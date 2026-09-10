@@ -18,6 +18,19 @@ test('private input reader rejects permissive files and symlinks without leaking
  assert.equal(typeof api.readPrivateLaunchFile,'function');const root=mkdtempSync(join(tmpdir(),'moriarty-launch-'));const file=join(root,'secret');
  try{writeFileSync(file,'DO_NOT_EMIT',{mode:0o600});assert.equal(api.readPrivateLaunchFile(file).toString(),'DO_NOT_EMIT');chmodSync(file,0o644);assert.throws(()=>api.readPrivateLaunchFile(file),e=>!e.message.includes('DO_NOT_EMIT'));chmodSync(file,0o600);symlinkSync(file,join(root,'link'));assert.throws(()=>api.readPrivateLaunchFile(join(root,'link')));}finally{rmSync(root,{recursive:true,force:true});}
 });
+test('private input reader and CLI reject a FIFO without waiting for a writer',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-launch-fifo-'));const fifo=join(dir,'not-a-regular-file');
+ try{
+  assert.equal(spawnSync('mkfifo',['-m','600',fifo]).status,0);
+  const moduleUrl=new URL('./launch-local.mjs',import.meta.url).href;
+  const script=`import {readPrivateLaunchFile} from ${JSON.stringify(moduleUrl)};try{readPrivateLaunchFile(process.argv[1]);process.exitCode=2;}catch(e){process.exitCode=e.message==='LAUNCH_PRIVATE_FILE'?0:3;}`;
+  const reader=spawnSync(process.execPath,['--input-type=module','-e',script,fifo],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(reader.error,undefined,'reader must reject without blocking on FIFO open');assert.equal(reader.status,0);
+  const cli=spawnSync(process.execPath,[new URL('./launch-local.mjs',import.meta.url).pathname,'--run','--plan',fifo,'--sha256',h],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(cli.error,undefined,'CLI must reject before its plan-dependent timer exists');assert.equal(cli.status,1);assert.equal(cli.stdout,'');
+  assert.equal(cli.stderr,'Local financial launch failed; inspect retained public run records.\n');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
 test('event projection drops private fields and rejects unexpected event kinds',()=>{
  assert.equal(typeof api.publicLaunchEvent,'function');
  const event=api.publicLaunchEvent({kind:'submitted',txId:h,identifiers:[h],transactionHash:h,private:'DO_NOT_EMIT'});

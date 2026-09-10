@@ -38,7 +38,8 @@ export function validateLocalLaunchPlan(p){
 function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
 export function readPrivateLaunchFile(p){
  absolute(p);safeAncestors(p);let fd;
- try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+ // Nonblocking open lets fstat reject a FIFO even when it has no writer.
+ try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
  finally{if(fd!==undefined)closeSync(fd);}
 }
 export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}

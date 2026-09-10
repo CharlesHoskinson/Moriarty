@@ -1,0 +1,50 @@
+Independent Grok 4.6 high CORRECTION review only. Existing Node/Linux financial launcher blocked on owner-only FIFO with no writer: openSync O_RDONLY|O_NOFOLLOW blocks BEFORE fstat regular-file rejection and CLI timer. Reproduced timeout; added O_NONBLOCK to that open, no other production change. API and CLI regression below failed ETIMEDOUT before repair; all 12 launcher tests pass after. Assess this narrow repair, not full launcher/security/financial acceptance. Existing regular-file uid/mode/size checks unchanged. Imported fs functions are actual node:fs, check throws Error(code), absolute checks normalized absolute path. Return concise JSON verdict APPROVED or CHANGES_REQUESTED, blockers and scope limits. No tools/network.
+Candidate: {
+  "schema": "moriarty.launcher-fifo-repair/1",
+  "parentSourceSha256": "0dbd814f75389225b2a3ef9e7000e8460efab40889d3aaa08f971e5a698d1748",
+  "scope": "Reject FIFO private inputs without blocking before regular-file validation; no other production behavior changed.",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "22057f50c1b120740b011c903803d08bb022a5dbff97a03ec9fdc9becfc3a3df"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "sha256": "e4f4b8c5e63730dfeb3dc6f40c21466d18f2ae88e8963dd1a377106c92c375b5"
+    }
+  ],
+  "checks": {
+    "red": "fifo-red.txt",
+    "green": "launcher-green.txt"
+  },
+  "executionAdmitted": false,
+  "limitations": [
+    "Prior launcher reviews and resource proposal pin source-02, not this changed source.",
+    "Missing complete Grok source review remains open.",
+    "No wallet, chain, proof or financial operation performed."
+  ]
+}
+
+Function:
+function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
+export function readPrivateLaunchFile(p){
+ absolute(p);safeAncestors(p);let fd;
+ // Nonblocking open lets fstat reject a FIFO even when it has no writer.
+ try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+ finally{if(fd!==undefined)closeSync(fd);}
+}
+
+Regression:
+test('private input reader and CLI reject a FIFO without waiting for a writer',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-launch-fifo-'));const fifo=join(dir,'not-a-regular-file');
+ try{
+  assert.equal(spawnSync('mkfifo',['-m','600',fifo]).status,0);
+  const moduleUrl=new URL('./launch-local.mjs',import.meta.url).href;
+  const script=`import {readPrivateLaunchFile} from ${JSON.stringify(moduleUrl)};try{readPrivateLaunchFile(process.argv[1]);process.exitCode=2;}catch(e){process.exitCode=e.message==='LAUNCH_PRIVATE_FILE'?0:3;}`;
+  const reader=spawnSync(process.execPath,['--input-type=module','-e',script,fifo],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(reader.error,undefined,'reader must reject without blocking on FIFO open');assert.equal(reader.status,0);
+  const cli=spawnSync(process.execPath,[new URL('./launch-local.mjs',import.meta.url).pathname,'--run','--plan',fifo,'--sha256',h],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(cli.error,undefined,'CLI must reject before its plan-dependent timer exists');assert.equal(cli.status,1);assert.equal(cli.stdout,'');
+  assert.equal(cli.stderr,'Local financial launch failed; inspect retained public run records.\n');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

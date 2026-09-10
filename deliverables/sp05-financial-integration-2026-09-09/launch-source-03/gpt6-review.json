@@ -1,0 +1,70 @@
+{
+  "schema": "moriarty.launcher-fifo-correction-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/launcher_fifo_audit",
+    "independentOfImplementation": true
+  },
+  "reviewedAt": "2026-09-10T03:32:07.475647+00:00",
+  "baseCommit": "7307349d0275af6fcb4144e1661d8b59d6b2663a",
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/launch-source-03/candidate.json",
+  "candidateSha256": "6df045d64215ea16255fd9dc75270872e1c50769c3a90e9e6b43a58a3259d530",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "22057f50c1b120740b011c903803d08bb022a5dbff97a03ec9fdc9becfc3a3df"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "sha256": "e4f4b8c5e63730dfeb3dc6f40c21466d18f2ae88e8963dd1a377106c92c375b5"
+    }
+  ],
+  "parentSourceSha256": "0dbd814f75389225b2a3ef9e7000e8460efab40889d3aaa08f971e5a698d1748",
+  "verdict": "PASS_SCOPED",
+  "scope": "Only the O_NONBLOCK FIFO-open correction and its new reader/CLI regression test; not approval of the complete launcher or execution.",
+  "findings": [],
+  "observations": [
+    "Production diff adds O_NONBLOCK to O_RDONLY|O_NOFOLLOW and a comment; fstat-based regular-file, permission, ownership and size checks and finally-close remain intact.",
+    "On this Linux host, a no-writer FIFO opens without waiting and is rejected by s.isFile() before readFileSync; regular owner-only file reading and existing permissive-file/symlink rejection continue to pass.",
+    "The FIFO regression creates a real owner-only FIFO without a writer, bounds reader and CLI subprocesses at 2000 ms with SIGKILL, checks the exact reader rejection code, and checks CLI failure status and sanitized output.",
+    "CLI source reads the plan before installing its hard timer; the new nonblocking open addresses that concrete pre-timer hang.",
+    "Candidate file hashes and parent source hash independently match working files and HEAD source respectively."
+  ],
+  "checks": [
+    {
+      "command": "timeout 15s node --test --test-name-pattern='private input reader' experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0,
+      "passed": 2,
+      "failed": 0,
+      "durationMs": 128.009744
+    },
+    {
+      "command": "git diff --check -- experiments/moriarty-midnight-financial/ledger/launch-local.mjs experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0
+    },
+    {
+      "artifact": "fifo-red.txt",
+      "performedByReviewer": false,
+      "observed": "Historical old-code reader subprocess ETIMEDOUT at 2000 ms; CLI assertion was not reached in that failed test."
+    },
+    {
+      "artifact": "launcher-green.txt",
+      "performedByReviewer": false,
+      "observed": "Inspected author-provided 12/12 passing launcher tests; reviewer independently reran only the two private-input tests."
+    }
+  ],
+  "limitations": [
+    "Linux/POSIX-specific evidence; external mkfifo and a two-second process startup allowance remain test prerequisites.",
+    "O_NONBLOCK does not establish a universal bound on filesystem operations, regular-file I/O, device drivers, or the full launcher.",
+    "No runtime SDK inspection/API execution, wallet, build, network, proof, chain, or financial operation was performed by this reviewer.",
+    "Source-02 full reviews and resource pins remain historical and do not approve source-03.",
+    "Separate Grok correction review and complete-source/execution admission remain outside this receipt."
+  ],
+  "executionAdmitted": false,
+  "completeLauncherApproved": false,
+  "financialAcceptance": false,
+  "proofAcceptance": false,
+  "networkAcceptance": false
+}
