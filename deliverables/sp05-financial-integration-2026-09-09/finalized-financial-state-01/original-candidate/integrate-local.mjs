@@ -101,12 +101,7 @@ export function createLocalRpc({node,deadlineMs,fetchImpl=globalThis.fetch}){
       requireThat(body?.jsonrpc==='2.0'&&body.id===id&&Object.hasOwn(body,'result')&&!Object.hasOwn(body,'error'),'RPC_RESPONSE');
       return body.result;
     })();
-    try{
-      const result=await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('RPC_DEADLINE'));},Math.min(deadlineMs-Date.now(),2147483647));})]);
-      // A blocked event loop can let the response win before an overdue timer.
-      requireThat(Date.now()<deadlineMs,'RPC_DEADLINE');
-      return result;
-    }
+    try{return await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('RPC_DEADLINE'));},Math.min(deadlineMs-Date.now(),2147483647));})]);}
     finally{clearTimeout(timer);controller.abort();}
   };
 }

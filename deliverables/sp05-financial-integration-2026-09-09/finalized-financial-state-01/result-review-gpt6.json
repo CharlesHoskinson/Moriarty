@@ -1,0 +1,94 @@
+{
+  "schema": "moriarty.finalized-state-independent-review/1",
+  "reviewer": "gpt-6-astra",
+  "reviewerAgent": "/root/spec_audit_early",
+  "reviewedAt": "2026-09-10T14:00:56.465563+00:00",
+  "verdict": "BLOCKED",
+  "scope": "Fixed finalized-state reader and narrow RPC whitelist/parameter extension, using actual retained native public state/full compiled decoder and controlled RPC. This is source correctness only, not live node support or ledger nonmutation.",
+  "independence": {
+    "authoredCandidate": false,
+    "readOtherReviewerVerdict": false
+  },
+  "candidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/review-candidate.json",
+    "sha256": "409e55e00c2e3a0a0c0314aac40643c9136b8f5e2c2c48a6d3639993cba7c55c",
+    "verifiedFileCount": 15,
+    "files": {
+      "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "2083cd1c84ab658e24c871f9140fcdc45ad5bf1309e53c61e2df5d59d264fab7",
+      "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.test.mjs": "e6f5e1261bb52819e58fc2e8e47d3983565a66c575238050c36af75582c29eb0",
+      "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "ee57cad0cf732473bd98d46b79cf68b7450f48b68b7db60ee4f86026fa5fc5a5",
+      "experiments/moriarty-midnight-financial/ledger/finalized-state-rpc.test.mjs": "beabef7cc80570a40a0601ebb5de78e2817bb488d723231d2f89a89e06405a2b",
+      "experiments/moriarty-midnight-financial/package.json": "5ddbffe32583f1f46d00824c0245af5fdb8775850fed025650477c5b7026fa7e",
+      "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "ae0fd41e68e8effe80e02c5c85b331bc564f9c5a2792bdd6f38f3fb4bf5c2a44",
+      "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1",
+      "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/source-candidate.json": "3794b4bfa87292ffd29509b9ada825eb33fdb801a86e8660a25a53b4dbc0aef0",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/README.md": "9d93bdc19ea08b956e29675b980aab443384efb77001aa18d6127ecc6227ccbe",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/inputs-and-source.json": "74ba10cf95186d0545529f6cc3777b2244aeb6c233b510b1fde9182f19dda4f2",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/source-interface-finding.json": "f7832b87bdcaeb018953b96a8ec71aebe69d3d0a6aee3c145fc9436da929745f",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/green-03.tap": "d1d16bebbbf7fc43b88cdc4039c7cf062d9f4601cbb065637d7d3cfdc6eb184a",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/root-verification-02.tap": "9b40ce7f4f1fe7169e818daae0558fc70f4be9d97a66b319f20b2922811f7cb2",
+      "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/rpc-green.tap": "035605c7e0b049ae8af55d476c39d67e0d06355f7adaaca76eeeddc434b2cb3f"
+    }
+  },
+  "findings": [
+    {
+      "id": "G6-FS-01",
+      "severity": "blocking",
+      "title": "Successful finalized-state capture can return after the shared absolute deadline",
+      "location": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs:40-41",
+      "supportingLocation": "experiments/moriarty-midnight-financial/ledger/receipt.mjs:96-103",
+      "evidence": "With actual retained full-build loader and native initialized swap state, controlled final chain_getBlockHash occupied the event loop until deadlineMs+20 then returned the correct hash. captureFinalizedFinancialState returned a success record 21ms after deadline. Promise.race timer cannot fire while the operation holds the event loop; its resolved operation wins once released, and the reader performs no post-await deadline check before returning.",
+      "reproducer": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/gpt6-deadline-reproduction.mjs",
+      "observation": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/gpt6-deadline-observation.json",
+      "expected": "An observation completed after the shared deadline must reject or remain unknown, even if the RPC operation began before the deadline and its final data is otherwise valid.",
+      "requestedRepair": "Add an explicit post-await absolute-deadline check at the reader success boundary and a regression that occupies the event loop through deadline during the last canonical query. Keep native cleanup and existing unknown/deadline classifications. A broad rewrite of the shared observation wrapper is not required for this focused repair."
+    }
+  ],
+  "reexecutedChecks": [
+    {
+      "command": "MORIARTY_SWAP_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json npm --prefix experiments/moriarty-midnight-financial run test:finalized-state",
+      "exitCode": 0,
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 929.237876,
+      "output": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/gpt6-finalized-state.tap",
+      "sha256": "f60717d011dcff5e9c10edd4735fbbc515589da29285286ae764d72fd3b8acde"
+    },
+    {
+      "command": "node --test --test-reporter=tap experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs experiments/moriarty-midnight-financial/ledger/initialized-swap-integration.test.mjs",
+      "exitCode": 0,
+      "tests": 88,
+      "passed": 88,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 300.084532,
+      "output": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/gpt6-integration-regression.tap",
+      "sha256": "ce76f27c6f10f18c7c2b0ac06a8f94fb873c33303362a70a353e040e4957cf31"
+    }
+  ],
+  "verifiedObservations": [
+    "All15 combined candidate hashes and all11 input/source plus8 historical check hashes and sizes match. Frozen candidate bytes rechecked after review and tests.",
+    "23 reader/RPC tests and88 targeted integration regressions pass, zero skipped; their current coverage does not include the delayed-timer success counterexample.",
+    "The public Rust RPC source declares contract address and optional historical block hash, executes state API at that exact supplied hash and hex-encodes result. Current local-service support remains unobserved.",
+    "Reader uses explicit finalized head, header height and canonical mapping before/after decode; no implicit latest/indexer fallback. Later head advancement does not invalidate recorded as-of anchor or establish no intervening actions.",
+    "The exact SDK Compact-runtime state producer is used, native full serialization roundtrip checked, unsupported shielded balances rejected, native unshielded balance projection retained and complete generated getter-backed state detached with structuredClone. Native object freed in finally after successful deserialize and on roundtrip failure.",
+    "Caller-supplied already-bound address and verified loader remain trusted identity inputs; reader does not authenticate state proof, contract code identity or arbitrary replacement decoder. Documentation states these limits.",
+    "RPC addition permits only midnight_contractState with exact bare64hex address and mandatory0x64hex block. Existing read-only method whitelist and no retries retained.",
+    "Transport ceiling is64KiB JSON body, necessarily stricter than1MiB decoded-state cap; documented, not silently expanded.",
+    "Required build environment fails when absent; no install/rebuild/proof/network/service/private-state action ran in this review."
+  ],
+  "notEstablished": [
+    "Node method support or actual finalized node state",
+    "Authenticated state proof or independently authenticated supplied address/loader",
+    "Actual failed-transaction rollback or financial nonmutation",
+    "Full SP05.2, Preview, mandatory PCD",
+    "Hard process containment from promise deadlines; caller retains RPC and loader lifecycle ownership"
+  ],
+  "campaignAdmissionGranted": false,
+  "sp052Complete": false,
+  "ledgerNonmutationEstablished": false,
+  "publicationApproved": false
+}

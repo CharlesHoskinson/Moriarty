@@ -1,0 +1,1910 @@
+Independent Grok 4.6 high source/result audit of corrected snapshot implementation. No tools, delegation, network. Return terminal JSON {verdict:PASS_SCOPED or FAIL,candidateSha256,scope,findings,checkedEvidence,limitations}. This is the full corrected candidate, not approval inherited from an earlier review. Known reproduced defect: Promise.race timers cannot interrupt eventloop-blocking operation; valid RPC may finish after deadline but resolve before timer. Reader now checks capped deadline before/after every RPC and after native free before returning; transport independently checks absolute deadline after awaited response before return. Review semantics and new connected clock-advance tests. 27reader/RPC tests=21reader+6RPC; 94regression=6RPC+88integration. Counts overlap. Initial deadline must safe future integer; 60sec cap preserved. Native ContractState full8150byte fixture and actual compiled decoder, controlledRPC only. Explicit finalized anchor and mandatory midnight_contractState(address,blockHash), no fallback/writes/retries. Native fullserialization/state/balances preserved, caller owns RPC/build loader identity/lifecycle. NodeRPC trusted observation, no authenticatedstateproof,nointerveningactionsafteranchor=false. Live node method support/nonmutation/Preview/PCD unestablished. Transport64KiB stricter than reader1MiB; snapshot caller should use RPC wrapper honoring request deadline for cancellation, reader completion deadlines enforced regardless. Do not invent deployed evidence. Full current source files supplied; integrate-local change is read-only method params plus post-await deadline check, unrelated historical integration behavior outside this incremental review. Candidate SHA 001294314b9ea83de3f4bd2cd845b15442f99d69cf1e7c4a7b89257d9feec417
+
+{
+  "schema": "moriarty.finalized-financial-state-review-candidate/1",
+  "scope": "Corrected read-only native snapshot/strict bounded local RPC; late completion stays unknown, live node and nonmutation unestablished",
+  "files": {
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.test.mjs": "880820eedfb19f1f7c0a8a75d01a8d4be72a4384c792dd383abb3f1816a137f2",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "345aa8985fcc8d0ae01d97517763753cd68e5fa021c7733759077bef9545e8f0",
+    "experiments/moriarty-midnight-financial/ledger/finalized-state-rpc.test.mjs": "d42dc047f25a20348ce61c28aa49a0938023409b5e2a263a7b8ed2af6d0ad50f",
+    "experiments/moriarty-midnight-financial/package.json": "5ddbffe32583f1f46d00824c0245af5fdb8775850fed025650477c5b7026fa7e",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "ae0fd41e68e8effe80e02c5c85b331bc564f9c5a2792bdd6f38f3fb4bf5c2a44",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/source-candidate-02.json": "05c691629f5a0fd4c709629a58f97b90d41fc1d86e78414092a9528c676fe558",
+    "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/CORRECTION-02.md": "60144d764a47864238b5b4c483585f73f4a5b68b5b49a253aa526476eaa56cfd",
+    "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/correction-evidence-02.json": "fc81f5da1b7d63dbf5871d0c3694ded3dbd85620f2606dcd6f592081fdb2d80e",
+    "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/root-correction-verification.tap": "55c7a2fb56dc5feee268ad776c27529dbc045639ee5609c557e7d0fd3a10ac16",
+    "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/rpc-deadline-green.tap": "8eacf479b28b5e9c3f36f26df709bc048722ca769148dbf6f2e06148122166d7"
+  }
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs SHA256 7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077 ===
+/** Read-only node state at an explicit finalized anchor. The node RPC remains
+ * trusted: this observation is not an authenticated state proof or rollback test.
+ */
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {beforeDeadline} from './receipt.mjs';
+import {extractNativeContractBalances} from './contract-balances.mjs';
+import {PINNED_NM} from './providers.mjs';
+// contract-balances checks this exact protocol/runtime entry and package pin.
+const {ContractState}=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs').href);
+const check=(ok,code)=>{if(!ok)throw Error('FINALIZED_STATE_'+code);};
+/** Caller supplies the existing bounded RPC and verified build loader. Neither
+ * is started or closed here. RPC must admit midnight_contractState(address, at).
+ */
+export async function captureFinalizedFinancialState({contractAddress,rpc,loadedContract,deadlineMs}){
+ check(typeof contractAddress==='string'&&/^[a-f0-9]{64}$/.test(contractAddress),'ADDRESS');
+ check(typeof rpc==='function'&&typeof loadedContract?.decodeState==='function','INTERFACES');
+ if(!Number.isSafeInteger(deadlineMs)||deadlineMs<=Date.now())throw Error('DEADLINE_EXPIRED');
+ const stop=Math.min(deadlineMs,Date.now()+60000);
+ const inTime=()=>{if(Date.now()>=stop)throw Error('OBSERVATION_TIMEOUT_UNKNOWN');};
+ const call=async(method,params)=>{
+  inTime();
+  const result=await beforeDeadline(()=>rpc(method,params,stop),stop);
+  // Timers cannot interrupt synchronous work; a resolved RPC can still be late.
+  inTime();return result;
+ };
+ const blockHash=await call('chain_getFinalizedHead',[]);
+ check(typeof blockHash==='string'&&/^0x[a-f0-9]{64}$/.test(blockHash),'HEAD');
+ const header=await call('chain_getHeader',[blockHash]);
+ check(typeof header?.number==='string'&&/^0x[0-9a-f]+$/i.test(header.number)&&header.number.length<=18,'HEADER');
+ const blockHeight=Number(BigInt(header.number));check(Number.isSafeInteger(blockHeight)&&blockHeight>=0,'HEIGHT');
+ check(await call('chain_getBlockHash',[blockHeight])===blockHash,'NONCANONICAL');
+ // Mandatory second argument prevents the RPC's implicit best-block fallback.
+ const serializedStateHex=await call('midnight_contractState',[contractAddress,blockHash]);
+ check(typeof serializedStateHex==='string'&&serializedStateHex.length>0&&serializedStateHex.length<=2097152&&/^(?:[a-f0-9]{2})+$/.test(serializedStateHex),'ENCODING');
+ const raw=Buffer.from(serializedStateHex,'hex');let native,snapshot;
+ try{native=ContractState.deserialize(raw);if(!Buffer.from(native.serialize()).equals(raw))throw Error('roundtrip');}
+ catch{native?.free();throw Error('FINALIZED_STATE_NATIVE');}
+ try{
+  const balances=extractNativeContractBalances({state:native});
+  const decoded=loadedContract.decodeState(native.data);
+  check(decoded&&Object.getPrototypeOf(decoded)===Object.prototype&&Object.keys(decoded).length>0,'DECODE');
+  // Detach every public field from the generated decoder's getter view.
+  const state=structuredClone(decoded);
+  check(Buffer.from(native.serialize()).equals(raw),'DECODE_MUTATED_NATIVE');
+  check(await call('chain_getBlockHash',[blockHeight])===blockHash,'NONCANONICAL');
+  snapshot=Object.freeze({schema:'moriarty.finalized-financial-state/1',contractAddress,blockHash,blockHeight,serializedStateHex,stateSha256:createHash('sha256').update(raw).digest('hex'),balances,state,source:'midnight_contractState-at-explicit-finalized-block',authenticatedStateProof:false,noInterveningActionsAfterAnchorEstablished:false});
+ }finally{native.free();}
+ inTime();
+ return snapshot;
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/finalized-financial-state.test.mjs SHA256 880820eedfb19f1f7c0a8a75d01a8d4be72a4384c792dd383abb3f1816a137f2 ===
+import test,{before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {loadProvenFinancialContract} from './proven-assets.mjs';
+const api=await import('./finalized-financial-state.mjs').catch(e=>{if(e.code==='ERR_MODULE_NOT_FOUND')return {};throw e;});
+const runtime=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs').href);
+const raw=readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/swap-initialize-diagnosis-01/indexed-initialize-state.bin',import.meta.url));
+const address='8824d69c9058f322b4f6da7e7cd8d49f3235db5fbe3d6080d25f239243812261',hash='0x'+'ab'.repeat(32),height=20400;
+let loadedContract;
+before(async()=>{assert.ok(process.env.MORIARTY_SWAP_BUILD_RECEIPT,'MORIARTY_SWAP_BUILD_RECEIPT requires retained full artifacts, never rebuild');loadedContract=await loadProvenFinancialContract({case:'swap',receiptPath:process.env.MORIARTY_SWAP_BUILD_RECEIPT,receiptSha256:'3789da217a36cecd5f7603cbbaead32671418da36ecc5c2d20b1709b9577f362',sourceManifestHash:'a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6'});});
+after(()=>loadedContract?.cleanup());
+function fixture(override=()=>undefined){
+ const calls=[];return {calls,options:{contractAddress:address,loadedContract,deadlineMs:Date.now()+10000,rpc:async(method,params)=>{
+  calls.push({method,params});const changed=await override(method,params,calls);if(changed!==undefined)return changed;
+  if(method==='chain_getFinalizedHead'){assert.deepEqual(params,[]);return hash;}
+  if(method==='chain_getHeader'){assert.deepEqual(params,[hash]);return {number:'0x'+height.toString(16)};}
+  if(method==='chain_getBlockHash'){assert.deepEqual(params,[height]);return hash;}
+  if(method==='midnight_contractState'){assert.deepEqual(params,[address,hash]);return raw.toString('hex');}
+  throw Error('UNEXPECTED_RPC');
+ }}};
+}
+function capture(o){assert.equal(typeof api.captureFinalizedFinancialState,'function','missing finalized node-state reader');return api.captureFinalizedFinancialState(o);}
+test('actual full native state and generated decoder captured at explicit canonical finalized anchor',async()=>{
+ const f=fixture(),result=await capture(f.options);
+ assert.equal(result.contractAddress,address);assert.equal(result.blockHash,hash);assert.equal(result.blockHeight,height);
+ assert.equal(result.stateSha256,'5a1dcdb726f25a724f89d0185af0fb8bb863b37e094fce8fc7dc1e75caf2b92c');
+ assert.equal(result.serializedStateHex,raw.toString('hex'));
+ assert.deepEqual(result.balances,{'5475695f8ccb85c05055a4ffef06bbbff208c58b07cf5c61052d25143729d166':'1000000','e7d969726b0884ada7bb477283143911dc4df1b18da25a776a433bfaac8646d4':'2000000'});
+ const actual=loadedContract.decodeState(runtime.ContractState.deserialize(raw).data);
+ assert.deepEqual(result.state,structuredClone(actual));assert.ok(Object.keys(result.state).length>10);
+ assert.equal(result.authenticatedStateProof,false);assert.equal(result.noInterveningActionsAfterAnchorEstablished,false);
+ assert.deepEqual(f.calls.map(c=>c.method),['chain_getFinalizedHead','chain_getHeader','chain_getBlockHash','midnight_contractState','chain_getBlockHash']);
+ assert.equal(loadedContract.assertFresh(),true);
+});
+for(const [name,override,code] of [
+ ['malformed finalized head',m=>m==='chain_getFinalizedHead'?'bad':undefined,'FINALIZED_STATE_HEAD'],
+ ['malformed header',m=>m==='chain_getHeader'?{number:'7'}:undefined,'FINALIZED_STATE_HEADER'],
+ ['unsafe height',m=>m==='chain_getHeader'?{number:'0x20000000000000'}:undefined,'FINALIZED_STATE_HEIGHT'],
+ ['canonical mismatch',m=>m==='chain_getBlockHash'?'0x'+'cd'.repeat(32):undefined,'FINALIZED_STATE_NONCANONICAL'],
+ ['canonical changes during state query',(m,_p,c)=>m==='chain_getBlockHash'&&c.length===5?'0x'+'cd'.repeat(32):undefined,'FINALIZED_STATE_NONCANONICAL'],
+ ['absent contract',m=>m==='midnight_contractState'?null:undefined,'FINALIZED_STATE_ENCODING'],
+ ['unknown RPC envelope',m=>m==='midnight_contractState'?{result:raw.toString('hex')}:undefined,'FINALIZED_STATE_ENCODING'],
+ ['non-native bytes',m=>m==='midnight_contractState'?'010203':undefined,'FINALIZED_STATE_NATIVE'],
+ ['noncanonical trailing bytes',m=>m==='midnight_contractState'?raw.toString('hex')+'00':undefined,'FINALIZED_STATE_NATIVE'],
+ ['oversized response',m=>m==='midnight_contractState'?'00'.repeat(1048577):undefined,'FINALIZED_STATE_ENCODING'],
+ ])test(name+' rejects connected RPC evidence',async()=>{await assert.rejects(capture(fixture(override).options),e=>e.message===code);});
+test('wrong address and expired deadline stop before RPC',async()=>{
+ const f=fixture();await assert.rejects(capture({...f.options,contractAddress:'0x'+address}),/FINALIZED_STATE_ADDRESS/);
+ await assert.rejects(capture({...f.options,deadlineMs:Date.now()-1}),/DEADLINE_EXPIRED/);assert.equal(f.calls.length,0);
+});
+test('unsupported node method propagates without latest or indexer fallback',async()=>{
+ const f=fixture(m=>{if(m==='midnight_contractState')throw Error('METHOD_NOT_FOUND');});
+ await assert.rejects(capture(f.options),/METHOD_NOT_FOUND/);assert.equal(f.calls.length,4);
+});
+test('hanging RPC is unknown under the shared deadline',async()=>{
+ const f=fixture(m=>m==='midnight_contractState'?new Promise(()=>{}):undefined);
+ await assert.rejects(capture({...f.options,deadlineMs:Date.now()+40}),/OBSERVATION_TIMEOUT_UNKNOWN/);
+});
+test('invalid full decoded state is rejected',async()=>{
+ const f=fixture();await assert.rejects(capture({...f.options,loadedContract:{decodeState:()=>null}}),/FINALIZED_STATE_DECODE/);
+});
+test('native unsupported shielded contract balance is rejected',async()=>{
+ const state=runtime.ContractState.deserialize(raw);state.balance=new Map([[{tag:'shielded',raw:'11'.repeat(32)},1n]]);
+ await assert.rejects(capture(fixture(m=>m==='midnight_contractState'?Buffer.from(state.serialize()).toString('hex'):undefined).options),/CONTRACT_BALANCE_TOKEN/);
+});
+
+test('later best/finalized head does not change the explicit as-of anchor',async()=>{
+ let moved=false;const f=fixture(m=>{if(m==='midnight_contractState')moved=true;if(m==='chain_getFinalizedHead'&&moved)return '0x'+'cd'.repeat(32);});
+ const result=await capture(f.options);assert.equal(result.blockHash,hash);assert.equal(moved,true);
+ assert.equal(f.calls.filter(c=>c.method==='chain_getFinalizedHead').length,1);
+ assert.equal(result.noInterveningActionsAfterAnchorEstablished,false);
+});
+test('nonfinite and coerced original deadlines reject before any RPC',async()=>{
+ for(const deadlineMs of [Infinity,NaN,String(Date.now()+10000),Date.now()+10000.5]){
+  const f=fixture();await assert.rejects(capture({...f.options,deadlineMs}),/DEADLINE_EXPIRED/);assert.equal(f.calls.length,0);
+ }
+});
+for(const lateCall of [1,5])test('late RPC '+lateCall+' rejects elapsed capped deadline and preserves cleanup',async t=>{
+ const started=Date.now();let clock=started,freed=0;
+ t.mock.method(Date,'now',()=>clock);
+ const originalFree=runtime.ContractState.prototype.free;
+ t.mock.method(runtime.ContractState.prototype,'free',function(){freed++;return originalFree.call(this);});
+ const f=fixture((_method,_params,calls)=>{if(calls.length===lateCall)clock=started+60000;});
+ await assert.rejects(capture({...f.options,deadlineMs:started+120000}),e=>e.message==='OBSERVATION_TIMEOUT_UNKNOWN');
+ assert.equal(f.calls.length,lateCall,'no subsequent RPC may run after late completion');
+ assert.equal(freed,lateCall===5?1:0,'the native snapshot is freed on late final RPC');
+});
+test('deadline elapsed during native cleanup cannot return a snapshot',async t=>{
+ const started=Date.now();let clock=started;
+ t.mock.method(Date,'now',()=>clock);
+ const originalFree=runtime.ContractState.prototype.free;
+ t.mock.method(runtime.ContractState.prototype,'free',function(){clock=started+60000;return originalFree.call(this);});
+ await assert.rejects(capture({...fixture().options,deadlineMs:started+120000}),e=>e.message==='OBSERVATION_TIMEOUT_UNKNOWN');
+});
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/integrate-local.mjs SHA256 345aa8985fcc8d0ae01d97517763753cd68e5fa021c7733759077bef9545e8f0 ===
+import {validateInitializedSwapPlan,readInitializedSwapInputs} from './continue-swap-plan.mjs';
+import {EXISTING_SWAP,INITIALIZED_SWAP,verifyInitializedSwapPrivate,assertInitializedSwapMintedOutput} from './continue-initialized-swap.mjs';
+import {verifyInitializedSwapPublic,assertSwapHistoryWallet} from './recover-deployment.mjs';
+import {preserveInitializedSwapStore} from './recover-store.mjs';
+import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
+/** Production composition for the fixed local I2 case. No wallet creation or CLI dispatch.
+ * Supplying existing handles transfers cleanup responsibility, including preflight failures.
+ * Execution still requires a separately reviewed launch with outer process containment.
+ */
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {isDeepStrictEqual} from 'node:util';
+import {loadProvenFinancialContract} from './proven-assets.mjs';
+import {loadFinancialContractsSdk,prepareFinancialDeployment} from './prepare-deployment.mjs';
+import {PINNED_NM,loadFinancialSdk,initializeFinancialReservations,createFinancialProviders} from './providers.mjs';
+import {observeFinalizedStage} from './receipt.mjs';
+import {createFinancialComparator} from './financial-comparison.mjs';
+import {runLocalFinancialCase} from './run-local.mjs';
+import {EXISTING_LOAN,validateExistingLoanPlan,readExistingLoanInputs,verifyExistingLoanPublic,verifyInitializedLoanPublic,reconstructExistingLoan,assertRecoveryWallet,restoreExistingLoanPrivate} from './recover-deployment.mjs';
+import {inspectFailedLoanStore,assertEmptyRecoveryStore,preserveInitializedLoanStore} from './recover-store.mjs';
+import {validateInitializedLoanPlan,readInitializedLoanInputs} from './continue-loan-plan.mjs';
+import {INITIALIZED_LOAN,verifyInitializedLoanPrivate,assertInitializedLoanMintedOutput} from './continue-initialized-loan.mjs';
+import {assertSwapInitializedWallet,SWAP_WALLET_FAILURE_CODES} from './swap-wallet.mjs';
+
+const requireThat=(condition,message)=>{if(!condition)throw Error(message);};
+const publicIntegrationFailureCodes=new Set([
+ 'SWAP_CONTINUATION_DEPLOY_STATE','SWAP_CONTINUATION_NATIVE_HASH','SWAP_CONTINUATION_NATIVE_IDENTIFIERS','SWAP_CONTINUATION_NATIVE_ACTION','SWAP_CONTINUATION_NATIVE_INPUTS','SWAP_CONTINUATION_NATIVE_DUST','SWAP_CONTINUATION_NATIVE_OUTPUT','SWAP_CONTINUATION_NATIVE_DEPLOY_STATE','SWAP_CONTINUATION_STATE_TYPE','SWAP_CONTINUATION_STATE_MISMATCH','SWAP_CONTINUATION_STATE_CANONICAL','SWAP_CONTINUATION_STATE_BALANCES','SWAP_CONTINUATION_STATE_AUTHORITY','SWAP_CONTINUATION_SIGNING_AUTHORITY','SWAP_CONTINUATION_PRIVATE_PROVIDER','SWAP_CONTINUATION_PRIVATE_READ','SWAP_CONTINUATION_PRIVATE_STATE','SWAP_CONTINUATION_PRIVATE_KEY','SWAP_CONTINUATION_WALLET_BINDING','SWAP_CONTINUATION_WALLET_HISTORY','CONTINUATION_INTEGRATION_PLAN','INVALID_INITIALIZED_SWAP',
+ ...SWAP_WALLET_FAILURE_CODES,...CONTRACT_BALANCE_FAILURE_CODES,'AMOUNT_CONTRACT_BALANCES',
+ 'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST','INTEGRATION_CONTINUATION_ADAPTERS_REQUIRE_SOURCE_TEST','CONTINUATION_PUBLIC_RESULT','CONTINUATION_STORE_PRESERVATION','CONTINUATION_PRIVATE_RESULT',
+ 'INITIALIZED_PRIVATE_PROVIDER','INITIALIZED_PRIVATE_READ','INITIALIZED_PRIVATE_STATE','INITIALIZED_PRIVATE_KEY','INITIALIZED_SIGNING_AUTHORITY','INITIALIZED_STATE_TYPE','INITIALIZED_STATE_MISMATCH','INITIALIZED_STATE_CANONICAL','INITIALIZED_WALLET_BINDING','INITIALIZED_WALLET_COINS','INITIALIZED_WALLET_AVAILABLE','INITIALIZED_WALLET_OUTPUT','INITIALIZED_WALLET_HISTORY',
+ 'RECOVERY_WALLET_BINDING','RECOVERY_WALLET_TIME_CAP','RECOVERY_WALLET_SYNC','RECOVERY_WALLET_PENDING','RECOVERY_WALLET_COIN','RECOVERY_WALLET_SPENT_INPUT','RECOVERY_WALLET_DUST_CODEC','RECOVERY_WALLET_SPENT_DUST','RECOVERY_WALLET_REGISTERED_DUST','RECOVERY_WALLET_DUST_CAP',
+ 'RECOVERY_STORE_INITIALIZED_NAMESPACE','RECOVERY_STORE_INITIALIZED_CIPHERTEXT','RECOVERY_STORE_METADATA','RECOVERY_STORE_DESTINATION_EXISTS','RECOVERY_STORE_COPY_CHANGED','RECOVERY_STORE_ACCOUNT','RECOVERY_STORE_ABSOLUTE_PATH','RECOVERY_STORE_OVERLAP','RECOVERY_STORE_LEVEL_PATH_PIN','RECOVERY_STORE_LEVEL_PIN','RECOVERY_STORE_FILE_CHANGED','RECOVERY_STORE_DIRECTORY_PRIVATE','RECOVERY_STORE_FILE_PRIVATE','RECOVERY_STORE_DIRECTORY_SYMLINK','RECOVERY_STORE_BYTE_BOUND','RECOVERY_STORE_FILE_BOUND','RECOVERY_STORE_EMPTY','RECOVERY_STORE_SOURCE_CHANGED','RECOVERY_STORE_SNAPSHOT_CHANGED','RECOVERY_STORE_PRESERVATION_FAILED','RECOVERY_STORE_ENTRY_BOUND','RECOVERY_STORE_ENTRY_ENCODING','RECOVERY_STORE_CLOSE_FAILED',
+ 'NOT_FINALIZED','FINALITY_REGRESSION','FINALITY_CANONICAL_MISMATCH','NONCANONICAL_FINALIZED_BLOCK','NONCANONICAL_BLOCK','INDEXED_INPUTS_MISMATCH','INDEXED_OUTPUTS_MISMATCH','RPC_DEADLINE','OBSERVATION_TIMEOUT_UNKNOWN','FINANCIAL_COMPARISON_REQUIRED_PASS','STAGE_RETENTION_REQUIRED'
+]);
+export function validatePublicIntegrationFailureCode(code){requireThat(code==='UNCLASSIFIED_INTEGRATION_FAILURE'||publicIntegrationFailureCodes.has(code),'INVALID_PUBLIC_INTEGRATION_FAILURE');return code;}
+function integrationFailureCode(error){const message=Object.getOwnPropertyDescriptor(error,'message');return message&&Object.hasOwn(message,'value')&&publicIntegrationFailureCodes.has(message.value)?message.value:'UNCLASSIFIED_INTEGRATION_FAILURE';}
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const bytes=hex=>{requireThat(typeof hex==='string'&&/^[a-f0-9]{64}$/.test(hex),'INTEGRATION_PUBLIC_BYTES');return Uint8Array.from(Buffer.from(hex,'hex'));};
+const PINS={
+  "@midnight-ntwrk/midnight-js-protocol": {
+    "version": "4.1.1",
+    "packageSha256": "bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd",
+    "entries": {
+      "dist/ledger.mjs": "4db121cdee21bb88cecca5dc1433c6d30cc12c1ac1f4c5e40a606440e08ac840"
+    }
+  },
+  "@midnight-ntwrk/ledger-v8": {
+    "version": "8.1.0",
+    "packageSha256": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+    "entries": {
+      "midnight_ledger_wasm_fs.js": "125acbc6327afcf5540e70fe2a42de58af909695fc284a0e663e20a3666d296c",
+      "midnight_ledger_wasm_bg.js": "0fcb6f30ec4c0f894917d516db627d78de5630377bf7918bac08466b894cb716",
+      "midnight_ledger_wasm_bg.wasm": "88ff7c7c47c30138ee8f3a0c8bcbf12dbdcdeba591edebfb955c30d732ea7638"
+    }
+  },
+  "@midnight-ntwrk/compact-runtime": {
+    "version": "0.16.0",
+    "packageSha256": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+    "entries": {
+      "dist/index.js": "c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde"
+    }
+  }
+};
+async function loadNativeRuntime(){
+  for(const [name,pin] of Object.entries(PINS)){
+    const root=join(PINNED_NM,name);
+    requireThat(hash(readFileSync(join(root,'package.json')))===pin.packageSha256,'INTEGRATION_RUNTIME_PACKAGE_PIN');
+    requireThat(JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version===pin.version,'INTEGRATION_RUNTIME_VERSION');
+    for(const [entry,digest] of Object.entries(pin.entries))requireThat(hash(readFileSync(join(root,entry)))===digest,'INTEGRATION_RUNTIME_ENTRY_PIN');
+  }
+  const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+  const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
+  return {ledger,runtime};
+}
+function localEndpoint(value,protocol){
+  const url=new URL(value);
+  requireThat(url.protocol===protocol&&['127.0.0.1','localhost','[::1]'].includes(url.hostname)&&!url.username&&!url.password&&!url.hash,'INTEGRATION_LOCAL_ENDPOINT');
+  return url.href;
+}
+function validDeadline(value){requireThat(Number.isSafeInteger(value)&&value>Date.now(),'INTEGRATION_DEADLINE');}
+/** Read-only local JSON-RPC: one request, no redirects/retries, 64KiB body ceiling. */
+export function createLocalRpc({node,deadlineMs,fetchImpl=globalThis.fetch}){
+  const endpoint=localEndpoint(node,'http:');validDeadline(deadlineMs);requireThat(typeof fetchImpl==='function','RPC_FETCH_REQUIRED');
+  let nextId=0;
+  return async(method,params)=>{
+    requireThat(['chain_getFinalizedHead','chain_getHeader','chain_getBlockHash','midnight_contractState'].includes(method)&&Array.isArray(params),'RPC_METHOD');
+    const validParams=method==='midnight_contractState'
+      ?params.length===2&&typeof params[0]==='string'&&/^[a-f0-9]{64}$/.test(params[0])&&typeof params[1]==='string'&&/^0x[a-f0-9]{64}$/.test(params[1])
+      :method==='chain_getFinalizedHead'?params.length===0:method==='chain_getHeader'?params.length===1&&typeof params[0]==='string'&&/^0x[a-f0-9]{64}$/i.test(params[0]):params.length===1&&Number.isSafeInteger(params[0])&&params[0]>=0;
+    requireThat(validParams,'RPC_PARAMS');
+    validDeadline(deadlineMs);const id=++nextId,controller=new AbortController();let timer;
+    const operation=(async()=>{
+      const response=await fetchImpl(endpoint,{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id,method,params}),signal:controller.signal});
+      requireThat(response.ok===true&&response.body,'RPC_HTTP_STATUS');
+      const reader=response.body.getReader(),chunks=[];let size=0;
+      try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>65536){controller.abort();throw Error('RPC_BODY_LIMIT');}chunks.push(Buffer.from(value));}}
+      finally{reader.releaseLock();}
+      const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      requireThat(body?.jsonrpc==='2.0'&&body.id===id&&Object.hasOwn(body,'result')&&!Object.hasOwn(body,'error'),'RPC_RESPONSE');
+      return body.result;
+    })();
+    try{
+      const result=await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('RPC_DEADLINE'));},Math.min(deadlineMs-Date.now(),2147483647));})]);
+      // A blocked event loop can let the response win before an overdue timer.
+      requireThat(Date.now()<deadlineMs,'RPC_DEADLINE');
+      return result;
+    }
+    finally{clearTimeout(timer);controller.abort();}
+  };
+}
+const realDependencies={loadAssets:loadProvenFinancialContract,loadContractsSdk:loadFinancialContractsSdk,loadProviderSdk:loadFinancialSdk,loadNativeRuntime,prepareDeployment:prepareFinancialDeployment,initializeReservations:initializeFinancialReservations,createProviders:createFinancialProviders,createComparator:createFinancialComparator,observe:observeFinalizedStage,driver:runLocalFinancialCase,fetch:globalThis.fetch};
+/** Fixed read-only public gate. No seed, wallet, new private files or store writes.
+ * The launcher invokes this before reading wallet material; integration repeats it.
+ */
+export async function preflightLocalRecovery(plan){
+  const recovery=validateExistingLoanPlan(plan.existingDeployment,plan),deadlineMs=plan.limits.deadlineMs;
+  validDeadline(deadlineMs);let loaded;
+  try{
+    const {ledger}=await loadNativeRuntime(),sdk=await loadFinancialSdk();
+    requireThat(plan.networkConfig.networkId==='undeployed','RECOVERY_PUBLIC_NETWORK');sdk.setNetworkId('undeployed');
+    for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:']])localEndpoint(plan.networkConfig[key],protocol);
+    const {raw}=readExistingLoanInputs(recovery,ledger);
+    loaded=await loadProvenFinancialContract({case:'loan',...plan.build});
+    const rpc=(method,params,requestDeadline=deadlineMs)=>createLocalRpc({node:plan.networkConfig.node,deadlineMs:Math.min(deadlineMs,requestDeadline)})(method,params);
+    requireThat(await rpc('chain_getBlockHash',[0])==='0x'+recovery.networkTag,'RECOVERY_PUBLIC_GENESIS');
+    const {waitForLocalTip}=await import('./local-tip.mjs');
+    const readCurrentTip=(requestDeadline=deadlineMs)=>waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs:Math.min(deadlineMs,requestDeadline),exactFinality:true});
+    const tip=await readCurrentTip();
+    const provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
+    const result=await verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip,readCurrentTip});
+    loaded.assertFresh();validDeadline(deadlineMs);return result;
+  }finally{if(loaded)await loaded.cleanup();}
+}
+/** Same public-only preflight for the one already initialized loan; no private reads. */
+export async function preflightLocalInitializedLoan(plan){
+ const continuation=validateInitializedLoanPlan(plan.existingInitializedLoan,plan),deadlineMs=plan.limits.deadlineMs;validDeadline(deadlineMs);let loaded;
+ try{
+  const {ledger}=await loadNativeRuntime(),sdk=await loadFinancialSdk();
+  requireThat(plan.networkConfig.networkId==='undeployed','INITIALIZED_PUBLIC_NETWORK');sdk.setNetworkId('undeployed');
+  for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:']])localEndpoint(plan.networkConfig[key],protocol);
+  const {deployRaw,initializeRaw}=readInitializedLoanInputs(continuation,ledger);
+  loaded=await loadProvenFinancialContract({case:'loan',...plan.build});
+  const rpc=(method,params,requestDeadline=deadlineMs)=>createLocalRpc({node:plan.networkConfig.node,deadlineMs:Math.min(deadlineMs,requestDeadline)})(method,params);
+  requireThat(await rpc('chain_getBlockHash',[0])==='0x'+continuation.networkTag,'INITIALIZED_PUBLIC_GENESIS');
+  const {waitForLocalTip}=await import('./local-tip.mjs');
+  const readCurrentTip=(requestDeadline=deadlineMs)=>waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs:Math.min(deadlineMs,requestDeadline),exactFinality:true});
+  const tip=await readCurrentTip(),provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
+  const result=await verifyInitializedLoanPublic({raw:deployRaw,rawInitialize:initializeRaw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip,readCurrentTip});
+  loaded.assertFresh();validDeadline(deadlineMs);return result;
+ }finally{if(loaded)await loaded.cleanup();}
+}
+export async function preflightLocalInitializedSwap(plan){
+ const continuation=validateInitializedSwapPlan(plan.existingInitializedSwap,plan),deadlineMs=plan.limits.deadlineMs;validDeadline(deadlineMs);let loaded;
+ try{
+  const {ledger}=await loadNativeRuntime(),sdk=await loadFinancialSdk();
+  requireThat(plan.networkConfig.networkId==='undeployed','INITIALIZED_PUBLIC_NETWORK');sdk.setNetworkId('undeployed');
+  for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:']])localEndpoint(plan.networkConfig[key],protocol);
+  const {deployRaw,initializeRaw}=readInitializedSwapInputs(continuation,ledger);
+  loaded=await loadProvenFinancialContract({case:'swap',...plan.build});
+  const rpc=(method,params,requestDeadline=deadlineMs)=>createLocalRpc({node:plan.networkConfig.node,deadlineMs:Math.min(deadlineMs,requestDeadline)})(method,params);
+  requireThat(await rpc('chain_getBlockHash',[0])==='0x'+continuation.networkTag,'INITIALIZED_PUBLIC_GENESIS');
+  const {waitForLocalTip}=await import('./local-tip.mjs');
+  const readCurrentTip=(requestDeadline=deadlineMs)=>waitForLocalTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs:Math.min(deadlineMs,requestDeadline),exactFinality:true});
+  const tip=await readCurrentTip(),provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
+  const result=await verifyInitializedSwapPublic({raw:deployRaw,rawInitialize:initializeRaw,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,tip,readCurrentTip});
+  loaded.assertFresh();validDeadline(deadlineMs);return result;
+ }finally{if(loaded)await loaded.cleanup();}
+}
+const realContinuationDependencies={publicCheck:preflightLocalInitializedLoan,preserveStore:preserveInitializedLoanStore,checkPrivate:verifyInitializedLoanPrivate,
+ checkWallet({synced,binding,timestampMs,dustCap}){
+  requireThat(binding?.deployment?.transactionHash===EXISTING_LOAN.transactionHash&&binding?.initialize?.transactionHash===INITIALIZED_LOAN.transactionHash,'INITIALIZED_WALLET_HISTORY');
+  assertRecoveryWallet({synced,binding:{...binding.deployment,oldDustNullifiers:binding.oldDustNullifiers,spentUnshieldedInputs:binding.spentUnshieldedInputs},timestampMs,dustCap});
+  return assertInitializedLoanMintedOutput({synced,binding:binding.initialize});
+ }};
+const realSwapContinuationDependencies={publicCheck:preflightLocalInitializedSwap,preserveStore:preserveInitializedSwapStore,checkPrivate:verifyInitializedSwapPrivate,checkWallet:assertSwapHistoryWallet};
+const realRecoveryDependencies={publicCheck:preflightLocalRecovery,reconstruct:reconstructExistingLoan,inspectStore:inspectFailedLoanStore,checkDestination:assertEmptyRecoveryStore,restore:restoreExistingLoanPrivate,checkWallet:assertRecoveryWallet};
+async function stopWallet(wallet){
+  if(typeof wallet?.stop!=='function')return {walletStopped:false,pendingOperations:null,containmentComplete:false};
+  let timer;try{await Promise.race([Promise.resolve().then(()=>wallet.stop()),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('WALLET_CLEANUP_TIMEOUT')),5000);})]);return {walletStopped:true,pendingOperations:0,containmentComplete:false};}
+  catch{return {walletStopped:false,pendingOperations:null,containmentComplete:false};}finally{clearTimeout(timer);}
+}
+/**
+ * limits.grossByLogicalAsset uses USD_TEST_ASSET (loan), ASSET_A/ASSET_B (swap).
+ * onStage must durably retain the closed comparison and return {status:'RECORDED',stage,txId}.
+ * Explicit complete inert adapters are permitted only with sourceTestOnly:true;
+ * those invocations can never return execution/network/proof acceptance.
+ */
+export async function integrateLocalFinancialCase(options){
+  let loaded,providers,driverStarted=false,driverResult,financialComparison,failure,cleanup,phase='preflight';
+  const summaries=[],pending=new Set();
+  const wallet=options?.walletContext?.wallet;
+  let sourceTestOnly=false,limits,assetBindings,buildBinding;
+  try{
+    requireThat(options&&typeof wallet?.stop==='function','EXISTING_WALLET_CLEANUP_REQUIRED');
+    sourceTestOnly=options.sourceTestOnly===true;
+    requireThat(options.adapters===undefined||sourceTestOnly,'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST');
+    requireThat(!sourceTestOnly||options.adapters,'COMPLETE_INERT_ADAPTERS_REQUIRED');
+    const deps=sourceTestOnly?options.adapters:realDependencies;
+    for(const key of Object.keys(realDependencies))requireThat(typeof deps[key]==='function','COMPLETE_INERT_ADAPTERS_REQUIRED');
+    requireThat(options.recoveryAdapters===undefined||sourceTestOnly,'INTEGRATION_RECOVERY_ADAPTERS_REQUIRE_SOURCE_TEST');
+    requireThat(options.existingDeployment===undefined&&options.initializedLoan===undefined&&options.initializedSwap===undefined,'INTEGRATION_USE_CLOSED_RECOVERY_PLAN');
+    requireThat(options.continuationAdapters===undefined||sourceTestOnly,'INTEGRATION_CONTINUATION_ADAPTERS_REQUIRE_SOURCE_TEST');
+    requireThat(options.recoveryPlan===undefined||options.continuationPlan===undefined,'INTEGRATION_EXCLUSIVE_CONTINUATION');
+    const cp=options.continuationPlan;
+    requireThat(cp===undefined||(cp!==null&&typeof cp==='object'&&Object.getPrototypeOf(cp)===Object.prototype),'CONTINUATION_INTEGRATION_PLAN');
+    const kd=cp===undefined?undefined:Object.getOwnPropertyDescriptor(cp,'kind');
+    requireThat(cp===undefined||(kd&&Object.hasOwn(kd,'value')),'CONTINUATION_INTEGRATION_PLAN');
+    const swapContinuation=kd?.value==='swap';
+    const continuationValidator=swapContinuation?validateInitializedSwapPlan:validateInitializedLoanPlan;
+    const continuationField=swapContinuation?'existingInitializedSwap':'existingInitializedLoan';
+    const historyDeploy=swapContinuation?EXISTING_SWAP:EXISTING_LOAN,historyInitialize=swapContinuation?INITIALIZED_SWAP:INITIALIZED_LOAN;
+    if(cp!==undefined){const dd=Object.getOwnPropertyDescriptor(cp,continuationField);requireThat(dd&&Object.hasOwn(dd,'value'),'CONTINUATION_INTEGRATION_PLAN');continuationValidator(dd.value,cp);}
+    const continuationPlan=options.continuationPlan===undefined?undefined:structuredClone(options.continuationPlan);
+    const continuation=continuationPlan===undefined?undefined:continuationValidator(continuationPlan[continuationField],continuationPlan);
+    const continuationDeps=sourceTestOnly?options.continuationAdapters:(swapContinuation?realSwapContinuationDependencies:realContinuationDependencies);
+    if(continuation)for(const key of Object.keys(realContinuationDependencies))requireThat(typeof continuationDeps?.[key]==='function','COMPLETE_INERT_CONTINUATION_ADAPTERS_REQUIRED');
+    else requireThat(options.continuationAdapters===undefined,'INTEGRATION_CONTINUATION_PLAN_REQUIRED');
+    if(options.recoveryPlan!==undefined)validateExistingLoanPlan(options.recoveryPlan.existingDeployment,options.recoveryPlan);
+    const recoveryPlan=options.recoveryPlan===undefined?undefined:structuredClone(options.recoveryPlan);
+    const recovery=recoveryPlan===undefined?undefined:validateExistingLoanPlan(recoveryPlan.existingDeployment,recoveryPlan);
+    const recoveryDeps=sourceTestOnly?options.recoveryAdapters:realRecoveryDependencies;
+    if(recovery)for(const key of Object.keys(realRecoveryDependencies))requireThat(typeof recoveryDeps?.[key]==='function','COMPLETE_INERT_RECOVERY_ADAPTERS_REQUIRED');
+    else requireThat(options.recoveryAdapters===undefined,'INTEGRATION_RECOVERY_PLAN_REQUIRED');
+    const {kind}=options;requireThat(kind==='loan'||kind==='swap','INTEGRATION_KIND');
+    requireThat(options.build&&Object.keys(options.build).sort().join(',')==='receiptPath,receiptSha256,sourceManifestHash','BUILD_RECEIPT_BINDING_REQUIRED');
+    bytes(options.build.receiptSha256);bytes(options.build.sourceManifestHash);
+    buildBinding=Object.freeze({...options.build});
+    requireThat(Number.isSafeInteger(options.expectedProtocolVersion)&&options.expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
+    requireThat(typeof options.onStage==='function'&&typeof options.onEvent==='function'&&typeof options.now==='function','REVIEWED_STAGE_EVENT_TIME_CALLBACKS_REQUIRED');
+    const expectedProtocolVersion=options.expectedProtocolVersion,onStage=options.onStage,onEvent=options.onEvent,now=options.now;
+    const network=Object.freeze({...options.networkConfig});requireThat(network.networkId==='undeployed','INTEGRATION_LOCAL_NETWORK');
+    for(const [key,protocol] of [['node','http:'],['indexer','http:'],['indexerWS','ws:'],['proofServer','http:']])localEndpoint(network[key],protocol);
+    requireThat(options.roles&&Object.keys(options.roles).sort().join(',')==='firstAddress,firstSecret,secondAddress,secondSecret','ROLE_BINDING_FIELDS');
+    const roles={...options.roles,firstSecret:Uint8Array.from(options.roles?.firstSecret??[]),secondSecret:Uint8Array.from(options.roles?.secondSecret??[])};
+    requireThat(roles.firstSecret.length===32&&roles.secondSecret.length===32,'ROLE_SECRETS_REQUIRED');
+    bytes(roles.firstAddress);bytes(roles.secondAddress);requireThat(roles.firstAddress!==roles.secondAddress,'DISTINCT_PARTICIPANTS_REQUIRED');bytes(options.networkTag);
+    requireThat(options.deploymentSigningKey!==undefined,'EXISTING_DEPLOYMENT_SIGNING_KEY_REQUIRED');
+    const logicalNames=kind==='loan'?['USD_TEST_ASSET']:['ASSET_A','ASSET_B'];
+    limits={...options.limits};const logical={...limits.grossByLogicalAsset};
+    requireThat(Object.keys(logical).sort().join('|')===logicalNames.sort().join('|'),'LOGICAL_ASSET_LIMITS');
+    for(const cap of Object.values(logical))requireThat(typeof cap==='bigint'&&cap>=0n,'LOGICAL_ASSET_CAP');
+    requireThat(!Object.hasOwn(limits,'grossByAsset'),'ALREADY_BOUND_ASSET_LIMITS_FORBIDDEN');
+    validDeadline(limits.deadlineMs);
+    requireThat(Number.isSafeInteger(limits.submissions)&&limits.submissions>0&&typeof limits.dustFee==='bigint'&&limits.dustFee>=0n,'FINANCIAL_LIMITS');
+    const checkDeadline=()=>validDeadline(limits.deadlineMs);
+    if(recovery){
+      requireThat(kind===recoveryPlan.kind&&isDeepStrictEqual(buildBinding,recoveryPlan.build)&&isDeepStrictEqual(network,recoveryPlan.networkConfig)&&options.networkTag===recoveryPlan.networkTag&&expectedProtocolVersion===recoveryPlan.expectedProtocolVersion,'RECOVERY_INTEGRATION_BINDING');
+      requireThat(roles.firstAddress===recoveryPlan.roles.firstAddress&&roles.secondAddress===recoveryPlan.roles.secondAddress&&options.walletContext.unshieldedKeystore.getBech32Address().toString()===recoveryPlan.wallet.expectedAddress,'RECOVERY_INTEGRATION_ROLES');
+      requireThat(options.privateStateConfig&&Object.keys(options.privateStateConfig).sort().join(',')==='midnightDbName,privateStateStoreName,privateStoragePasswordProvider'&&options.privateStateConfig.midnightDbName===recovery.destinationDirectory&&options.privateStateConfig.privateStateStoreName==='sp05-loan','RECOVERY_INTEGRATION_STORE');
+      requireThat(limits.allocationId===recoveryPlan.limits.allocationId&&limits.deadlineMs===recoveryPlan.limits.deadlineMs&&limits.submissions===3&&limits.dustFee===BigInt(recoveryPlan.limits.dustFee)&&logical.USD_TEST_ASSET===BigInt(recoveryPlan.limits.grossByLogicalAsset.USD_TEST_ASSET)&&limits.reservationStatePath===join(recoveryPlan.outputDirectory,'reservations.json'),'RECOVERY_INTEGRATION_LIMITS');
+    }
+    if(continuation){
+      requireThat(kind===continuationPlan.kind&&isDeepStrictEqual(buildBinding,continuationPlan.build)&&isDeepStrictEqual(network,continuationPlan.networkConfig)&&options.networkTag===continuationPlan.networkTag&&expectedProtocolVersion===continuationPlan.expectedProtocolVersion,'CONTINUATION_INTEGRATION_BINDING');
+      requireThat(roles.firstAddress===continuationPlan.roles.firstAddress&&roles.secondAddress===continuationPlan.roles.secondAddress&&options.walletContext.unshieldedKeystore.getBech32Address().toString()===continuationPlan.wallet.expectedAddress,'CONTINUATION_INTEGRATION_ROLES');
+      requireThat(options.privateStateConfig&&Object.keys(options.privateStateConfig).sort().join(',')==='midnightDbName,privateStateStoreName,privateStoragePasswordProvider'&&options.privateStateConfig.midnightDbName===continuation.privateStateDirectory&&options.privateStateConfig.privateStateStoreName==='sp05-'+kind,'CONTINUATION_INTEGRATION_STORE');
+      requireThat(limits.allocationId===continuationPlan.limits.allocationId&&limits.deadlineMs===continuationPlan.limits.deadlineMs&&limits.submissions===2&&limits.dustFee===BigInt(continuationPlan.limits.dustFee)&&Object.keys(logical).every(k=>logical[k]===BigInt(continuationPlan.limits.grossByLogicalAsset[k]))&&limits.reservationStatePath===join(continuationPlan.outputDirectory,'reservations.json'),'CONTINUATION_INTEGRATION_LIMITS');
+    }
+    async function within(label,fn){
+      checkDeadline();let timer;const operation=Promise.resolve().then(()=>{checkDeadline();return fn();});pending.add(operation);operation.then(()=>pending.delete(operation),()=>pending.delete(operation));
+      try{const value=await Promise.race([operation,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('INTEGRATION_DEADLINE_'+label)),Math.min(limits.deadlineMs-Date.now(),2147483647));})]);checkDeadline();return value;}finally{clearTimeout(timer);}
+    }
+    const sdk=await within('runtime',()=>deps.loadProviderSdk()),{ledger,runtime}=await within('native',()=>deps.loadNativeRuntime());
+    const payer=ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey());
+    const checkBinding=()=>{checkDeadline();requireThat(sdk.getNetworkId()==='undeployed'&&ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey())===roles.firstAddress,'INTEGRATION_WALLET_NETWORK_BINDING');};
+    checkBinding();requireThat(payer===roles.firstAddress,'INTEGRATION_PAYER');
+    phase='load-assets';loaded=await within('assets',()=>deps.loadAssets({case:kind,...buildBinding}));
+    const assertFresh=()=>{checkBinding();loaded.assertFresh();};assertFresh();
+    const sourceBindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url),'utf8'))[kind];
+    const program=bytes(sourceBindings.programDigest),networkTag=options.networkTag;
+    const FreshZkProvider=class extends sdk.NodeZkConfigProvider{constructor(path){super(path);return new Proxy(this,{get(target,key){const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;return(...args)=>{assertFresh();const result=value.apply(target,args);return result?.then?result.then(value=>{assertFresh();return value;}):result;};}});}};
+    const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
+    const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
+    const constructorArgs=[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)];
+    let prepared,verifiedPrivate,checkedContinuation,comparator;
+    const historicalSummaries=new Map();
+    const compareAndRetain=async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const publicSummary=structuredClone(summary);const stored=await onStage(structuredClone(publicSummary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(publicSummary);return summary;};
+    if(continuation){
+      phase='continuation-public';checkedContinuation=await within('continuation-public',()=>continuationDeps.publicCheck(continuationPlan));
+      requireThat(checkedContinuation?.status==='INITIALIZED_PUBLIC_STATE_VERIFIED'&&checkedContinuation.deploymentObservation?.receipt?.txId===historyDeploy.txId&&checkedContinuation.initializeObservation?.receipt?.txId===historyInitialize.txId,'CONTINUATION_PUBLIC_RESULT');
+      phase='continuation-wallet';const synced=await within('continuation-sync',()=>wallet.waitForSyncedState());
+      continuationDeps.checkWallet({synced,binding:checkedContinuation.binding,timestampMs:checkedContinuation.tip.timestampMs,dustCap:limits.dustFee});checkDeadline();
+      phase='continuation-history';comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+      for(const [stage,observation] of [['deploy',checkedContinuation.deploymentObservation],['initialize',checkedContinuation.initializeObservation]])historicalSummaries.set(stage,await within('history-'+stage,()=>compareAndRetain(stage,observation)));
+      if(swapContinuation){phase='continuation-mint';assertInitializedSwapMintedOutput({receipt:checkedContinuation.initializeObservation.receipt,roles,assetBindings:{ASSET_A:runtime.rawTokenType(bytes(sourceBindings.assetADomain),historyInitialize.contractAddress),ASSET_B:runtime.rawTokenType(bytes(sourceBindings.assetBDomain),historyInitialize.contractAddress)},synced});checkDeadline();}
+      phase='continuation-preserve';const preserved=await within('continuation-preserve',()=>continuationDeps.preserveStore({sourceDirectory:continuation.privateStateDirectory,snapshotDirectory:continuation.snapshotDirectory,inspectionDirectory:continuation.inspectionDirectory,accountId:options.walletContext.unshieldedKeystore.getBech32Address().toString()}));requireThat(preserved?.status==='PRESERVED','CONTINUATION_STORE_PRESERVATION');
+    }else if(recovery){
+      phase='recovery-public';const checked=await within('recovery-public',()=>recoveryDeps.publicCheck(recoveryPlan));
+      phase='recovery-wallet';const synced=await within('recovery-sync',()=>wallet.waitForSyncedState());
+      recoveryDeps.checkWallet({synced,binding:checked.binding,timestampMs:checked.tip.timestampMs,dustCap:limits.dustFee});checkDeadline();
+      phase='recovery-constructor';verifiedPrivate=await within('recovery-constructor',()=>recoveryDeps.reconstruct({compiledContract:loaded.compiledContract,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),coinPublicKey:publicWalletProvider.getCoinPublicKey(),signingKey:options.deploymentSigningKey,args:constructorArgs,ledger}));
+      phase='recovery-store';await within('recovery-store',()=>recoveryDeps.inspectStore({sourceDirectory:recovery.sourcePrivateStateDirectory,inspectionDirectory:recovery.inspectionDirectory,accountId:options.walletContext.unshieldedKeystore.getBech32Address().toString()}));
+    }else{
+      phase='prepare-deployment';
+      prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:constructorArgs},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
+    }
+    const contractAddress=continuation?historyInitialize.contractAddress:recovery?EXISTING_LOAN.contractAddress:prepared.public.contractAddress;bytes(contractAddress);assertFresh();
+    const domains=kind==='loan'?{USD_TEST_ASSET:sourceBindings.usdDomain}:{ASSET_A:sourceBindings.assetADomain,ASSET_B:sourceBindings.assetBDomain};
+    const grossByAsset={};assetBindings={};
+    for(const name of Object.keys(domains)){const color=runtime.rawTokenType(bytes(domains[name]),contractAddress);bytes(color);requireThat(!Object.hasOwn(grossByAsset,color),'ASSET_COLOR_COLLISION');grossByAsset[color]=logical[name];assetBindings[name]=color;}
+    delete limits.grossByLogicalAsset;limits=Object.freeze({...limits,grossByAsset:Object.freeze(grossByAsset)});
+    const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
+    if(recovery){phase='recovery-destination';recoveryDeps.checkDestination(recovery.destinationDirectory);checkDeadline();}
+    phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
+    phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
+    if(continuation){phase='continuation-private';const checked=await within('continuation-private',()=>continuationDeps.checkPrivate({provider:providers.privateStateProvider,signingKey:options.deploymentSigningKey,contractState:checkedContinuation.initializeContractState,ledger}));requireThat(checked?.status==='PRIVATE_STATE_CHECKED','CONTINUATION_PRIVATE_RESULT');}
+    if(recovery){phase='recovery-restore';await within('recovery-restore',()=>recoveryDeps.restore(providers.privateStateProvider,verifiedPrivate));}
+    const rpc=(method,params,requestDeadline=limits.deadlineMs)=>createLocalRpc({node:network.node,deadlineMs:Math.min(limits.deadlineMs,requestDeadline),fetchImpl:deps.fetch})(method,params);
+    comparator??=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion}));
+    const freshDriverSdk=(recovery||continuation)?{submitCallTx(...args){assertFresh();return contractsSdk.submitCallTx(...args);}}:{deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
+    phase='driver';driverStarted=true;
+    let driverFailure;
+    try{
+      driverResult=await deps.driver({kind,network:'undeployed',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshDriverSdk,
+        ...(recovery?{existingDeployment:{contractAddress,txId:EXISTING_LOAN.txId}}:{}),
+        ...(continuation?{[swapContinuation?'initializedSwap':'initializedLoan']:{contractAddress,deployTxId:historyDeploy.txId,initializeTxId:historyInitialize.txId}}:{}),
+        observe:({circuitId,txId,contractAddress:observedAddress})=>{assertFresh();requireThat(observedAddress===contractAddress,'PREPARED_OBSERVED_ADDRESS_MISMATCH');if(continuation&&['deploy','initialize'].includes(circuitId)){const observation=circuitId==='deploy'?checkedContinuation.deploymentObservation:checkedContinuation.initializeObservation;requireThat(observation.receipt.txId===txId,'CONTINUATION_HISTORY_ID');return observation;}return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress:observedAddress,decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
+        verifyStage:async(stage,observation)=>{
+          if(continuation&&historicalSummaries.has(stage)){requireThat(observation===(stage==='deploy'?checkedContinuation.deploymentObservation:checkedContinuation.initializeObservation),'CONTINUATION_HISTORY_OBSERVATION');return historicalSummaries.get(stage);}
+          const summary=await compareAndRetain(stage,observation);
+          if(kind==='swap'&&stage==='initialize'){
+            const synced=await within('swap-wallet-sync',()=>wallet.waitForSyncedState());
+            assertSwapInitializedWallet({receipt:observation.receipt,roles,assetBindings,synced});checkDeadline();
+          }
+          return summary;
+        }});
+    }catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}
+    finally{if(summaries.length===4){try{financialComparison=comparator.finish();}catch(error){if(!driverFailure)throw error;}}}
+    driverResult={...driverResult,assetBindings};
+  }catch(error){failure=error instanceof Error?error:Error('INTEGRATION_FAILED');}
+  finally{
+    if(!driverStarted || !driverResult?.cleanup){
+      if(providers){try{cleanup=await providers.cleanup();}catch{cleanup=await stopWallet(wallet);}}
+      else cleanup=await stopWallet(wallet);
+    }else cleanup=driverResult?.cleanup;
+    if(loaded){try{await loaded.cleanup();}catch{failure??=Error('ASSET_LOADER_CLEANUP_FAILED');}}
+  }
+  const publicResult={schema:'moriarty.local-financial-integration/1',status:failure?(driverResult?.status??'FAILED'):sourceTestOnly?'SOURCE_TEST_ONLY':driverResult.status,kind:['loan','swap'].includes(options?.kind)?options.kind:null,sourceTestOnly,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,
+    build:buildBinding?{receiptSha256:buildBinding.receiptSha256,sourceManifestHash:buildBinding.sourceManifestHash}:undefined,assetBindings,phase,driver:driverResult,cleanup,setupPendingOperations:pending.size,comparisons:summaries,financialComparison,...(failure?{failureCode:integrationFailureCode(failure)}:{}),
+    scope:'Fixed I2 composition; source adapters and incomplete containment never establish financial network acceptance'};
+  if(failure){failure.publicIntegrationResult=publicResult;throw failure;}
+  return publicResult;
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/finalized-state-rpc.test.mjs SHA256 d42dc047f25a20348ce61c28aa49a0938023409b5e2a263a7b8ed2af6d0ad50f ===
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createLocalRpc} from './integrate-local.mjs';
+
+const address='33'.repeat(32), block='0x'+'ab'.repeat(32);
+function fixture(result='aabb') {
+  const requests=[];
+  const rpc=createLocalRpc({node:'http://127.0.0.1:9944',deadlineMs:Date.now()+1000,
+    fetchImpl:async(url,options)=>{
+      const body=JSON.parse(options.body);requests.push({url,options,body});
+      return Response.json({jsonrpc:'2.0',id:body.id,result});
+    }});
+  return {rpc,requests};
+}
+test('local state RPC sends exact contract and explicit block in one read request',async()=>{
+  const f=fixture();assert.equal(await f.rpc('midnight_contractState',[address,block]),'aabb');
+  assert.equal(f.requests.length,1);
+  assert.deepEqual(f.requests[0].body,{jsonrpc:'2.0',id:1,method:'midnight_contractState',params:[address,block]});
+  assert.equal(f.requests[0].options.redirect,'error');assert.equal(f.requests[0].options.method,'POST');
+  assert.equal(f.requests[0].options.signal.aborted,true);
+});
+test('local state RPC rejects absent block, malformed identity and extra arguments before fetch',async()=>{
+  const f=fixture();
+  for(const params of [[],[address],[address,null],[address,'latest'],[address,block,0],['0x'+address,block],[address.toUpperCase().replace('3','G'),block],['ab'.repeat(31),block],[address,'ab'.repeat(32)]]) {
+    await assert.rejects(f.rpc('midnight_contractState',params),/RPC_PARAMS/);
+  }
+  assert.equal(f.requests.length,0);
+});
+test('state query capability does not admit transaction writes',async()=>{
+  const f=fixture();await assert.rejects(f.rpc('author_submitExtrinsic',[address]),/RPC_METHOD/);assert.equal(f.requests.length,0);
+});
+test('state query retains the response size limit and performs no retry',async()=>{
+  const f=fixture('ab'.repeat(32768));await assert.rejects(f.rpc('midnight_contractState',[address,block]),/RPC_BODY_LIMIT/);assert.equal(f.requests.length,1);
+});
+test('unsupported state method error propagates without an unpinned fallback',async()=>{
+  let calls=0;
+  const rpc=createLocalRpc({node:'http://127.0.0.1:9944',deadlineMs:Date.now()+1000,fetchImpl:async(_url,options)=>{
+    calls++;const {id}=JSON.parse(options.body);return Response.json({jsonrpc:'2.0',id,error:{code:-32601,message:'Method not found'}});
+  }});
+  await assert.rejects(rpc('midnight_contractState',[address,block]),/RPC_RESPONSE/);assert.equal(calls,1);
+});
+test('RPC rejects a valid response completed after its absolute deadline before its timer fires',async t=>{
+  const start=Date.now(),deadlineMs=start+1000;let clock=start,calls=0,signal;
+  t.mock.method(Date,'now',()=>clock);
+  const rpc=createLocalRpc({node:'http://127.0.0.1:9944',deadlineMs,fetchImpl:async(_url,options)=>{
+    calls++;signal=options.signal;const {id}=JSON.parse(options.body);
+    clock=deadlineMs+1;
+    return Response.json({jsonrpc:'2.0',id,result:'aabb'});
+  }});
+  await assert.rejects(rpc('midnight_contractState',[address,block]),/RPC_DEADLINE/);
+  assert.equal(calls,1);assert.equal(signal.aborted,true);
+});
+
+
+=== FILE experiments/moriarty-midnight-financial/package.json SHA256 5ddbffe32583f1f46d00824c0245af5fdb8775850fed025650477c5b7026fa7e ===
+{
+  "name": "moriarty-midnight-financial",
+  "private": true,
+  "type": "module",
+  "description": "Fixed Moriarty loan/swap comparisons and local Midnight integration modules. Financial network acceptance and mandatory PCD remain separate gates.",
+  "scripts": {
+    "test": "node --test --test-reporter=tap tests/*.test.mjs",
+    "test:ledger": "node --test --test-reporter=tap ledger/build-proven.test.mjs ledger/continue-initialized-loan.test.mjs ledger/continue-initialized-swap.test.mjs ledger/continue-loan-plan.test.mjs ledger/contract-balances.test.mjs ledger/financial-comparison.test.mjs ledger/initialized-swap-driver.test.mjs ledger/initialized-swap-integration.test.mjs ledger/initialized-swap-public.test.mjs ledger/initialized-swap-store.test.mjs ledger/integrate-local.test.mjs ledger/integration-negative.test.mjs ledger/launch-local.test.mjs ledger/local-tip.test.mjs ledger/preflight-recovery.test.mjs ledger/prepare-deployment.test.mjs ledger/proven-assets.test.mjs ledger/provider-native-balances.test.mjs ledger/providers.test.mjs ledger/receipt-native-balances.test.mjs ledger/receipt.test.mjs ledger/recover-deployment.test.mjs ledger/recover-store.test.mjs ledger/run-local.test.mjs ledger/swap-wallet.test.mjs",
+    "test:compiled": "node --test --test-reporter=tap ledger/compiled-comparison.test.mjs",
+    "build": "node ledger/build-proven.mjs",
+    "test:compiled-rejection": "node --experimental-test-module-mocks --test --test-reporter=tap ledger/compiled-rejection.test.mjs",
+    "test:finalized-state": "node --test --test-reporter=tap ledger/finalized-financial-state.test.mjs ledger/finalized-state-rpc.test.mjs"
+  },
+  "engines": {
+    "node": ">=24.18.1"
+  }
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/receipt.mjs SHA256 ae0fd41e68e8effe80e02c5c85b331bc564f9c5a2792bdd6f38f3fb4bf5c2a44 ===
+import {extractNativeContractBalances} from './contract-balances.mjs';
+import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
+import {decodeLocalIndexedOwner} from './indexed-owner.mjs';
+
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+function requireThat(ok, code) { if (!ok) throw new Error(code); }
+function hex(value, label) {
+  requireThat(typeof value === 'string' && /^[0-9a-f]{64}$/.test(value), `INVALID_${label}`);
+  return value;
+}
+function amount(value, label) {
+  requireThat(typeof value === 'bigint' && value >= 0n && value < 1n << 128n, `INVALID_${label}`);
+  return value.toString();
+}
+function decimal(value, label) {
+  requireThat(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), `INVALID_${label}`);
+  return amount(BigInt(value),label);
+}
+function sorted(value) { return value.map(item=>JSON.stringify(item)).sort(); }
+
+/** Closed public projection of the pinned ledger Effects type. */
+export function projectTranscriptEffects(effects) {
+  const arrays=['claimedNullifiers','claimedShieldedReceives','claimedShieldedSpends','claimedContractCalls'];
+  const maps=['shieldedMints','unshieldedMints','unshieldedInputs','unshieldedOutputs','claimedUnshieldedSpends'];
+  requireThat(effects && Object.keys(effects).length===arrays.length+maps.length,'EFFECT_SHAPE');
+  for(const key of arrays) requireThat(Array.isArray(effects[key]) && effects[key].length===0,'UNSUPPORTED_EFFECT_'+key);
+  for(const key of maps) requireThat(effects[key] instanceof Map,'EFFECT_MAP_'+key);
+  requireThat(effects.shieldedMints.size===0,'UNSUPPORTED_SHIELDED_MINT');
+  function token(type) {requireThat(type?.tag==='unshielded','UNSUPPORTED_EFFECT_TOKEN');return hex(type.raw,'EFFECT_ASSET');}
+  function quantities(map,key) {
+    const result={};for(const [type,value] of map) {const id=key(type);requireThat(!(id in result),'DUPLICATE_EFFECT_ASSET');result[id]=amount(value,'EFFECT_AMOUNT');}return result;
+  }
+  return {
+    unshieldedMints:quantities(effects.unshieldedMints,x=>hex(x,'MINT_DOMAIN')),
+    unshieldedInputs:quantities(effects.unshieldedInputs,token),
+    unshieldedOutputs:quantities(effects.unshieldedOutputs,token),
+    claimedUnshieldedSpends:[...effects.claimedUnshieldedSpends].map(([key,value])=>{
+      requireThat(Array.isArray(key)&&key.length===2&&['user','contract'].includes(key[1]?.tag),'EFFECT_PAYOUT_SHAPE');
+      return {type:token(key[0]),recipientKind:key[1].tag,recipient:hex(key[1].address,'PAYOUT_ADDRESS'),amount:amount(value,'PAYOUT_AMOUNT')};
+    }),
+  };
+}
+
+/** Decode native public transaction bytes; this does not verify ZK proofs or ledger acceptance. */
+export function decodeNativeFinancialTransaction(raw, ledger) {
+  requireThat(raw instanceof Uint8Array && raw.length > 0 && raw.length <= 16*1024*1024,'TRANSACTION_BYTES');
+  const tx=ledger.Transaction.deserialize('signature','proof','binding',raw);
+  requireThat(Buffer.from(raw).equals(Buffer.from(tx.serialize())),'NONCANONICAL_TRANSACTION');
+  requireThat(!tx.rewards && !tx.guaranteedOffer && (!tx.fallibleOffer || tx.fallibleOffer.size===0),'UNSUPPORTED_SHIELDED_OR_REWARD');
+  requireThat(tx.intents instanceof Map && tx.intents.size > 0,'MISSING_INTENTS');
+  const inputs=[], outputs=[], actions=[], grossByAsset={}; const spent=new Set();
+  let dustFee=0n;
+  for (const [segment,intent] of tx.intents) {
+    requireThat(Number.isInteger(segment) && segment>=0 && segment<=65535,'INVALID_SEGMENT');
+    const signatureData=intent.signatureData(segment);
+    for (const [section,offer] of [['guaranteed',intent.guaranteedUnshieldedOffer],['fallible',intent.fallibleUnshieldedOffer]]) {
+      if (!offer) continue;
+      // Guaranteed offers execute in segment0 even when their intent is stored
+      // under a nonzero physical segment; fallible offers use that segment.
+      const intentHash=hex(intent.intentHash(section==='guaranteed'?0:segment),'INTENT_HASH');
+      requireThat(offer.signatures.length===offer.inputs.length,'INPUT_SIGNATURE_COUNT');
+      for (const [index,input] of offer.inputs.entries()) {
+        const owner=hex(ledger.addressFromKey(input.owner),'INPUT_OWNER');
+        requireThat(ledger.verifySignature(input.owner,signatureData,offer.signatures[index])===true,'MISSING_OR_INVALID_INPUT_SIGNATURE');
+        const type=hex(input.type,'INPUT_ASSET'), value=amount(input.value,'INPUT_VALUE');
+        const origin=hex(input.intentHash,'INPUT_ORIGIN');
+        requireThat(Number.isSafeInteger(input.outputNo) && input.outputNo>=0,'INVALID_OUTPUT_NUMBER');
+        const id=`${origin}:${input.outputNo}`; requireThat(!spent.has(id),'DUPLICATE_INPUT'); spent.add(id);
+        inputs.push({segment,section,owner,type,value,intentHash:origin,outputNo:input.outputNo});
+        grossByAsset[type]=(BigInt(grossByAsset[type]??'0')+input.value).toString();
+      }
+      offer.outputs.forEach((output,index)=>outputs.push({segment,section,owner:hex(output.owner,'OUTPUT_OWNER'),type:hex(output.type,'OUTPUT_ASSET'),value:amount(output.value,'OUTPUT_VALUE'),intentHash,offerIndex:index}));
+    }
+    for (const action of intent.actions) {
+      if (action instanceof ledger.ContractCall) {
+        const entryPoint=typeof action.entryPoint==='string'?action.entryPoint:Buffer.from(action.entryPoint).toString('hex');
+        const transcripts=[];
+        for(const [section,transcript] of [['guaranteed',action.guaranteedTranscript],['fallible',action.fallibleTranscript]]) {
+          if(transcript) transcripts.push({section,effects:projectTranscriptEffects(transcript.effects)});
+        }
+        actions.push({segment,kind:'call',address:hex(action.address,'CONTRACT_ADDRESS'),entryPoint,transcripts});
+      } else if (action instanceof ledger.ContractDeploy) {
+        actions.push({segment,kind:'deploy',address:hex(action.address,'CONTRACT_ADDRESS')});
+      } else throw new Error('UNSUPPORTED_CONTRACT_ACTION');
+    }
+    if (intent.dustActions) {
+      requireThat(intent.dustActions.registrations.length===0,'UNSUPPORTED_DUST_REGISTRATION');
+      for (const spend of intent.dustActions.spends) dustFee+=BigInt(amount(spend.vFee,'DUST_FEE'));
+    }
+  }
+  return {schema:'moriarty.native-financial-transaction/1',rawSha256:hash(raw),transactionHash:tx.transactionHash(),identifiers:[...tx.identifiers()],inputs,outputs,actions,grossByAsset,dustFee:dustFee.toString(),proofVerified:false,ledgerAccepted:false};
+}
+
+/** A shared absolute deadline; a timed-out observation is unknown, never successful. */
+export async function beforeDeadline(operation, deadlineMs) {
+  requireThat(Number.isSafeInteger(deadlineMs) && deadlineMs>Date.now(),'DEADLINE_EXPIRED');
+  let timer;
+  try {
+    return await Promise.race([Promise.resolve().then(operation),new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error('OBSERVATION_TIMEOUT_UNKNOWN')),deadlineMs-Date.now());
+    })]);
+  } finally { clearTimeout(timer); }
+}
+
+function indexedRows(rows) {
+  requireThat(Array.isArray(rows),'MISSING_INDEXED_UTXOS');
+  return rows.map(x=>({owner:decodeLocalIndexedOwner(x.owner),type:hex(x.tokenType,'INDEXED_ASSET'),value:amount(x.value,'INDEXED_VALUE'),intentHash:hex(x.intentHash,'INDEXED_INTENT')}));
+}
+
+function nativeRows(rows) {
+  return rows.map(({owner,type,value,intentHash})=>({owner,type,value,intentHash}));
+}
+
+/**
+ * Read one confirmed stage through pinned SDK/RPC APIs. Observations come from
+ * finalized bytes and block-pinned state, never from an expected financial fixture.
+ * The RPC/indexer remain explicit external trust dependencies.
+ */
+export async function observeFinalizedStage({provider,rpc,ledger,txId,contractAddress,circuitId,decodeState,deadlineMs,expectedProtocolVersion}) {
+  hex(contractAddress,'CONTRACT_ADDRESS');
+  requireThat(Number.isSafeInteger(expectedProtocolVersion) && expectedProtocolVersion>=0,'EXPECTED_PROTOCOL_VERSION_REQUIRED');
+  requireThat(typeof txId==='string' && txId.length>0,'TX_ID');
+  const wait=op=>beforeDeadline(op,deadlineMs);
+  const data=await wait(()=>provider.watchForTxData(txId));
+  requireThat(data.status==='SucceedEntirely','TRANSACTION_STATUS');
+  requireThat(data.tx instanceof ledger.Transaction,'NATIVE_TRANSACTION_REQUIRED');
+  const decoded=decodeNativeFinancialTransaction(data.tx.serialize(),ledger);
+  requireThat(decoded.identifiers.includes(txId) && data.txId===txId,'TRANSACTION_ID_MISMATCH');
+  requireThat(isDeepStrictEqual([...data.identifiers].sort(),[...decoded.identifiers].sort()),'IDENTIFIERS_MISMATCH');
+  requireThat(decoded.transactionHash===data.txHash,'TRANSACTION_HASH_MISMATCH');
+  requireThat(decoded.actions.length===1,'CONTRACT_ACTION_COUNT');
+  const action=decoded.actions[0];
+  requireThat(action.address===contractAddress && (circuitId==='deploy'?action.kind==='deploy':action.kind==='call' && action.entryPoint===circuitId),'CONTRACT_ACTION_MISMATCH');
+  requireThat(data.segmentStatusMap===undefined || [...data.segmentStatusMap.values()].every(s=>s==='SegmentSuccess'),'SEGMENT_FAILURE');
+  requireThat(Number.isSafeInteger(data.blockHeight) && data.blockHeight>=0,'BLOCK_HEIGHT');
+  const blockHash=hex(data.blockHash,'BLOCK_HASH');
+  // Indexed inclusion can precede node finality. Wait only for read-only
+  // finality progress, under both the existing caller and a 60-second bound.
+  const finalityStop=Math.min(deadlineMs,Date.now()+60000);
+  let finalizedHead,finalizedHeight,previous;
+  for(let sample=0;sample<60&&Date.now()<finalityStop;sample++){
+    const requestDeadline=Math.min(finalityStop,Date.now()+5000);
+    const readRpc=(method,params)=>beforeDeadline(()=>rpc(method,params,requestDeadline),requestDeadline);
+    finalizedHead=await readRpc('chain_getFinalizedHead',[]);
+    requireThat(typeof finalizedHead==='string'&&/^0x[a-f0-9]{64}$/.test(finalizedHead),'FINALIZED_HASH');
+    const header=await readRpc('chain_getHeader',[finalizedHead]);
+    requireThat(typeof header?.number==='string'&&/^0x[0-9a-f]+$/i.test(header.number),'FINALIZED_HEADER');
+    finalizedHeight=Number(BigInt(header.number));
+    requireThat(Number.isSafeInteger(finalizedHeight)&&finalizedHeight>=0,'FINALIZED_HEIGHT');
+    if(previous){
+      requireThat(finalizedHeight>=previous.height&&(finalizedHeight!==previous.height||finalizedHead===previous.hash),'FINALITY_REGRESSION');
+      if(finalizedHeight>previous.height)requireThat(await readRpc('chain_getBlockHash',[previous.height])===previous.hash,'FINALITY_CANONICAL_MISMATCH');
+    }
+    if(finalizedHeight>=data.blockHeight)break;
+    previous={height:finalizedHeight,hash:finalizedHead};
+    if(Date.now()<finalityStop)await beforeDeadline(()=>new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(1,finalityStop-Date.now()-1)))),finalityStop);
+  }
+  requireThat(Number.isSafeInteger(finalizedHeight)&&finalizedHeight>=data.blockHeight,'NOT_FINALIZED');
+  requireThat(finalizedHeight!==data.blockHeight||finalizedHead==='0x'+blockHash,'NONCANONICAL_FINALIZED_BLOCK');
+  const canonical=await wait(()=>rpc('chain_getBlockHash',[data.blockHeight]));
+  requireThat(typeof canonical==='string' && canonical.replace(/^0x/,'')===blockHash,'NONCANONICAL_BLOCK');
+  requireThat(Number.isInteger(data.protocolVersion) && data.protocolVersion===expectedProtocolVersion,'UNSUPPORTED_PROTOCOL');
+  const paidFees=decimal(data.fees?.paidFees,'PAID_FEES');
+  const estimatedFees=decimal(data.fees?.estimatedFees,'ESTIMATED_FEES');
+  // Native vFee includes the wallet-selected fee resource debit. The indexer
+  // strings have no verified encoding/overhead relationship to that debit.
+  // Historical public replay demonstrates unequal values for a successful call.
+  // Retain both; authorization charges the full native amount without refunds.
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.spent)),sorted(nativeRows(decoded.inputs))),'INDEXED_INPUTS_MISMATCH');
+  requireThat(isDeepStrictEqual(sorted(indexedRows(data.unshielded?.created)),sorted(nativeRows(decoded.outputs))),'INDEXED_OUTPUTS_MISMATCH');
+  const config={type:'blockHash',blockHash};
+  const state=await wait(()=>provider.queryContractState(contractAddress,config));
+  requireThat(state!==null && state!==undefined,'MISSING_CONTRACT_STATE');
+  // Complete public balances belong to the same exact-block native state.
+  // The separate indexer projection omitted actual swap reserves in retained
+  // evidence. Do not substitute that projection for native contract balances.
+  const contractBalances=extractNativeContractBalances({state});
+  // Keep decoded contract state separate and private to the comparator. No
+  // uncontrolled caller object is spread into the publishable receipt.
+  return {receipt:{schema:'moriarty.finalized-financial-stage/1',txId,contractAddress,circuitId,transaction:decoded,blockHash,blockHeight:data.blockHeight,finalizedHead,finalizedHeight,protocolVersion:data.protocolVersion,indexerIdentifiers:[...data.identifiers],fees:{nativeDebit:{asset:'DUST',unit:'SPECK',amount:decoded.dustFee},indexerReported:{paid:paidFees,estimated:estimatedFees,sourceUnitLabel:'DUST',encoding:'unresolved',nativeDebitRelationship:'unresolved'}},contractBalances,acceptance:'uncertified-I2-observation'},state:decodeState(state.data)};
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/contract-balances.mjs SHA256 6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1 ===
+/** Public state is produced by the SDK Compact runtime; transactions use a
+ * different ledger runtime. Bind the state class to the actual provider import.
+ * These direct package/entry pins are not a transitive supply-chain attestation.
+ * Import reads only public installed code, never providers, wallets or secrets.
+ */
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+const root=PINNED_NM+'/@midnight-ntwrk/';
+const pins={
+ 'midnight-js-protocol/package.json':'bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd',
+ 'midnight-js-protocol/dist/compact-runtime.mjs':'24e261044bcf1b12452393d31a0d1965335397e03a32b288822ffd06fb1c012b',
+ 'compact-runtime/package.json':'ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c',
+ 'compact-runtime/dist/index.js':'c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde'
+};
+for(const [path,digest] of Object.entries(pins))if(createHash('sha256').update(readFileSync(root+path)).digest('hex')!==digest)throw Error('CONTRACT_BALANCE_RUNTIME_PIN');
+const {ContractState:ProviderContractState}=await import(pathToFileURL(root+'midnight-js-protocol/dist/compact-runtime.mjs').href);
+export const CONTRACT_BALANCE_FAILURE_CODES=Object.freeze(['RUNTIME_PIN','STATE','MAP','COUNT','TOKEN','TOKEN_FIELDS','AMOUNT','DUPLICATE'].map(x=>'CONTRACT_BALANCE_'+x));
+const check=(ok,label)=>{if(!ok)throw Error('CONTRACT_BALANCE_'+label);};
+const mapSize=Object.getOwnPropertyDescriptor(Map.prototype,'size').get;
+export function extractNativeContractBalances({state}){
+ check(state instanceof ProviderContractState,'STATE');
+ return projectUnshieldedContractBalanceMap(state.balance);
+}
+/** Pure map projection; establishes no state identity, provenance or dispatch. */
+export function projectUnshieldedContractBalanceMap(balances){
+ check(balances instanceof Map,'MAP');
+ const size=mapSize.call(balances);check(Number.isSafeInteger(size)&&size>=0&&size<=4096,'COUNT');
+ const result={};let count=0;
+ // Use the actual Map iterator, not caller-overridden iterable methods.
+ for(const [token,amount] of Map.prototype.entries.call(balances)){
+  check(++count<=4096,'COUNT');
+  check(token&&Object.getPrototypeOf(token)===Object.prototype,'TOKEN');
+  const fields=Object.getOwnPropertyDescriptors(token);
+  check(Reflect.ownKeys(fields).length===2&&Object.hasOwn(fields,'tag')&&Object.hasOwn(fields,'raw')&&Object.hasOwn(fields.tag,'value')&&Object.hasOwn(fields.raw,'value'),'TOKEN_FIELDS');
+  const tag=fields.tag.value,raw=fields.raw.value;
+  check(tag==='unshielded'&&typeof raw==='string'&&/^[a-f0-9]{64}$/.test(raw),'TOKEN');
+  check(typeof amount==='bigint'&&amount>=0n&&amount<(1n<<128n),'AMOUNT');
+  check(!Object.hasOwn(result,raw),'DUPLICATE');result[raw]=amount.toString();
+ }
+ check(count===size,'COUNT');return Object.freeze(result);
+}
+
+
+=== FILE experiments/moriarty-midnight-financial/ledger/proven-assets.mjs SHA256 80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e ===
+/** Fixed financial build -> generated module -> CompiledContract. No compile/prove/network operations.
+ * An externally admitted receipt hash is the provenance root, not an authentication mechanism.
+ */
+import {openSync, closeSync, fstatSync, lstatSync, readFileSync, readSync, readdirSync, constants} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {dirname, resolve, join, relative, isAbsolute, sep} from 'node:path';
+import {fileURLToPath, pathToFileURL} from 'node:url';
+import {registerHooks} from 'node:module';
+import {inspectBuildSources, sourceManifestHash as hashSources} from './build-proven.mjs';
+import {PINNED_NM} from './providers.mjs';
+
+const CIRCUITS = {loan:['initialize','accrue','settle'],swap:['initialize','swap','close']};
+const HEX = /^[a-f0-9]{64}$/;
+const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const PINS = {
+  "@midnight-ntwrk/midnight-js-protocol": {
+    "version": "4.1.1",
+    "packageSha256": "bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd",
+    "entries": {
+      "dist/compact-js.mjs": "7c34e5ac44b1406080f1cbf9f514c1d887b7bc947327a3f83031d9794caa85b7"
+    }
+  },
+  "@midnight-ntwrk/compact-js": {
+    "version": "2.5.1",
+    "packageSha256": "90b4bcb6c76218dc4f99ca2cdb5ce619e1df2932c6fb9e494f9f8bee1c240b51",
+    "entries": {
+      "dist/esm/index.js": "d4ab62942ce025b93ce67ffe880e081a91bda84bc7300f9c749dc87d3fe13d3f",
+      "dist/esm/effect/CompiledContract.js": "72d13105fa558c4ce908df43acc6879b051e0b64fec15da2efa57989a2035d30"
+    }
+  },
+  "@midnight-ntwrk/compact-runtime": {
+    "version": "0.16.0",
+    "packageSha256": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+    "entries": {
+      "dist/index.js": "c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde"
+    }
+  },
+  "typescript": {
+    "version": "6.0.3",
+    "packageSha256": "9332e97c30d3e53ed54910b89207ed657fb444066484df6e5b6965bf130865e9",
+    "entries": {
+      "lib/typescript.js": "569177652966bd528c319171c7dd22860dbf72bde116cbc4f644f1d02bb12e39"
+    }
+  }
+};
+function requireThat(value, message) { if (!value) throw Error(message); }
+function safePath(path) {
+  requireThat(isAbsolute(path ?? '') && resolve(path) === path, 'normalized absolute path required');
+  for (let current = path; ; current = dirname(current)) {
+    const stat = lstatSync(current);
+    requireThat(!stat.isSymbolicLink(), 'symlink asset/ancestor forbidden');
+    if (current !== path) requireThat(stat.isDirectory(), 'asset ancestor must be a directory');
+    if (dirname(current) === current) break;
+  }
+  return path;
+}
+function bytesAt(path) {
+  safePath(path);
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try { requireThat(fstatSync(fd).isFile(), 'regular file required'); return readFileSync(fd); }
+  finally { closeSync(fd); }
+}
+function fingerprint(path) {
+  safePath(path);
+  const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const stat = fstatSync(fd); requireThat(stat.isFile() && stat.size > 0, 'empty or nonregular asset');
+    const h = createHash('sha256'), buffer = Buffer.allocUnsafe(1024 * 1024);
+    let length = 0, read;
+    while ((read = readSync(fd, buffer, 0, buffer.length, null)) !== 0) { h.update(buffer.subarray(0, read)); length += read; }
+    const end = fstatSync(fd); requireThat(length === stat.size && end.size === stat.size && end.mtimeMs === stat.mtimeMs, 'asset changed during inspection');
+    return {bytes:length, sha256:h.digest('hex')};
+  } finally { closeSync(fd); }
+}
+function checkedPin(name) {
+  const pin = PINS[name], root = join(PINNED_NM, name);
+  requireThat(pin && hash(bytesAt(join(root,'package.json'))) === pin.packageSha256, 'dependency package pin mismatch: ' + name);
+  const metadata = JSON.parse(bytesAt(join(root,'package.json')));
+  requireThat(metadata.version === pin.version, 'dependency version mismatch: ' + name);
+  for (const [entry, digest] of Object.entries(pin.entries)) requireThat(hash(bytesAt(join(root,entry))) === digest, 'dependency entry pin mismatch: ' + name);
+  return root;
+}
+async function loadParser() {
+  const root = checkedPin('typescript');
+  const module = await import(pathToFileURL(join(root,'lib/typescript.js')).href);
+  return module.default ?? module;
+}
+function checkGeneratedImports(ts, path, bytes) {
+  const source = ts.createSourceFile(path, bytes.toString('utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  requireThat(source.parseDiagnostics.length === 0, 'generated module parse error');
+  function visit(node) {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      if (node.moduleSpecifier) requireThat(ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === '@midnight-ntwrk/compact-runtime', 'unsupported generated module import');
+    }
+    if (ts.isCallExpression(node)) {
+      requireThat(node.expression.kind !== ts.SyntaxKind.ImportKeyword, 'lazy generated imports unsupported');
+      requireThat(!(ts.isIdentifier(node.expression) && ['require','eval','Function'].includes(node.expression.text)), 'generated dynamic module loading unsupported');
+    }
+    requireThat(!(ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'Function'), 'generated dynamic code unsupported');
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+}
+function checkCommands(receipt, outputDir) {
+  const compact = '/home/charl/.local/bin/compact', stage = join(outputDir,'stage');
+  const expected = [[compact,'--version'],[compact,'compile','--version'],[compact,'compile','--language-version'],[compact,'compile','--runtime-version'],[compact,'compile','--compact-path',stage,join(stage,receipt.case+'.compact'),receipt.assetsPath]];
+  const versions = ['compact 0.5.2','0.31.1','0.23.0','0.16.0'];
+  requireThat(Array.isArray(receipt.commands) && receipt.commands.length === expected.length, 'complete compiler commands required');
+  for (let i=0;i<expected.length;i++) {
+    const command=receipt.commands[i];
+    requireThat(JSON.stringify(command.argv) === JSON.stringify(expected[i]), 'unexpected compiler command/skip-zk');
+    requireThat(command.exit === 0 && command.signal === null && command.error === null && Number.isSafeInteger(command.timeoutMs) && command.timeoutMs > 0, 'compiler did not finish successfully');
+    requireThat(typeof command.stdout === 'string' && typeof command.stderr === 'string' && hash(command.stdout) === command.stdoutSha256 && hash(command.stderr) === command.stderrSha256, 'compiler output hash mismatch');
+    if (i < 4) requireThat(command.stdout.trim() === versions[i], 'compiler version output mismatch');
+  }
+  requireThat(JSON.stringify(receipt.versions) === JSON.stringify({compactWrapper:'compact 0.5.2',compiler:'0.31.1',language:'0.23.0',runtime:'0.16.0'}), 'build versions mismatch');
+}
+function inspectBytes(options, sourceTestOnly) {
+  requireThat(Object.hasOwn(CIRCUITS, options.case), 'fixed financial case required');
+  requireThat(HEX.test(options.receiptSha256 ?? '') && HEX.test(options.sourceManifestHash ?? ''), 'external receipt and source hash bindings required');
+  const bytes = bytesAt(options.receiptPath);
+  requireThat(hash(bytes) === options.receiptSha256, 'build receipt hash mismatch');
+  const receipt = JSON.parse(bytes);
+  requireThat(receipt.schema === 'moriarty.financial-proven-assets/1' && receipt.case === options.case, 'build receipt schema/case mismatch');
+  const genuine = receipt.status === 'built' && receipt.synthetic === false && receipt.proven === true && receipt.inspectedProofAssets === true;
+  const synthetic = receipt.status === 'source-test-only' && receipt.synthetic === true && receipt.proven === false && receipt.inspectedProofAssets === false;
+  requireThat(sourceTestOnly ? synthetic : genuine, sourceTestOnly ? 'source inspection requires explicitly synthetic build' : 'genuine build required; synthetic/failed/unproven receipts reject');
+  // The compiler builds proving assets; it does not produce transaction proof bodies.
+  requireThat(receipt.proofsGenerated === false && !Object.hasOwn(receipt,'error'), 'unexpected build proof/error claim');
+  requireThat(receipt.sourceManifestHash === options.sourceManifestHash && hashSources(inspectBuildSources()) === options.sourceManifestHash, 'stale build sources');
+  const outputDir = dirname(safePath(options.receiptPath));
+  requireThat(options.receiptPath === join(outputDir,'build-receipt.json'), 'unexpected build receipt location');
+  requireThat(receipt.assetsPath === join(outputDir,options.case) && receipt.contractModulePath === join(receipt.assetsPath,'contract/index.js'), 'build asset path mismatch');
+  checkCommands(receipt,outputDir);
+  const attempt=JSON.parse(bytesAt(receipt.attemptFile));
+  requireThat(attempt.schema === 'moriarty.financial-build-attempt/1' && attempt.synthetic === sourceTestOnly, 'build attempt synthetic/genuine mismatch');
+  for (const [key,value] of Object.entries({resourceId:receipt.resourceId,admissionId:receipt.admissionId,sourceCandidateSha:options.sourceManifestHash,case:options.case,outputDir,attempts:1})) requireThat(attempt[key] === value, 'build attempt identity mismatch');
+  requireThat(typeof receipt.admissionId === 'string' && receipt.admissionId.length > 0 && typeof receipt.resourceId === 'string' && receipt.resourceId.length > 0, 'build resource identity missing');
+  requireThat(HEX.test(receipt.resourceRecord?.sha256 ?? '') && hash(bytesAt(receipt.resourceRecord.path)) === receipt.resourceRecord.sha256, 'build resource byte binding mismatch');
+  requireThat(Array.isArray(receipt.artifacts), 'asset manifest required');
+  const declared = new Map();
+  for (const artifact of receipt.artifacts) {
+    requireThat(artifact && Object.keys(artifact).sort().join(',') === 'bytes,path,sha256', 'unknown artifact field');
+    const name=artifact.path;
+    requireThat(typeof name === 'string' && name.length > 0 && !name.includes('\\') && !name.split('/').some(p => !p || p === '.' || p === '..') && !isAbsolute(name), 'unsafe relative asset path');
+    requireThat(!declared.has(name) && HEX.test(artifact.sha256) && Number.isSafeInteger(artifact.bytes) && artifact.bytes > 0, 'duplicate or malformed artifact');
+    declared.set(name,artifact);
+  }
+  const observed = new Map();
+  function visit(directory) {
+    safePath(directory); requireThat(lstatSync(directory).isDirectory(), 'asset directory required');
+    for (const name of readdirSync(directory).sort()) {
+      const path=join(directory,name), stat=lstatSync(path);
+      requireThat(!stat.isSymbolicLink(), 'asset symlink forbidden');
+      if (stat.isDirectory()) visit(path);
+      else {
+        const name=relative(receipt.assetsPath,path).split(sep).join('/'), pin=declared.get(name);
+        requireThat(pin, 'unlisted asset: '+name);
+        const actual=fingerprint(path);
+        requireThat(actual.bytes === pin.bytes && actual.sha256 === pin.sha256, 'asset bytes/hash mismatch: '+name);
+        observed.set(name,pin);
+      }
+    }
+  }
+  visit(receipt.assetsPath);
+  requireThat(observed.size === declared.size, 'missing listed asset');
+  for (const path of ['contract/index.js','compiler/contract-info.json',...CIRCUITS[options.case].flatMap(name=>[`keys/${name}.prover`,`keys/${name}.verifier`,`zkir/${name}.zkir`,`zkir/${name}.bzkir`])]) requireThat(observed.has(path), 'missing required proof asset: '+path);
+  const metadata=JSON.parse(bytesAt(join(receipt.assetsPath,'compiler/contract-info.json')));
+  for (const [key,value] of Object.entries({'compiler-version':'0.31.1','language-version':'0.23.0','runtime-version':'0.16.0'})) requireThat(metadata[key] === value, 'compiler metadata version mismatch');
+  requireThat(Array.isArray(metadata.circuits), 'compiler circuit metadata missing');
+  const circuits=metadata.circuits.filter(c=>c.proof === true && c.pure === false).map(c=>c.name).sort();
+  requireThat(JSON.stringify(circuits) === JSON.stringify([...CIRCUITS[options.case]].sort()), 'compiler proof circuits mismatch');
+  return {receipt, observed};
+}
+function compose(CompiledContract, generated, kind, path) {
+  requireThat(typeof generated?.Contract === 'function' && typeof generated?.ledger === 'function', 'generated Contract/ledger exports required');
+  requireThat(['make','withVacantWitnesses','withCompiledFileAssets'].every(name=>typeof CompiledContract?.[name] === 'function'), 'pinned CompiledContract interface required');
+  return CompiledContract.make('moriarty-financial-'+kind,generated.Contract).pipe(CompiledContract.withVacantWitnesses,CompiledContract.withCompiledFileAssets(path));
+}
+/** Structural source inspection never grants executable/proven status or returns a contract. */
+export async function inspectFinancialBuild(options) {
+  options=Object.freeze({...options});
+  const sourceTestOnly=options.sourceTestOnly === true;
+  requireThat(options.moduleAdapter === undefined || (sourceTestOnly && typeof options.moduleAdapter === 'function'), 'module adapters are source-test-only');
+  const {receipt,observed}=inspectBytes(options,sourceTestOnly), ts=await loadParser();
+  for (const name of observed.keys()) if (/\.(?:js|mjs|cjs)$/.test(name)) checkGeneratedImports(ts,join(receipt.assetsPath,name),bytesAt(join(receipt.assetsPath,name)));
+  if (options.moduleAdapter) {
+    const adapter=await options.moduleAdapter(receipt.contractModulePath);
+    compose(adapter.CompiledContract,adapter.generatedModule,options.case,receipt.assetsPath);
+    inspectBytes(options,sourceTestOnly);
+  }
+  return Object.freeze({status:sourceTestOnly?'source-test-only':'assets-inspected',executable:false,case:options.case,receiptSha256:options.receiptSha256,sourceManifestHash:options.sourceManifestHash,zkConfigPath:receipt.assetsPath,contractModulePath:receipt.contractModulePath,artifactCount:observed.size});
+}
+/** Only externally bound genuine build receipts reach actual generated module import. */
+export async function loadProvenFinancialContract(options) {
+  options=Object.freeze({...options});
+  requireThat(options.moduleAdapter === undefined && options.sourceTestOnly === undefined, 'executable loader forbids source-test adapters');
+  const report=await inspectFinancialBuild(options);
+  const protocolRoot=checkedPin('@midnight-ntwrk/midnight-js-protocol');
+  checkedPin('@midnight-ntwrk/compact-js');
+  const runtimeRoot=checkedPin('@midnight-ntwrk/compact-runtime');
+  const runtimeUrl=pathToFileURL(join(runtimeRoot,'dist/index.js')).href;
+  const assetRoot=report.zkConfigPath+sep;
+  const belongs=url=>{try{return fileURLToPath(url).startsWith(assetRoot);}catch{return false;}};
+  // Exact runtime mapping is outside hashed assets. Static-only imports allow immediate deregistration.
+  const hooks=registerHooks({
+    resolve(specifier,context,nextResolve) {
+      if (context.parentURL && belongs(context.parentURL)) {
+        requireThat(specifier === '@midnight-ntwrk/compact-runtime', 'unsupported generated module dependency');
+        return {url:runtimeUrl,shortCircuit:true};
+      }
+      return nextResolve(specifier,context);
+    },
+    load(url,context,nextLoad) {
+      if (belongs(url)) {
+        const path=fileURLToPath(url), {observed}=inspectBytes(options,false), name=relative(report.zkConfigPath,path).split(sep).join('/');
+        requireThat(observed.has(name) && /\.js$/.test(name), 'unlisted generated module');
+        const source=bytesAt(path);requireThat(hash(source) === observed.get(name).sha256,'generated source changed before import');
+        return {format:'module',source,shortCircuit:true};
+      }
+      return nextLoad(url,context);
+    },
+  });
+  let generated, CompiledContract;
+  try {
+    ({CompiledContract}=await import(pathToFileURL(join(protocolRoot,'dist/compact-js.mjs')).href));
+    generated=await import(pathToFileURL(report.contractModulePath).href+'?financialBuild='+options.receiptSha256);
+  } finally { hooks.deregister(); }
+  inspectBytes(options,false);
+  const compiledContract=compose(CompiledContract,generated,options.case,report.zkConfigPath);
+  let closed=false;
+  const assertFresh=()=>{requireThat(!closed,'financial assets loader closed');inspectBytes(options,false);return true;};
+  return Object.freeze({case:options.case,compiledContract,zkConfigPath:report.zkConfigPath,receiptSha256:report.receiptSha256,sourceManifestHash:report.sourceManifestHash,
+    decodeState(state){assertFresh();requireThat(state !== undefined && state !== null,'observed contract state required');return generated.ledger(state);},
+    assertFresh,cleanup(){closed=true;return {loaderHooksRemoved:true};}});
+}
+
+
+=== FILE deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/source-candidate-02.json SHA256 05c691629f5a0fd4c709629a58f97b90d41fc1d86e78414092a9528c676fe558 ===
+{
+  "schema": "moriarty.finalized-financial-state-source-candidate/1",
+  "status": "corrected-source-tests-pass-review-pending",
+  "supersedes": "source-candidate.json",
+  "files": {
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.test.mjs": "880820eedfb19f1f7c0a8a75d01a8d4be72a4384c792dd383abb3f1816a137f2",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "345aa8985fcc8d0ae01d97517763753cd68e5fa021c7733759077bef9545e8f0",
+    "experiments/moriarty-midnight-financial/ledger/finalized-state-rpc.test.mjs": "d42dc047f25a20348ce61c28aa49a0938023409b5e2a263a7b8ed2af6d0ad50f",
+    "experiments/moriarty-midnight-financial/package.json": "5ddbffe32583f1f46d00824c0245af5fdb8775850fed025650477c5b7026fa7e"
+  },
+  "scope": "explicit-finalized-node-state capture and bounded RPC transport with post-completion deadline rejection; no live method support or ledger-nonmutation established"
+}
+
+
+=== FILE deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/CORRECTION-02.md SHA256 60144d764a47864238b5b4c483585f73f4a5b68b5b49a253aa526476eaa56cfd ===
+# Deadline completion correction
+
+The first candidate's timer race could return a successful snapshot after its absolute deadline when synchronous work delayed timer delivery. The independent GPT6 BLOCKED review and its reproduction remain retained. The original reader and test are archived under `original-candidate/`; original manifests, README and logs are unchanged.
+
+`reader-late-rpc-red.tap` reproduces three missing predicates through connected interfaces: late first RPC, late final canonical RPC, and expiry during native cleanup. It records18passes/3failures. The first case returned the wrong deadline classification; the final RPC and cleanup cases incorrectly succeeded. Tests advance Date.now inside the RPC/native-cleanup callbacks, including the reader's60second cap under a longer caller deadline.
+
+The reader now checks that capped absolute deadline before and after each awaited RPC and after native cleanup, immediately before successful return. Late completion throws `OBSERVATION_TIMEOUT_UNKNOWN`; it cannot trigger another RPC or escape native cleanup. This local repair does not change shared receipt.mjs. Root separately corrected the transport's post-response deadline check, with `rpc-deadline-red.tap` and `rpc-deadline-green.tap` retaining its reproduction and94passing tests.
+
+The combined package command passed27tests, zero failed/skipped, in `reader-late-rpc-green.tap`. `git diff --check` exited0. Reproduction still requires the same retained build environment variable and runs no service, proof, compiler, private input or network operation:
+
+```sh
+MORIARTY_SWAP_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json npm --prefix experiments/moriarty-midnight-financial run test:finalized-state
+```
+
+`source-candidate-02.json` binds the corrected reader/test, corrected transport/test and package script. Scope remains an unauthenticated read-only observation at an explicit finalized anchor. Actual installed-node RPC support and before/after ledger nonmutation remain unobserved. New independent audits are required; old verdicts do not approve corrected bytes.
+
+
+=== FILE deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/correction-evidence-02.json SHA256 fc81f5da1b7d63dbf5871d0c3694ded3dbd85620f2606dcd6f592081fdb2d80e ===
+{
+  "schema": "moriarty.finalized-node-state-correction/1",
+  "candidateSha256": "05c691629f5a0fd4c709629a58f97b90d41fc1d86e78414092a9528c676fe558",
+  "originalArchivedFiles": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/original-candidate/finalized-financial-state.mjs",
+      "sha256": "2083cd1c84ab658e24c871f9140fcdc45ad5bf1309e53c61e2df5d59d264fab7"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/original-candidate/finalized-financial-state.test.mjs",
+      "sha256": "e6f5e1261bb52819e58fc2e8e47d3983565a66c575238050c36af75582c29eb0"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/original-candidate/finalized-state-rpc.test.mjs",
+      "sha256": "beabef7cc80570a40a0601ebb5de78e2817bb488d723231d2f89a89e06405a2b"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/original-candidate/integrate-local.mjs",
+      "sha256": "ee57cad0cf732473bd98d46b79cf68b7450f48b68b7db60ee4f86026fa5fc5a5"
+    }
+  ],
+  "checks": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/reader-late-rpc-red.tap",
+      "sha256": "9e4c419b38ff0d7cb4841e84d368320206cb3c1f202e0c59cd9bce627eede1ad"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/reader-late-rpc-green.tap",
+      "sha256": "75048983358b7c489ad602dbd32d0c339185a329ed1c9e7fb8789bd780af7f5e"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/rpc-deadline-red.tap",
+      "sha256": "5f1edca1d89380ef05268838e6bb86f4add031965c054f0c18c2e615ee3b4bd6"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/rpc-deadline-green.tap",
+      "sha256": "8eacf479b28b5e9c3f36f26df709bc048722ca769148dbf6f2e06148122166d7"
+    }
+  ],
+  "combinedTests": {
+    "passed": 27,
+    "failed": 0,
+    "skipped": 0
+  }
+}
+
+
+=== FILE deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/root-correction-verification.tap SHA256 55c7a2fb56dc5feee268ad776c27529dbc045639ee5609c557e7d0fd3a10ac16 ===
+
+> test:finalized-state
+> node --test --test-reporter=tap ledger/finalized-financial-state.test.mjs ledger/finalized-state-rpc.test.mjs
+
+TAP version 13
+# Subtest: actual full native state and generated decoder captured at explicit canonical finalized anchor
+ok 1 - actual full native state and generated decoder captured at explicit canonical finalized anchor
+  ---
+  duration_ms: 433.596788
+  type: 'test'
+  ...
+# Subtest: malformed finalized head rejects connected RPC evidence
+ok 2 - malformed finalized head rejects connected RPC evidence
+  ---
+  duration_ms: 0.470141
+  type: 'test'
+  ...
+# Subtest: malformed header rejects connected RPC evidence
+ok 3 - malformed header rejects connected RPC evidence
+  ---
+  duration_ms: 0.256702
+  type: 'test'
+  ...
+# Subtest: unsafe height rejects connected RPC evidence
+ok 4 - unsafe height rejects connected RPC evidence
+  ---
+  duration_ms: 0.205745
+  type: 'test'
+  ...
+# Subtest: canonical mismatch rejects connected RPC evidence
+ok 5 - canonical mismatch rejects connected RPC evidence
+  ---
+  duration_ms: 0.173277
+  type: 'test'
+  ...
+# Subtest: canonical changes during state query rejects connected RPC evidence
+ok 6 - canonical changes during state query rejects connected RPC evidence
+  ---
+  duration_ms: 43.841479
+  type: 'test'
+  ...
+# Subtest: absent contract rejects connected RPC evidence
+ok 7 - absent contract rejects connected RPC evidence
+  ---
+  duration_ms: 0.320919
+  type: 'test'
+  ...
+# Subtest: unknown RPC envelope rejects connected RPC evidence
+ok 8 - unknown RPC envelope rejects connected RPC evidence
+  ---
+  duration_ms: 0.225185
+  type: 'test'
+  ...
+# Subtest: non-native bytes rejects connected RPC evidence
+ok 9 - non-native bytes rejects connected RPC evidence
+  ---
+  duration_ms: 1.466737
+  type: 'test'
+  ...
+# Subtest: noncanonical trailing bytes rejects connected RPC evidence
+ok 10 - noncanonical trailing bytes rejects connected RPC evidence
+  ---
+  duration_ms: 3.171468
+  type: 'test'
+  ...
+# Subtest: oversized response rejects connected RPC evidence
+ok 11 - oversized response rejects connected RPC evidence
+  ---
+  duration_ms: 0.273197
+  type: 'test'
+  ...
+# Subtest: wrong address and expired deadline stop before RPC
+ok 12 - wrong address and expired deadline stop before RPC
+  ---
+  duration_ms: 0.19032
+  type: 'test'
+  ...
+# Subtest: unsupported node method propagates without latest or indexer fallback
+ok 13 - unsupported node method propagates without latest or indexer fallback
+  ---
+  duration_ms: 0.399408
+  type: 'test'
+  ...
+# Subtest: hanging RPC is unknown under the shared deadline
+ok 14 - hanging RPC is unknown under the shared deadline
+  ---
+  duration_ms: 40.857546
+  type: 'test'
+  ...
+# Subtest: invalid full decoded state is rejected
+ok 15 - invalid full decoded state is rejected
+  ---
+  duration_ms: 4.765387
+  type: 'test'
+  ...
+# Subtest: native unsupported shielded contract balance is rejected
+ok 16 - native unsupported shielded contract balance is rejected
+  ---
+  duration_ms: 6.956068
+  type: 'test'
+  ...
+# Subtest: later best/finalized head does not change the explicit as-of anchor
+ok 17 - later best/finalized head does not change the explicit as-of anchor
+  ---
+  duration_ms: 40.70606
+  type: 'test'
+  ...
+# Subtest: nonfinite and coerced original deadlines reject before any RPC
+ok 18 - nonfinite and coerced original deadlines reject before any RPC
+  ---
+  duration_ms: 0.358241
+  type: 'test'
+  ...
+# Subtest: late RPC 1 rejects elapsed capped deadline and preserves cleanup
+ok 19 - late RPC 1 rejects elapsed capped deadline and preserves cleanup
+  ---
+  duration_ms: 0.524687
+  type: 'test'
+  ...
+# Subtest: late RPC 5 rejects elapsed capped deadline and preserves cleanup
+ok 20 - late RPC 5 rejects elapsed capped deadline and preserves cleanup
+  ---
+  duration_ms: 37.488783
+  type: 'test'
+  ...
+# Subtest: deadline elapsed during native cleanup cannot return a snapshot
+ok 21 - deadline elapsed during native cleanup cannot return a snapshot
+  ---
+  duration_ms: 37.54402
+  type: 'test'
+  ...
+# (node:1669529) TimeoutNegativeWarning: -1 is a negative number.
+# Timeout duration was set to 1.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: local state RPC sends exact contract and explicit block in one read request
+ok 22 - local state RPC sends exact contract and explicit block in one read request
+  ---
+  duration_ms: 17.285905
+  type: 'test'
+  ...
+# Subtest: local state RPC rejects absent block, malformed identity and extra arguments before fetch
+ok 23 - local state RPC rejects absent block, malformed identity and extra arguments before fetch
+  ---
+  duration_ms: 0.59982
+  type: 'test'
+  ...
+# Subtest: state query capability does not admit transaction writes
+ok 24 - state query capability does not admit transaction writes
+  ---
+  duration_ms: 0.137828
+  type: 'test'
+  ...
+# Subtest: state query retains the response size limit and performs no retry
+ok 25 - state query retains the response size limit and performs no retry
+  ---
+  duration_ms: 1.175864
+  type: 'test'
+  ...
+# Subtest: unsupported state method error propagates without an unpinned fallback
+ok 26 - unsupported state method error propagates without an unpinned fallback
+  ---
+  duration_ms: 0.837014
+  type: 'test'
+  ...
+# Subtest: RPC rejects a valid response completed after its absolute deadline before its timer fires
+ok 27 - RPC rejects a valid response completed after its absolute deadline before its timer fires
+  ---
+  duration_ms: 0.770114
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 974.777503
+
+
+=== FILE deliverables/sp05-financial-integration-2026-09-09/finalized-financial-state-01/rpc-deadline-green.tap SHA256 8eacf479b28b5e9c3f36f26df709bc048722ca769148dbf6f2e06148122166d7 ===
+TAP version 13
+# (node:1666019) TimeoutNegativeWarning: -1 is a negative number.
+# Timeout duration was set to 1.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: local state RPC sends exact contract and explicit block in one read request
+ok 1 - local state RPC sends exact contract and explicit block in one read request
+  ---
+  duration_ms: 99.132321
+  type: 'test'
+  ...
+# Subtest: local state RPC rejects absent block, malformed identity and extra arguments before fetch
+ok 2 - local state RPC rejects absent block, malformed identity and extra arguments before fetch
+  ---
+  duration_ms: 0.861377
+  type: 'test'
+  ...
+# Subtest: state query capability does not admit transaction writes
+ok 3 - state query capability does not admit transaction writes
+  ---
+  duration_ms: 0.159471
+  type: 'test'
+  ...
+# Subtest: state query retains the response size limit and performs no retry
+ok 4 - state query retains the response size limit and performs no retry
+  ---
+  duration_ms: 0.770219
+  type: 'test'
+  ...
+# Subtest: unsupported state method error propagates without an unpinned fallback
+ok 5 - unsupported state method error propagates without an unpinned fallback
+  ---
+  duration_ms: 5.957423
+  type: 'test'
+  ...
+# Subtest: RPC rejects a valid response completed after its absolute deadline before its timer fires
+ok 6 - RPC rejects a valid response completed after its absolute deadline before its timer fires
+  ---
+  duration_ms: 1.663865
+  type: 'test'
+  ...
+# Subtest: initialized composition replays history once before store access and only submits swap and close
+ok 7 - initialized composition replays history once before store access and only submits swap and close
+  ---
+  duration_ms: 9.153634
+  type: 'test'
+  ...
+# Subtest: initialized publicCheck failure stops calls and cleans owned resources
+ok 8 - initialized publicCheck failure stops calls and cleans owned resources
+  ---
+  duration_ms: 7.0592
+  type: 'test'
+  ...
+# Subtest: initialized checkWallet failure stops calls and cleans owned resources
+ok 9 - initialized checkWallet failure stops calls and cleans owned resources
+  ---
+  duration_ms: 2.683934
+  type: 'test'
+  ...
+# Subtest: initialized preserveStore failure stops calls and cleans owned resources
+ok 10 - initialized preserveStore failure stops calls and cleans owned resources
+  ---
+  duration_ms: 1.155874
+  type: 'test'
+  ...
+# Subtest: initialized checkPrivate failure stops calls and cleans owned resources
+ok 11 - initialized checkPrivate failure stops calls and cleans owned resources
+  ---
+  duration_ms: 1.546486
+  type: 'test'
+  ...
+# Subtest: failed initialized historical deploy comparison prevents snapshot and providers
+ok 12 - failed initialized historical deploy comparison prevents snapshot and providers
+  ---
+  duration_ms: 8.869195
+  type: 'test'
+  ...
+# Subtest: failed initialized historical initialize comparison prevents snapshot and providers
+ok 13 - failed initialized historical initialize comparison prevents snapshot and providers
+  ---
+  duration_ms: 4.914737
+  type: 'test'
+  ...
+# Subtest: initialized actual store mismatch stops before setup
+ok 14 - initialized actual store mismatch stops before setup
+  ---
+  duration_ms: 4.196865
+  type: 'test'
+  ...
+# Subtest: initialized actual limits mismatch stops before setup
+ok 15 - initialized actual limits mismatch stops before setup
+  ---
+  duration_ms: 1.995289
+  type: 'test'
+  ...
+# Subtest: initialized actual role mismatch stops before setup
+ok 16 - initialized actual role mismatch stops before setup
+  ---
+  duration_ms: 3.122586
+  type: 'test'
+  ...
+# Subtest: initialized actual build mismatch stops before setup
+ok 17 - initialized actual build mismatch stops before setup
+  ---
+  duration_ms: 1.249781
+  type: 'test'
+  ...
+# Subtest: production rejects continuation adapters; source fixture requires every gate
+ok 18 - production rejects continuation adapters; source fixture requires every gate
+  ---
+  duration_ms: 6.984244
+  type: 'test'
+  ...
+# Subtest: initialized publicCheck requires its closed success result
+ok 19 - initialized publicCheck requires its closed success result
+  ---
+  duration_ms: 2.435334
+  type: 'test'
+  ...
+# Subtest: initialized preserveStore requires its closed success result
+ok 20 - initialized preserveStore requires its closed success result
+  ---
+  duration_ms: 1.57538
+  type: 'test'
+  ...
+# Subtest: initialized checkPrivate requires its closed success result
+ok 21 - initialized checkPrivate requires its closed success result
+  ---
+  duration_ms: 1.372424
+  type: 'test'
+  ...
+# Subtest: closed swap plan reads both actual public histories from same source result
+ok 22 - closed swap plan reads both actual public histories from same source result
+  ---
+  duration_ms: 78.524277
+  type: 'test'
+  ...
+# Subtest: closed swap plan rejects consumed allocation and altered/exclusive descriptor
+ok 23 - closed swap plan rejects consumed allocation and altered/exclusive descriptor
+  ---
+  duration_ms: 1.511652
+  type: 'test'
+  ...
+# Subtest: closed swap plan rejects consumed allocation and altered/exclusive descriptor
+ok 24 - closed swap plan rejects consumed allocation and altered/exclusive descriptor
+  ---
+  duration_ms: 0.252285
+  type: 'test'
+  ...
+# Subtest: closed swap plan rejects consumed allocation and altered/exclusive descriptor
+ok 25 - closed swap plan rejects consumed allocation and altered/exclusive descriptor
+  ---
+  duration_ms: 0.232825
+  type: 'test'
+  ...
+# Subtest: closed swap plan rejects consumed allocation and altered/exclusive descriptor
+ok 26 - closed swap plan rejects consumed allocation and altered/exclusive descriptor
+  ---
+  duration_ms: 0.100416
+  type: 'test'
+  ...
+# Subtest: closed swap plan rejects consumed allocation and altered/exclusive descriptor
+ok 27 - closed swap plan rejects consumed allocation and altered/exclusive descriptor
+  ---
+  duration_ms: 0.069152
+  type: 'test'
+  ...
+# Subtest: composed swap plan getters rejected without invocation before setup
+ok 28 - composed swap plan getters rejected without invocation before setup
+  ---
+  duration_ms: 0.434667
+  type: 'test'
+  ...
+# Subtest: missing initialized mint stops before preservation and new dispatch
+ok 29 - missing initialized mint stops before preservation and new dispatch
+  ---
+  duration_ms: 1.010604
+  type: 'test'
+  ...
+# Subtest: retains closed swap diagnostic SWAP_CONTINUATION_DEPLOY_STATE
+ok 30 - retains closed swap diagnostic SWAP_CONTINUATION_DEPLOY_STATE
+  ---
+  duration_ms: 1.681656
+  type: 'test'
+  ...
+# Subtest: retains closed swap diagnostic SWAP_CONTINUATION_PRIVATE_READ
+ok 31 - retains closed swap diagnostic SWAP_CONTINUATION_PRIVATE_READ
+  ---
+  duration_ms: 2.318486
+  type: 'test'
+  ...
+# Subtest: retains closed swap diagnostic SWAP_CONTINUATION_WALLET_HISTORY
+ok 32 - retains closed swap diagnostic SWAP_CONTINUATION_WALLET_HISTORY
+  ---
+  duration_ms: 1.898081
+  type: 'test'
+  ...
+# Subtest: full composition prepares address then binds colors once and records every stage before next call
+ok 33 - full composition prepares address then binds colors once and records every stage before next call
+  ---
+  duration_ms: 13.707557
+  type: 'test'
+  ...
+# Subtest: wrong network rejects before preparation and bounded-cleans supplied wallet
+ok 34 - wrong network rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 1.246724
+  type: 'test'
+  ...
+# Subtest: wrong SDK network rejects before preparation and bounded-cleans supplied wallet
+ok 35 - wrong SDK network rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 0.736099
+  type: 'test'
+  ...
+# Subtest: wrong payer rejects before preparation and bounded-cleans supplied wallet
+ok 36 - wrong payer rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 1.175899
+  type: 'test'
+  ...
+# Subtest: public endpoint rejects before preparation and bounded-cleans supplied wallet
+ok 37 - public endpoint rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 0.379161
+  type: 'test'
+  ...
+# Subtest: missing protocol rejects before preparation and bounded-cleans supplied wallet
+ok 38 - missing protocol rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 0.202963
+  type: 'test'
+  ...
+# Subtest: unknown logical asset rejects before preparation and bounded-cleans supplied wallet
+ok 39 - unknown logical asset rejects before preparation and bounded-cleans supplied wallet
+  ---
+  duration_ms: 0.199917
+  type: 'test'
+  ...
+# Subtest: provider construction failure preserves failure and cleans wallet/assets
+ok 40 - provider construction failure preserves failure and cleans wallet/assets
+  ---
+  duration_ms: 3.365954
+  type: 'test'
+  ...
+# Subtest: driver failure before its cleanup ownership guard falls back to wallet cleanup
+ok 41 - driver failure before its cleanup ownership guard falls back to wallet cleanup
+  ---
+  duration_ms: 7.50313
+  type: 'test'
+  ...
+# Subtest: driver throw without cleanup receipt falls back to owned providers exactly once
+ok 42 - driver throw without cleanup receipt falls back to owned providers exactly once
+  ---
+  duration_ms: 2.870833
+  type: 'test'
+  ...
+# Subtest: onStage failed retention stops before another transaction
+ok 43 - onStage failed retention stops before another transaction
+  ---
+  duration_ms: 3.123149
+  type: 'test'
+  ...
+# Subtest: source adapters cannot silently switch into production mode
+ok 44 - source adapters cannot silently switch into production mode
+  ---
+  duration_ms: 0.395425
+  type: 'test'
+  ...
+# Subtest: local RPC uses one bounded nonredirecting request and validates its response identity
+ok 45 - local RPC uses one bounded nonredirecting request and validates its response identity
+  ---
+  duration_ms: 57.883171
+  type: 'test'
+  ...
+# Subtest: local RPC aborts an unresponsive inert request by absolute deadline
+ok 46 - local RPC aborts an unresponsive inert request by absolute deadline
+  ---
+  duration_ms: 30.953856
+  type: 'test'
+  ...
+# Subtest: swap waits for exact wallet mint after durable initialize comparison and before actual driver swap
+ok 47 - swap waits for exact wallet mint after durable initialize comparison and before actual driver swap
+  ---
+  duration_ms: 13.150582
+  type: 'test'
+  ...
+# Subtest: missing initialized wallet mint stops actual driver before swap and close
+ok 48 - missing initialized wallet mint stops actual driver before swap and close
+  ---
+  duration_ms: 2.450837
+  type: 'test'
+  ...
+# Subtest: wallet sync that crosses the admission deadline prevents swap
+ok 49 - wallet sync that crosses the admission deadline prevents swap
+  ---
+  duration_ms: 1.112679
+  type: 'test'
+  ...
+# Subtest: asset mutation after a recorded stage stops before the next SDK stage
+ok 50 - asset mutation after a recorded stage stops before the next SDK stage
+  ---
+  duration_ms: 5.91427
+  type: 'test'
+  ...
+# Subtest: inert contained success is explicitly source-only and never financial acceptance
+ok 51 - inert contained success is explicitly source-only and never financial acceptance
+  ---
+  duration_ms: 4.698502
+  type: 'test'
+  ...
+# Subtest: RPC rejects mismatched IDs and oversized bodies without a retry
+ok 52 - RPC rejects mismatched IDs and oversized bodies without a retry
+  ---
+  duration_ms: 3.276652
+  type: 'test'
+  ...
+# Subtest: protocol and reviewed callbacks remain captured after asynchronous preparation starts
+ok 53 - protocol and reviewed callbacks remain captured after asynchronous preparation starts
+  ---
+  duration_ms: 2.759951
+  type: 'test'
+  ...
+# Subtest: recovery composition restores before real driver, observes historical deploy once and submits only three calls
+ok 54 - recovery composition restores before real driver, observes historical deploy once and submits only three calls
+  ---
+  duration_ms: 10.810533
+  type: 'test'
+  ...
+# Subtest: recovery publicCheck failure stops before driver and cleans owned resources
+ok 55 - recovery publicCheck failure stops before driver and cleans owned resources
+  ---
+  duration_ms: 2.686232
+  type: 'test'
+  ...
+# Subtest: recovery checkWallet failure stops before driver and cleans owned resources
+ok 56 - recovery checkWallet failure stops before driver and cleans owned resources
+  ---
+  duration_ms: 1.043409
+  type: 'test'
+  ...
+# Subtest: recovery reconstruct failure stops before driver and cleans owned resources
+ok 57 - recovery reconstruct failure stops before driver and cleans owned resources
+  ---
+  duration_ms: 1.039456
+  type: 'test'
+  ...
+# Subtest: recovery inspectStore failure stops before driver and cleans owned resources
+ok 58 - recovery inspectStore failure stops before driver and cleans owned resources
+  ---
+  duration_ms: 0.503744
+  type: 'test'
+  ...
+# Subtest: recovery restore failure stops before driver and cleans owned resources
+ok 59 - recovery restore failure stops before driver and cleans owned resources
+  ---
+  duration_ms: 0.466591
+  type: 'test'
+  ...
+# Subtest: recovery wallet synchronization rejection prevents constructor, store and driver
+ok 60 - recovery wallet synchronization rejection prevents constructor, store and driver
+  ---
+  duration_ms: 0.833925
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual allocation differing from closed plan before recovery work
+ok 61 - recovery rejects actual allocation differing from closed plan before recovery work
+  ---
+  duration_ms: 0.400778
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual submissions differing from closed plan before recovery work
+ok 62 - recovery rejects actual submissions differing from closed plan before recovery work
+  ---
+  duration_ms: 0.376366
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual dust differing from closed plan before recovery work
+ok 63 - recovery rejects actual dust differing from closed plan before recovery work
+  ---
+  duration_ms: 0.256292
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual gross cap differing from closed plan before recovery work
+ok 64 - recovery rejects actual gross cap differing from closed plan before recovery work
+  ---
+  duration_ms: 0.399852
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual deadline differing from closed plan before recovery work
+ok 65 - recovery rejects actual deadline differing from closed plan before recovery work
+  ---
+  duration_ms: 0.293418
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual journal differing from closed plan before recovery work
+ok 66 - recovery rejects actual journal differing from closed plan before recovery work
+  ---
+  duration_ms: 0.241919
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual store directory differing from closed plan before recovery work
+ok 67 - recovery rejects actual store directory differing from closed plan before recovery work
+  ---
+  duration_ms: 0.231418
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual store namespace differing from closed plan before recovery work
+ok 68 - recovery rejects actual store namespace differing from closed plan before recovery work
+  ---
+  duration_ms: 0.213574
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual role differing from closed plan before recovery work
+ok 69 - recovery rejects actual role differing from closed plan before recovery work
+  ---
+  duration_ms: 0.339077
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual wallet differing from closed plan before recovery work
+ok 70 - recovery rejects actual wallet differing from closed plan before recovery work
+  ---
+  duration_ms: 3.012914
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual network tag differing from closed plan before recovery work
+ok 71 - recovery rejects actual network tag differing from closed plan before recovery work
+  ---
+  duration_ms: 1.07563
+  type: 'test'
+  ...
+# Subtest: recovery rejects actual build differing from closed plan before recovery work
+ok 72 - recovery rejects actual build differing from closed plan before recovery work
+  ---
+  duration_ms: 0.398048
+  type: 'test'
+  ...
+# Subtest: recovery plan rejects changed deployment identity and unchecked identity shortcut
+ok 73 - recovery plan rejects changed deployment identity and unchecked identity shortcut
+  ---
+  duration_ms: 0.477535
+  type: 'test'
+  ...
+# Subtest: production integration rejects recovery adapters before loading runtime or touching private state
+ok 74 - production integration rejects recovery adapters before loading runtime or touching private state
+  ---
+  duration_ms: 0.207535
+  type: 'test'
+  ...
+# Subtest: source recovery requires all recovery adapters
+ok 75 - source recovery requires all recovery adapters
+  ---
+  duration_ms: 1.218002
+  type: 'test'
+  ...
+# Subtest: nonempty recovery destination stops before provider creation and driver
+ok 76 - nonempty recovery destination stops before provider creation and driver
+  ---
+  duration_ms: 1.231035
+  type: 'test'
+  ...
+# Subtest: recovery rejects deployment identity getter before cloning or executing it
+ok 77 - recovery rejects deployment identity getter before cloning or executing it
+  ---
+  duration_ms: 0.855887
+  type: 'test'
+  ...
+# Subtest: initialized composition replays history once before store access and only submits accrue and settle
+ok 78 - initialized composition replays history once before store access and only submits accrue and settle
+  ---
+  duration_ms: 3.604258
+  type: 'test'
+  ...
+# Subtest: initialized publicCheck failure stops calls and cleans owned resources
+ok 79 - initialized publicCheck failure stops calls and cleans owned resources
+  ---
+  duration_ms: 1.440347
+  type: 'test'
+  ...
+# Subtest: initialized checkWallet failure stops calls and cleans owned resources
+ok 80 - initialized checkWallet failure stops calls and cleans owned resources
+  ---
+  duration_ms: 2.022195
+  type: 'test'
+  ...
+# Subtest: initialized preserveStore failure stops calls and cleans owned resources
+ok 81 - initialized preserveStore failure stops calls and cleans owned resources
+  ---
+  duration_ms: 1.212068
+  type: 'test'
+  ...
+# Subtest: initialized checkPrivate failure stops calls and cleans owned resources
+ok 82 - initialized checkPrivate failure stops calls and cleans owned resources
+  ---
+  duration_ms: 2.597302
+  type: 'test'
+  ...
+# Subtest: failed initialized historical deploy comparison prevents snapshot and providers
+ok 83 - failed initialized historical deploy comparison prevents snapshot and providers
+  ---
+  duration_ms: 3.320278
+  type: 'test'
+  ...
+# Subtest: failed initialized historical initialize comparison prevents snapshot and providers
+ok 84 - failed initialized historical initialize comparison prevents snapshot and providers
+  ---
+  duration_ms: 3.325579
+  type: 'test'
+  ...
+# Subtest: initialized actual store mismatch stops before setup
+ok 85 - initialized actual store mismatch stops before setup
+  ---
+  duration_ms: 1.465327
+  type: 'test'
+  ...
+# Subtest: initialized actual limits mismatch stops before setup
+ok 86 - initialized actual limits mismatch stops before setup
+  ---
+  duration_ms: 1.856065
+  type: 'test'
+  ...
+# Subtest: initialized actual role mismatch stops before setup
+ok 87 - initialized actual role mismatch stops before setup
+  ---
+  duration_ms: 0.590037
+  type: 'test'
+  ...
+# Subtest: initialized actual build mismatch stops before setup
+ok 88 - initialized actual build mismatch stops before setup
+  ---
+  duration_ms: 0.449214
+  type: 'test'
+  ...
+# Subtest: production rejects continuation adapters; source fixture requires every gate
+ok 89 - production rejects continuation adapters; source fixture requires every gate
+  ---
+  duration_ms: 5.939619
+  type: 'test'
+  ...
+# Subtest: initialized publicCheck requires its closed success result
+ok 90 - initialized publicCheck requires its closed success result
+  ---
+  duration_ms: 0.77857
+  type: 'test'
+  ...
+# Subtest: initialized preserveStore requires its closed success result
+ok 91 - initialized preserveStore requires its closed success result
+  ---
+  duration_ms: 0.939073
+  type: 'test'
+  ...
+# Subtest: initialized checkPrivate requires its closed success result
+ok 92 - initialized checkPrivate requires its closed success result
+  ---
+  duration_ms: 3.152997
+  type: 'test'
+  ...
+# Subtest: integration failure emits only a closed code and excludes unknown SDK text
+ok 93 - integration failure emits only a closed code and excludes unknown SDK text
+  ---
+  duration_ms: 1.166589
+  type: 'test'
+  ...
+# Subtest: actual production preflight failure survives durable launcher retention with its closed code
+ok 94 - actual production preflight failure survives durable launcher retention with its closed code
+  ---
+  duration_ms: 7.168195
+  type: 'test'
+  ...
+1..94
+# tests 94
+# suites 0
+# pass 94
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 756.66097
