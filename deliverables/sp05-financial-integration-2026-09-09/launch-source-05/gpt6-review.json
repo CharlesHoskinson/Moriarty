@@ -1,0 +1,93 @@
+{
+  "schema": "moriarty.local-launch-source-review/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "agent": "/root/password_preflight_review",
+    "independentOfImplementation": true
+  },
+  "reviewedAt": "2026-09-10T05:22:39.708346+00:00",
+  "candidatePath": "deliverables/sp05-financial-integration-2026-09-09/launch-source-05/candidate.json",
+  "candidateSha256": "d33cb3634087f5fdfcf53f4c855e24060a29c0d21c5b45e4d7a9e8096e8db817",
+  "sourceDiff": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/launch-source-05/source.diff",
+    "sha256": "15d8b53b2a407ac2b9c8ae85955245bd5a03b2a5bb4a0d9a6b3cef5c9510da79"
+  },
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "c902820dee080f78a6ae341ca30bac8c959a86f94a9781a8ddae7fbb60408f95"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "sha256": "e691031f7268eda4edb1fe9ccea43ca5df132fbb03f995fdee720219b496b3ed"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "sha256": "731fe3d459380b94c24a3f73fe14f304fb87db005f8170bf115cbd7d00cd116d"
+    }
+  ],
+  "installedValidator": {
+    "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-utils/dist/index.mjs",
+    "sha256": "812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de"
+  },
+  "supportingFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-level-private-state-provider/dist/index.mjs",
+      "sha256": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-utils/package.json",
+      "sha256": "b37d636b59f81e791a64b0569393ad27d968aa4b20553a9f98ad3bee6b8d69cc"
+    }
+  ],
+  "verdict": "PASS_SCOPED",
+  "scope": "Exact password-policy preflight source repair, position in production launcher, closed rejection and offline launcher regressions only.",
+  "findings": [],
+  "observations": [
+    "The helper hashes installed midnight-js-utils/dist/index.mjs before importing and calling its synchronous validatePassword. The actual pinned level private-state provider imports validatePassword from this package; the installed import export maps to dist/index.mjs and no provider-local nested utils package exists.",
+    "Inspected SDK policy requires at least 16 characters and three of lowercase, uppercase, digits and other characters, rejects more than three identical consecutive characters, and rejects four-character ascending or descending sequences case-insensitively. Direct use of the validator avoids an incomplete local policy copy.",
+    "Production launch awaits the preflight after static build/runtime inspection and role-secret validation, before reading saved wallet envelopes or seed, creating output records, importing the wallet runtime for use, querying tip readiness, deriving keys or restoring/starting any wallet. The same validated, trimmed string is closed over by privateStoragePasswordProvider; there is no later password reread.",
+    "Validator rejection is replaced with a fresh LAUNCH_PRIVATE_PASSWORD Error without SDK message, reason or cause. The CLI retains its fixed diagnostic. This addition creates no password-bearing log, public record or persistent file.",
+    "The isolated regression rejects synthetic lowercase hexadecimal, sequential, repeated-character and too-short inputs, accepts a valid synthetic input, and verifies fixed error text. All 13 launcher tests independently passed.",
+    "The diff does not change native guards, loan build, submissions, resource reservations, retry behavior or network limits. Documentation preserves existing private files and requires separate deployment recovery after a ledger-success/storage-failure outcome.",
+    "Candidate, all three declared source files and installed validator hash independently match the assigned exact bytes."
+  ],
+  "checks": [
+    {
+      "command": "node --test experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "performedByReviewer": true,
+      "exitCode": 0,
+      "passed": 13,
+      "failed": 0,
+      "durationMs": 3647.686629
+    },
+    {
+      "command": "git diff --check -- experiments/moriarty-midnight-financial/ledger/launch-local.mjs experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "performedByReviewer": true,
+      "exitCode": 0
+    },
+    {
+      "check": "SHA-256 candidate/source/installed-policy checks",
+      "performedByReviewer": true,
+      "status": "PASS"
+    }
+  ],
+  "limitations": [
+    "No real private state, password, seed or wallet snapshot was read. No wallet, service, compiler, proof generation, submission, recovery or allocation was run. Tests use synthetic temporary private files and historical public transaction bytes with inert submission.",
+    "Placement before wallet work was verified by source inspection; the helper regression does not dynamically execute the full launch preflight with a sentinel wallet.",
+    "Password strength validation does not establish existing-store decryptability, filesystem write success, future SDK operation success or financial correctness. Existing deployment recovery remains separate.",
+    "The pin covers the validator entry bytes; it does not establish full transitive dependency integrity or protect against concurrent installed-code mutation.",
+    "The broader ledger suite and the separate real-provider synthetic reproducer were not independently run or relied on for this verdict.",
+    "Guarded status reports unresolved operational history. This review does not clear that state or establish execution admission. Required Grok review and acceptance gates remain separate."
+  ],
+  "executionAdmitted": false,
+  "successorAllocationAuthorized": false,
+  "deploymentRecoveryAuthorized": false,
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false
+}

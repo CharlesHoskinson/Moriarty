@@ -1,0 +1,447 @@
+Independent Grok4.6 high scoped source review. Source04 was approved. Actual local allocation03 passed committee/oldtx reconciliation, then native deployment indexed SUCCESS, but integration failed before recording deploy stage. Root verified actual private password fails installed validatePassword reason insufficient_classes (no secret emitted). Independent agent reproduced real level provider.set with fakehex password: metadata salt created then same error, no private value. Setup generated randomhex, launcher checked only length. Minimal fix imports hash-pinned actual utils validatePassword and calls it on storage password before snapshots/seed/wallet/start/network. Closed rejection LAUNCH_PRIVATE_PASSWORD, no SDK private text. Review exact change for correctness, runtime/policy binding, privacy, placement and regression. No source redesign, no new resource/wallet/recovery authorization. Existing successful deployment/private files/charges remain; cannot retry deployment. Return concise JSON {verdict:APPROVED|CHANGES_REQUESTED,candidateSha256,findings:[],scope,limitations:[]}. No tools/web/subagents; finite900secondallowance.
+
+CandidateSHA256 d33cb3634087f5fdfcf53f4c855e24060a29c0d21c5b45e4d7a9e8096e8db817
+
+FILE deliverables/sp05-financial-integration-2026-09-09/launch-source-05/candidate.json SHA256 d33cb3634087f5fdfcf53f4c855e24060a29c0d21c5b45e4d7a9e8096e8db817
+{
+  "schema": "moriarty.local-launch-source-candidate/1",
+  "recordedAt": "2026-09-10T05:20:22.612609+00:00",
+  "predecessor": "../launch-source-04/candidate-02.json",
+  "scope": "Validate private storage password with pinned installed SDK policy before wallet work; unchanged loan build, native guards and network limits",
+  "files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.mjs",
+      "sha256": "c902820dee080f78a6ae341ca30bac8c959a86f94a9781a8ddae7fbb60408f95"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "sha256": "e691031f7268eda4edb1fe9ccea43ca5df132fbb03f995fdee720219b496b3ed"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-local.md",
+      "sha256": "731fe3d459380b94c24a3f73fe14f304fb87db005f8170bf115cbd7d00cd116d"
+    }
+  ],
+  "installedValidator": {
+    "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-utils/dist/index.mjs",
+    "sha256": "812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de"
+  },
+  "notAuthorized": [
+    "wallet execution",
+    "retry",
+    "new allocation",
+    "deployment recovery",
+    "financial acceptance"
+  ]
+}
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/launch-source-05/source.diff SHA256 15d8b53b2a407ac2b9c8ae85955245bd5a03b2a5bb4a0d9a6b3cef5c9510da79
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.md b/experiments/moriarty-midnight-financial/ledger/launch-local.md
+index 203c222..9b08ee7 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.md
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.md
+@@ -94,3 +94,5 @@ The launcher waits for a recent indexed block before restoring the wallet, and c
+ After the SDK independently queries the indexer during balancing, the launcher checks the native recipe's DUST creation time before it returns to signing: no future time, age at most 60 seconds, and no regression below the observed tip timestamp rounded to seconds. It checks native age again before submission. A slow proof can therefore stop before submission; no timestamp is rewritten and no wallet operation retries. Public bytes are retained before that final check, preserving failed output. Successful readiness observations are retained as closed public records. Wallet synchronization alone does not establish freshness.
+ 
+ This change responds to the actual local deployment rejection recorded in `deliverables/sp05-financial-integration-2026-09-09/local-execution-02/RESULT.md`. The original allocation remains consumed. Source tests do not authorize a new run or establish ledger acceptance.
++
++Storage passwords must pass the installed `midnight-js-utils` validator before wallet restore or any transaction. Length alone is insufficient: random lowercase hexadecimal passwords fail its character-class rule. The launcher pins and calls the SDK policy directly, returning only a closed error on rejection. Provision a random password that passes that exact validator; do not change an existing deployment's stored password or reset its private files. Successful ledger deployment followed by a storage failure requires separate recovery of that deployment, with its transaction and charges retained.
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+index 4bdb76f..2431df4 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+@@ -43,6 +43,17 @@ export function readPrivateLaunchFile(p){
+  try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+  finally{if(fd!==undefined)closeSync(fd);}
+ }
++/** Apply the installed private-store policy before wallet restore or submission.
++ * Pin the actual validator, never mirror its rules or expose its error text.
++ */
++export async function readLocalStoragePassword(file){
++ const password=readPrivateLaunchFile(file).toString('utf8').trim();
++ const entry=join(PINNED_NM,'@midnight-ntwrk/midnight-js-utils/dist/index.mjs');
++ check(hash(readFileSync(entry))==='812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de','LAUNCH_PASSWORD_POLICY_PIN');
++ const {validatePassword}=await import(pathToFileURL(entry).href);
++ try{validatePassword(password);}catch{throw Error('LAUNCH_PRIVATE_PASSWORD');}
++ return password;
++}
+ export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
+ function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
+ function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+@@ -112,7 +123,7 @@ export async function launchLocalFinancialCase(plan){
+  // Inspect real proving assets before opening private wallet material.
+  await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
+  const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
+- const password=readPrivateLaunchFile(p.privateState.passwordFile).toString('utf8').trim();check(password.length>=16,'LAUNCH_PRIVATE_PASSWORD');
++ const password=await readLocalStoragePassword(p.privateState.passwordFile);
+  const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
+  const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
+  mkdirSync(p.outputDirectory,{mode:0o700}); // Exclusive run directory, never resume or retry automatically.
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs b/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
+index 0821b90..ba11c84 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
+@@ -75,3 +75,16 @@ test('complete reviewed public integration result preserves failed driver receip
+   const successDir=mkdtempSync(join(dir,'success-'));const success=structuredClone(result);success.status='PASS';success.driver.status='PASS';api.retainPublicIntegrationResult(successDir,success);assert.deepEqual(JSON.parse(readFileSync(join(successDir,'integration-result.json'))),success);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ });
++
++test('storage password preflight applies actual SDK policy before wallet work and emits only a closed error',async()=>{
++ assert.equal(typeof api.readLocalStoragePassword,'function');
++ const dir=mkdtempSync(join(tmpdir(),'moriarty-password-preflight-')),file=join(dir,'password');
++ try{
++  for(const password of ['1a9f'.repeat(16),'Ab1!'.repeat(4)+'abcd','Ab1!'.repeat(4)+'zzzz','too-short']){
++   writeFileSync(file,password+'\n',{mode:0o600});
++   await assert.rejects(api.readLocalStoragePassword(file),e=>e.message==='LAUNCH_PRIVATE_PASSWORD'&&!e.message.includes(password));
++  }
++  const accepted='N7!qL2@vR9#sH4$wT6%y';writeFileSync(file,accepted+'\n',{mode:0o600});
++  assert.equal(await api.readLocalStoragePassword(file),accepted);
++ }finally{rmSync(dir,{recursive:true,force:true});}
++});
+
+
+FILE deliverables/sp05-financial-integration-2026-09-09/launch-source-05/password-provider-repro-result.json SHA256 82969207f42a3cc1c11b5fbf1a4675a79db4bd8785a5379d4a203be501942115
+{
+  "schema": "moriarty.password-provider-reproduction/1",
+  "status": "REPRODUCED",
+  "observedAt": "2026-09-10T05:20:22.860Z",
+  "scriptSha256": "4b17b40d30853c5a57d75a489d433d8e4457926be7b548bf66bd3ddccc8d4e8e",
+  "versions": {
+    "midnight-js-level-private-state-provider": "4.1.1",
+    "midnight-js-utils": "4.1.1"
+  },
+  "sources": [
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-level-private-state-provider/package.json",
+      "sha256": "abab392b7cfa7f75f33ec1616b2880dc77de12f1ee1e4be6d00854390d950cfe"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-level-private-state-provider/dist/index.mjs",
+      "sha256": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-utils/package.json",
+      "sha256": "b37d636b59f81e791a64b0569393ad27d968aa4b20553a9f98ad3bee6b8d69cc"
+    },
+    {
+      "path": "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-utils/dist/index.mjs",
+      "sha256": "812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de"
+    }
+  ],
+  "fixture": {
+    "syntheticPassword": true,
+    "passwordLength": 64,
+    "passwordCharacterClasses": 2,
+    "privateStateStoreName": "sp05-loan",
+    "newTemporaryDatabase": true
+  },
+  "failure": {
+    "name": "PasswordValidationError",
+    "reason": "insufficient_classes"
+  },
+  "entryCount": 1,
+  "onlySaltVersionMetadata": true,
+  "privateStateEntryWritten": false,
+  "filesBeforeRead": [
+    {
+      "name": "000003.log",
+      "bytes": 185
+    },
+    {
+      "name": "CURRENT",
+      "bytes": 16
+    },
+    {
+      "name": "LOCK",
+      "bytes": 0
+    },
+    {
+      "name": "LOG",
+      "bytes": 57
+    },
+    {
+      "name": "MANIFEST-000002",
+      "bytes": 50
+    }
+  ],
+  "sourceTrace": [
+    "midnight-js-level-private-state-provider/dist/index.mjs:797-804: set calls getOrCreateEncryption before state serialization and value write",
+    "same file:389-414,424-439: salt/version metadata is created before getPasswordFromProvider",
+    "same file:284-287: getPasswordFromProvider calls validatePassword",
+    "midnight-js-utils/dist/index.mjs:319-335: validator requires at least three character classes; two yields insufficient_classes",
+    "Moriarty prepare-deployment.mjs:57-63: successful finalized submit precedes private-state set and signing-key set",
+    "Moriarty run-local.mjs:50-51: driver assigns contractAddress only after deployment adapter returns"
+  ],
+  "qualification": "Exact synthetic provider failure reproduced. Original integration exception code was not emitted; original causal attribution combines this reproduction, root reported local validator rejection, and public failure sequence. Does not inspect original private state or prove absence of prior private writes.",
+  "networkAcceptance": false,
+  "proofAcceptance": false,
+  "financialAcceptance": false,
+  "scope": "Offline causal evidence only; no wallet, real private-state access, network, service, proof, or transaction operation",
+  "fixtureRemoved": true
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/launch-local.mjs SHA256 c902820dee080f78a6ae341ca30bac8c959a86f94a9781a8ddae7fbb60408f95
+/** Existing-wallet local entry point. Actual execution requires separate admission
+ * and outer process containment. Importing this module never reads private files,
+ * constructs a wallet, imports SDK code, or contacts a service.
+ */
+import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join,dirname,isAbsolute,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {inspectFinancialBuild} from './proven-assets.mjs';
+import {integrateLocalFinancialCase} from './integrate-local.mjs';
+import {waitForLocalTip,guardLocalWallet} from './local-tip.mjs';
+
+const check=(ok,code)=>{if(!ok)throw Error(code);};
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+const childKinds=['shielded','unshielded','dust'];
+const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+export function validateLocalLaunchPlan(p){
+ exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory');
+ check(p.schema==='moriarty.local-financial-launch/1'&&['loan','swap'].includes(p.kind),'LAUNCH_SCHEMA');
+ exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hex(p.build.receiptSha256)&&hex(p.build.sourceManifestHash),'LAUNCH_BUILD_HASH');
+ exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');check(p.networkConfig.networkId==='undeployed','LAUNCH_NETWORK');
+ for(const key of ['node','indexer','indexerWS','proofServer']){const u=new URL(p.networkConfig[key]);check(u.protocol===(key==='indexerWS'?'ws:':'http:')&&['127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&!u.hash,'LAUNCH_LOOPBACK');}
+ exact(p.wallet,'seedFile,stateDirectory,expectedAddress');absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);check(typeof p.wallet.expectedAddress==='string'&&/^mn_addr_undeployed1[a-z0-9]+$/.test(p.wallet.expectedAddress),'LAUNCH_WALLET_ADDRESS');
+ exact(p.roles,'firstAddress,secondAddress,secretsFile');absolute(p.roles.secretsFile);check(hex(p.roles.firstAddress)&&hex(p.roles.secondAddress)&&p.roles.firstAddress!==p.roles.secondAddress,'LAUNCH_ROLES');
+ exact(p.privateState,'directory,passwordFile');absolute(p.privateState.directory);absolute(p.privateState.passwordFile);absolute(p.outputDirectory);
+ const paths=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory];check(new Set(paths).size===3&&paths.every((a,i)=>paths.every((b,j)=>i===j||!a.startsWith(b+'/'))),'LAUNCH_DISTINCT_DIRECTORIES');
+ check(hex(p.networkTag)&&Number.isSafeInteger(p.expectedProtocolVersion)&&p.expectedProtocolVersion>=0,'LAUNCH_BINDINGS');
+ exact(p.limits,'allocationId,deadlineMs,submissions,dustFee,grossByLogicalAsset');check(typeof p.limits.allocationId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.limits.allocationId),'LAUNCH_ALLOCATION');
+ check(Number.isSafeInteger(p.limits.deadlineMs)&&p.limits.deadlineMs>Date.now()&&p.limits.deadlineMs<=Date.now()+3600000&&p.limits.submissions===4&&decimal(p.limits.dustFee),'LAUNCH_LIMITS');
+ exact(p.limits.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(p.limits.grossByLogicalAsset).every(decimal),'LAUNCH_ASSET_LIMITS');
+ return structuredClone(p);
+}
+function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
+export function readPrivateLaunchFile(p){
+ absolute(p);safeAncestors(p);let fd;
+ // Nonblocking open lets fstat reject a FIFO even when it has no writer.
+ try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+ finally{if(fd!==undefined)closeSync(fd);}
+}
+/** Apply the installed private-store policy before wallet restore or submission.
+ * Pin the actual validator, never mirror its rules or expose its error text.
+ */
+export async function readLocalStoragePassword(file){
+ const password=readPrivateLaunchFile(file).toString('utf8').trim();
+ const entry=join(PINNED_NM,'@midnight-ntwrk/midnight-js-utils/dist/index.mjs');
+ check(hash(readFileSync(entry))==='812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de','LAUNCH_PASSWORD_POLICY_PIN');
+ const {validatePassword}=await import(pathToFileURL(entry).href);
+ try{validatePassword(password);}catch{throw Error('LAUNCH_PRIVATE_PASSWORD');}
+ return password;
+}
+export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
+function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
+function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+function syncDirectory(p){const d=openSync(p,constants.O_RDONLY);try{fsyncSync(d);}finally{closeSync(d);}}
+function durableBytes(p,bytes){const fd=openSync(p,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,bytes);fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(p));}
+function durableFile(p,value){durableBytes(p,JSON.stringify(value)+'\n');}
+/** Called only at the wallet submission boundary, after provider reservations.
+ * Retains native finalized public payloads, never recipes or SDK private objects.
+ */
+export function retainPublicSubmissions({wallet,ledger,directory}){
+ privateDirectory(directory);check(typeof wallet?.submitTransaction==='function','LAUNCH_SUBMIT_API');
+ const submit=wallet.submitTransaction.bind(wallet);
+ return new Proxy(wallet,{get(target,key){
+  if(key==='submitTransaction')return async tx=>{
+   check(tx instanceof ledger.Transaction&&Object.getPrototypeOf(tx)===ledger.Transaction.prototype,'LAUNCH_NATIVE_TRANSACTION');
+   const raw=Buffer.from(tx.serialize());check(raw.length>0&&raw.length<=16*1024*1024,'LAUNCH_PUBLIC_TRANSACTION_SIZE');
+   const canonical=ledger.Transaction.deserialize('signature','proof','binding',raw);
+   check(Buffer.from(canonical.serialize()).equals(raw),'LAUNCH_NONCANONICAL_TRANSACTION');
+   const transactionHash=canonical.transactionHash(),identifiers=[...canonical.identifiers()];check(hex(transactionHash)&&identifiers.length>0&&identifiers.length<=128&&identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_TRANSACTION_IDENTITY');
+   const file=transactionHash+'.bin';
+   durableBytes(join(directory,file),raw);
+   durableFile(join(directory,transactionHash+'.json'),{schema:'moriarty.public-submission-bytes/1',transactionHash,identifiers,rawSha256:hash(raw),bytes:raw.length,file,scope:'Finalized public native bytes retained before wallet submission; submission and ledger acceptance unknown'});
+   return submit(canonical);
+  };
+  const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+ }});
+}
+/** Only the actual reviewed integration producer reaches this writer in the CLI.
+ * That producer already closes nested observations/comparisons. This is retention,
+ * not a sanitizer for caller-supplied SDK errors or private results.
+ */
+export function retainPublicIntegrationResult(directory,result){
+ exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope');
+ check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
+ if(result.driver!==undefined){const d=result.driver;exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':''));check(d.schema==='moriarty.local-financial-run/1','LAUNCH_PUBLIC_DRIVER');}
+ if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
+ durableFile(join(directory,'integration-result.json'),structuredClone(result));
+}
+export function publicLaunchEvent(e){
+ check(e&&['submitted','stopped'].includes(e.kind),'LAUNCH_EVENT_KIND');
+ check(Array.isArray(e.identifiers)&&e.identifiers.length<=128&&e.identifiers.every(x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x)),'LAUNCH_EVENT_IDS');
+ if(e.kind==='submitted'){check(typeof e.txId==='string'&&e.identifiers.includes(e.txId)&&hex(e.transactionHash),'LAUNCH_EVENT_TX');return {kind:e.kind,txId:e.txId,identifiers:[...e.identifiers],transactionHash:e.transactionHash};}
+ check(Number.isSafeInteger(e.pendingOperations)&&e.pendingOperations>=0&&e.reservationRetained===true,'LAUNCH_EVENT_STOP');
+ return {kind:e.kind,identifiers:[...e.identifiers],reservationRetained:true,pendingOperations:e.pendingOperations};
+}
+export async function inspectLocalLaunchRuntime(){
+ const pins=runtimePins();let files=0;
+ for(const [name,pin] of Object.entries(pins))for(const [entry,digest] of Object.entries(pin.files)){check(hash(readFileSync(join(PINNED_NM,name,entry)))===digest,'LAUNCH_SDK_PIN');files++;}
+ return {status:'SOURCE_INSPECTED',files,walletStarted:false};
+}
+async function runtime(){
+ await inspectLocalLaunchRuntime();const pins=runtimePins();
+ const load=name=>import(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href);
+ const [sdk,ledger,network,rx,ws]=await Promise.all(['@midnight-ntwrk/wallet-sdk','@midnight-ntwrk/midnight-js-protocol','@midnight-ntwrk/midnight-js-network-id','rxjs','ws'].map(load));
+ globalThis.WebSocket=ws.WebSocket;return {sdk,ledger,network,rx};
+}
+/** Imports exact SDK code but creates no wallet, key, proof or network request. */
+export async function inspectLocalLaunchApi(){
+ const {sdk,ledger,network,rx}=await runtime();
+ check(['ShieldedWallet','UnshieldedWallet','DustWallet','createKeystore','NoOpTransactionHistoryStorage'].every(k=>typeof sdk[k]==='function')&&typeof sdk.WalletFacade.init==='function'&&typeof sdk.HDWallet.fromSeed==='function'&&typeof ledger.signingKeyFromBip340==='function'&&typeof network.setNetworkId==='function'&&typeof rx.firstValueFrom==='function','LAUNCH_SDK_API');
+ return {status:'API_INSPECTED',walletStarted:false,keysCreated:false,networkRequests:0};
+}
+// No caller-supplied SDK/runtime adapters: only the fixed inspected SDK reaches execution.
+export async function launchLocalFinancialCase(plan){
+ const p=validateLocalLaunchPlan(plan);process.umask(0o077);
+ privateDirectory(p.wallet.stateDirectory);privateDirectory(dirname(p.outputDirectory));privateDirectory(p.privateState.directory);
+ // Inspect real proving assets before opening private wallet material.
+ await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
+ const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
+ const password=await readLocalStoragePassword(p.privateState.passwordFile);
+ const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
+ const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
+ mkdirSync(p.outputDirectory,{mode:0o700}); // Exclusive run directory, never resume or retry automatically.
+ syncDirectory(dirname(p.outputDirectory));
+ durableFile(join(p.outputDirectory,'plan.json'),p);
+ let sequence=0,wallet,ownershipTransferred=false,phase='restore';const children=[];
+ const append=value=>durableFile(join(p.outputDirectory,`${String(++sequence).padStart(3,'0')}.json`),value);
+ const deadline=p.limits.deadlineMs;
+ const within=async fn=>{check(Date.now()<deadline,'LAUNCH_DEADLINE');let t;try{return await Promise.race([Promise.resolve().then(fn),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('LAUNCH_DEADLINE')),Math.max(1,deadline-Date.now()));})]);}finally{clearTimeout(t);}};
+ try{
+  const {sdk,ledger,network,rx}=await within(runtime);network.setNetworkId('undeployed');
+  const tipOptions={node:p.networkConfig.node,indexer:p.networkConfig.indexer,deadlineMs:deadline};
+  phase='tip-readiness';append(await within(()=>waitForLocalTip(tipOptions)));phase='restore';
+  const hd=sdk.HDWallet.fromSeed(Buffer.from(seedHex,'hex'));seed.fill(0);seedHex=undefined;check(hd.type==='seedOk','LAUNCH_SEED_DERIVATION');
+  let keys;try{const result=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal,sdk.Roles.Dust]).deriveKeysAt(0);check(result.type==='keysDerived','LAUNCH_SEED_DERIVATION');keys=result.keys;}finally{hd.hdWallet.clear();}
+  const shieldedSecretKeys=ledger.ZswapSecretKeys.fromSeed(keys[sdk.Roles.Zswap]),dustSecretKey=ledger.DustSecretKey.fromSeed(keys[sdk.Roles.Dust]),unshieldedKeystore=sdk.createKeystore(keys[sdk.Roles.NightExternal],'undeployed');
+  check(unshieldedKeystore.getBech32Address().asString()===p.wallet.expectedAddress&&unshieldedKeystore.getAddress()===p.roles.firstAddress,'LAUNCH_EXISTING_IDENTITY');
+  const signingBytes=unshieldedKeystore.getSecretKey();let deploymentSigningKey;try{deploymentSigningKey=ledger.signingKeyFromBip340(signingBytes);}finally{signingBytes.fill(0);}
+  check(ledger.signatureVerifyingKey(deploymentSigningKey)===unshieldedKeystore.getPublicKey(),'LAUNCH_SIGNING_IDENTITY');
+  const restore=(factory,kind)=>async c=>{const child=await factory(c).restore(saved[kind]);children.push(child);if(Date.now()>=deadline){await child.stop();throw Error('LAUNCH_DEADLINE');}return child;};
+  wallet=await within(()=>sdk.WalletFacade.init({configuration:{networkId:'undeployed',indexerClientConnection:{indexerHttpUrl:p.networkConfig.indexer,indexerWsUrl:p.networkConfig.indexerWS},provingServerUrl:new URL(p.networkConfig.proofServer),relayURL:new URL(p.networkConfig.node.replace(/^http/,'ws')),txHistoryStorage:new sdk.NoOpTransactionHistoryStorage(),costParameters:{additionalFeeOverhead:300000000000000n,feeBlocksMargin:5}},shielded:restore(sdk.ShieldedWallet,'shielded'),unshielded:restore(sdk.UnshieldedWallet,'unshielded'),dust:restore(sdk.DustWallet,'dust')}).then(async value=>{if(Date.now()>=deadline){await value.stop();throw Error('LAUNCH_DEADLINE');}return value;}));
+  const restored=await within(()=>rx.firstValueFrom(wallet.unshielded.state));
+  check(restored.state.networkId==='undeployed'&&restored.state.publicKey.publicKey===unshieldedKeystore.getPublicKey()&&restored.state.publicKey.addressHex===p.roles.firstAddress&&restored.state.publicKey.address===p.wallet.expectedAddress,'LAUNCH_RESTORED_IDENTITY');
+  phase='sync';await within(()=>wallet.start(shieldedSecretKeys,dustSecretKey));const synced=await within(()=>wallet.waitForSyncedState());check(synced.isSynced===true&&synced.dust.availableCoins.length>0,'LAUNCH_REGISTERED_DUST_REQUIRED');
+ const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
+  const guardedWallet=guardLocalWallet({wallet,...tipOptions,onTip:append});
+  const retainedWallet=retainPublicSubmissions({wallet:guardedWallet,ledger,directory:submissionDirectory});
+  phase='integration';ownershipTransferred=true;
+  const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicLaunchEvent(e)),onStage:summary=>{check(summary?.status==='PASS'&&['deploy','initialize','accrue','settle','swap','close'].includes(summary.stage),'LAUNCH_STAGE');durableFile(join(p.outputDirectory,'stage-'+summary.stage+'.json'),summary);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}};
+  let result;
+  try{result=await integrateLocalFinancialCase(options);}
+  catch(error){if(error.publicIntegrationResult!==undefined)retainPublicIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('LOCAL_FINANCIAL_RUN_INCOMPLETE');}
+  retainPublicIntegrationResult(p.outputDirectory,result);return result;
+ }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('LOCAL_FINANCIAL_LAUNCH_FAILED');}
+ finally{seed.fill(0);if(!ownershipTransferred){let t;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Outer process containment remains required. */}finally{clearTimeout(t);}}}
+}
+if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+ let hardTimer;
+ try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=result.status==='PASS'?0:2;}
+ catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+ finally{clearTimeout(hardTimer);}
+ process.exit(process.exitCode??0);
+}
+
+
+FILE experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs SHA256 e691031f7268eda4edb1fe9ccea43ca5df132fbb03f995fdee720219b496b3ed
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,readFileSync,readdirSync,chmodSync,symlinkSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+const api=await import('./launch-local.mjs').catch(()=>({}));
+const h='11'.repeat(32);
+function plan(){return {schema:'moriarty.local-financial-launch/1',kind:'loan',build:{receiptPath:'/private/build-receipt.json',receiptSha256:h,sourceManifestHash:h},networkConfig:{networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},wallet:{seedFile:'/private/local.seed',stateDirectory:'/private/existing',expectedAddress:'mn_addr_undeployed1example'},roles:{firstAddress:h,secondAddress:'22'.repeat(32),secretsFile:'/private/roles.json'},privateState:{directory:'/private/db',passwordFile:'/private/password'},networkTag:h,expectedProtocolVersion:1000000,limits:{allocationId:'local-01',deadlineMs:Date.now()+60000,submissions:4,dustFee:'123',grossByLogicalAsset:{USD_TEST_ASSET:'1000'}},outputDirectory:'/private/run-01'};}
+test('closed local plan validates without opening secret paths',()=>{assert.equal(typeof api.validateLocalLaunchPlan,'function');assert.equal(api.validateLocalLaunchPlan(plan()).kind,'loan');});
+test('rejects remote endpoints, Preview, embedded secrets, unknown fields and unbounded limits',()=>{
+ assert.equal(typeof api.validateLocalLaunchPlan,'function');
+ for(const mutate of [p=>p.networkConfig.node='http://example.com',p=>p.networkConfig.networkId='preview',p=>p.wallet.seed='SECRET',p=>p.roles.firstSecret='SECRET',p=>p.adapters={},p=>p.limits.submissions=5,p=>p.limits.deadlineMs=Date.now()+7200000,p=>p.limits.dustFee='-1',p=>p.privateState.directory=p.outputDirectory,p=>p.roles.secondAddress=p.roles.firstAddress]){const p=plan();mutate(p);assert.throws(()=>api.validateLocalLaunchPlan(p));}
+});
+test('private input reader rejects permissive files and symlinks without leaking contents',()=>{
+ assert.equal(typeof api.readPrivateLaunchFile,'function');const root=mkdtempSync(join(tmpdir(),'moriarty-launch-'));const file=join(root,'secret');
+ try{writeFileSync(file,'DO_NOT_EMIT',{mode:0o600});assert.equal(api.readPrivateLaunchFile(file).toString(),'DO_NOT_EMIT');chmodSync(file,0o644);assert.throws(()=>api.readPrivateLaunchFile(file),e=>!e.message.includes('DO_NOT_EMIT'));chmodSync(file,0o600);symlinkSync(file,join(root,'link'));assert.throws(()=>api.readPrivateLaunchFile(join(root,'link')));}finally{rmSync(root,{recursive:true,force:true});}
+});
+test('private input reader and CLI reject a FIFO without waiting for a writer',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-launch-fifo-'));const fifo=join(dir,'not-a-regular-file');
+ try{
+  assert.equal(spawnSync('mkfifo',['-m','600',fifo]).status,0);
+  const moduleUrl=new URL('./launch-local.mjs',import.meta.url).href;
+  const script=`import {readPrivateLaunchFile} from ${JSON.stringify(moduleUrl)};try{readPrivateLaunchFile(process.argv[1]);process.exitCode=2;}catch(e){process.exitCode=e.message==='LAUNCH_PRIVATE_FILE'?0:3;}`;
+  const reader=spawnSync(process.execPath,['--input-type=module','-e',script,fifo],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(reader.error,undefined,'reader must reject without blocking on FIFO open');assert.equal(reader.status,0);
+  const cli=spawnSync(process.execPath,[new URL('./launch-local.mjs',import.meta.url).pathname,'--run','--plan',fifo,'--sha256',h],{encoding:'utf8',timeout:2000,killSignal:'SIGKILL'});
+  assert.equal(cli.error,undefined,'CLI must reject before its plan-dependent timer exists');assert.equal(cli.status,1);assert.equal(cli.stdout,'');
+  assert.equal(cli.stderr,'Local financial launch failed; inspect retained public run records.\n');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('event projection drops private fields and rejects unexpected event kinds',()=>{
+ assert.equal(typeof api.publicLaunchEvent,'function');
+ const event=api.publicLaunchEvent({kind:'submitted',txId:h,identifiers:[h],transactionHash:h,private:'DO_NOT_EMIT'});
+ assert.deepEqual(event,{kind:'submitted',txId:h,identifiers:[h],transactionHash:h});
+ assert.throws(()=>api.publicLaunchEvent({kind:'private',secret:'DO_NOT_EMIT'}));
+});
+test('actual pinned launch SDK files satisfy source inspection without wallet construction',async()=>{
+ assert.equal(typeof api.inspectLocalLaunchRuntime,'function');const result=await api.inspectLocalLaunchRuntime();assert.equal(result.status,'SOURCE_INSPECTED');assert.equal(result.walletStarted,false);assert.ok(result.files>10);
+});
+test('CLI requires an explicit run, plan path and exact digest without echoing arguments',()=>{
+ const child=spawnSync(process.execPath,['experiments/moriarty-midnight-financial/ledger/launch-local.mjs','--seed','DO_NOT_EMIT'],{encoding:'utf8'});
+ assert.equal(child.status,1);assert.equal(child.stdout,'');assert.ok(!child.stderr.includes('DO_NOT_EMIT'));
+});
+test('strict saved-state envelope rejects absent, null and incompatible restore data',()=>{
+ assert.equal(typeof api.decodeSavedWalletEnvelope,'function');
+ assert.equal(api.decodeSavedWalletEnvelope({version:1,state:'opaque-saved-state'}),'opaque-saved-state');
+ for(const x of [{version:1},{version:1,state:null},{version:2,state:'x'},{version:1,state:'x',fallback:true}])assert.throws(()=>api.decodeSavedWalletEnvelope(x));
+});
+test('real pinned API exports compose without constructing a wallet or key',async()=>{
+ assert.equal(typeof api.inspectLocalLaunchApi,'function');assert.deepEqual(await api.inspectLocalLaunchApi(),{status:'API_INSPECTED',walletStarted:false,keysCreated:false,networkRequests:0});
+});
+test('public submission capture persists actual historical native bytes before inert submission and retains failure evidence',async()=>{
+ assert.equal(typeof api.retainPublicSubmissions,'function');
+ const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+ const raw=readFileSync(new URL('./fixtures/historical-dust/transaction.bin',import.meta.url));
+ const tx=ledger.Transaction.deserialize('signature','proof','binding',raw);
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-public-submission-'));let calls=0;
+ const wallet={marker:1,async submitTransaction(actual){calls++;assert.equal(this,wallet);assert.deepEqual(Buffer.from(actual.serialize()),raw);const metadata=JSON.parse(readFileSync(join(dir,tx.transactionHash()+'.json')));assert.equal(metadata.transactionHash,tx.transactionHash());assert.deepEqual(metadata.identifiers,[...tx.identifiers()]);assert.deepEqual(readFileSync(join(dir,metadata.file)),raw);throw Error('INERT_SUBMIT_FAILURE');},stop(){assert.equal(this,wallet);return this.marker;}};
+ try{const retained=api.retainPublicSubmissions({wallet,ledger,directory:dir});assert.equal(retained.stop(),1);await assert.rejects(retained.submitTransaction(tx),/INERT_SUBMIT_FAILURE/);assert.equal(calls,1);assert.equal(readdirSync(dir).length,2);
+  await assert.rejects(retained.submitTransaction(tx));assert.equal(calls,1,'exclusive existing capture blocks repeat submission');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('submission evidence storage failure prevents calling even an inert submitter',async()=>{
+ assert.equal(typeof api.retainPublicSubmissions,'function');const ledger=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs')).href);
+ const tx=ledger.Transaction.deserialize('signature','proof','binding',readFileSync(new URL('./fixtures/historical-dust/transaction.bin',import.meta.url)));const dir=mkdtempSync(join(tmpdir(),'moriarty-capture-failure-'));let calls=0;
+ try{writeFileSync(join(dir,tx.transactionHash()+'.json'),'occupied',{mode:0o600});const wallet={async submitTransaction(){calls++;}};const retained=api.retainPublicSubmissions({wallet,ledger,directory:dir});await assert.rejects(retained.submitTransaction(tx));assert.equal(calls,0);assert.ok(readdirSync(dir).some(x=>x.endsWith('.bin')),'public bytes retained despite metadata storage failure');}finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('complete reviewed public integration result preserves failed driver receipts, cleanup and finished comparison',()=>{
+ assert.equal(typeof api.retainPublicIntegrationResult,'function');const dir=mkdtempSync(join(tmpdir(),'moriarty-integration-result-'));
+ const result={schema:'moriarty.local-financial-integration/1',status:'INCOMPLETE',kind:'loan',sourceTestOnly:false,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false,build:{receiptSha256:h,sourceManifestHash:h},assetBindings:{USD_TEST_ASSET:h},phase:'driver',driver:{schema:'moriarty.local-financial-run/1',status:'INCOMPLETE',kind:'loan',contractAddress:h,stages:[{schema:'moriarty.finalized-financial-stage/1',txId:h}],transactionIds:[h],cleanup:{walletStopped:true,pendingOperations:0,containmentComplete:false},operationalState:{reservedSubmissions:4},scope:'public'},cleanup:{walletStopped:true,pendingOperations:0,containmentComplete:false},setupPendingOperations:0,comparisons:[{status:'PASS',stage:'settle'}],financialComparison:{status:'PASS',kind:'loan',contractAddress:h,expectationsSha256:h,stages:[{status:'PASS',stage:'settle'}],scope:'public',networkAcceptance:false,proofAcceptance:false},scope:'public'};
+ try{api.retainPublicIntegrationResult(dir,result);assert.deepEqual(JSON.parse(readFileSync(join(dir,'integration-result.json'))),result);assert.throws(()=>api.retainPublicIntegrationResult(dir,{...result,private:'DO_NOT_EMIT'}));assert.throws(()=>api.retainPublicIntegrationResult(dir,new Error('DO_NOT_EMIT')));
+  const successDir=mkdtempSync(join(dir,'success-'));const success=structuredClone(result);success.status='PASS';success.driver.status='PASS';api.retainPublicIntegrationResult(successDir,success);assert.deepEqual(JSON.parse(readFileSync(join(successDir,'integration-result.json'))),success);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('storage password preflight applies actual SDK policy before wallet work and emits only a closed error',async()=>{
+ assert.equal(typeof api.readLocalStoragePassword,'function');
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-password-preflight-')),file=join(dir,'password');
+ try{
+  for(const password of ['1a9f'.repeat(16),'Ab1!'.repeat(4)+'abcd','Ab1!'.repeat(4)+'zzzz','too-short']){
+   writeFileSync(file,password+'\n',{mode:0o600});
+   await assert.rejects(api.readLocalStoragePassword(file),e=>e.message==='LAUNCH_PRIVATE_PASSWORD'&&!e.message.includes(password));
+  }
+  const accepted='N7!qL2@vR9#sH4$wT6%y';writeFileSync(file,accepted+'\n',{mode:0o600});
+  assert.equal(await api.readLocalStoragePassword(file),accepted);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

@@ -43,6 +43,17 @@ export function readPrivateLaunchFile(p){
  try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
  finally{if(fd!==undefined)closeSync(fd);}
 }
+/** Apply the installed private-store policy before wallet restore or submission.
+ * Pin the actual validator, never mirror its rules or expose its error text.
+ */
+export async function readLocalStoragePassword(file){
+ const password=readPrivateLaunchFile(file).toString('utf8').trim();
+ const entry=join(PINNED_NM,'@midnight-ntwrk/midnight-js-utils/dist/index.mjs');
+ check(hash(readFileSync(entry))==='812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de','LAUNCH_PASSWORD_POLICY_PIN');
+ const {validatePassword}=await import(pathToFileURL(entry).href);
+ try{validatePassword(password);}catch{throw Error('LAUNCH_PRIVATE_PASSWORD');}
+ return password;
+}
 export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
 function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
 function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
@@ -112,7 +123,7 @@ export async function launchLocalFinancialCase(plan){
  // Inspect real proving assets before opening private wallet material.
  await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
  const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
- const password=readPrivateLaunchFile(p.privateState.passwordFile).toString('utf8').trim();check(password.length>=16,'LAUNCH_PRIVATE_PASSWORD');
+ const password=await readLocalStoragePassword(p.privateState.passwordFile);
  const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
  const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
  mkdirSync(p.outputDirectory,{mode:0o700}); // Exclusive run directory, never resume or retry automatically.

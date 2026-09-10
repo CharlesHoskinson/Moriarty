@@ -1,0 +1,26 @@
+{
+  "schema": "moriarty.local-loan-attempt/2",
+  "allocationId": "sp05-local-loan-03",
+  "createdAt": "2026-09-10T05:13:19.603915+00:00",
+  "admissionSha256": "b51f125bfb3769131a994d21938d466e95562bb77951c2a3a13ad210daedadbc",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-stop-03",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-03.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorAttempt": "../local-execution-03/attempt-result.json",
+  "earlierAttempt": "../local-execution-02/attempt-result.json",
+  "priorReservedSubmissions": 2,
+  "priorReservedDustSpeck": "600000000000002",
+  "otherHistoricalCharges": "retained separately, not zeroed"
+}

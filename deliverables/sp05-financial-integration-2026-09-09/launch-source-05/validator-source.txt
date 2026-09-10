@@ -1,0 +1,112 @@
+229: };
+230: 
+231: /*
+232:  * This file is part of midnight-js.
+233:  * Copyright (C) 2025-2026 Midnight Foundation
+234:  * SPDX-License-Identifier: Apache-2.0
+235:  * Licensed under the Apache License, Version 2.0 (the "License");
+236:  * You may not use this file except in compliance with the License.
+237:  * You may obtain a copy of the License at
+238:  * http://www.apache.org/licenses/LICENSE-2.0
+239:  * Unless required by applicable law or agreed to in writing, software
+240:  * distributed under the License is distributed on an "AS IS" BASIS,
+241:  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+242:  * See the License for the specific language governing permissions and
+243:  * limitations under the License.
+244:  */
+245: const MIN_PASSWORD_LENGTH = 16;
+246: const MIN_CHARACTER_CLASSES = 3;
+247: const MAX_CONSECUTIVE_REPEATED = 3;
+248: const MIN_SEQUENTIAL_LENGTH = 4;
+249: /**
+250:  * Thrown when a password does not satisfy the strength policy applied to
+251:  * private storage and export/import operations.
+252:  */
+253: class PasswordValidationError extends Error {
+254:     reason;
+255:     constructor(message, reason) {
+256:         super(message);
+257:         this.reason = reason;
+258:         this.name = 'PasswordValidationError';
+259:     }
+260: }
+261: const countCharacterClasses = (password) => {
+262:     let count = 0;
+263:     if (/[a-z]/.test(password))
+264:         count++;
+265:     if (/[A-Z]/.test(password))
+266:         count++;
+267:     if (/[0-9]/.test(password))
+268:         count++;
+269:     if (/[^a-zA-Z0-9]/.test(password))
+270:         count++;
+271:     return count;
+272: };
+273: const hasRepeatedCharacters = (password) => {
+274:     let consecutiveCount = 1;
+275:     for (let i = 1; i < password.length; i++) {
+276:         if (password[i] === password[i - 1]) {
+277:             consecutiveCount++;
+278:             if (consecutiveCount > MAX_CONSECUTIVE_REPEATED) {
+279:                 return true;
+280:             }
+281:         }
+282:         else {
+283:             consecutiveCount = 1;
+284:         }
+285:     }
+286:     return false;
+287: };
+288: const hasSequentialPattern = (password) => {
+289:     const lowerPassword = password.toLowerCase();
+290:     for (let i = 0; i <= lowerPassword.length - MIN_SEQUENTIAL_LENGTH; i++) {
+291:         let ascendingCount = 1;
+292:         let descendingCount = 1;
+293:         for (let j = 1; j < MIN_SEQUENTIAL_LENGTH; j++) {
+294:             const currentCode = lowerPassword.charCodeAt(i + j);
+295:             const prevCode = lowerPassword.charCodeAt(i + j - 1);
+296:             if (currentCode === prevCode + 1) {
+297:                 ascendingCount++;
+298:             }
+299:             else {
+300:                 ascendingCount = 1;
+301:             }
+302:             if (currentCode === prevCode - 1) {
+303:                 descendingCount++;
+304:             }
+305:             else {
+306:                 descendingCount = 1;
+307:             }
+308:             if (ascendingCount >= MIN_SEQUENTIAL_LENGTH || descendingCount >= MIN_SEQUENTIAL_LENGTH) {
+309:                 return true;
+310:             }
+311:         }
+312:     }
+313:     return false;
+314: };
+315: /**
+316:  * Shared password strength policy for private storage and export/import operations.
+317:  * Throws {@link PasswordValidationError} on the first violated rule.
+318:  */
+319: const validatePassword = (password) => {
+320:     if (!password) {
+321:         throw new PasswordValidationError('Password is required for private state encryption.\n' +
+322:             'Please provide a password via privateStoragePasswordProvider in the configuration.', 'missing');
+323:     }
+324:     if (password.length < MIN_PASSWORD_LENGTH) {
+325:         throw new PasswordValidationError(`Password is shorter than ${MIN_PASSWORD_LENGTH} characters`, 'too_short');
+326:     }
+327:     if (hasRepeatedCharacters(password)) {
+328:         throw new PasswordValidationError(`Password contains too many repeated characters (more than ${MAX_CONSECUTIVE_REPEATED} identical in a row)`, 'repeated_characters');
+329:     }
+330:     const characterClasses = countCharacterClasses(password);
+331:     if (characterClasses < MIN_CHARACTER_CLASSES) {
+332:         throw new PasswordValidationError(`Password must contain at least ${MIN_CHARACTER_CLASSES} of: uppercase letters, lowercase letters, digits, special characters. Found: ${characterClasses}`, 'insufficient_classes');
+333:     }
+334:     if (hasSequentialPattern(password)) {
+335:         throw new PasswordValidationError("Password contains sequential patterns (e.g., '1234', 'abcd'). Use a more random password", 'sequential_pattern');
+336:     }
+337: };
+338: 
+339: /*
+340:  * This file is part of midnight-js.

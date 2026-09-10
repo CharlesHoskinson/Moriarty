@@ -1,0 +1,180 @@
+{
+  "schema": "moriarty.fixed-local-loan-resource/4",
+  "status": "proposed-not-admitted",
+  "authority": "raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md",
+  "scope": "One bounded local service/catch-up window, then at most one fresh loan execution ONLY if the previously pending transaction is reconciled as not included through a synchronized finalized tip later than its earliest native TTL. Otherwise stop after public observation. No automatic replay/resubmission, wallet reset, node/runtime change, compiler run, Preview or acceptance promotion.",
+  "sourceAssessment": "../launch-source-04/gpt6-review.md",
+  "sourceAssessmentSha256": "de074fe0a80255e29499276ced26bb89b11522a7033076666855740a02aa3498",
+  "attempts": 1,
+  "submissions": 4,
+  "grossByLogicalAsset": {
+    "USD_TEST_ASSET": "20000000000"
+  },
+  "dustFeeSpeck": "2000000000000000",
+  "proofAccounting": {
+    "contractProveEntriesMax": 4,
+    "walletFinalizeProveEntriesMax": 4,
+    "httpAttemptsPerCallbackMax": 4,
+    "callbackMultiplicity": "not established; no absolute HTTP count claimed",
+    "resourceBound": "single proof server under CPU/memory limits and independent outer Docker shutdown deadline; all internal SDK retries consume the same time/resources"
+  },
+  "timeSeconds": {
+    "serviceReadinessMax": 120,
+    "walletOperationMax": 1200,
+    "cleanupReserved": 30,
+    "totalMax": 1350,
+    "independentShutdownStart": 1300
+  },
+  "nodeService": {
+    "unit": "moriarty-sp05-local-loan-03.service",
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "KillMode": "control-group",
+    "SendSIGKILL": true,
+    "RuntimeMaxSec": 1206,
+    "TimeoutStopSec": 5,
+    "FinalKillSignal": "SIGKILL",
+    "activationDeadlineSecondsAfterArming": 120
+  },
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-proof-server",
+      "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "roles": {
+    "firstAddress": "9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb",
+    "secondAddress": "c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e",
+    "expectedAddress": "mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9",
+    "lenderBasis": "Existing preprod public address re-encoded as local payout recipient only; no preprod request, secret read, signature or funding."
+  },
+  "privatePreparation": {
+    "base": "/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03",
+    "exclusive": true,
+    "seedFile": "/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed",
+    "walletStateDirectory": "/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2",
+    "newMaterial": "Two random 32-byte contract capability secrets and one 32-byte random private-state password; not wallet identities",
+    "existingSnapshots": "Strict restore only, leave original bytes unchanged",
+    "fileMode": "0600",
+    "directoryMode": "0700",
+    "directoryDurability": "Fsync new directory and parent before acknowledged activation, including contract-state base"
+  },
+  "network": {
+    "networkId": "undeployed",
+    "node": "http://127.0.0.1:19944",
+    "indexer": "http://127.0.0.1:18088/api/v4/graphql",
+    "indexerWS": "ws://127.0.0.1:18088/api/v4/graphql/ws",
+    "proofServer": "http://127.0.0.1:16300",
+    "networkTagRule": "Validated actual chain_getBlockHash([0]) hex without 0x",
+    "protocolVersionRule": "Actual local indexer public transaction data for retained dedicated wallet receipt; require exact existing transaction/block identity and node finality, not inferred package versions"
+  },
+  "storage": {
+    "minimumFreeBytes": 4294967296,
+    "publicPayloadMaxBytesEach": 16777216,
+    "publicPayloadMaxCount": 4,
+    "aggregateHardQuota": false,
+    "sourceBound": "four payloads up to64MiB plus closed stage/event/results and new private LevelDB; retain privately, never copy SDK diagnostics or secrets into git",
+    "cleanup": "Retain all partial transaction records, reservations and private contract state; no evidence or wallet-state deletion."
+  },
+  "stopOn": [
+    "preexisting unit/timer/run directory",
+    "container identity/limits/state mismatch",
+    "unresolved source/build review",
+    "missing memory/disk headroom",
+    "old chain receipt/genesis/protocol mismatch",
+    "private file or restored identity mismatch",
+    "no synchronized registered DUST",
+    "deadline/resource cap",
+    "first failed required comparison",
+    "unknown submission/finality; preserve reservation",
+    "fresh canonical tip unavailable",
+    "stale/future/regressing native DUST creation time",
+    "deadline crossed during readiness retention",
+    "committee epoch catch-up or rotation unresolved",
+    "old pending transaction not conclusively reconciled at a post-TTL synchronized finalized tip"
+  ],
+  "prerequisites": [
+    "separate approved current launcher source reviews",
+    "approved actual compiler artifact reviews",
+    "fresh GPT-6 and Grok agreeing resource votes",
+    "record exact command arguments, plan hash and outer timer activation before wallet launch"
+  ],
+  "priorCharges": "All earlier campaign/compiler/review/service charges remain. Actual local attempts01 and02 each retain1reservedsubmission and300000000000001SPECK; combined actual2submissions and600000000000002SPECK, zero completed financial stages. This successor adds at most4submissions and2000000000000000SPECK; combined at most6submissions and2600000000000002SPECK for these3local attempts, plus earlier other campaign charges. No original journal is edited and no charge reclaimed. Read-only catch-up/expiry failure consumes this service attempt without wallet dispatch.",
+  "acceptance": "Inner result stays INCOMPLETE if pinned SDK cannot report complete containment. Four matching stages + separately observed outer cleanup are scoped I2 observations only; no full SP05/Preview/PCD acceptance.",
+  "predecessor": "../local-execution-03/resource-proposal.json",
+  "outerShutdown": {
+    "unit": "moriarty-sp05-local-stop-03",
+    "atSecondsAfterArming": 1300,
+    "launcherUnit": "moriarty-sp05-local-loan-03.service",
+    "launcherKillCommandMaxSeconds": 5,
+    "dockerStopCommandMaxSeconds": 20,
+    "dockerKillFallbackMaxSeconds": 5,
+    "handlesAbsentLauncher": true,
+    "startsForbiddenAfterShutdownBegins": true,
+    "latestCompletedCleanupSeconds": 1331,
+    "envelopeSeconds": 1350,
+    "scope": "This corrects the late-launch finding by terminating both launcher cgroup and external services. Readiness, private setup and launcher activation must finish by arming+120 seconds; no deferred activation."
+  },
+  "sourceCandidate": {
+    "path": "../launch-source-04/candidate-02.json",
+    "sha256": "42ebb0b23376324318d98aaa31aa7e512b195aa256428ac3acc6902d226742c6"
+  },
+  "changedHypothesis": "Actual predecessor reached valid mempool with fresh DUSTctime. Finite committee epoch catch-up reserved full block weight; final last-observed lag was10epochs. Do not raise block limits. Before any private wallet work require a same-hash finalized non-rotation block with committee epoch current and node/indexer agreement. Reconcile old transaction at that tip and require timestamp later than04:55:15Z TTL. No irreversible ledger effect from old transaction may be assumed absent solely because local process stopped.",
+  "retainedFailure": {
+    "path": "../local-execution-03/attempt-result.json",
+    "sha256": "b803ac998c1ab306033475a6ff8171e37b5e7eca59c4b42c16e672548ee3f464",
+    "transactionHash": "7f567d8759d8289016040278b39f92a1912396f56416e469e5ae10a548081d01",
+    "resubmit": false
+  },
+  "readiness": "Before restore and each SDK balance: <=60s and60read-only samples,1s spacing,5s per sample requests,all inside existing wallet/outer deadline. Tipage<=60s,no future,canonical node hash and +/-2height near finalized head; not finality acceptance. Actual native DUSTctime <=60s and no tip-time regression before signing; <=60s before submit. No wallet retries. Slow proof stops; no extra resource allowance.",
+  "reconciliation": {
+    "nativeTransactionHash": "7f567d8759d8289016040278b39f92a1912396f56416e469e5ae10a548081d01",
+    "identifiers": [
+      "00f7530d22d7c9222b63265a92bcf341af022cbd6db9d457f72a2bceb4e04f5d50",
+      "00ad91f904215ddec4aa7d5312d9999a508acbcf44f4a18bcdbee7227d7eadb85f"
+    ],
+    "earliestNativeIntentTtl": "2026-09-10T04:55:15.000Z",
+    "conditions": [
+      "Offline native canonical bytes/hash/TTL inspection must match preserved record",
+      "Node finalized block timestamp strictly after earliest TTL",
+      "Indexer tip same block hash/height as selected finalized node block, with no transaction found by hash or either identifier",
+      "No old transaction in node pending pool; if present, do not delete or replace it",
+      "If any receipt, pending record, indexer gap, pre-TTL tip, chain identity mismatch or ambiguity remains, retain it and stop; no fresh deployment"
+    ],
+    "journalPolicy": "Append separate reconciliation observation only; leave old submitting reservation and its charges intact. Expiration observation is not a refund or synthetic settlement."
+  },
+  "committeeReadiness": {
+    "scope": "Read-only same-finalized-hash runtime/metadata, timestamp, committee epoch and all system/session event observations before wallet preparation",
+    "conditions": [
+      "Actual current committee epoch equals sidechain epoch stored at selected finalized block",
+      "Selected finalized block has no session rotation event",
+      "Selected block timestamp is recent and its calculated wall epoch from actual slot/epoch configuration does not exceed committee epoch",
+      "Indexer latest block hash/height equals selected finalized node block"
+    ],
+    "bound": "All catch-up polling, old receipt checks, private preparation and acknowledged launcher activation share existing120s setup deadline after timer arming; one-second read-only condition polling. No fixed sleep as evidence; no runtime/committee write. If no readiness by bound, abort before wallet."
+  }
+}

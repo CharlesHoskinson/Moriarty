@@ -1,0 +1,18 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "candidateSha256": "d33cb3634087f5fdfcf53f4c855e24060a29c0d21c5b45e4d7a9e8096e8db817",
+  "findings": [
+    {
+      "severity": "medium",
+      "file": "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs",
+      "line": 84,
+      "description": "Two expected-reject fixtures (`Ab1!`\u00d74+`abcd` and `Ab1!`\u00d74+`zzzz`) contain upper, lower, digit, and special classes and length 20. The pinned-policy reproduction states insufficient_classes at fewer than three classes. Unless the pinned validator has an extra unpublished rule, those cases pass `validatePassword` and the new test fails. Keep proven rejects (64-char lowercase hex; too-short) and one live accepted password; do not assert rejection of mixed-class secrets that the SDK admits."
+    }
+  ],
+  "scope": "Pinned midnight-js-utils validatePassword preflight on the storage password before snapshots/seed/wallet/start/network; no retry, recovery, new allocation, or financial acceptance.",
+  "limitations": [
+    "Production placement, pin 812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de, closed LAUNCH_PRIVATE_PASSWORD (no SDK text/cause), and call before snapshots/seed are correct for the hex insufficient_classes failure. This verdict is only the incorrect reject vectors in the new test.",
+    "Validator source was not listed here; class-count behavior is taken from the supplied reproduction trace. Tests were not executed in this review.",
+    "This change does not authorize reuse of allocation03, password rotation on the existing private store, wallet reset, or recovery of the already indexed deployment. Those charges and private files remain consumed."
+  ]
+}

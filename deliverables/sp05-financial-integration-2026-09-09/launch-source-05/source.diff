@@ -1,0 +1,62 @@
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.md b/experiments/moriarty-midnight-financial/ledger/launch-local.md
+index 203c222..9b08ee7 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.md
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.md
+@@ -94,3 +94,5 @@ The launcher waits for a recent indexed block before restoring the wallet, and c
+ After the SDK independently queries the indexer during balancing, the launcher checks the native recipe's DUST creation time before it returns to signing: no future time, age at most 60 seconds, and no regression below the observed tip timestamp rounded to seconds. It checks native age again before submission. A slow proof can therefore stop before submission; no timestamp is rewritten and no wallet operation retries. Public bytes are retained before that final check, preserving failed output. Successful readiness observations are retained as closed public records. Wallet synchronization alone does not establish freshness.
+ 
+ This change responds to the actual local deployment rejection recorded in `deliverables/sp05-financial-integration-2026-09-09/local-execution-02/RESULT.md`. The original allocation remains consumed. Source tests do not authorize a new run or establish ledger acceptance.
++
++Storage passwords must pass the installed `midnight-js-utils` validator before wallet restore or any transaction. Length alone is insufficient: random lowercase hexadecimal passwords fail its character-class rule. The launcher pins and calls the SDK policy directly, returning only a closed error on rejection. Provision a random password that passes that exact validator; do not change an existing deployment's stored password or reset its private files. Successful ledger deployment followed by a storage failure requires separate recovery of that deployment, with its transaction and charges retained.
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+index 4bdb76f..2431df4 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+@@ -43,6 +43,17 @@ export function readPrivateLaunchFile(p){
+  try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+  finally{if(fd!==undefined)closeSync(fd);}
+ }
++/** Apply the installed private-store policy before wallet restore or submission.
++ * Pin the actual validator, never mirror its rules or expose its error text.
++ */
++export async function readLocalStoragePassword(file){
++ const password=readPrivateLaunchFile(file).toString('utf8').trim();
++ const entry=join(PINNED_NM,'@midnight-ntwrk/midnight-js-utils/dist/index.mjs');
++ check(hash(readFileSync(entry))==='812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de','LAUNCH_PASSWORD_POLICY_PIN');
++ const {validatePassword}=await import(pathToFileURL(entry).href);
++ try{validatePassword(password);}catch{throw Error('LAUNCH_PRIVATE_PASSWORD');}
++ return password;
++}
+ export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
+ function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
+ function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+@@ -112,7 +123,7 @@ export async function launchLocalFinancialCase(plan){
+  // Inspect real proving assets before opening private wallet material.
+  await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
+  const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
+- const password=readPrivateLaunchFile(p.privateState.passwordFile).toString('utf8').trim();check(password.length>=16,'LAUNCH_PRIVATE_PASSWORD');
++ const password=await readLocalStoragePassword(p.privateState.passwordFile);
+  const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
+  const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
+  mkdirSync(p.outputDirectory,{mode:0o700}); // Exclusive run directory, never resume or retry automatically.
+diff --git a/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs b/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
+index 0821b90..ba11c84 100644
+--- a/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
++++ b/experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs
+@@ -75,3 +75,16 @@ test('complete reviewed public integration result preserves failed driver receip
+   const successDir=mkdtempSync(join(dir,'success-'));const success=structuredClone(result);success.status='PASS';success.driver.status='PASS';api.retainPublicIntegrationResult(successDir,success);assert.deepEqual(JSON.parse(readFileSync(join(successDir,'integration-result.json'))),success);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ });
++
++test('storage password preflight applies actual SDK policy before wallet work and emits only a closed error',async()=>{
++ assert.equal(typeof api.readLocalStoragePassword,'function');
++ const dir=mkdtempSync(join(tmpdir(),'moriarty-password-preflight-')),file=join(dir,'password');
++ try{
++  for(const password of ['1a9f'.repeat(16),'Ab1!'.repeat(4)+'abcd','Ab1!'.repeat(4)+'zzzz','too-short']){
++   writeFileSync(file,password+'\n',{mode:0o600});
++   await assert.rejects(api.readLocalStoragePassword(file),e=>e.message==='LAUNCH_PRIVATE_PASSWORD'&&!e.message.includes(password));
++  }
++  const accepted='N7!qL2@vR9#sH4$wT6%y';writeFileSync(file,accepted+'\n',{mode:0o600});
++  assert.equal(await api.readLocalStoragePassword(file),accepted);
++ }finally{rmSync(dir,{recursive:true,force:true});}
++});

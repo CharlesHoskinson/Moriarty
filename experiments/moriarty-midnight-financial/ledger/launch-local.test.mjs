@@ -75,3 +75,16 @@ test('complete reviewed public integration result preserves failed driver receip
   const successDir=mkdtempSync(join(dir,'success-'));const success=structuredClone(result);success.status='PASS';success.driver.status='PASS';api.retainPublicIntegrationResult(successDir,success);assert.deepEqual(JSON.parse(readFileSync(join(successDir,'integration-result.json'))),success);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('storage password preflight applies actual SDK policy before wallet work and emits only a closed error',async()=>{
+ assert.equal(typeof api.readLocalStoragePassword,'function');
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-password-preflight-')),file=join(dir,'password');
+ try{
+  for(const password of ['1a9f'.repeat(16),'Ab1!'.repeat(4)+'abcd','Ab1!'.repeat(4)+'zzzz','too-short']){
+   writeFileSync(file,password+'\n',{mode:0o600});
+   await assert.rejects(api.readLocalStoragePassword(file),e=>e.message==='LAUNCH_PRIVATE_PASSWORD'&&!e.message.includes(password));
+  }
+  const accepted='N7!qL2@vR9#sH4$wT6%y';writeFileSync(file,accepted+'\n',{mode:0o600});
+  assert.equal(await api.readLocalStoragePassword(file),accepted);
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});

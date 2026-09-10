@@ -1,0 +1,41 @@
+{
+  "observedModel": "grok-4.6",
+  "usageModel": "grok-4.6-build",
+  "verdict": "CHANGES_REQUESTED",
+  "proposalSha256": "667b8907f8cafef1894637a18f7299a0bb067ef8776b8ec9ddf6edeee3465e04",
+  "commandsSha256": "21291d71830991b626ee0ff4661cb520a4549534fd08337a83256816c62d44c2",
+  "findings": [
+    {
+      "severity": "high",
+      "file": "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/commands.md",
+      "description": "Numbered steps 4\u20135 still create private material, a closed plan, and the launcher as an unconditional success path. Committee readiness and post-TTL reconciliation are only a trailing paragraph after the runbook. An executor following the numbered sequence can start private wallet work before the stated stop-on-ambiguity gate."
+    },
+    {
+      "severity": "medium",
+      "file": "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/resource-proposal.json",
+      "description": "Catch-up, post-TTL finalized timestamp, history/pool reconciliation, private prep, and activation share arming+120s, but neither artifact requires wall clock already strictly after earliestNativeIntentTtl 2026-09-10T04:55:15.000Z before timer arming. If TTL is still in the future, that bound cannot honestly hold; missing that stop would start containers and wait instead of aborting."
+    },
+    {
+      "severity": "low",
+      "file": "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/commands.md",
+      "description": "Copied narrative still says retain attempt01 and preserve both attempts. Proposal accounting of three local attempts (6 submissions / 2600000000000002 SPECK max) is correct; the commands text must not undercount execution-03."
+    }
+  ],
+  "conditions": [
+    "Rewrite commands.md so committeeReadiness plus reconciliation is an explicit numbered blocking step after container/genesis checks and before any private directory, roles, password, plan, or launcher activation. Failure or ambiguity stops without step 4/5.",
+    "Do not arm if wall time is not already strictly after 2026-09-10T04:55:15.000Z; then require a same-hash finalized non-rotation block whose timestamp is also strictly after that TTL, committee epoch equal to that block\u2019s sidechain epoch, no session rotation event, wall epoch from actual slotConfig not exceeding committee epoch, and indexer tip hash/height equal to that block.",
+    "Reconcile 7f567d8759d8289016040278b39f92a1912396f56416e469e5ae10a548081d01 and both identifiers 00f7530d22d7c9222b63265a92bcf341af022cbd6db9d457f72a2bceb4e04f5d50 and 00ad91f904215ddec4aa7d5312d9999a508acbcf44f4a18bcdbee7227d7eadb85f as absent from synchronized finalized history and absent from the node pool. Offline native hash/TTL must match the preserved record. Any hit, pool presence, indexer gap, pre-TTL tip, or ambiguity aborts. Do not replay, replace, or delete pool bytes. Do not infer a refund; append a separate observation only.",
+    "Missing RPC/metadata/slotConfig/committee methods, epoch duration, replay status, protocolVersion, or genesis/networkTag are stops, not guessed defaults.",
+    "Source remains exact candidate-02 sha256 42ebb0b23376324318d98aaa31aa7e512b195aa256428ac3acc6902d226742c6 with current GPT-6 and Grok source approvals. No guard/runtime/block-limit change. Verify the commands.md worktree actually contains those bytes.",
+    "Same caps only: 1350s envelope, shutdown 1300, setup/activation 120, loan-03/stop-03, base /home/charl/.local/state/moriarty/sp05-local-loan-20260910-03, unchanged containers/images/limits, at most 1 fresh loan / 4 submissions / 2000000000000000 SPECK if and only if every gate passed. Keep attempts 01 and 03 consumed (2 submissions, 600000000000002 SPECK). No snapshot/wallet reset.",
+    "Live preflight, compiler reviews, two agreeing resource votes on the corrected commands/proposal bytes, and recorded admission remain required before dispatch. No SP05/Preview/network/proof/financial acceptance."
+  ],
+  "scope": "Resource-proposal/4 and commands only: one bounded catch-up window, then at most one fresh local loan if the unknown-finality mempool transaction is reconciled. Not live status reconciliation, not a new source candidate, not execution admission, not financial acceptance.",
+  "limitations": [
+    "Changed evidence supports waiting for finite committee catch-up rather than raising block limits; image git label c48905267920d5599e849e8e043f801c6baab94a is still not bound to the inspected release commit.",
+    "Post-TTL finalized time excludes future well_formed acceptance of the exact merged bytes; it does not by itself prove historical absence. That proof depends on the synchronized hash plus both-identifier query, which this review did not execute.",
+    "120s after arming may abort before wallet if restart lag exceeds the bound; that is a stop, not authority to extend the envelope.",
+    "This vote did not query the node, pool, or indexer and does not determine whether 7f567d8759d8289016040278b39f92a1912396f56416e469e5ae10a548081d01 was included. Old submitting reservations stay charged.",
+    "Candidate-02 source approval is unchanged and is not this resource vote."
+  ]
+}
