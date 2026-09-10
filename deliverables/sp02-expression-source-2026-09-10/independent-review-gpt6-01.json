@@ -1,0 +1,164 @@
+{
+  "reviewer": {
+    "identity": "GPT-6 Astra / Codex, fresh independent implementation/result reviewer",
+    "identityEvidence": "Review launch record specifies gpt-6-astra at high effort; no separate backend build identifier was exposed.",
+    "author": false
+  },
+  "candidateHash": "acf5c2c872a86b4ca3551f951e245cf5d0cb4e08fa78dfb41cc3f213340f393a",
+  "baseCommit": "36ca249601288decb7e923a5561c8fe4ad4d9090",
+  "sourceVerdict": "REQUEST_CHANGES",
+  "D5Verdict": "REQUEST_CHANGES",
+  "summary": "The source frontend implements the scoped all40 mappings and both retained D5 corrections. One reproducible phase-4 diagnostic-order defect remains. D1–D4 are not reopened.",
+  "requiredCorrections": [
+    {
+      "id": "R1",
+      "severity": "medium",
+      "finding": "access_field validates its second operand's metadata before elaborating its first operand, violating the specified lexical order within phase 4.",
+      "path": "experiments/moriarty-language/src/successor/expression-source-types.ts",
+      "line": 127,
+      "contractReference": "deliverables/sp02-expression-source-2026-09-10/PROPOSAL-03.md:265",
+      "witness": {
+        "schema": {
+          "units": [],
+          "assets": [],
+          "vaults": [],
+          "parties": [],
+          "recordTypes": {
+            "R": {}
+          },
+          "enumTypes": {},
+          "fields": {
+            "n": {
+              "type": ["UInt64"],
+              "writeClass": "ordinary"
+            }
+          },
+          "args": {
+            "arg": ["UInt64"]
+          },
+          "observations": {
+            "ready": ["Bool"]
+          },
+          "operations": {
+            "O": "R"
+          }
+        },
+        "source": "profile \"moriarty-expression-source/1\"; agreement Audit { action step(arg:UInt64) { let x=access_field(unknown(),\"bad field\"); } }",
+        "snapshots": {
+          "Pre": {"n": "1"},
+          "Args": {"arg": "1"},
+          "Obs": {"ready": true},
+          "workInitial": "1000"
+        },
+        "invocation": "Bind canonical(schema), then call elaborate(source), check(source), or evaluate(source, canonical(snapshots)).",
+        "actual": {
+          "code": "SOURCE_LITERAL_SHAPE",
+          "span": {"kind": "source", "start": "113", "end": "124"},
+          "nodePath": [],
+          "workUsed": "0"
+        },
+        "expected": {
+          "code": "SOURCE_CALL",
+          "span": {"kind": "source", "start": "103", "end": "112"},
+          "nodePath": [],
+          "workUsed": "0"
+        }
+      },
+      "evidence": "All three public methods reproduce the later metadata diagnostic. Replacing \"bad field\" with \"ok\" exposes SOURCE_CALL at unknown(). A second probe, access_field(i128(1+2), \"bad field\"), likewise selects the later string span instead of the earlier malformed numeric operand.",
+      "correction": "After checking access_field arity, elaborate its first operand before validating the second operand's literal shape. Retain phase-4 precedence over Core typing and add regression coverage for competing source errors and their exact spans.",
+      "impact": "Incorrect first-error code/location; no observed state publication or financial acceptance bypass."
+    }
+  ],
+  "retainedD5Corrections": {
+    "C1": {
+      "verdict": "PASS_SCOPED",
+      "evidence": "Registered-operation typed emission rejects with parser UNEXPECTED_TOKEN precisely at the UTF-8 span of '<', with empty nodePath and zero work. The /1 parser constructs only a bare operation type.",
+      "implementation": "experiments/moriarty-language/src/successor/frontend.ts:911"
+    },
+    "C2": {
+      "verdict": "PASS_SCOPED",
+      "evidence": "The explicit 2000000-byte bound reaches parseCanonical before JSON parsing. Independent probes distinguish 2000000 from 2000001 bytes, exercise multibyte input, and verify each Pre/Args/Obs component's separate 65536-byte gate.",
+      "implementation": "experiments/moriarty-language/src/successor/expression-source-v1.ts:30"
+    }
+  },
+  "actualChecks": {
+    "startup": {
+      "loaded": ["AGENTS.md", "plugins/moriarty-dev/skills/develop/SKILL.md"],
+      "stopRulesInspected": true,
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "result": "Exit 1: sqlite3.OperationalError: unable to open database file. Continued read-only; no repair attempted."
+    },
+    "integrity": {
+      "candidateDigestMatchedBeforeAndAfter": true,
+      "candidateFilePinsMatchedBeforeAndAfter": "24/24, including byte counts",
+      "verificationLogHashesMatchedBeforeAndAfter": "4/4",
+      "proposal01And02PreservationHashesMatched": true,
+      "fourPreservedDesignReviewsMatchCommittedBytes": true,
+      "trackedWorkingTreeUnchanged": true
+    },
+    "commands": [
+      {
+        "command": "node --test --test-isolation=none --test-skip-pattern='lone surrogates, escaped surrogates and invalid UTF-8 reject|CLI ' experiments/moriarty-language/tests/expression-v1*.test.mjs experiments/moriarty-language/tests/expression-source*.test.mjs experiments/moriarty-language/tests/successor-expression-source.test.mjs experiments/moriarty-language/tests/successor-syntax*.test.mjs",
+        "result": "252 tests passed, zero failures. Three filesystem/CLI-dependent cases were excluded."
+      },
+      {
+        "command": "tsc -p experiments/moriarty-language/tsconfig.json --noEmit",
+        "result": "Exit 0. An earlier attempt at package-local node_modules/.bin/tsc failed because that executable was absent."
+      },
+      {
+        "command": "node experiments/moriarty-language/examples/expression-source.mjs",
+        "result": "SourceChecked with B=40; ExpressionPrepared with counter=12, funds=100, QuoteNotice descriptor, workRemaining=960."
+      },
+      {
+        "command": "node deliverables/sp02-expression-source-2026-09-10/root-probes-02.mjs",
+        "result": "12/12 passed. Inspected the retained original result: REQUIRE_FAILED was an incorrect oracle; GUARD_FAILED is correct."
+      },
+      {
+        "command": "node --input-type=module with independent in-memory probe scripts",
+        "result": "55 positive/negative checks passed, plus the separately reproduced R1 diagnostic-order witnesses.",
+        "coverage": [
+          "UInt64/UInt128/SInt128 endpoints, overflow, unsigned underflow, exact scales, assets, units and collection capacities.",
+          "Nested record/option/collection composition and formatter preservation of Core structure, precedence and operand order.",
+          "Enum-prefix collisions, registry binder collisions, separate asset/record namespaces and intrinsic-shaped field names.",
+          "Projected record Emit operand preserved directly: B=3 versus B=5 for equivalent brace reconstruction.",
+          "All seven admission/reduction phases; dead-branch static checking; Pre/Args/Obs admission order.",
+          "Source and Core check methods do not reduce or certify typed snapshots.",
+          "Exact selected INDEX_RANGE path, UTF-8 span and work; short-circuit work below conservative B.",
+          "Hostile live inputs without getter access, schema override rejection, returned-Core ownership and financial-write rejection.",
+          "Immutable pre/post views, ensure rollback, descriptor128 success and descriptor129 rollback.",
+          "Frozen exported lexical catalogs and explicit rejection of UInt256 source types."
+        ]
+      }
+    ],
+    "testEnvironmentLimitations": [
+      "Initial full permitted test attempts failed in successor-syntax.test.mjs.",
+      "An independent inert spawnSync probe returned EPERM and empty stdout/stderr, explaining the CLI subprocess-output failures.",
+      "The invalid-UTF8 test requires temporary-file creation, incompatible with this read-only environment.",
+      "The preserved author log reports 470 passing tests; that complete package result was hash-verified, not independently reproduced."
+    ],
+    "diffChecks": {
+      "workingTree": "git diff --check passed.",
+      "againstBase": "git diff --check BASE reported whitespace in retained logs/patch capture and a final blank line in the new grammar. These are not product defects; historical artifacts were left untouched."
+    }
+  },
+  "staticInspections": {
+    "inspected": [
+      "Public createExpressionSourceV1 elaborate/check/evaluate implementation.",
+      "Explicit /1 parser and formatter, source type metadata and all40 lowering.",
+      "Actual .mori example, schema, snapshots and executable demo.",
+      "Proposal02 approvals, Proposal03 delta, complete source grammar and source contract.",
+      "Normative lexical, representation, static-semantics and expression-contract rules.",
+      "Underlying wire/schema helpers and expression runtime admission, typing, reduction and rollback."
+    ],
+    "baselinePreservation": "Of 24 existing package source files, 21 are byte-identical to base. Only successor/frontend.ts, successor/format.ts and successor/expression-v1.ts changed. Legacy evaluators, funded elaboration/repayment paths and syntax CLI remain byte-identical. Shared parser/formatter changes are profile-gated; the existing expression evaluator adds a check-only return before snapshot validation and reduction.",
+    "scopeAssessment": "All40 constructor mappings are present within the approved source domain. Direct financial writes remain rejected; Emit produces descriptors only. The factory selects expression-contract/1 explicitly and does not select financial8/UInt256."
+  },
+  "remainingLimits": [
+    "R1 requires a narrow implementation correction and fresh verification; the two original D5 corrections themselves pass this review.",
+    "This is one independent review, not the required independent review pair.",
+    "No claim of exhaustive source-space testing or formal parser/lowering/evaluator correspondence.",
+    "One-action source scope remains; complete agreement authoring, constants, genesis and source-defined schemas remain open.",
+    "No whole-SP02, full financial38, K/proof/signature, mandatory PCD, financial settlement or Midnight acceptance.",
+    "No network, financial, service, native or proof commands; no private wallet/history reads; no repository edits or historical-result rewrites."
+  ]
+}
