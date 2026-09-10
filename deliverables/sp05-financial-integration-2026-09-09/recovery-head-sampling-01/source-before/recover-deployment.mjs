@@ -78,10 +78,10 @@ export async function reconstructExistingLoan({compiledContract,zkConfigProvider
 /** Public chain gate, before seed/private store access. Caller supplies only fixed read-only providers. */
 export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,tip,readCurrentTip}){
  const {observeFinalizedStage,beforeDeadline}=await import('./receipt.mjs');
- const binding=inspectExistingLoanBytes(raw,ledger);let queryDeadline=deadlineMs;const wait=fn=>beforeDeadline(fn,queryDeadline);
+ const binding=inspectExistingLoanBytes(raw,ledger);const wait=fn=>beforeDeadline(fn,deadlineMs);
  check(typeof readCurrentTip==='function','RECOVERY_INDEXER_READER');
  const indexedTip=async()=>{
-  const t=Object.freeze({...await wait(()=>readCurrentTip(queryDeadline))});
+  const t=Object.freeze({...await wait(readCurrentTip)});
   check(t.status==='READY'&&typeof t.hash==='string'&&/^[a-f0-9]{64}$/.test(t.hash)&&Number.isSafeInteger(t.height)&&t.height>=0&&t.finalizedHeight===t.height&&t.finalizedHash==='0x'+t.hash,'RECOVERY_INDEXER_FINALITY');
   check(Number.isSafeInteger(t.timestampMs)&&t.timestampMs<=Date.now()&&Date.now()-t.timestampMs<=60000,'RECOVERY_INDEXER_TIME');
   return t;
@@ -91,50 +91,27 @@ export async function verifyExistingLoanPublic({raw,ledger,provider,rpc,decodeSt
  const observation=await observeFinalizedStage({provider,rpc,ledger,txId:binding.txId,contractAddress:binding.contractAddress,circuitId:'deploy',decodeState,deadlineMs,expectedProtocolVersion});
  const r=observation.receipt;
  check(r.transaction.transactionHash===binding.transactionHash&&r.transaction.rawSha256===binding.transactionHash&&r.blockHash===EXISTING_LOAN.blockHash&&r.blockHeight===EXISTING_LOAN.blockHeight,'RECOVERY_DEPLOY_RECEIPT');
- // The historical watch runs once. Only well-formed forward movement may
- // trigger another public snapshot; state/identity/provider failures are fatal.
+ // The historical watch can advance the chain. Select current finality only
+ // after that watch, then reject any head movement during state observation.
+ const indexed=await indexedTip();
+ const head=await wait(()=>rpc('chain_getFinalizedHead',[]));
+ check(typeof head==='string'&&/^0x[a-f0-9]{64}$/.test(head),'RECOVERY_CURRENT_HEAD');
+ const header=await wait(()=>rpc('chain_getHeader',[head]));
+ check(typeof header?.number==='string'&&/^0x[a-f0-9]+$/i.test(header.number),'RECOVERY_CURRENT_HEADER');
+ const height=Number(BigInt(header.number));
+ check(Number.isSafeInteger(height)&&height>=r.finalizedHeight&&height>=tip.height&&height-tip.height<=2,'RECOVERY_CURRENT_HEIGHT');
+ check(indexed.hash===head.slice(2)&&indexed.height===height,'RECOVERY_INDEXER_FINALITY');
  check(await wait(()=>rpc('chain_getBlockHash',[tip.height]))==='0x'+tip.hash,'RECOVERY_TIP_CANONICAL');
- const startedAt=Date.now();queryDeadline=Math.min(deadlineMs,startedAt+60000);
- const readRpc=(method,params)=>wait(()=>rpc(method,params,queryDeadline));
- const retry=Object.freeze({});let lastMovement,samples=0,finalityFloor=r.finalizedHeight;
- const moved=async(phase,from,to)=>{
-  check(to.height>from.height,'RECOVERY_INDEXER_FINALITY');
-  check(await readRpc('chain_getBlockHash',[from.height])===from.hash,'RECOVERY_TIP_CANONICAL');
-  finalityFloor=Math.max(finalityFloor,to.height);
-  lastMovement=Object.freeze({phase,fromHash:from.hash,fromHeight:from.height,toHash:to.hash,toHeight:to.height});
-  throw retry;
- };
- const nodeTip=async()=>{
-  const hash=await readRpc('chain_getFinalizedHead',[]);
-  check(typeof hash==='string'&&/^0x[a-f0-9]{64}$/.test(hash),'RECOVERY_CURRENT_HEAD');
-  const header=await readRpc('chain_getHeader',[hash]);
-  check(typeof header?.number==='string'&&/^0x[a-f0-9]+$/i.test(header.number),'RECOVERY_CURRENT_HEADER');
-  const height=Number(BigInt(header.number));check(Number.isSafeInteger(height)&&height>=0,'RECOVERY_CURRENT_HEIGHT');
-  return {hash,height};
- };
- for(;samples<6&&Date.now()<queryDeadline;){
-  samples++;
-  try{
-   const indexed=await indexedTip(),anchor={hash:'0x'+indexed.hash,height:indexed.height};
-   check(indexed.height>=finalityFloor,'RECOVERY_FINALITY_REGRESSION');
-   const {hash:head,height}=await nodeTip();
-   check(height>=r.finalizedHeight&&height>=tip.height&&height-tip.height<=2,'RECOVERY_CURRENT_HEIGHT');
-   if(anchor.hash!==head||anchor.height!==height)await moved('before-state',anchor,{hash:head,height});
-   // A block filter selects an action IN that block, not state as of the block.
-   const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress))]);
-   assertExistingLoanState(historical,ledger);assertExistingLoanState(current,ledger);
-   const after=await indexedTip();
-   if(after.hash!==indexed.hash||after.height!==indexed.height)await moved('after-state',anchor,{hash:'0x'+after.hash,height:after.height});
-   const end=await nodeTip();
-   if(end.hash!==head||end.height!==height)await moved('final-node',anchor,end);
-   check(tip.height>=r.blockHeight&&Date.now()-tip.timestampMs<=60000,'RECOVERY_CURRENT_STATE_TIME');
-   return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock:Object.freeze({hash:head,height}),snapshotSamples:samples,status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/latest-state checks in one stable indexed/finalized snapshot; bounded public sampling, no private recovery or financial acceptance'});
-  }catch(error){if(error!==retry)throw error;}
-  if(samples<6&&Date.now()<queryDeadline)await wait(()=>new Promise(resolve=>setTimeout(resolve,Math.min(1000,Math.max(1,queryDeadline-Date.now()-1)))));
- }
- const error=Error('RECOVERY_SNAPSHOT_UNSTABLE');
- error.recoveryObservation=Object.freeze({samples,elapsedMs:Date.now()-startedAt,reason:Date.now()>=queryDeadline?'deadline':'sample-limit',...lastMovement});
- throw error;
+ // A block filter selects an action IN that block, not state as of the block.
+ // Read latest state only between two exact indexed/finalized tip observations.
+ const [historical,current]=await Promise.all([wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash})),wait(()=>provider.queryContractState(binding.contractAddress))]);
+ assertExistingLoanState(historical,ledger);assertExistingLoanState(current,ledger);
+ const after=await indexedTip();
+ check(after.hash===indexed.hash&&after.height===indexed.height,'RECOVERY_CURRENT_HEAD_MOVED');
+ check(await wait(()=>rpc('chain_getFinalizedHead',[]))===head,'RECOVERY_CURRENT_HEAD_MOVED');
+ check(tip.height>=r.blockHeight&&Date.now()-tip.timestampMs<=60000,'RECOVERY_CURRENT_STATE_TIME');
+ // Native bytes include balances; compare all state, not just the three local verifier keys.
+ return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock:Object.freeze({hash:head,height}),status:'PUBLIC_STATE_VERIFIED',scope:'Read-only native/history/latest-state checks bracketed by matching indexed and finalized heads; no private recovery or financial acceptance'});
 }
 
 const verifiedPrivateResults=new WeakSet(),consumedPrivateResults=new WeakSet();

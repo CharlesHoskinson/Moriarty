@@ -1,0 +1,37 @@
+{
+  "exitCode": 0,
+  "elapsedSeconds": 253.937,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"source\": {\n    \"verdict\": \"APPROVED\",\n    \"candidateSha256\": \"fdcda068b3778c9f9b1f075cc9aa75a5c6c9adf695da532c79cfdfada5fa6091\",\n    \"findings\": [\n      \"No blocking defect in the focused sampler. Historical observeFinalizedStage still runs once on the caller deadline. After the one-time original-tip canonical check, queryDeadline becomes min(caller, start+60s) and at most six snapshot attempts run. Retry is only the internal frozen sentinel from moved(), which requires to.height>from.height and chain_getBlockHash(from.height)===from.hash before raising finalityFloor. Same-height hash conflict, regression (indexed.height<finalityFloor), constructor mismatch, malformed tips, and provider throws all bypass the sentinel and fail immediately.\",\n      \"Acceptance still requires one stable bracket: indexedTip exact-finalized, node head/header equal to that indexed snapshot, historical blockHash plus latest queryContractState both pass assertExistingLoanState, then after indexedTip and final nodeTip unchanged. Original tip age and height-tip.height<=2 remain on every sample and can stop before six attempts (persistent-forward test).\",\n      \"preflightLocalRecovery now passes Math.min(caller, requestDeadline) into a fresh createLocalRpc and into waitForLocalTip; indexedTip calls readCurrentTip(queryDeadline). Native SDK state queries still have no cancel hook: beforeDeadline failure is fatal and does not resample. That is disclosed, not an acceptance hole.\",\n      \"Non-blocking: sleep interrupted by beforeDeadline yields OBSERVATION_TIMEOUT_UNKNOWN rather than RECOVERY_SNAPSHOT_UNSTABLE with recoveryObservation. Conservative. The widened movesDuringQuery reject regex no longer names a single code. Fixture SHA a5b79e786e260d0c015fd0daa1097d68af13ee53e7189bf42d764a7f2e39be81 going RED 781.828ms RECOVERY_INDEXER_FINALITY then GREEN-02 1833.314ms PUBLIC_STATE_VERIFIED / 33 HTTP / privateAccess [] is synthetic only.\"\n    ]\n  },\n  \"resource\": {\n    \"verdict\": \"APPROVE_BOUNDED_RUN\",\n    \"proposalSha256\": \"4c37ee8953ed9faf150497370a9729aa01091db33e5e33d0dfefa57d283ca50e\",\n    \"commandsSha256\": \"5d3c459e5e7559edb4c1699430a90235d452d029b07716adeea2abaca6a3f171\",\n    \"runnerSha256\": \"d5eca6e9fec40e4ebe981143145273d22dc229bf68632ef678c4998418cbc5b9\",\n    \"findings\": [\n      \"Same previously approved envelope: 1 attempt, 3 submissions, 2000000000000000 SPECK, 20000000000 USD_TEST_ASSET, 1350s with independent stop at +1300s. Unique 03 units and base /home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03; original03 seed/roles/store/build unchanged. Recovery01/02/diagnostic01 charges retained; no new financial reservation from recovery02. No rebuild, redeploy, reset, or retry. Candidate must be fdcda068b3778c9f9b1f075cc9aa75a5c6c9adf695da532c79cfdfada5fa6091 with two source and two resource votes before ADMITTED start.\",\n      \"execute-once.py still rejects optimized Python before reading admission; public child runs before base.mkdir; Type=exec systemd-run is start-only (not full-service wait); docker start and activation are bounded by remaining arming+120s.\",\n      \"New public projection is closed: success may add snapshotSamples only after a 1..6 integer check; RECOVERY_SNAPSHOT_UNSTABLE may add recoveryObservation only after exact key-set/type checks (samples 0..6, elapsedMs>=0, reason deadline|sample-limit, optional phase before-state|after-state|final-node with 0x64-hex hashes and nonnegative heights). Extra accessors rejected; invalid observation omitted; invalid success count fails the child. No raw private output is in this packet.\"\n    ]\n  },\n  \"attemptResult\": {\n    \"verdict\": \"PASS_SCOPED\",\n    \"resultSha256\": \"6de75c12f562c7f7ff66b2ba6d7f5f7fbe999f03011edd9ed1992e87d57e6e37\",\n    \"findings\": [\n      \"local-recovery-02/attempt-result.json is a contained public-gate failure, not a recovery pass: status FAILED_PUBLIC_PREFLIGHT_CONTAINED, failure RECOVERY_INDEXER_FINALITY, committeeReady true, financialStagesCompleted 0, newSubmissions 0, reservedDustFee 0, newPrivateBaseCreated false, launcherActivated false, outerContained true, containmentObservedSeconds 112.849, retryAllowed false.\",\n      \"public-recovery-preflight.json sha256 fdb2643f7dcd041b35b1cb239ca83bee75c4e494ac2d8f8df6a78175e6c15721 is PUBLIC_PREFLIGHT_FAILED with localCode RECOVERY_INDEXER_FINALITY only. terminal-containment.json sha256 1d3e851c7f620ff35140cc21ba60b5f8c608913edbfac570800e0a389daf2351: launcher inactive/dead, all three containers exited, privateRecoveryBaseExists false, contained true at 112.849s. timer-cancelled-after-containment.json sha256 658698ed0fc450f8b2af7d4722a1f5edbbab93a367f5ec2950a7997bdaf36435: containedFirst true, timer inactive/dead.\",\n      \"The record does not claim the live hash pair or prove the fixture mechanism on the actual node. PASS_SCOPED accepts this fail-closed contained observation only.\"\n    ]\n  },\n  \"limitations\": [\n    \"Three independent verdicts. Source APPROVED is not resource admission or live preflight success. APPROVE_BOUNDED_RUN still needs exact ADMITTED execution-admission.json binding these hashes plus actual reviews. Recovery02 PASS_SCOPED is not PUBLIC_STATE_VERIFIED and is not financial, Preview, or SP05 completion.\",\n    \"Do not treat fixture SHA a5b79e786e260d0c015fd0daa1097d68af13ee53e7189bf42d764a7f2e39be81 RED/GREEN, claimed 296 ledger tests / 0 skips / 7444.22ms, or sampling-tests-green-02.tap as network acceptance. Exact recovery02 mismatch pair was not retained; actual indexer DB was not inspected.\",\n    \"Latest-state plus a stable indexed/finalized snapshot remains trusted local observation, not cryptographic inclusion. Nested waitForLocalTip polling can issue many HTTP reads inside one snapshot attempt; the six-attempt cap is not a six-request cap. SDK queryContractState cancellation is not claimed.\",\n    \"committee-probe.mjs, constructor/private-store/wallet/driver, and build receipts are hash-pinned from prior reviews and were not newly re-reviewed here. This review executed no commands and did not recompute hashes.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 64578,
+      "output_tokens": 12012,
+      "cache_read_input_tokens": 63104,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 64578,
+        "outputTokens": 12012,
+        "cacheReadInputTokens": 63104,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0395726
+      }
+    },
+    "total_cost_usd": 0.0395726,
+    "session_id": "01a08a44-012a-7ea0-9844-afb2ea989e1d"
+  }
+}

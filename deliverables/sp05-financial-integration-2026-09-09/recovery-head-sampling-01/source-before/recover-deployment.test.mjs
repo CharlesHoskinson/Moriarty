@@ -141,10 +141,10 @@ test('recovery detects later finalized state transition after prefetched tip',as
 });
 test('later finalized head with unchanged constructor state passes after final head recheck',async()=>{
  const f=movingFinalityFixture(),result=await api.verifyExistingLoanPublic(f.options);
- assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.deepEqual(result.stateBlock,{hash:'0x'+f.newHash,height:api.EXISTING_LOAN.blockHeight+1});assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);assert.equal(f.rpcCalls.at(-1).method,'chain_getHeader');
+ assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.deepEqual(result.stateBlock,{hash:'0x'+f.newHash,height:api.EXISTING_LOAN.blockHeight+1});assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);assert.equal(f.rpcCalls.at(-1).method,'chain_getFinalizedHead');
 });
 test('recovery rejects finalized head movement across current state query',async()=>{
- const f=movingFinalityFixture({movesDuringQuery:true});await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_SNAPSHOT_UNSTABLE|RECOVERY_INDEXER_FINALITY|RECOVERY_FINALITY_REGRESSION/);assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);
+ const f=movingFinalityFixture({movesDuringQuery:true});await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEAD_MOVED/);assert.ok(f.stateHashes.includes('latest'));assert.ok(f.headReads()>=3);
 });
 test('earlier one-block indexed lag must catch up before latest-state observation',async()=>{
  const f=movingFinalityFixture({lag:1}),result=await api.verifyExistingLoanPublic(f.options);assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.ok(f.stateHashes.includes('latest'));
@@ -181,51 +181,5 @@ test('latest state is rejected when indexed coverage is behind current finality'
 test('latest state is rejected when indexer coverage changes during observation',async()=>{
  const f=exactBlockStateFixture();f.options.provider.queryContractState=async()=>initial();let reads=0;
  f.options.readCurrentTip=async()=>++reads===1?{...f.indexed}:{...f.indexed,hash:'ed'.repeat(32),finalizedHash:'0x'+'ed'.repeat(32),height:f.height+1,finalizedHeight:f.height+1};
- await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_SNAPSHOT_UNSTABLE|RECOVERY_INDEXER_FINALITY|RECOVERY_FINALITY_REGRESSION/);
-});
-
-
-function oneHeadAdvanceFixture(){
- const f=exactBlockStateFixture(),rpc=f.options.rpc;let heads=0;
- f.options.rpc=async(method,args,...rest)=>{
-  if(method==='chain_getFinalizedHead'&&++heads===1)return '0x'+api.EXISTING_LOAN.blockHash;
-  if(method==='chain_getHeader'&&args[0]==='0x'+api.EXISTING_LOAN.blockHash)return {number:'0x'+api.EXISTING_LOAN.blockHeight.toString(16)};
-  return rpc(method,args,...rest);
- };
- return f;
-}
-test('one forward head advance between indexed sample and node read is sampled again before private recovery',async()=>{
- const f=oneHeadAdvanceFixture();let samples=0,watches=0;
- const watch=f.options.provider.watchForTxData;f.options.provider.watchForTxData=async(...args)=>{watches++;return watch(...args);};
- f.options.readCurrentTip=async()=>{samples++;return samples===1?{...f.options.tip}:{...f.indexed};};
- const result=await api.verifyExistingLoanPublic(f.options);
- assert.equal(result.status,'PUBLIC_STATE_VERIFIED');assert.equal(watches,1);assert.ok(samples>=3);assert.equal(result.stateBlock.height,f.height);
-});
-test('persistent forward movement is rejected within the existing initial-tip bound',async()=>{
- const f=exactBlockStateFixture();let samples=0,current=f.height;const hash=h=>h===api.EXISTING_LOAN.blockHeight?api.EXISTING_LOAN.blockHash:h.toString(16).padStart(64,'0');
- // The retained two-block initial-tip bound can stop before the six-sample ceiling.
- f.options.readCurrentTip=async()=>{samples++;return {...f.indexed,height:current,finalizedHeight:current,hash:hash(current),finalizedHash:'0x'+hash(current)};};
- f.options.rpc=async(method,args)=>{
-  if(method==='chain_getFinalizedHead'){if(samples)current++;return '0x'+hash(current);}
-  if(method==='chain_getHeader')return {number:'0x'+(args[0]==='0x'+api.EXISTING_LOAN.blockHash?api.EXISTING_LOAN.blockHeight:Number(BigInt(args[0]))).toString(16)};
-  return '0x'+hash(args[0]);
- };
- await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEIGHT/);assert.ok(samples<=6);assert.ok(!f.stateReads.includes('latest'));
-});
-test('same-height conflicting coverage is fatal without sampling again',async()=>{
- const f=exactBlockStateFixture();let samples=0;
- f.options.readCurrentTip=async()=>{samples++;return {...f.indexed,hash:'11'.repeat(32),finalizedHash:'0x'+'11'.repeat(32)};};
- await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_INDEXER_FINALITY/);assert.equal(samples,1);
-});
-
-
-test('sampling passes its bounded deadline into the reader and does not retry provider failure',async()=>{
- const f=exactBlockStateFixture(),failure=Error('SYNTHETIC_PROVIDER_FAILURE');let calls=0;
- f.options.deadlineMs=Date.now()+120000;
- f.options.readCurrentTip=async stop=>{calls++;assert.ok(stop<=Date.now()+60000);assert.ok(stop<f.options.deadlineMs);throw failure;};
- await assert.rejects(api.verifyExistingLoanPublic(f.options),e=>e===failure);assert.equal(calls,1);
-});
-test('a finalized snapshot regressing after an observed advance is fatal',async()=>{
- const f=oneHeadAdvanceFixture();let calls=0;f.options.readCurrentTip=async()=>{calls++;return {...f.options.tip};};
- await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_FINALITY_REGRESSION/);assert.equal(calls,2);
+ await assert.rejects(api.verifyExistingLoanPublic(f.options),/RECOVERY_CURRENT_HEAD_MOVED/);
 });

@@ -1,0 +1,27 @@
+{
+  "schema": "moriarty.local-loan-recovery-attempt/1",
+  "allocationId": "sp05-local-loan-recovery-02",
+  "createdAt": "2026-09-10T07:50:20.923435+00:00",
+  "admissionSha256": "426b5b648db66bad53bd11d9455ded34ff45c37f21c8c380c2e744f9a42612dc",
+  "timerArgv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--unit=moriarty-sp05-local-recovery-stop-02",
+    "--on-active=1300s",
+    "--timer-property=AccuracySec=1s",
+    "--property=Type=oneshot",
+    "--property=TimeoutStartSec=25s",
+    "--property=TimeoutStopSec=5s",
+    "--property=ExecStopPost=/usr/bin/timeout --signal=KILL 5s /usr/bin/docker kill moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node",
+    "/usr/bin/bash",
+    "-c",
+    "/usr/bin/timeout --signal=KILL 5s /usr/bin/systemctl --user kill --signal=KILL --kill-whom=all moriarty-sp05-local-loan-recovery-02.service; /usr/bin/timeout --signal=KILL 20s /usr/bin/docker stop -t 5 moriarty-midnight-proof-server moriarty-midnight-indexer moriarty-midnight-node"
+  ],
+  "retryAllowed": false,
+  "priorAttempt": "../local-recovery-01/attempt-result.json",
+  "originalDeploymentAttempt": "../local-execution-04/attempt-result.json",
+  "consumedReadOnlyDiagnostic": "../local-recovery-diagnostic-01/attempt.json",
+  "priorReservedSubmissions": 3,
+  "priorReservedDustSpeck": "900000000000003",
+  "otherHistoricalCharges": "recovery01, diagnostic01 and all other service/review/compiler charges retained separately, not zeroed"
+}

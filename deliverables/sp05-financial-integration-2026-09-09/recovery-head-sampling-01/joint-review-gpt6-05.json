@@ -1,0 +1,259 @@
+{
+  "schema": "moriarty.independent-three-scope-review/1",
+  "reviewer": "gpt-6-astra",
+  "actualReviewerIdentity": {
+    "model": "GPT-6 Astra",
+    "agent": "/root/recovery_source_audit",
+    "interface": "Codex delegated independent reviewer",
+    "productionAuthor": false,
+    "resourceRunnerAuthor": false,
+    "otherReviewUsedAsSubstitute": false
+  },
+  "reviewedAt": "2026-09-10T08:03:05.185816+00:00",
+  "candidateSha256": "fdcda068b3778c9f9b1f075cc9aa75a5c6c9adf695da532c79cfdfada5fa6091",
+  "proposalSha256": "4c37ee8953ed9faf150497370a9729aa01091db33e5e33d0dfefa57d283ca50e",
+  "commandsSha256": "5d3c459e5e7559edb4c1699430a90235d452d029b07716adeea2abaca6a3f171",
+  "runnerSha256": "d5eca6e9fec40e4ebe981143145273d22dc229bf68632ef678c4998418cbc5b9",
+  "sourceVerdict": "PASS_SCOPED",
+  "resourceVerdict": "APPROVE_BOUNDED_RUN",
+  "recoveryResultVerdict": "PASS_SCOPED",
+  "findings": [],
+  "sourceReview": {
+    "verdict": "PASS_SCOPED",
+    "baseRevision": "bface7c",
+    "fileCount": 67,
+    "allCandidateHashesMatch": true,
+    "checks": [
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs:91",
+        "result": "Compared actual production diff and surrounding code against bface7c. Historical observeFinalizedStage runs once, with unchanged original native/result/receipt identity and canonical finality checks. The initial tip is checked canonical before the sampler. Original private constructor, metadata-only copy, destination, restore, wallet, driver and reservation predicates remain unchanged."
+      },
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs:97",
+        "result": "One decision deadline is min(caller deadline, sampler start +60000). At most six snapshot attempts run, with bounded one-second spacing after movement. A private local sentinel is the only caught retry signal. No provider, state, identity, malformed observation, backward finality or same-height conflicting-hash error is converted to that sentinel."
+      },
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs:100",
+        "result": "Before resampling, movement requires a strictly greater height and node confirmation that the earlier hash remains canonical. The highest observed finalized height is retained as a nondecreasing floor and the next indexed snapshot cannot fall below it. Separate node head/header checks remain; old initial-tip freshness and two-block bounds can stop earlier."
+      },
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs:117",
+        "result": "Every accepted snapshot still requires well-formed exact indexed/finalized coverage, equal selected node head/height, complete canonical serialized historical and latest current state equality, matching subsequent indexed/finalized coverage, and matching final node head/header. State comparisons occur before movement after state is eligible for resampling, so altered or missing state is fatal immediately."
+      },
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs:99",
+        "result": "Actual preflight wrappers pass the shorter query deadline to waitForLocalTip and to a local RPC factory constrained by min(original, request deadline). RPC requests and the readiness reader therefore do not inherit the longer wallet deadline during sampling. The native SDK query lacks an abort hook; timeout propagates fatally and grants no private work or resampling."
+      },
+      {
+        "location": "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs:138",
+        "result": "RECOVERY_SNAPSHOT_UNSTABLE constructs a frozen, closed public observation from local sample count, elapsed time, reason and last validated movement. It includes no state bytes, private data or arbitrary SDK error object. Normal provider/deadline errors retain their existing error path."
+      }
+    ],
+    "independentVerification": [
+      {
+        "command": "node --test experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs",
+        "exitCode": 0,
+        "tests": 62,
+        "pass": 62,
+        "fail": 0,
+        "skipped": 0,
+        "durationMs": 6150.213807
+      },
+      {
+        "command": "node deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-preflight-fixture.mjs",
+        "exitCode": 0,
+        "status": "PUBLIC_STATE_VERIFIED",
+        "elapsedMs": 1936.043309,
+        "stateHeight": 20324,
+        "headAdvanceAtRequest": 17,
+        "readRequestCount": 33,
+        "privateAccess": [],
+        "fixtureClosed": true,
+        "stderr": "",
+        "scope": "Actual installed SDK and actual production preflight, retained public native/build inputs, synthetic loopback transport. One forward head advance is reproduced; no live chain or financial result follows."
+      },
+      {
+        "operation": "Read retained final full-suite ledger-regression-07.tap",
+        "tests": 296,
+        "pass": 296,
+        "fail": 0,
+        "skipped": 0,
+        "durationMs": 7444.220004,
+        "scope": "Retained full-suite evidence, independently supplemented by the 62 focused tests above."
+      },
+      {
+        "operation": "Read unchanged real-SDK fixture, retained RED and final GREEN-02 evidence, repair design and earlier source snapshot files",
+        "result": "Fixture advancement occurs between indexed observation and subsequent node read. RED RECOVERY_INDEXER_FINALITY and final GREEN support that concrete synthetic mechanism; the actual recovery02 mismatching pair remains unknown."
+      }
+    ],
+    "limitations": [
+      "This is a source verdict, not runtime admission or financial acceptance. No original private store, roles, seed, snapshots, live state, wallet balance or finality was inspected.",
+      "Latest-state correctness still relies on the trusted local indexer and RPC reporting coherent observations; no cryptographic state inclusion proof or guarantee against later change is established.",
+      "The initial-tip two-block/freshness bounds can conservatively reject before six samples. Ordinary read/provider timeouts and those fatal bounds do not promise a RECOVERY_SNAPSHOT_UNSTABLE observation. That is a rejection/evidence limitation, not acceptance of an unstable or changed state.",
+      "Six snapshot attempts are not six network requests. Each exact-finality readiness read retains its own existing bounded polling. Readiness may internally poll after errors; the sampler itself does not retry a surfaced provider error.",
+      "The sampler decision timeout does not establish cancellation of the native SDK query. Outstanding work is public/read-only and remains subject to existing process/service limits; no timeout permits private recovery."
+    ]
+  },
+  "resourceReview": {
+    "verdict": "APPROVE_BOUNDED_RUN",
+    "attempts": 1,
+    "submissionsMax": 3,
+    "dustFeeSpeckMax": "2000000000000000",
+    "grossByLogicalAsset": {
+      "USD_TEST_ASSET": "20000000000"
+    },
+    "checks": [
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:6",
+        "result": "Read full predecessor runner and exact successor diff; parsed successor AST without importing/executing it. Optimized Python rejection remains before admission. Candidate path is fixed to source-candidate-05; its actual digest matches the proposal. All admission/candidate hashes, two reviewer identities and both scoped verdict receipts remain required before timer arming."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:69",
+        "result": "Absent run/base/units and exact stopped Docker image/limit/restart identities, 20 GiB available memory and 4 GiB free disk remain required. New allocation/base/launcher/timer names end in recovery03; original03 roles, signing identity, wallet snapshots and failed store retain their distinct unchanged original paths."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:79",
+        "result": "Exact unchanged predecessor timer argv adapts only unit names. +1300 seconds independent cgroup kill/Docker stop/post-kill, <=1-second timer accuracy and +1331 planned cleanup remain within +1350. Docker and launcher resource limits and timeout/whole-cgroup cleanup remain unchanged."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:90",
+        "result": "All setup and acknowledged activation still share the timer-derived +120-second deadline. The new public sampler consumes that remaining allowance; it does not extend setup, <=1200-second wallet operation or independent shutdown. TimeoutStartSec and activation/readback subprocesses remain constrained by remaining setup time."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:123",
+        "result": "Closed in-memory plan still binds original deployed native hash, identifiers, address, build, genesis, protocol and role/store sources. Public validation/preflight observation and success assertion precede every new private directory/password/plan. Launcher and integration repeat the source-approved public and private gates. No new deploy, compiler, wallet identity, funding/registration or reset is added."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:140",
+        "result": "Optional public recoveryObservation is emitted only for RECOVERY_SNAPSHOT_UNSTABLE and only after exact plain-object/data-descriptor/key/type validation. It reconstructs selected scalar fields; malformed/extra/accessor data is omitted. Optional success snapshotSamples must be an integer 1..6. Original bounded class/code/message, invalid-output and timeout records still fail closed before private creation."
+      },
+      {
+        "location": "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py:84",
+        "result": "Recovery01, recovery02 and diagnostic01 remain consumed; original three reservations and 900000000000003 SPECK are preserved. One successor adds at most three submissions and 2000000000000000 SPECK, totaling at most six and 2900000000000003 SPECK for these charged allocations. No prior journal/private directory is overwritten."
+      }
+    ],
+    "independentProjectionCheck": {
+      "method": "AST extracted only the exact publicProjection string, then evaluated with inert synthetic values in Node; operational script not imported/executed",
+      "exitCode": 0,
+      "validShapes": 2,
+      "rejectedShapes": 8,
+      "accessorInvocations": 0
+    },
+    "conditions": [
+      "Execute these exact bytes once only after actual agreeing GPT-6 Astra/Grok4.6 source and resource verdicts are truthfully normalized, and admission hashes bind candidate, proposal, commands, runner and actual responses.",
+      "Honor every runtime public/private/identity/readiness/resource gate. A failed gate consumes the attempt. This vote grants no automatic retry, expanded budget, new deploy/build, reset, funding/registration or reused failed allocation.",
+      "Retain every partial result and prior/new charge. Independently observe terminal launcher cgroup and Docker containment before treating cleanup as established; planned timer completion alone is insufficient."
+    ],
+    "limitations": [
+      "No hard aggregate disk quota is established; proposal states that limitation. Public subprocess capture_output buffers before output-size validation, so the retained-output cap is not a streaming memory bound. These unchanged limits do not establish fresh live resource availability.",
+      "This vote authorizes only the reviewed bounded attempt under its existing delegated admission process; it establishes no wallet operation, transaction, private restore or financial/Preview/SP05/PCD acceptance."
+    ]
+  },
+  "recoveryResultReview": {
+    "verdict": "PASS_SCOPED",
+    "attempt": "local-recovery-02",
+    "attemptResultSha256": "6de75c12f562c7f7ff66b2ba6d7f5f7fbe999f03011edd9ed1992e87d57e6e37",
+    "admissionSha256": "426b5b648db66bad53bd11d9455ded34ff45c37f21c8c380c2e744f9a42612dc",
+    "checks": [
+      "attempt-result.json has the supplied exact SHA. public-recovery-preflight.json retains RECOVERY_INDEXER_FINALITY; committee-sample-008.json is READY at height20353. setup-failure.json records AssertionError with launcherAcknowledged false. Result and prose correctly state failed public preflight before private creation/launcher activation, zero new financial stages/submissions/DUST reservations and a consumed attempt.",
+      "Independent terminal-containment.json at 2026-09-10T07:52:13.781006Z, +112.849 seconds, records all three containers exited with PID0, launcher PID0/empty cgroup and absent new base. timer-cancelled-after-containment.json is later at 07:52:13.789171Z and records inactive timer. Result does not falsely claim that the +1300-second timer fired.",
+      "Checked every retained execution-admission file commitment. Only the three subsequently changed production/test paths differ currently; git show bface7c for each exactly matches its historical admission digest. The old admission and evidence are preserved.",
+      "Actual mismatching per-query hashes were not retained. The real-SDK fixture is accurately scoped as a matching mechanism reproduction, not the observed historical failure pair. Original reservations and all earlier service/review charges remain; no private recovery or financial acceptance is claimed."
+    ],
+    "limitations": [
+      "Retained observations were audited; no fresh actual chain, services or private-file inspection was performed. Committee readiness and containment observations do not themselves establish successful recovery."
+    ]
+  },
+  "reviewedFileHashes": {
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-02.mjs": "89543dc2c57b88648ffc4bd1c7ab8f70896859ae5ec79fae4a02299f075281f7",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-check-03.mjs": "2b63e0c1142b2a358fbd5b5decbbbb25baf68870cd8ead7dc8794dc6da905a07",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-02.json": "51d91271f9c427944d40c2a2ea7e02862c14268558f4bf80388def849746e7b6",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation-03.json": "bdcf47df75da71e44156545c277365a8f2974086b462f28733769f52a23ed7c1",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/constructor-restore-observation.json": "b16136d4ddf6d8a5d6e15efe83ec3a48fe28e3a9965f9273f7252a289d04356f",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/recovery-design-02.md": "1f232bb3f9163ff4ac53731e91aa99809029fa76ddb16df4b45e93e284d2a1e7",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/sdk-correction-evidence.json": "8a013a7a55d38553151221eb367c94bfe597b9377706dd9e4cf253b5bbdfa328",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-corrections-03.md": "2f06f475e2103bacc46db25eed25af6f2e927a9e94d2499e6bfe661d274f1bb5",
+    "deliverables/sp05-financial-integration-2026-09-09/deployment-recovery-01/source-review-gpt6-level-lock-reproduction-01.json": "82d11e5294ed592ca047b9cbdc31afdbfeed1d1e2b6407dcf2205273ed1621d9",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/green-findings.md": "197dac451534a1e4840c47364135d2485d8935c1fb3fe05d429fd29921cffddd",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-green-02-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-green-02.json": "705ff91c24652407a74e65c3ac12812f9b12cb24dd77883ea2de2439df9a68a9",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-green-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-green.json": "ba628f89a5b24b558ec6d6154390a02f120588adfd5f4b1c984d30d3eb7eeb90",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-preflight-fixture.mjs": "a5b79e786e260d0c015fd0daa1097d68af13ee53e7189bf42d764a7f2e39be81",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-red-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/head-sampling-red.json": "0a6496ccf2d463742dc9f057ba24d2792377c5c62fcbf6fcbba0ae5b8a8a93b3",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/ledger-regression-07.tap": "49a3ddbde9e069042e6bdcc7a7521d503627e32168a2ff4068c148aa4c725398",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/red-findings.md": "1c990cabecdcbcf5b9f0fb28c73171426f61f0710fa21b2bee5f64ce1b9dbd4f",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/repair-design-05.md": "0d4ff29482502f22b09eeb172a903d361d616aeacb207474537a8eb88f03f144",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/sampling-tests-green-02.tap": "442e3b5c86147ef9ddb781ae5fe048a5fc565c6b5c5e583a1ea757ea657e6403",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/sampling-tests-green.tap": "8d6d7e2e69d45c6bef7e3fad8a1609ab604e35bf407e686ad2a5ffc5c07ade3a",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/sampling-tests-red.tap": "dec83ee0191eeee7a7c964cd128abcde62ca595c79350b6171564116f596546e",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/source-before/integrate-local.mjs": "a1e438e47545a3ea9dfa4e41bda57bdab30d26bc6e2f259a31b416e3e1659362",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/source-before/recover-deployment.mjs": "b21250c61718dab07b9a89236fb79ec567edde61d7308da97d281679a0e22f2f",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/source-before/recover-deployment.test.mjs": "c738f8dddace5492785fd32f9ab7b77bf3c4b6691c93d6021252673a2113a05e",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/exact-block-preflight-fixture.mjs": "8e7a05bad975d340c618c3f1664444dc3fc8d95b9b5e20a3858d3b6aba74359b",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/exact-block-preflight-green-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/exact-block-preflight-green.json": "be7870f8f4888328f58a61e78f35d55303f0295fabc233c798e51bfdcaf407ae",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/exact-block-preflight-red-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/exact-block-preflight-red.json": "a999c0c4e97ceab1357a982f37e57eaff2d75b35a18f50c21098fdba32a5e9fd",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/extracted-queries.json": "1a4f8f05d4765a3add6c51fa51c11a65f73d480b0d88a646437e92feb6a950e1",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/findings.md": "5e8fe52f002794bf0be85540640e0b02c78ef6c382670e0bc0c72bfb8518384a",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/green-confirmation.md": "a4a24d42d66652ff9c450f3b810dd42a1ec96a7e5ef214b0cfce0dca87e09c5d",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/image-label-metadata.txt": "d1fe62fbfea6c09e96eeb9eb16de2dd2c662c1443a76dc31da4305dd78cab654",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/latest-state-tests-green.tap": "8e1cfe1a86f2060b79aedade60b04c3f48f76cf80c47baa4dbc1f2d2b62953f8",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/latest-state-tests-red.tap": "10607f752d9713e32b6a0df79f8b27f3c48e537f3b0eee40e9b6b3a025f7f22f",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/ledger-regression-06.tap": "4409bfcbd9e1b36e08b3de73f5377b5863a8834f3cb8c7c32840b59ef4ef7f36",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/repair-design-04.md": "b87ce28069794bb6bd29d28c020105c717b344708d6b532471e33a3a794cac18",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-before/integrate-local.mjs": "2c05d140d534753089c0ee5373b3a2f861ae318ff1182d75d80aded3b6b612c4",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-before/recover-deployment.mjs": "fac078018fc22c4ef88ebb45cba14bc14b5d535f6a16319638755e38f9c2b319",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-contract-action.rs": "9678786ba8dbbbaf25150420f9f3096e4a78fd675458cb3eae5a8f3f1073ee79",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-manifest.json": "086c0e0941d07b774744013a8cc1c9ad4201e2a6f50d386a31ba555ff04c0819",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-storage-trait.rs": "c5424f1986f660664390133ae933907cb0972b14a551e0051e76cc2e1ebdf579",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/source-v4-query.rs": "de8eca75102a808d1a9be084aee7bc705ac4baeea58e67d00262e6b60d4540d8",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/sqlite-exact-block-result-02.json": "4ede7963c709be93c7f8b17fa03da11db3201881f18d78743bae3aa44a7b4fc8",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/sqlite-exact-block-result.json": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/sqlite-exact-block.py": "5c3f4d2587fda38c2911e5b709960cd9cf660095eb19823f38adc1f96d6faeb7",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "f6ad26dce1cf9f5c2a80200d8e8eedd12645b1d040099151d78cb631f7f8957c",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "300799cf1f5c08445ac818d844ca86491d532a8861bfd26d145e855aa2af3dd4",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.test.mjs": "fa1c3c91f491cd33103894e3d68d4944a3d7d2c7a7f7622dd0ea48955f087f17",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.md": "964820e2085c7987120a3386378926572f59712ceac21ca64517f787467138e3",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "db2ceaf8d2afe85b58674e60fc6c3928b412ca7d5dddac70ac76429cd9e56b3c",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.test.mjs": "8637a685b900b4754faa28874e47a3637d575a29767d032c6d0a638601babfcc",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.test.mjs": "057b1db6663bb92e251026628727bbf0784aad4c7de9b97c1434bf49a856264d",
+    "experiments/moriarty-midnight-financial/ledger/preflight-recovery.test.mjs": "9ecff112eac07275845503f88fb0e0970b2d8abc2bc3aa5f9b2427824397eb11",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "88c99ee97c624c5c27f31d03b182974bd6d31e672f67f82dfab53172d1239463",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "f0e222c472b55f1ba162b69b390e462fec2dacfe655259129d247d62d9d7e62e",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.test.mjs": "622beec3064b94a0962ea40a24f0408d811db8d1f7e6309c7476dac82ffb1439",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "af5fc81f9a18313ce0e27dfd0c99ab5fbb1d09fd1809f672f22f3c30c441c524",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.test.mjs": "e4ee4342ecfae20e602ecfec50b83396d9f442771ef58880aa2e727354427ddf",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "fb48dc48bfb9ced815a52e50cc0d80f1628e3ba3c95a85a25fcb86c4972cc3ba",
+    "experiments/moriarty-midnight-financial/ledger/run-local.test.mjs": "2f2ad99aacaf6312b68d5e546b877f1b2e105f4e7799fc8df2467ed5f92e89f0",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-head-sampling-01/source-candidate-05.json": "fdcda068b3778c9f9b1f075cc9aa75a5c6c9adf695da532c79cfdfada5fa6091",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/resource-proposal-01.json": "4c37ee8953ed9faf150497370a9729aa01091db33e5e33d0dfefa57d283ca50e",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/commands-01.md": "5d3c459e5e7559edb4c1699430a90235d452d029b07716adeea2abaca6a3f171",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-03/execute-once.py": "d5eca6e9fec40e4ebe981143145273d22dc229bf68632ef678c4998418cbc5b9",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/attempt-result.json": "6de75c12f562c7f7ff66b2ba6d7f5f7fbe999f03011edd9ed1992e87d57e6e37",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/RESULT.md": "f94b347a4f223647509d2002e455ff394525e277689598f6caabbc77927ac39a",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/attempt.json": "6245f3314baa9870e8b4eb025d239e319b0096a1c12055eb28284f2d521ee036",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/execution-admission.json": "426b5b648db66bad53bd11d9455ded34ff45c37f21c8c380c2e744f9a42612dc",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/public-recovery-preflight.json": "fdb2643f7dcd041b35b1cb239ca83bee75c4e494ac2d8f8df6a78175e6c15721",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/setup-failure.json": "41612da5f7f656dca175e3bbe159e8d51b111d86173024708459ccc1d75eae5d",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/committee-readiness.json": "5139a7bb9176bfbbb8544cd81112b2b9e6749e2aed90bace857deb83d46db343",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/committee-sample-008.json": "d913072a205f389e5a4506d30ee581f208deb6c5ed0474ecc3759dbe9eeefbed",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/terminal-containment.json": "1d3e851c7f620ff35140cc21ba60b5f8c608913edbfac570800e0a389daf2351",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/timer-armed.json": "bf1b5e54feb08479bc1250b3ff622395ea3d98d4c029b3aa9f4451cf4fd3d08c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/timer-cancelled-after-containment.json": "658698ed0fc450f8b2af7d4722a1f5edbbab93a367f5ec2950a7997bdaf36435",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/execute-once.py": "745e026ebd31055e41cf39d44030ed90e0ffe8d5b04dcfacbee19a6a6cc05057",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/commands-01.md": "319d88e9e7507e4bd59a61d9a268defb5528f256399b3f2592892e7e7f0fac38",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/resource-proposal-01.json": "90cf7452a9969131fc0309bbbb77c996cfe83fd6ccda78144c6fd584453d3b3b",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/resource-approved-gpt-6-astra.json": "4abb1442786c4c37242f59cadf141ae00dc58c9c693d9a8fe5222a0f37342611",
+    "deliverables/sp05-financial-integration-2026-09-09/local-recovery-02/resource-approved-grok-4.6.json": "9b361df07078a6214c029896f5a7ed97ed77fa0b981edeb0457119ad503f56e5",
+    "deliverables/sp05-financial-integration-2026-09-09/recovery-state-query-01/joint-review-gpt6-04.json": "84a0ca0ac78e3ef43e3d418f96c1db11d72a56f5d4004c9edfab52ef647f36db",
+    "deliverables/sp05-financial-integration-2026-09-09/local-execution-02/timer-armed.json": "557ae48a8e76cb794082a0edc9070a7977918f1083b2ed62cccc7070138ccccf"
+  },
+  "scope": "Independently authored source05 review, separate resource03 vote and completed recovery02 result audit. No implementation/resource edit or operational runner dispatch; no live-chain, actual private-file/store/wallet, proof or submission access."
+}
