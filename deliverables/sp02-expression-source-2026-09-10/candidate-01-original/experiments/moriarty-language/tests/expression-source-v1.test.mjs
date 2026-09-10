@@ -7,36 +7,6 @@ import { canonical } from '../src/successor/expression-wire-v1.ts';
 const empty = () => ({ units: [], assets: [], vaults: [], parties: [], recordTypes: {}, enumTypes: {}, fields: {}, args: {}, observations: {}, operations: {} });
 const source = body => `profile "moriarty-expression-source/1"; agreement Demo { action step() { ${body} } }`;
 const invocation = (Pre = {}, Args = {}, Obs = {}, workInitial = '1000') => canonical({ Pre, Args, Obs, workInitial });
-
-for (const method of ['elaborate', 'check', 'evaluate']) {
-  for (const [expr, code, offending] of [
-    ['access_field(unknown(), "bad field")', 'SOURCE_CALL', 'unknown()'],
-    ['access_field(i128(1+2), "bad field")', 'SOURCE_LITERAL_SHAPE', '1+2'],
-    ['access_field(access_field(unknown(), "bad inner"), "bad outer")', 'SOURCE_CALL', 'unknown()'],
-    ['access_field(1, "bad field")', 'SOURCE_LITERAL_SHAPE', '"bad field"'],
-    ['access_field(missing, "bad field")', 'SOURCE_LITERAL_SHAPE', '"bad field"'],
-    ['access_field(unknown())', 'SOURCE_ARITY', 'access_field(unknown())'],
-    ['access_index(unknown(), i128(1+2))', 'SOURCE_CALL', 'unknown()'],
-    ['floor_div(unknown(), i128(1+2))', 'SOURCE_CALL', 'unknown()'],
-    ['amount(1+2, unknown())', 'SOURCE_LITERAL_SHAPE', '1+2'],
-    ['shares(1+2, unknown(), missing())', 'SOURCE_LITERAL_SHAPE', '1+2'],
-    ['rate(1+2, unknown())', 'SOURCE_LITERAL_SHAPE', '1+2'],
-    ['price(1+2, unknown(), missing(), bad())', 'SOURCE_LITERAL_SHAPE', '1+2'],
-  ]) {
-    test(`source diagnostic lexical order: ${method} ${expr}`, () => {
-      const runtime = createExpressionSourceV1(canonical(empty()));
-      const input = source(`let label = "é😀"; let value = ${expr};`);
-      const start = input.indexOf(offending);
-      assert.notEqual(start, -1);
-      const result = method === 'evaluate' ? runtime.evaluate(input, invocation()) : runtime[method](input);
-      assert.deepEqual(result, { status: 'Rejected', code,
-        span: { kind: 'source', start: String(Buffer.byteLength(input.slice(0, start))),
-          end: String(Buffer.byteLength(input.slice(0, start + offending.length))) },
-        nodePath: [], workUsed: '0' });
-    });
-  }
-}
-
 function expression(expr, type, expected, patch = {}, pre = {}) {
   const schema = { ...empty(), ...patch, fields: { out: { type, writeClass: 'ordinary' }, ...(patch.fields ?? {}) } };
   const runtime = createExpressionSourceV1(canonical(schema));

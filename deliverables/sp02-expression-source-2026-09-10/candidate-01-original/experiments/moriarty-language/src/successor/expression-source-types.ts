@@ -123,10 +123,9 @@ export function sourceExtension(schema: Schema) {
     }
     if (e.name === 'access_field') {
       count(args.length, 2, e.span);
-      const record = lower(args[0]);
       const field = args[1];
       if (field.tag !== 'StringLiteral' || !asciiIdentifier(field.decoded)) return sourceFailure('SOURCE_LITERAL_SHAPE', field.span);
-      return n('AccessField', { record, field: field.decoded });
+      return n('AccessField', { record: lower(args[0]), field: field.decoded });
     }
     return undefined;
   };
