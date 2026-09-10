@@ -1,0 +1,26 @@
+# Local completion executor: proposed use
+
+Supersedes COMMANDS-PROPOSAL.md only by providing the finite executor adaptation. No admission or dispatch. Source02 is independently approved source-only; this exact executor, public preflight and resource-proposal02 still require both fresh GPT6 and Grok source/resource reviews. Each admission must bind every candidate/packet/dependency file, accepted source02/raw reviews and the two retained full-build reviews. Source review wrappers require their exact actual raw-review hashes; no missing verdict is filled.
+
+After separate exact admissions, invoke one selected case only:
+
+```sh
+python3 deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/execute-once.py --case loan
+python3 deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/execute-once.py --case swap
+```
+
+These are alternatives/sequential reviewed actions, not a shell batch. They use execution-admission-loan.json or execution-admission-swap.json and create an exclusive loan/ or swap/ public attempt directory. New private bases/allocations are fixed in the unchanged plan drafts. All units/timers for both cases must be absent before activation; all3containers must be stopped and retain their pinned images/limits. Each case has one consumed attempt, four submissions,2e15 SPECK; no automatic retry/next case. Prior-case attempt hash is retained when present; final accounting must sum both journals rather than reset the27/8100000000000027 baseline.
+
+The existing local-stale executor supplies bounded diagnostic cgroup, activation deadline, setup readiness and forced timer. The existing local-swap flow supplies fresh public build/runtime inspection and exclusive empty contract store. No new wallet or password is generated; original undeployed snapshots remain unchanged. Their identity/availability must pass actual restore/synchronization, not old numeric assumptions. The preflight reads public inputs only, uses the existing pinned committee probe and inspects the exact retained build/runtime before new private preparation. Both raw SDK output files are exclusively created owner0600 under owner0700 base and remain private.
+
+Resources remain per-case120s setup/<=1200s operations/1300s forced shutdown/31s cleanup/1350s envelope. Exact manager argv and remaining TimeoutStartSec are fsynced before submission; diagnostic RuntimeMaxSec uses that same remaining allowance. Three containers remain5GiB RAM/10GiB total swap/4CPU/no restart; launcher/diagnostic4GiB/no swap/2CPU, sequential. Original forced timer kills both case-specific launcher and preflight cgroups, then stops all3containers with retained5s Docker kill fallback. Actual failure cleanup command exits are retained. The executor never cancels its timer.
+
+At main completion, before stop, root captures the selected properties of the chosen exact launcher: LoadState, ActiveState, SubState, Result, ExecMainCode, ExecMainStatus, MainPID, ControlGroup, InvocationID, Type, RemainAfterExit, Transient. Require loaded active/exited, code1/status0, Resultsuccess, MainPID0, Typeexec/RemainAfterExityes and SAME nonzero InvocationID as launcher-active.json. Durably retain these raw selected fields before explicit unit stop. The existing retained terminal_predicate.py provides the exact pure predicate; its source is pinned. Missing/unloaded/mismatched status remains UNKNOWN, not inferred exit0.
+
+Only after actual main terminal capture, root may read at most the final8192 bytes of private stdout once, select exactly one JSON object with keys status,containmentComplete,networkAcceptance,proofAcceptance,financialAcceptance, require FINANCIAL_COMPLETE and all booleans false, and retain only that line/hash. No repeated raw/private log reads; no snapshot contents. Missing/ambiguous output remains a closed failure and raw logs stay private.
+
+Stop the chosen exact launcher with the existing bounded systemctl stop pattern (<=25s, inside the existing outer deadline), triggering ExecStopPost. Retain actual stop exit. Observe physical startupcgroup absence plus diagnosticcgroup absence and all3containers exited while timer still active; retain before cancelling that exact timer. Do not replace captured main exit with later not-found defaults. Root independently performs and records this lifecycle as in the actual reviewed Preview swap; it is not a new watcher. No stop code is assumed successful.
+
+Retain full public native bytes/metadata, all eight expected IDs where actually produced, four canonical state/effect receipts, complete independent comparisons, actual native fees/gross asset totals and zero pending/wallet-stop result. These observations, raw exit and external containment are separate audit claims. Local post-run snapshot persistence remains unimplemented/unclaimed; no financial/PCD/fullSP05 acceptance arises from source checks. Both Preview case caps remain exhausted; this LOCAL-only packet gives no third Preview authority.
+
+Safe checks only: `python3 check-static.py`, `python3 -m py_compile execute-once.py`, and `node --check public-preflight.mjs`, from this packet directory. Never import the executor for testing.

@@ -1,0 +1,303 @@
+{
+  "schema": "moriarty.local-command-execution-proposal/3",
+  "status": "PROPOSED_ONLY_NOT_ADMITTED",
+  "sourceReviews": "Accepted corrected runtime source approval/raw receipts bound separately. Fresh two source reviews must bind the combined executor candidate; separate resource votes bind this exact proposal.",
+  "resourceReviews": "Fresh exact executor/proposal GPT6 and Grok approvals required before dispatch.",
+  "target": "LOCAL_ONLY_UNDEPLOYED",
+  "cases": [
+    {
+      "kind": "loan",
+      "operations": [
+        "deploy",
+        "initialize",
+        "accrue",
+        "settle"
+      ],
+      "attempts": 1,
+      "submissionMax": 4,
+      "dustFeeSpeck": "2000000000000000",
+      "grossByLogicalAsset": {
+        "USD_TEST_ASSET": "20000000000"
+      },
+      "publicPlan": {
+        "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan-public-plan-draft.json",
+        "sha256": "2cfa4a44b9debd5e88ef920dd90feefe306c5dab8d032cbfa10e5652bc6e20f5"
+      },
+      "base": "/home/charl/.local/state/moriarty/sp05-local-loan-completion-20260910-01",
+      "launcherUnit": "moriarty-sp05-local-loan-completion-01.service",
+      "stopUnit": "moriarty-sp05-local-loan-completion-stop-01"
+    },
+    {
+      "kind": "swap",
+      "operations": [
+        "deploy",
+        "initialize",
+        "swap",
+        "close"
+      ],
+      "attempts": 1,
+      "submissionMax": 4,
+      "dustFeeSpeck": "2000000000000000",
+      "grossByLogicalAsset": {
+        "ASSET_A": "100000",
+        "ASSET_B": "0"
+      },
+      "publicPlan": {
+        "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/swap-public-plan-draft.json",
+        "sha256": "16d6d5985b474a0df2c2643c3ada6eec3bdfb1f3428e06cb0aa15ae12cd93175"
+      },
+      "base": "/home/charl/.local/state/moriarty/sp05-local-swap-completion-20260910-01",
+      "launcherUnit": "moriarty-sp05-local-swap-completion-01.service",
+      "stopUnit": "moriarty-sp05-local-swap-completion-stop-01"
+    }
+  ],
+  "caseScheduling": "Sequential; fully contain first before any second. Each receives its own exclusive consumed attempt, allocation, plan/output/store and original forced timer. Stop on any unknown/failure; no automatic second-case start or retry.",
+  "caseCaps": {
+    "newLocalAttemptsMax": 2,
+    "newLocalAttemptsPerCase": 1,
+    "newLocalSubmissionsMax": 8,
+    "publicPreviewLoanAttemptsConsumed": 2,
+    "publicPreviewSwapAttemptsConsumed": 2,
+    "publicAttemptsPerCaseCap": 2,
+    "authority": "This proposal does not alter any public attempt cap or authorize third Preview execution. Prior local attempts remain charged; these are successors, not first-ever local cases."
+  },
+  "timeSecondsPerCase": {
+    "setupAndActivationMax": 120,
+    "walletOperationMax": 1200,
+    "runtimeMax": 1206,
+    "independentStopAfterArming": 1300,
+    "cleanupMax": 31,
+    "containmentLatestAfterArming": 1331,
+    "envelopeMax": 1350,
+    "operationDeadlineRule": "min(materialized wall time+1200000ms, conservative independent shutdown wall projection-5000ms), same original local finite pattern; manager runtime<=1206s never resets outer timer"
+  },
+  "totalSequentialEnvelopeMaxSeconds": 2700,
+  "launcher": {
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "Type": "exec",
+    "RemainAfterExit": true,
+    "TimeoutStartSec": "floor(remaining120s activation window)-1; require>=1 before dispatch; exact argv fsynced",
+    "TimeoutStopSec": 5,
+    "KillMode": "control-group",
+    "restart": "no"
+  },
+  "containers": [
+    {
+      "name": "moriarty-midnight-node",
+      "imageSha256": "ede01da35e982b6a4b85461ad8492ae2753ef14246fba33c8039b782aa8e39fb",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-indexer",
+      "imageSha256": "03afd079b00bcd229df29a24771439c5e7695c339cd89216d0763ce40731cc4b",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    },
+    {
+      "name": "moriarty-midnight-proof-server",
+      "imageSha256": "801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531",
+      "memory": 5368709120,
+      "memorySwapTotal": 10737418240,
+      "nanoCpus": 4000000000,
+      "restart": "no",
+      "preserveWritableLayer": true
+    }
+  ],
+  "readiness": "Reuse bounded existing committee/readiness probe and exact genesis gate before private preparation. Native startup/query failures stop the consumed service attempt; no reset/catchup/retry extension inferred.",
+  "memoryAvailableMinimumBytes": 21474836480,
+  "freeDiskMinimumBytes": 4294967296,
+  "identity": {
+    "seedFile": "/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed",
+    "walletStateDirectory": "/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2",
+    "originalRolesFile": "/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03/roles.json",
+    "existingPasswordFile": "/home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03/password"
+  },
+  "privatePreparation": "Fresh exclusive0700 per-case base and empty contract-state,0600 plan, original03 roles and recovered03 password. No new wallet, secret, signer or password; no chmod. Snapshot/stores/writable layers stay preserved. Plan deadline0 is deliberately invalid until exact admitted timer projection is materialized.",
+  "walletPrerequisites": "Existing owner-only three undeployed snapshots must parse and restore through existing launcher; original address/key identity and current synchronized DUST/coin availability must be observed at actual startup, never inferred from old amounts. Existing swap minted-output gate must succeed after initialize. No snapshot reset and no old allowance reuse.",
+  "persistenceBoundary": "Existing local launcher restores original child snapshots and stops wallet but does not persist post-run snapshots. Prior local admission explicitly preserved original snapshot bytes. Command/financial evidence can be proposed under that same scope; coherent post-run local persistence/restart assurance is NOT implemented or claimed. If acceptance requires it, a separate narrow source repair is a prerequisite; do not substitute Preview persistence or invent a local callable persistence API.",
+  "terminalCapture": "Record nonzero loaded startup InvocationID; at main completion retain loaded active/exited Typeexec RemainAfterExityes MainPID0 Resultsuccess ExecMainCode1/Status0 and same InvocationID before explicit launcher stop. Capture closed stdout with containmentCompletefalse independently. Explicit stop triggers ExecStopPost; retain its actual exit then physical startupcgroupabsence and all3containers exited before timer cancellation. Never infer code0 from unloaded defaults.",
+  "financialAcceptance": "Actual canonical-finalized full native receipts/state/effects, exact owners/change/gross assets/residual obligations, fee comparison and durable native IDs/results, zero pending and wallet stop plus raw mainexit0 and independent containment; both actual-result reviews. No fullSP05/PCD from command alone.",
+  "priorCharges": {
+    "priorLocalReservations": 11,
+    "priorLocalReservedSpeck": "3300000000000011",
+    "priorCombinedReservations": 27,
+    "priorCombinedReservedSpeck": "8100000000000027",
+    "priorCombinedAdmittedCeilingsSpeck": "12000000000000010",
+    "additionalReservationsMax": 8,
+    "additionalDustCapSpeck": "4000000000000000",
+    "combinedReservationCeiling": 35,
+    "combinedReservedPlusNewCapsSpeck": "12100000000000027",
+    "combinedAdmittedCeilingsPlusNewCapsSpeck": "16000000000000010",
+    "scope": "Not predicted paid fees. Both new allocations remain separately capped; no historical surplus subsidy. All older failed/service/proof/compiler/reviewer charges, including unquantified totals, remain consumed."
+  },
+  "operationalGap": "Executor and public-preflight are now concrete finite adaptations, syntax/AST checked only. Fresh source/resource admission is absent. Local coherent post-run snapshot persistence remains unimplemented and unclaimed; old snapshot-preservation scope is retained.",
+  "provenance": [
+    {
+      "path": "openspec/changes/mc02-preview-financial-operation/tasks.md",
+      "sha256": "628c9be36bf57dc6822e7a61d0699b72a739a0ff567a10a82bb5cec381502358"
+    },
+    {
+      "path": "openspec/sprints/sp05-financial-integration-on-preview.md",
+      "sha256": "fd7b0cdbbfe608239c2a91c28a1c4f7d9d15d3bcc9a120eeb52098ab5c1dda2f"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-execution-04/resource-proposal-02.json",
+      "sha256": "ee0915b4c44e6fd45a753776e42c6356e65ab0ff34db410a07b3f216db50b292"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/resource-proposal-01.json",
+      "sha256": "6c9fb3df909cb0432e2463df6433e2d5678d8070da401b30287f0ec54b2295fe"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-stale-loan-01/resource-proposal-01.json",
+      "sha256": "9979de6b7299e6bceb7d39af8590b7ca7935226d54cf45d7bb1d4ec999e77f15"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/attempt-result-01.json",
+      "sha256": "4ec1ad11614795bd26da341e2118ae61153dab3804be665cc2107ab7c0394ad1"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-status-retention-01/source-candidate-02.json",
+      "sha256": "3a2e057ae293e1d37c6d59ecaf40f43828881fe92445574ff38a52e87c42724b"
+    }
+  ],
+  "acceptedCompletionSource": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-completion-01/source-candidate-02.json",
+    "sha256": "c58b6fbf83bdb95b2ee2d6620fd4c7528e28c9f5ab13cf341d067d2b44a71743"
+  },
+  "acceptedCompletionApproval": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-completion-01/scoped-source-approval-02.json",
+    "sha256": "670e0dd46d3f547eaa8e63ec0e3cf63515566a83e3d19c1a759fd98d4ff2c190"
+  },
+  "executor": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/execute-once.py",
+    "sha256": "fab472fd97d16836e064c346a3ec3cbbf6c0c77e24e6d79862d6b80ad1684e16"
+  },
+  "commands": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/commands-02.md",
+    "sha256": "c3545819f2687b6e0be8d0a01d791f8faeba31ece942540a35d93429fecd3dd4"
+  },
+  "diagnosticService": {
+    "MemoryMax": 4294967296,
+    "MemorySwapMax": 0,
+    "CPUQuota": "200%",
+    "TimeoutStartSec": "remaining setup window minus1",
+    "RuntimeMaxSec": "same remaining setup allowance",
+    "TimeoutStopSec": 1,
+    "parallelWithWallet": false
+  },
+  "privateLogBound": "Owner0600 files, exclusive/no overwrite; no numeric log byte quota claimed. Shared finite wall/CPU bound; free-disk check headroom only. Root selects only closed<=8192byte final tail after actual terminal.",
+  "proofAccounting": {
+    "logicalStagesPerCase": 4,
+    "applicationRetries": 0,
+    "hardAggregateSdkProofCallbackLimit": false,
+    "scope": "All SDK/proof callbacks share existing wall/resource/4submission/2e15 financial ceilings; callback count/internal retries not independently bounded to4."
+  },
+  "runtimeClosure": {
+    "experiments/moriarty-language/compact/arithmetic.compact": "b2969d0bc346fa93d88546578c9f9d29f1b74d7bc3f88f2e04709fa0932d9415",
+    "experiments/moriarty-language/compact/generated/loan/bound-program.json": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+    "experiments/moriarty-language/compact/generated/loan/kernel.compact": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+    "experiments/moriarty-language/compact/generated/loan/metadata.json": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+    "experiments/moriarty-language/compact/generated/swap/bound-program.json": "5a1a5510cdbeb4a5444f1a94639e48dcc22010c6f5d2883cd1600c2772913d23",
+    "experiments/moriarty-language/compact/generated/swap/kernel.compact": "090b9e2ecf5a0850bee0d46570ca9edb3ac374743e2ed29235913c6e1bb58741",
+    "experiments/moriarty-language/compact/generated/swap/metadata.json": "e0b96181aad293cac32668cfaa3152c5c7cf38dca55e5f567616d17511fe7a9e",
+    "experiments/moriarty-language/spec/examples/loan.mori": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+    "experiments/moriarty-language/spec/examples/swap.mori": "0c2217365f2e518ec70835cf05a09150253d2df334e7dcf0504fd8c8d887051e",
+    "experiments/moriarty-midnight-financial/custody/bindings.json": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+    "experiments/moriarty-midnight-financial/custody/generate.mjs": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+    "experiments/moriarty-midnight-financial/custody/loan.compact": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+    "experiments/moriarty-midnight-financial/custody/swap.compact": "29b4be0dafcb6013577f67d0446622be7cf9b8ef0bb3fc1fb81a32801a879a56",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-loan.mjs": "5907e8af27217910e2e2546409a70909eb9bd077be6fcc33872ac44a1e6da766",
+    "experiments/moriarty-midnight-financial/ledger/continue-initialized-swap.mjs": "ed9698646230a50df55b346ca65fb47e2090924dd0e160ca46f2b7149dd25578",
+    "experiments/moriarty-midnight-financial/ledger/continue-loan-plan.mjs": "568fd5602f9b3a6da38b64ed571e97a73374d59a022e757d0a8c7a3adf35ac80",
+    "experiments/moriarty-midnight-financial/ledger/continue-swap-plan.mjs": "369891fc909c3ed5cb55a3d84beb87a6cfb313352dfe286c44f5f22a584ccda8",
+    "experiments/moriarty-midnight-financial/ledger/contract-balances.mjs": "6def6377cb8a350fa4fa00d1f07c9c5c5a5a1fadadd2edaabdac295c31ec12e1",
+    "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+    "experiments/moriarty-midnight-financial/ledger/financial-rpc.mjs": "c9316e175c45c46dcda9f114f8097a0c2e562a8f0bf1424c4b760ddf37f6154c",
+    "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "7164ccf41de2bd611203a58f73efea440f7e71526b837d2c328d1b46a3345d2d",
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": "b1bda64796bf10e483e118a87cee6aac807d1b394ce323e94b5a763436862f5c",
+    "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+    "experiments/moriarty-midnight-financial/ledger/launch-local.mjs": "a255d8dab708dfd99eaced0d96d8cc1dd9c3e78022f8ab01e4dbc522a639998b",
+    "experiments/moriarty-midnight-financial/ledger/local-tip.mjs": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+    "experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs": "4b5cfb48f10870febe44e526384eea9e0427f0acc293219a720cc7c9c7c634c2",
+    "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": "61e3dc84b495285d8d4ca2460744f802b3123326c601d0e4f86ad5ea585e7dff",
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "f7d0266f5a798bce4433a4c4e474e68f2fe67d824f40a1afe2bd0856a9673e46",
+    "experiments/moriarty-midnight-financial/ledger/recover-deployment.mjs": "40f1c4dc8a670b216fab22b945cbe77ef2a3a711de304bf2cd4bb5e1980fbaeb",
+    "experiments/moriarty-midnight-financial/ledger/recover-store.mjs": "ff36a27e5c63aea63339a08d09b20fe659f33c6b3ac796f9e1181ad78b1cc790",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0b7886c8e3851db0791fa74051a57c3093e7cf0598ca1fb5b03f9c58b34d28ae",
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-plan.mjs": "9cfc0d19a24869311c936050bbaf0838fd719bf388a2a955a214afe1f7418e08",
+    "experiments/moriarty-midnight-financial/ledger/stale-loan-rejection.mjs": "381e9eac1be54a0ac0e1d92d0178508ccbae673682f39699bf9725a8ab7fe9f1",
+    "experiments/moriarty-midnight-financial/ledger/swap-wallet.mjs": "02eed3b99def59695b76482c4017bc328ce8c8ac6b1c436ba8dbee8e06b5ca5d",
+    "experiments/moriarty-midnight-financial/ledger/local-completion.mjs": "d989aec4455527bff0b455dea8edc14cb7f8faee61f05a99f82a24caa74d383c"
+  },
+  "staticChecks": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/static-checks-03.json",
+    "sha256": "f7b5942aa38c33c541754c80b5e48fdc080509f60b412f0ac692f0cf3a23115c"
+  },
+  "sourceCandidate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/source-candidate-02.json",
+    "sha256": "974413cff58696ecace1475fc133e4532ff24637da4131abb9cbeb670c55fbaf"
+  },
+  "packetFiles": {
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/COMMANDS-PROPOSAL.md": "a9889365923f9e06bab45baa0c3c0bce8e9733e2d6539420f2c3e9f6d71ace40",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/execute-once.py": "fab472fd97d16836e064c346a3ec3cbbf6c0c77e24e6d79862d6b80ad1684e16",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/static-checks-final-02.json": "f7b5942aa38c33c541754c80b5e48fdc080509f60b412f0ac692f0cf3a23115c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/plan-validation-source-only.json": "1f1b1a8a528f599827426ad6d634302c23a1859da05ef9425a42dfca69108abc",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/public-preflight.mjs": "e61df014cef972d3c892e5350fbc2c276fe183f8db0b7b7349c969e0b3f2f9c0",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/commands-02.md": "c3545819f2687b6e0be8d0a01d791f8faeba31ece942540a35d93429fecd3dd4",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/resource-proposal-01.json": "b9bb79f3595d3ace40d8a6a17ef4efc35db49f1000630b70bd1d4f12af075cd4",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/static-checks-02.json": "f7b5942aa38c33c541754c80b5e48fdc080509f60b412f0ac692f0cf3a23115c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/swap-public-plan-draft.json": "16d6d5985b474a0df2c2643c3ada6eec3bdfb1f3428e06cb0aa15ae12cd93175",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan-public-plan-draft.json": "2cfa4a44b9debd5e88ef920dd90feefe306c5dab8d032cbfa10e5652bc6e20f5",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/check-static.py": "c98eb3f8a22a83f47c3b6a8b72cffb138ab263c0d4e765cdcb9a46f2a137fe43",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/check-attempt-record.py": "dd1425a758070b6e166ced69d5a35491d9ec4955398cc2747a2e83f911ea44e5",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/attempt-record-green-02.json": "a21894f9526fbba886ff88439018dff8207ea239ca60fb4e8e7ca9fb24c9111c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/attempt-record-red-01.txt": "65e65d06fb52a0a43e2aff71bba9db8b74bca685b808dd8637ad8cbdc9eff64c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/static-checks-03.json": "f7b5942aa38c33c541754c80b5e48fdc080509f60b412f0ac692f0cf3a23115c",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/syntax-checks-02.json": "03df7e3f9d3d1b62f5c0e26c7d04d3a0f46b8bed949ffc00c08adc274c8af033",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/CORRECTION-02.md": "a8b2c0b97759659297bc1e7f79ee83a02bca8ebc49a995e6d3fdaa7904bcf40e",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/executor-preservation-01.json": "cd50e9e61492ea2f345094a866317c3154c3f1954b0e061ce7bb19bfd2dce196",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/original-pin-verification-02.json": "f7099e2e6776bfcd9544ece3192b18c7c0082ea2fd5210fae402d5c5afc5cf39",
+    "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/executor-correction-02.patch": "d67c7ee8d116456403c80743fbbdd80ca835b63ead1943294a387cdb554e0166"
+  },
+  "retentionPredicate": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/preview-exit-status-retention-01/terminal_predicate.py",
+    "sha256": "29df049bf8da51d23b4b09f101fbdd7d8f4f893ddf5e7e2a7b2049c537624f67"
+  },
+  "predecessorExecutors": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-stale-loan-01/execute-once.py",
+      "sha256": "2f23c6334325e79894825a14fd821ff27eafe6d28657d949b33c32d157e2c8a6"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-swap-01/execute-once.py",
+      "sha256": "8a6d3cc3b6643099ef11610f4f9f22fee0b5ad5865a406014e8080d741305960"
+    }
+  ],
+  "supersedes": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/resource-proposal-02.json",
+    "sha256": "bdb39692e608ba7f9f8bd9f51aa11d375632a290abfa35bc6b36ba3f15ad1953"
+  },
+  "attemptRecordChecks": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/attempt-record-green-02.json",
+    "sha256": "a21894f9526fbba886ff88439018dff8207ea239ca60fb4e8e7ca9fb24c9111c"
+  },
+  "correction": {
+    "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/CORRECTION-02.md",
+    "sha256": "a8b2c0b97759659297bc1e7f79ee83a02bca8ebc49a995e6d3fdaa7904bcf40e"
+  }
+}
