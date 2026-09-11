@@ -1,4 +1,4 @@
-/** Profile-explicit file adapter for expression-source/1 checking and formatting. */
+/** Profile-explicit file adapter for expression-source/1 checking, formatting, and local simulation. */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,8 +7,9 @@ import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/e
 import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
 import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
 import { SuccessorSyntaxError } from './successor/frontend.ts';
+import { parseCanonical } from './successor/expression-wire-v1.ts';
 
-type Input = 'arguments' | 'schema' | 'source';
+type Input = 'arguments' | 'schema' | 'source' | 'snapshots';
 type ProcessIo = { argv: string[]; exitCode: number;
   stdout: { write(value: string): unknown }; stderr: { write(value: string): unknown } };
 class CliFailure extends Error {
@@ -23,28 +24,32 @@ class CliFailure extends Error {
   }
 }
 const LIMIT = 65536;
+const SNAPSHOT_LIMIT = 2_000_000;
 
-function argumentsFor(argv: string[]): { command: 'check' | 'format'; profile: string; source: string; schema?: string } {
+function argumentsFor(argv: string[]): { command: 'check' | 'format' | 'simulate'; profile: string; source: string; schema?: string; snapshots?: string } {
   const [command, flag, profile, ...rest] = argv;
   const fileName = (value: string | undefined): value is string =>
     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
   const checking = command === 'check' && rest.length === 3 && rest[0] === '--schema'
     && fileName(rest[1]) && fileName(rest[2]);
   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
-  if (flag !== '--profile' || !profile || (!checking && !formatting))
+  const simulating = command === 'simulate' && rest.length === 5 && rest[0] === '--schema'
+    && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3]) && fileName(rest[4]);
+  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating))
     throw new CliFailure('CLI_USAGE', 'arguments');
   if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
   return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
+    : simulating ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], source: rest[4] }
     : { command: 'format', profile, source: rest[0] };
 }
 
 /** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
-function readText(file: string, input: 'schema' | 'source'): string {
+function readText(file: string, input: 'schema' | 'source' | 'snapshots', limit = LIMIT): string {
   let fd: number | undefined;
   try {
     fd = fs.openSync(path.resolve(file), fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
     if (!fs.fstatSync(fd).isFile()) throw new CliFailure('CLI_IO', input);
-    const buffer = new Uint8Array(LIMIT + 1);
+    const buffer = new Uint8Array(limit + 1);
     let got = 0;
     while (got < buffer.length) {
       const count = fs.readSync(fd, buffer, got, buffer.length - got, got);
@@ -52,7 +57,7 @@ function readText(file: string, input: 'schema' | 'source'): string {
       if (count < 0) throw new CliFailure('CLI_IO', input);
       got += count;
     }
-    if (got > LIMIT) throw new CliFailure(input === 'source' ? 'SOURCE_BOUND' : 'INPUT_BOUND', input, 1);
+    if (got > limit) throw new CliFailure(input === 'source' ? 'SOURCE_BOUND' : 'INPUT_BOUND', input, 1);
     try {
       return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(buffer.subarray(0, got));
     } catch {
@@ -70,7 +75,7 @@ function readText(file: string, input: 'schema' | 'source'): string {
 
 function run(io: ProcessIo): void {
   const args = argumentsFor(io.argv.slice(2));
-  const schema = args.command === 'check' ? readText(args.schema!, 'schema') : undefined;
+  const schema = args.command === 'format' ? undefined : readText(args.schema!, 'schema');
   const source = readText(args.source, 'source');
   if (args.command === 'format') {
     const formatted = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
@@ -79,6 +84,20 @@ function run(io: ProcessIo): void {
   } else {
     const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
       ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
+    if (args.command === 'simulate') {
+      const snapshots = readText(args.snapshots!, 'snapshots', SNAPSHOT_LIMIT);
+      const result = language.evaluate(source, snapshots);
+      if ('status' in result && result.status === 'Rejected') {
+        io.stderr.write(JSON.stringify(result) + '\n');
+        io.exitCode = 1;
+        return;
+      }
+      const snapshot = parseCanonical(snapshots, SNAPSHOT_LIMIT) as { Pre: unknown; workInitial: string };
+      io.stdout.write(JSON.stringify({ judgmentResult: 'SourceSimulated', sourceProfile: args.profile,
+        pre: snapshot.Pre, initialWork: snapshot.workInitial, result }) + '\n');
+      io.exitCode = 0;
+      return;
+    }
     const result = language.check(source);
     if ('status' in result) {
       io.stderr.write(JSON.stringify(result) + '\n');
