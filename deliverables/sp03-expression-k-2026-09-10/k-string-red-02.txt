@@ -1,0 +1,52 @@
+...EF..........
+======================================================================
+ERROR: test_documented_k_string_tokens (__main__.CodecTests.test_documented_k_string_tokens)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/expression_codec.py", line 150, in token
+    try:v=json.loads(s)
+          ~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 361, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ~~~~~~~~~~~~~~^^^^^^^^
+json.decoder.JSONDecodeError: Invalid \escape: line 1 column 2 (char 1)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/test_expression_codec.py", line 29, in test_documented_k_string_tokens
+    self.assertEqual(c.decode_term(c._apply('ejString',c._token('String',token))),value)
+                     ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/expression_codec.py", line 196, in decode_term
+    try:return walk(term)
+               ~~~~^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/expression_codec.py", line 184, in walk
+    elif label in ('ejString','ejNumber','ejBool') and len(a)==1:values.append(token(a[0],{'ejString':'String','ejNumber':'Int','ejBool':'Bool'}[label]))
+                                                                               ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/expression_codec.py", line 151, in token
+    except (ValueError,TypeError):_fail()
+                                  ~~~~~^^
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/expression_codec.py", line 11, in _fail
+    def _fail():raise CodecError('EXPRESSION_TRANSPORT')
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+expression_codec.CodecError: EXPRESSION_TRANSPORT
+
+======================================================================
+FAIL: test_invalid_k_string_tokens (__main__.CodecTests.test_invalid_k_string_tokens)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/charl/Moriarty/.worktrees/sp03-expression-k/experiments/moriarty-language/formal/k/test_expression_codec.py", line 34, in test_invalid_k_string_tokens
+    with self.assertRaises(c.CodecError):c.decode_term(c._apply('ejString',c._token('String',token)))
+         ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+AssertionError: CodecError not raised
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.502s
+
+FAILED (failures=1, errors=1)

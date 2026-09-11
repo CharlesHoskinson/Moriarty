@@ -1,0 +1,41 @@
+# SP03 next concrete source step
+
+Read-only repository observation, 2026-09-10, canonical /home/charl/Moriarty. AGENTS/develop/status loaded; no pending notifications. Coarse operational status still reports historical SP01 admission defects; this source investigation does not dispatch them. Existing graph queried; direct source below controls conclusions. No K compile/run/proof, network or source edits performed.
+
+## Existing architecture and actual limits
+
+- `experiments/moriarty-language/formal/k/moriarty.k:2–15`: MORIARTY-SYNTAX admits only packet/transferPacket with exactly two balances, one allowance, one obligation, one Transfer and optional Repay. No general expression constructor is represented.
+- `moriarty.k:17–32`: MORIARTY imports INT/BOOL/STRING; configuration is only `<k>$PGM:Packet</k><out>pending</out>`. Explicit inspect/ensure/convert/divide/round/fund/allocate/finish continuations enforce ordering. `ensure(false)` discards the whole continuation and returns rejected(digest,code,index). Results are flat prepared/preparedTransfer records; work is one/two actions, not expression-node cost.
+- `moriarty.k:112–152`: checks multiplication bounds before division and scale before exponentiation, then publishes financial numbers only at finish. This is a useful explicit-stage pattern, not reusable general signed expression arithmetic: the projection uses nonnegative UInt128 values and repayment-specific conversion/allocation.
+- `formal/k/codec.py:32,70,87`: closed JSON admission, narrow projection encoding, KAST v4 result decoding. Decoder reconstructs unchanged metadata, effects and tombstones from input. It is a trusted combined codec/K observation, not independent derivation of all output fields. README:11–48 spells out this boundary.
+- `formal/k/run.py:18–24,32–85`: fixed suite names, fixed build directory, source/artifact/toolchain binding, irreversible per-build attempt counters, sequential krun and bounded process groups. `prove` is explicitly unimplemented. The toolchain lock pins K7.1.337 / revision4a46d123… / LLVM O0. Do not repurpose consumed builds or their counters.
+- `openspec/sprints/execution/SP03.md` and numeric K README retain executed projection cases. They explicitly leave arbitrary sequences, general Core, histories, lifecycle and correspondence open. Historical reviewer routing in this file is superseded by current AGENTS.
+
+## Full target and smallest useful source increment
+
+Implement a separate `formal/k/expression-v1.k` definition for **all forty constructors of moriarty-expression-contract/1**, leaving the existing repayment module intact. Start the implementation with its complete syntax/types/configuration and an explicit constructor coverage table, then fill the actual reduction rules in the same source increment. Do not publish another arithmetic-only packet as full Core semantics. The eight financial additions remain their separately versioned follow-on; do not silently widen /1.
+
+Suggested configuration: immutable Sigma/Pre/Args/Obs, local bindings, staged writes, ordered descriptors, current expression plus explicit evaluation frames, remaining/initial work, and a closed result. Each frame carries original span/nodePath, entered status and expected result type. Parent resume must not charge again. Use original lexical operand order, including record-field lists; canonical map ordering is a serialization rule, not evaluation order.
+
+Concrete owned files:
+
+1. NEW `formal/k/expression-v1.k`: syntax for all40, types/values, deterministic static admission and executable expression/action rules. K INT calculations require explicit target-width bounds after every primitive. For signed floor division with positive denominator, normalize quotient/remainder so 0<=r<denominator; ceil adds1 iff r!=0. Reject denominator<=0. Preserve exact nominal/unit types, Access aliases, collection bounds, and entire-action static checking before any reduction.
+2. NEW `formal/k/expression_codec.py`: canonical JSON→structural K terms and closed complete result decoding, preserving every span/path and typed value. No host-computed answers or caller-supplied typed=true/prechecked flags. Prefer K-side schema/type/snapshot validation; if initial adapter reuses a checked host admission function, name that trust boundary and retain K typing as an explicit unfinished obligation, not a theorem. Transport lexical malformed JSON/Unicode rejection is separate from semantic K rejection.
+3. NEW `formal/k/test_expression_codec.py` and `tests/k-expression-correspondence.test.mjs`: codec negatives plus complete K/reference/independent-result comparisons. Reuse published expression case expectations and existing runtime tests; do not derive the expected result by calling the runtime. A single fixture corpus may feed both engines, but assert full values/types/post/descriptors/work/code/span/path, not booleans.
+4. Later minimal extension to existing `formal/k/run.py` for an explicit expression definition/suite with a fresh bound build: reuse existing toolchain and supervision. This is dependent execution work, not a new runner. Compile/traces require a separately bounded resource admission; no arbitrary suite name or attempt reset.
+
+## Accepted semantics to reuse exactly
+
+`spec/successor/semantic-contract.md:34–40,65–73,144–263`, `static-semantics.md`, `expression-signatures.json` and `src/successor/expression-{v1,types-v1,wire-v1}.ts` are the concrete references.
+
+- Full structural/schema/typing and all supplied snapshots admit before reduction. Static errors in an unselected Boolean operand still reject with workUsed0.
+- Each entered constructor costs1; work0 rejects at the attempted node without charging it. And/Or evaluate left first, then only the selected right; no eager K strictness attribute on both operands. Preserve actual child path/span when a selected child fails.
+- Require/Let/NextWrite/Ensure/Emit are the five action statements. Ensure forms the suffix; writes are staged, single-assignment and restricted by field class; descriptors do not execute financial operations.
+- Any failure exposes only Rejected(code,span,nodePath,workUsed), not staged state/descriptors. This is local preparation rollback, not ledger rollback or refunded financial authority. Successful action is ExpressionPrepared, never Complete/Pending/financial acceptance.
+- Retain all simultaneous finite bounds, schema acyclicity and complete typed value validation. Old40 total declarations256 remains unchanged; the new pure48 named-type bound does not apply here.
+
+Required distinguishing traces include UInt/SInt min/max and intermediate overflow; negative signed floor/ceil; zero/negative denominator; wrong unit/asset; alias work equality; record lexical-order first failure; Boolean dead runtime error versus dead static error; selected-right exact work exhaustion; UTF-8 source offsets and malformed-span synthetic fallback; staged write and Emit followed by failed Ensure exposing no state/effects; post/descriptor aggregate overflow; type/schema cycles; maximum accepted depth/count and one-over rejection. Cover every40 constructor with positive and invalid traces, including statement contexts, then run unchanged old projection tests against its original definition.
+
+## Choices versus open gates
+
+The numeric rules, short circuit, work accounting, error precedence, spans and rollback above are already accepted choices: no new semantic vote is needed to port them faithfully. K representation/frame/cell layout is implementation design. The substantive trust-boundary choice is whether K executes static admission itself or consumes host-admitted input; choose K-side admission for the full executable target, and explicitly scope any intermediate result otherwise. Full financial descriptor consumption, lifecycle Complete/Pending, residual duties and all38 operations are separate semantics dependencies; they cannot be supplied by an opaque host callback. SP03.3 determinism, progress/rejection, preservation, termination, residual duties and elaboration/evaluator correspondence remain unproved until actual named claims are discharged. Finite differential tests alone do not establish them.
