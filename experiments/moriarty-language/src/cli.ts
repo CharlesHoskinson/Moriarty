@@ -6,10 +6,11 @@ import { createExpressionSourceV1 } from './successor/expression-source-v1.ts';
 import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/expression-source-frontend.ts';
 import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
 import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
+import { createFundedFinancialExpressionSourceV1 } from './successor/funded-expression-source-v1.ts';
 import { SuccessorSyntaxError } from './successor/frontend.ts';
 import { parseCanonical } from './successor/expression-wire-v1.ts';
 
-type Input = 'arguments' | 'schema' | 'source' | 'snapshots';
+type Input = 'arguments' | 'schema' | 'source' | 'snapshots' | 'repayment-state';
 type ProcessIo = { argv: string[]; exitCode: number;
   stdout: { write(value: string): unknown }; stderr: { write(value: string): unknown } };
 class CliFailure extends Error {
@@ -26,7 +27,10 @@ class CliFailure extends Error {
 const LIMIT = 65536;
 const SNAPSHOT_LIMIT = 2_000_000;
 
-function argumentsFor(argv: string[]): { command: 'check' | 'format' | 'simulate'; profile: string; source: string; schema?: string; snapshots?: string } {
+function argumentsFor(argv: string[]): {
+  command: 'check' | 'format' | 'simulate'; profile: string; source: string;
+  schema?: string; snapshots?: string; repaymentState?: string;
+} {
   const [command, flag, profile, ...rest] = argv;
   const fileName = (value: string | undefined): value is string =>
     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
@@ -35,16 +39,21 @@ function argumentsFor(argv: string[]): { command: 'check' | 'format' | 'simulate
   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
   const simulating = command === 'simulate' && rest.length === 5 && rest[0] === '--schema'
     && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3]) && fileName(rest[4]);
-  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating))
+  const funded = command === 'simulate' && rest.length === 7 && rest[0] === '--schema'
+    && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3])
+    && rest[4] === '--repayment-state' && fileName(rest[5]) && fileName(rest[6]);
+  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating && !funded))
     throw new CliFailure('CLI_USAGE', 'arguments');
   if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
+  if (funded && profile !== FINANCIAL_EXPRESSION_SOURCE_PROFILE) throw new CliFailure('CLI_USAGE', 'arguments');
   return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
+    : funded ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], repaymentState: rest[5], source: rest[6] }
     : simulating ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], source: rest[4] }
     : { command: 'format', profile, source: rest[0] };
 }
 
 /** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
-function readText(file: string, input: 'schema' | 'source' | 'snapshots', limit = LIMIT): string {
+function readText(file: string, input: 'schema' | 'source' | 'snapshots' | 'repayment-state', limit = LIMIT): string {
   let fd: number | undefined;
   try {
     fd = fs.openSync(path.resolve(file), fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
@@ -86,6 +95,22 @@ function run(io: ProcessIo): void {
       ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
     if (args.command === 'simulate') {
       const snapshots = readText(args.snapshots!, 'snapshots', SNAPSHOT_LIMIT);
+      if (args.repaymentState !== undefined) {
+        const repaymentState = readText(args.repaymentState, 'repayment-state');
+        const result = createFundedFinancialExpressionSourceV1(schema!).evaluate(source, snapshots, repaymentState);
+        if ('status' in result && result.status === 'Rejected') {
+          io.stderr.write(JSON.stringify(result) + '\n');
+          io.exitCode = 1;
+          return;
+        }
+        const snapshot = parseCanonical(snapshots, SNAPSHOT_LIMIT) as { Pre: unknown; workInitial: string };
+        io.stdout.write(JSON.stringify({
+          judgmentResult: 'SourceSimulated', sourceProfile: args.profile, pre: snapshot.Pre,
+          financialPre: JSON.parse(repaymentState), initialWork: snapshot.workInitial, result,
+        }) + '\n');
+        io.exitCode = 0;
+        return;
+      }
       const result = language.evaluate(source, snapshots);
       if ('status' in result && result.status === 'Rejected') {
         io.stderr.write(JSON.stringify(result) + '\n');

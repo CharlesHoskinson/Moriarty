@@ -56,3 +56,8 @@ Its exact implementation audits are pending. The included demo checks and
 updates ordinary state while retaining financial state; emissions are typed
 descriptors with no financial execution. Original syntax-only and funded entry
 points keep their exact profiles. Full agreement declarations and SP02 remain open.
+
+The [funded financial expression adapter](funded-expression-source.md) is a later
+local slice. It keeps the financial expression profile and, with an explicit
+CLI `--repayment-state` file, prepares Transfer/Repay through the retained
+kernel after expression evaluation succeeds.
