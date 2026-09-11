@@ -15,6 +15,19 @@ language.elaborate(source);
 language.evaluate(source, snapshotCanonicalJSON);
 ```
 
+From the repository root, developers can check or format the published vault
+quote fixture with the explicit profile:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+```
+
+`check` performs the same source-only static judgment as `language.check` and
+requires the trusted canonical schema. `format` uses no schema and writes its
+canonical source to stdout. The complete CLI transport, errors, and exit-code
+contract is in [expression-cli.md](expression-cli.md).
+
 The source header must be `profile "moriarty-financial-expression-source/1";`.
 The factory binds only `moriarty-financial-expression-contract/1`, including its
 required `variantTypes` schema map. Neither older profile is upgraded. APIs accept

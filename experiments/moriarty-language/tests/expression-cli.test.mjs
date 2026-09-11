@@ -172,3 +172,27 @@ test('financial CLI explicit routing equals financial APIs and never infers the 
   const old=source('requires true;');
   failure(['check','--profile',financial,'--schema',schemaFile,file(old)],language.check(old));
 });
+
+test('financial CLI preserves checking and formatting meaning for the published vault quote fixture', () => {
+  const financial = 'moriarty-financial-expression-source/1';
+  const fixture = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.mori', import.meta.url));
+  const schemaFixture = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.schema.json', import.meta.url));
+  const input = readFileSync(fixture, 'utf8');
+  const schemaText = readFileSync(schemaFixture, 'utf8');
+  const language = createFinancialExpressionSourceV1(schemaText);
+  const expected = language.check(input);
+  const checked = invoke(['check', '--profile', financial, '--schema', schemaFixture, fixture]);
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.equal(checked.stderr, '');
+  assert.equal(checked.stdout, JSON.stringify(expected) + '\n');
+
+  const formatted = invoke(['format', '--profile', financial, fixture]);
+  assert.equal(formatted.status, 0, formatted.stderr);
+  assert.equal(formatted.stderr, '');
+  assert.equal(formatted.stdout, formatFinancialExpressionSource(input));
+  const formattedPath = file(formatted.stdout);
+  const rechecked = invoke(['check', '--profile', financial, '--schema', schemaFixture, formattedPath]);
+  assert.equal(rechecked.status, 0, rechecked.stderr);
+  assert.equal(rechecked.stdout, JSON.stringify(language.check(formatted.stdout)) + '\n');
+  assert.equal(invoke(['format', '--profile', financial, formattedPath]).stdout, formatted.stdout);
+});
