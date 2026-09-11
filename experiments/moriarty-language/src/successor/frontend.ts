@@ -4,6 +4,16 @@ export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
 export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
 export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expression-source/1';
 export const FINANCIAL_AGREEMENT_SOURCE_PROFILE = 'moriarty-financial-agreement-source/1';
+export const FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE = 'moriarty-financial-agreement-source/2';
+
+function isAgreementSourceProfile(profile: string): boolean {
+  return profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE;
+}
+
+function isFinancialLexerProfile(profile: string): boolean {
+  return profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE || isAgreementSourceProfile(profile);
+}
 
 export const SYNTAX_BOUNDS = Object.freeze({
   sourceUtf8Bytes: 65536,
@@ -686,10 +696,10 @@ class Parser {
   private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE || this.financialProfile; }
   private get financialProfile(): boolean {
     return this.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
-      || this.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE;
+      || isAgreementSourceProfile(this.profile);
   }
   private get agreementSourceProfile(): boolean {
-    return this.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE;
+    return isAgreementSourceProfile(this.profile);
   }
 
   parseProgram(): Program {
@@ -1390,7 +1400,7 @@ function parseSourceProfile(source: string, profile: string): Program {
   const tokens = new Lexer(
     source,
     profile !== SYNTAX_PROFILE,
-    profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE || profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE,
+    isFinancialLexerProfile(profile),
   ).tokenize();
   return new Parser(tokens, profile).parseProgram();
 }
@@ -1412,4 +1422,9 @@ export function parseSuccessorFinancialExpressionSource(source: string): Program
 /** Distinct source-defined agreement entry; older parsers never opt into it. */
 export function parseSuccessorFinancialAgreementSource(source: string): Program {
   return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_PROFILE);
+}
+
+/** Distinct multiple-action agreement entry; /1 never opts into it. */
+export function parseSuccessorFinancialAgreementSourceV2(source: string): Program {
+  return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE);
 }

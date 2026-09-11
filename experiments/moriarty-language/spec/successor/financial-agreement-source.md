@@ -4,6 +4,8 @@ This profile declares the bounded repayment contract in one `.mori` file and
 runs it without an external schema file. It is a distinct
 `moriarty-financial-agreement-source/1` entry. Older expression and financial
 expression profiles keep their exact contracts and still require `--schema`.
+Multiple named actions use the separate
+[financial-agreement-source/2](financial-agreement-source-v2.md) profile.
 
 ```javascript
 import { createFinancialAgreementSourceV1 } from '../../src/successor/financial-agreement-source-v1.ts';

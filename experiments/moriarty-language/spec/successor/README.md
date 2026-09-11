@@ -65,3 +65,7 @@ kernel after expression evaluation succeeds.
 The [source-defined agreement profile](financial-agreement-source.md) declares
 units, assets, records, ordinary state and protected Transfer/Repay operations
 in one `.mori` file and reuses that funded path without an external schema.
+
+The [multiple-action agreement profile](financial-agreement-source-v2.md) is a
+separate `/2` entry. It checks every named action and executes exactly one
+selected funded action. The `/1` exactly-one-action contract is unchanged.
