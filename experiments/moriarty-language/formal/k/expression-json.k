@@ -3,6 +3,7 @@ module MORIARTY-EXPRESSION-JSON
   imports INT
   imports BOOL
   imports STRING
+  imports K-EQUAL
   syntax EJSON ::= ejNull() [symbol(ejNull)]
                  | ejBool(Bool) [symbol(ejBool)]
                  | ejNumber(Int) [symbol(ejNumber)]

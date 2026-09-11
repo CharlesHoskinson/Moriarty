@@ -3,6 +3,9 @@ import json,pathlib,sys,tempfile,unittest
 from unittest.mock import patch
 import run
 class ExpressionRunner(unittest.TestCase):
+ def test_expression_equality_syntax_is_imported_at_root(self):
+  source=(pathlib.Path(__file__).resolve().parent/'expression-json.k').read_text()
+  self.assertIn('imports K-EQUAL',source)
  def test_explicit_suite_preserves_old_limits(self):
   self.assertIn('expression-v1',run.SUITES)
   self.assertEqual(run.SUITE_LIMITS['initial'],(16,512))
