@@ -1,0 +1,38 @@
+{
+  "candidateSha256": "91a328ee3670bd625a35cba5e6566b86ceaf9f5901e3478e4ceb74fca266d6f6",
+  "head": "d4ee817f6f69a9c2a3a50ab7f77531edd248d964",
+  "exitCode": 0,
+  "elapsedSeconds": 251.775,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "candidateBytesUnchanged": true,
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"head\": \"d4ee817f6f69a9c2a3a50ab7f77531edd248d964\",\n  \"candidateSha256\": \"91a328ee3670bd625a35cba5e6566b86ceaf9f5901e3478e4ceb74fca266d6f6\",\n  \"verdict\": \"PASS_SCOPED\",\n  \"requiredCorrections\": [],\n  \"checksPerformed\": [\n    \"Static review of the complete candidate-vs-base diff: README.md, expression-cli.md, src/cli.ts, tests/expression-cli.test.mjs only.\",\n    \"Confirmed listed successor source/evaluator files (expression-source-v1.ts, expression-v1.ts, expression-wire-v1.ts, financial-expression-source-v1.ts, financial-expression-v1.ts) are absent from the diff and are used only as the existing evaluate/check APIs.\",\n    \"Argv shape: exact `simulate --profile PROFILE --schema SCHEMA --snapshots SNAPSHOTS SOURCE.mori`; unknown/reordered/missing flags \u2192 CLI_USAGE; unknown profile \u2192 CLI_PROFILE before any open.\",\n    \"Admission order: schema UTF-8 read, then source, then snapshots at 2_000_000; descriptor O_RDONLY|O_NONBLOCK, fstat regular-only, limit+1 extra-byte bound, close in finally; schema/source remain 65536 with SOURCE_BOUND vs INPUT_BOUND preserved.\",\n    \"Decoder `TextDecoder('utf-8', { fatal: true, ignoreBOM: true })` unchanged; BOM retention matches the stated Node 24.18.1 behavior and is delegated to existing canonical admission.\",\n    \"Success path calls only `language.evaluate(source, snapshots)`; rejects solely on `status === 'Rejected'` so `ExpressionPrepared` is not treated as check-style `'status' in result`; wrapper is `SourceSimulated` plus profile, `pre`, `initialWork`, exact API result with `workRemaining` and no success `workUsed`.\",\n    \"Display `parseCanonical` runs only after evaluate success; rejection writes the exact API record to stderr, empty stdout, exit 1, no wrapper Pre/post/descriptors.\",\n    \"check/format branches, factories, and reader defaults are unchanged except schema is also read for simulate.\",\n    \"Independent financial fixture arithmetic: deposit=4, supply=3, valuation=10 \u2192 floor(12/10)=1; Select takes calculated; Notice {allocation:1, offered:4}; post.last=1; 1000\u221241=959 remaining is consistent with static bound 43 minus untaken Select branch.\",\n    \"Independent original-40 fixture: counter 10+delta 2 \u2192 12, funds 100, QuoteNotice {amount:5, count:2}, remaining 960.\",\n    \"Parent-executed evidence treated as executed by parent: build exit 0; 682/0 tests; 8 CLI probes (financial success, OPTION_NONE, rollback after write+emit, WORK_EXHAUSTED at workInitial 0, aggregate snapshot >65536 with remaining 18, invalid-source vs `{}` snapshot priority INPUT_SCHEMA, BOM snapshot INPUT_SCHEMA, numeric workInitial INPUT_SCHEMA) plus unchanged temp input bytes.\",\n    \"No K, proof, network, wallet, ledger, or source-machine edits in the diff.\"\n  ],\n  \"substantiveReasons\": [\n    \"The new adapter is a local file wrapper around the already-accepted profile factories. Outcome is controlled by `evaluate(source, snapshotText)`; this review does not re-litigate source40/financial48 evaluator semantics.\",\n    \"CLI transport and language phases are ordered correctly: argv/profile, then schema/source/snapshots reads, then API. A second canonical parse for `pre`/`initialWork` cannot fire on Rejected, so it cannot leak snapshot state or convert API `INPUT_SCHEMA` into `CLI_INTERNAL`.\",\n    \"Parent probes and the added subprocess tests cover the required local behaviors: independently derived financial and original success records, rollback without tentative post/descriptors, work exhaustion, envelope-vs-component snapshot bounds, multi-error priority matching the API, BOM/UTF-8/canonical rejection, and check/format preservation (679\u2192682 tests, +3 simulate cases).\",\n    \"Success JSON matches the contract (`ExpressionPrepared` + `workRemaining`, not `workUsed`). Failure is exact API Rejected on stderr, exit 1, empty stdout.\",\n    \"Unexecuted full SP03, K correspondence, proof, and financial/ledger gates are out of this scoped acceptance and are not treated as adapter defects.\"\n  ],\n  \"limitations\": [\n    \"This review is offline static only. Build, 682 tests, demos, and the 8 root probes were not re-executed here; parent logs were accepted as parent-executed.\",\n    \"File SHA-256 values were not recomputed; candidate identity is the supplied manifest hash. Source/evaluator unchanged status is inferred from their absence in the complete diff plus the dumped API text, not a byte-compare against base blobs.\",\n    \"The advertised 82,231-byte snapshot size was not independently counted; the probe only asserts canonical bytes >65536 and a successful remaining-work 18, which is enough for the envelope-vs-component rule.\",\n    \"No K compile/trace, proof, network, wallet, or ledger execution was present or required. PASS_SCOPED is not full SP03 or financial-transition acceptance.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 56133,
+      "output_tokens": 13781,
+      "cache_read_input_tokens": 384,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 56133,
+        "outputTokens": 13781,
+        "cacheReadInputTokens": 384,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.03317448
+      }
+    }
+  }
+}
