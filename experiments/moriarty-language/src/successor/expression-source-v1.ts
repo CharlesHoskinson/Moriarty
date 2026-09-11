@@ -64,7 +64,10 @@ function sourceAction(program: Program, schema: Schema): ActionDecl {
   for (const d of declarations) {
     if (names.has(d.name)) sourceFailure('SOURCE_DUPLICATE_DECLARATION', d.span);
     names.add(d.name);
-    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl') sourceFailure('SOURCE_DECLARATION', d.span);
+    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl'
+      || d.tag === 'UninitializedStateDecl' || d.tag === 'RecordDecl' || d.tag === 'OperationDecl') {
+      sourceFailure('SOURCE_DECLARATION', d.span);
+    }
     if (d.tag === 'ActionDecl') {
       if (reservedSourceTerm(d.name)) sourceFailure('SOURCE_RESERVED_NAME', d.span);
     } else {

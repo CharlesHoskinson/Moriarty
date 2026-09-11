@@ -16,6 +16,9 @@ node experiments/moriarty-language/src/cli.ts format --profile moriarty-financia
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/1 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/1 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/1 --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
 ```
 
 Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
@@ -23,11 +26,15 @@ schema JSON consumed by the selected source factory; it is not a type-alias regi
 The financial profile requires its runtime's variantTypes schema map. Its
 factory/formatter are createFinancialExpressionSourceV1/formatFinancialExpressionSource;
 the original profile uses createExpressionSourceV1/formatExpressionSource.
+The source-defined agreement profile uses
+createFinancialAgreementSourceV1/formatFinancialAgreementSource and rejects
+`--schema`.
 The --profile value is the literal profile identifier, not a path or inferred
 source header. Flags appear in the shown order, once each. Unknown commands,
 missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
 Unknown --profile values reject CLI_PROFILE before opening files. Formatting
-accepts no schema; checking requires one. There is no stdin, output-file or
+accepts no schema; checking requires one except for
+`moriarty-financial-agreement-source/1`. There is no stdin, output-file or
 in-place mode, profile inference, or callback. Without `--repayment-state` the
 CLI does not execute financial operations. With that option it still does not
 contact a ledger.
@@ -36,11 +43,17 @@ Use a path such as ./--example.mori for a filename beginning with --.
 Simulation takes the exact ordered form `simulate --profile PROFILE --schema
 SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori`. The financial profile may
 place `--repayment-state STATE_JSON` immediately before SOURCE. That option is
-illegal for check, format, and `moriarty-expression-source/1`. Without the
-option, simulation remains a local-only adapter for the selected source API's
-`evaluate(source, snapshotCanonicalJSON)` method. With the option it calls
+illegal for check, format, and `moriarty-expression-source/1`.
+`moriarty-financial-agreement-source/1` simulate is
+`simulate --profile moriarty-financial-agreement-source/1 --snapshots
+SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori` and rejects `--schema`.
+Without `--repayment-state`, simulation remains a local-only adapter for the
+selected source API's `evaluate(source, snapshotCanonicalJSON)` method. With
+the option the financial expression profile calls
 `createFundedFinancialExpressionSourceV1(schema).evaluate(source, snapshots, state)`
-as specified in [funded-expression-source.md](funded-expression-source.md).
+as specified in [funded-expression-source.md](funded-expression-source.md);
+the agreement profile calls
+`createFinancialAgreementSourceV1().evaluate(source, snapshots, state)`.
 It accepts neither caller-supplied Core nor a check-only shortcut. The source
 profile and trusted schema select the same factories as checking. Snapshots are
 canonical JSON with exactly `Pre`, `Args`, `Obs`, and `workInitial`, as defined
