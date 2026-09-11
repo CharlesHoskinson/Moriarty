@@ -343,7 +343,7 @@ The ProRata helper is used only after a positive outstanding obligation and a fi
 \mathsf{inspect}(P,s,r) & \leadsto & \mathit{checks}(P,s,r) \rhd \mathit{tail}(P,s,r) & \text{(EXPAND)} \\[4pt]
 \mathsf{ensure}(H,\mathsf{true},\mathit{code},i) & \leadsto & \varepsilon & \text{(CHECK)} \\[10pt]
 \mathsf{convert}(P,s,r) & \leadsto & g(n\,m \le U,\ \mathtt{OVERFLOW}) \rhd \mathsf{divide}(P,s,r,n\,m) & \text{(CONVERT)} \\[4pt]
-\mathsf{divide}(P,s,r,x) & \leadsto & \mathsf{round}\bigl(P,s,r,\ x \operatorname{div} 10^{\ell},\ x \bmod 10^{\ell}\bigr) & \text{(DIVIDE)} \\[4pt]
+\mathsf{divide}(P,s,r,x) & \leadsto & \mathsf{round}\bigl(P,s,r,\ x \mathbin{\mathrm{div}} 10^{\ell},\ x \bmod 10^{\ell}\bigr) & \text{(DIVIDE)} \\[4pt]
 \mathsf{round}(P,s,r,q,u) & \leadsto & g(\rho \neq \mathtt{none} \lor u = 0,\ \mathtt{INEXACT\_CONVERSION}) & \text{(ROUND)} \\
 & & \quad \rhd\ \mathsf{fund}(P,s,r,R(\rho,q,u)) & \\[4pt]
 \mathsf{fund}(P,s,r,c) & \leadsto & g(c \le U,\ \mathtt{OVERFLOW}) \rhd g(c > 0,\ \mathtt{DUST}) & \text{(FUND)} \\
@@ -454,7 +454,7 @@ Every rejection raised before the first E-ENTER, by admission, schema validation
 \end{array}
 ```
 
-**Statements.** Statements reduce in lexical order; each returns Unit and advances to the next. A statement's expression operand reduces by the E-rules under the current $\sigma$, with $w$ threaded through. $S$ is the remaining statement list, $\oplus$ overrides a record by staged writes, and $D \cdot d$ appends a descriptor. $\mathsf{ReadPre}(\mathsf{post},f)$ reads $\mathit{pre} \oplus W$ and is typable only inside an Ensure condition; that view never commits. EMIT also rejects $\mathtt{DESCRIPTOR\_BOUND}$ when the descriptor list exceeds its aggregate bound, and FINISH rejects $\mathtt{VALUE\_BOUND}$ when the assembled post-state exceeds its bound.
+**Statements.** Statements reduce in lexical order; each returns Unit and advances to the next. A statement's expression operand reduces by the E-rules under the current $\sigma$, with $w$ threaded through. $S$ is the remaining statement list, $\oplus$ overrides a record by staged writes, and $D \cdot d$ appends a descriptor. $\mathsf{ReadPre}(\mathsf{post},f)$ reads $\mathit{pre} \oplus W$ and is typable only inside an Ensure condition; that view never commits. EMIT also rejects `DESCRIPTOR_BOUND` when the descriptor list exceeds its aggregate bound, and FINISH rejects `VALUE_BOUND` when the assembled post-state exceeds its bound.
 
 ```math
 \begin{array}{rcll}
@@ -499,9 +499,9 @@ $B$ is finite under the simultaneous source and Core bounds and conservatively b
 \frac{\Sigma;\Gamma;\phi \vdash e_1 : \mathsf{Bool} \qquad \Sigma;\Gamma;\phi \vdash e_2 : \mathsf{Bool}}{\Sigma;\Gamma;\phi \vdash \mathsf{And}(e_1,\ e_2) : \mathsf{Bool}}\ \text{(CMP-AND)}
 ```
 
-A `next` view rejects $\mathtt{TYPE\_NEXT\_READ}$ and a `post` view outside Ensure rejects $\mathtt{TYPE\_POST\_SCOPE}$. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects $\mathtt{ARITH\_RANGE}$ when the result does not fit $T$; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in [static-semantics.md](experiments/moriarty-language/spec/successor/static-semantics.md), mirrored machine-readably in [expression-signatures.json](experiments/moriarty-language/spec/successor/expression-signatures.json).
+A `next` view rejects `TYPE_NEXT_READ` and a `post` view outside Ensure rejects `TYPE_POST_SCOPE`. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects `ARITH_RANGE` when the result does not fit $T$; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in [static-semantics.md](experiments/moriarty-language/spec/successor/static-semantics.md), mirrored machine-readably in [expression-signatures.json](experiments/moriarty-language/spec/successor/expression-signatures.json).
 
-**What is not specified.** S-FINISH ends at $\mathsf{ExpressionPrepared}$, never at an accepted `Prepared`. No rule in this repository consumes an emitted descriptor: nothing maps $\mathsf{Operation}_{\mathsf{Transfer}}$ or $\mathsf{Operation}_{\mathsf{Repay}}$ onto the funded kernel packet above, orders descriptors against staged writes, charges kernel action-work, or decides what an Ensure sees after financial effects. The contract states this composition as open. A candidate mapping is recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it changes no registered behavior.
+**What is not specified.** S-FINISH ends at $\mathsf{ExpressionPrepared}$, never at an accepted `Prepared`. No rule in this repository consumes an emitted descriptor: nothing maps $\mathsf{Operation}_{\mathsf{Transfer}}\ \text{or}\ \mathsf{Operation}_{\mathsf{Repay}}$ onto the funded kernel packet above, orders descriptors against staged writes, charges kernel action-work, or decides what an Ensure sees after financial effects. The contract states this composition as open. A candidate mapping is recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it changes no registered behavior.
 
 ## What a developer writes
 
