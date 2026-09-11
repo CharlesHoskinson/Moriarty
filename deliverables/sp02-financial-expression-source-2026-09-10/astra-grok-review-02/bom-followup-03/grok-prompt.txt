@@ -1,0 +1,617 @@
+You are Grok4.6 high, following up ONLY your completed CLI-BOM-R1 finding on unchanged candidate07e19d4 and manifestfb6921a497b1863b33a785e70c3bbb421e078ccea62b6997b4fa106054c2fb17. Prior full review source PASS_SCOPED, CLI CHANGES_REQUESTED solely for BOM option. Preserve that review unchanged. No product file has changed. Offline static review of inline evidence only; no tools, skills or delegation; give substantive final JSON, not private reasoning.
+Your prior finding says ignoreBOM:true strips U+FEFF and asks for false. Root ran Node v24.18.1 directly: bytes EF BB BF 78 decode to codepoints[65279,120] with true, [120] with false. Root also executed actual CLI source/schema BOM checks and formatting for BOTH profiles, each matching public API rejection and retaining files. Those results challenge the specific premise of CLI-BOM-R1. Evaluate the provided script/output and actual option usage; do not accept parent assertion without checking internal consistency. You may retract the finding if disproven; if not, explain an executable discriminating test or remaining concrete defect. Do not change code to satisfy a mistaken finding. The original full review and this narrow correction together cover the unchanged candidate; no fresh broad audit is requested.
+Return JSON with candidateSha256, head, priorReviewDisposition, sourceVerdict, cliVerdict (PASS_SCOPED or CHANGES_REQUESTED), requiredCorrections, substantiveReasons, checksPerformed, limitations. State if this review revises only BOM finding; preserve all prior scopes/exclusions. This is not full SP02/financial acceptance; do not claim personally executing the parent script. Prior models and limits remain unchanged.
+
+
+EVIDENCE grok-review.json SHA256 ca811eef8e9d6eeda6da22a2317bbc22b78f3c266b336a1b15a0e624c710b8aa
+
+{
+  "candidateSha256": "fb6921a497b1863b33a785e70c3bbb421e078ccea62b6997b4fa106054c2fb17",
+  "head": "07e19d4daa014c320aa483c8b5435bc111a60f71",
+  "exitCode": 0,
+  "elapsedSeconds": 630.96,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "candidateBytesUnchanged": true,
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"candidateSha256\": \"fb6921a497b1863b33a785e70c3bbb421e078ccea62b6997b4fa106054c2fb17\",\n  \"head\": \"07e19d4daa014c320aa483c8b5435bc111a60f71\",\n  \"base\": \"2eb6f4176e99b0621a6a394e90a721a414298c1b\",\n  \"sourceVerdict\": \"PASS_SCOPED\",\n  \"cliVerdict\": \"CHANGES_REQUESTED\",\n  \"requiredCorrections\": [\n    {\n      \"id\": \"CLI-BOM-R1\",\n      \"severity\": \"medium\",\n      \"classification\": \"CLI transport contradicts the recorded decoder/API-equality contract\",\n      \"file\": \"experiments/moriarty-language/src/cli.ts\",\n      \"line\": 57,\n      \"spec\": \"experiments/moriarty-language/spec/successor/expression-cli.md (BOM retained by the fatal UTF-8 decoder; after valid transport, check equals the API exactly)\",\n      \"testOracle\": \"experiments/moriarty-language/tests/expression-cli.test.mjs (BOM-prefixed source compared to createExpressionSourceV1(schema).check('\\\\uFEFF'+source); schema cases include '\\\\uFEFF'+schema)\",\n      \"finding\": \"readText decodes with TextDecoder('utf-8', { fatal: true, ignoreBOM: true }). WHATWG/Node ignoreBOM:true omits a leading UTF-8 BOM from the string passed to the API. The CLI contract keeps that U+FEFF so parser/canonical admission see it. API.check('\\\\uFEFF'+validSource) is UNEXPECTED_CHAR / INPUT_SCHEMA; a stripping CLI would admit the same file bytes and disagree.\",\n      \"repro\": \"Write EF BB BF followed by a legal moriarty-expression-source/1 program (or a canonical schema JSON). Invoke node experiments/moriarty-language/src/cli.ts check --profile moriarty-expression-source/1 --schema SCHEMA SOURCE. Compare stdout/stderr/exit with createExpressionSourceV1(schemaText).check(sourceText) on the unstripped JS strings. Repeat with moriarty-financial-expression-source/1. Format has the same decoder.\",\n      \"correction\": \"Decode with fatal:true and ignoreBOM:false (or omit ignoreBOM). Do not strip EF BB BF. Keep INVALID_UTF8 on fatal decode failure. Leave admission order, bound+1 read, and fstat-isFile unchanged.\"\n    }\n  ],\n  \"checksPerformed\": [\n    \"Static read of the complete inlined candidate against approved PROPOSAL-02 P1\u2013P5 and DECISION-02; prior Grok votes were not reused.\",\n    \"Parser/lexer profile gating: separate FINANCIAL_EXPRESSION_SOURCE_PROFILE entry; '?' lexed only when financialProfile; GENERIC_PRIMARIES left as the old five names; FINANCIAL_GENERIC_PRIMARIES is a distinct frozen table; old parseSuccessorSource / parseSuccessorExpressionSource still exact-profile.\",\n    \"Formatter: Conditional below Or, right-association parentheses on a left nested conditional, postfix grouping, explicit formatSuccessorFinancialExpressionSource; PREC_NONE -1 vs old 0 is behavior-preserving for non-conditional trees.\",\n    \"Lowering of the eight new constructors (ConstructAmount/Shares/Variant, ProjectVariant, ProjectSome, ConvertUInt, ScalarValue, Select), literal-vs-generic amount/shares, u256-vs-to_uint, access_field operand order retained.\",\n    \"Select: parseExpression consequent/alternative, static infer of all three children then Bool/equal-arm/Unit-Operation rules, reduce charges Select+condition+chosen arm only, paths 0/1/2, ARITH_DENOMINATOR on the selected zero divisor.\",\n    \"Whole-conditional UTF-8 spans, child spans on dynamic failure, Let-wrapped work B7/success4/false6, rollback Rejected without post/descriptors, TYPE_FINANCIAL_WRITE at check.\",\n    \"Additive financial runtime check(): early return after infer, before validateSnapshot/reduce; evaluate union and default path unchanged in the supplied diff.\",\n    \"Transport/ownership: 2_000_000 snapshot envelope, independent 65536 components, trusted schema text, returned Core not consumed, hostile non-string source SOURCE_TYPE.\",\n    \"Unsigned ConvertUInt widths 64/128/256, same-width still a node, Amount child TYPE_MISMATCH, narrowing ARITH_RANGE; Price orientation and LitUInt128 10^scale TYPE_SCALE_DIVISOR.\",\n    \"Old /1 isolation: u256 remains a legal binder there; financial header/syntax rejected by old parse/check; reservation tables not appended on the shared /1 exports.\",\n    \"CLI static: argumentsFor shape then profile before any open; check reads schema then source; format has no schema; O_RDONLY|O_NONBLOCK, fstat isFile, 65537-byte probe, fatal UTF-8; success/failure stdout/stderr/exits; no write APIs; both-profile routing and vault-quote fixture test.\",\n    \"Terra completion is tests/docs only (expression-cli.test.mjs vault fixture + financial-expression-source.md commands). Author RESULT-01 and parent 679/10-probe records were treated as observations, not execution by this review.\"\n  ],\n  \"substantiveReasons\": [\n    \"Source P1: createFinancialExpressionSourceV1 and profile \\\"moriarty-financial-expression-source/1\\\" are the only new admission path. syntax/0 and expression-source/1 entry points, exported GENERIC_PRIMARIES, and source40 TERM_RESERVED stay separate. Runtime is not inferred from syntax.\",\n    \"Source P2/P3: authored types match the published financial trees; literal amount/shares remain one Lit* node; generic amount/shares always Construct* plus UInt128 child; u256 is LitUInt width 256 from IntegerLiteral only; to_uint is ConvertUInt; variant<F,T>/project_variant<T>/some_value map to the reviewed operand roles; dotted variant metadata dies at '.'.\",\n    \"Source P4: conditional is below or and right-associative; both arms are lowered and statically checked; reduction is lazy with child paths 0/1/2; the P4 token is ARITH_DENOMINATOR, not DIV_ZERO. Let-wrapped counts in the tests match the approved B/work figures.\",\n    \"Source P5: compile uses financial .check() with dummy snapshots and workInitial 0 and stops before typed snapshots/reduction; evaluate still validates snapshots and reduces; SOURCE_* plus runtime codes stay closed; financial metadata reservations are profile-local; dummy check does not certify Pre/Args/Obs.\",\n    \"Preservation: the product diff versus accepted base is the gated frontend/format additions plus additive financial check(). expression-source-{v1,types,lower}.ts and expression-v1.ts are the accepted source40 bytes. financial-expression-types-v1.ts is the published schema/type domain. Terra did not change runtime semantics.\",\n    \"CLI admission, bounds, regular-descriptor read, invalid UTF-8, exact API JSON on check, format-equals-API/idempotence, no input writes, and explicit two-profile routing match expression-cli.md except BOM retention.\",\n    \"CLI-BOM-R1 is enough for CHANGES_REQUESTED on the CLI only. It is not a financial-runtime or source-lowering defect.\"\n  ],\n  \"limitations\": [\n    \"Static review only. This reviewer did not run npm test, tsc, CLI processes, demos, or hash verification, and does not certify MANIFEST_SHA256 or file sha256 pins.\",\n    \"Parent records (build exit 0, 679 tests, 10 public API probes) and author RESULT-01 are observations, not this review's execution. They are not SP02, financial-transition, or ledger acceptance.\",\n    \"CLI-BOM-R1 is judged from decoder options versus the CLI spec/test oracle. Node's actual ignoreBOM effect on this host was not measured here. If the recorded 679-pass included that BOM test, that pass is unreconciled with WHATWG ignoreBOM:true stripping; the correction ignoreBOM:false remains the contract-aligned decoder.\",\n    \"Omitted evidence: original-profile-files bytes (hashes only), independent-vault-arithmetic-01.json (referenced, not inlined), full test log (summary only), root README/grammar mirror (stated unedited, not inlined).\",\n    \"Scope remains financial-expression-source/1 plus explicit check/format CLI for both source profiles. Not accepted: full SP02, source-defined schema authority, multi-action selection, genesis/constants, identity escaping, financial transitions, K/proof/native/network/Preview, or ACTUS/DeFi.\",\n    \"No exhaustive source-space, formal parser/evaluator correspondence, or overload-complete arithmetic audit beyond the inlined tests and the previously accepted 48-constructor runtime.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 112710,
+      "output_tokens": 32928,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 112710,
+        "outputTokens": 32928,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.07190796
+      }
+    }
+  }
+}
+
+
+EVIDENCE bom-reproduction.mjs SHA256 ef736b2bfdccdec84a26f5a926a6fa26a482271c19fcd779c04a55459ce09aba
+
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawnSync} from 'node:child_process';
+const root=process.argv[2];
+const cli=join(root,'experiments/moriarty-language/src/cli.ts');
+const dir=mkdtempSync(join(tmpdir(),'moriarty-bom-repro-'));
+const results=[];
+try {
+ const bytes=Uint8Array.from([0xef,0xbb,0xbf,0x78]);
+ const withTrue=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+ const withFalse=new TextDecoder('utf-8',{fatal:true,ignoreBOM:false}).decode(bytes);
+ assert.equal(withTrue,'\uFEFFx'); assert.equal(withFalse,'x');
+ results.push({case:'Node TextDecoder direct',node:process.version,ignoreBOMtrue:Array.from(withTrue,c=>c.codePointAt(0)),ignoreBOMfalse:Array.from(withFalse,c=>c.codePointAt(0))});
+ for(const financial of [false,true]){
+  const profile=financial?'moriarty-financial-expression-source/1':'moriarty-expression-source/1';
+  const source=`profile "${profile}"; agreement Demo { action step() { requires true; } }`;
+  const schema={units:[],assets:[],vaults:[],parties:[],recordTypes:{},enumTypes:{},fields:{},args:{},observations:{},operations:{}};
+  if(financial)schema.variantTypes={};
+  const {canonical}=await import(join(root,'experiments/moriarty-language/src/successor/expression-wire-v1.ts'));
+  const factory=financial?(await import(join(root,'experiments/moriarty-language/src/successor/financial-expression-source-v1.ts'))).createFinancialExpressionSourceV1:(await import(join(root,'experiments/moriarty-language/src/successor/expression-source-v1.ts'))).createExpressionSourceV1;
+  const rawSchema=canonical(schema);
+  for(const bomInput of ['source','schema']){
+   const sourceText=(bomInput==='source'?'\uFEFF':'')+source;
+   const schemaText=(bomInput==='schema'?'\uFEFF':'')+rawSchema;
+   const sf=join(dir,'source.mori'),jf=join(dir,'schema.json');
+   writeFileSync(sf,sourceText);writeFileSync(jf,schemaText);
+   const expected=factory(schemaText).check(sourceText);
+   const r=spawnSync(process.execPath,[cli,'check','--profile',profile,'--schema',jf,sf],{encoding:'utf8',timeout:5000});
+   assert.equal(r.status,1);assert.equal(r.stdout,'');assert.deepEqual(JSON.parse(r.stderr),expected);
+   assert.equal(expected.code,bomInput==='source'?'UNEXPECTED_CHAR':'INPUT_SCHEMA');
+   assert.equal(readFileSync(sf,'utf8'),sourceText);assert.equal(readFileSync(jf,'utf8'),schemaText);
+   results.push({case:profile+' BOM '+bomInput,exit:r.status,result:expected});
+   if(bomInput==='source'){
+    const f=spawnSync(process.execPath,[cli,'format','--profile',profile,sf],{encoding:'utf8',timeout:5000});
+    assert.equal(f.status,1);assert.equal(f.stdout,'');assert.equal(JSON.parse(f.stderr).code,'UNEXPECTED_CHAR');
+    results.push({case:profile+' BOM format',exit:f.status,result:JSON.parse(f.stderr)});
+   }
+  }
+ }
+ console.log(JSON.stringify({passed:true,conclusion:'ignoreBOM:true retains U+FEFF; false strips it. Current CLI matches API for BOM source/schema in both profiles. Proposed change would violate its retention contract.',results},null,2));
+} finally {rmSync(dir,{recursive:true,force:true});}
+
+
+EVIDENCE bom-reproduction.json SHA256 a10202b1cc2c1dc6cb71de419ea0354fc3389a2be24913cfd014893ce2a2cc15
+
+{
+  "passed": true,
+  "conclusion": "ignoreBOM:true retains U+FEFF; false strips it. Current CLI matches API for BOM source/schema in both profiles. Proposed change would violate its retention contract.",
+  "results": [
+    {
+      "case": "Node TextDecoder direct",
+      "node": "v24.18.1",
+      "ignoreBOMtrue": [
+        65279,
+        120
+      ],
+      "ignoreBOMfalse": [
+        120
+      ]
+    },
+    {
+      "case": "moriarty-expression-source/1 BOM source",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "UNEXPECTED_CHAR",
+        "span": {
+          "kind": "source",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    },
+    {
+      "case": "moriarty-expression-source/1 BOM format",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "UNEXPECTED_CHAR",
+        "span": {
+          "kind": "source",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    },
+    {
+      "case": "moriarty-expression-source/1 BOM schema",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "INPUT_SCHEMA",
+        "span": {
+          "kind": "synthetic",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    },
+    {
+      "case": "moriarty-financial-expression-source/1 BOM source",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "UNEXPECTED_CHAR",
+        "span": {
+          "kind": "source",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    },
+    {
+      "case": "moriarty-financial-expression-source/1 BOM format",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "UNEXPECTED_CHAR",
+        "span": {
+          "kind": "source",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    },
+    {
+      "case": "moriarty-financial-expression-source/1 BOM schema",
+      "exit": 1,
+      "result": {
+        "status": "Rejected",
+        "code": "INPUT_SCHEMA",
+        "span": {
+          "kind": "synthetic",
+          "start": "0",
+          "end": "0"
+        },
+        "nodePath": [],
+        "workUsed": "0"
+      }
+    }
+  ]
+}
+
+
+CURRENT FILE experiments/moriarty-language/src/cli.ts
+
+/** Profile-explicit file adapter for expression-source/1 checking and formatting. */
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createExpressionSourceV1 } from './successor/expression-source-v1.ts';
+import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/expression-source-frontend.ts';
+import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
+import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
+import { SuccessorSyntaxError } from './successor/frontend.ts';
+
+type Input = 'arguments' | 'schema' | 'source';
+type ProcessIo = { argv: string[]; exitCode: number;
+  stdout: { write(value: string): unknown }; stderr: { write(value: string): unknown } };
+class CliFailure extends Error {
+  readonly code: string;
+  readonly input: Input;
+  readonly exitCode: number;
+  constructor(code: string, input: Input, exitCode = 2) {
+    super(code);
+    this.code = code;
+    this.input = input;
+    this.exitCode = exitCode;
+  }
+}
+const LIMIT = 65536;
+
+function argumentsFor(argv: string[]): { command: 'check' | 'format'; profile: string; source: string; schema?: string } {
+  const [command, flag, profile, ...rest] = argv;
+  const fileName = (value: string | undefined): value is string =>
+    typeof value === 'string' && value.length > 0 && !value.startsWith('--');
+  const checking = command === 'check' && rest.length === 3 && rest[0] === '--schema'
+    && fileName(rest[1]) && fileName(rest[2]);
+  const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
+  if (flag !== '--profile' || !profile || (!checking && !formatting))
+    throw new CliFailure('CLI_USAGE', 'arguments');
+  if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
+  return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
+    : { command: 'format', profile, source: rest[0] };
+}
+
+/** Same bounded descriptor/type check as syntax-cli.ts; never reads a FIFO. */
+function readText(file: string, input: 'schema' | 'source'): string {
+  let fd: number | undefined;
+  try {
+    fd = fs.openSync(path.resolve(file), fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
+    if (!fs.fstatSync(fd).isFile()) throw new CliFailure('CLI_IO', input);
+    const buffer = new Uint8Array(LIMIT + 1);
+    let got = 0;
+    while (got < buffer.length) {
+      const count = fs.readSync(fd, buffer, got, buffer.length - got, got);
+      if (count === 0) break;
+      if (count < 0) throw new CliFailure('CLI_IO', input);
+      got += count;
+    }
+    if (got > LIMIT) throw new CliFailure(input === 'source' ? 'SOURCE_BOUND' : 'INPUT_BOUND', input, 1);
+    try {
+      return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(buffer.subarray(0, got));
+    } catch {
+      throw new CliFailure('INVALID_UTF8', input, 1);
+    }
+  } catch (error) {
+    if (error instanceof CliFailure) throw error;
+    throw new CliFailure('CLI_IO', input);
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch { /* Closing does not replace the primary result. */ }
+    }
+  }
+}
+
+function run(io: ProcessIo): void {
+  const args = argumentsFor(io.argv.slice(2));
+  const schema = args.command === 'check' ? readText(args.schema!, 'schema') : undefined;
+  const source = readText(args.source, 'source');
+  if (args.command === 'format') {
+    const formatted = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+      ? formatFinancialExpressionSource(source) : formatExpressionSource(source);
+    io.stdout.write(formatted);
+  } else {
+    const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+      ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
+    const result = language.check(source);
+    if ('status' in result) {
+      io.stderr.write(JSON.stringify(result) + '\n');
+      io.exitCode = 1;
+      return;
+    }
+    io.stdout.write(JSON.stringify(result) + '\n');
+  }
+  io.exitCode = 0;
+}
+
+function report(error: unknown, io: ProcessIo): void {
+  if (error instanceof SuccessorSyntaxError) {
+    io.stderr.write(JSON.stringify({ status: 'Rejected', code: error.code,
+      span: { kind: 'source', start: String(error.start), end: String(error.end) },
+      nodePath: [], workUsed: '0' }) + '\n');
+    io.exitCode = 1;
+    return;
+  }
+  const failure = error instanceof CliFailure ? error : new CliFailure('CLI_INTERNAL', 'arguments');
+  io.stderr.write(JSON.stringify({ status: 'CliRejected', code: failure.code, input: failure.input }) + '\n');
+  io.exitCode = failure.exitCode;
+}
+
+const entry = process.argv[1];
+if (typeof entry === 'string' && path.resolve(entry) === path.resolve(fileURLToPath(import.meta.url))) {
+  const io = process as unknown as ProcessIo;
+  try { run(io); } catch (error) { report(error, io); }
+}
+
+
+CURRENT FILE experiments/moriarty-language/spec/successor/expression-cli.md
+
+# Expression source command line
+
+Contract recorded before implementation for the existing SP02.3 adapter task.
+This command checks and formats the explicit expression-source/1 and
+financial-expression-source/1 profiles.
+Its implementation and result audits remain pending. It does not add language
+semantics or execute financial operations. Each explicit profile selects its
+own reviewed expression source API.
+
+Run from the repository root with exactly these positional argument forms:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-expression-source/1 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 SOURCE.mori
+```
+
+Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
+schema JSON consumed by the selected source factory; it is not a type-alias registry.
+The financial profile requires its runtime's variantTypes schema map. Its
+factory/formatter are createFinancialExpressionSourceV1/formatFinancialExpressionSource;
+the original profile uses createExpressionSourceV1/formatExpressionSource.
+The --profile value is the literal profile identifier, not a path or inferred
+source header. Flags appear in the shown order, once each. Unknown commands,
+missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
+Unknown --profile values reject CLI_PROFILE before opening files. Formatting
+accepts no schema; checking requires one. There is no stdin, output-file or
+in-place mode, profile inference, callback, evaluation or financial execution.
+Use a path such as ./--example.mori for a filename beginning with --.
+
+Checking writes the exact successful SourceChecked API record as one JSON line
+to stdout, followed by LF. It writes no stderr and exits0. A language rejection
+writes the exact API Rejected record, without added/removed fields, as one JSON
+line to stderr and exits1; stdout is empty. This includes its code, span, nodePath
+and workUsed. No AST/Core or snapshot is accepted through this CLI.
+
+Formatting writes exactly the selected profile formatter's result to stdout and exits0,
+with no stderr. It uses the same parser and formatter as the API, so it does not
+perform trusted-schema checking. Syntax or formatted-output-bound failures write
+one JSON Rejected record
+to stderr with the SuccessorSyntaxError code and source byte span, empty nodePath
+and workUsed="0", then exit1. A decoder error has no valid source span and is a
+CLI transport failure instead. Formatting never writes the source file.
+
+CLI admission/read failures write exactly
+`{"status":"CliRejected","code":CODE,"input":INPUT}` as one JSON stderr line,
+with empty stdout. INPUT is arguments, schema or source. Codes/exits are:
+
+| Code | Input | Exit | Meaning |
+| --- | --- | --- | --- |
+| CLI_USAGE | arguments | 2 | Invocation differs from the forms above |
+| CLI_PROFILE | arguments | 2 | Explicit profile identifier is unsupported |
+| CLI_IO | schema or source | 2 | File cannot be opened/read or is not regular |
+| INPUT_BOUND | schema | 1 | Schema exceeds65536 bytes |
+| SOURCE_BOUND | source | 1 | Source exceeds65536 bytes |
+| INVALID_UTF8 | schema or source | 1 | File bytes are not valid UTF-8 |
+| CLI_INTERNAL | arguments | 2 | Unexpected internal failure; no host error detail exposed |
+
+All failures have empty stdout; no partial formatted output is emitted. No
+exception stack, OS path/error detail or file contents are added to diagnostics.
+Unexpected internal errors cannot be reported as a successful source check.
+
+Admission order: validate complete CLI shape, validate --profile; for check read
+and decode schema then source, for format read and decode source; call the API.
+Transport admission necessarily precedes language phases. After valid transport,
+check results equal the API exactly. A schema file with a trailing newline is not
+canonical and the existing API determines its rejection. A BOM is retained by
+the fatal UTF-8 decoder and handled by the existing parser/canonical admission.
+
+The reader follows syntax-cli.ts's existing regular-file pattern: open with
+O_RDONLY|O_NONBLOCK where available, check the opened descriptor with fstat,
+read at most65537 bytes, reject if the extra byte exists, and close in finally.
+Directories, devices and FIFOs reject; stdin is not opened. Symlinks to regular
+files are allowed, with type checked on the opened descriptor. No unbounded
+readFile shortcut or stat-then-open assumption is used.
+
+## Implementation and verification plan
+
+Create src/cli.ts as a small direct-entry adapter using existing public source
+APIs and the bounded reader pattern. Preserve successor/syntax-cli.ts unchanged.
+Create tests/expression-cli.test.mjs with real subprocess invocations against
+temporary regular files, compared to API check and formatter results. Verify
+success, wrong-type/dead-branch/R1/UTF-8 source spans, missing/extra/reordered
+arguments, unknown profile, source header mismatch, malformed canonical schema,
+nonregular/missing paths, invalid UTF-8, exact65536 and65537-byte bounds, formatting
+idempotence and unchanged source/schema bytes. Include file paths with spaces.
+Run package build/test and real check/format demo commands, retaining failures
+and outputs under a separate CLI delivery record. Freeze separately for audit.
+
+This adapter does not close SP02: full agreement/schema authoring, multi-action
+selection, genesis/constants, missing financial source families, complete CLI
+surface and actual-participant syntax evaluation retain their existing owners.
+The source40 and pure48 candidates retain their separate acceptance gates.
+
+
+CURRENT FILE experiments/moriarty-language/tests/expression-cli.test.mjs
+
+import test, { after } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { createExpressionSourceV1 } from '../src/successor/expression-source-v1.ts';
+import { formatExpressionSource } from '../src/successor/expression-source-frontend.ts';
+import { canonical } from '../src/successor/expression-wire-v1.ts';
+import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
+import { formatFinancialExpressionSource } from '../src/successor/financial-expression-source-frontend.ts';
+
+const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
+const directory = mkdtempSync(join(tmpdir(), 'moriarty-expression-cli-'));
+after(() => rmSync(directory, { recursive: true, force: true }));
+let serial = 0;
+const file = content => {
+  const name = join(directory, `input ${serial++}`);
+  writeFileSync(name, content);
+  return name;
+};
+const schema = canonical({ units: [], assets: [], vaults: [], parties: [], recordTypes: {}, enumTypes: {},
+  fields: {}, args: {}, observations: {}, operations: {} });
+const profile = 'moriarty-expression-source/1';
+const source = body => `profile "${profile}"; agreement Demo { action step() { ${body} } }`;
+const schemaPath = file(schema);
+const invoke = args => {
+  const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(result.error, undefined);
+  assert.equal(result.signal, null);
+  return result;
+};
+const checkArgs = (input, schemaFile = schemaPath) => ['check', '--profile', profile, '--schema', schemaFile, input];
+const formatArgs = input => ['format', '--profile', profile, input];
+const failure = (args, expected, exit = 1) => {
+  const result = invoke(args);
+  assert.equal(result.status, exit, result.stderr);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, JSON.stringify(expected) + '\n');
+};
+const cliFailure = (args, code, input, exit = 2) => failure(args, { status: 'CliRejected', code, input }, exit);
+
+test('expression CLI check equals successful API and leaves source/schema bytes intact', () => {
+  const input = source('let label = "é😀"; requires true;');
+  const path = file(input);
+  const result = invoke(checkArgs(path));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, '');
+  assert.equal(result.stdout, JSON.stringify(createExpressionSourceV1(schema).check(input)) + '\n');
+  assert.equal(readFileSync(path, 'utf8'), input);
+  assert.equal(readFileSync(schemaPath, 'utf8'), schema);
+});
+
+test('expression CLI preserves complete API failure records including R1 and UTF-8 spans', () => {
+  for (const input of [source('let label="é😀"; requires true or 1;'),
+    source('let label="é😀"; let value=access_field(unknown(),"bad field");'),
+    source('requires false; requires 1;'), source('requires ;'),
+    source('requires true;').replace(profile, 'moriarty-successor-syntax/0')]) {
+    failure(checkArgs(file(input)), createExpressionSourceV1(schema).check(input));
+  }
+});
+
+test('expression CLI format equals API, is idempotent and writes no input files', () => {
+  const input = source('let label="é😀";let xs=collection<UInt64,2>(u64(1));requires xs[u64(0)]==u64(1);');
+  const path = file(input);
+  const result = invoke(formatArgs(path));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, '');
+  assert.equal(result.stdout, formatExpressionSource(input));
+  assert.equal(invoke(formatArgs(file(result.stdout))).stdout, result.stdout);
+  assert.equal(readFileSync(path, 'utf8'), input);
+  // Formatting checks syntax; an unbound name does not require a trusted schema.
+  assert.equal(invoke(formatArgs(file(source('let x=unknown();')))).status, 0);
+});
+
+test('expression CLI format preserves parser code/span with no partial output', () => {
+  const input = source('let label="é😀"; requires ;');
+  let error;
+  try { formatExpressionSource(input); } catch (caught) { error = caught; }
+  assert.ok(error);
+  failure(formatArgs(file(input)), { status: 'Rejected', code: error.code,
+    span: { kind: 'source', start: String(error.start), end: String(error.end) }, nodePath: [], workUsed: '0' });
+});
+
+test('expression CLI format rejects output expansion beyond the bound without partial stdout', () => {
+  const body = Array.from({ length: 64 }, (_, i) => `let v${i}="${'a'.repeat(1006)}";`).join('');
+  const input = `profile "${profile}";agreement Demo{action step(){${body}}}`;
+  assert.equal(Buffer.byteLength(input), 65148);
+  assert.throws(() => formatExpressionSource(input), { code: 'FORMAT_BOUND', start: 0, end: 0 });
+  failure(formatArgs(file(input)), { status: 'Rejected', code: 'FORMAT_BOUND',
+    span: { kind: 'source', start: '0', end: '0' }, nodePath: [], workUsed: '0' });
+});
+
+test('expression CLI rejects malformed invocation before reading paths', () => {
+  for (const args of [[], ['check'], ['format', '--profile', profile], ['check', '--profile', profile, 'missing'],
+    ['evaluate', '--profile', profile, 'missing'], [...formatArgs('missing'), 'extra'],
+    ['format', '--profile', profile, '--schema', 'missing', 'missing'],
+    ['check', '--schema', 'missing', '--profile', profile, 'missing'],
+    ['check', '--profile', profile, '--profile', profile, 'missing'],
+    ['format', '--profile', profile, ''], ['format', '--profile', profile, '--bad']]) {
+    cliFailure(args, 'CLI_USAGE', 'arguments');
+  }
+  cliFailure(['format', '--profile', 'unknown', 'missing'], 'CLI_PROFILE', 'arguments');
+});
+
+test('expression CLI schema errors equal API after bounded transport', () => {
+  const input = source('requires true;');
+  for (const text of ['{}', schema + '\n', '{', '\uFEFF' + schema]) {
+    failure(checkArgs(file(input), file(text)), createExpressionSourceV1(text).check(input));
+  }
+});
+
+test('expression CLI bounds distinguish 65536 from 65537 bytes for source/schema', () => {
+  const base = source('requires true;');
+  const exact = base + ' '.repeat(65536 - Buffer.byteLength(base));
+  assert.equal(invoke(checkArgs(file(exact))).status, 0);
+  assert.equal(invoke(formatArgs(file(exact))).status, 0);
+  for (const args of [checkArgs(file(exact + ' ')), formatArgs(file(exact + ' ')), formatArgs(file('é'.repeat(32768) + 'a'))]) {
+    cliFailure(args, 'SOURCE_BOUND', 'source', 1);
+  }
+  const exactSchema = schema + ' '.repeat(65536 - Buffer.byteLength(schema));
+  failure(checkArgs(file(base), file(exactSchema)), createExpressionSourceV1(exactSchema).check(base));
+  cliFailure(checkArgs('missing', file(exactSchema + ' ')), 'INPUT_BOUND', 'schema', 1);
+});
+
+test('expression CLI rejects invalid UTF-8 before parser and retains BOM for parser', () => {
+  for (const args of [formatArgs(file(new Uint8Array([0xc3, 0x28]))), checkArgs(file(new Uint8Array([0xff])))]) {
+    cliFailure(args, 'INVALID_UTF8', 'source', 1);
+  }
+  cliFailure(checkArgs('missing', file(new Uint8Array([0xff]))), 'INVALID_UTF8', 'schema', 1);
+  const input = '\uFEFF' + source('requires true;');
+  failure(checkArgs(file(input)), createExpressionSourceV1(schema).check(input));
+});
+
+test('expression CLI opens only bounded regular files and allows regular symlink targets', () => {
+  cliFailure(formatArgs(join(directory, 'missing')), 'CLI_IO', 'source');
+  cliFailure(formatArgs(directory), 'CLI_IO', 'source');
+  cliFailure(checkArgs('missing', directory), 'CLI_IO', 'schema');
+  const target = file(source('requires true;'));
+  const link = join(directory, 'regular-link');
+  symlinkSync(target, link);
+  assert.equal(invoke(checkArgs(link)).status, 0);
+  if (process.platform !== 'win32') {
+    const fifo = join(directory, 'fifo');
+    const made = spawnSync('mkfifo', [fifo], { encoding: 'utf8' });
+    assert.equal(made.status, 0, made.stderr);
+    cliFailure(formatArgs(fifo), 'CLI_IO', 'source');
+    cliFailure(formatArgs('/dev/null'), 'CLI_IO', 'source');
+  }
+});
+
+test('expression CLI import has no command or stream side effects', () => {
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', 'await import(process.argv[1]);', new URL('../src/cli.ts', import.meta.url).href], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, '');
+  assert.equal(result.stderr, '');
+});
+
+test('financial CLI explicit routing equals financial APIs and never infers the profile', () => {
+  const financial='moriarty-financial-expression-source/1';
+  const text=canonical({...JSON.parse(schema),variantTypes:{}}),schemaFile=file(text),language=createFinancialExpressionSourceV1(text);
+  for(const body of ['let x=true ? u256(7) : u256(8);','let x=false ? 7 : u64(8);','let x=some_value(none<UInt128>());']){
+    const s=source(body).replace(profile,financial),path=file(s);
+    const args=['check','--profile',financial,'--schema',schemaFile,path], expected=language.check(s);
+    if('status' in expected) failure(args,expected);
+    else {const result=invoke(args);assert.equal(result.status,0,result.stderr);assert.equal(result.stdout,JSON.stringify(expected)+'\n');assert.equal(result.stderr,'');}
+    const formatted=invoke(['format','--profile',financial,path]);
+    assert.equal(formatted.status,0,formatted.stderr);assert.equal(formatted.stdout,formatFinancialExpressionSource(s));
+    failure(checkArgs(path),createExpressionSourceV1(schema).check(s));
+  }
+  const old=source('requires true;');
+  failure(['check','--profile',financial,'--schema',schemaFile,file(old)],language.check(old));
+});
+
+test('financial CLI preserves checking and formatting meaning for the published vault quote fixture', () => {
+  const financial = 'moriarty-financial-expression-source/1';
+  const fixture = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.mori', import.meta.url));
+  const schemaFixture = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.schema.json', import.meta.url));
+  const input = readFileSync(fixture, 'utf8');
+  const schemaText = readFileSync(schemaFixture, 'utf8');
+  const language = createFinancialExpressionSourceV1(schemaText);
+  const expected = language.check(input);
+  const checked = invoke(['check', '--profile', financial, '--schema', schemaFixture, fixture]);
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.equal(checked.stderr, '');
+  assert.equal(checked.stdout, JSON.stringify(expected) + '\n');
+
+  const formatted = invoke(['format', '--profile', financial, fixture]);
+  assert.equal(formatted.status, 0, formatted.stderr);
+  assert.equal(formatted.stderr, '');
+  assert.equal(formatted.stdout, formatFinancialExpressionSource(input));
+  const formattedPath = file(formatted.stdout);
+  const rechecked = invoke(['check', '--profile', financial, '--schema', schemaFixture, formattedPath]);
+  assert.equal(rechecked.status, 0, rechecked.stderr);
+  assert.equal(rechecked.stdout, JSON.stringify(language.check(formatted.stdout)) + '\n');
+  assert.equal(invoke(['format', '--profile', financial, formattedPath]).stdout, formatted.stdout);
+});
