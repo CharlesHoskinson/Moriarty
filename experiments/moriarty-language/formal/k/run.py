@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import sys
@@ -23,6 +24,15 @@ SUITES={'initial':'fixtures/cases.json', 'branches':'fixtures/branches.json', 't
 
 SUITE_LIMITS={'initial':(16,512),'branches':(16,512),'transfer-only':(16,512),'numeric':(64,1512),'expression-v1':(115,2552)}
 OUTPUT_LIMITS={'initial':1024*1024,'branches':1024*1024,'transfer-only':1024*1024,'numeric':1024*1024,'expression-v1':64*1024*1024}
+
+# These names are the only labels emitted by expression_codec.encode_request.
+# The configuration labels are produced by the compiled initializer, before the
+# macro phase.  Both sets are checked against the exact alias vocabulary below.
+EXPRESSION_INPUT_LABELS=frozenset({'expressionRequest','ejNull','ejString','ejNumber','ejBool','ejArray','ejObject','ejPair','ejNil','ejCons'})
+GENERATED_CONFIGURATION_LABELS=frozenset({'<generatedTop>','<k>','<sigma>','<request>','<pre>','<args>','<obs>','<localTypes>','<locals>','<written>','<writes>','<descriptors>','<sourceBytes>','<initialWork>','<work>','<reducing>','<out>','<generatedCounter>'})
+EXPECTED_SYNTAX_ALIASES=frozenset({'weakExistsFinally','weakAlwaysFinally','allPathGlobally'})
+EMPTY_MACROS_KORE=b'// macros\n'
+EMPTY_MACROS_KORE_SHA256='3585c084b81281ec26971b2e42c56b9968a802c5d645a81062296350493491cf'
 
 class RunnerError(RuntimeError):pass
 def fail(code):raise RunnerError(code)
@@ -59,6 +69,34 @@ def artifacts():
     result={str(p.relative_to(DEFINITION)):sha(p) for p in sorted(DEFINITION.rglob('*')) if p.is_file()}
     if not result:fail('COMPILED_MISSING')
     return result
+
+def kast_labels(term):
+    """Iteratively collect KApply labels from a locally generated KAST term."""
+    labels=set();pending=[term]
+    while pending:
+        node=pending.pop()
+        if type(node) is not dict:continue
+        if node.get('node')=='KApply':
+            label=node.get('label');args=node.get('args')
+            if type(label) is not dict or type(label.get('name')) is not str or type(args) is not list:fail('MACRO_GUARD')
+            labels.add(label['name']);pending.extend(args)
+        elif node.get('node')=='KSequence':
+            items=node.get('items')
+            if type(items) is not list:fail('MACRO_GUARD')
+            pending.extend(items)
+    return frozenset(labels)
+
+def expression_krun_argv(argv,term):
+    """Append the K bypass only for the reviewed macro-free compiled artifact."""
+    macros=DEFINITION/'macros.kore';syntax=DEFINITION/'syntaxDefinition.kore'
+    if not macros.is_file() or not syntax.is_file():fail('MACRO_GUARD')
+    content=macros.read_bytes()
+    if content!=EMPTY_MACROS_KORE or hashlib.sha256(content).hexdigest()!=EMPTY_MACROS_KORE_SHA256:fail('MACRO_GUARD')
+    aliases=frozenset(re.findall(r'\balias\s+([A-Za-z][A-Za-z0-9_]*)\s*\{',syntax.read_text(encoding='utf8')))
+    if aliases!=EXPECTED_SYNTAX_ALIASES:fail('MACRO_GUARD')
+    labels=kast_labels(term)
+    if not labels<=EXPRESSION_INPUT_LABELS or labels & aliases or GENERATED_CONFIGURATION_LABELS & aliases:fail('MACRO_GUARD')
+    return [*argv,'--no-expand-macros']
 
 def command(argv,seconds,label):
     remaining=DEADLINE-time.monotonic()
@@ -106,7 +144,9 @@ def evaluate(packet,label):
         program.write_text(expression_codec.serialize_term({'format':'KAST','version':4,'term':term})+'\n')
     else:program.write_text(codec.encode(packet)+'\n')
     argv=[lock['executables']['krun']['path'],str(program),'--definition',str(DEFINITION),'--output','json']
-    if SUITE=='expression-v1':argv.extend(['--parser',str(HERE/'expression-parser.py')])
+    if SUITE=='expression-v1':
+        argv.extend(['--parser',str(HERE/'expression-parser.py')])
+        argv=expression_krun_argv(argv,term)
     raw=command(argv,20,name)
     result=expression_codec.decode_result(raw,packet['schema'],packet['request']) if SUITE=='expression-v1' else codec.decode(raw,packet)
     write(BUILD/(name+'.result.json'),{'id':label,'inputDigest':hashlib.sha256(expression_codec._canonical(packet).encode()).hexdigest() if SUITE=='expression-v1' else codec.digest(packet),'result':result})

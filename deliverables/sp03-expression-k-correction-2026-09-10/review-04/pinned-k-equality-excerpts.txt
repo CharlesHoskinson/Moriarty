@@ -1,0 +1,68 @@
+Pinned /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/include/kframework/builtin/domains.md SHA256 eb5b7c3cd001d5fe3cbd481598bb53c3abfd417c409135276008d50edf79aa0d
+45: endmodule
+46: 
+47: module DOMAINS
+48:   imports DOMAINS-SYNTAX
+49:   imports INT
+50:   imports BOOL
+51:   imports STRING
+52:   imports BASIC-K
+53:   imports LIST
+54:   imports K-IO
+55:   imports MAP
+56:   imports SET
+57:   imports ID
+58:   imports K-EQUAL
+59: endmodule
+60: ```
+61: 
+62: Arrays
+63: ------
+64: 
+65: Provided here is an implementation for fixed-sized, contiguous maps from `Int`
+2315:   argument evaluates to `true`, the second argument is returned. Otherwise,
+2316:   the third argument is returned. Note that this does not short-circuit on
+2317:   symbolic backends.
+2318: 
+2319: ```k
+2320: module K-EQUAL-SYNTAX
+2321:   imports private BOOL
+2322:   imports private BASIC-K
+2323: 
+2324:   syntax Bool ::= left:
+2325:                   K "==K" K           [function, total, comm, smt-hook(=), hook(KEQUAL.eq), symbol(_==K_), group(equalEqualK)]
+2326:                 | K "=/=K" K          [function, total, comm, smt-hook(distinct), hook(KEQUAL.ne), symbol(_=/=K_), group(notEqualEqualK)]
+2327: 
+2328:   syntax priority equalEqualK notEqualEqualK > boolOperation mlOp
+2329: 
+2330:   syntax {Sort} Sort ::= "#if" Bool "#then" Sort "#else" Sort "#fi" [function, total, symbol(ite), smt-hook(ite), hook(KEQUAL.ite)]
+2331: 
+2332: endmodule
+2333: 
+2334: module K-EQUAL-KORE [symbolic]
+2335:   imports private BOOL
+2336:   imports K-EQUAL-SYNTAX
+2337: 
+2338:   rule K1:Bool ==K K2:Bool => K1 ==Bool K2 [simplification]
+2339:   rule {K1 ==K K2 #Equals true} => {K1 #Equals K2} [simplification]
+2340:   rule {true #Equals K1 ==K K2} => {K1 #Equals K2} [simplification]
+2341:   rule {K1 ==K K2 #Equals false} => #Not({K1 #Equals K2}) [simplification]
+2342:   rule {false #Equals K1 ==K K2} => #Not({K1 #Equals K2}) [simplification]
+2343:   rule {K1 =/=K K2 #Equals true} => #Not({K1 #Equals K2}) [simplification]
+2344:   rule {true #Equals K1 =/=K K2} => #Not({K1 #Equals K2}) [simplification]
+2345:   rule {K1 =/=K K2 #Equals false} => {K1 #Equals K2} [simplification]
+2346:   rule {false #Equals K1 =/=K K2} => {K1 #Equals K2} [simplification]
+2347: 
+2348: endmodule
+2349: 
+2350: module K-EQUAL
+2351:   imports private BOOL
+2352:   imports K-EQUAL-SYNTAX
+2353:   imports K-EQUAL-KORE
+2354: 
+2355:   rule K1:K =/=K K2:K => notBool (K1 ==K K2)
+2356: 
+2357:   rule #if C:Bool #then B1::K #else _ #fi => B1 requires C
+2358:   rule #if C:Bool #then _ #else B2::K #fi => B2 requires notBool C
+2359: 
+2360: endmodule
