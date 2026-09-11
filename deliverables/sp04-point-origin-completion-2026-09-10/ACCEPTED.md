@@ -1,0 +1,9 @@
+# Reviewed verifier point-origin analysis
+
+The retained source investigation now has separate scoped approvals from a fresh Codex CLI selecting Astra medium and Grok 4.6 high. See [acceptance](acceptance.json) and the original [Astra](review-01/astra-review.json) and [Grok](review-01/grok-review.json) verdicts. The Astra invocation records the selected model and effort; the reviewer does not claim independent server attestation. Grok returned its model identity and a completed terminal verdict.
+
+The analysis establishes separate symbolic proof-point counts for the inspected 7.2.4 and pinned native implementations. It also identifies the pinned IVC wrapper's zero fresh committed-instance points and two carried variable bases, and the point, scalar and label bindings that a finalizer must preserve. The parent reproduced the Python checker output exactly; Astra additionally compared all 37 source captures with pinned Git objects or cached archives. These checks establish source and arithmetic observations, not native circuit behavior.
+
+The completion candidate's phrase “constrained host decoder” means **checked host decoder**. Host checks are distinct from circuit constraints. Corrected citation locations are 7.2.4 vanishing.rs:58–66 for the random point, :70–78 for quotient reads, and types.rs:122–126 for the subgroup-analysis TODO. The curves 0.3.1 decoder observations do not establish correspondence for every native dependency; native Cargo.lock names curves 0.3.0. Original captured bytes and reviews remain intact.
+
+The next prerequisite is an exact architecture/VK/feature selection and typed application/carried-accumulator ABI, with immutable SRS/VK bindings and a complete outer-stack cost model. Symbolic counts and the prior conditional per-point subtotal do not establish whole-verifier fit, F0 go, native proof or Midnight Preview acceptance.

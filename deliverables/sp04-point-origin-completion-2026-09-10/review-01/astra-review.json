@@ -1,0 +1,106 @@
+{
+  "verdict": "PASS_SCOPED",
+  "head": "437146c6419b6717f5cac647750905f05a83f32c",
+  "candidateSha256": "fab830ed4542e5f47195b8ded12f59ff82b0d8fdc8a1f2d21367d20eca82ec76",
+  "reviewer": "Codex, fresh nonauthor source reviewer",
+  "model": {
+    "requested": "gpt-6-astra",
+    "independentlyAttestedRuntimeIdentity": null
+  },
+  "effort": {
+    "requested": "medium",
+    "independentlyAttestedRuntimeSetting": null
+  },
+  "blockingFindings": [],
+  "substantiveReasons": [
+    {
+      "finding": "Both symbolic proof-point formulas are supported, separately for the inspected KZG implementations: N_724=A+3L+ceil(P/(d-2))+T+H+3; N_native=A+2L+sum(c_i)+ceil(P/(d-2))+T+H+2. Native reads one point per label, including T trash points. Its quotient count depends on single-h-commitment; LogUp chunk counts require valid architecture parameters.",
+      "sourceLocations": [
+        "sources/midnight-circuits-7.2.4/src/verifier/verifier_gadget.rs:330-431",
+        "sources/midnight-circuits-7.2.4/src/verifier/lookup.rs:56-80",
+        "sources/midnight-circuits-7.2.4/src/verifier/permutation.rs:56-72",
+        "sources/midnight-circuits-7.2.4/src/verifier/vanishing.rs:58-78",
+        "sources/native-695351/circuits/src/verifier/verifier_gadget.rs:350-388,531-555",
+        "sources/native-695351/circuits/src/verifier/lookup.rs:60-102",
+        "sources/native-695351/circuits/src/verifier/transcript_gadget.rs:149-172",
+        "sources/native-695351/proofs/src/plonk/logup.rs:223-238,316-319"
+      ]
+    },
+    {
+      "finding": "C=0 and R=2 are justified for the pinned circuit-constructed committed instance and collapsed IVC carry. They do not establish a generic caller or application-state point count. Genesis scales the proof accumulator, then accumulation still includes prev_acc.",
+      "sourceLocations": [
+        "sources/native-695351/aggregation/src/ivc/circuit.rs:128-134,170-222",
+        "sources/native-695351/circuits/src/verifier/verifier_gadget.rs:190-205",
+        "sources/native-695351/circuits/src/verifier/msm.rs:503-532"
+      ]
+    },
+    {
+      "finding": "The inspected checked compressed decoder enforces encoding, curve and subgroup checks while allowing identity. Gadget parsing instead substitutes a default point on host read errors and assigns without subgroup checks; it does not constrain proof-byte decoding or exhaustion.",
+      "sourceLocations": [
+        "sources/midnight-circuits-7.2.4/src/hash/poseidon/poseidon_cpu.rs:207-225",
+        "sources/midnight-curves-0.3.1/src/bls12_381/g1.rs:370-385,401-402,776-780",
+        "sources/blst-0.3.16/blst/src/e1.c:236-294",
+        "sources/blst-0.3.17/blst/src/e1.c:236-294",
+        "sources/midnight-circuits-7.2.4/src/verifier/transcript_gadget.rs:76-84,130-145",
+        "sources/native-695351/circuits/src/verifier/transcript_gadget.rs:81-89,149-172"
+      ]
+    },
+    {
+      "finding": "Identity-coordinate and foreign-field aliases are supported as source-level discriminators. The convenience identity shortcut precedes length validation; field reconstruction permits modulo aliases. Circuit coordinate normalization does not itself mask identity coordinates. Native's convenience inverse is additionally test/testing-feature gated.",
+      "sourceLocations": [
+        "sources/midnight-circuits-7.2.4/src/ecc/foreign/weierstrass_chip.rs:175-178,235-265,399-410",
+        "sources/midnight-circuits-7.2.4/src/field/foreign/field_chip.rs:130-165,509-528",
+        "sources/native-695351/circuits/src/ecc/foreign/weierstrass_chip.rs:249-263"
+      ]
+    },
+    {
+      "finding": "The same assigned commitments flow through transcript absorption and KZG MSM construction, yielding (pi,C-vG+z*pi). The proposed subgroup relation must bind to those cells. Carried encodings omit structural labels and fixed-point bytes, so ordered shape and constant bindings remain external ABI obligations. Final verification combines proof_acc with instance.acc before checking both pairing terms.",
+      "sourceLocations": [
+        "sources/midnight-circuits-7.2.4/src/verifier/kzg.rs:428-475",
+        "sources/native-695351/circuits/src/verifier/kzg.rs:612-660",
+        "sources/native-695351/circuits/src/verifier/msm.rs:98-110,351-367",
+        "sources/native-695351/circuits/src/verifier/accumulator.rs:179-223,355-382",
+        "sources/native-695351/aggregation/src/ivc/verifier.rs:49-84",
+        "sources/native-695351/proofs/src/poly/kzg/msm.rs:294-309"
+      ]
+    },
+    {
+      "finding": "The inherited 368188 remains a conditional source subtotal. The candidate explicitly leaves architecture/VK/features, application ABI, immutable SRS/VK bindings and outer-stack costs unresolved. No unsupported whole-verifier numerical bound or acceptance follows.",
+      "sourceLocations": [
+        "../SUBGROUP-RESULT.md",
+        "README.md:59-68",
+        "../../../deliverables/sp04-point-origin-completion-2026-09-10/CANDIDATE.json",
+        "../../../deliverables/sp04-point-origin-completion-2026-09-10/RESULT.md:26-29"
+      ]
+    },
+    {
+      "severity": "nonblocking",
+      "finding": "Replace 'constrained host decoder' with 'checked host decoder' in completion RESULT.md:22. The detailed report correctly distinguishes host validation from circuit constraints. Several retained README line references also drift: random vanishing is at vanishing.rs:58-66, quotient reads at :70-78, and the subgroup-analysis TODO at types.rs:122-126.",
+      "sourceLocations": [
+        "deliverables/sp04-point-origin-completion-2026-09-10/RESULT.md:22",
+        "sources/midnight-circuits-7.2.4/src/verifier/vanishing.rs:58-78",
+        "sources/midnight-circuits-7.2.4/src/verifier/types.rs:122-126"
+      ]
+    }
+  ],
+  "checksPerformed": [
+    "Loaded AGENTS.md and checked-in moriarty-dev develop skill; inspected orchestration stop rules.",
+    "Attempted guarded status --json: failed with sqlite3.OperationalError, unable to open database file. Guarded next --json succeeded and returned unrelated SP01 work; nothing dispatched.",
+    "Verified exact HEAD, parent manifest digest and all 54 parent pins before and after review.",
+    "Verified all 43 preservation pins and all 37 retained source pins.",
+    "Independently compared all 37 retained sources with their local pinned Git objects or cached archive members; all matched. Verified all five archive digests.",
+    "Read the completion candidate, retained investigation artifacts and claim-relevant source implementations across all source families.",
+    "Inspected additional members of digest-verified local archives to confirm seven 56-bit limbs, Fq capacity and modulo reconstruction.",
+    "Executed only the permitted Python reference checker: exit 0, empty stderr, stdout byte-identical to results.json and root-check.stdout.json.",
+    "Confirmed eight compressed-prefix cases, three identity-shortcut aliases, modulo-alias arithmetic and two synthetic count expansions.",
+    "No source changes, delegation, network access, native/BLST/Rust/circuit execution, service actions or concurrent Grok-verdict inspection."
+  ],
+  "limitations": [
+    "Source locations beginning sources/ are relative to deliverables/sp04-native-finalizer-source-2026-09-10/point-origin-source-01/.",
+    "Runtime model identity and effort were not independently exposed or attested. Parent invocation evidence must establish the requested Astra MEDIUM routing; this JSON alone does not establish that reviewer-identity gate.",
+    "Source review and Python branch-model reproduction do not establish native decoder execution, malicious-witness rejection, circuit soundness or measured resource use.",
+    "Native Cargo.lock uses workspace midnight-curves 0.3.0; the retained curves 0.3.1 decoder inspection must not be presented as complete native dependency correspondence.",
+    "The prior subgroup relation and its conditional cost were not re-proved.",
+    "PASS_SCOPED covers this source investigation only. It grants no F0 go, backend selection, resource admission, whole-verifier fit, canonical standalone IvcInstance decoder, native acceptance or Preview acceptance."
+  ]
+}
