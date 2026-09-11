@@ -32,7 +32,7 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 | --- | --- | --- |
 | Lexical structure | Separate token rules and regular expressions | Identifiers, literals, whitespace, comments and source locations |
 | Syntax | EBNF using the ISO/IEC 14977 notation for the provisional successor profile | Valid combinations of declarations, actions and expressions |
-| Static semantics | Typing and scoping judgments, illustrated by `Γ ⊢ e : τ` | Name resolution, asset units, resource use and admissible bounds |
+| Static semantics | Typing and scoping judgments, illustrated by $\Gamma \vdash e : \tau$ | Name resolution, asset units, resource use and admissible bounds |
 | Dynamic semantics | Executable operational semantics in the K Framework | State transitions, financial effects, obligations and rejection |
 | Correctness claims | Explicit properties over those semantics | What must be established about an agreement, execution and history |
 
@@ -71,6 +71,103 @@ The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notat
 | `(* ... *)` | A comment in the grammar specification |
 
 Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use `//` or `/* ... */`.
+
+The grammar below is typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and `syntax/0` remains separate; lexical rules are `lexical.md` plus profile-gated `[` and `]` punctuation; parentheses create no AST nodes, and precedence and associativity match `syntax/0`; generic names are excluded from `ordinaryPrimaryName`; integer lexical tokens remain unsigned canonical decimals with `-` as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules; and parsing `const`, `state` or multiple actions does not make them executable. The simultaneous bounds are listed after the grammar.
+
+*Program and declarations.*
+
+```math
+\begin{array}{rcl}
+\mathit{program} & = & \mathit{profileDecl} ,\; \mathit{agreementDecl} ,\; ?\ \text{end of file}\ ? \;; \\[4pt]
+\mathit{profileDecl} & = & \texttt{"profile"} ,\; \mathit{stringToken} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{agreementDecl} & = & \texttt{"agreement"} ,\; \mathit{identifier} ,\; \texttt{"\{"} ,\; \{\, \mathit{declaration} \,\} ,\; \texttt{"\}"} \;; \\[4pt]
+\mathit{declaration} & = & \mathit{unitDecl} \\
+ & \mid & \mathit{partyDecl} \\
+ & \mid & \mathit{assetDecl} \\
+ & \mid & \mathit{constDecl} \\
+ & \mid & \mathit{stateDecl} \\
+ & \mid & \mathit{actionDecl} \;; \\[4pt]
+\mathit{unitDecl} & = & \texttt{"unit"} ,\; \mathit{identifier} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{partyDecl} & = & \texttt{"party"} ,\; \mathit{identifier} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{assetDecl} & = & \texttt{"asset"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{constDecl} & = & \texttt{"const"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{stateDecl} & = & \texttt{"state"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{actionDecl} & = & \texttt{"action"} ,\; \mathit{identifier} ,\; \texttt{"("} ,\; [\, \mathit{parameters} \,] ,\; \texttt{")"} ,\; \\
+ &  & \texttt{"\{"} ,\; \{\, \mathit{statement} \,\} ,\; \{\, \mathit{postcondition} \,\} ,\; \texttt{"\}"} \;; \\[4pt]
+\mathit{parameters} & = & \mathit{parameter} ,\; \{\, \texttt{","} ,\; \mathit{parameter} \,\} \;; \\[4pt]
+\mathit{parameter} & = & \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} \;;
+\end{array}
+```
+
+*Statements and postconditions.*
+
+```math
+\begin{array}{rcl}
+\mathit{statement} & = & \mathit{requirement} \mid \mathit{binding} \mid \mathit{update} \mid \mathit{emission} \;; \\[4pt]
+\mathit{requirement} & = & \texttt{"requires"} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{binding} & = & \texttt{"let"} ,\; \mathit{identifier} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{update} & = & \texttt{"next"} ,\; \texttt{"."} ,\; \mathit{identifier} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
+\mathit{emission} & = & \texttt{"emit"} ,\; \mathit{identifier} ,\; ( \texttt{"\{"} ,\; [\, \mathit{effectFields} \,] ,\; \texttt{"\}"} \mid \mathit{expression} ) ,\; \texttt{";"} \;; \\[4pt]
+\mathit{effectFields} & = & \mathit{effectField} ,\; \{\, \texttt{","} ,\; \mathit{effectField} \,\} \;; \\[4pt]
+\mathit{effectField} & = & \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{expression} \;; \\[4pt]
+\mathit{postcondition} & = & \texttt{"ensures"} ,\; \mathit{expression} ,\; \texttt{";"} \;;
+\end{array}
+```
+
+*Types.*
+
+```math
+\begin{array}{rcl}
+\mathit{type} & = & \mathit{identifier} ,\; [\, \mathit{typeArgs} \,] \;; \\[4pt]
+\mathit{typeArgs} & = & \texttt{"<"} ,\; \mathit{typeArgument} ,\; \{\, \texttt{","} ,\; \mathit{typeArgument} \,\} ,\; \texttt{">"} \;; \\[4pt]
+\mathit{typeArgument} & = & \mathit{type} \mid \mathit{signedInteger} \;; \\[4pt]
+\mathit{signedInteger} & = & [\, \texttt{"-"} \,] ,\; \mathit{integerToken} \;;
+\end{array}
+```
+
+*Expressions.*
+
+```math
+\begin{array}{rcl}
+\mathit{expression} & = & \mathit{disjunction} \;; \\[4pt]
+\mathit{disjunction} & = & \mathit{conjunction} ,\; \{\, \texttt{"or"} ,\; \mathit{conjunction} \,\} \;; \\[4pt]
+\mathit{conjunction} & = & \mathit{negation} ,\; \{\, \texttt{"and"} ,\; \mathit{negation} \,\} \;; \\[4pt]
+\mathit{negation} & = & \{\, \texttt{"not"} \,\} ,\; \mathit{comparison} \;; \\[4pt]
+\mathit{comparison} & = & \mathit{sum} ,\; [\, \mathit{comparisonOp} ,\; \mathit{sum} \,] \;; \\[4pt]
+\mathit{comparisonOp} & = & \texttt{"=="} \mid \texttt{"!="} \mid \texttt{"<"} \mid \texttt{"<="} \mid \texttt{">"} \mid \texttt{">="} \;; \\[4pt]
+\mathit{sum} & = & \mathit{product} ,\; \{\, ( \texttt{"+"} \mid \texttt{"-"} ) ,\; \mathit{product} \,\} \;; \\[4pt]
+\mathit{product} & = & \mathit{postfix} ,\; \{\, \texttt{"*"} ,\; \mathit{postfix} \,\} \;; \\[4pt]
+\mathit{postfix} & = & \mathit{primary} ,\; \{\, \texttt{"."} ,\; \mathit{identifier} \mid \texttt{"["} ,\; \mathit{expression} ,\; \texttt{"]"} \,\} \;; \\[4pt]
+\mathit{ordinaryPrimaryName} & = & ?\ \text{identifier token except some, none, collection, quantity, record}\ ? \;; \\[4pt]
+\mathit{primary} & = & \texttt{"-"} ,\; \mathit{integerToken} \\
+ & \mid & \mathit{integerToken} \\
+ & \mid & \mathit{stringToken} \\
+ & \mid & \texttt{"true"} \\
+ & \mid & \texttt{"false"} \\
+ & \mid & \mathit{ordinaryPrimaryName} ,\; [\, \texttt{"("} ,\; [\, \mathit{arguments} \,] ,\; \texttt{")"} \,] \\
+ & \mid & \mathit{genericCall} \\
+ & \mid & \mathit{recordLiteral} \\
+ & \mid & \texttt{"("} ,\; \mathit{expression} ,\; \texttt{")"} \;; \\[4pt]
+\mathit{genericCall} & = & ( \texttt{"some"} \mid \texttt{"none"} \mid \texttt{"collection"} \mid \texttt{"quantity"} ) ,\; \\
+ &  & \texttt{"<"} ,\; \mathit{typeArgument} ,\; \{\, \texttt{","} ,\; \mathit{typeArgument} \,\} ,\; \texttt{">"} ,\; \\
+ &  & \texttt{"("} ,\; [\, \mathit{arguments} \,] ,\; \texttt{")"} \;; \\[4pt]
+\mathit{recordLiteral} & = & \texttt{"record"} ,\; \texttt{"<"} ,\; \mathit{type} ,\; \texttt{">"} ,\; \texttt{"\{"} ,\; [\, \mathit{effectFields} \,] ,\; \texttt{"\}"} \;; \\[4pt]
+\mathit{arguments} & = & \mathit{expression} ,\; \{\, \texttt{","} ,\; \mathit{expression} \,\} \;;
+\end{array}
+```
+
+*Lexical tokens.*
+
+```math
+\begin{array}{rcl}
+\mathit{identifier} & = & ?\ \text{ASCII identifier token defined in lexical.md}\ ? \;; \\[4pt]
+\mathit{integerToken} & = & ?\ \text{canonical unsigned decimal token defined in lexical.md}\ ? \;; \\[4pt]
+\mathit{stringToken} & = & ?\ \text{JSON string token defined in lexical.md}\ ? \;;
+\end{array}
+```
+
+<details>
+<summary>Verbatim EBNF for copying</summary>
 
 ```ebnf
 (* ISO/IEC 14977 EBNF for moriarty-expression-source/1.
@@ -185,6 +282,8 @@ stringToken = ? JSON string token defined in lexical.md ? ;
 
 ```
 
+</details>
+
 The [lexical specification](experiments/moriarty-language/spec/successor/lexical.md) defines the referenced tokens and their source spans. Identifiers match `[A-Za-z][A-Za-z0-9_]*`, are case-sensitive, and cannot be keywords. Integers are canonical unsigned decimals (`0` or a nonzero digit followed by digits); strings use JSON escapes and must decode to Unicode scalar values. Only ASCII space, tab, CR and LF separate tokens as whitespace. Source comments use `//` or non-nesting `/* ... */`; a bare `/` is not an operator. Input must be valid UTF-8, with no BOM stripping or Unicode normalization.
 
 The [expression-source bounds](experiments/moriarty-language/spec/successor/expression-source.md) extend the base [syntax bounds](experiments/moriarty-language/spec/successor/syntax-profile.json) and apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including `ensures`, 256 action parameters, 128 collection-intrinsic arguments, and 64 ordinary call arguments or effect fields. These parser limits are separate from the atomic execution bounds and from financial runtime limits.
@@ -199,71 +298,81 @@ The [K definition](experiments/moriarty-language/formal/k/moriarty.k) implements
 
 The codec admits closed records and canonical UInt128 fields. K checks positive conversion mantissa and scale at most 18 before reaching the stage that computes powers or division. Invalid financial values such as zero mantissa or a huge scale reach K and reject; malformed records and unsupported collection/action shapes stop at the codec. Raw K terms outside this admitted domain are not covered.
 
-**Terms and contexts.** `P` is a packet and `H` its codec-supplied digest. `s,r` are sender/receiver row indices (`−1` means absent). `x,q,u,c,v` are intermediate integers. `ε` is empty computation, `▷` sequencing, and `□` one context hole. This is explanatory notation, not raw K syntax.
+**Terms and contexts.** $P$ is a packet and $H$ its codec-supplied digest. $s, r$ are sender/receiver row indices ($-1$ means absent). $x, q, u, c, v$ are intermediate integers. $\varepsilon$ is empty computation, $\rhd$ sequencing, and $\square$ one context hole. This is explanatory notation, not raw K syntax.
 
-```text
-Instruction a ::= start(P) | inspect(P,s,r) | ensure(H,b,code,i)
-                | convert(P,s,r) | divide(P,s,r,x) | round(P,s,r,q,u)
-                | fund(P,s,r,c) | allocate(P,s,r,c) | split(P,s,r,c)
-                | finishT(P,s,r) | finishR(P,s,r,c,v)
-Computation k ::= ε | a | k ▷ k
-Context     E ::= □ | E ▷ k
-Program     t ::= run_H(k) | prepared(H,F) | rejected(H,code,i)
+```math
+\begin{array}{llcl}
+\text{Instruction} & a & ::= & \mathsf{start}(P) \mid \mathsf{inspect}(P,s,r) \mid \mathsf{ensure}(H,b,\mathit{code},i) \\
+& & \mid & \mathsf{convert}(P,s,r) \mid \mathsf{divide}(P,s,r,x) \mid \mathsf{round}(P,s,r,q,u) \\
+& & \mid & \mathsf{fund}(P,s,r,c) \mid \mathsf{allocate}(P,s,r,c) \mid \mathsf{split}(P,s,r,c) \\
+& & \mid & \mathsf{finishT}(P,s,r) \mid \mathsf{finishR}(P,s,r,c,v) \\[6pt]
+\text{Computation} & k & ::= & \varepsilon \mid a \mid k \rhd k \\[6pt]
+\text{Context} & E & ::= & \square \mid E \rhd k \\[6pt]
+\text{Program} & t & ::= & \mathsf{run}_H(k) \mid \mathsf{prepared}(H,F) \mid \mathsf{rejected}(H,\mathit{code},i)
+\end{array}
 ```
 
-Sequences are identified up to associativity and the two unit equations `ε ▷ k = k = k ▷ ε`, so contexts select the first pending instruction and retain its suffix. There is no `k ▷ E` context that skips an unfinished instruction, and no context enters packet data or terminal answers. Only programs reachable from `run_H(start(P))` for admitted `P` are in the domain.
+Sequences are identified up to associativity and the two unit equations $\varepsilon \rhd k = k = k \rhd \varepsilon$, so contexts select the first pending instruction and retain its suffix. There is no $k \rhd E$ context that skips an unfinished instruction, and no context enters packet data or terminal answers. Only programs reachable from $\mathsf{run}_H(\mathsf{start}(P))$ for admitted $P$ are in the domain.
 
-**Pure helpers and guards.** Within a repayment rule, `n` is nominal payment, `m` conversion mantissa, `ℓ` scale, `ρ` rounding mode, `p,a` principal/accrued debt, `T` transferred cash and `λ` allocation rule, all read from `P`. Let `U = 2^128 − 1` and write `g(b,code)` for `ensure(H,b,code,1)`. `R(ρ,q,u)` returns `q`, except that ceil with nonzero remainder returns `q+1`. `DP(λ,n,p,a)` is:
+**Pure helpers and guards.** Within a repayment rule, $n$ is nominal payment, $m$ conversion mantissa, $\ell$ scale, $\rho$ rounding mode, $p, a$ principal/accrued debt, $T$ transferred cash and $\lambda$ allocation rule, all read from $P$. Let $U = 2^{128} - 1$ and write $g(b, \mathit{code})$ for $\mathsf{ensure}(H, b, \mathit{code}, 1)$. $R(\rho, q, u)$ returns $q$, except that ceil with nonzero remainder returns $q + 1$.
 
-```text
-AccrualFirst:   n − min(n,a)
-PrincipalFirst: min(n,p)
-ProRata:       floor(n*p / (p+a))
+```math
+R(\rho,q,u) =
+\begin{cases}
+q + 1 & \rho = \mathtt{ceil} \text{ and } u \neq 0 \\
+q & \text{otherwise}
+\end{cases}
 ```
 
-The ProRata helper is used only after a positive outstanding obligation and a fitting `n*p` product have passed their guards. Integer division therefore has a positive denominator. Helpers abstract internal K equational steps; they are not financial action-work charges.
+```math
+\mathit{DP}(\lambda,n,p,a) =
+\begin{cases}
+n - \min(n,a) & \lambda = \mathtt{AccrualFirst} \\
+\min(n,p) & \lambda = \mathtt{PrincipalFirst} \\
+\left\lfloor \dfrac{n\,p}{p+a} \right\rfloor & \lambda = \mathtt{ProRata}
+\end{cases}
+```
 
-**Primitive contractions.** `checks(P,s,r)` contains 15 ordered guards for Transfer-only or 21 initial guards for repayment. `tail(P,s,r)` is `finishT` or `convert`, respectively. Both are exact instruction-list abbreviations, not new program constructors.
+The ProRata helper is used only after a positive outstanding obligation and a fitting $n\,p$ product have passed their guards. Integer division therefore has a positive denominator. Helpers abstract internal K equational steps; they are not financial action-work charges.
 
-```text
-start(P) ↝ inspect(P,sender(P),receiver(P))                         (START)
-inspect(P,s,r) ↝ checks(P,s,r) ▷ tail(P,s,r)                       (EXPAND)
-ensure(H,true,code,i) ↝ ε                                        (CHECK)
+**Primitive contractions.** $\mathit{checks}(P,s,r)$ contains 15 ordered guards for Transfer-only or 21 initial guards for repayment. $\mathit{tail}(P,s,r)$ is $\mathsf{finishT}$ or $\mathsf{convert}$, respectively. Both are exact instruction-list abbreviations, not new program constructors. In the SPLIT rule, $d$ abbreviates $\mathit{DP}(\lambda,n,p,a)$.
 
-convert(P,s,r)
-  ↝ g(n*m ≤ U,OVERFLOW) ▷ divide(P,s,r,n*m)                       (CONVERT)
-divide(P,s,r,x)
-  ↝ round(P,s,r,x div 10^ℓ,x mod 10^ℓ)                           (DIVIDE)
-round(P,s,r,q,u)
-  ↝ g(ρ ≠ none or u = 0,INEXACT_CONVERSION)
-    ▷ fund(P,s,r,R(ρ,q,u))                                      (ROUND)
-fund(P,s,r,c)
-  ↝ g(c ≤ U,OVERFLOW) ▷ g(c > 0,DUST)
-    ▷ g(c ≤ T,INSUFFICIENT_UNALLOCATED) ▷ allocate(P,s,r,c)       (FUND)
-allocate(P,s,r,c)
-  ↝ g(λ ≠ ProRata or n*p ≤ U,OVERFLOW) ▷ split(P,s,r,c)          (ALLOCATE)
-split(P,s,r,c)
-  ↝ g(DP(λ,n,p,a) ≤ p and n−DP(λ,n,p,a) ≤ a,ALLOCATION_COMPONENT)
-    ▷ finishR(P,s,r,c,DP(λ,n,p,a))                               (SPLIT)
+```math
+\begin{array}{rcll}
+\mathsf{start}(P) & \leadsto & \mathsf{inspect}(P,\mathit{sender}(P),\mathit{receiver}(P)) & \text{(START)} \\[4pt]
+\mathsf{inspect}(P,s,r) & \leadsto & \mathit{checks}(P,s,r) \rhd \mathit{tail}(P,s,r) & \text{(EXPAND)} \\[4pt]
+\mathsf{ensure}(H,\mathsf{true},\mathit{code},i) & \leadsto & \varepsilon & \text{(CHECK)} \\[10pt]
+\mathsf{convert}(P,s,r) & \leadsto & g(n\,m \le U,\ \mathtt{OVERFLOW}) \rhd \mathsf{divide}(P,s,r,n\,m) & \text{(CONVERT)} \\[4pt]
+\mathsf{divide}(P,s,r,x) & \leadsto & \mathsf{round}\bigl(P,s,r,\ x \operatorname{div} 10^{\ell},\ x \bmod 10^{\ell}\bigr) & \text{(DIVIDE)} \\[4pt]
+\mathsf{round}(P,s,r,q,u) & \leadsto & g(\rho \neq \mathtt{none} \lor u = 0,\ \mathtt{INEXACT\_CONVERSION}) & \text{(ROUND)} \\
+& & \quad \rhd\ \mathsf{fund}(P,s,r,R(\rho,q,u)) & \\[4pt]
+\mathsf{fund}(P,s,r,c) & \leadsto & g(c \le U,\ \mathtt{OVERFLOW}) \rhd g(c > 0,\ \mathtt{DUST}) & \text{(FUND)} \\
+& & \quad \rhd\ g(c \le T,\ \mathtt{INSUFFICIENT\_UNALLOCATED}) & \\
+& & \quad \rhd\ \mathsf{allocate}(P,s,r,c) & \\[4pt]
+\mathsf{allocate}(P,s,r,c) & \leadsto & g(\lambda \neq \mathtt{ProRata} \lor n\,p \le U,\ \mathtt{OVERFLOW}) & \text{(ALLOCATE)} \\
+& & \quad \rhd\ \mathsf{split}(P,s,r,c) & \\[4pt]
+\mathsf{split}(P,s,r,c) & \leadsto & g(d \le p \land n - d \le a,\ \mathtt{ALLOCATION\_COMPONENT}) & \text{(SPLIT)} \\
+& & \quad \rhd\ \mathsf{finishR}(P,s,r,c,d) &
+\end{array}
 ```
 
 The stage boundaries matter: a huge scale cannot trigger exponentiation before its state guard, and a product that exceeds UInt128 cannot be divided first to obtain an apparently fitting answer. The definition uses K instructions, rather than eager numeric helpers over the whole future continuation, for these boundaries.
 
-**Contextual and terminal reductions.** `→` is generated by context closure and the following whole-program rules. ABORT discards the entire continuation, including finalization; rejected output has no tentative state or effects.
+**Contextual and terminal reductions.** $\to$ is generated by context closure and the following whole-program rules. ABORT discards the entire continuation, including finalization; rejected output has no tentative state or effects.
 
-```text
-                      a ↝ k'
-  ---------------------------------------------                 (CONTEXT)
-  run_H(E[a]) → run_H(E[k'])
-
-  run_H(E[ensure(H,false,code,i)])
-    → rejected(H,code,i)                                        (ABORT)
-
-  run_H(finishT(P,s,r)) → prepared(H,FT(P,s,r))                   (PREPARE-T)
-  run_H(finishR(P,s,r,c,v)) → prepared(H,FR(P,s,r,c,v))           (PREPARE-R)
+```math
+\frac{a \leadsto k'}{\mathsf{run}_H(E[a]) \to \mathsf{run}_H(E[k'])}\ \text{(CONTEXT)}
 ```
 
-`FT` and `FR` abbreviate the exact distinct scalar records returned by K's `preparedTransfer` and `prepared` constructors. Both include the input digest and receiver index. The codec reconstructs complete unchanged metadata and ordered effects. For Transfer-only, unchanged debt and allocation history are copied by the codec: they are not separately computed debt outputs or a proved K invariant. No context reduces inside `prepared` or `rejected`.
+```math
+\begin{array}{rcll}
+\mathsf{run}_H\bigl(E[\mathsf{ensure}(H,\mathsf{false},\mathit{code},i)]\bigr) & \to & \mathsf{rejected}(H,\mathit{code},i) & \text{(ABORT)} \\[6pt]
+\mathsf{run}_H(\mathsf{finishT}(P,s,r)) & \to & \mathsf{prepared}(H,\mathit{FT}(P,s,r)) & \text{(PREPARE-T)} \\[4pt]
+\mathsf{run}_H(\mathsf{finishR}(P,s,r,c,v)) & \to & \mathsf{prepared}(H,\mathit{FR}(P,s,r,c,v)) & \text{(PREPARE-R)}
+\end{array}
+```
+
+$\mathit{FT}$ and $\mathit{FR}$ abbreviate the exact distinct scalar records returned by K's `preparedTransfer` and `prepared` constructors. Both include the input digest and receiver index. The codec reconstructs complete unchanged metadata and ordered effects. For Transfer-only, unchanged debt and allocation history are copied by the codec: they are not separately computed debt outputs or a proved K invariant. No context reduces inside $\mathsf{prepared}$ or $\mathsf{rejected}$.
 
 Checks run in this order; the [K rules](experiments/moriarty-language/formal/k/moriarty.k) specify every predicate.
 
@@ -278,13 +387,121 @@ Checks run in this order; the [K rules](experiments/moriarty-language/formal/k/m
 
 A successful Transfer-only moves cash and gross allowance, appends only its Transfer ID, emits one Transfer and charges **one action-work unit**. It preserves the complete obligation, including a settled ProRata obligation, because no allocation occurs. A non-creditor recipient is legal for this operation.
 
-A successful repayment charges **two action-work units**, emits Transfer then Repayment, and appends both IDs. With computed settlement `c` and principal discharge `v`, the obligation becomes `p′=p−v`, `a′=a−(n−v)`, `o′=p+a−n`, Settled iff `o′=0`. Only nominal `n` discharges debt; cash `T` and settlement `c` have distinct roles. Closure reserve is unchanged.
+A successful repayment charges **two action-work units**, emits Transfer then Repayment, and appends both IDs. With computed settlement $c$ and principal discharge $v$, the obligation becomes
 
-For example, ProRata with principal 100, accrued 10 and nominal payment 7 gives `v=floor(700/110)=6`, leaving principal 94, accrued 9 and outstanding 103. At mantissa 3, scale 1 and floor rounding, settlement is `floor(21/10)=2`: transferring 2 can fund that nominal payment. `none` would reject the same fractional conversion; floor producing zero cash rejects DUST.
+```math
+p' = p - v, \qquad a' = a - (n - v), \qquad o' = p + a - n, \qquad \text{Settled} \iff o' = 0 .
+```
 
+Only nominal $n$ discharges debt; cash $T$ and settlement $c$ have distinct roles. Closure reserve is unchanged.
+
+For example, ProRata with principal 100, accrued 10 and nominal payment 7 gives $v = \lfloor 700/110 \rfloor = 6$, leaving principal 94, accrued 9 and outstanding 103. At mantissa 3, scale 1 and floor rounding, settlement is $\lfloor 21/10 \rfloor = 2$: transferring 2 can fund that nominal payment. `none` would reject the same fractional conversion; floor producing zero cash rejects DUST.
 **Presentation bound.** Assuming pure helper termination on the admitted domain, successful Transfer-only takes **18 control steps** (START, EXPAND, 15 guards, PREPARE-T). Successful repayment takes **37** (eight stage contractions, 28 guards, PREPARE-R). Rejection ends at its first false guard and discards the remaining stages. Unlike the earlier single-expansion presentation, the failure step count depends on which numeric stages were reached. These are control-presentation counts, not internal K rewrites, execution fees or a mechanized termination proof.
 
 The [initial execution](deliverables/bounded-k-2026-09-09/README.md), [additional repayment branches](deliverables/repayment-k-branches-2026-09-09/README.md), and [Transfer-only extension](deliverables/transfer-only-k-2026-09-09/README.md) retain their original source-bound evidence and earlier control counts. The numeric suite combines all 42 prior distinct inputs with 22 new independent cases. Finite comparisons do not establish full source/Core/K correspondence, SP03 completion, mandatory PCD or finalized financial settlement. `Prepared` remains a local proposal, not authorization or Midnight acceptance.
+
+### Expression small-step semantics (40-constructor Core)
+
+The [expression contract](experiments/moriarty-language/spec/successor/semantic-contract.md) and its [static semantics](experiments/moriarty-language/spec/successor/static-semantics.md) define the 40-constructor Core that `moriarty-expression-source/1` text elaborates to. Both documents are proposals with independent design approval; neither is a registered profile. The presentation below restates their §E and §S0 as a reduction system in the same explanatory notation as the repayment section. The contract's prose remains authoritative, the [runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) is TypeScript rather than K, and no correspondence between the two is proved.
+
+**Terms and frames.** An action is a statement list followed by an Ensure suffix. $K(e_1,\ldots,e_n)$ is an unentered constructor occurrence and $K^{\circ}$ the same occurrence once entered; $v$ ranges over values. The frame $\sigma = \langle \mathit{pre}, W, L, A, O, D \rangle$ holds the immutable pre-state, staged writes, locals, arguments, observations and emitted descriptors. $w$ is remaining work and $w_0$ the initial budget. Expression configurations are $\langle e, w\rangle$ and reduce under a fixed frame $\sigma$, which reads consult and which no expression rule changes; statement configurations are $\langle S, \sigma, w\rangle$. Every occurrence keeps its original span and node path.
+
+```math
+\begin{array}{llcl}
+\text{Statement} & s & ::= & \mathsf{Require}(e) \mid \mathsf{Let}(x,e) \mid \mathsf{NextWrite}(f,e) \mid \mathsf{Emit}(O,e) \\[4pt]
+\text{Suffix} & q & ::= & \mathsf{Ensure}(e) \\[4pt]
+\text{Action} & \mathcal{A} & ::= & s_1;\ldots;s_m;\ q_1;\ldots;q_k \\[4pt]
+\text{Context} & C & ::= & [\,] \\
+ & & \mid & K^{\circ}(v_1,\ldots,v_{i-1},\,C,\,e_{i+1},\ldots,e_n) \qquad K \notin \{\mathsf{And},\mathsf{Or}\} \\
+ & & \mid & \mathsf{And}^{\circ}(C,e_2) \;\mid\; \mathsf{Or}^{\circ}(C,e_2)
+\end{array}
+```
+
+In the generic alternative $i$ ranges over the constructor's evaluated operands in listed order; metadata operands are never evaluated. There is no $\mathsf{And}^{\circ}(v,C)$ or $\mathsf{Or}^{\circ}(v,C)$ context: the right operand is reached only by the contractions below.
+
+**Entry and context closure.** Entering an occurrence costs one unit of work. An occurrence that cannot be entered rejects without consuming work.
+
+```math
+\frac{w > 0}{\langle K(e_1,\ldots,e_n),\ w\rangle \to \langle K^{\circ}(e_1,\ldots,e_n),\ w-1\rangle}\ \text{(E-ENTER)}
+\qquad
+\frac{\langle e,\ w\rangle \to \langle e',\ w'\rangle}{\langle C[e],\ w\rangle \to \langle C[e'],\ w'\rangle}\ \text{(E-CONTEXT)}
+```
+
+```math
+\langle C[K(e_1,\ldots,e_n)],\ 0\rangle \to \mathsf{Rejected}(\mathtt{WORK\_EXHAUSTED},\ \mathrm{span}(K),\ \mathrm{path}(K),\ w_0)\ \text{(E-EXHAUSTED)}
+```
+
+**Primitive rules.** For $K$ other than $\mathsf{And}$ and $\mathsf{Or}$, once every evaluated child has returned a value the constructor's rule $\mathcal{R}_K$ from the static semantics either yields a value or a rejection code. A rejection discards the entire continuation, staged writes, locals and descriptors; the reported work is the work actually consumed.
+
+```math
+\frac{\mathcal{R}_K(v_1,\ldots,v_n) = v}{\langle K^{\circ}(v_1,\ldots,v_n),\ w\rangle \to \langle v,\ w\rangle}\ \text{(E-PRIM)}
+```
+
+```math
+\frac{\mathcal{R}_K(v_1,\ldots,v_n) = \mathtt{code}}{\langle C[K^{\circ}(v_1,\ldots,v_n)],\ w\rangle \to \mathsf{Rejected}(\mathtt{code},\ \mathrm{span}(K),\ \mathrm{path}(K),\ w_0 - w)}\ \text{(E-PRIM-FAIL)}
+```
+
+Every rejection raised before the first E-ENTER, by admission, schema validation or typing, reports work used 0. A span that is absent, malformed or out of range is reported as the synthetic span $[0,0)$ with the original node path kept; it is never clamped. An isolated pure expression, evaluated outside an action, ends in $\mathsf{ExpressionValue}(T, v, w)$ rather than a statement result.
+
+**Boolean contractions.** After the left operand returns, the four contractions fire at zero cost. A skipped right operand is never entered and produces no work or failure. A selected right operand resumes as the original occurrence at child index 1 with its own span; if it is unentered and $w = 0$, E-EXHAUSTED applies to it.
+
+```math
+\begin{array}{rcll}
+\mathsf{And}^{\circ}(\mathsf{false},\ e_2) & \to & \mathsf{false} & \text{(E-AND-F)} \\[2pt]
+\mathsf{And}^{\circ}(\mathsf{true},\ e_2) & \to & e_2 & \text{(E-AND-T)} \\[2pt]
+\mathsf{Or}^{\circ}(\mathsf{true},\ e_2) & \to & \mathsf{true} & \text{(E-OR-T)} \\[2pt]
+\mathsf{Or}^{\circ}(\mathsf{false},\ e_2) & \to & e_2 & \text{(E-OR-F)}
+\end{array}
+```
+
+**Statements.** Statements reduce in lexical order; each returns Unit and advances to the next. A statement's expression operand reduces by the E-rules under the current $\sigma$, with $w$ threaded through. $S$ is the remaining statement list, $\oplus$ overrides a record by staged writes, and $D \cdot d$ appends a descriptor. $\mathsf{ReadPre}(\mathsf{post},f)$ reads $\mathit{pre} \oplus W$ and is typable only inside an Ensure condition; that view never commits. EMIT also rejects $\mathtt{DESCRIPTOR\_BOUND}$ when the descriptor list exceeds its aggregate bound, and FINISH rejects $\mathtt{VALUE\_BOUND}$ when the assembled post-state exceeds its bound.
+
+```math
+\begin{array}{rcll}
+\langle \mathsf{Require}^{\circ}(\mathsf{true});\ S,\ \sigma,\ w\rangle & \to & \langle S,\ \sigma,\ w\rangle & \text{(S-REQUIRE)} \\[2pt]
+\langle \mathsf{Require}^{\circ}(\mathsf{false});\ S,\ \sigma,\ w\rangle & \to & \mathsf{Rejected}(\mathtt{GUARD\_FAILED},\ldots) & \text{(S-REQUIRE-FAIL)} \\[2pt]
+\langle \mathsf{Let}^{\circ}(x,\ v);\ S,\ \sigma,\ w\rangle & \to & \langle S,\ \sigma[L \mathrel{+}= x \mapsto v],\ w\rangle & \text{(S-LET)} \\[2pt]
+\langle \mathsf{NextWrite}^{\circ}(f,\ v);\ S,\ \sigma,\ w\rangle & \to & \langle S,\ \sigma[W \mathrel{+}= f \mapsto v],\ w\rangle & \text{(S-NEXT)} \\[2pt]
+\langle \mathsf{Emit}^{\circ}(O,\ v);\ S,\ \sigma,\ w\rangle & \to & \langle S,\ \sigma[D \mathrel{:=} D \cdot \mathsf{Operation}_O(v)],\ w\rangle & \text{(S-EMIT)} \\[2pt]
+\langle \mathsf{Ensure}^{\circ}(\mathsf{true});\ S,\ \sigma,\ w\rangle & \to & \langle S,\ \sigma,\ w\rangle & \text{(S-ENSURE)} \\[2pt]
+\langle \mathsf{Ensure}^{\circ}(\mathsf{false});\ S,\ \sigma,\ w\rangle & \to & \mathsf{Rejected}(\mathtt{ENSURES\_FAILED},\ldots) & \text{(S-ENSURE-FAIL)} \\[2pt]
+\langle \varepsilon,\ \sigma,\ w\rangle & \to & \mathsf{ExpressionPrepared}(\mathit{pre} \oplus W,\ D,\ w) & \text{(S-FINISH)}
+\end{array}
+```
+
+**Work.** With $C(e)$ the work actually consumed by a successful pure expression and $B(e)$ the count of every constructor occurrence including unselected branches:
+
+```math
+\begin{array}{rcl}
+C(\mathsf{And}(e_1,e_2)) & = & 1 + C(e_1) + [\,e_1 \Downarrow \mathsf{true}\,]\ C(e_2) \\[2pt]
+C(\mathsf{Or}(e_1,e_2)) & = & 1 + C(e_1) + [\,e_1 \Downarrow \mathsf{false}\,]\ C(e_2) \\[2pt]
+B(K(e_1,\ldots,e_n)) & = & 1 + \sum_i B(e_i)
+\end{array}
+```
+
+$B$ is finite under the simultaneous source and Core bounds and conservatively bounds reduction work; it estimates neither validation overhead nor native proof cost.
+
+**Typing judgment.** Admission precedes reduction: structure, schema, whole-action typing and snapshot validation all complete before the first E-ENTER, so a static error anywhere in the action precedes any runtime guard. The judgment is $\Sigma;\Gamma;\phi \vdash e : T$ with $\Sigma$ the bounded acyclic schema registry, $\Gamma = L \uplus A \uplus O \uplus F$ four disjoint namespaces, and $\phi$ the phase, $\mathsf{ensure}$ inside an Ensure condition and $\mathsf{stmt}$ elsewhere. Type equality is exact, including every index; there is no subtyping or implicit cast. Four representative rules:
+
+```math
+\frac{n \in \{64,128\} \qquad 0 \le v < 2^{n}}{\Sigma;\Gamma;\phi \vdash \mathsf{LitUInt}(n,\ v) : \mathsf{UInt}_{n}}\ \text{(L-U)}
+```
+
+```math
+\frac{F[f] = T \qquad \mathit{view} = \mathsf{pre}\ \lor\ (\mathit{view} = \mathsf{post} \land \phi = \mathsf{ensure})}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadPre}(\mathit{view},\ f) : T}\ \text{(READ-PRE)}
+```
+
+```math
+\frac{\Sigma;\Gamma;\phi \vdash e_1 : T \qquad \Sigma;\Gamma;\phi \vdash e_2 : T \qquad T \in \{\mathsf{UInt64},\mathsf{UInt128},\mathsf{SInt128}\}}{\Sigma;\Gamma;\phi \vdash \mathsf{Add}(e_1,\ e_2) : T}\ \text{(ARITH-ADD-SCALAR)}
+```
+
+```math
+\frac{\Sigma;\Gamma;\phi \vdash e_1 : \mathsf{Bool} \qquad \Sigma;\Gamma;\phi \vdash e_2 : \mathsf{Bool}}{\Sigma;\Gamma;\phi \vdash \mathsf{And}(e_1,\ e_2) : \mathsf{Bool}}\ \text{(CMP-AND)}
+```
+
+A `next` view rejects $\mathtt{TYPE\_NEXT\_READ}$ and a `post` view outside Ensure rejects $\mathtt{TYPE\_POST\_SCOPE}$. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects $\mathtt{ARITH\_RANGE}$ when the result does not fit $T$; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in [static-semantics.md](experiments/moriarty-language/spec/successor/static-semantics.md), mirrored machine-readably in [expression-signatures.json](experiments/moriarty-language/spec/successor/expression-signatures.json).
+
+**What is not specified.** S-FINISH ends at $\mathsf{ExpressionPrepared}$, never at an accepted `Prepared`. No rule in this repository consumes an emitted descriptor: nothing maps $\mathsf{Operation}_{\mathsf{Transfer}}$ or $\mathsf{Operation}_{\mathsf{Repay}}$ onto the funded kernel packet above, orders descriptors against staged writes, charges kernel action-work, or decides what an Ensure sees after financial effects. The contract states this composition as open. A candidate mapping is recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it changes no registered behavior.
 
 ## What a developer writes
 

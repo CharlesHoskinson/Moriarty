@@ -65,6 +65,48 @@ order, allowing equal assets; scale is0..18. No host type-alias registry exists.
 | quanta/mantissa/is_negative/magnitude(x) | ScalarValue | Exact closed scalar projection overload |
 | condition ? consequent : alternative | Select | Lazy exact-type conditional expression |
 
+### F — financial constructor rules
+
+The rows below follow the L table shape of [static-semantics.md](static-semantics.md)
+and are derived from the runtime's admission, typing and reduction code. Every
+constructor is a closed tagged node, costs one unit of work on entry, and rejects
+VALUE_BOUND if its result exceeds the value bounds, except Select, whose result
+is the already-checked value of the selected arm. Operands before the semicolon
+are metadata and are not evaluated; operands after it are evaluated children in
+listed order. Static rejections use the original span and node path of the
+constructor; runtime rejections use the same provenance and consumed work.
+
+| Rule | Constructor (metadata; children) | Typing | Reduction | Rejections |
+| --- | --- | --- | --- | --- |
+| F-CA | ConstructAmount(asset; value) | asset declared in Σ.assets; value:UInt128; result Amount\<asset\> | returns the integer as quanta; range check on Amount | TYPE_NAME, TYPE_MISMATCH, ARITH_RANGE |
+| F-CS | ConstructShares(vault,holder; value) | vault in Σ.vaults and holder in Σ.parties; value:UInt128; result Shares\<vault,holder\> | returns the integer as share quanta; range check on Shares | TYPE_NAME, TYPE_MISMATCH, ARITH_RANGE |
+| F-CV | ConstructVariant(family,tag; value) | Σ.variantTypes[family][tag] declared; value has exactly that payload type; result Variant\<family\> | returns the tagged payload {tag, value} | TYPE_NAME, TYPE_MISMATCH |
+| F-PV | ProjectVariant(tag; value) | value:Variant\<F\>; tag declared in F; result is F's payload type for tag | active tag must equal tag, else VARIANT_CASE; returns the payload | TYPE_MISMATCH, TYPE_NAME, VARIANT_CASE |
+| F-PS | ProjectSome(value) | value:Option\<T\>; result T | None rejects OPTION_NONE; Some(v) returns v | TYPE_MISMATCH, OPTION_NONE |
+| F-CU | ConvertUInt(width; value) | width in {64,128,256}; value:UInt64, UInt128 or UInt256, including the same width; result UInt\<width\> | returns the integer unchanged; must fit the target width, else ARITH_RANGE | TYPE_LITERAL, TYPE_MISMATCH, ARITH_RANGE |
+| F-SV | ScalarValue(component; value) | component in {quanta, mantissa, negative, magnitude}; exactly one admitted overload per component and child type (table below) | quanta and mantissa return the underlying integer; negative returns mantissa \< 0; magnitude returns the absolute value | TYPE_LITERAL, TYPE_MISMATCH |
+| F-SEL | Select(condition, consequent, alternative) | condition:Bool; consequent and alternative have the identical complete type T, with T not Unit or Operation; result T | after entry evaluate condition once, then enter only the selected arm at child path 1 or 2 | TYPE_MISMATCH, WORK_EXHAUSTED at the selected arm |
+
+ScalarValue overloads are exactly: quanta on Amount or Shares gives UInt128;
+mantissa on Price gives UInt128 and on Rate or Quantity gives SInt128; negative
+on Rate, Quantity, SignedAmount or NetAmount gives Bool; magnitude on Rate,
+Quantity or NetAmount gives UInt128 and on SignedAmount gives UInt256. Any other
+pairing rejects TYPE_MISMATCH. The source spelling `is_negative` lowers to the
+Core component name `negative`; the prose above uses the source spelling.
+
+Related admitted extensions in this profile, not new constructors: LitUInt
+accepts width 256 (the `u256(q)` literal); Add, Sub, Mul, FloorDiv and CeilDiv
+admit identical UInt256 operands with a UInt256 result; Mul admits Amount×UInt128
+in either operand order to Amount,
+Amount×Amount to AmountProduct with sorted indices, Amount×Price to ScaledAmount
+when the price's quote matches the amount's asset, and Amount×Rate to
+SignedScaledAmount; FloorDiv and CeilDiv admit AmountProduct÷Amount to the other
+Amount index, and ScaledAmount or SignedScaledAmount divided by a literal UInt128
+exactly 10^scale to Amount or SignedAmount, else TYPE_SCALE_DIVISOR. Comparison
+Lt/Lte/Gt/Gte accept every numeric type listed in the runtime's NUMERIC set with
+identical operand types. These are the code's overloads; the prose sections below
+describe the same set.
+
 `u256(7)` is a one-node UInt256 literal. Its operand must be an integer literal;
 `u256(q)` does not convert a variable. Bare positive integers remain UInt128 and
 bare negative integers remain SInt128. `amount(5,A)` remains one LitAmount node;

@@ -203,6 +203,15 @@ zero-cost contractions and original-occurrence paths. No truthiness, implicit
 cast or financial composition is encoded by these nodes. Pure short-circuiting
 does not skip admission or turn a Boolean operand into an effectful statement.
 
+Source inequality has no Core constructor. The source lowering maps `a != b` to
+Not(Eq(core(a),core(b))): two constructor occurrences, both carrying the span of
+the source comparison occurrence, with Eq at child path p+[0] of the Not at p.
+Eq's rule applies unchanged, so the operand types must be identical and the
+result is Bool. B counts two for the pair and entering them charges two units
+of work. The `emit X { ... }` field-list form likewise lowers to two nodes, Emit
+over a ConstructRecord of the operation's operand record; no other source form
+introduces more than one Core node.
+
 ## STMT — staging and descriptors
 
 Require(cond): require Bool. Evaluate cond; false rejects GUARD_FAILED, true
