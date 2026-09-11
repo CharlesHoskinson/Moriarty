@@ -194,6 +194,7 @@ PROGRAM_KEYS = (
 )
 CAMPAIGN_RECORD_KEYS = (
     "acceptance",
+    "admission",
     "acceptedProfile",
     "binding",
     "bindingSha256",
@@ -201,6 +202,7 @@ CAMPAIGN_RECORD_KEYS = (
     "candidateManifest",
     "candidateSha256",
     "checks",
+    "consumed",
     "currentAccounting",
     "currentFindingReview",
     "dispatchCondition",
@@ -211,6 +213,7 @@ CAMPAIGN_RECORD_KEYS = (
     "recordedAt",
     "records",
     "resourceAmendment",
+    "result",
     "review",
     "reviewRequirement",
     "scope",
@@ -221,6 +224,15 @@ CAMPAIGN_RECORD_KEYS = (
     "successorReviewAmendment",
     "timingDisclosure",
 )
+# Retained bounded-K observations, not dispatch authority or available credit.
+# Expanding this family requires explicit semantics, not a generic field whitelist.
+HISTORICAL_K_STATUSES = frozenset((
+    "failed-unsupported-compiler-flag",
+    "failed-decoder-schema-after-successful-k-execution",
+    "executed-local-projection-awaiting-result-reviews",
+))
+HISTORICAL_K_FIELDS = frozenset(("admission", "result", "consumed"))
+HISTORICAL_K_COUNTERS = frozenset(("compileAttempts", "krunInvocations"))
 MANIFEST_KEYS = (
     "baseCommit",
     "candidateSha256",
@@ -437,7 +449,7 @@ def load_snapshot(repo, action_id, history_reader=None):
     campaign_path = _contained_file(root, campaign_rel, missing, "campaign-store")
     if campaign_path is not None:
         campaigns = _load_json_path(campaign_path, missing, campaign_rel)
-        campaign_ok = _validate_campaigns(campaigns, missing)
+        campaign_ok = _validate_campaigns(root, campaigns, missing)
 
     snap = {
         "authorityCurrent": False,
@@ -816,7 +828,7 @@ def _validate_sprints(sprints, missing):
     return valid
 
 
-def _validate_campaigns(campaigns, missing):
+def _validate_campaigns(root, campaigns, missing):
     if campaigns is None:
         return False
     if type(campaigns) is not dict:
@@ -847,6 +859,34 @@ def _validate_campaigns(campaigns, missing):
         for key in extra_record:
             missing.append("unknown-campaign-field:" + key)
             valid = False
+        if HISTORICAL_K_FIELDS.intersection(record):
+            if not _validate_historical_k(root, campaign_id, record, missing):
+                valid = False
+    return valid
+
+
+def _validate_historical_k(root, campaign_id, record, missing):
+    """Read the closed observation family without promoting it to admission.
+
+    Provenance paths must remain available and contained; their contents and the
+    retained counters do not replace binding, candidate, review or live accounting
+    verification. The three historical statuses cannot authorize actionful work.
+    """
+    valid = True
+    if not _status_in(record.get("status"), HISTORICAL_K_STATUSES):
+        missing.append("historical-campaign-status-unsupported:" + campaign_id)
+        valid = False
+    if not HISTORICAL_K_FIELDS.issubset(record):
+        missing.append("historical-campaign-observation-incomplete:" + campaign_id)
+        valid = False
+    for field in ("admission", "result"):
+        if _contained_file(root, record.get(field), missing, "historical-campaign-" + field) is None:
+            valid = False
+    consumed = record.get("consumed")
+    if (type(consumed) is not dict or set(consumed) != HISTORICAL_K_COUNTERS
+            or any(type(value) is not int or value < 0 for value in consumed.values())):
+        missing.append("historical-campaign-consumed-invalid:" + campaign_id)
+        valid = False
     return valid
 
 

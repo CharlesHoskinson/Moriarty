@@ -254,6 +254,18 @@ def cmd_status(repo: Path, db_path: Path, history_reader, as_json: bool):
         blocked_action = "none"
         reason = "none"
 
+    # Reporting is always allowed, but that must not hide stale source or missing
+    # accounting behind the report decision or a generic history-only summary.
+    evidence_gaps = [
+        item for item in snap.get("missingEvidence", [])
+        if isinstance(item, str) and not item.startswith("operational-history")
+    ]
+    if evidence_gaps:
+        if blocked_action == "none":
+            blocked_action = f"dependent dispatch for {active_action.get('capability', 'action')}"
+        detail = "current evidence gaps: " + "; ".join(dict.fromkeys(evidence_gaps))
+        reason = detail if reason == "none" else reason + "; " + detail
+
     next_action_id = snap.get("nextActionId") or active_action["id"]
     undelivered = get_undelivered_txs(db_path, str(repo))
 

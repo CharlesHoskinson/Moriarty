@@ -33,7 +33,7 @@ class HistoricalRegressionsTestCase(unittest.TestCase):
         subprocess.run(["git", "config", "user.email", "test@moriarty.local"], cwd=str(self.root), check=True)
         subprocess.run(["git", "config", "user.name", "Test User"], cwd=str(self.root), check=True)
         self.db_path = get_db_path(self.root)
-        init_db(self.db_path)
+        init_db(self.db_path).close()
 
     def tearDown(self):
         self.temp_dir.cleanup()

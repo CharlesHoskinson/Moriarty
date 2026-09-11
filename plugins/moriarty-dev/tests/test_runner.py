@@ -5,6 +5,7 @@ import os
 import shutil
 import signal
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import time
@@ -82,7 +83,7 @@ class BoundRunnerTests(unittest.TestCase):
         again = self.run_cli("run", "--action", action["id"], "--json")
         self.assertEqual(again.returncode, 2, again.stdout + again.stderr)
         self.assertFalse(self.child_marker.exists(), "one charge cannot authorize a second execution")
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
             receipt = json.loads(conn.execute("SELECT receipt_json FROM reservations WHERE status='finished'").fetchone()[0])
         self.assertEqual(receipt["runnerReceipt"]["runnerDigest"], self.runner_digest)
         self.assertEqual(receipt["runnerReceipt"]["chargeId"], self.plan["chargeId"])
@@ -129,7 +130,7 @@ class BoundRunnerTests(unittest.TestCase):
         action = self.admit("print('x' * 20000)\n")
         result = self.run_cli("run", "--action", action["id"], "--json")
         self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
             receipt = json.loads(conn.execute("SELECT receipt_json FROM reservations").fetchone()[0])
         self.assertLessEqual(len(receipt["stdout"]), 4096)
         self.assertTrue(receipt["runnerReceipt"]["outputLimitExceeded"])
@@ -149,7 +150,7 @@ class BoundRunnerTests(unittest.TestCase):
             self.assertEqual(len(children), 1)
             os.kill(int(children[0]), signal.SIGKILL)
             proc.communicate(timeout=10)
-            with sqlite3.connect(self.db_path) as conn:
+            with closing(sqlite3.connect(self.db_path)) as conn, conn:
                 self.assertEqual(conn.execute("SELECT status FROM reservations").fetchone()[0], "active")
         finally:
             if proc.poll() is None:
@@ -160,14 +161,14 @@ class BoundRunnerTests(unittest.TestCase):
         action = self.admit("raise SystemExit(125)\n")
         result = self.run_cli("run", "--action", action["id"])
         self.assertEqual(result.returncode, 4)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
             self.assertEqual(conn.execute("SELECT status FROM reservations").fetchone()[0], "active")
 
     def test_encoded_signal_keeps_reservation_unresolved(self):
         action = self.admit("raise SystemExit(137)\n")
         result = self.run_cli("run", "--action", action["id"])
         self.assertEqual(result.returncode, 4)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
             self.assertEqual(conn.execute("SELECT status FROM reservations").fetchone()[0], "active")
 
     def test_approved_behavioral_verifier_records_observed_defect(self):
@@ -180,7 +181,7 @@ class BoundRunnerTests(unittest.TestCase):
         action = self.admit("print('{\"charged\":true,\"behavioralAssertions\":[{\"outcome\":\"defect-observed\"}]}')\nraise RuntimeError('initialization failed')\n", "reproduce")
         result = self.run_cli("run", "--action", action["id"], "--json")
         self.assertEqual(result.returncode, 4, result.stdout + result.stderr)
-        with sqlite3.connect(self.db_path) as conn:
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
             self.assertEqual(conn.execute("SELECT count(*) FROM events WHERE event_kind='reproducer_verified'").fetchone()[0], 0)
 
 

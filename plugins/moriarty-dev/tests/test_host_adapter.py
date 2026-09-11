@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sqlite3
+from contextlib import closing
 import sys
 import tempfile
 import unittest
@@ -81,7 +82,7 @@ class HostAdapter(unittest.TestCase):
     def test_locked_store_returns_diagnostic_within_host_bound(self):
         db=store.get_db_path(self.root)
         store.enqueue_tx(db,str(self.root),'tx-locked','submitted',{'network':'preview'})
-        with sqlite3.connect(db) as c:
+        with closing(sqlite3.connect(db)) as c, c:
             c.execute('PRAGMA journal_mode=DELETE')
             c.execute('BEGIN EXCLUSIVE')
             p=subprocess.run([sys.executable,hook.__file__,'PostToolUse'],input=json.dumps({'cwd':str(self.root)}),text=True,capture_output=True,timeout=0.95)

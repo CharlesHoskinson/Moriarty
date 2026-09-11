@@ -475,6 +475,17 @@ class ExecutionTestCase(unittest.TestCase):
         hist = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
         self.assertEqual(hist["adminSeconds"], 150)
 
+    def test_status_cli_names_stale_source_alongside_unknown_history(self):
+        self.make_case(failures=0, action_kind="report")
+        source = self.root / "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
+        source.write_text(source.read_text() + "\nUnreviewed drift.\n")
+        result = self.run_cli("status", "--json")
+        self.assertEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertIn("operational history is unresolved or unverified", data["reason"])
+        self.assertIn("binding-input-stale:", data["reason"])
+        self.assertIn("candidate-input-stale:", data["reason"])
+
     def test_status_cli_reports_unresolved_history_honestly(self):
         self.make_case(failures=0, action_kind="implement")
         res = self.run_cli("status", "--json")

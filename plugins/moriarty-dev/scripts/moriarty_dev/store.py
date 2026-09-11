@@ -5,6 +5,7 @@ import re
 import sqlite3
 import time
 import uuid
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -149,9 +150,8 @@ def init_db(db_path: Path) -> sqlite3.Connection:
                     header = f.read(16)
                 if header != b"SQLite format 3\x00":
                     raise StoreError(f"Database file is corrupt: {db_path}; invalid file header, preserving original bytes for diagnosis")
-                conn_test = sqlite3.connect(str(db_path), timeout=5.0)
-                conn_test.execute("PRAGMA schema_version;")
-                conn_test.close()
+                with closing(sqlite3.connect(str(db_path), timeout=5.0)) as conn_test:
+                    conn_test.execute("PRAGMA schema_version;")
             except StoreError:
                 raise
             except Exception as exc:
@@ -159,9 +159,13 @@ def init_db(db_path: Path) -> sqlite3.Connection:
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), timeout=10.0, isolation_level=None)
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA busy_timeout=5000;")
-    conn.executescript(SCHEMA_SQL)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.executescript(SCHEMA_SQL)
+    except Exception:
+        conn.close()
+        raise
     return conn
 
 
@@ -502,7 +506,7 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
 
 
 def has_other_primary(db_path: Path, reservation_id: str) -> bool:
-    with sqlite3.connect(db_path) as conn:
+    with closing(sqlite3.connect(db_path)) as conn:
         return conn.execute(
             "SELECT 1 FROM reservations WHERE status='active' "
             "AND action_kind IN ('implement', 'repair') AND id != ? LIMIT 1",

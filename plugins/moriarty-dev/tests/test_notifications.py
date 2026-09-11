@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import tempfile
@@ -36,7 +37,7 @@ class Notifications(unittest.TestCase):
         return store.get_undelivered_txs(self.db, str(self.root))
 
     def row(self):
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             return c.execute('SELECT status, delivered_at, enqueued_at FROM outbox').fetchone()
 
     def message(self, status='submitted', role='assistant', phase='commentary', timestamp=None, text=None):
@@ -132,7 +133,7 @@ class Notifications(unittest.TestCase):
         row=self.row()
         store.enqueue_tx(self.db,str(self.root),'tx-test-1','submitted',{'network':'preview'})
         self.assertEqual(self.row(),row)
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             self.assertEqual(c.execute("SELECT count(*) FROM events WHERE event_kind='tx_notification'").fetchone()[0],1)
 
     def test_absent_or_ambiguous_host_stays_pending(self):
@@ -157,7 +158,7 @@ class Notifications(unittest.TestCase):
         self.assertNotEqual(self.cli('deliver','--tx-id','tx-test-1').returncode,0)
         self.message()
         self.assertEqual(self.cli('deliver','--tx-id','tx-test-1').returncode,0)
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             data=c.execute("SELECT payload_json FROM events WHERE event_kind='tx_delivered'").fetchone()[0]
         self.assertNotIn('Unrelated private conversation',data)
         self.assertEqual(json.loads(data)['deliveryId'],'host-message-1')

@@ -26,7 +26,7 @@ class HookContractTestCase(unittest.TestCase):
         subprocess.run(["git", "config", "user.email", "test@moriarty.local"], cwd=str(self.root), check=True)
         subprocess.run(["git", "config", "user.name", "Test User"], cwd=str(self.root), check=True)
         self.db_path = get_db_path(self.root)
-        init_db(self.db_path)
+        init_db(self.db_path).close()
         self.hook_py = SCRIPTS_DIR / "moriarty_dev" / "hook.py"
 
     def tearDown(self):

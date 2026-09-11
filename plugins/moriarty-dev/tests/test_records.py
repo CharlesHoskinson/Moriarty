@@ -118,6 +118,10 @@ def make_repo():
 
 def copy_relative(root, relative):
     src = SOURCE_ROOT / relative
+    # This input belongs to the frozen historical admission, not today's sprint.
+    # Do not rehash its binding to make a changed live document appear approved.
+    if relative == "openspec/sprints/sp01-financial-contract-and-execution-admission.md":
+        src = Path(__file__).resolve().parent / "fixtures" / Path(relative).name
     if not src.is_file():
         return None
     dest = root / relative

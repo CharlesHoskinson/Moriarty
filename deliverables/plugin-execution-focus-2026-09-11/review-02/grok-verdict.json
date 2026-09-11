@@ -1,0 +1,84 @@
+{
+  "verdict": "APPROVED",
+  "candidateSha256": "96e8702b81380b39c687702a9423fc280e922dd7d7d45598bd205a03215f649f",
+  "scope": "Non-author audit of the combined Moriarty plugin guidance (develop skill + execution-focus reference + README routing) and runtime reader/store/status/testfixture changes. Runtime in scope: typed legacy K observation family (admission/result/consumed), three historical statuses, contained provenance, closed nonnegative compile/krun counters, SQLite close-on-failure, status reporting of stale source and current evidence beside operational history, and a frozen historical sprint fixture. Out of scope: product acceptance, MAIN dispatch authorization, SP05 completion, network/wallet/prover/campaign execution, and any inference from a green test transcript alone.",
+  "findings": [],
+  "checks": [
+    {
+      "id": "adv-historical-k-beside-valid-grant",
+      "result": "PASS",
+      "detail": "A well-formed historical K record may sit in the same campaign store as an unrelated current grant. _validate_campaigns only fail-closes the store when the observation is malformed or an unknown campaign field appears. _resolve_campaign_admission still binds the selected campaign id. assess() still requires admitted-* or complete as applicable; the three historical statuses are neither. test_observations_do_not_poison_unrelated_current_admission keeps loan review allowed and leaves campaign/accounting bytes unchanged for all three statuses."
+    },
+    {
+      "id": "adv-historical-record-selected-as-new-grant",
+      "result": "PASS",
+      "detail": "Selecting campaign:historical-k as admissionRef yields authorityCurrent, candidateCurrent and resourceAdmitted false and assess allow false. _status_allows rejects the three historical statuses for implement/repair/admin/review/reproduce/verify. _evidence_applicable also rejects them. Promoting status to complete or admitted-* while K fields remain fail-closes the store (historical-campaign-status-unsupported). consumed is a closed two-counter nonnegative int map and is not read by _verify_resource or remaining-budget math. Extra keys, negatives, bools and floats fail. Unknown field approved still fail-closes. Provenance uses _contained_file (absolute, .., secrets, missing, empty rejected). Contents of admission/result are not treated as binding, candidate, review or credit."
+    },
+    {
+      "id": "adv-stale-live-binding-green-fixture-tests",
+      "result": "PASS",
+      "detail": "Tests copy plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md (manifest sha256 fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172, claimed freeze of commit f173efe91f598e1a862d941c1c854692d9219a6b) instead of rewriting live binding or candidate-04 digests. test_live_source_drift_is_not_repaired_by_history_support still fail-closes on unreviewed mutation. Delivered MAIN status/next remain blocked: binding-input-stale and candidate-input-stale on the live sprint document, current-accounting-missing, resource-live-state-unavailable, operational-history; next is report only. Green fixtures do not authorize live work."
+    },
+    {
+      "id": "adv-declare-sp05-or-skip-auditor",
+      "result": "PASS",
+      "detail": "Guidance names uncertified I2/MC02, keeps SP01 as an SP05 dependency, and forbids declaring SP05 from a successful-looking loan slice, reused swap, helper-only collector, or missing raw exit. Both fresh full-candidate concurrent audits are required; missing auditors do not substitute. Task routing is Astra author plus Grok 4.6 high and Astra medium for this update only; general Grok plus Opus/Astra is preserved. Receipt ingestion is documented as identity/schema validation, not mechanical roster enforcement. No new scheduler, evidence register, admission exception or CI framework. Report remains allowed; actionful dispatch still uses existing authority, candidate, resource, history, reservation and review gates."
+    },
+    {
+      "id": "k-family-closed-not-permissive",
+      "result": "PASS",
+      "detail": "admission, result and consumed were added to the existing closed CAMPAIGN_RECORD_KEYS set. Validation runs only for that named family, requires all three fields, exact counter names, type(value) is int (bool rejected), value >= 0, and one of three statuses. Unknown campaign fields still fail. Not a blanket unknown-field whitelist. Expanding the family still needs explicit semantics."
+    },
+    {
+      "id": "no-authority-from-failed-record-or-counters",
+      "result": "PASS",
+      "detail": "Historical observations are excluded from _campaign_is_complete, _status_allows implement/review paths, and resource remaining. Policy.py, runner debit/claim, reservation, and review-receipt rules are unchanged. cmd_status only appends non-history missingEvidence to the reason; it does not allow dispatch. Live next allow is report."
+    },
+    {
+      "id": "sqlite-close-failure-paths",
+      "result": "PASS",
+      "detail": "init_db closes the integrity-probe connection via contextlib.closing, and closes the opened connection if WAL/schema setup fails. has_other_primary uses closing(). Tests that opened init_db now close it. New StoreConnections tests cover success, missing-file execute failure, failed PRAGMA schema_version, and failed journal_mode. Author transcript: 174 tests OK, no ResourceWarning lines."
+    },
+    {
+      "id": "status-does-not-hide-stale-source",
+      "result": "PASS",
+      "detail": "When missingEvidence contains non-history gaps, reason names them even if operational history is also unresolved. test_status_cli_names_stale_source_alongside_unknown_history requires both. Delivered runtime-status.json shows history plus binding-input-stale, candidate-input-stale and live accounting gaps. Policy deny codes are not weakened."
+    },
+    {
+      "id": "tests-not-removed-or-weakened",
+      "result": "PASS",
+      "detail": "Diff adds CampaignHistory (7), StoreConnections (3) and one status stale-source test. 163+11=174 matches the transcript. Existing assertions were not deleted. Remaining edits are connection closing and routing the historical sprint input through the freeze fixture. Fail-closed cases for unknown fields, secret paths, stale hashes, self-review, charge mismatch, primary reservation, and author defect_resolved remain."
+    },
+    {
+      "id": "guidance-requirements",
+      "result": "PASS",
+      "detail": "One delivery item plus bounded native F0 with existing authority; exact I2/MC02 not full SP05; one reconciliation of existing records then the real caller; retained lineage, counterparty gap and adverse-path handling; independent failure matrix before authoring; sufficient current context with history on disk; both fresh full-candidate audits; six manual metrics in existing records; native verifier route before heavy k17 retry and a bounded discriminator; single K failed-case reproduction then full final conformance; deferred profiles/ACTUS/DeFi/productization/new CI; transaction/resource/approval/history gates preserved; no new framework; readonly inspection needs no new gate; guidance vs CLI enforcement stated honestly in README, SKILL.md and execution-focus.md."
+    },
+    {
+      "id": "green-tests-are-not-approval",
+      "result": "PASS",
+      "detail": "Author transcript of 174 passing tests is supporting evidence only. MAIN remains blocked by stale sprint/source commitments, missing live accounting and unresolved operational history. This verdict does not authorize implementation, credit, settlement or SP05."
+    }
+  ],
+  "reviewerIdentity": {
+    "model": "grok-4.6",
+    "effort": "high",
+    "role": "fresh-independent-nonauthor-auditor",
+    "authorVendor": "Astra",
+    "requestedPair": [
+      "grok-4.6-high",
+      "gpt-6-astra-medium"
+    ],
+    "selfReview": false,
+    "priorDocsOnlyApprovalReliedOn": false
+  },
+  "limitations": [
+    "Inspected the supplied plugin text, tracked diff, fixture notes and author test/status transcripts as evidence. Did not execute tests, hash files, open the live git object f173efe, touch wallets, network, prover, campaign dispatch or MAIN worktrees.",
+    "candidateSha256 96e8702b81380b39c687702a9423fc280e922dd7d7d45598bd205a03215f649f is the identity under review; this auditor did not recompute it.",
+    "Zero ResourceWarnings is inferred from a clean 174-test transcript, not from a separate warnings assertion in that file.",
+    "A historical K row that also copied a current freeze could make candidateCurrent true while still denying dispatch via status/authority. That is not a grant; it is not a required change.",
+    "Malformed historical K still fail-closes the whole campaign store. That is conservative, not a grant.",
+    "CLI review ingestion still does not mechanically require the two named auditors; the candidate states that as guidance, not as a new gate.",
+    "This APPROVED is an independent audit of the supplied plugin guidance and runtime reader fix. It is not product acceptance, I2 certification, SP05 completion, or authorization of blocked MAIN work."
+  ]
+}
