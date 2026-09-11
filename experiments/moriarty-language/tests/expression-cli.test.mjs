@@ -33,6 +33,8 @@ const invoke = args => {
 };
 const checkArgs = (input, schemaFile = schemaPath) => ['check', '--profile', profile, '--schema', schemaFile, input];
 const formatArgs = input => ['format', '--profile', profile, input];
+const simulateArgs = (selectedProfile, selectedSchema, snapshots, input) =>
+  ['simulate', '--profile', selectedProfile, '--schema', selectedSchema, '--snapshots', snapshots, input];
 const failure = (args, expected, exit = 1) => {
   const result = invoke(args);
   assert.equal(result.status, exit, result.stderr);
@@ -195,4 +197,85 @@ test('financial CLI preserves checking and formatting meaning for the published 
   assert.equal(rechecked.status, 0, rechecked.stderr);
   assert.equal(rechecked.stdout, JSON.stringify(language.check(formatted.stdout)) + '\n');
   assert.equal(invoke(['format', '--profile', financial, formattedPath]).stdout, formatted.stdout);
+});
+
+test('simulation CLI returns independently derived local financial and original expression results', () => {
+  const financial = 'moriarty-financial-expression-source/1';
+  const financialSource = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.mori', import.meta.url));
+  const financialSchema = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.schema.json', import.meta.url));
+  const financialSnapshots = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.snapshots.json', import.meta.url));
+  const financialResult = invoke(simulateArgs(financial, financialSchema, financialSnapshots, financialSource));
+  assert.equal(financialResult.status, 0, financialResult.stderr);
+  assert.equal(financialResult.stderr, '');
+  assert.deepEqual(JSON.parse(financialResult.stdout), {
+    judgmentResult: 'SourceSimulated', sourceProfile: financial, pre: { last: '0' }, initialWork: '1000',
+    result: { status: 'ExpressionPrepared', post: { last: '1' },
+      descriptors: [{ operation: 'Notice', fields: { allocation: '1', offered: '4' } }], workRemaining: '959' },
+  });
+
+  const originalSource = fileURLToPath(new URL('../spec/successor/examples/expression-counter.mori', import.meta.url));
+  const originalSchema = fileURLToPath(new URL('../spec/successor/examples/expression-counter.schema.json', import.meta.url));
+  const originalSnapshots = fileURLToPath(new URL('../spec/successor/examples/expression-counter.snapshots.json', import.meta.url));
+  const originalResult = invoke(simulateArgs(profile, originalSchema, originalSnapshots, originalSource));
+  assert.equal(originalResult.status, 0, originalResult.stderr);
+  assert.equal(originalResult.stderr, '');
+  assert.deepEqual(JSON.parse(originalResult.stdout), {
+    judgmentResult: 'SourceSimulated', sourceProfile: profile,
+    pre: { counter: '10', funds: '100' }, initialWork: '1000',
+    result: { status: 'ExpressionPrepared', post: { counter: '12', funds: '100' },
+      descriptors: [{ operation: 'QuoteNotice', fields: { amount: '5', count: '2' } }], workRemaining: '960' },
+  });
+});
+
+test('simulation CLI preserves source API rejection records and never prints snapshot state', () => {
+  const financial = 'moriarty-financial-expression-source/1';
+  const sourcePath = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.mori', import.meta.url));
+  const schemaPath = fileURLToPath(new URL('../spec/successor/examples/financial-vault-quote.schema.json', import.meta.url));
+  const sourceText = readFileSync(sourcePath, 'utf8');
+  const schemaText = readFileSync(schemaPath, 'utf8');
+  const initial = JSON.parse(readFileSync(new URL('../spec/successor/examples/financial-vault-quote.snapshots.json', import.meta.url), 'utf8'));
+  const language = createFinancialExpressionSourceV1(schemaText);
+  const cases = [];
+
+  const absent = { ...initial, Args: { ...initial.Args, useSupplied: true } };
+  cases.push(canonical(absent));
+  cases.push(canonical({ ...initial, workInitial: '40' }));
+  const failingEnsure = sourceText.replace('ensures post.last == selected;', 'ensures post.last == deposit;');
+  const failingEnsurePath = file(failingEnsure);
+  const rollback = language.evaluate(failingEnsure, canonical(initial));
+  assert.equal(rollback.status, 'Rejected');
+  assert.equal('post' in rollback, false);
+  assert.equal('descriptors' in rollback, false);
+  failure(simulateArgs(financial, schemaPath, file(canonical(initial)), failingEnsurePath), rollback);
+
+  for (const snapshot of cases) {
+    const expected = language.evaluate(sourceText, snapshot);
+    assert.equal(expected.status, 'Rejected');
+    assert.equal('post' in expected, false);
+    assert.equal('descriptors' in expected, false);
+    const result = invoke(simulateArgs(financial, schemaPath, file(snapshot), sourcePath));
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, JSON.stringify(expected) + '\n');
+    assert.equal(result.stderr.includes('last'), false);
+    assert.equal(result.stderr.includes('Notice'), false);
+  }
+});
+
+test('simulation CLI retains snapshot transport limits and canonical handling', () => {
+  const sourcePath = fileURLToPath(new URL('../spec/successor/examples/expression-counter.mori', import.meta.url));
+  const schemaPath = fileURLToPath(new URL('../spec/successor/examples/expression-counter.schema.json', import.meta.url));
+  const snapshotText = readFileSync(new URL('../spec/successor/examples/expression-counter.snapshots.json', import.meta.url), 'utf8');
+  const language = createExpressionSourceV1(readFileSync(schemaPath, 'utf8'));
+  for (const text of [snapshotText + '\n', '\uFEFF' + snapshotText,
+    '{"Args":{"delta":2},"Obs":{"ready":true},"Pre":{"counter":10,"funds":"100"},"workInitial":"1000"}',
+    ' '.repeat(65537)]) {
+    const expected = language.evaluate(readFileSync(sourcePath, 'utf8'), text);
+    failure(simulateArgs(profile, schemaPath, file(text), sourcePath), expected);
+  }
+  cliFailure(simulateArgs(profile, schemaPath, file(' '.repeat(2_000_001)), sourcePath), 'INPUT_BOUND', 'snapshots', 1);
+  cliFailure(simulateArgs('unknown', 'missing-schema', 'missing-snapshots', 'missing-source'), 'CLI_PROFILE', 'arguments');
+  cliFailure(['simulate', '--profile', profile, '--snapshots', 'missing', '--schema', 'missing', 'missing'], 'CLI_USAGE', 'arguments');
+  cliFailure(simulateArgs(profile, schemaPath, directory, sourcePath), 'CLI_IO', 'snapshots');
+  cliFailure(simulateArgs(profile, schemaPath, file(new Uint8Array([0xff])), sourcePath), 'INVALID_UTF8', 'snapshots', 1);
 });

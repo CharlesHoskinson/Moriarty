@@ -435,8 +435,16 @@ these commands from the repository root:
 ```sh
 node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json --snapshots experiments/moriarty-language/spec/successor/examples/financial-vault-quote.snapshots.json experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
 npm --prefix experiments/moriarty-language run financial-expression-demo
 ```
+
+`simulate` returns the validated pre-state, initial work, and the selected
+source API's exact local candidate result, including its post-state,
+descriptors, and remaining work where the candidate succeeds. A rejection is a
+structured stderr record with no candidate state or effects. It is local only:
+it does not run K, create a proof, or perform a ledger, wallet, service, or
+network action.
 
 `check` returns `SourceChecked` with static work bound `43` for this fixture.
 `format` writes canonical source to stdout and leaves the input file unchanged.
