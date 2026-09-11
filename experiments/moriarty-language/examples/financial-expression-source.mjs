@@ -1,0 +1,17 @@
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+import { createFinancialExpressionSourceV1 } from '../src/successor/financial-expression-source-v1.ts';
+import { canonical } from '../src/successor/expression-wire-v1.ts';
+const read=name=>readFileSync(new URL('../spec/successor/examples/financial-vault-quote.'+name,import.meta.url),'utf8');
+const source=read('mori'),language=createFinancialExpressionSourceV1(read('schema.json')),snapshots=read('snapshots.json');
+const checked=language.check(source),result=language.evaluate(source,snapshots);
+assert.equal(checked.judgmentResult,'SourceChecked');
+assert.equal(result.status,'ExpressionPrepared');
+assert.deepEqual(result.post,{last:'1'});
+assert.deepEqual(result.descriptors,[{operation:'Notice',fields:{allocation:'1',offered:'4'}}]);
+const selected=JSON.parse(snapshots);selected.Args.useSupplied=true;
+const rejected=language.evaluate(source,canonical(selected));
+assert.equal(rejected.code,'OPTION_NONE');
+assert.equal(rejected.status,'Rejected');
+assert.equal('post' in rejected,false);assert.equal('descriptors' in rejected,false);
+console.log(JSON.stringify({sourceCheck:checked,localQuote:result,selectedNone:rejected},null,2));

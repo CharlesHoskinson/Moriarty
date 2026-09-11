@@ -1,0 +1,16 @@
+profile "moriarty-financial-expression-source/1";
+
+agreement VaultQuote {
+  action quote(deposit: UInt128, supply: UInt128, valuation: UInt128, useSupplied: Bool, supplied: Option<UInt128>) {
+    requires valuation > 0;
+    let calculated = to_uint<128>(floor_div(to_uint<256>(deposit) * to_uint<256>(supply), to_uint<256>(valuation)));
+    let selected = useSupplied ? some_value(supplied) : calculated;
+    let allocation = shares<Vault, Alice>(selected);
+    let offered = amount<USD>(deposit);
+    let quote = variant<Quote, Allocation>(allocation);
+    let recovered = project_variant<Allocation>(quote);
+    next.last = quanta(recovered);
+    emit Notice { allocation: recovered, offered: offered };
+    ensures post.last == selected;
+  }
+}

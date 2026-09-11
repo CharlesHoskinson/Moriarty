@@ -1,0 +1,38 @@
+{
+  "candidateSha256": "fb6921a497b1863b33a785e70c3bbb421e078ccea62b6997b4fa106054c2fb17",
+  "head": "07e19d4daa014c320aa483c8b5435bc111a60f71",
+  "exitCode": 0,
+  "elapsedSeconds": 136.255,
+  "callerTimedOut": false,
+  "upstreamCancellation": "not requested",
+  "observedModels": [
+    "grok-4.6"
+  ],
+  "candidateBytesUnchanged": true,
+  "terminal": {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "result": "{\n  \"candidateSha256\": \"fb6921a497b1863b33a785e70c3bbb421e078ccea62b6997b4fa106054c2fb17\",\n  \"head\": \"07e19d4daa014c320aa483c8b5435bc111a60f71\",\n  \"priorReviewDisposition\": \"PRESERVED_EXCEPT_BOM. The prior grok-review.json (SHA256 ca811eef8e9d6eeda6da22a2317bbc22b78f3c266b336a1b15a0e624c710b8aa) remains the full-review record for source P1\u2013P5, CLI non-BOM transport, Terra-as-tests/docs, and every listed scope and exclusion. This follow-up revises only CLI-BOM-R1. No product file changed. No fresh broad audit.\",\n  \"sourceVerdict\": \"PASS_SCOPED\",\n  \"cliVerdict\": \"PASS_SCOPED\",\n  \"requiredCorrections\": [],\n  \"substantiveReasons\": [\n    \"This review revises only the BOM finding. Source PASS_SCOPED and every non-BOM CLI judgment from the prior review are left unchanged.\",\n    \"CLI-BOM-R1 is retracted. Its premise was inverted. WHATWG TextDecoder ignoreBOM:true means do not treat EF BB BF as an encoding signature, so U+FEFF is emitted. ignoreBOM:false (the default) strips a leading UTF-8 BOM. The recorded Node v24.18.1 decode of bytes EF BB BF 78 is codepoints [65279, 120] with true and [120] with false. That matches WHATWG and contradicts the prior claim that ignoreBOM:true omits U+FEFF.\",\n    \"experiments/moriarty-language/src/cli.ts still decodes with TextDecoder('utf-8', { fatal: true, ignoreBOM: true }). expression-cli.md requires a BOM to be retained by the fatal UTF-8 decoder and then handled by parser/canonical admission. After valid transport, check must equal the public API on the unstripped strings. The current option is the contract-aligned decoder.\",\n    \"The supplied bom-reproduction.mjs is internally consistent with bom-reproduction.json. Direct decoder asserts require true \u2192 '\\\\uFEFFx' and false \u2192 'x'; the JSON reports those codepoints. For both moriarty-expression-source/1 and moriarty-financial-expression-source/1, BOM-prefixed source yields CLI exit 1, empty stdout, and stderr equal to factory(schemaText).check(sourceText) with code UNEXPECTED_CHAR; BOM-prefixed schema yields INPUT_SCHEMA; format of BOM-prefixed source yields UNEXPECTED_CHAR; source and schema files retain the written text. passed:true and that conclusion follow from those asserts.\",\n    \"The inlined tests already encode the same oracle: '\\\\uFEFF'+source compared to createExpressionSourceV1(schema).check(input), and schema cases including '\\\\uFEFF'+schema. A stripping CLI would admit EF BB BF file bytes and disagree with API.check('\\\\uFEFF'+text). Applying the prior correction (ignoreBOM:false, or omitting ignoreBOM) would strip U+FEFF, violate retention, and fail those tests. Do not change the decoder to satisfy the retracted finding.\",\n    \"CLI-BOM-R1 was the sole CHANGES_REQUESTED item. With it retracted, cliVerdict is PASS_SCOPED. This is still not full SP02, financial-transition, ledger, or source-defined schema acceptance.\"\n  ],\n  \"checksPerformed\": [\n    \"Narrow BOM-only static re-evaluation of unchanged cli.ts readText against expression-cli.md BOM-retention and exact-API-after-transport text, plus the inlined expression-cli.test.mjs BOM source/schema cases.\",\n    \"Internal-consistency check of bom-reproduction.mjs versus bom-reproduction.json: decoder asserts, codepoint arrays, both-profile check/format routing, expected rejection codes, file-retention asserts, and the script conclusion string.\",\n    \"Option-usage check: current source uses ignoreBOM:true; measured true retains U+FEFF; measured false strips it; proposed ignoreBOM:false would invert the recorded contract.\",\n    \"WHATWG ignoreBOM semantics checked against the recorded Node v24.18.1 output. They agree. The prior finding's WHATWG/Node stripping claim does not.\",\n    \"Prior full-review checksPerformed were not re-executed. They remain the source and non-BOM CLI record. Parent 679-test / 10-probe / RESULT-01 records remain observations, not this review's execution.\"\n  ],\n  \"limitations\": [\n    \"This reviewer did not personally execute bom-reproduction.mjs, npm test, tsc, or any CLI process. Decoder codepoints, CLI exits, and API equality are taken from the supplied SHA256-identified script and output, checked for internal consistency against the inlined cli.ts, spec, and tests.\",\n    \"Static review only. MANIFEST_SHA256 and file sha256 pins are not recertified here. Candidate bytes are treated as unchanged because the task states they are unchanged and the inlined cli.ts still has ignoreBOM:true.\",\n    \"Host measurement in the evidence is Node v24.18.1. Some Node API prose describes ignoreBOM as skipping a BOM; that wording is the likely source of CLI-BOM-R1 and is not a product defect in cli.ts. Portable contract is WHATWG plus the expression-cli.md retention sentence.\",\n    \"Omitted evidence unchanged from the prior review: original-profile-files bytes (hashes only), independent-vault-arithmetic-01.json (referenced, not inlined), full test log (summary only), root README/grammar mirror (stated unedited, not inlined).\",\n    \"Scope remains financial-expression-source/1 plus explicit check/format CLI for both source profiles. Not accepted: full SP02, source-defined schema authority, multi-action selection, genesis/constants, identity escaping, financial transitions, K/proof/native/network/Preview, or ACTUS/DeFi.\",\n    \"No exhaustive source-space, formal parser/evaluator correspondence, or overload-complete arithmetic audit beyond the inlined tests and the previously accepted 48-constructor runtime. Prior models and limits remain unchanged.\"\n  ]\n}",
+    "stop_reason": "end_turn",
+    "usage": {
+      "input_tokens": 22254,
+      "output_tokens": 7242,
+      "cache_read_input_tokens": 1152,
+      "cache_creation_input_tokens": 0,
+      "server_tool_use": {
+        "web_search_requests": 0
+      }
+    },
+    "modelUsage": {
+      "grok-4.6-build": {
+        "inputTokens": 22254,
+        "outputTokens": 7242,
+        "cacheReadInputTokens": 1152,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.01505112
+      }
+    }
+  }
+}

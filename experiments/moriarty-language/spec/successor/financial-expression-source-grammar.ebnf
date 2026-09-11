@@ -1,0 +1,120 @@
+(* ISO/IEC 14977 EBNF for moriarty-financial-expression-source/1.
+   Source header must match exactly; syntax/0 remains separate.
+   Lexical rules are lexical.md plus profile-gated [, ] and ? punctuation.
+   Parentheses create no AST nodes. Conditional is right-associative below Or;
+   other precedence and associativity match syntax/0.
+   Generic names are excluded from ordinaryPrimaryName.
+   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
+   declarations256, statements256, record fields64, ordinary call arguments64,
+   collection intrinsic arguments128, action parameters256.
+   Integer lexical tokens remain unsigned canonical decimals; - is separate.
+   The source contract supplies all type/domain/metadata and diagnostic rules.
+   Parsing const/state or multiple actions does not make them executable.
+*)
+
+program = profileDecl, agreementDecl, ? end of file ? ;
+
+profileDecl = "profile", stringToken, ";" ;
+
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | constDecl
+            | stateDecl
+            | actionDecl ;
+
+unitDecl = "unit", identifier, ";" ;
+
+partyDecl = "party", identifier, ";" ;
+
+assetDecl = "asset", identifier, ":", type, ";" ;
+
+constDecl = "const", identifier, ":", type, "=", expression, ";" ;
+
+stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
+
+actionDecl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
+
+effectFields = effectField, { ",", effectField } ;
+
+effectField = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ typeArgs ] ;
+
+typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
+
+typeArgument = type | signedInteger ;
+signedInteger = [ "-" ], integerToken ;
+
+expression = conditional ;
+
+conditional = disjunction, [ "?", expression, ":", conditional ] ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparisonOp, sum ] ;
+
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier | "[", expression, "]" } ;
+
+ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record, amount, shares, variant, project_variant, to_uint ? ;
+
+primary = "-", integerToken
+        | integerToken
+        | stringToken
+        | "true"
+        | "false"
+        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
+        | genericCall
+        | dynamicOrLiteral
+        | financialGeneric
+        | recordLiteral
+        | "(", expression, ")" ;
+
+genericCall = ( "some" | "none" | "collection" | "quantity" ),
+              "<", typeArgument, { ",", typeArgument }, ">",
+              "(", [ arguments ], ")" ;
+
+dynamicOrLiteral = ( "amount" | "shares" ), [ typeArgs ],
+                   "(", [ arguments ], ")" ;
+
+financialGeneric = ( "variant" | "project_variant" | "to_uint" ),
+                   typeArgs, "(", [ arguments ], ")" ;
+
+recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+stringToken = ? JSON string token defined in lexical.md ? ;

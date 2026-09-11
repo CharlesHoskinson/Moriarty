@@ -13,9 +13,6 @@ export type ExpressionResult =
   | { status: 'Rejected'; code: string; span: ExpressionSpan; nodePath: string[]; workUsed: string }
   | { status: 'ExpressionPrepared'; post: Record<string, any>; descriptors: any[]; workRemaining: string }
   | { judgmentResult: 'ExpressionValue'; type: ValueType; value: any; workRemaining: string };
-export type ExpressionCheckResult =
-  | { judgmentResult: 'ExpressionChecked' }
-  | Extract<ExpressionResult, { status: 'Rejected' }>;
 type Role = 'int' | 'id' | 'bool' | 'text' | 'type' | 'units' | 'view' | 'expr' | 'list' | 'fields';
 const BINARY: [string, Role][] = [['left', 'expr'], ['right', 'expr']];
 const OPERANDS: Record<string, [string, Role][]> = {
@@ -321,7 +318,7 @@ class Machine {
       valueBound(type, result, this.schema, 'VALUE_BOUND'); return result;
     });
   }
-  run(request: string, checkOnly = false): ExpressionResult | ExpressionCheckResult {
+  run(request: string): ExpressionResult {
     try {
       // The largest legal separate components fit below this derived envelope
       // limit even with JSON string escaping. Each semantic component still has
@@ -352,7 +349,6 @@ class Machine {
           this.infer(n, [i], n.constructor === 'Ensure', true);
         }));
       } else this.infer(r.core, [], false);
-      if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
       const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
       validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
       this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
@@ -372,24 +368,16 @@ class Machine {
 
 /** The trusted host binds Σ once. Untrusted evaluate() requests cannot supply or
  * reclassify it. This factory is not profile registration or financial authority. */
-export function createFinancialExpressionContractV1(schemaCanonicalJSON: string): {
-  evaluate(requestCanonicalJSON: string): ExpressionResult;
-  check(requestCanonicalJSON: string): ExpressionCheckResult;
-} {
+export function createFinancialExpressionContractV1(schemaCanonicalJSON: string): { evaluate(requestCanonicalJSON: string): ExpressionResult } {
   // Retain only the immutable text; every call gets a fresh owned schema tree.
-  // check() performs structure/schema/whole-action typing only: it cannot certify
-  // supplied snapshots, run guards, or publish a prepared state or descriptors.
-  function run(requestCanonicalJSON: string, checkOnly: boolean): ExpressionResult | ExpressionCheckResult {
+  // Schema defects are returned through the same defined rejection boundary.
+  return Object.freeze({ evaluate(requestCanonicalJSON: string): ExpressionResult {
     let schema: Schema;
     try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
     catch (error) {
       if (!(error instanceof ExpressionFailure)) throw error;
       return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
     }
-    return new Machine(schema).run(requestCanonicalJSON, checkOnly);
-  }
-  return Object.freeze({
-    evaluate: (request: string) => run(request, false) as ExpressionResult,
-    check: (request: string) => run(request, true) as ExpressionCheckResult,
-  });
+    return new Machine(schema).run(requestCanonicalJSON);
+  } });
 }
