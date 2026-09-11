@@ -1,0 +1,84 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "candidateSha256": "f1d4eaf53c43db8d9f49940aff2d6dd05a492495c6730e0148877bf855c4cbee",
+  "head": "b7c6821504a35227c31d1b185289c94dba9dec17",
+  "scope": "Fresh independent non-author source review of the 8 files in deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate, read against the supplied historical loan/swap observations, the swap terminal_predicate.py, the preserved-input assignment and the root check receipts. Source mechanism only. This is not runtime, systemd, Preview, containment, financial, SP05/MC02 or admission acceptance.",
+  "summary": "The core mechanism is sound. It requires a nonzero 32-hex startup InvocationID with a canonical positive MainPID string. The terminal predicate is strict, complete and bound to that InvocationID, and it rejects the not-found/default loan snapshot, mismatches, duplicate/malformed shows, post-stop observations and pre-existing stop evidence. A matching running unit returns NOT_TERMINAL with no files or stop, and the same directory later accepts the exited capture. Invalid identity, show failure, predicate failure and persistence failure never reach stop. Stop runs only after an O_EXCL, fsynced file and directory save, and FINANCIAL_COMPLETE is never consulted. One blocking defect remains: the stop phase loses the actual stop outcome and misclassifies it.",
+  "findings": [
+    {
+      "id": "OPUS-SP05LER-1",
+      "blocking": true,
+      "severity": "medium",
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+      "title": "Actual stop outcome is swallowed and conflated with stop-receipt persistence failure",
+      "evidence": "In retain_exit_evidence, transport.stop(unit) and durable_exclusive_save(stop_path, stop_record) share one try block ending in a bare `except Exception: explicit_stop_completed = False`. Trace 1: stop returns rc=0 (the unit is actually stopped), then saving explicit-stop.json raises OSError (ENOSPC/fsync/EEXIST). The function returns status STOP_FAILED_AFTER_RETENTION and explicitStopCompleted=False with no stop return code, no error class and no receipt. A successful live stop is reported as a stop failure, and its outcome survives in neither durable evidence nor the return value. Trace 2: transport.stop raises (e.g. subprocess.TimeoutExpired from invoke_user_systemctl). Nothing is recorded or returned beyond stopAttempted=True, so the error class and detail are discarded. A stop result without returncode is internally labelled ValueError('SHOW_FAILED') and then also swallowed. This contradicts the task requirement that an actual stop failure stay distinct, and the README claim that 'Cleanup/stop errors stay explicit'. No test covers rc=0 followed by stop-receipt persistence failure. test_stop_exception_after_retention_is_not_command_success only asserts the status.",
+      "repair": "Split stop invocation from stop-receipt persistence. Return stopReturnCode (or null), stopErrorClass/stopError when transport.stop raises, and stopReceiptPersisted. Use a distinct status such as STOP_RECEIPT_PERSISTENCE_FAILED when rc=0 but the receipt did not persist, and keep STOP_FAILED_AFTER_RETENTION for a nonzero rc or an exception. On a transport exception, try to durably save an explicit-stop record with the exception class. Replace the 'SHOW_FAILED' label in the stop path. Keep exitRetained=True, financialAcceptance=False and containmentAcceptance=False in every stop outcome. Add regressions through retain_loan_main_exit for (a) stop rc=0 with an injected stop-receipt save failure and (b) a stop exception that asserts the recorded error detail. Adjust the README sentence to match."
+    },
+    {
+      "id": "OPUS-SP05LER-2",
+      "blocking": false,
+      "severity": "low",
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+      "title": "A malformed custom transport result can raise out of the function",
+      "evidence": "`record['returnCode'] = int(getattr(show_result, 'returncode', 1))` and `list(getattr(show_result, 'argv', ...))` run outside the try block. They only check hasattr(returncode), so a custom transport returning a non-int returncode or non-iterable argv raises ValueError/TypeError out of retain_exit_evidence without a persisted observation. There is no stop, so this fails closed. UserSystemctlTransport coerces returncode to int inside show(), so the shipped path is unaffected.",
+      "repair": "Coerce and validate returncode/argv inside the show try block, or route the transport through _coerce_result."
+    },
+    {
+      "id": "OPUS-SP05LER-3",
+      "blocking": false,
+      "severity": "low",
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/launch_contract.py",
+      "title": "Unit-name regex permits a leading '-'",
+      "evidence": "require_unit_name accepts `[A-Za-z0-9:_.@-]+\\.service`, so a name like `-q.service` or `--x.service` passes and is placed before the unit position in the systemctl argv without `--`. The unit comes from the admitted caller, so exposure is limited.",
+      "repair": "Require a leading alphanumeric character, or insert `--` before the unit in the show and stop argv."
+    },
+    {
+      "id": "OPUS-SP05LER-4",
+      "blocking": false,
+      "severity": "low",
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+      "title": "Only active/running counts as non-terminal, and result shape is inconsistent",
+      "evidence": "_same_invocation_running requires SubState=running. Other same-invocation transient states such as deactivating or reloading become RETENTION_FAILED and persist terminal-observation.json, which makes that directory unusable afterwards. This fails closed with no stop. The early-return dicts for UNIT/EVIDENCE_DIR and STOP_EVIDENCE_PRESENT omit the `pending` key. The README pattern uses result.get('pending'), so this is cosmetic.",
+      "repair": "Optionally document that non-running, non-terminal states are final failures for that directory. Include pending=False in every return."
+    },
+    {
+      "id": "OPUS-SP05LER-5",
+      "blocking": false,
+      "severity": "low",
+      "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/README.md",
+      "title": "Caller obligations could be more complete",
+      "evidence": "The README states the admission, launch properties, startup observation, parent deadline/cleanup ownership and non-acceptance boundaries honestly. It does not say that the caller must give each unit/invocation a dedicated evidence directory. It also omits two points from preserved-input step 6: containment (cgroup/prover/container) observation before timer cancellation remains the caller's duty after stop, and ControlGroup is recorded but not checked by the predicate. A crash between the observation save and stop cannot be finished by a second call, which fails PERSISTENCE_FAILED and leaves the unit to parent cleanup.",
+      "repair": "Add brief caller-obligation lines on dedicated evidence directories, post-stop containment observation, and the crash-between-save-and-stop behavior."
+    }
+  ],
+  "checks": {
+    "reviewerExecutedNothing": true,
+    "sourceInspection": [
+      "Callable path loan_exit_operator.retain_loan_main_exit -> exit_retention.retain_exit_evidence -> transport.show/stop. UserSystemctlTransport requires an explicit runner. invoke_user_systemctl runs only when passed. cli collect-once always refuses, and import has no side effects.",
+      "require_startup_identity: loaded, active, MainPID matching [1-9][0-9]* as str (bool/int/padded/leading-zero rejected), InvocationID 32 lowercase hex and nonzero.",
+      "require_exit_zero is semantically identical to the inspected swap predicate. All 11 fields must be present and equal, including Type=exec, RemainAfterExit=yes, Transient=yes, ExecMainCode=1, ExecMainStatus=0 and the same InvocationID. The authentic loan snapshot (not-found, ExecMainCode=0) is rejected.",
+      "parse_systemctl_show rejects empty input, lines without '=', non-alphanumeric keys (including FINANCIAL_COMPLETE) and duplicate keys.",
+      "Order: stop-evidence precheck -> startup identity -> show -> NOT_TERMINAL early return (no persist, no stop) -> persist with O_EXCL|O_NOFOLLOW, file fsync and directory fsync -> exitRetained requires predicate, no persist failure, rejected=None, the file present and its digest -> stop.",
+      "Invalid identity, show failure/exception, parse/predicate rejection and persistence failure all return before stop.",
+      "No writes to historical deliverables. Tests read authentic observations and write only to temporary directories."
+    ],
+    "rootReportedNotReverified": [
+      "root-tests04: 24 unittests OK (18 exit_retention + 6 terminal_predicate), exit 0, output sha c71e7ee6...",
+      "root-independent04: running-to-exited calls [show, show, stop] PASS; actual fsync-failure injection calls [show] -> RETENTION_FAILED PASS",
+      "Source hashes in root receipts match the manifest file list supplied"
+    ]
+  },
+  "limitations": [
+    "No-tools review. I did not verify filesystem contents, hashes, the candidate.json manifest or test execution, and I rely on root's validation.",
+    "All behavioral evidence comes from offline scripted transports and a local Python subprocess stand-in. It is not systemd, Preview, wallet or network evidence and cannot establish real Type=exec/RemainAfterExit retention semantics.",
+    "Source approval, once granted, would not admit an allocation, waive resource/cleanup gates, close the Preview command-exit predicate, or establish containment, financial acceptance, SP05, MC02 or PCD.",
+    "Historical loan attempts remain consumed, and the old raw exit is unrecoverable.",
+    "The author conversation and the other current review were not read. The first author call's usage remains unknown."
+  ],
+  "reviewerIdentity": {
+    "model": "claude-opus-5",
+    "effort": "medium",
+    "mode": "fresh, no tools, non-author",
+    "role": "independent source reviewer (Claude Opus leg of Opus + Astra medium routing)"
+  }
+}
