@@ -54,7 +54,7 @@ The successor semantic freeze and full SP02/SP03 acceptance remain open. A K def
 
 ### Successor source grammar (EBNF)
 
-This is the complete syntax grammar for **`moriarty-expression-source/1`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf). The parser, formatter, checker and local evaluator support all 40 Core expression constructors within this profile. Parsing a declaration does not establish executable support: constants, state declarations and multiple actions are rejected by this source factory. The [source contract](experiments/moriarty-language/spec/successor/expression-source.md) defines the supported schema binding and diagnostics. The eight financial-expression additions and complete successor language remain separate unfinished work.
+This is the complete syntax grammar for **`moriarty-expression-source/1`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf). The parser, formatter, checker and local evaluator support all 40 Core expression constructors within this profile. Parsing a declaration does not establish executable support: constants, state declarations and multiple actions are rejected by this source factory. The [source contract](experiments/moriarty-language/spec/successor/expression-source.md) defines the supported schema binding and diagnostics. The separate [financial expression source profile](experiments/moriarty-language/spec/successor/financial-expression-source.md) adds eight constructors, UInt256 and dimensional arithmetic. Complete successor authoring remains open.
 
 The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.
 
@@ -407,7 +407,7 @@ Simulation does not sign, prove, submit or consume a ledger state. The acceptanc
 
 ### Check an agreement of your own
 
-The frontend exposes JavaScript APIs rather than a standalone language CLI. Save this as `check-agreement.mjs` in the repository root:
+The atomic frontend used by the loan and swap demo exposes JavaScript APIs. Save this as `check-agreement.mjs` in the repository root:
 
 ```js
 import {readFileSync} from 'node:fs';
@@ -426,6 +426,30 @@ node check-agreement.mjs experiments/moriarty-language/spec/examples/loan.mori
 ```
 
 Pass your own source file in place of the example. `check` returns a typed program or a diagnostic with a code and source span. `parse` returns the source tree, and `elaborate` returns the bound Core program. Simulating a new agreement also requires constructing its instance configuration, action inputs and authority; the demo script shows those API calls.
+
+### Check and format financial expression source
+
+The expression CLI takes an explicit source profile and a trusted schema. Run
+these commands from the repository root:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-expression-source/1 --schema experiments/moriarty-language/spec/successor/examples/financial-vault-quote.schema.json experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 experiments/moriarty-language/spec/successor/examples/financial-vault-quote.mori
+npm --prefix experiments/moriarty-language run financial-expression-demo
+```
+
+`check` returns `SourceChecked` with static work bound `43` for this fixture.
+`format` writes canonical source to stdout and leaves the input file unchanged.
+The demo computes a local vault quote with explicit UInt256 intermediates and
+shows rejection of a selected absent Option without publishing state or effects.
+It performs expression evaluation; it does not transfer assets or submit a
+transaction. The same CLI supports `moriarty-expression-source/1` with that
+profile's source and schema. See the [CLI contract](experiments/moriarty-language/spec/successor/expression-cli.md)
+for argument forms, diagnostic records and exit codes.
+
+The component supports one action against a trusted schema. Source-defined
+schemas, multiple actions, full financial transitions and full SP02 acceptance
+remain open.
 
 ### Inspect the generated Compact
 
