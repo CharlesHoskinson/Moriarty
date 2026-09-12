@@ -25,6 +25,10 @@ node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.state.json experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
 npm --prefix experiments/moriarty-language run financial-lifecycle-demo
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+npm --prefix experiments/moriarty-language run loan-lifecycle-demo
 ```
 
 The new profile rejects `--schema`. Check and format reject `--action`.
