@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deep_research_assignment id="moriarty-defi-interface-specification-2026-09-12" version="2.0">
+
+  <title>Moriarty DeFi Kernel SDK Interface: Write the Specification</title>
+
+  <research_date>2026-09-12</research_date>
+
+  <objective>
+    Produce one specification. Three agents each write the finished normative
+    text for their assigned sections of it; the orchestrator assembles those
+    sections into a single document that replaces the current one. The output is
+    specification prose, not a review of a specification. Do not return verdicts,
+    scores, matrices, registers, coverage tables or commentary about what should
+    change. Return the text that goes in the document.
+  </objective>
+
+  <role>
+    Act as three specification authors with disjoint scope. Each of you is
+    writing part of a document a competent engineer will implement from, and an
+    adversary will attack. Write as the author of record, not as a reviewer.
+  </role>
+
+  <writing_standard>
+    Normative, present tense, declarative. State what the interface does, what it
+    refuses, and under what conditions. No hedging, no confidence markers, no
+    "should consider". Where a constraint is real, state it as a constraint.
+    Where something is unknown, name it as unknown in the open-parameters section
+    rather than writing around it. Prefer a smaller specification: an element
+    earns its place only if a named behaviour requires it and a named failure
+    occurs without it. Use a table when the content is dense and repetitive;
+    prose otherwise. Never present an off-ledger fact as anchored, and never let
+    a successful outer transaction stand for a successful financial result.
+  </writing_standard>
+
+  <target status="S2" path="docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md" commit="be2bf44">
+    The document being replaced, 400 lines in fourteen sections: 1 Scope,
+    2 Interface model, 3 Language changes depended on, 4 Type surface, 5 Call
+    surface, 6 Foreign authorization, 7 Import acceptance, 8 Cost model,
+    9 Application fee and operator compensation, 10 Refusal contract,
+    11 Admission ladder, 12 Decisions, 13 Deliberately not offered, 14 Open
+    parameters. Keep this section structure unless a section should not exist.
+    Inherited constraints are in the sibling kernel design,
+    docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md.
+    Positions already reversed once are recorded in wiki/defi-kernel-sdk-interface.md;
+    do not reintroduce one without new cited evidence.
+  </target>
+
+  <inputs>
+    <input kind="pinned_repositories" status="S6" path="/home/charl/protocol-graph/repos">
+      near-core b0e9daa54b1b427acce0ab4d23e22d96e8e51003;
+      near-neps dcc0bcbd452f68c936696e5f9552e567c3b162e0;
+      near-intents 32a7836f825e8c984c26149f4456793ec7e3d49a;
+      near-mpc e87591426582d62eff83e3c084f356abbfcfdcbb;
+      tron-java b33eed89a6a424c498d4fb1b03ca2c86eddf4840;
+      tron-protocol 8432beca98c52ba04c82aea0b48ae9f9f882c82a;
+      tron-docs 926421f572bdbddbdb19b8cd6a64dc51b317f73d;
+      tron-tips c29d7363642ba7bc34d0db75721bf67533db5220;
+      hl-python-sdk 2fdb18f9517675ea03695a0962bd19eece9c83f0;
+      hl-contracts d7e66aa751ffbd19bfd2b90fd5d9a3d8f32d99ee;
+      hl-node 405cc08b17a727ee51b0f9128918955a84439915.
+      Read-only. Cite path and line in your evidence note for anything you assert.
+    </input>
+    <input kind="captured_sources" status="S6" path="raw/sources/defi-kernel-multichain-2026-09-11/">
+      117 captured documents with receipts.
+    </input>
+  </inputs>
+
+  <established_findings>
+    Already established. Build on these; do not re-derive them. Refute any one
+    only with better cited evidence, and say plainly that you are doing so.
+    <claim id="E01">TRON raw transaction data has no chain identifier. The signature covers sha256 of the serialized raw data, which includes the TAPOS reference-block fields, so TAPOS is signature-protected but is not a chain identifier.</claim>
+    <claim id="E02">TRON TAPOS compares a 2-byte key, the block number modulo 65536, against an 8-byte slice of the reference block identifier, within a 65536-block window, bounded further by a 24-hour expiration ceiling. Effective strength is 64 bits of block-hash content.</claim>
+    <claim id="E03">Verified live: a Nile transaction's reference hash equals bytes 8 through 16 of the Nile block identifier at the referenced height and differs from mainnet at the same height. Genesis identifiers differ across mainnet, Nile and Shasta.</claim>
+    <claim id="E04">TRON has a per-network chain id equal to the trailing four bytes of the genesis block identifier, verified live as mainnet 0x2b6653dc, Nile 0xcd8690dc, Shasta 0x94a9059e. It is used only by the JSON-RPC chain id, the virtual machine chain id opcode and the TIP-712 domain separator, and is never consulted in node transaction validation.</claim>
+    <claim id="E05">TRON addresses derive from the public key with no network prefix. The same address was observed live on both Nile and mainnet, so one key controls the same address on every TRON network.</claim>
+    <claim id="E06">A NEAR delegate action carries sender, receiver, actions, nonce, maximum block height and public key, and no network field. Its signed preimage carries a message-type discriminant, not a chain tag.</claim>
+    <claim id="E07">The outer NEAR transaction carries a block hash checked against the local block store, but the delegate-action application path never re-checks it. Inner validity rests on maximum block height against local height and nonce against local state.</claim>
+    <claim id="E08">NEAR implicit account identifiers are the hex encoding of the public key with no network salt, so one key yields the same account identifier on both networks.</claim>
+    <claim id="E09">Measured live, NEAR testnet height led mainnet by roughly 52.9 million blocks, so maximum block height protects asymmetrically: a testnet-signed action is not expired on mainnet.</claim>
+    <claim id="E10">NEP-641 is Final, binds a chain id inside a signed offchain envelope checked against the runtime chain id, and is implemented in the intents wallet contract. No equivalent exists in the NEP-366 delegate path.</claim>
+  </established_findings>
+
+  <assignments>
+
+    <agent id="A1" name="Interface">
+      <writes>Sections 1, 2, 3, 4, 5, 6, 7 and 13.</writes>
+      <decide_before_writing>
+        <item>Which records and methods survive, which are absent and needed, and which exist because they sound complete rather than because a behaviour requires them.</item>
+        <item>The full lifecycle, including unknown execution and partial fill, and which record makes each transition idempotent across a crash.</item>
+        <item>Whether the import sequence genuinely works at predecessor fan-in one, or whether the specification depends on a value it does not have.</item>
+        <item>Whether the two network-binding forms survive the established findings unchanged, or must be renamed, split or narrowed.</item>
+        <item>What the surface silently permits that section 13 claims to forbid.</item>
+      </decide_before_writing>
+    </agent>
+
+    <agent id="A2" name="Economics">
+      <writes>Sections 8 and 9.</writes>
+      <decide_before_writing>
+        <item>Whether the planes are jointly exhaustive and mutually exclusive, and what work is performed but unpriced.</item>
+        <item>For every number: whether a source fixes it, a measurement would fix it, or it is arbitrary. Arbitrary numbers do not go in the text; they go to section 14 as named unknowns.</item>
+        <item>Whether hard-stopping on budget exhaustion can strand an already dispatched foreign leg, and what reserve makes the stop safe.</item>
+        <item>For each operator role, the most profitable deviation available and what prevents it. Delete any role whose work is not separately priced or whose misbehaviour has no consequence.</item>
+        <item>Whether purchased capacity is fundable under bursty demand without a subsidy the specification does not name.</item>
+      </decide_before_writing>
+    </agent>
+
+    <agent id="A3" name="Safety and admission">
+      <writes>Sections 10, 11 and 14.</writes>
+      <decide_before_writing>
+        <item>Every way each method can fail, and whether the refusal set covers it. Remove codes no path emits; add codes for uncovered failures.</item>
+        <item>The admission status of each adapter under the established findings, with the binding mechanism, its quantified strength, its validity window and the conditions under which it fails.</item>
+        <item>Whether a custody or envelope contract is required rather than optional for each foreign venue.</item>
+        <item>Whether each tier boundary holds, or whether a lower tier already releases value against imported evidence.</item>
+        <item>Which routes must be refused outright rather than gated, and say so in the text.</item>
+      </decide_before_writing>
+    </agent>
+
+  </assignments>
+
+  <return>
+    <item name="sections">The finished normative text for your assigned sections, in the document's voice, ready to assemble without editing. Use the target's heading numbers and levels.</item>
+    <item name="decisions">One row per decision you made, as: decision, the alternative you rejected, and the reason it lost. The orchestrator composes section 12 from these rows.</item>
+    <item name="unknowns">Every number or mechanism you could not fix from evidence, phrased as it should appear in section 14.</item>
+    <item name="evidence_note">Separate from the specification text: your path-and-line citations for every assertion, so a reader can check the document without the document carrying apparatus.</item>
+  </return>
+
+  <constraints>
+    <contract kind="specification_is_standalone">The delivered text carries no trace of how it was made: no agents, rounds, votes, scores, personas, review passes or confidence markers. Citations live in the evidence note, not in the specification.</contract>
+    <contract kind="no_invented_parameters">Never supply a number the evidence does not support. Name it as unknown in section 14 and say what would fix it.</contract>
+    <contract kind="read_only">Pinned repositories are read-only. Do not modify, check out, rebase or fetch. Write only your return and the scratchpad.</contract>
+    <contract kind="no_network_writes">Read-only queries to public endpoints are permitted. Broadcasting a transaction or changing state on any network, testnet included, requires prior authorization and is outside this assignment.</contract>
+    <contract kind="evidence_discipline">Documentation states intent; code and live observation state behaviour. Where they disagree, the specification follows behaviour and says so. Inferred similarity between two protocols is never evidence of substitutability.</contract>
+    <contract kind="no_attribution">No agent, model, session or tool attribution in the specification, any commit message, tag or pull request.</contract>
+  </constraints>
+
+  <assembly>
+    The orchestrator assembles the three returns into one document, composes
+    section 12 from the decision rows, merges the unknowns into section 14,
+    resolves every conflict explicitly rather than by blending incompatible
+    positions, and keeps the specification shorter in speculative content than
+    the document it replaces. Disagreements between agents are decided on cited
+    evidence, and the losing position is recorded in the reconciliation note that
+    accompanies the specification, never inside it.
+  </assembly>
+
+</deep_research_assignment>
