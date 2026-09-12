@@ -9,12 +9,20 @@ import { NUMERIC, aggregateBound, numericFits, resolve, same, schemaShape, typeS
 import type { Schema, ValueType } from './financial-expression-types-v1.ts';
 import { admitRepaymentStateJSON } from './repayment.ts';
 import type { Allowance, Balance, Obligation, RepaymentState } from './repayment.ts';
-import { debitExpressionWork, prepareStagedKernel } from './funded-expression-source-v1.ts';
-import type { FundedExpressionResult } from './funded-expression-source-v1.ts';
+import { admitFinancialLifecycleStateJSON } from './financial-lifecycle.ts';
+import type { LifecycleObligation, LifecycleState } from './financial-lifecycle.ts';
+import {
+  debitExpressionWork,
+  prepareStagedKernel,
+  prepareStagedLifecycleKernel,
+  lifecycleResultBound,
+} from './funded-expression-source-v1.ts';
+import type { FundedExpressionResult, LifecycleExpressionResult } from './funded-expression-source-v1.ts';
 
 export const FINANCIAL_EXPRESSION_CONTRACT_V1 = 'moriarty-financial-expression-contract/1';
 export const FINANCIAL_EXPRESSION_CONTRACT_V2 = 'moriarty-financial-expression-contract/2';
 export const FINANCIAL_EXPRESSION_CONTRACT_V3 = 'moriarty-financial-expression-contract/3';
+export const FINANCIAL_EXPRESSION_CONTRACT_V4 = 'moriarty-financial-expression-contract/4';
 const KERNEL_IDENTIFIER = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 function validKernelIdentity(identity: unknown, strict: boolean): identity is string {
   if (typeof identity !== 'string') return false;
@@ -106,7 +114,9 @@ function pairKey(party: string, asset: string): string {
   return party + '\u0000' + asset;
 }
 function operandsFor(contract: string): Record<string, [string, Role][]> {
-  if (contract === FINANCIAL_EXPRESSION_CONTRACT_V3) return { ...OPERANDS, ...READ_OPERANDS, ...POST_READ_OPERANDS };
+  if (contract === FINANCIAL_EXPRESSION_CONTRACT_V3 || contract === FINANCIAL_EXPRESSION_CONTRACT_V4) {
+    return { ...OPERANDS, ...READ_OPERANDS, ...POST_READ_OPERANDS };
+  }
   return contract === FINANCIAL_EXPRESSION_CONTRACT_V2 ? { ...OPERANDS, ...READ_OPERANDS } : OPERANDS;
 }
 function has(v: object, name: string): boolean { return Object.hasOwn(v, name); }
@@ -122,12 +132,12 @@ class Machine {
   schema: Schema;
   contract: string;
   operandTable: Record<string, [string, Role][]>;
-  financialPre: RepaymentState | undefined;
-  financialPost: RepaymentState | undefined;
-  obligations = new Map<string, Obligation>();
+  financialPre: RepaymentState | LifecycleState | undefined;
+  financialPost: RepaymentState | LifecycleState | undefined;
+  obligations = new Map<string, Obligation | LifecycleObligation>();
   balances = new Map<string, Balance>();
   allowances = new Map<string, Allowance>();
-  postObligations = new Map<string, Obligation>();
+  postObligations = new Map<string, Obligation | LifecycleObligation>();
   postBalances = new Map<string, Balance>();
   postAllowances = new Map<string, Allowance>();
   sourceBytes = 0;
@@ -144,7 +154,7 @@ class Machine {
   args: Record<string, any> = {};
   obs: Record<string, any> = {};
   located = new WeakSet<ExpressionFailure>();
-  constructor(schema: Schema, contract = FINANCIAL_EXPRESSION_CONTRACT_V1, financialPre?: RepaymentState) {
+  constructor(schema: Schema, contract = FINANCIAL_EXPRESSION_CONTRACT_V1, financialPre?: RepaymentState | LifecycleState) {
     this.schema = schema;
     this.contract = contract;
     this.operandTable = operandsFor(contract);
@@ -414,7 +424,8 @@ class Machine {
         const post = FINANCIAL_POST_READS.has(k);
         if (post ? this.financialPost === undefined : this.financialPre === undefined) fail('FINANCIAL_CONTEXT_REQUIRED');
         const identity = v[0];
-        if (!validKernelIdentity(identity, this.contract === FINANCIAL_EXPRESSION_CONTRACT_V3)) fail('INVALID_IDENTIFIER');
+        if (!validKernelIdentity(identity, this.contract === FINANCIAL_EXPRESSION_CONTRACT_V3
+          || this.contract === FINANCIAL_EXPRESSION_CONTRACT_V4)) fail('INVALID_IDENTIFIER');
         if (k in OBLIGATION_READS || k in POST_OBLIGATION_READS) {
           const field = post ? POST_OBLIGATION_READS[k] : OBLIGATION_READS[k];
           const obligation = (post ? this.postObligations : this.obligations).get(identity);
@@ -479,7 +490,7 @@ class Machine {
     this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
     return fieldTypes;
   }
-  bindFinancialPost(post: RepaymentState): void {
+  bindFinancialPost(post: RepaymentState | LifecycleState): void {
     this.financialPost = post;
     this.postObligations = new Map();
     this.postBalances = new Map();
@@ -527,7 +538,7 @@ type V3PrefixReady = {
   descriptors: any[];
   prefixUsed: bigint;
   continueSuffix(
-    financialPost: RepaymentState,
+    financialPost: RepaymentState | LifecycleState,
     kernelActions: number,
   ): Extract<ExpressionResult, { status: 'Rejected' }> | V3SuffixReady;
 };
@@ -548,9 +559,10 @@ function checkFinancialExpressionV3(
 function evaluateFinancialExpressionV3Prefix(
   schema: Schema,
   requestCanonicalJSON: string,
-  financialPre: RepaymentState,
+  financialPre: RepaymentState | LifecycleState,
+  contract: string = FINANCIAL_EXPRESSION_CONTRACT_V3,
 ): Extract<ExpressionResult, { status: 'Rejected' }> | V3PrefixReady {
-  const machine = new Machine(schema, FINANCIAL_EXPRESSION_CONTRACT_V3, financialPre);
+  const machine = new Machine(schema, contract, financialPre);
   try {
     const begun = machine.begin(requestCanonicalJSON, false);
     if (!('r' in begun)) {
@@ -574,7 +586,7 @@ function evaluateFinancialExpressionV3Prefix(
       post,
       descriptors: machine.descriptors,
       prefixUsed,
-      continueSuffix(financialPost: RepaymentState, kernelActions: number) {
+      continueSuffix(financialPost: RepaymentState | LifecycleState, kernelActions: number) {
         try {
           machine.bindFinancialPost(financialPost);
           machine.chargeKernelWork(kernelActions);
@@ -728,6 +740,81 @@ export function createFinancialExpressionContractV3(
     },
     check(requestCanonicalJSON: string): ExpressionCheckResult {
       return checkFinancialExpressionV3(schemaCanonicalJSON, requestCanonicalJSON);
+    },
+  });
+}
+
+function checkFinancialExpressionV4(
+  schemaCanonicalJSON: string,
+  requestCanonicalJSON: string,
+): ExpressionCheckResult {
+  let schema: Schema;
+  try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+  catch (error) {
+    if (!(error instanceof ExpressionFailure)) throw error;
+    return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+  }
+  return new Machine(schema, FINANCIAL_EXPRESSION_CONTRACT_V4).run(requestCanonicalJSON, true) as ExpressionCheckResult;
+}
+
+/** Core /4 check needs no financial state. evaluate is funded action evaluation
+ * over the lifecycle kernel. Prefix/kernel/suffix staging is private. */
+export function createFinancialExpressionContractV4(
+  schemaCanonicalJSON: string,
+  financialPreStateJSON: string | undefined = undefined,
+): {
+  evaluate(requestCanonicalJSON: string): LifecycleExpressionResult;
+  check(requestCanonicalJSON: string): ExpressionCheckResult;
+} {
+  return Object.freeze({
+    evaluate(requestCanonicalJSON: string): LifecycleExpressionResult {
+      if (typeof schemaCanonicalJSON !== 'string') return v3Envelope('INPUT_SCHEMA');
+      let schema: Schema;
+      try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+      catch (error) {
+        if (!(error instanceof ExpressionFailure)) throw error;
+        return v3Envelope(error.code);
+      }
+      const typed = checkFinancialExpressionV4(schemaCanonicalJSON, requestCanonicalJSON);
+      if ('status' in typed) return typed;
+      let request: any;
+      try { request = parseCanonical(requestCanonicalJSON, 2_000_000); }
+      catch (error) {
+        if (!(error instanceof ExpressionFailure)) throw error;
+        return v3Envelope(error.code);
+      }
+      const isAction = typeof request.core === 'object' && request.core !== null && has(request.core, 'statements');
+      if (!isAction) return v3Envelope('TYPE_ACTION_REQUIRED');
+      if (financialPreStateJSON === undefined) return v3Envelope('FINANCIAL_CONTEXT_REQUIRED');
+      const admitted = admitFinancialLifecycleStateJSON(financialPreStateJSON);
+      if (!admitted.ok) return admitted.result;
+      if (request.workInitial !== admitted.value.work.remaining) {
+        return { status: 'Rejected', code: 'WORK_MISMATCH' };
+      }
+      const owned = JSON.parse(JSON.stringify(admitted.value)) as Record<string, unknown>;
+      const prefix = evaluateFinancialExpressionV3Prefix(
+        schema, requestCanonicalJSON, admitted.value, FINANCIAL_EXPRESSION_CONTRACT_V4,
+      );
+      if (prefix.status === 'Rejected') return prefix;
+      const prepared = prepareStagedLifecycleKernel(prefix.descriptors, canonical(schema), owned, prefix.prefixUsed);
+      if (!prepared.ok) return prepared.result;
+      const suffix = prefix.continueSuffix(prepared.post, prepared.effects.length);
+      if (suffix.status === 'Rejected') return suffix;
+      const debited = debitExpressionWork(prepared.post as unknown as Record<string, unknown>, suffix.suffixUsed);
+      if (!debited.ok) return debited.result;
+      const bound = lifecycleResultBound(debited.state);
+      if (bound !== null) return bound;
+      const work = debited.state.work as { remaining: string };
+      return {
+        status: 'FundedExpressionPrepared',
+        post: suffix.post,
+        financialPost: debited.state as unknown as typeof prepared.post,
+        effects: prepared.effects,
+        workRemaining: work.remaining,
+      };
+    },
+    check(requestCanonicalJSON: string): ExpressionCheckResult {
+      return checkFinancialExpressionV4(schemaCanonicalJSON, requestCanonicalJSON);
     },
   });
 }

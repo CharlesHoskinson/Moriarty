@@ -4,12 +4,14 @@ import {
   FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE,
+  FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE,
   FINANCIAL_READ_GENERIC_PRIMARIES,
   FINANCIAL_POST_READ_GENERIC_PRIMARIES,
   parseSuccessorFinancialAgreementSource,
   parseSuccessorFinancialAgreementSourceV2,
   parseSuccessorFinancialAgreementSourceV3,
   parseSuccessorFinancialAgreementSourceV4,
+  parseSuccessorFinancialAgreementSourceV5,
   SuccessorSyntaxError,
 } from './frontend.ts';
 import type {
@@ -34,9 +36,11 @@ import {
   FINANCIAL_EXPRESSION_CONTRACT_V1,
   FINANCIAL_EXPRESSION_CONTRACT_V2,
   FINANCIAL_EXPRESSION_CONTRACT_V3,
+  FINANCIAL_EXPRESSION_CONTRACT_V4,
   createFinancialExpressionContractV1,
   createFinancialExpressionContractV2,
   createFinancialExpressionContractV3,
+  createFinancialExpressionContractV4,
 } from './financial-expression-v1.ts';
 import type { ExpressionResult } from './financial-expression-v1.ts';
 import {
@@ -61,12 +65,18 @@ import {
 } from './financial-expression-source-types.ts';
 import {
   completeFundedPreparation,
+  lifecycleOperationBinding,
   operationBinding,
   parseOwnedState,
   snapshotWorkInitial,
 } from './funded-expression-source-v1.ts';
 import { admitRepaymentStateJSON } from './repayment.ts';
-import type { BindingDiagnostic, FundedExpressionResult } from './funded-expression-source-v1.ts';
+import { admitFinancialLifecycleStateJSON } from './financial-lifecycle.ts';
+import type {
+  BindingDiagnostic,
+  FundedExpressionResult,
+  LifecycleExpressionResult,
+} from './funded-expression-source-v1.ts';
 
 export const TRANSPORT_BYTES = 2_000_000;
 export const COMPONENT_BYTES = 65536;
@@ -75,10 +85,12 @@ export type AgreementProfile =
   | typeof FINANCIAL_AGREEMENT_SOURCE_PROFILE
   | typeof FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
   | typeof FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
-  | typeof FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
 
 function extraReserved(profile: AgreementProfile): readonly string[] {
-  if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) {
     return [...FINANCIAL_READ_GENERIC_PRIMARIES, ...FINANCIAL_POST_READ_GENERIC_PRIMARIES];
   }
   return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE ? FINANCIAL_READ_GENERIC_PRIMARIES : [];
@@ -86,11 +98,13 @@ function extraReserved(profile: AgreementProfile): readonly string[] {
 
 function readsEnabled(profile: AgreementProfile): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
 }
 
 function postReadsEnabled(profile: AgreementProfile): boolean {
-  return profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
+  return profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE;
 }
 
 export interface CompiledAgreementAction {
@@ -140,8 +154,37 @@ export function evaluateCompiledAction(
   compiled: CompiledAgreementAction,
   snapshotCanonicalJSON: string,
   repaymentStateJSON: string,
+  profile: typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE,
+): LifecycleExpressionResult;
+export function evaluateCompiledAction(
+  source: string,
+  compiled: CompiledAgreementAction,
+  snapshotCanonicalJSON: string,
+  repaymentStateJSON: string,
+  profile?: Exclude<AgreementProfile, typeof FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE>,
+): FundedExpressionResult;
+export function evaluateCompiledAction(
+  source: string,
+  compiled: CompiledAgreementAction,
+  snapshotCanonicalJSON: string,
+  repaymentStateJSON: string,
   profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
-): FundedExpressionResult {
+): FundedExpressionResult | LifecycleExpressionResult {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) {
+    const admitted = admitFinancialLifecycleStateJSON(repaymentStateJSON);
+    if (!admitted.ok) return admitted.result;
+    const remainingText = admitted.value.work.remaining;
+    const workInitial = typeof snapshotCanonicalJSON === 'string'
+      ? snapshotWorkInitial(snapshotCanonicalJSON) : undefined;
+    if (workInitial !== undefined && workInitial !== remainingText) {
+      return { status: 'Rejected', code: 'WORK_MISMATCH' };
+    }
+    const input = snapshots(snapshotCanonicalJSON);
+    const schemaText = canonical(compiled.schema);
+    return createFinancialExpressionContractV4(schemaText, repaymentStateJSON).evaluate(canonical({
+      contract: FINANCIAL_EXPRESSION_CONTRACT_V4, source, core: compiled.core, ...input,
+    }));
+  }
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) {
     const admitted = admitRepaymentStateJSON(repaymentStateJSON);
     if (!admitted.ok) return admitted.result;
@@ -196,6 +239,7 @@ export function evaluateCompiledAction(
 }
 
 function parseAgreement(source: string, profile: AgreementProfile): Program {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE) return parseSuccessorFinancialAgreementSourceV5(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) return parseSuccessorFinancialAgreementSourceV4(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) return parseSuccessorFinancialAgreementSourceV3(source);
   return profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
@@ -460,9 +504,11 @@ function bindingFailureSpan(
     }
     return operation?.span ?? program.agreement.span;
   }
-  const extra = operations.find((operation) => operation.name !== 'Transfer' && operation.name !== 'Repay');
+  const extra = operations.find((operation) =>
+    operation.name !== 'Transfer' && operation.name !== 'Repay'
+    && operation.name !== 'Originate' && operation.name !== 'Accrue');
   if (extra) return extra.span;
-  if (operations.length !== 2) return operations[0]?.span ?? program.agreement.span;
+  if (operations.length !== 2 && operations.length !== 4) return operations[0]?.span ?? program.agreement.span;
   const transfer = operations.find((operation) => operation.name === 'Transfer');
   const repay = operations.find((operation) => operation.name === 'Repay');
   if (transfer === undefined) return repay?.span ?? program.agreement.span;
@@ -482,8 +528,11 @@ function requireProtectedBinding(
   operations: OperationDecl[],
   records: RecordDecl[],
   schema: Schema,
+  profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
 ): void {
-  const binding = operationBinding(schema);
+  const binding = profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+    ? lifecycleOperationBinding(schema)
+    : operationBinding(schema);
   if ('status' in binding) {
     sourceFailure(
       'OPERATION_BINDING',
@@ -566,7 +615,9 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
   }
   function compileAction(action: ActionDecl, schema: Schema): CompiledAgreementAction | SourceRejected {
     const lowered = lowerAndCheckFinancialAction(source, action, schema, canonical(schema), {
-      contract: postReadsEnabled(profile)
+      contract: profile === FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE
+        ? FINANCIAL_EXPRESSION_CONTRACT_V4
+        : postReadsEnabled(profile)
         ? FINANCIAL_EXPRESSION_CONTRACT_V3
         : readsEnabled(profile) ? FINANCIAL_EXPRESSION_CONTRACT_V2 : FINANCIAL_EXPRESSION_CONTRACT_V1,
       extraReserved: extraReserved(profile),
@@ -585,13 +636,13 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
     const action = collected.actions[0];
     const schema = normalizeSchema({ ...shared, args: actionArgs(action) }, collected.states, program);
     validateFinancialActionParameters(action, schema, extraReserved(profile));
-    requireProtectedBinding(program, collected.operations, collected.records, schema);
+    requireProtectedBinding(program, collected.operations, collected.records, schema, profile);
     const compiled = compileAction(action, schema);
     if ('status' in compiled) return compiled;
     return { agreement: program.agreement.name, actions: [compiled] };
   }
   const sharedNormalized = normalizeSchema(shared, collected.states, program);
-  requireProtectedBinding(program, collected.operations, collected.records, sharedNormalized);
+  requireProtectedBinding(program, collected.operations, collected.records, sharedNormalized, profile);
   const compiledActions: CompiledAgreementAction[] = [];
   for (const action of collected.actions) {
     const schema = normalizeSchema({ ...shared, args: actionArgs(action) }, collected.states, program);

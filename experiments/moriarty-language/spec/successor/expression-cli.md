@@ -25,6 +25,12 @@ node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financ
 node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/3 SOURCE.mori
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/3 SOURCE.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/3 --action NAME --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/4 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/4 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/4 --action NAME --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 SOURCE.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action NAME --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
 ```
 
 Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
