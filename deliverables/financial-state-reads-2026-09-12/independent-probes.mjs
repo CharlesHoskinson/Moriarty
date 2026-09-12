@@ -1,0 +1,75 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdtempSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {spawnSync} from 'node:child_process';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+const root=process.argv[2], pkg=root+'/experiments/moriarty-language';
+const {createFinancialAgreementSourceV3}=await import(pathToFileURL(pkg+'/src/successor/financial-agreement-source-v3.ts'));
+const {canonical}=await import(pathToFileURL(pkg+'/src/successor/expression-wire-v1.ts'));
+const {prepareRepayment,REPAYMENT_VERSION}=await import(pathToFileURL('/home/charl/Moriarty/.worktrees/multiple-named-actions/experiments/moriarty-language/src/successor/repayment.ts'));
+const api=createFinancialAgreementSourceV3(), cases=[];
+const oldSource=readFileSync(pkg+'/spec/successor/examples/multiple-action-payment.mori','utf8');
+const state=JSON.parse(readFileSync(pkg+'/spec/successor/examples/expression-funded-payment.state.json','utf8'));
+state.work.remaining='256';
+const copy=x=>structuredClone(x);
+function ok(name,fn){fn();cases.push(name);}
+function rejected(x,code){assert.equal(x.status,'Rejected',JSON.stringify(x));if(code)assert.equal(x.code,code);for(const k of ['post','financialPost','effects','descriptors','result','workRemaining'])assert(!Object.hasOwn(x,k),'leaked '+k);return x;}
+const third=`
+ action repay_remaining(transferId: Text, allocationId: Text) {
+   let nominal = outstanding<Cash>("Due100");
+   let payment = magnitude(nominal);
+   requires payment > 0;
+   requires quanta(balance<Cash>("Payer")) >= payment;
+   requires quanta(allowance_remaining<Cash>("Payer")) >= payment;
+   next.paid = pre.paid + payment;
+   emit Transfer { id: transferId, from: "Payer", to: "Lender", settlementAsset: "Cash", transferAmount: amount<Cash>(payment) };
+   emit Repay { allocationId: allocationId, transferId: transferId, obligationId: "Due100", payer: "Payer", nominalAmount: nominal };
+   ensures post.paid == pre.paid + payment;
+ }
+`;
+const source=oldSource.replace('source/2','source/3').replaceAll('pre.due > 0','magnitude(outstanding<Cash>("Due100")) > 0').replace(/}\s*$/,third+'}\n');
+const snapshots={Pre:{due:'999',paid:'0'},Args:{nominal:'30',transferId:'T1',allocationId:'Alloc1'},Obs:{},workInitial:'256'};
+const ev=(s=source,a='repay',sn=snapshots,st=state)=>api.evaluate(s,a,canonical(sn),JSON.stringify(st));
+let first,second,last;
+ok('all actions checked and explicit Core/2',()=>{const x=api.elaborate(source);assert.equal(x.judgmentResult,'SourceElaborated',JSON.stringify(x));assert.equal(x.contract,'moriarty-financial-expression-contract/2');assert.deepEqual(x.actions.map(a=>a.action),['repay','repay_installment','repay_remaining']);assert.equal(api.evaluate.length,4);});
+ok('first payment reads financial debt despite ordinary due999',()=>{first=ev();assert.equal(first.status,'FundedExpressionPrepared',JSON.stringify(first));assert.equal(first.financialPost.obligations[0].outstanding,'70');assert.equal(first.workRemaining,'211');});
+const sn2=()=>({Pre:first.post,Args:{transferId:'T2',allocationId:'Alloc2'},Obs:{},workInitial:first.workRemaining});
+ok('second action continues exact financial state',()=>{second=ev(source,'repay_installment',sn2(),first.financialPost);assert.equal(second.status,'FundedExpressionPrepared',JSON.stringify(second));assert.equal(second.financialPost.obligations[0].outstanding,'50');assert.equal(second.workRemaining,'164');});
+const sn3=()=>({Pre:second.post,Args:{transferId:'T3',allocationId:'Alloc3'},Obs:{},workInitial:second.workRemaining});
+ok('remaining action derives50 without nominal input',()=>{last=ev(source,'repay_remaining',sn3(),second.financialPost);assert.equal(last.status,'FundedExpressionPrepared',JSON.stringify(last));const expected=copy(state);expected.balances[0].amount='0';expected.balances[1].amount='100';expected.allowances[0].remaining='0';expected.allowances[0].spent='100';Object.assign(expected.obligations[0],{principal:'0',accrued:'0',outstanding:'0',status:'Settled'});expected.usedTransferIds=['T1','T2','T3'];expected.usedAllocationIds=['Alloc1','Alloc2','Alloc3'];expected.work.remaining='115';expected.work.spent='141';assert.deepEqual(last.financialPost,expected);assert.deepEqual(last.post,{due:'999',paid:'100'});assert.equal(last.workRemaining,'115');});
+ok('settled remaining action rejects without tentative result',()=>rejected(ev(source,'repay_remaining',{Pre:last.post,Args:{transferId:'T4',allocationId:'Alloc4'},Obs:{},workInitial:last.workRemaining},last.financialPost),'GUARD_FAILED'));
+ok('caller cannot override read with extra nominal arg',()=>rejected(ev(source,'repay_remaining',{...sn3(),Args:{...sn3().Args,nominal:'1'}},second.financialPost)));
+ok('caller Obs cannot provide financial values',()=>rejected(ev(source,'repay',{...snapshots,Obs:{outstanding:'1'}})));
+ok('invalid unselected action beats malformed state and selector',()=>{const bad=source.replace('let nominal = outstanding<Cash>("Due100");','let nominal = outstanding<Cash>(7);');const x=api.evaluate(bad,{},'invalid','invalid');rejected(x,'TYPE_MISMATCH');assert.equal(x.workUsed,'0');});
+const prefix=oldSource.slice(0,oldSource.indexOf('  action repay(')).replace('source/2','source/3').replace('  state due: UInt128;','  state observed: UInt128;\n  state later: UInt128;\n  state due: UInt128;');
+const transfer=`emit Transfer {id: "ProbeTransfer", from: "Payer", to: "Lender", settlementAsset: "Cash", transferAmount: amount<Cash>(1)};`;
+const readSource=(expr,after='')=>prefix+`action probe(id: Text) {next.observed = ${expr}; ${transfer} ${after}} }`;
+const readSnapshot=(id='Due100')=>({Pre:{due:'0',paid:'0',observed:'0',later:'0'},Args:{id},Obs:{},workInitial:'256'});
+const read=(expr,st=state,id='Due100',after='')=>ev(readSource(expr,after),'probe',readSnapshot(id),st);
+for(const [fn,scalar,wanted,id] of [['outstanding','magnitude','100','Due100'],['principal','magnitude','100','Due100'],['accrued','magnitude','0','Due100'],['balance','quanta','100','Payer'],['allowance_remaining','quanta','100','Payer'],['allowance_spent','quanta','0','Payer']])ok('typed dynamic read '+fn,()=>{const x=read(`${scalar}(${fn}<Cash>(id))`,state,id);assert.equal(x.status,'FundedExpressionPrepared',JSON.stringify(x));assert.equal(x.post.observed,wanted);assert.equal(x.workRemaining,'243');});
+ok('pre financial reads remain unchanged after emit',()=>{const x=read('quanta(balance<Cash>(id))',state,'Payer','ensures post.observed == quanta(balance<Cash>(id));');assert.equal(x.status,'FundedExpressionPrepared',JSON.stringify(x));assert.equal(x.post.observed,'100');assert.equal(x.financialPost.balances[0].amount,'99');});
+for(const [fn,scalar,code] of [['outstanding','magnitude','MISSING_OBLIGATION'],['balance','quanta','MISSING_BALANCE'],['allowance_remaining','quanta','MISSING_ALLOWANCE']])ok('missing '+fn+' is not zero',()=>{const x=rejected(read(`${scalar}(${fn}<Cash>(id))`,state,'Missing'),code);assert.equal(x.span.kind,'source');assert.equal(x.workUsed,'4');});
+for(const id of ['','__proto__','A\n','a'.repeat(65)])ok('invalid read identity '+JSON.stringify(id),()=>rejected(read('magnitude(outstanding<Cash>(id))',state,id),'INVALID_IDENTIFIER'));
+ok('zero settled obligation is readable',()=>{const st=copy(state);Object.assign(st.obligations[0],{principal:'0',accrued:'0',outstanding:'0',status:'Settled'});assert.equal(read('magnitude(outstanding<Cash>(id))',st).post.observed,'0');});
+ok('wrong declared nominal unit rejects dynamically',()=>{const s=readSource('magnitude(outstanding<Other>(id))').replace('unit Cash;','unit Cash; unit Other;');rejected(ev(s,'probe',readSnapshot(),state),'NOMINAL_UNIT');});
+ok('unknown generic unit rejects statically without state',()=>rejected(api.check(readSource('magnitude(outstanding<Absent>(id))')),'TYPE_NAME'));
+ok('financial quantities keep signed128 read bound',()=>{const st=copy(state);st.obligations[0].principal=st.obligations[0].outstanding=(1n<<127n).toString();rejected(read('magnitude(outstanding<Cash>(id))',st),'ARITH_RANGE');st.obligations[0].principal=st.obligations[0].outstanding=((1n<<127n)-1n).toString();assert.equal(read('magnitude(outstanding<Cash>(id))',st).post.observed,((1n<<127n)-1n).toString());});
+ok('Amount reads retain fullUInt128 domain',()=>{const st=copy(state);st.balances[0].amount=((1n<<128n)-1n).toString();assert.equal(read('quanta(balance<Cash>(id))',st,'Payer').post.observed,st.balances[0].amount);});
+ok('interest-first partial repayment remains intact',()=>{const st=copy(state);Object.assign(st.obligations[0],{principal:'83',accrued:'17'});const x=ev(source,'repay',snapshots,st);assert.equal(x.financialPost.obligations[0].principal,'70');assert.equal(x.financialPost.obligations[0].accrued,'0');});
+const badStates=[['extra field',s=>s.unknown=1],['duplicate balances',s=>s.balances.push(copy(s.balances[0]))],['duplicate obligations',s=>s.obligations.push(copy(s.obligations[0]))],['debt equality',s=>s.obligations[0].outstanding='99'],['status inconsistency',s=>s.obligations[0].status='Settled'],['noncanonical amount',s=>s.balances[0].amount='01'],['invalid unused entry',s=>s.balances.push({party:'Other',asset:'Cash',amount:'-1'})],['allowance overflow',s=>{s.allowances[0].remaining=((1n<<128n)-1n).toString();s.allowances[0].spent='1';}],['work overflow',s=>s.work.spent=((1n<<128n)-1n).toString()]];
+for(const [name,mutate]of badStates)ok('full state admission before guard: '+name,()=>{const st=copy(state);mutate(st);const x=rejected(ev(source.replace('requires magnitude(outstanding<Cash>("Due100")) > 0;','requires false;'),'repay',snapshots,st));const expected=prepareRepayment(JSON.stringify({schemaVersion:REPAYMENT_VERSION,state:st,actions:[{kind:'Transfer',id:'ProbeTransfer',from:'Payer',to:'Lender',asset:'Cash',amount:'1'}]})); assert.equal(expected.status,'Rejected');assert.equal(x.code,expected.code);if('workUsed'in x)assert.equal(x.workUsed,'0');});
+ok('short circuit skips missing read lookup',()=>{const x=read('(false ? magnitude(outstanding<Cash>("Missing")) : u128(7))');assert.equal(x.status,'FundedExpressionPrepared',JSON.stringify(x));assert.equal(x.post.observed,'7');});
+for(const [amount,code]of [['44','INSUFFICIENT_WORK'],['45',null]])ok('exact first payment total work '+amount,()=>{const st=copy(state);st.work.remaining=amount;const x=ev(source,'repay',{...snapshots,workInitial:amount},st);if(code)rejected(x,code);else{assert.equal(x.status,'FundedExpressionPrepared');assert.equal(x.workRemaining,'0');}});
+ok('insufficient funding leaves reusable state untouched',()=>{const st=copy(state);st.allowances[0].remaining='29';rejected(ev(source,'repay',snapshots,st),'INSUFFICIENT_ALLOWANCE');assert.deepEqual(ev(),first);});
+ok('valid arbitrary prior spent is preserved without a fabricated budget',()=>{const st=copy(state);st.work.spent='17';const x=ev(source,'repay',snapshots,st);assert.equal(x.status,'FundedExpressionPrepared',JSON.stringify(x));assert.equal(x.financialPost.work.spent,'62');assert.equal(x.workRemaining,'211');});
+ok('work mismatch rejected before execution',()=>rejected(ev(source,'repay',{...snapshots,workInitial:'255'}),'WORK_MISMATCH'));
+let touched=false;const hostile=Object.create(null,{toString:{get(){touched=true;throw Error('accessed');}}});for(const pos of[0,1,2,3])ok('primitive input boundary '+pos,()=>{const args=[source,'repay',canonical(snapshots),JSON.stringify(state)];args[pos]=hostile;rejected(api.evaluate(...args));assert.equal(touched,false);});
+if(process.argv.includes('--api-only')){console.log(JSON.stringify({passed:cases.length,cases,first,second,last},null,2));process.exit(0);}
+const tmp=mkdtempSync(join(tmpdir(),'moriarty-financial-reads-root-')),src=join(tmp,'case.mori'),sn=join(tmp,'snapshots.json'),st=join(tmp,'state.json');writeFileSync(src,source);writeFileSync(sn,canonical(snapshots));writeFileSync(st,JSON.stringify(state));const cli=(...args)=>spawnSync(process.execPath,[pkg+'/src/cli.ts',...args],{encoding:'utf8'});const profile=['--profile','moriarty-financial-agreement-source/3'];
+ok('actual CLI check',()=>{const x=cli('check',...profile,src);assert.equal(x.status,0,x.stderr);assert.equal(JSON.parse(x.stdout).judgmentResult,'SourceChecked');});
+ok('actual CLI simulate matches complete API result',()=>{const x=cli('simulate',...profile,'--action','repay','--snapshots',sn,'--repayment-state',st,src);assert.equal(x.status,0,x.stderr);assert.deepEqual(JSON.parse(x.stdout).result,first);});
+ok('actual CLI formatter idempotence and semantic equivalence',()=>{const x=cli('format',...profile,src);assert.equal(x.status,0,x.stderr);writeFileSync(src,x.stdout);const y=cli('format',...profile,src);assert.equal(y.stdout,x.stdout);assert.deepEqual(ev(x.stdout),first);});
+ok('actual CLI missing selector is usage failure',()=>{const x=cli('simulate',...profile,'--snapshots',sn,'--repayment-state',st,src);assert.equal(x.status,2);assert.equal(x.stdout,'');});
+ok('actual CLI unknown selector is semantic rejection',()=>{const x=cli('simulate',...profile,'--action','unknown','--snapshots',sn,'--repayment-state',st,src);assert.equal(x.status,1);assert.equal(x.stdout,'');assert.equal(JSON.parse(x.stderr).code,'SOURCE_ACTION_UNKNOWN');});
+console.log(JSON.stringify({passed:cases.length,cases,first,second,last},null,2));

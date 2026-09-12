@@ -5,10 +5,12 @@ export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
 export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expression-source/1';
 export const FINANCIAL_AGREEMENT_SOURCE_PROFILE = 'moriarty-financial-agreement-source/1';
 export const FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE = 'moriarty-financial-agreement-source/2';
+export const FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE = 'moriarty-financial-agreement-source/3';
 
 function isAgreementSourceProfile(profile: string): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
 }
 
 function isFinancialLexerProfile(profile: string): boolean {
@@ -315,6 +317,9 @@ export const SOURCE_KEYWORDS = Object.freeze([
 const KEYWORDS = new Set(SOURCE_KEYWORDS);
 export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'quantity', 'record']);
 export const FINANCIAL_GENERIC_PRIMARIES = Object.freeze(['amount', 'shares', 'variant', 'project_variant', 'to_uint']);
+export const FINANCIAL_READ_GENERIC_PRIMARIES = Object.freeze([
+  'outstanding', 'principal', 'accrued', 'balance', 'allowance_remaining', 'allowance_spent',
+]);
 
 const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
 const CMP_OPS = new Set(['==', '!=', '<', '<=', '>', '>=']);
@@ -700,6 +705,9 @@ class Parser {
   }
   private get agreementSourceProfile(): boolean {
     return isAgreementSourceProfile(this.profile);
+  }
+  private get agreementV3Profile(): boolean {
+    return this.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
   }
 
   parseProgram(): Program {
@@ -1303,9 +1311,11 @@ class Parser {
       const name = this.advance();
       let typeArguments: TypeNode[] | undefined;
       const financialGeneric = this.financialProfile && FINANCIAL_GENERIC_PRIMARIES.includes(name.text);
+      const readGeneric = this.agreementV3Profile && (FINANCIAL_READ_GENERIC_PRIMARIES as readonly string[]).includes(name.text);
       const optionalGeneric = ['amount', 'shares'].includes(name.text);
       if (this.expressionProfile && (GENERIC_PRIMARIES.includes(name.text)
-          || (financialGeneric && (!optionalGeneric || this.at('<'))))) {
+          || (financialGeneric && (!optionalGeneric || this.at('<')))
+          || readGeneric)) {
         this.enterNest(this.peek());
         this.expect('<');
         typeArguments = [this.parseType(name.text !== 'record')];
@@ -1332,7 +1342,7 @@ class Parser {
         }
         if (!this.at('(')) this.unexpected();
       }
-      if (financialGeneric && !this.at('(')) this.unexpected();
+      if ((financialGeneric || readGeneric) && !this.at('(')) this.unexpected();
       if (this.at('(')) {
         this.enterNest(this.peek());
         this.advance();
@@ -1427,4 +1437,9 @@ export function parseSuccessorFinancialAgreementSource(source: string): Program 
 /** Distinct multiple-action agreement entry; /1 never opts into it. */
 export function parseSuccessorFinancialAgreementSourceV2(source: string): Program {
   return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE);
+}
+
+/** Distinct kernel-backed read agreement entry; /1 and /2 never opt into it. */
+export function parseSuccessorFinancialAgreementSourceV3(source: string): Program {
+  return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE);
 }

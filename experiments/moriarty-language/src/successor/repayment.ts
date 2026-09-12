@@ -1239,3 +1239,37 @@ export function prepareRepayment(source: string): RepaymentResult {
   }
   return runActions(parsed.value);
 }
+
+/** Full kernel state admission from a primitive JSON string. This is not
+ * prepareRepayment and does not run Transfer/Repay. */
+export function admitRepaymentStateJSON(
+  text: unknown,
+): { ok: true; value: RepaymentState } | { ok: false; result: RejectedRepayment | { status: 'Rejected'; code: string } } {
+  if (typeof text !== 'string') {
+    return { ok: false, result: { status: 'Rejected', code: 'INPUT_SCHEMA' } };
+  }
+  if (text.length > REPAYMENT_BOUNDS.sourceUtf8Bytes) {
+    return { ok: false, result: { status: 'Rejected', code: 'INPUT_BOUND' } };
+  }
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length > REPAYMENT_BOUNDS.sourceUtf8Bytes) {
+    return { ok: false, result: { status: 'Rejected', code: 'INPUT_BOUND' } };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, result: { status: 'Rejected', code: 'INPUT_SCHEMA' } };
+  }
+  let owned: unknown;
+  try {
+    owned = JSON.parse(JSON.stringify(parsed));
+  } catch {
+    return { ok: false, result: { status: 'Rejected', code: 'INPUT_SCHEMA' } };
+  }
+  const state = parseState(owned);
+  if (!state.ok) {
+    return { ok: false, result: rejected(state.code, null) };
+  }
+  return { ok: true, value: copyState(state.value) };
+}

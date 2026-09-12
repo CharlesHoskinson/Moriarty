@@ -2,8 +2,11 @@
 import {
   FINANCIAL_AGREEMENT_SOURCE_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE,
+  FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE,
+  FINANCIAL_READ_GENERIC_PRIMARIES,
   parseSuccessorFinancialAgreementSource,
   parseSuccessorFinancialAgreementSourceV2,
+  parseSuccessorFinancialAgreementSourceV3,
   SuccessorSyntaxError,
 } from './frontend.ts';
 import type {
@@ -24,7 +27,12 @@ import {
   validateFinancialActionParameters,
 } from './financial-expression-source-v1.ts';
 import type { SourceRejected } from './financial-expression-source-v1.ts';
-import { FINANCIAL_EXPRESSION_CONTRACT_V1, createFinancialExpressionContractV1 } from './financial-expression-v1.ts';
+import {
+  FINANCIAL_EXPRESSION_CONTRACT_V1,
+  FINANCIAL_EXPRESSION_CONTRACT_V2,
+  createFinancialExpressionContractV1,
+  createFinancialExpressionContractV2,
+} from './financial-expression-v1.ts';
 import type { ExpressionResult } from './financial-expression-v1.ts';
 import {
   ExpressionFailure,
@@ -52,6 +60,7 @@ import {
   parseOwnedState,
   snapshotWorkInitial,
 } from './funded-expression-source-v1.ts';
+import { admitRepaymentStateJSON } from './repayment.ts';
 import type { BindingDiagnostic, FundedExpressionResult } from './funded-expression-source-v1.ts';
 
 export const TRANSPORT_BYTES = 2_000_000;
@@ -59,7 +68,16 @@ export const COMPONENT_BYTES = 65536;
 
 export type AgreementProfile =
   | typeof FINANCIAL_AGREEMENT_SOURCE_PROFILE
-  | typeof FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE;
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+
+function extraReserved(profile: AgreementProfile): readonly string[] {
+  return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE ? FINANCIAL_READ_GENERIC_PRIMARIES : [];
+}
+
+function readsEnabled(profile: AgreementProfile): boolean {
+  return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+}
 
 export interface CompiledAgreementAction {
   action: string;
@@ -108,7 +126,30 @@ export function evaluateCompiledAction(
   compiled: CompiledAgreementAction,
   snapshotCanonicalJSON: string,
   repaymentStateJSON: string,
+  profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
 ): FundedExpressionResult {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) {
+    const admitted = admitRepaymentStateJSON(repaymentStateJSON);
+    if (!admitted.ok) return admitted.result;
+    const remainingText = admitted.value.work.remaining;
+    const workInitial = typeof snapshotCanonicalJSON === 'string'
+      ? snapshotWorkInitial(snapshotCanonicalJSON) : undefined;
+    if (workInitial !== undefined && workInitial !== remainingText) {
+      return { status: 'Rejected', code: 'WORK_MISMATCH' };
+    }
+    const input = snapshots(snapshotCanonicalJSON);
+    const schemaText = canonical(compiled.schema);
+    const evaluated: ExpressionResult = createFinancialExpressionContractV2(schemaText, repaymentStateJSON).evaluate(canonical({
+      contract: FINANCIAL_EXPRESSION_CONTRACT_V2, source, core: compiled.core, ...input,
+    }));
+    return completeFundedPreparation(
+      evaluated,
+      schemaText,
+      JSON.parse(JSON.stringify(admitted.value)) as Record<string, unknown>,
+      remainingText,
+      workInitial,
+    );
+  }
   const parsedState = parseOwnedState(repaymentStateJSON);
   if (!parsedState.ok) return parsedState.result;
   const remainingText = (parsedState.value.work as Record<string, unknown>).remaining as string;
@@ -126,6 +167,7 @@ export function evaluateCompiledAction(
 }
 
 function parseAgreement(source: string, profile: AgreementProfile): Program {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) return parseSuccessorFinancialAgreementSourceV3(source);
   return profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
     ? parseSuccessorFinancialAgreementSourceV2(source)
     : parseSuccessorFinancialAgreementSource(source);
@@ -181,8 +223,9 @@ function declareNames(program: Program, profile: AgreementProfile): {
       otherNames.add(d.name);
     }
   }
+  const reserved = extraReserved(profile);
   for (const action of actions) {
-    if (reservedSourceTerm(action.name)) sourceFailure('SOURCE_RESERVED_NAME', action.span);
+    if (reservedSourceTerm(action.name, reserved)) sourceFailure('SOURCE_RESERVED_NAME', action.span);
   }
   for (const asset of assets) {
     if (asset.type.numeric || asset.type.name !== 'Asset' || asset.type.arguments.length) {
@@ -305,8 +348,8 @@ function declaredType(t: TypeNode, names: DeclaredNames): ValueType {
   return value;
 }
 
-function requireSourceSchemaName(name: string, span: Span): void {
-  if (!asciiIdentifier(name) || reservedSourceSchemaName(name)) sourceFailure('SOURCE_SCHEMA_NAME', span);
+function requireSourceSchemaName(name: string, span: Span, extra: readonly string[] = []): void {
+  if (!asciiIdentifier(name) || reservedSourceSchemaName(name, extra)) sourceFailure('SOURCE_SCHEMA_NAME', span);
 }
 
 function validateDeclaredSchemaNames(collected: {
@@ -317,18 +360,18 @@ function validateDeclaredSchemaNames(collected: {
   operations: OperationDecl[];
   states: UninitializedStateDecl[];
   actions: ActionDecl[];
-}): void {
-  for (const d of collected.units) requireSourceSchemaName(d.name, d.span);
-  for (const d of collected.assets) requireSourceSchemaName(d.name, d.span);
-  for (const d of collected.parties) requireSourceSchemaName(d.name, d.span);
+}, extra: readonly string[] = []): void {
+  for (const d of collected.units) requireSourceSchemaName(d.name, d.span, extra);
+  for (const d of collected.assets) requireSourceSchemaName(d.name, d.span, extra);
+  for (const d of collected.parties) requireSourceSchemaName(d.name, d.span, extra);
   for (const d of collected.records) {
-    requireSourceSchemaName(d.name, d.span);
-    for (const field of d.fields) requireSourceSchemaName(field.name, field.span);
+    requireSourceSchemaName(d.name, d.span, extra);
+    for (const field of d.fields) requireSourceSchemaName(field.name, field.span, extra);
   }
-  for (const d of collected.operations) requireSourceSchemaName(d.name, d.span);
-  for (const d of collected.states) requireSourceSchemaName(d.name, d.span);
+  for (const d of collected.operations) requireSourceSchemaName(d.name, d.span, extra);
+  for (const d of collected.states) requireSourceSchemaName(d.name, d.span, extra);
   for (const action of collected.actions) {
-    for (const parameter of action.parameters) requireSourceSchemaName(parameter.name, parameter.span);
+    for (const parameter of action.parameters) requireSourceSchemaName(parameter.name, parameter.span, extra);
   }
 }
 
@@ -441,7 +484,7 @@ function normalizeSchema(schema: Schema, states: UninitializedStateDecl[], progr
 export function compileAgreementSource(source: string, profile: AgreementProfile): CompiledAgreement | SourceRejected {
   const program = parseAgreement(source, profile);
   const collected = declareNames(program, profile);
-  validateDeclaredSchemaNames(collected);
+  validateDeclaredSchemaNames(collected, extraReserved(profile));
   const names: DeclaredNames = {
     units: new Set(collected.units.map((d) => d.name)),
     assets: new Set(collected.assets.map((d) => d.name)),
@@ -492,7 +535,11 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
     return args;
   }
   function compileAction(action: ActionDecl, schema: Schema): CompiledAgreementAction | SourceRejected {
-    const lowered = lowerAndCheckFinancialAction(source, action, schema, canonical(schema));
+    const lowered = lowerAndCheckFinancialAction(source, action, schema, canonical(schema), {
+      contract: readsEnabled(profile) ? FINANCIAL_EXPRESSION_CONTRACT_V2 : FINANCIAL_EXPRESSION_CONTRACT_V1,
+      extraReserved: extraReserved(profile),
+      financialReads: readsEnabled(profile),
+    });
     if ('status' in lowered) return lowered;
     return {
       action: action.name,
@@ -504,7 +551,7 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
   if (profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE) {
     const action = collected.actions[0];
     const schema = normalizeSchema({ ...shared, args: actionArgs(action) }, collected.states, program);
-    validateFinancialActionParameters(action, schema);
+    validateFinancialActionParameters(action, schema, extraReserved(profile));
     requireProtectedBinding(program, collected.operations, collected.records, schema);
     const compiled = compileAction(action, schema);
     if ('status' in compiled) return compiled;
@@ -515,7 +562,7 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
   const compiledActions: CompiledAgreementAction[] = [];
   for (const action of collected.actions) {
     const schema = normalizeSchema({ ...shared, args: actionArgs(action) }, collected.states, program);
-    validateFinancialActionParameters(action, schema);
+    validateFinancialActionParameters(action, schema, extraReserved(profile));
     const compiled = compileAction(action, schema);
     if ('status' in compiled) return compiled;
     compiledActions.push(compiled);

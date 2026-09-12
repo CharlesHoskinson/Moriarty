@@ -3,7 +3,7 @@
 import { parseFinancialExpressionSource, FINANCIAL_EXPRESSION_SOURCE_PROFILE } from './financial-expression-source-frontend.ts';
 import { SuccessorSyntaxError } from './frontend.ts';
 import type { ActionDecl, Program } from './frontend.ts';
-import { createFinancialExpressionContractV1, FINANCIAL_EXPRESSION_CONTRACT_V1 } from './financial-expression-v1.ts';
+import { createFinancialExpressionContractV1, createFinancialExpressionContractV2, FINANCIAL_EXPRESSION_CONTRACT_V1, FINANCIAL_EXPRESSION_CONTRACT_V2 } from './financial-expression-v1.ts';
 import type { ExpressionResult } from './financial-expression-v1.ts';
 import { ExpressionFailure, SYNTHETIC_SPAN, bytes, canonical, closed, decimal, parseCanonical, scalarString } from './expression-wire-v1.ts';
 import { schemaShape, validateSchema, same } from './financial-expression-types-v1.ts';
@@ -82,7 +82,11 @@ function sourceAction(program: Program, schema: Schema): ActionDecl {
   validateFinancialActionParameters(action, schema);
   return action;
 }
-export function validateFinancialActionParameters(action: ActionDecl, schema: Schema): void {
+export function validateFinancialActionParameters(
+  action: ActionDecl,
+  schema: Schema,
+  extraReserved: readonly string[] = [],
+): void {
   const parameters = new Set<string>();
   const otherDeclarations = new Set<string>();
   for (const key of ['units', 'assets', 'vaults', 'parties']) schema[key].forEach((n: string) => otherDeclarations.add(n));
@@ -90,7 +94,7 @@ export function validateFinancialActionParameters(action: ActionDecl, schema: Sc
   for (const p of action.parameters) {
     if (parameters.has(p.name)) sourceFailure('SOURCE_PARAMETER_NAMES', p.span);
     parameters.add(p.name);
-    if (reservedSourceTerm(p.name) || otherDeclarations.has(p.name)) sourceFailure('SOURCE_RESERVED_NAME', p.span);
+    if (reservedSourceTerm(p.name, extraReserved) || otherDeclarations.has(p.name)) sourceFailure('SOURCE_RESERVED_NAME', p.span);
   }
   if (parameters.size !== Object.keys(schema.args).length || [...parameters].some(n => !Object.hasOwn(schema.args, n)))
     sourceFailure('SOURCE_PARAMETER_NAMES', action.span);
@@ -114,15 +118,30 @@ export function lowerAndCheckFinancialAction(
   action: ActionDecl,
   schema: Schema,
   schemaCanonicalJSON: string,
+  options?: {
+    contract?: typeof FINANCIAL_EXPRESSION_CONTRACT_V1 | typeof FINANCIAL_EXPRESSION_CONTRACT_V2;
+    extraReserved?: readonly string[];
+    financialReads?: boolean;
+  },
 ): { core: { statements: SourceCoreNode[]; span: ReturnType<typeof sourceSpan> }; staticWorkBound: string } | SourceRejected {
-  const lowering = createFinancialSourceLowering(schema, new Set(action.parameters.map(p => p.name)));
+  const extraReserved = options?.extraReserved ?? [];
+  const lowering = createFinancialSourceLowering(
+    schema,
+    new Set(action.parameters.map(p => p.name)),
+    { financialReads: options?.financialReads === true },
+  );
   const statements = [...action.statements, ...action.postconditions].map(statement => {
-    if (statement.tag === 'Let' && reservedSourceTerm(statement.name)) sourceFailure('SOURCE_RESERVED_NAME', statement.span);
+    if (statement.tag === 'Let' && reservedSourceTerm(statement.name, extraReserved)) {
+      sourceFailure('SOURCE_RESERVED_NAME', statement.span);
+    }
     return lowering.statement(statement);
   });
   const core = { statements, span: sourceSpan(action.span) };
-  const checked = createFinancialExpressionContractV1(schemaCanonicalJSON).check(canonical({ contract: FINANCIAL_EXPRESSION_CONTRACT_V1,
-    source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
+  const contract = options?.contract ?? FINANCIAL_EXPRESSION_CONTRACT_V1;
+  const checked = (contract === FINANCIAL_EXPRESSION_CONTRACT_V2
+    ? createFinancialExpressionContractV2(schemaCanonicalJSON)
+    : createFinancialExpressionContractV1(schemaCanonicalJSON)
+  ).check(canonical({ contract, source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
   if ('status' in checked) return checked;
   return { core, staticWorkBound: workBound(core) };
 }

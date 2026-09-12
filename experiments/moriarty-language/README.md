@@ -144,3 +144,14 @@ actions in one file. Check still inspects every action. Simulate requires
 node src/cli.ts check --profile moriarty-financial-agreement-source/2 spec/successor/examples/multiple-action-payment.mori
 node src/cli.ts simulate --profile moriarty-financial-agreement-source/2 --action repay --snapshots spec/successor/examples/multiple-action-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/multiple-action-payment.mori
 ```
+
+The `/3` profile adds typed reads of obligations, balances and allowances
+from a fully validated kernel pre-state. `repay_remaining` computes the
+payment from `outstanding<Cash>("Due100")`. See
+[spec/successor/financial-agreement-source-v3.md](spec/successor/financial-agreement-source-v3.md).
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/3 spec/successor/examples/financial-state-payment.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/3 --action repay --snapshots spec/successor/examples/financial-state-payment.snapshots.json --repayment-state spec/successor/examples/financial-state-payment.state.json spec/successor/examples/financial-state-payment.mori
+npm run financial-state-demo
+```

@@ -1,0 +1,66 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+const root='/home/charl/Moriarty/.worktrees/financial-state-reads';
+const out='/home/charl/Moriarty/deliverables/financial-state-reads-2026-09-12/audit-01';
+const base=root+'/experiments/moriarty-language';
+const {createFinancialAgreementSourceV3}=await import(base+'/src/successor/financial-agreement-source-v3.ts');
+const {parseFinancialAgreementSourceV3,formatFinancialAgreementSourceV3}=await import(base+'/src/successor/financial-agreement-source-v3-frontend.ts');
+const {createFinancialExpressionContractV2,createFinancialExpressionContractV1}=await import(base+'/src/successor/financial-expression-v1.ts');
+const {canonical:J}=await import(base+'/src/successor/expression-wire-v1.ts');
+const source=fs.readFileSync(base+'/spec/successor/examples/financial-state-payment.mori','utf8');
+const initial=JSON.parse(fs.readFileSync(base+'/spec/successor/examples/financial-state-payment.state.json'));
+const snapshots=JSON.parse(fs.readFileSync(base+'/spec/successor/examples/financial-state-payment.snapshots.json'));
+const api=createFinancialAgreementSourceV3(),clone=x=>structuredClone(x), rows=[];
+function t(name,fn){try{fn();rows.push({name,pass:true});}catch(e){rows.push({name,pass:false,message:e.message});}}
+function rejected(r,code){assert.equal(r.status,'Rejected',JSON.stringify(r));assert.equal(r.code,code,JSON.stringify(r));for(const k of ['post','financialPost','effects','descriptors','workRemaining'])assert.equal(k in r,false);}
+const schema={units:['Cash','Other'],assets:['Cash','Token'],vaults:[],parties:[],recordTypes:{},enumTypes:{},variantTypes:{},fields:{},args:{id:['Text']},observations:{},operations:{}};
+const P={kind:'synthetic',start:'0',end:'0'},N=(constructor,operands)=>({constructor,operands,span:P}),T=value=>N('LitText',{value}),B=value=>N('LitBool',{value});
+const names=['ReadOutstanding','ReadPrincipal','ReadAccrued','ReadBalance','ReadAllowanceRemaining','ReadAllowanceSpent'];
+const read=(k,id)=>N(k,{[names.indexOf(k)<3?'unit':'asset']:'Cash',identity:typeof id==='string'?T(id):id});
+function core(c,state=initial,extra={}){return createFinancialExpressionContractV2(J(schema),state===undefined?undefined:typeof state==='string'?state:JSON.stringify(state)).evaluate(J({contract:'moriarty-financial-expression-contract/2',source:'',core:c,Pre:{},Args:{id:'Payer'},Obs:{},workInitial:'20',...extra}));}
+function ev(src=source,action='repay',snap=snapshots,state=initial){return api.evaluate(src,action,typeof snap==='string'?snap:J(snap),typeof state==='string'?state:JSON.stringify(state));}
+for(const [i,k] of names.entries()){
+ t(k+' result/type/work',()=>{const r=core(read(k,i<3?'Due100':'Payer'));assert.equal(r.value,['100','100','0','100','100','0'][i]);assert.equal(r.workRemaining,'18');assert.deepEqual(r.type,i<3?['Quantity',[['Cash','1']],'0']:['Amount','Cash']);});
+ for(const id of ['', 'X'.repeat(65),'bad-id','Payer\n','Payer\r','Payer\u2028','Payer\0']) t(k+' invalid '+JSON.stringify(id),()=>rejected(core(read(k,id)),'INVALID_IDENTIFIER'));
+ t(k+' missing',()=>rejected(core(read(k,'Missing')),i<3?'MISSING_OBLIGATION':i===3?'MISSING_BALANCE':'MISSING_ALLOWANCE'));
+ for(const prop of ['extra','wrongOperand']) t(k+' closed '+prop,()=>{const n=read(k,'Payer');n.operands[prop]='x';rejected(core(n),'INPUT_SCHEMA');});
+ t(k+' Core /1 closed',()=>{const r=createFinancialExpressionContractV1(J(schema)).check(J({contract:'moriarty-financial-expression-contract/1',source:'',core:read(k,'Payer'),Pre:{},Args:{},Obs:{},workInitial:'0'}));rejected(r,'TYPE_CONSTRUCTOR');});
+}
+t('dynamic identity once and selected branch cost',()=>{const c=read('ReadBalance',N('Select',{condition:B(true),consequent:N('ReadArg',{name:'id'}),alternative:T('Missing')}));const r=core(c);assert.equal(r.value,'100');assert.equal(r.workRemaining,'16');});
+t('exact pair no other asset fallback',()=>{const c=read('ReadBalance','Other');rejected(core(c),'MISSING_BALANCE');c.operands.asset='Token';assert.equal(core(c).value,'7');});
+t('quantity range',()=>{const s=clone(initial);s.obligations[0].principal=s.obligations[0].outstanding=String(1n<<127n);rejected(core(read('ReadOutstanding','Due100'),s),'ARITH_RANGE');});
+t('UInt128 max Amount',()=>{const s=clone(initial);s.balances[0].amount=String((1n<<128n)-1n);assert.equal(core(read('ReadBalance','Payer'),s).value,s.balances[0].amount);});
+t('wrong denomination',()=>{const c=read('ReadOutstanding','Due100');c.operands.unit='Other';rejected(core(c),'NOMINAL_UNIT');});
+t('zero settled present',()=>{const s=clone(initial);Object.assign(s.obligations[0],{outstanding:'0',principal:'0',status:'Settled'});assert.equal(core(read('ReadOutstanding','Due100'),s).value,'0');});
+t('short circuit excludes runtime read cost',()=>{const c=N('Or',{left:B(true),right:N('Eq',{left:read('ReadBalance','Missing'),right:N('LitAmount',{asset:'Cash',value:'0'})})});assert.equal(core(c).workRemaining,'18');});
+t('Core admission exact repaired envelope',()=>assert.deepEqual(core(B(true),'{}'),{status:'Rejected',code:'SCHEMA',span:P,nodePath:[],workUsed:'0'}));
+t('Core object context closed',()=>{const r=createFinancialExpressionContractV2(J(schema),initial).evaluate('{}');assert.deepEqual(r,{status:'Rejected',code:'INPUT_SCHEMA',span:P,nodePath:[],workUsed:'0'});});
+const mutations=[['unrelated balance range',s=>s.balances[2].amount='-1','INVALID_AMOUNT'],['unrelated allowance sum',s=>s.allowances[1].remaining=String((1n<<128n)-1n),'INVARIANT'],['duplicate balance',s=>s.balances.push(s.balances[0]),'DUPLICATE'],['duplicate allowance',s=>s.allowances.push(s.allowances[0]),'DUPLICATE'],['duplicate obligation',s=>s.obligations.push(s.obligations[0]),'DUPLICATE'],['debt sum',s=>s.obligations[0].principal='99','INVARIANT'],['status',s=>s.obligations[0].status='Settled','INVARIANT'],['conversion',s=>s.obligations[0].conversion.mantissa='0','INVARIANT'],['work overflow',s=>s.work.spent=String((1n<<128n)-1n),'INVARIANT'],['closed work',s=>s.work.extra='0','SCHEMA'],['history duplicate',s=>s.usedTransferIds=['Old','Old'],'DUPLICATE'],['capacity',s=>s.balances=Array.from({length:129},(_,i)=>({party:'X'+i,asset:'Cash',amount:'0'})),'CAPACITY']];
+for(const [name,mut,code] of mutations)t('admission before guard '+name,()=>{const s=clone(initial);mut(s);const r=ev(source.replace('requires magnitude(outstanding<Cash>("Due100")) > 0;','requires false;'),'repay',snapshots,s);rejected(r,code);assert.equal(r.actionIndex,null);});
+t('source static before selector/state',()=>rejected(ev(source.replace('let nominal = outstanding<Cash>("Due100");','let nominal = outstanding<Cash>(1);'),'Missing',snapshots,'{}'),'TYPE_MISMATCH'));
+t('selector before state',()=>rejected(ev(source,'Missing',snapshots,'{}'),'SOURCE_ACTION_UNKNOWN'));
+t('state before snapshots',()=>rejected(ev(source,'repay','bad','{}'),'SCHEMA'));
+t('work mismatch before snapshot shape',()=>{const s=clone(snapshots);s.workInitial='255';s.Pre={};rejected(ev(source,'repay',s),'WORK_MISMATCH');});
+t('extra selected Args',()=>{const s=clone(snapshots);s.Args.extra='1';rejected(ev(source,'repay',s),'INPUT_SCHEMA');});
+t('returned artifacts cannot inject',()=>{const artifact=api.elaborate(source);artifact.actions[0].core.statements=[];artifact.actions[0].schema.fields={};assert.equal(ev().financialPost.obligations[0].outstanding,'70');});
+t('same pre after emit and ordinary ensures',()=>{const src=source.replaceAll('ensures post.paid == pre.paid + payment;','ensures post.paid == pre.paid + payment; ensures magnitude(outstanding<Cash>("Due100")) == 100;');assert.equal(ev(src).status,'FundedExpressionPrepared');});
+t('UTF8 read failure span',()=>{const src='// é😀\n'+source.replace('outstanding<Cash>("Due100")','outstanding<Cash>("Missing")');const r=ev(src);rejected(r,'MISSING_OBLIGATION');const start=Buffer.byteLength(src.slice(0,src.indexOf('outstanding<Cash>("Missing")')));assert.deepEqual(r.span,{kind:'source',start:String(start),end:String(start+Buffer.byteLength('outstanding<Cash>("Missing")'))});assert.equal(r.workUsed,'5');});
+t('independent node counts',()=>{const a=api.elaborate(source);function count(n){if(!n||typeof n!=='object')return 0;return (Object.hasOwn(n,'constructor')?1:0)+Object.values(n).reduce((a,b)=>a+count(b),0);}assert.deepEqual(a.actions.map(x=>count(x.core)),[43,45,47]);assert.deepEqual(a.actions.map(x=>x.staticWorkBound),['43','45','47']);});
+t('three calls full state and history',()=>{let s=clone(initial),p=clone(snapshots.Pre);for(const [i,action] of ['repay','repay_installment','repay_remaining'].entries()){const r=ev(source,action,{Pre:p,Args:{transferId:'T'+(i+1),allocationId:'Alloc'+(i+1),...(i===0?{nominal:'30'}:{})},Obs:{},workInitial:s.work.remaining},s);assert.equal(r.status,'FundedExpressionPrepared');s=r.financialPost;p=r.post;assert.equal(s.obligations[0].outstanding,['70','50','0'][i]);assert.equal(s.work.remaining,['211','164','115'][i]);}const expected=clone(initial);expected.balances[0].amount='0';expected.balances[1].amount='100';expected.allowances[0].remaining='0';expected.allowances[0].spent='100';Object.assign(expected.obligations[0],{principal:'0',outstanding:'0',status:'Settled'});expected.usedTransferIds=['T1','T2','T3'];expected.usedAllocationIds=['Alloc1','Alloc2','Alloc3'];Object.assign(expected.work,{remaining:'115',spent:'141'});assert.deepEqual(s,expected);assert.deepEqual(p,{due:'100',paid:'100'});rejected(ev(source,'repay_remaining',{Pre:p,Args:{transferId:'T4',allocationId:'Alloc4'},Obs:{},workInitial:'115'},s),'GUARD_FAILED');});
+t('interest first and arbitrary spent17',()=>{const s=clone(initial);s.obligations[0].principal='80';s.obligations[0].accrued='20';s.work.spent='17';const r=ev(source,'repay',snapshots,s);assert.equal(r.financialPost.obligations[0].principal,'70');assert.equal(r.financialPost.obligations[0].accrued,'0');assert.equal(r.financialPost.work.spent,'62');});
+for(const [w,code] of [['42','WORK_EXHAUSTED'],['43','INSUFFICIENT_WORK'],['44','INSUFFICIENT_WORK'],['45',null]])t('work boundary '+w,()=>{const s=clone(initial),snap=clone(snapshots);s.work.remaining=snap.workInitial=w;const r=ev(source,'repay',snap,s);if(code)rejected(r,code);else {assert.equal(r.workRemaining,'0');assert.equal(r.financialPost.work.closureReserve,'16');}});
+for(const name of ['outstanding','principal','accrued','balance','allowance_remaining','allowance_spent']){
+ t('grammar arity '+name,()=>{const src=source.replace('outstanding<Cash>("Due100")',name+'<Cash,Cash>("Due100")');assert.doesNotThrow(()=>parseFinancialAgreementSourceV3(src));rejected(api.check(src),'SOURCE_ARITY');assert.doesNotThrow(()=>parseFinancialAgreementSourceV3(formatFinancialAgreementSourceV3(src)));});
+ t('generic shape '+name,()=>rejected(api.check(source.replace('outstanding<Cash>("Due100")',name+'<Amount<Cash>>("Due100")')),'SOURCE_TYPE_SHAPE'));
+}
+t('README canonical grammar equals full file',()=>{const readme=fs.readFileSync(root+'/README.md','utf8');const grammar=fs.readFileSync(base+'/spec/successor/financial-agreement-source-v3-grammar.ebnf','utf8').trim();assert.ok([...readme.matchAll(/```ebnf\n([\s\S]*?)```/g)].some(m=>m[1].trim()===grammar));});
+const cli=base+'/src/cli.ts',fixture=base+'/spec/successor/examples/financial-state-payment.mori';
+function command(args){const r=spawnSync(process.execPath,[cli,...args],{cwd:root,encoding:'utf8'});return {status:r.status,stdout:r.stdout,stderr:r.stderr};}
+const prefix=['--profile','moriarty-financial-agreement-source/3'];
+for(const cmd of ['check','format'])t('actual CLI '+cmd,()=>{const r=command([cmd,...prefix,fixture]);assert.equal(r.status,0,r.stderr);if(cmd==='format')assert.equal(formatFinancialAgreementSourceV3(r.stdout),r.stdout);});
+t('actual CLI simulate',()=>{const r=command(['simulate',...prefix,'--action','repay','--snapshots',base+'/spec/successor/examples/financial-state-payment.snapshots.json','--repayment-state',base+'/spec/successor/examples/financial-state-payment.state.json',fixture]);assert.equal(r.status,0,r.stderr);assert.deepEqual(JSON.parse(r.stdout).result,ev());});
+t('CLI usage action on check',()=>{const r=command(['check',...prefix,'--action','repay',fixture]);assert.equal(r.status,2);assert.equal(r.stdout,'');assert.equal(JSON.parse(r.stderr).code,'CLI_USAGE');});
+t('CLI semantic unknown action',()=>{const r=command(['simulate',...prefix,'--action','Missing','--snapshots',base+'/spec/successor/examples/financial-state-payment.snapshots.json','--repayment-state',base+'/spec/successor/examples/financial-state-payment.state.json',fixture]);assert.equal(r.status,1);assert.equal(r.stdout,'');assert.equal(JSON.parse(r.stderr).code,'SOURCE_ACTION_UNKNOWN');});
+t('actual README npm demo',()=>{const r=spawnSync('npm',['--prefix','experiments/moriarty-language','run','financial-state-demo'],{cwd:root,encoding:'utf8'});assert.equal(r.status,0,r.stderr);fs.writeFileSync(out+'/demo-output.txt',r.stdout);});
+fs.writeFileSync(out+'/independent-results.json',JSON.stringify({total:rows.length,passed:rows.filter(x=>x.pass).length,rows},null,2));console.log(JSON.stringify({total:rows.length,passed:rows.filter(x=>x.pass).length,failures:rows.filter(x=>!x.pass)},null,2));process.exitCode=rows.some(x=>!x.pass)?1:0;
