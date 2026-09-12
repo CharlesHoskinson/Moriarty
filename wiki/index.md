@@ -8,7 +8,7 @@ updated: 2026-09-12
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-12T02:40:00Z
+updated_at: 2026-09-12T21:40:00Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -55,11 +55,11 @@ The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) adopt
 
 Thirteen repositories at pinned commits, a 695-file topic corpus, and an 8,389-node graph across 501 communities. Only nine cross-protocol edges survive filtering, all inferred similarities around staking and validator discipline; the three systems share no intent format, fee representation or settlement interface.
 
-## DeFi kernel SDK interface — 2026-09-12
+## DeFi kernel interface — 2026-09-12
 
-[[wiki/defi-kernel-sdk-interface|SDK interface decision]] · [interface design](../docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md) · [kernel design](../docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md).
+[[wiki/defi-kernel-sdk-interface|Interface decision]] · [specification](../docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md) · [reconciliation](../docs/superpowers/specs/2026-09-12-defi-kernel-sdk-interface-reconciliation.md).
 
-Orchestration around a bounded language: no fifth effect, one anchored Midnight coordinator, and foreign legs advancing a pending record through `ImportFrom` at fan-in 1. Five cost planes, two meters of declared work, nine paid operator roles, and a three-tier admission ladder that ships local orchestration while value-moving foreign legs stay gated on adapter conformance and funded compensation.
+A four-layer specification whose public part names no chain: you state an outcome, and which chains and assets serve it is a routing decision. Five guarantees, five surfaces, and capability classes replacing admission tiers. Four earlier guarantees were found false and restated. Tron now outranks Hyperliquid on network binding, and NEAR delegate actions are refused outright for value.
 
 ## Completion sprint schedule
 

@@ -8,7 +8,7 @@ updated: 2026-09-12
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-12T02:40:00Z
+updated_at: 2026-09-12T21:40:00Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -1124,3 +1124,11 @@ Capture `capture-pcd-midnight-native-20260911`; ingest `ingest-pcd-midnight-nati
 **Decisions.** Five cost planes rather than four, adding foreign execution as its own plane. Budget exhaustion stops work instead of falling back to unsigned charges. Capacity is purchased, not staked. Adjudication of a false imported fact uses a separate quorum, disclosed as another trusted import. Admission is staged in three tiers so local orchestration can ship while value-moving foreign legs stay gated.
 
 **Not performed.** No adapter test, finality experiment or benchmark. Every tariff, bond, quorum size and exposure cap is a proposed launch parameter. No language change admitted, no push.
+
+## [2026-09-12] decision | DeFi kernel interface re-cut around outcomes
+
+**Deliverables.** [[wiki/defi-kernel-sdk-interface|Interface decision page]] rewritten; specification and reconciliation record committed as `194f633` on `main` and `DeFiInterface` and pushed; four category studies retained under `deliverables/defi-interface-research-2026-09-12/`.
+
+**Decisions.** The specification is layered so its public part names no chain, venue or signing scheme. The application interface is grouped by what a caller is doing, and per-leg dispatch calls moved below the line. Admission tiers became capability classes that are router inputs. Four standing guarantees were found false or unsupported and restated, and a fifth was added for inbound value. Tron reaches observation bare and value movement behind a custody contract; Hyperliquid was downgraded because its signed chain identifier is constant across environments; NEAR delegate actions are refused outright for value.
+
+**Not performed.** No adapter test, finality experiment or benchmark. Forty-two parameters remain unfixed. Nothing was broadcast to any network, and no language change was admitted.
