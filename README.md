@@ -40,7 +40,7 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 
 [K](https://kframework.org/docs/user_manual/) describes execution through configurations and rewrite rules. It is the selected framework for Moriarty's formal operational semantics. Typing judgments define admissible programs; contract properties and Hoare-style assertions state claims to prove. Denotational models can support particular financial analyses, but do not replace the execution definition.
 
-The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Distinct later entries are `moriarty-expression-source/1`, pure `moriarty-financial-expression-source/1`, and `moriarty-financial-agreement-source/1`, `/2`, `/3` and `/4`. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile. The complete `/4` grammar is reproduced below. The historical `/1` expression-source grammar remains at [its canonical file](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf).
+The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Distinct later entries are `moriarty-expression-source/1`, pure `moriarty-financial-expression-source/1`, and `moriarty-financial-agreement-source/1`, `/2`, `/3`, `/4` and `/5`. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile. The complete `/5` grammar is reproduced below. The historical `/1` expression-source grammar remains at [its canonical file](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf).
 
 The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) supports Transfer-only execution as well as Transfer followed by Repay. The Transfer-only extension is tracked in [its scoped evidence](deliverables/transfer-only-k-2026-09-09/README.md). All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
 
@@ -54,7 +54,7 @@ The successor semantic freeze and full SP02/SP03 acceptance remain open. A K def
 
 ### Successor source grammar (EBNF)
 
-This is the complete syntax grammar for **`moriarty-financial-agreement-source/4`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf). It admits uninitialized state, record and operation declarations, multiple named actions, six generic financial PRE reads, and six Ensure-only financial POST reads. The parser, formatter, checker and local funded evaluator support that profile. Historical full grammars remain separate: [`syntax/0`](experiments/moriarty-language/spec/successor/grammar.ebnf), [`expression-source/1`](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf), [`financial-expression-source/1`](experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf), [`agreement-source/1`](experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf), [`agreement-source/2`](experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf) and [`agreement-source/3`](experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf). The [source contract](experiments/moriarty-language/spec/successor/financial-agreement-source-v4.md) defines the `/4` schema binding, Core `/3` post constructors, kernel-before-ensures evaluation, diagnostics and work rules. The earlier [expression-source contract](experiments/moriarty-language/spec/successor/expression-source.md) still describes the trusted-schema one-action factory. Complete successor authoring, K correspondence and Preview financial settlement remain open.
+This is the complete syntax grammar for **`moriarty-financial-agreement-source/5`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf). It admits uninitialized state, record and operation declarations, multiple named actions, six generic financial PRE reads, and six Ensure-only financial POST reads. Protected Originate and Accrue use nested `record<Row>{...}` constructors and `u64(...)` literals. The parser, formatter, checker and local funded evaluator support that profile. Historical full grammars remain separate: [`syntax/0`](experiments/moriarty-language/spec/successor/grammar.ebnf), [`expression-source/1`](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf), [`financial-expression-source/1`](experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf), [`agreement-source/1`](experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf), [`agreement-source/2`](experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf), [`agreement-source/3`](experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf) and [`agreement-source/4`](experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf). The [source contract](experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md) defines the `/5` schema binding, Core `/4` constructors, lifecycle kernel evaluation, diagnostics and work rules. The earlier [expression-source contract](experiments/moriarty-language/spec/successor/expression-source.md) still describes the trusted-schema one-action factory. Complete successor authoring, K correspondence and Preview financial settlement remain open.
 
 The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.
 
@@ -72,14 +72,14 @@ The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notat
 
 Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use `//` or `/* ... */`.
 
-The grammar below is the complete `/4` syntax, typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and older profiles remain separate; lexical rules are `lexical.md` plus profile-gated `[`, `]` and `?` punctuation; `record` and `operation` are profile-gated declaration spellings; state fields have no initializer; parentheses create no AST nodes; conditional is right-associative below Or; generic, financial-read and financial-post-read names are excluded from `ordinaryPrimaryName`; integer lexical tokens remain unsigned canonical decimals with `-` as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules. The simultaneous bounds are 65,536 source UTF-8 bytes, 8,192 tokens, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action, 64 record fields, 64 ordinary call arguments, 128 collection-intrinsic arguments and 256 action parameters.
+The grammar below is the complete `/5` syntax, typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and older profiles remain separate; lexical rules are `lexical.md` plus profile-gated `[`, `]` and `?` punctuation; `record` and `operation` are profile-gated declaration spellings; state fields have no initializer; parentheses create no AST nodes; conditional is right-associative below Or; generic, financial-read and financial-post-read names are excluded from `ordinaryPrimaryName`; integer lexical tokens remain unsigned canonical decimals with `-` as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules. The simultaneous bounds are 65,536 source UTF-8 bytes, 8,192 tokens, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action, 64 record fields, 64 ordinary call arguments, 128 collection-intrinsic arguments and 256 action parameters.
 
 <details>
 <summary>Verbatim EBNF for copying</summary>
 
 ```ebnf
-(* ISO/IEC 14977 EBNF for moriarty-financial-agreement-source/4.
-   Source header must match exactly; /1, /2, /3 and older profiles remain separate.
+(* ISO/IEC 14977 EBNF for moriarty-financial-agreement-source/5.
+   Source header must match exactly; /1, /2, /3, /4 and older profiles remain separate.
    Lexical rules are lexical.md plus the financial-expression punctuation
    [ ] and ?. record and operation are profile-gated declaration spellings
    and are not added to the global keyword catalog.
@@ -690,6 +690,27 @@ succeeds with remaining 0 and reserve 16. A suffix rejection publishes no
 financial effect. This is local preparation, not a K execution, proof, or
 ledger settlement. The bounded K kernel does not implement the post-read
 constructors.
+
+### Check, format and simulate loan origination and accrual
+
+Agreement source `/5` keeps the `/4` declaration grammar, PRE reads and
+Ensure-only POST reads. It adds protected Originate and Accrue, nested
+`record<Row>{...}` constructors, `u64(...)` period/time literals, and the
+lifecycle kernel `moriarty-financial-lifecycle/1`. Quantity and Amount stay
+distinct; source U and settlement A are the same name. Core `/4` evaluate is
+funded action evaluation over that kernel. The current example originates
+principal 100, accrues one period of 10, and repays 30; outstanding 80
+remains and lifetime incurred stays 110. Full settlement of that example is
+Task 3. Run these from the repository root:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.state.json experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
+npm --prefix experiments/moriarty-language run financial-lifecycle-demo
+```
+
+This is local preparation, not a K execution, proof, or ledger settlement.
 
 ### Inspect the generated Compact
 
