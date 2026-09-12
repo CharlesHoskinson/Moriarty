@@ -1,0 +1,138 @@
+{
+  "kind": "independent-exact-adapter-source-audit/1",
+  "timestampUTC": "2026-09-12T06:24:05.440045+00:00",
+  "reviewer": {
+    "agent": "/root/k_adapter_audit",
+    "requestedModel": "gpt-6-astra",
+    "requestedEffort": "medium",
+    "identityDisclosure": "Fresh delegated context requested by root as GPT-6 Astra medium. No independent provider-returned model/effort attestation was exposed; no stronger identity claim is made.",
+    "independence": "Did not author or edit candidate files. Root supplied provisional concerns; independently inspected actual source and exercised own simulated checks."
+  },
+  "verdict": "BLOCKED_PENDING_SAME_AUTHOR_REPAIR",
+  "sourceApproved": false,
+  "dispatchApproved": false,
+  "actualKResultApproved": false,
+  "scope": "Exact frozen three-file diagnostic adapter and actual retained binding/tools/artifacts plus existing runner source and approved resource/routing contract; not lifecycle K implementation.",
+  "frozenFiles": {
+    ".moriarty-dev/k-macro05-trace106-diagnostic.py": {
+      "sha256": "de02a76e59089aa2fc129e26449f4876dc7e02c7e474c461cc1d160011242b3b",
+      "bytes": 12723
+    },
+    ".moriarty-dev/test_k_macro05_trace106_diagnostic.py": {
+      "sha256": "9b2527938280da15370f77f96845d4c1b696132e28849a0dce08767acaa4aa88",
+      "bytes": 14387
+    },
+    ".moriarty-dev/k-macro05-trace106-pins.json": {
+      "sha256": "b2ae44c64b6711a367af235ab6524cb2ee4b10f4bd55bd8a9dbb1603b3f2140e",
+      "bytes": 6286
+    }
+  },
+  "frozenFilesMatch": true,
+  "closureManifest": {
+    "path": "audit-adapter-closure-01.json",
+    "sha256": "ee0b83a41f2d77029c242e40a0361702d08895dcd90015cf62f0097c497c736e",
+    "uniquePaths": 532,
+    "allRecordedExpectedHashesMatch": true
+  },
+  "checks": [
+    {
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status",
+      "exitCode": 0,
+      "result": "Read-only worktree status: dependent loan dispatch blocked; no financial transaction evidence recorded."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3.14 .moriarty-dev/test_k_macro05_trace106_diagnostic.py -v",
+      "exitCode": 0,
+      "tests": 11,
+      "scope": "Offline injected-spawn tests. Passing counts do not establish native capture correctness or acceptance."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 /usr/bin/python3.14 audit-adapter-probes-01.py",
+      "exitCode": 0,
+      "scope": "verify-only plus injected trace and bounded harmless Python child checks; no K or strace",
+      "evidence": "audit-adapter-probes-01.json",
+      "verifyOnly": {
+        "verifiedFiles": 519,
+        "bindingArtifactsVerified": 488,
+        "krunInvocationsPinned": 106,
+        "spawnCount": 0
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "A01",
+      "severity": "blocking",
+      "title": "Native stderr and stack evidence are discarded",
+      "sourceLines": "adapter 278,320,324-326; parser 140-146",
+      "observation": "Only adapter JSON reaches stderr. No raw native stderr file is written; processEvidence.sample retains at most32 krun-containing lines. Timeout/overflow stdout is also not forwarded or persisted. There is no output-destination preflight or durable raw retention. Existing runner can only retain what adapter emits, so its own byte hashes cannot recover native stderr.",
+      "check": "Injected trace containing native_stack_site is absent both as raw bytes and as a stack site in adapter output.",
+      "repair": "Retain bounded raw streams and trace bytes through an explicitly checked destination or lossless existing output channel. Preserve diagnostic evidence on non-normal exits and fail closed on retention failure; account for wrapper metadata under outer output cap."
+    },
+    {
+      "id": "A02",
+      "severity": "blocking",
+      "title": "Capture is unbounded until communicate completes",
+      "sourceLines": "adapter 151-188",
+      "observation": "Popen.communicate buffers complete stdout and stderr before applying output_limit. Inner memory consumption scales with all child output; outer runner only sees later adapter output and cannot bound this memory.",
+      "check": "Harmless Python4MiB stdout probe: 4194304 counted,1048576 retained,10493916 peak Python allocation bytes. This is simulated process capture, not K.",
+      "repair": "Incrementally drain both streams using bounded buffers, running counts/hashes, one deadline and explicit overflow handling."
+    },
+    {
+      "id": "A03",
+      "severity": "blocking",
+      "title": "Signal attribution is not tied to process identity",
+      "sourceLines": "adapter 131-146,302-303",
+      "observation": "Any SIGSEGV substring and last killed-by text are used independently of interpreter PID, successful exec, or provenance of stderr. interpreterExit can assert SIGSEGV when another process died; unsuccessful exec and ordinary stderr text are not excluded.",
+      "check": "Simulated interpreter PID10 exits0 and parser PID20 diesSIGSEGV; parser reports interpreterExit signal SIGSEGV.",
+      "repair": "Retain raw trace, associate successful interpreter exec and terminal signal with the same PID and process tree, and report unknown when evidence is ambiguous. Separate wrapper/strace exit from interpreter and parser evidence."
+    },
+    {
+      "id": "A04",
+      "severity": "blocking",
+      "title": "Post-timeout drain has no deadline and group kill does not cover detached descendants",
+      "sourceLines": "adapter 158-176",
+      "observation": "After timeout, killpg addresses the original child group then communicate() has no timeout. Descendants in a new session can hold pipes past the20-second deadline. Existing strong outer containment remains required and may eventually terminate the namespace, but that does not satisfy the inner deadline or preserve its lost summary.",
+      "check": "Bounded harmless Python child plus detached grandchild:0.1-second requested limit returned after0.624563807999948 seconds, timedOut true; grandchild naturally ended at0.6 seconds. No K or strace.",
+      "repair": "Use a single monotonic deadline through read, termination and cleanup; guarantee bounded pipe closure/reap and explicit incomplete cleanup/evidence status. Rely on the existing admitted strong containment without adding a launcher."
+    },
+    {
+      "id": "A05",
+      "severity": "blocking",
+      "title": "Nested tool commitments are not preflight verified",
+      "sourceLines": "adapter 75-109; retained expression-parser.py; krun wrapper and bin-unwrapped/krun",
+      "observation": "Binding hashes the lock files but verify_pins never follows their nested tool/source hashes. krun wrapper execs bin-unwrapped/krun and sources k-util.sh; parser reads kast lock and checks kast only after krun begins. Thus hashing the wrapper and lock file does not establish the approved before-K selected tool closure. All inspected nested locks match now, but a current pass does not enforce future mismatch rejection.",
+      "repair": "Add the actual selected transitive tool/source commitments to preflight, including nested kast and unwrapped krun commitments, or explicitly establish the reviewed immutable package closure. Bind final pins/config in candidate and runner files."
+    },
+    {
+      "id": "A06",
+      "severity": "medium",
+      "title": "krunCalls is asserted before execution evidence exists",
+      "sourceLines": "adapter 262-269,311-314",
+      "observation": "Result unconditionally sets krunCalls1 after spawning strace, even if strace fails before exec. It records one attempted wrapper spawn, not one observed successful krun exec.",
+      "repair": "Label scheduled/attempted spawn separately from process-tree-derived observed exec count; do not promote ptrace/launcher failure to a K invocation observation."
+    }
+  ],
+  "positiveObservations": [
+    "Current frozen hashes and configured retained pins match; exact recorded argv agrees with retained command and proposal diagnostic prefix.",
+    "No retry or compilation path exists in adapter; core limit is set0 and8MiB stack checked and retained before child spawn.",
+    "Normal wrapper113 plus empty stdout is forwarded as the narrow admitted observation; other normal codes are not rewritten113; overflow/timeout prevent reproductionObserved.",
+    "Raw child returncode is preserved in JSON wrapperExit even when negative signals become shell exit encoding through sys.exit.",
+    "Existing runner load validates admitted candidate, command, launcher and exact prepaid debit, and execute requests Foreman --require-containment strong; it incrementally bounds its own output. Strong runtime containment was not executed or demonstrated by this audit."
+  ],
+  "remainingAdmissionConditions": [
+    "Repair blocking source findings with same author, freeze new exact bytes and obtain fresh independent source audit.",
+    "Draft runner has unresolved candidate/adapter hash and omits consumed pins JSON from files; final full candidate/config/action/command/binding/charge projection must be frozen and separately validated before dispatch. These are recognized draft incompleteness, not currently admitted records.",
+    "Retain approved isolated resource and diagnostic-only routing; stage remains specified-only without product acceptance.",
+    "Actual guarded admission, one allowed invocation and separate actual-result review remain unperformed."
+  ],
+  "limitations": [
+    "Binary retained artifacts were hash-verified; no claim of semantic correctness or full runtime-library audit.",
+    "No live containment probe, strace, krun, kompile, Docker, network/provider, or accounting mutation performed.",
+    "No claim that old crash was reproduced or localized, or that K agreement/product acceptance advanced."
+  ],
+  "nativeKInvoked": false,
+  "straceInvoked": false,
+  "compilations": 0,
+  "accountingMutated": false
+}

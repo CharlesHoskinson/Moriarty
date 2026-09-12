@@ -1,0 +1,258 @@
+{
+  "scope": "Independent actual existing runner and temporary SQLite consumer; harmless Python only; no K/strace/compile/live accounting/store changes",
+  "sourceHashes": {
+    "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+    "plugins/moriarty-dev/scripts/moriarty_dev/store.py": "66417c0a1b73fd0c1ad9ee627c74430fdb1edfc8afba2aec155479dba994dfa5"
+  },
+  "cases": [
+    {
+      "name": "exact",
+      "acceptedRawEvidence": true,
+      "rejection": null,
+      "runnerReceipt": {
+        "actionId": "harmless-exact",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "025bb43bd84db0aa64136355e23037ef6ddfb1b3bebef632282efd834d984cce",
+        "chargeId": "test-only-exact",
+        "reservationId": "f05eedd6-8208-47a5-b793-44743373c9f7",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "5",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "import os; os.write(1,b'stdout \\xc3\\xa9\\n'); os.write(2,b'error\\n')"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.12806960701709613,
+        "outputSha256": {
+          "stdout": "801b528a31abe175682667a619da9e46d16588004f268b360d5d64963144c219",
+          "stderr": "ed25a15314bdab3b7896892a4bc7f2ed55dca402f1a15aed0d171acec612593f"
+        },
+        "outputBytes": {
+          "stdout": 10,
+          "stderr": 256
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": false,
+        "behavioralAssertions": []
+      },
+      "detachedSurvived": null
+    },
+    {
+      "name": "exit113",
+      "acceptedRawEvidence": true,
+      "rejection": null,
+      "runnerReceipt": {
+        "actionId": "harmless-exit113",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "66724d5e4de87517965e503fa1ce2965105ef96aabd8e51d48ffc43a0b136c50",
+        "chargeId": "test-only-exit113",
+        "reservationId": "84b2069b-49e5-4b3d-bed8-2fc22feae8a8",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "5",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "raise SystemExit(113)"
+        ],
+        "exitCode": 113,
+        "elapsedSeconds": 0.1270845789986197,
+        "outputSha256": {
+          "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr": "ec7352e3394aee999603d6a4fb720633bf1a8814455ff0c6dd6927731635c49a"
+        },
+        "outputBytes": {
+          "stdout": 0,
+          "stderr": 250
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": false,
+        "behavioralAssertions": [
+          {
+            "assertionId": "test113",
+            "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "outcome": "defect-observed"
+          }
+        ]
+      },
+      "detachedSurvived": null
+    },
+    {
+      "name": "invalidUtf8",
+      "acceptedRawEvidence": false,
+      "rejection": "raw byte recovery",
+      "runnerReceipt": {
+        "actionId": "harmless-invalidUtf8",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "efb6f9e1bb362a2b27c8fc4aa5723993fec1f1e49bde3b9e82b2c6bd6b3a1907",
+        "chargeId": "test-only-invalidUtf8",
+        "reservationId": "407e4e35-6207-4b0a-acaf-52f90f6c42d8",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "5",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "import os; os.write(1,bytes([255]))"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.125778988993261,
+        "outputSha256": {
+          "stdout": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+          "stderr": "3e5b3b4b4bcbcb0600721b699acb3a57a6e0214162fe38420ea48a20060debeb"
+        },
+        "outputBytes": {
+          "stdout": 1,
+          "stderr": 250
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": false,
+        "behavioralAssertions": []
+      },
+      "detachedSurvived": null
+    },
+    {
+      "name": "timeout",
+      "acceptedRawEvidence": false,
+      "rejection": "incomplete result",
+      "runnerReceipt": {
+        "actionId": "harmless-timeout",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "a5aee18e6c9236a06fb827a4b333d74bde8ffb02e7bd34f63bd7e67f03fed0f1",
+        "chargeId": "test-only-timeout",
+        "reservationId": "3d5b5805-6128-4bb6-b9b9-dd42785684f2",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "1",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "import time; time.sleep(10)"
+        ],
+        "exitCode": 124,
+        "elapsedSeconds": 2.123584789020242,
+        "outputSha256": {
+          "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr": "73f98a22a5723d472abd921c0be8e3f96234790a69599e63a04b639b0e9d26d1"
+        },
+        "outputBytes": {
+          "stdout": 0,
+          "stderr": 250
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": false,
+        "behavioralAssertions": []
+      },
+      "detachedSurvived": null
+    },
+    {
+      "name": "overflow",
+      "acceptedRawEvidence": false,
+      "rejection": "incomplete result",
+      "runnerReceipt": {
+        "actionId": "harmless-overflow",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "065afb0eda3e26061b3a796463435d2f39a24a93cb778876097d322eff580690",
+        "chargeId": "test-only-overflow",
+        "reservationId": "dfd794cc-75c3-474a-a5da-13f9ce03653a",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "5",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "import os; os.write(1,b'x'*4096)"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.12971087300684303,
+        "outputSha256": {
+          "stdout": "a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e",
+          "stderr": "907ad22b7908b0b2c1efbab497bbf614face8fd7236219ea6f09b01958593de7"
+        },
+        "outputBytes": {
+          "stdout": 4096,
+          "stderr": 250
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": true,
+        "behavioralAssertions": []
+      },
+      "detachedSurvived": null
+    },
+    {
+      "name": "detached",
+      "acceptedRawEvidence": true,
+      "rejection": null,
+      "runnerReceipt": {
+        "actionId": "harmless-detached",
+        "candidateHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "runnerDigest": "39749a120ff59025e2d06a7b0e371e6221bea0bb2e4c5d2d6bb84ba770207857",
+        "chargeId": "test-only-detached",
+        "reservationId": "898f40ff-d39a-4a50-9524-0022801abbc7",
+        "argv": [
+          "/home/charl/.foreman/tools/fnm/node-versions/v24.18.1/installation/bin/node",
+          "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+          "--timeout",
+          "5",
+          "--grace",
+          "1",
+          "--require-containment",
+          "strong",
+          "--",
+          "/usr/bin/python3.14",
+          "-c",
+          "import subprocess,sys,time,pathlib; subprocess.Popen([sys.executable,'-c',\"import pathlib,time; pathlib.Path('/tmp/moriarty-runner-consumer-wexl77m6/ready').write_text('ready'); time.sleep(3); pathlib.Path('/tmp/moriarty-runner-consumer-wexl77m6/escaped').write_text('survived')\",'moriarty-probe-43dbc6c8654040fdb6a4c4cb50a7601c'],start_new_session=True,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); p=pathlib.Path('/tmp/moriarty-runner-consumer-wexl77m6/ready'); deadline=time.monotonic()+2\nwhile not p.exists() and time.monotonic()<deadline: time.sleep(.01)\nassert p.exists()"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.17263285801163875,
+        "outputSha256": {
+          "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderr": "00ced1ef8c7aa377ef4a184dcf22b9d0ffaece2733653be0b9651da51d24f86d"
+        },
+        "outputBytes": {
+          "stdout": 0,
+          "stderr": 250
+        },
+        "completionAmbiguous": false,
+        "outputLimitExceeded": false,
+        "behavioralAssertions": []
+      },
+      "detachedSurvived": false
+    }
+  ],
+  "identityMismatchRejections": 30,
+  "actualStorePath": "/home/charl/Moriarty/.git/moriarty-dev/state.sqlite3",
+  "verdict": "PASS"
+}

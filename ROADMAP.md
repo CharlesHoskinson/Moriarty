@@ -16,6 +16,8 @@ This is the complete current roadmap. [OpenSpec](openspec/MORIARTY-COMPLETION-PR
 
 The [asset-study integration](openspec/ASSET-STUDY-INTEGRATION-2026-09-09.md) adds eleven required implementation obligations and eight acceptance cases across the existing sprints. The [task crosswalk](openspec/sprints/asset-study.json) covers asset/claim transformations, encumbrances, operation-specific policies, exceptional authority, servicing, identity/privacy and history. Supported profiles require Docker testing followed by separately admitted Midnight Preview evidence. These obligations are open; the research does not establish implemented language features.
 
+The [Midnight-native PCD roadmap](openspec/PCD-ROADMAP-2026-09-11.md) turns the [September 11 PCD architecture report](deliverables/pcd-midnight-native-2026-09-11/REPORT.md) into nine staged gates and five ordered experiments. The [PCD integration amendment](openspec/PCD-INTEGRATION-2026-09-11.md) adopts it into this roadmap as specified-only planning: ledger-anchored certified state with bounded native certificates replaces per-transaction recursive history. Atomic F3 now rests on the Stage 0 seam, SP04 and SP06 deliver certificates, and the [PCD change package](openspec/changes/pcd-ledger-anchored-acceptance/README.md) adds eighteen requirements to MC03–MC06. Verification-enabled mandatory Preview acceptance stays the hard gate, and certificate campaigns need a reviewed resource amendment.
+
 The [September 9 refinement](openspec/ROADMAP-REFINEMENT-2026-09-09.md) incorporates the PCD/intents reports, four-paper taxonomy, vault report, modern standards atlas and orchestration postmortems. It preserves all original OpenSpec requirements and gates. The [report crosswalk](openspec/sprints/report-lessons.json) assigns eighteen lesson groups, TX01–TX12, VX01–VX06, all 24 modern cases and three identified source gaps to existing tasks. Research classifications become explicit acceptance obligations, never proof or network evidence.
 
 | Sprint | Deliverable | Decisive completion evidence |
@@ -23,29 +25,29 @@ The [September 9 refinement](openspec/ROADMAP-REFINEMENT-2026-09-09.md) incorpor
 | [SP01](openspec/sprints/sp01-financial-contract-and-execution-admission.md) | Freeze behavior and reuse accepted foundations | Complete behavior/source/authority crosswalk; current atomic evidence retained; bounded native go/no-go. |
 | [SP02](openspec/sprints/sp02-complete-mori-authoring-frontend.md) | Finish the language contract and authoring tools | Full lexical/EBNF/static specification plus working check/format and matched syntax study. |
 | [SP03](openspec/sprints/sp03-executable-bounded-semantics-in-k.md) | Make K execute the financial distinctions | Runnable K/evaluator agreement and discharged base-domain semantic/correspondence claims. |
-| [SP04](openspec/sprints/sp04-complete-native-verifier-component-feasibility.md) | Decide whether the full native verifier works | All native/outer verifier controls, including the real final accumulator decision. |
+| [SP04](openspec/sprints/sp04-complete-native-verifier-component-feasibility.md) | Decide whether bounded native certificates work on the ledger | E3 certificate controls on a `ledger-10` devnet, including ledger-side accumulator pairing. |
 | [SP05](openspec/sprints/sp05-financial-integration-on-preview.md) | Finalize actual financial loan and swap effects on Preview | Both loan and swap finalized on Preview with complete independently checked effects. |
-| [SP06](openspec/sprints/sp06-real-recursive-financial-history.md) | Produce and independently verify real recursive history | Real two-step recursive proof; retained bytes independently verified and mutations rejected. |
+| [SP06](openspec/sprints/sp06-real-recursive-financial-history.md) | Produce and independently verify an off-ledger segment certificate | E5 segment certificates at 1, 10 and 100 steps; retained bytes verified in a fresh process and mutations rejected. |
 | [SP07](openspec/sprints/sp07-actus-obligations-and-lifecycle-semantics.md) | Implement ACTUS without losing debt or fields | All 277 ACTUS fixtures/all fields, 18 executable types and 32 source-backed dispositions. |
 | [SP08](openspec/sprints/sp08-defi-actions-and-outcome-intents.md) | Implement behavior-driven DeFi and intent libraries | All 72 DeFi rows, DA24, intent/request lifecycles and report-derived modeled regressions. |
-| [SP09](openspec/sprints/sp09-mandatory-pcd-and-ledger-correspondence.md) | Require complete proof and authority at ledger acceptance | All four mandatory claims, proved correspondence and verification-enabled Preview acceptance. |
-| [SP10](openspec/sprints/sp10-private-handoff-and-bounded-composition.md) | Prove private handoff and all five composition operators | Isolated private handoff, real split/join and all five composition operators through acceptance. |
+| [SP09](openspec/sprints/sp09-mandatory-pcd-and-ledger-correspondence.md) | Require complete proof and authority at ledger acceptance | All four mandatory claim families discharged by the fused step relation and ledger induction, proved correspondence and verification-enabled Preview acceptance. |
+| [SP10](openspec/sprints/sp10-private-handoff-and-bounded-composition.md) | Prove private handoff and all five composition operators | Isolated recipient-keyed handoff, ledger-atomic split/join, cross-contract release and reclaim, and all five composition operators through acceptance. |
 | [SP11](openspec/sprints/sp11-full-financial-and-formal-conformance.md) | Qualify the complete financial and formal scope | Every required behavior qualified across semantics, proof, local and required Preview evidence. |
 | [SP12](openspec/sprints/sp12-developer-release-and-reproducible-evidence.md) | Release something developers can use and reproduce | Usable end-to-end flow, two clean builders, two non-toy pilots and every G01–G24 gate. |
 
-Start three eligible tracks: **SP01→SP02→SP03** for language, **SP01 F0→SP04→SP06** for native feasibility/proofs, and **accepted atomic + loan/swap subset→SP05** for financial Preview integration. SP09.1 atomic F3 joins SP05/SP06 early; the full successor joins after SP07/SP08. Then SP10→SP11→SP12. Use the exact stage prerequisites below, not whole-sprint barriers.
+Start four eligible tracks: **SP01→SP02→SP03** for language, **SP01 F0→SP09.1** for the ledger-anchored core, **SP01 F0→SP04→SP06** for bounded native certificates, and **accepted atomic + loan/swap subset→SP05** for financial Preview integration. SP09.1 atomic F3 joins SP05 and the Stage 0 seam early without waiting for certificates; the full successor joins after SP07/SP08. Then SP10→SP11→SP12. Use the exact stage prerequisites below, not whole-sprint barriers.
 
 The next successor demonstration is a `.mori` partial payment that preserves its residual obligation in Core, K and the evaluator. The bounded Preview [loan](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md) and [swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/RESULT.md) now have both independent result audits. The [admission-bound cumulative native DUST comparison](deliverables/sp05-financial-integration-2026-09-09/preview-fee-comparison-01/RESULT.md) is implemented with both source reviews. The [Preview command-completion correction](deliverables/sp05-financial-integration-2026-09-09/preview-exit-completion-01/RESULT.md) also has both source reviews. The [corrected Preview loan run](deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/RESULT.md) has both independent financial result approvals and emitted `FINANCIAL_COMPLETE`, with separate outer containment observed. Its transient service unloaded before the raw main-process exit was captured; that missing evidence keeps the command exit-zero gate open. The [corrected Preview swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/RESULT.md) now has both independent approvals for its financial effects, actual zero exit and separate containment. Both cases have consumed their two public attempts; a further attempt requires an explicit reviewed amendment. The original launchers exited one, and the later swap success does not repair the loan’s missing raw exit. Mandatory verification-enabled Preview acceptance remains a later hard gate. The missing current accounting/operational history blocks its dependent campaign dispatch, not this planning work or unrelated eligible development. No new runner, loop, dashboard or approval bureaucracy is part of this refinement.
 
 ## Sprint delivery plan
 
-The [twelve OpenSpec sprints](openspec/sprints/README.md) schedule the complete roadmap: financial design and admission; source language; K semantics; native verifier feasibility; Preview financial integration; real recursion; ACTUS; DeFi and intents; mandatory PCD and ledger correspondence; private composition; full conformance; developer release. Language and native feasibility work can progress independently until their acceptance boundary. Each sprint has explicit deliverables, file ownership and rejection criteria. The [coverage crosswalk](openspec/sprints/coverage.json) retains every original requirement. These are delivery gates, not calendar or compute estimates.
+The [twelve OpenSpec sprints](openspec/sprints/README.md) schedule the complete roadmap: financial design and admission; source language; K semantics; certificate feasibility; Preview financial integration; segment certificates; ACTUS; DeFi and intents; mandatory PCD and ledger correspondence; private composition; full conformance; developer release. Language and native feasibility work can progress independently until their acceptance boundary. Each sprint has explicit deliverables, file ownership and rejection criteria. The [coverage crosswalk](openspec/sprints/coverage.json) retains every original requirement. These are delivery gates, not calendar or compute estimates.
 
 ## What exists
 
 The repository contains an experimental bounded agreement syntax, parser, type checker, canonical encoding, local evaluator and restricted Compact lowering. Loan and swap examples run locally. A separate browser mock explores proposed developer flows with simulated authority and certificates. The initial atomic profile has accepted input-boundary correction and candidate-bound reviews: atomic-prepare, atomic-accept and RP01-MC02 are complete in the [retained reconciliation](evidence/moriarty-completion-program-2026-09-07/report-reconciliation/atomic-reconciliation.json). Full successor language and MC01 acceptance remain open.
 
-[Retained Preview evidence](evidence/midnight-preview-2026-09-07/README.md) records a hello-world deployment and call finalized with exact state readback. That demonstrates basic network integration. The [reviewed first-period Preview loan](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md) now demonstrates four finalized native stages and a lender payment of 533,972,602 test-asset units with 4,500,000,000 notional still outstanding. The [reviewed Preview swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/RESULT.md) also demonstrates a 10,000-A trade for 19,743 B and reserve withdrawal at close. Full financial transfer coverage on Preview and mandatory Moriarty PCD acceptance remain open. The original native recursion experiment exhausted rows at k17. Its fixed-instance replacement is source work that has not produced a recursive proof. The complete native-to-Preview verifier remains unresolved. A [reviewed source and cost analysis](deliverables/sp04-native-finalizer-source-2026-09-10/RESULT.md) now pins the foreign-field and pairing schedule, but leaves subgroup/identity correspondence, exact SRS binding, the complete verifier cost and deployed Preview alignment open. Its partial bounds do not authorize a native retry.
+[Retained Preview evidence](evidence/midnight-preview-2026-09-07/README.md) records a hello-world deployment and call finalized with exact state readback. That demonstrates basic network integration. The [reviewed first-period Preview loan](deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/RESULT.md) now demonstrates four finalized native stages and a lender payment of 533,972,602 test-asset units with 4,500,000,000 notional still outstanding. The [reviewed Preview swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/RESULT.md) also demonstrates a 10,000-A trade for 19,743 B and reserve withdrawal at close. Full financial transfer coverage on Preview and mandatory Moriarty PCD acceptance remain open. The original native recursion experiment exhausted rows at k17. The [PCD integration](openspec/PCD-INTEGRATION-2026-09-11.md) retires that fixed-instance route: the ledger verifies contract-call proofs against the operation key in contract state, and recursion serves only bounded certificates on `ledger-10`. The ledger-anchored core and its Preview acceptance remain unbuilt. A [reviewed source and cost analysis](deliverables/sp04-native-finalizer-source-2026-09-10/RESULT.md) now pins the foreign-field and pairing schedule, but leaves subgroup/identity correspondence, exact SRS binding, the complete verifier cost and deployed Preview alignment open. Its partial bounds do not authorize a native retry.
 
 A [provisional successor syntax profile](experiments/moriarty-language/spec/successor/README.md) now has separate lexical/EBNF files, a bounded parser, canonical formatter and read-only source CLI. Its [checks and independent review](deliverables/successor-syntax-2026-09-09/README.md) cover syntax only. It does not type or execute partial payments, freeze RP01, or close SP02.
 
@@ -68,7 +70,7 @@ The research corpus, source snapshots, target inventories and scoped experimenta
 These checks belong to the existing work packages. They can progress from the accepted atomic subset while successor language work remains open.
 
 - [ ] **RP01: Financial and intent semantics.** Define bounded, independent traces for the eight intent examples, the three retained held-outs, all eight DeFi regression classes and five composition operators. Map source intent, concrete plan, effects, liabilities, assumptions and successor artifacts. Specify signed nominal-debt authority separately from token spending. Co-design canonical signing and display before freezing new authority fields. Every unsupported required behavior retains an owner and closure task.
-- [ ] **RP02: Complete native history route.** Specify what a private successor receives, which secrets remain private, how predecessor proofs compose, and how the final native accumulator decision reaches the actual Midnight verifier. Pin source and deployment versions separately. Resolve source interfaces and run independently admitted component probes before a new native campaign.
+- [ ] **RP02: Complete native history route.** On-ledger history follows by induction from constrained genesis, immutable operation keys and head read-then-write discipline. The PCD integration settles this in design, pending RP02 review, E1 and E2 for the core, and E4 for migration and reclaim. Specify what a private successor receives, which secrets remain private, and how off-ledger segment certificates reach the ledger through `ledger-10` `verify_proof`. Pin source and deployment versions separately. Resolve source interfaces and run independently admitted component probes before a new native campaign.
 - [ ] **RP03: Campaign admission.** Freeze existing commands, candidate hashes, current Grok 4.6 high/fresh GPT-6 review records, bounded resources and stop conditions for each campaign. Preserve historical charges. Migrate legacy reviewer admission fields honestly. A full MC07 campaign manifest is required for MC07, not for an earlier small probe.
 
 RP01 preserves all 277 ACTUS fixtures, 32 ACTUS taxonomy dispositions and 72 historical DeFi rows. Normalizing product/version scope cannot reduce these requirements. Additional report holdouts need pinned primary sources before becoming source-defined behavior cases. The early review is design coverage; full implementation and evidence remain MC07.
@@ -110,28 +112,28 @@ Acceptance: retained transaction and finalized-block evidence establishes exact 
 ### MC03: Real native recursive proof
 
 - [ ] Complete the early native source/interface and component gates below.
-- [ ] Correct and review the fixed financial relation, successor commands, canonical export and retained-proof verifier under a bounded campaign.
-- [ ] Produce genuine recursive proofs for the admitted two-step loan episode and verify serialized artifacts in an independent process.
-- [ ] Reject altered proof bytes, context, state, keys and accumulators; discharge the complete native final decision.
+- [ ] Review the certificate relations, guard-constant lint, `Collapsed` decider constraints, canonical export and retained-proof verifier under a bounded campaign.
+- [ ] Produce off-ledger segment certificates over the Moriarty step at 1, 10 and 100 steps and verify serialized artifacts in an independent process.
+- [ ] Reject altered proof bytes, context, state, keys, accumulators, free guards, substituted `vk_repr` and unbound inner instances; the ledger discharges the accumulator pairing.
 
-Acceptance: actual retained native IVC evidence for the exact fixed episode. A nonrecursive re-proof of the same table, hash chain or host verdict cannot substitute. General DSL execution and private branching remain later requirements. [Detailed plan](openspec/changes/mc03-native-recursive-proof/README.md).
+Acceptance: actual retained segment-certificate evidence, accepted through a `ledger-10` certificate entry point. A nonrecursive re-proof of the same table, hash chain or host verdict cannot substitute. General DSL execution and private branching remain later requirements. [Detailed plan](openspec/changes/mc03-native-recursive-proof/README.md).
 
 ### MC04: Compiler and ledger correspondence
 
-- [ ] Implement the complete native verification boundary under exact Midnight source and deployed-version provenance, including canonical decoding and final accumulator/pairing verification.
+- [ ] Declare and use the ledger verification seam, the operation key in contract state checked by ledger `well_formed`, under exact Midnight source and deployed-version provenance, with a deploy audit of immutable authority.
 - [ ] Prove the supported compiler-to-ledger correspondence with explicit domains, assumptions and audited theorem dependencies.
-- [ ] Bind program, semantic profile, policy, verifier, predecessors, observations, output state and complete effects across authorization, proof and ledger. Outcome signatures bind constraints; the concrete execution binds their digest and proves refinement. Exact-plan signatures may additionally bind the selected execution. Preserve cumulative partial-fill authority in durable acceptance state.
-- [ ] Enforce durable authorization, currentness, replay protection and unique predecessor consumption. Test two individually valid conflicting transactions, restart and recovery.
+- [ ] Bind the program digest, contract, instance, head, revision, observations, output state and complete effects across authorization, proof and ledger. Outcome signatures bind constraints; the concrete execution binds their digest and proves refinement. Exact-plan signatures may additionally bind the selected execution. Preserve cumulative partial-fill authority in durable acceptance state.
+- [ ] Enforce durable authorization, currentness, replay protection and unique consumption through head read-then-write discipline, checked over generated ZKIR and by experiment E1. Test two individually valid conflicting transactions, restart and recovery.
 - [ ] Demonstrate non-mock Preview acceptance with verification enabled and a meaningful financial state change through the versioned acceptance lineage.
 
 Acceptance: the actual ledger consumes the checked history and applies exactly the authorized effects. A circuit preparation gadget or unconstrained host boolean is insufficient. [Detailed plan](openspec/changes/mc04-ledger-correspondence-and-consumption/README.md).
 
 ### MC05: Mandatory correctness and intent acceptance
 
-- [ ] Enforce ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance in every permitted acceptance path, including constrained genesis and administrative transitions in scope.
+- [ ] Enforce ContractInvariant, IntentRefinement, TransitionValidity and HistoryCompliance in every permitted acceptance path, including constrained genesis and administrative transitions in scope. The fused step relation discharges refinement and transition validity; on-ledger history compliance follows by ledger induction.
 - [ ] Connect permitted route choices to signed gross authority, net outcomes, recipients, fees, new liabilities and complete effects.
-- [ ] Use non-circular canonical commitments and trusted deployment policy. Reject stripped claims, arbitrary verifiers, missing dependencies, stale observations and proof-valid but intent-invalid actions.
-- [ ] Enforce verifier/spec activation and revocation, cheap bounded admission before expensive verification, and safe consumption-preserving migration.
+- [ ] Use non-circular canonical commitments, the compiled claim set and an audited immutable deployment. Reject stripped claims, arbitrary verifiers, missing dependencies, stale observations and proof-valid but intent-invalid actions.
+- [ ] Replace verifier revocation with forward-declared migration and a principal-threshold pause. Check program-digest bounds before expensive proving, and keep migration consumption-preserving.
 - [ ] Produce the extended native evidence and requalify compiler/ledger correspondence for the actual mandatory relation.
 
 Acceptance: a required claim cannot be removed, downgraded or replaced with a simulation. [Detailed plan](openspec/changes/mc05-mandatory-claim-acceptance/README.md).
@@ -139,7 +141,7 @@ Acceptance: a required claim cannot be removed, downgraded or replaced with a si
 ### MC06: Private handoff and composition
 
 - [ ] Prove a successor in an isolated participant environment without access to predecessor secrets. Inventory artifact recipients, confidentiality and recovery ownership.
-- [ ] Produce genuine split, independent branch and join proofs with compatible policies, distinct identities and no duplicate predecessor use.
+- [ ] Realize ledger-atomic split and join, cross-contract release with reclaim, and certificates for off-ledger branches, with compatible policies, distinct heads and no duplicate consumption.
 - [ ] Preserve live liabilities, residual authority and conserved global work. Reject authority amplification, debt erasure and lifecycle reset.
 - [ ] Give separate semantics and compatibility rules to sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging. A required unsupported operator remains open.
 - [ ] Exercise pending/claimable/settled states, cancellation/fill races, unavailable witnesses, conflict and bounded recovery through the same acceptance lineage.
@@ -173,31 +175,33 @@ Acceptance: a reproducible developer release whose advertised guarantees match r
 ```mermaid
 flowchart TD
   RP1[RP01 semantic design map] -->|RP01-MC02 subset| MC02
-  RP1 -->|RP01-MC03 subset| MC03
+  RP1 -->|RP01-MC03 subset| F2
   MC01[MC01-ATOMIC acceptance] --> MC02
-  MC01 --> MC03
-  SRC[MC04 pinned source findings] --> F0[RP02 F0 feasibility and ledger-family decision]
-  F0 --> F0A[F0a admitted component authorship]
-  F0A --> F1[F1 positive and negative component probes]
-  F1 --> MC03[MC03 / F2 native proof]
+  MC01 --> F3
+  SRC[MC04 pinned source findings] --> F0[RP02 F0 Stage 0 seam and toolchain manifest]
+  F0 --> NPF[native-path-freeze]
+  NPF --> F3[MC04 / F3 ledger-anchored core: E2 fit, E1 linearity, Preview acceptance]
+  NPF --> F0A[F0a certificate-relation authorship]
+  F0A --> F1[F1 / E3 certificate on a ledger-10 devnet]
+  F1 --> F2[MC03 / F2 / E5 segment certificate]
   ADM[RP03 separate candidate-bound campaign admission] --> F0A
   ADM --> F1
   ADM --> MC02[MC02 / I2 uncertified financial integration]
-  ADM --> MC03
-  ADM --> MC04[MC04 / F3 complete ledger wrapper]
-  MC02 --> MC04
-  MC03 --> MC04
-  MC04 --> MC05[MC05 mandatory acceptance]
+  ADM --> F2
+  ADM --> F3
+  MC02 --> F3
+  F3 --> MC05[MC05 mandatory acceptance]
   MC05 --> MC06[MC06 private composition]
   MC06 --> MC07[MC07 complete finance]
   MC07 --> MC08[MC08 developer release]
+  F2 --> MC08
 ```
 
 The diagram shows the main path; the machine register carries every direct accepted-profile dependency and each campaign requires its own RP03 record, including MC05-MC08.
 
-F0 establishes a reviewed proposed route without native execution, including finalizer arithmetic/constraint-fit estimates, go/no-go criteria and a ledger-family decision with explicit deployment-provenance limits. F0a cannot start until these decisions and a conservative reservation amendment are reviewed. F0a assigns MC04 component authorship and MC03 export work, with a recorded preparation allocation, conservative reservation amendment and current source reviews. F1 requires its own frozen implemented candidate, resource decision and current reviews before compilation or synthesis. P1 and P3 execute in the exact outer ledger circuit stack selected at F0, with native tests as reference fixtures only. Missing outer sources block F2/F3. P1 includes full ported IVC challenge/preparation/carried-accumulator agreement; its finite transcript vector alone is insufficient. All three F1 probe families must pass: transcript agreement, canonical export/import and constrained final pairing acceptance of an independently checked nontrivial valid fixture plus rejection of invalid direct-assignment mutations. No incomplete probe is waived. [Pinned independent fixture recipes](openspec/REPORT-RECONCILIATION-2026-09-07.md#independent-f1-fixture-sources) use native transcript tests, a separately admitted small non-loan Poseidon IVC derivative and a non-loan verifier-test accumulator. They are source recipes, not generated evidence. Missing codecs/finalizer and fixture generation require bounded admission; no F1 fixture may depend on the MC03 loan proof. MC03 supplies the terminal proof needed for F3, so full MC04 acceptance is not a prerequisite for MC03.
+F0 records the Stage 0 seam without native execution: the operation key in contract state that ledger `well_formed` checks, a toolchain manifest per network generation, and the head-discipline checker and deploy-audit designs. It also records a certificate-route go/no-go, conditional on `ledger-10`. `native-path-freeze` then fixes path ownership for the step-relation compiler output, checker, deploy audit and certificate-relation roots. F3 builds the ledger-anchored core: E2 measures the fused step relation against k ≤ 17, E1 shows head read-then-write linearity on Preview, and verification-enabled Preview acceptance follows a deploy audit of immutable authority. F3 needs no MC03 proof. On the certificate track, F0a authors certificate relations against pinned pull request 738 sources, F1 runs E3 with its negative controls on a `ledger-10` devnet, and F2 runs E5. Nothing computes pairings in-circuit; the ledger checks each accumulator. Certificate campaigns need k 18–19 on the measured evidence, so they also need a reviewed resource amendment. No incomplete control is waived, and no certificate fixture may depend on a loan proof. The [PCD integration amendment](openspec/PCD-INTEGRATION-2026-09-11.md) maps the earlier P1–P3 recipes and route table.
 
-The native precondition is the reviewed RP01-MC03 fixed-statement subset and F0/F0a, successful F1, MC01-ATOMIC acceptance and campaign-specific RP03 admission. The full RP01 design map gates general successor profiles and later semantic extensions; it is not a prerequisite for the unchanged fixed-instance experiment. MC01-ATOMIC remains the existing source/evaluator comparison prerequisite. The register now represents each preparation and execution stage separately; null campaign IDs reject admission, and full package dependencies never block their own preparation stages. Each later extension has its own resource and review gate. Stop on the first failed required control, undefined essential interface or resource ceiling. Preserve failed evidence and change a justified hypothesis before another admitted attempt. A blocked Midnight interface does not authorize dropping PCD or changing the product target.
+The certificate precondition is the reviewed RP01-MC03 statement subset of the Moriarty step, F0/F0a, successful F1, MC01-ATOMIC acceptance, a reviewed resource amendment and campaign-specific RP03 admission. The full RP01 design map gates general successor profiles and later semantic extensions. MC01-ATOMIC remains the existing source/evaluator comparison prerequisite. The register now represents each preparation and execution stage separately; null campaign IDs reject admission, and full package dependencies never block their own preparation stages. Each later extension has its own resource and review gate. Stop on the first failed required control, undefined essential interface or resource ceiling. Preserve failed evidence and change a justified hypothesis before another admitted attempt. A blocked Midnight interface does not authorize dropping PCD or changing the product target.
 
 ## Guarantees and research notes
 
@@ -209,7 +213,7 @@ The [combined report review and interactive graph](deliverables/moriarty-report-
 
 ## September 12 language delivery reconciliation
 
-The following capabilities are implemented, tested and merged into main through `dc9d516eabb5757591e6ef73a7544639cbe55134`. Their status is S4 local implementation. They do not close full SP02, SP03, authenticated authority, K correspondence, proofs or Preview acceptance.
+The following capabilities are implemented, tested and merged into main through `81bed862c60b184e7f5fdb27577157c2bcf39530`. Their status is S4 local implementation. They do not close full SP02, SP03, authenticated authority, K correspondence, proofs or Preview acceptance.
 
 | Capability | Merged change | Current scoped evidence |
 | --- | --- | --- |
@@ -217,5 +221,8 @@ The following capabilities are implemented, tested and merged into main through 
 | Source-defined repayment schemas | PR2, `ea40ab488d1d056c7192cc4dfd7ae250d44e3d49` | [Result](deliverables/source-defined-repayment-2026-09-11/RESULT.md), [final audit](deliverables/source-defined-repayment-2026-09-11/audit-02/review.json) |
 | Multiple named actions with explicit selection | PR3, `96860344978e176236a6f152cd694433263c8d5f` | [Result](deliverables/multiple-named-actions-2026-09-11/RESULT.md), [final audit](deliverables/multiple-named-actions-2026-09-11/audit-01/review.json) |
 | Typed financial PRE reads and computed remaining repayment | PR4, `98f6d59f11e163325256766a08d2d3f119d102ed` | [Result](deliverables/financial-state-reads-2026-09-12/RESULT.md), [final audit](deliverables/financial-state-reads-2026-09-12/audit-01/review.json) |
+| Financial postconditions over actual debt, balances and allowances, with atomic rejection | PR5, `1e8bf397546ae1a5f373cb50492f9d10b6e5f8f5` | [Exact candidate audit](deliverables/language-to-ledger-2026-09-12/postconditions/audit-postconditions-01.json), [merge receipt](deliverables/language-to-ledger-2026-09-12/postconditions/merge-result-01.json) |
+| Source loan origination and explicit floor/ceil interest accrual, with duplicate-period protection | PR6, `a3ada9d9f4c7b6bf41b5503a2eb1d308ba55cbdd` | [Exact candidate audit](deliverables/language-to-ledger-2026-09-12/origination/audit-origination-01.json), [merge receipt](deliverables/language-to-ledger-2026-09-12/origination/merge-result-01.json) |
+| Complete source lifecycle: originate, accrue, partially repay and settle, preserving liabilities and cumulative work | PR7, `81bed862c60b184e7f5fdb27577157c2bcf39530` | [Exact candidate audit](deliverables/language-to-ledger-2026-09-12/lifecycle/audit-lifecycle-01.json), [merge receipt](deliverables/language-to-ledger-2026-09-12/lifecycle/merge-result-01.json) |
 
-The user-approved [language-to-ledger plan](docs/superpowers/plans/2026-09-12-language-to-ledger.md) and [OpenSpec package](openspec/changes/language-to-ledger-lifecycle/README.md) now order financial postconditions, origination/accrual, a complete lifecycle, scoped K agreement and authenticated Docker/Preview execution. These new behaviors are S2, specified-only until their independent result evidence is recorded. Existing wider MC/SP acceptance and resource gates remain unchanged.
+The user-approved [language-to-ledger plan](docs/superpowers/plans/2026-09-12-language-to-ledger.md) and [OpenSpec package](openspec/changes/language-to-ledger-lifecycle/README.md) continue with scoped K agreement, authenticated source-to-Compact translation, actual compilation, Docker lifecycle validation and admitted Preview execution. Those execution stages remain open. The seven merged capabilities above establish local source/Core/evaluator behavior; existing wider MC/SP acceptance, formal proof, financial and resource gates remain unchanged.

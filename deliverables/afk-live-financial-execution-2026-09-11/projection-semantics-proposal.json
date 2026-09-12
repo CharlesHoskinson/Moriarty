@@ -1,0 +1,44 @@
+{
+  "status": "SYMBOLIC_DESIGN_INPUT_NOT_AUTHORITY",
+  "symbols": {
+    "G": "positive integer new MC02 seconds grant",
+    "N": "positive integer new MC02 dispatch allowance",
+    "S": "sum of committed new-grant seconds",
+    "n": "committed new-grant dispatch count",
+    "U": "planning+overhead+all historical charges+all historical reserved+all historical external charges",
+    "M": "original represented master_limit_seconds",
+    "C": "ceil(max(0,M-U)), explicitly closure only, not paid cost",
+    "D": "max(0,ceil(U+C)-M), explicitly reviewed integer closure reconciliation, not spendable grant"
+  },
+  "preservedTopLevel": {
+    "schema": "moriarty.supervised-accounting/1",
+    "package": "MC01",
+    "authority_sha256": "unchanged original",
+    "charges": "all historical MC01 rows unchanged",
+    "planning_charge_seconds": "unchanged",
+    "planning_overhead_reserved_seconds": "unchanged",
+    "package_limit_seconds": "unchanged MC01 limit",
+    "worker_dispatches": "unchanged MC01 count52",
+    "worker_dispatch_limit": "unchanged MC01 cap52"
+  },
+  "amendedTopLevel": {
+    "master_limit_seconds": "M+D+G",
+    "master_worker_dispatch_limit": "old83+N",
+    "externalWorkerDispatches": "old31+n",
+    "externalPackageCharges": "all old rows unchanged plus MC02 grant-specific exact debits",
+    "reserved": "all old rows unchanged plus historical closure C and active grant reserve G-S",
+    "successorEnvelopes": "all old entries retained/nonspendable; new immutable-grant-bound MC02 envelope remainingReservedSeconds=G-S,workerDispatches=n,workerDispatchLimit=N"
+  },
+  "activeOwnerSemantics": {
+    "ledgerOwner": "MC01",
+    "campaignOwner": "MC02",
+    "selectedPackageBudget": "exact new MC02 grant envelope G; not lifetimeMC02 totals",
+    "masterUsedAfter": "U+C+S+(G-S)=U+C+G",
+    "masterSlackAfter": "M+D-U-C, nonnegative and <1 when ceiling conversion is sole D; cannot be spent outside new envelope",
+    "selectedGrantRemaining": "G-S",
+    "prepaidEligibility": "exact matching committed debit/action/candidate/runner and not-yet-claimed; all totals<=ceilings; n<=N; own full-bound chargedSeconds retained; allow n=N or G-S=0 for this one debit only",
+    "newDebitEligibility": "S+cost<=G and n+1<=N, plus aggregate limits and exclusive lock; no borrowed historic/master rounding surplus"
+  },
+  "unknowns": "Unquantified closed historical allocations remain referenced unknown; they are not synthetic0 rows and confer no credit. Explicit reviewed disposition must establish they cannot debit the active grant retroactively. Otherwise reject.",
+  "consumerChange": "For exact finalized-financial-settlement profile, validated accounting producer returns selected authenticated envelope ownership, limits and prepaid state; reader must not apply top-level MC01 package/worker limits to MC02. Legacy behavior remains separate."
+}

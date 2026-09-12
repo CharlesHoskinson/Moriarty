@@ -2,7 +2,7 @@
 
 ## Inputs and dependencies
 
-Dependencies: MC03, MC04.
+Dependencies: MC04. The PCD integration removed MC03; mandatory acceptance takes no MC03 proof.
 
 - `experiments/moriarty-developer-mock/src/language/claims.ts`
 - `experiments/moriarty-developer-mock/src/language/policy.ts`

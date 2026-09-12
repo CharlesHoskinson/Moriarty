@@ -2,6 +2,8 @@
 
 Status: specified-only.
 
+Amended by [pcd-ledger-anchored-acceptance](../pcd-ledger-anchored-acceptance/README.md) under the [PCD integration amendment](../../PCD-INTEGRATION-2026-09-11.md).
+
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc04-ledger-correspondence-and-consumption/spec.md)

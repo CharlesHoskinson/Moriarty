@@ -21,6 +21,7 @@ class RetentionTests(unittest.TestCase):
         gates = self.load('legacy-release-gates.json')
         paths = set(coverage['sourceInventories']) | set(coverage['sourceDigests'])
         paths |= set(reports['sourceDigests']) | set(gates['sourceSha256'])
+        paths |= set(self.load('pcd-integration.json')['sourceDigests'])
         for path in paths:
             dest = self.root / path
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +86,34 @@ class RetentionTests(unittest.TestCase):
         data['requirements'] = [r for r in data['requirements'] if r['package'] != 'SPRINT-PROGRAM']
         self.save('coverage.json', data)
         self.rejects('Requirement crosswalk differs')
+
+    def set_stage_requires(self, stage, requires):
+        path = self.root / 'openspec/moriarty-completion-program.json'
+        program = json.loads(path.read_text())
+        for record in program['reportReconciliation']['stageAdmission']['stages']:
+            if record['id'] == stage:
+                record['requires'] = requires
+        path.write_text(json.dumps(program))
+        sprints = self.load('sprints.json')
+        for sprint in sprints['sprints']:
+            for gate in sprint['entryGates']:
+                if gate['stage'] == stage:
+                    gate['requires'] = requires
+        self.save('sprints.json', sprints)
+
+    def test_core_depends_on_certificate_stage(self):
+        self.set_stage_requires('f3', ['atomic-accept', 'i2', 'f2', 'f1'])
+        self.rejects('PCD core depends on certificate stage')
+
+    def test_release_lost_certificate_stage(self):
+        self.set_stage_requires('release', ['atomic-accept', 'i2', 'f3', 'mandatory', 'composition', 'finance'])
+        self.rejects('PCD release lost certificate stage')
+
+    def test_unknown_pcd_crosswalk_reference(self):
+        data = self.load('pcd-integration.json')
+        data['stageMapping'][0]['tasks'] = ['SP99.9']
+        self.save('pcd-integration.json', data)
+        self.rejects('Unknown PCD crosswalk reference')
 
 
 if __name__ == '__main__':

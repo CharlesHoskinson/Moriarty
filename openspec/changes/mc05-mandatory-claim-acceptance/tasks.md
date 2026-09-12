@@ -4,7 +4,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 **Goal:** Enforce all four required claims in the real transaction acceptance path.
 
-**Dependencies:** MC03, MC04, plus the current `mandatory` stage prerequisites for successor promotion. Package dependencies never admit dispatch.
+**Dependencies:** MC04, plus the current `mandatory` stage prerequisites for successor promotion. Package dependencies never admit dispatch.
 
 **Implementation root:** `experiments/moriarty-acceptance/`.
 

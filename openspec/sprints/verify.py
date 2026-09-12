@@ -188,4 +188,26 @@ for id, row in gate_rows.items():
     require(f'<gate id="{id}">{row["originalPredicate"]}</gate>' in xml, f'Legacy gate XML differs: {id}')
     require(row['primaryClosingTask'] in task_paths and set(row['evidenceOwners']) <= set(task_paths), f'Legacy gate owner differs: {id}')
 
+# PCD integration: the ledger-anchored core must not wait on certificates, and release keeps them.
+pcd = json.loads((SPRINTS / 'pcd-integration.json').read_text())
+for path, digest in pcd['sourceDigests'].items():
+    require(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == digest, f'Stale PCD integration source: {path}')
+def stage_ancestors(id):
+    found, pending = set(), list(stage_records[id]['requires'])
+    while pending:
+        dep = pending.pop()
+        if dep not in found:
+            found.add(dep)
+            pending.extend(stage_records[dep]['requires'])
+    return found
+require(not {'f0a', 'f1-fixtures', 'f1', 'f2'} & stage_ancestors('mandatory'), 'PCD core depends on certificate stage')
+require('f2' in stage_ancestors('release'), 'PCD release lost certificate stage')
+pcd_requirements = {name for spec, name in actual if spec.startswith('openspec/changes/pcd-ledger-anchored-acceptance/specs/')}
+for row in pcd['stageMapping'] + pcd['experiments']:
+    require(row['stage'] in stage_records and row['tasks'] and set(row['tasks']) <= set(task_paths), f'Unknown PCD crosswalk reference: {row["id"]}')
+for row in pcd['supersessions']:
+    require((row['spec'], row['requirement']) in actual and set(row['governing']) <= pcd_requirements, f'Unknown PCD crosswalk reference: {row["requirement"]}')
+for row in pcd['lockedTasks']:
+    require((row['package'], row['taskId']) in mapped and set(row['governing']) <= pcd_requirements, f'Unknown PCD crosswalk reference: {row["package"]} {row["taskId"]}')
+
 print(json.dumps({'status': 'pass', 'scope': 'planning structure only; no implementation or dispatch acceptance', 'sprints': len(sprints), 'requirements': len(actual), 'stages': len(stages), 'originalTasks': len(mapped), 'sprintTasks': len(task_paths), 'reportLessons': len(reports['lessons']), 'modeledRegressions': len(expected_tests), 'comparativeCases': len(atlas_cases), 'legacyGates': len(gate_rows)}, indent=2))

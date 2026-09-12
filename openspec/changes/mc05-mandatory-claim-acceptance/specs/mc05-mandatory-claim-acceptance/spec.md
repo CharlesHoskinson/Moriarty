@@ -10,6 +10,7 @@ The real acceptance path SHALL require valid evidence for all four claim types u
 #### Scenario: Downgrade attack
 - **WHEN** an action omits claims, strips mandatory roots, selects arbitrary verifiers, or supplies stale certificates, false guards, or unsatisfied dependencies
 - **THEN** actual acceptance rejects it before applying effects.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirements "Immutable authority deployment audit" and "Claim discharge map" and "Forward-declared migration replaces in-place revocation": claims are compiled into immutable operation keys, so a stripped claim or arbitrary verifier needs a different key and fails the deploy audit.
 
 ### Requirement: Intent refinement and complete effects
 The proof relation SHALL connect the concrete plan and complete effects to signed bounded authority and net goals.
@@ -17,6 +18,7 @@ The proof relation SHALL connect the concrete plan and complete effects to signe
 #### Scenario: Authorized route choice
 - **WHEN** different permitted plans refine the same signed outcome intent
 - **THEN** each accepted route satisfies the original gross authority limits, net goals, and complete-effect relation.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Intent digest v2 and program digest": route choice uses outcome mode, which binds a program-digest allowlist and a consumed nonce.
 
 #### Scenario: Ledger-valid intent-invalid action
 - **WHEN** a ledger-valid action has wrong recipients, refunds hiding excess gross debit, fees violating net goals, or undeclared approvals
@@ -28,6 +30,7 @@ The certificate and proof construction SHALL use the non-circular commitment ord
 #### Scenario: Bound outcome claims
 - **WHEN** a participant signs an outcome intent before a concrete execution is selected
 - **THEN** the signature binds the canonical constraints, program/profile/policy and required claims; the proof statement binds that authorization digest, concrete predecessors, observations, resulting state and complete effects, proves refinement, and matches the actual ledger projection.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Intent digest v2 and program digest": the signature binds digest v2 fields, and the head read replaces predecessor lists.
 
 #### Scenario: Bound exact-plan claims
 - **WHEN** a participant signs an exact plan
@@ -87,7 +90,9 @@ Intent refinement SHALL constrain newly created or modified nominal liabilities 
 #### Scenario: Revoked verifier or inactive specification
 - **WHEN** evidence verifies cryptographically but its key/specification is revoked or outside the policy activation window
 - **THEN** acceptance rejects it and migration cannot restore a consumed predecessor or reset lifecycle authority.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Forward-declared migration replaces in-place revocation": keys cannot be revoked in place; a defective program is halted by `Pause` and replaced by migration, which still cannot restore consumed state or reset lifecycle authority.
 
 #### Scenario: Oversized verification input
 - **WHEN** claim count, dependency bounds, encoded evidence/sidecar bytes or declared total verification work exceed the registered budget
 - **THEN** bounded admission rejects before expensive verification or unbounded allocation, without applying effects.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirements "Intent digest v2 and program digest" and "Measured bounds frozen into the program digest": the registered budget is the Π_P bound set, checked before proving; on-chain sidecar bytes are zero.

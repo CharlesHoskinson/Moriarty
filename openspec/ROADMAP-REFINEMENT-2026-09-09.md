@@ -6,6 +6,8 @@ Status: specified-only planning revision. Execution date: 2026-09-09 UTC; resear
 
 Build a usable bounded financial language, test the complete native boundary early, then join them at actual Midnight acceptance. The financial taxonomy organizes requirements; the linked standards atlas supplies version-scoped interface and behavioral constraints. Neither automatically determines the Core's constructors.
 
+The [PCD integration](PCD-INTEGRATION-2026-09-11.md) supersedes the SP04 and SP06 rows below and the native-track bullet under the stage graph.
+
 | Sprint | Concrete output | First demonstration and exit condition |
 | --- | --- | --- |
 | [SP01](sprints/sp01-financial-contract-and-execution-admission.md) | Complete financial/authority contract and early native decision | Reuse accepted atomic evidence; freeze independent positive/negative behavior traces; record bounded F0 go/no-go and path ownership. |
@@ -33,7 +35,7 @@ Startup currently reports missing current accounting and unresolved historical r
 
 ## Order the work by actual prerequisites
 
-The existing 21-stage graph in [sprints.json](sprints/sprints.json) and the [program register](moriarty-completion-program.json) is unchanged:
+The existing 21-stage graph in [sprints.json](sprints/sprints.json) and the [program register](moriarty-completion-program.json) is unchanged by this refinement; the later [PCD integration](PCD-INTEGRATION-2026-09-11.md) re-roots `f3` and repurposes the native track:
 
 1. **Language track:** full RP01 behavior/authority design → successor frontend → base K/evaluator semantics → ACTUS and DeFi extensions. Define financial expectations during SP01, before implementing their constructors. SP07/SP08 can prepare separate fixtures in parallel; serialize changes to shared Core/K files.
 2. **Native track:** F0 go → native-path-freeze → F0a → independently generated non-loan fixtures → all F1 controls → corrected financial F2. Preserve source/deployment pins, actual outer final decision and the prohibition on retrying the failed k17 encoding without a reviewed changed hypothesis.

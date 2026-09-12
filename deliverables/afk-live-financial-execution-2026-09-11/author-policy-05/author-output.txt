@@ -1,0 +1,160 @@
+B1 fail-closes live history when any same-lineage store key cannot resolve; B2 uses only unmatched legacy starts, never foreign reservation IDs. Non-live `get_history` is unchanged. Binding work is not in this patch.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/scripts/moriarty_dev/store.py
+@@
+         matched = []
+-        fallback = []
++        legacy = []
+         for (raw,) in cur.fetchall():
+             try:
+                 payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+             except Exception:
+-                fallback.append(None)
++                if reservation_id is None:
++                    legacy.append(None)
+                 continue
+             profile = _extract_start_profile(payload)
+-            if (
+-                reservation_id is not None
+-                and isinstance(payload, dict)
+-                and payload.get("reservationId") == reservation_id
+-            ):
+-                matched.append(profile)
+-            fallback.append(profile)
+-        if reservation_id is not None and matched:
+-            return matched
+-        return fallback
++            stored_rid = payload.get("reservationId") if isinstance(payload, dict) else None
++            if reservation_id is not None:
++                if stored_rid == reservation_id:
++                    matched.append(profile)
++                elif stored_rid is None or stored_rid == "":
++                    legacy.append(profile)
++            else:
++                legacy.append(profile)
++        if reservation_id is not None:
++            if matched:
++                return matched
++            return legacy
++        return legacy
+@@
+ def _expand_related_repo_ids(conn, requested_ids, requirement, capability):
+     requested_set = set(requested_ids)
+     expanded = list(requested_ids)
+     seen = set(requested_ids)
+     try:
+         cur = conn.execute(
+             "SELECT DISTINCT repository FROM events WHERE requirement = ? AND capability = ?",
+             (requirement, capability),
+         )
+-        for (stored,) in cur.fetchall():
++        stored_keys = [row[0] for row in cur.fetchall()]
++    except Exception:
++        return None
++    for stored in stored_keys:
+         if stored in seen:
+             continue
+-            stored_ids = set(_canonical_repo_ids(stored))
+-            if stored_ids & requested_set:
+-                expanded.append(stored)
+-                seen.add(stored)
+-    except Exception:
+-        return requested_ids
++        try:
++            stored_ids = set(_canonical_repo_ids(stored))
++        except Exception:
++            return None
++        if stored_ids & requested_set:
++            expanded.append(stored)
++            seen.add(stored)
++        else:
++            return None
+     return expanded
+@@
+         repo_ids = _canonical_repo_ids(repo)
+         if expand_related:
+             repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
++            if repo_ids is None:
++                return None
+         placeholders = ",".join("?" for _ in repo_ids)
+@@
+         repo_ids = _canonical_repo_ids(repo)
+         repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
++        if repo_ids is None:
++            return False
+         placeholders = ",".join("?" for _ in repo_ids)
+*** Update File: plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+         with self.assertRaises(ReservationConflictError):
+             self.reserve_kind("repair", action_id="after-mixed-start")
++
++    def test_foreign_explicit_start_does_not_exempt_active_verify(self):
++        finished = self.reserve_kind(
++            "verify", profile=NONFINANCIAL_PROFILE, action_id="shared-verify"
++        )
++        finish(self.db_path, finished, {"exitCode": 0})
++        conn = init_db(self.db_path)
++        now = "2026-09-11T00:00:00+00:00"
++        try:
++            with conn:
++                conn.execute(
++                    """
++                    INSERT INTO reservations (
++                        id, repository, requirement, capability, candidate,
++                        action_id, action_kind, pid, status, reserved_at
++                    ) VALUES (?, ?, ?, ?, ?, ?, 'verify', 1, 'active', ?)
++                    """,
++                    (
++                        "active-orphan",
++                        str(self.root),
++                        REQ,
++                        CAP,
++                        "diagnosis-only",
++                        "shared-verify",
++                        now,
++                    ),
++                )
++        finally:
++            conn.close()
++        history = self.history()
++        self.assertTrue(history["primaryActive"])
++        self.assertTrue(has_other_primary(self.db_path, "other"))
++        with self.assertRaises(ReservationConflictError):
++            self.reserve_kind("verify", action_id="second-live")
+@@
+             live_hist = get_live_history(
+                 wt_db, str(common), REQ, CAP, identity_anchor="fixture-anchor-1"
+             )
+             self.assertIsNotNone(live_hist)
+             self.assertNotEqual(live_hist["sameDefectFailures"], 0)
+             legacy_common = get_history(wt_db, str(common), REQ, CAP)
+             self.assertEqual(legacy_common["sameDefectFailures"], 0)
++            gitfile = wt / ".git"
++            gitfile_text = gitfile.read_text()
++            gitfile.unlink()
++            removed = load_snapshot(
++                str(wt), "live-loan-verify", history_reader=wt_reader
++            )
++            self.assertIsNone(removed["sameDefectFailures"])
++            self.assertIn("operational-history", removed["missingEvidence"])
++            self.assertIsNone(
++                get_live_history(
++                    wt_db, str(common), REQ, CAP, identity_anchor="fixture-anchor-1"
++                )
++            )
++            gitfile.write_text(gitfile_text)
++            restored = load_snapshot(
++                str(wt), "live-loan-verify", history_reader=wt_reader
++            )
++            self.assertNotEqual(restored["sameDefectFailures"], 0)
+         finally:
+*** End Patch
+```
+
+Root:
+```bash
+python3 -m unittest plugins.moriarty-dev.tests.test_live_policy_history plugins.moriarty-dev.tests.test_policy plugins.moriarty-dev.tests.test_execution plugins.moriarty-dev.tests.test_regressions plugins.moriarty-dev.tests.test_store_connections
+```
+I did not run these. Binding work is paused.

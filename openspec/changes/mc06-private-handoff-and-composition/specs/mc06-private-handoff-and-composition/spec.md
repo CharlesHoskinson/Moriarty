@@ -17,6 +17,7 @@ Split and join SHALL preserve obligations, authority limits, output uniqueness, 
 #### Scenario: Compatible composition
 - **WHEN** two independently proved compatible branches undergo the declared split and join
 - **THEN** their new proofs discharge dependencies and preserve obligations, residual authority, uniqueness, and global lifecycle bounds.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirements "Ledger-atomic split and join" and "Cross-contract release with reclaim": on-ledger branches need no branch proofs; off-ledger branches join only through certificates.
 
 #### Scenario: Composition attack
 - **WHEN** composition duplicates predecessors, reuses outputs, mixes incompatible policies, exceeds fan-in, or resets bounds
@@ -79,3 +80,4 @@ Composition SHALL state whether it is sequential, disjoint, shared-state atomic 
 #### Scenario: Report requirement omitted
 - **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
 - **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+- **Amended by** `pcd-ledger-anchored-acceptance` requirements "Recipient-keyed successor handoff" and "Composition operators under head discipline": on-ledger successors need no predecessor proof verification, and handoff carries recipient-encrypted openings.

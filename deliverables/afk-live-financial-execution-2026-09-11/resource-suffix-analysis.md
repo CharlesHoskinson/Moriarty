@@ -1,0 +1,19 @@
+# Resource suffix and additive grant analysis
+
+Read-only preparation, 2026-09-11. Exact record hashes and observed timestamps are in `resource-suffix-observations.json`. Original diagnosis and live accounting were not modified. This is evidence for subsequent independent specification/resource review, not a grant.
+
+The represented master suffix is 197630 seconds / 71 authors → 197630/79 (source successor majority decision) → 197630/80 (permission correction majority decision) → 200630/81 (source correction majority decision) → 206630/83 (focused correction majority decision) → 209270/83 (notification direct delegated amendment) → 210890/83 (hooks direct delegated amendment). The two final records explicitly do not claim majority votes. Preserve actual historical authority. The origin of the 197630/71 baseline is not yet established by this inspection; source-completion and focused-correction amendments corroborate that baseline without deriving it.
+
+The current master top-level amendment hash resolves to amendment11/new ceiling51000, and dispatch amendment hash to amendment02/ceiling25. Those fields do not themselves authenticate the later suffix. Do not repair by fabricating a current pointer lineage.
+
+Four separate closed Preview runtime envelopes (`preview-loan-01`, `preview-swap-01`, `preview-loan-exit-01`, `preview-swap-exit-01`, under the September9 financial deliverable) each have2550seconds, for10200seconds of those four runtime allowances only. Their execution-admission records bind exact proposal hashes and resource votes. Compiler/review/other service costs are not all inside these wall envelopes. The later local-command-execution proposal03 allows1350seconds per case/2700sequential; an actual loan record exists and no sibling swap result directory was observed. Its separate allocation marker must decide consumption; no unused allowance transfers to new work.
+
+The reviewed27 reserved submissions and8100000000000027SPECK are a partial historical subset, not a global total or actual paid fees. Preserve the separately stated12000000000000010SPECK admitted ceilings and all unquantified older costs. Preserve cumulative loan attempt3 identity in the successor rather than restarting numbering. New financial/source/cleanup/review resource ceilings must be explicit and cannot use historical surplus.
+
+## Practical option for independent review
+
+Existing user authority permits bounded successor allocations. `raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md` states: “Majority decisions choose design and resource actions; they cannot turn a failed proof/test into passing evidence.” It also requires: “Preserve historical charges and admit bounded successor allocations before actionful campaigns.” Two substantive agreeing votes decide resource actions; missing responses are not votes.
+
+A reviewed successor may close all old allocations to spending, preserve unknown costs as unknown, and grant only an exact new increment. Its spendable credit must derive exclusively from that new grant, with atomic pre-debit and exact action/candidate/runner binding; no subtraction from an invented finite lifetime total. This is a conditional design option requiring both specification approval and separate concrete resource approval plus actual consumer enforcement. It is not already implemented or authorized by this note.
+
+Distinguish reconciliation of the represented master and its recorded amendments from unrelated lifetime-global costs. If any unknown cost could still consume the same spendable envelope, dependent spending must remain blocked until resolved or explicitly covered by the approved scoped successor rule. A scoped projection cannot claim complete global accounting. Preserve all old charges/reservations and exhausted author counts, including uncertainty. No refund, reset, grant reuse, or synthetic unknown=0 entry is allowed.

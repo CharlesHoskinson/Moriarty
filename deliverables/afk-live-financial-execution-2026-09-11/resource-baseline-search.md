@@ -1,0 +1,13 @@
+# Bounded represented-master baseline lookup
+
+Read-only targeted lookup, 2026-09-11. No live budget or original diagnosis files changed. This note closes the bounded search; it is not a reconstruction of all project costs.
+
+The latest pre-baseline surviving local budget found is `~/.local/state/moriarty/sp01-loan-swap-grok-20260907/pre-design-correction-budget.json`, observed ceiling69900/dispatch40 at its September8 01:53 modification time. The next surviving snapshots found are `successor-dispatch-decision-20260908/budget-before.json` and `budget-before-application.json`, ceiling197630/dispatch71, September8 14:57/15:08. Snapshot file times are observations, not authenticated transaction timestamps.
+
+Many bounded source/package amendments in that interval carry explicit increments; a complete unique mapping of their master application, protected reservations and dispatch adjustments was not established. Do not sum every allocation field: some are suballocations inside unchanged master ceilings, some are copied records, and some are corrections transferring reserved amounts. Exact origination of197630/71 therefore remains unresolved.
+
+The public `evidence/moriarty-completion-program-2026-09-07/MC08/source-successor-allocation-01/decision.json` and independently reviewed budget/proposal provide a practical explicit historical checkpoint. Its Fable result independently recalculates ordinary/external/planning totals and197630 capacity, with GPT-6 also voting substantively. It corroborates and uses the baseline; do not claim it supplies the missing earlier derivation.
+
+`resource-prefix-comparison.json` establishes exact row preservation from budget-before-application to current budget: all177 ordinary charges and144 prior external charge rows remain byte-equivalent as parsed objects, with no missing IDs;84 additional external charge rows bring external seconds59340→99135. Ordinary seconds remain108960. Planning remains2323.0473305040214. Overhead reserve300→165 corresponds to three new45second `plugin-focused-decision-fable`, `plugin-focused-decision-grok`, and `plugin-focused-decision-gpt6` entries explicitly charged from planning overhead; the135seconds were transferred, not refunded.
+
+The recovered suffix decisions explain197630→210890 and71→83. Their exact hashes are retained separately. This supports a reconciled represented-master suffix with explicitly inherited checkpoint uncertainty, not lifetime-global accounting. A new reviewed grant may use a closed historical prefix as nonspendable history only if the approved specification and actual consumer enforce that historical uncertainty cannot create credit or consume the exact new allowance twice. No such authority or implementation is created by this note.

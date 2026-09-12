@@ -6,6 +6,7 @@ Native execution SHALL require a changed encoding hypothesis and both named audi
 #### Scenario: Checked smaller encoding
 - **WHEN** both auditors review the implemented smaller encoding and its resource contract
 - **THEN** they require checked ranges and commitment preimages preserving every original financial and authority binding before launch.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Off-ledger segment certificate": the fixed 54-limb relation and its smaller-encoding retry are retired; SP06 reviews the segment relation instead.
 
 #### Scenario: Unjustified retry
 - **WHEN** dispatch reuses the failed 54-limb setup, unchecked state hashes, or an unreviewed larger k
@@ -17,10 +18,12 @@ The harness SHALL prove both financial steps and verify retained bytes in a sepa
 #### Scenario: Valid episode
 - **WHEN** the native harness proves the original accrual and due-settlement transitions
 - **THEN** a separate process verifies retained proofs, constrained genesis, expected fields, and the discharged final accumulator.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Off-ledger segment certificate": the fixed two-step episode becomes segment certificates at 1, 10 and 100 steps, still verified from retained bytes in a fresh process.
 
 #### Scenario: Invalid proof context
 - **WHEN** retained input is missing, truncated, altered, wrong-key, wrong-state, wrong-domain, wrong-intent, forged-genesis, or invalid-predecessor
 - **THEN** the separate verifier rejects each mutant for its declared reason.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Bounded native certificates": the rejection list also covers free or mismatched guards, substituted `vk_repr` and unbound inner instances.
 
 ### Requirement: Hard resource stop
 The runner SHALL enforce cumulative time, process-group memory, CPU, output, SRS, k, and attempt limits.
@@ -57,3 +60,4 @@ A native campaign SHALL satisfy RP01, RP02 stages F0/F1 and campaign-specific RP
 #### Scenario: Report requirement omitted
 - **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
 - **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Recursion dependency tracking and stop": the backend decision is the certificate route, gated by the Midnight dependency tracker and a reviewed resource amendment.

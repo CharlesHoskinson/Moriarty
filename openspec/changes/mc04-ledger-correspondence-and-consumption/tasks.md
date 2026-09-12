@@ -4,7 +4,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 
 **Goal:** Connect compiled semantics and native proof verification to durable Midnight effects and consumption.
 
-**Dependencies:** MC01, MC02, MC03.
+**Dependencies:** MC01, MC02.
 
 **Implementation root:** `experiments/moriarty-ledger-adapter/`.
 
@@ -41,7 +41,7 @@ Status: specified-only. All implementation tasks remain unchecked.
 ## P. Implement and review the native extension
 
 These tasks precede any proof-dependent acceptance or correspondence claim in this package.
-Establish the retained MC03 verifier interface before extending the relation. Requalify correspondence using the new loan/swap proofs.
+Use the declared ledger verification seam; no MC03 proof is an input. Requalify correspondence using the new loan/swap proofs.
 
 - [ ] P.1 Write `experiments/moriarty-ledger-adapter/proof/relation-spec.md` and `experiments/moriarty-ledger-adapter/proof/campaign-cases.json` for adapter-profile-01.
 - [ ] P.2 Add independent expected-field and rejection controls in `experiments/moriarty-ledger-adapter/proof/encoding-controls.rs` before changing the relation.

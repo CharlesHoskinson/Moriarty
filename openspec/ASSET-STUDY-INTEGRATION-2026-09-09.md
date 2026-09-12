@@ -18,7 +18,7 @@ Moriarty must describe what asset a position represents, what the holder is enti
 | AS06 Identity, freshness and revocation | SP01/SP03/SP08–10 distinguish key control, credential predicates and beneficial ownership; reject stale/replayed policy evidence under explicit issuer assumptions. |
 | AS07 Financial servicing and persistent claims | SP07 owns schedules, capitalization, coupon/record-date/default/redemption semantics; SP08 owns pending requests and residual rights. |
 | AS08 Bounded composition and exit paths | SP03/SP08/SP10/SP11 test custody, wrapper, batch, liquidation and migration compatibility under finite position/dependency/nesting bounds. |
-| AS09 History, ledger and trust | SP06/SP09 bind the accepted asset/claim/policy statement; SP04.2/.3 apply only if an admitted profile changes the native statement. Custody, oracle truth, finality and legal assumptions remain explicit. |
+| AS09 History, ledger and trust | SP06/SP09 bind the accepted asset/claim/policy statement; SP04.2/.3 apply only if an admitted profile changes a certificate statement. Custody, oracle truth, finality and legal assumptions remain explicit. |
 | AS10 Disclosure and developer explanation | SP02/SP08/SP10/SP12 specify private/public fields, diagnostics, complete canonical signing display, administrator powers and exit constraints. |
 | AS11 Actual staged target evidence | SP05/SP11/SP12 require Docker first, then separately admitted Midnight Preview evidence, with actual transaction IDs, complete effects and retained duties. |
 
