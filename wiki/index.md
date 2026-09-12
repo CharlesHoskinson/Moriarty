@@ -4,12 +4,15 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-10
+updated: 2026-09-12
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T08:30:09Z
+updated_at: 2026-09-12T02:40:00Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0109
   - SRC-0110
   - SRC-0108
@@ -29,6 +32,34 @@ sources:
 
 Read this page before searching externally. Merge new evidence into the existing
 topic pages and preserve their source and claim identifiers.
+
+## Midnight-native PCD architecture — 2026-09-11
+
+[[wiki/decisions/pcd-midnight-native-architecture|PCD architecture decision]] · [decision report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md) · [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) · [reproduced measurements](../evidence/pcd-midnight-native-2026-09-11/README.md).
+
+Sources: SRC-0111 (Midnight implementation and network collection), SRC-0112 (literature) and SRC-0113 (local measurements). CLM-0946–CLM-0960 are maintained in the decision page, with summaries in [[wiki/formal-assurance|formal assurance]], [[wiki/moriarty-architecture|architecture]], [[wiki/benchmarks|benchmarks]], [[wiki/open-questions|open questions]] and [[wiki/contradictions|contradictions]].
+
+**Recommended direction.** Ledger-anchored certified state with bounded native certificates, instead of per-transaction recursive history.
+
+**Why.**
+
+- Contract proofs cannot be recursively verified on Midnight.
+- The ledger already enforces verifier selection, stale-read rejection and effect binding.
+- Midnight recursion (`ledger-10`, pull request 738) arrives with unpriced pairings and guard hazards.
+
+The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) adopted the roadmap into OpenSpec planning as specified-only work and re-rooted atomic F3 on the Stage 0 seam.
+
+## Protocol graph for the DeFi kernel — 2026-09-12
+
+[[wiki/defi-kernel-protocol-graph|NEAR, Hyperliquid and Tron protocol graph]] · [kernel study](../deliverables/defi-kernel-multichain-2026-09-11/REPORT.md) · [kernel design](../docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md).
+
+Thirteen repositories at pinned commits, a 695-file topic corpus, and an 8,389-node graph across 501 communities. Only nine cross-protocol edges survive filtering, all inferred similarities around staking and validator discipline; the three systems share no intent format, fee representation or settlement interface.
+
+## DeFi kernel SDK interface — 2026-09-12
+
+[[wiki/defi-kernel-sdk-interface|SDK interface decision]] · [interface design](../docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md) · [kernel design](../docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md).
+
+Orchestration around a bounded language: no fifth effect, one anchored Midnight coordinator, and foreign legs advancing a pending record through `ImportFrom` at fan-in 1. Five cost planes, two meters of declared work, nine paid operator roles, and a three-tier admission ladder that ships local orchestration while value-moving foreign legs stay gated on adapter conformance and funded compensation.
 
 ## Completion sprint schedule
 

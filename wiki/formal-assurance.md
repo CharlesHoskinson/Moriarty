@@ -3,8 +3,11 @@ id: assurance.formal.matrix
 type: formal
 title: Formal assurance matrix
 status: active
-updated_at: 2026-09-07T16:50:22.642457+00:00
+updated_at: 2026-09-11T17:24:22Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0070
   - SRC-0071
   - SRC-0072
@@ -24,7 +27,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-11
 tags:
   - moriarty
   - research
@@ -164,3 +167,23 @@ SRC-0071 distinguishes linear IVC, recursive aggregation and compatible branchin
 RP02 moves the artifact/export and complete-verifier decision before expanded native work, preserving MC06's later real private composition evidence. No report or graph proves feasibility. Finite evaluation, financial safety, source fidelity, ledger uniqueness, oracle truth and witness availability remain distinct claims.
 
 Metadata: SRC-0071; observed 2026-09-07; report synthesis and pinned repository observation at `3eb0e0acf5b07a224ad876886e54837c82c84b86`; S2 planning disposition, no native or ledger proof reproduced; confidence high for identified missing evidence, unknown for implementation feasibility.
+
+## Midnight-native PCD decision — 2026-09-11
+
+The [[wiki/decisions/pcd-midnight-native-architecture|PCD architecture decision]] (CLM-0946–CLM-0960) revises how CLM-0191–CLM-0193 and CLM-0920 are to be discharged on Midnight.
+
+**What is kept.**
+
+- All four obligations.
+- Constrained genesis.
+- Resistance to downgrade and stripping.
+- The external boundary for consumption, ordering, finality and oracle truth.
+
+**What changes.**
+
+- **Fused claims.** Transition validity, intent refinement, per-step invariants, authorization and applicability are fused into one contract-call relation per entry point. The ledger verifies it against an immutable operation key.
+- **History compliance.** On-ledger history is discharged by induction over ledger acceptance with head read-then-write (CLM-0949), not by recursive verification of predecessor proofs, which Midnight cannot do for contract proofs (CLM-0948).
+- **Contract properties.** The universal contract property stays a deploy-time certificate bound by program digest.
+- **Recursion.** Midnight recursion (CLM-0953) is reserved for off-ledger segments, attestations and imports.
+
+The SRC-0045 recursion pins cited in CLM-0193 predate pull request 738 and the published crates; SRC-0111 supersedes them for interface facts. S2 decision; no Moriarty proof or ledger acceptance established; the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) is specified-only.

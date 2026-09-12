@@ -530,8 +530,308 @@
         }
       ],
       "notes": "Legacy CLM-0945; S2 source interpretation/proposed design only; no implementation, legal, proof or network acceptance."
+    },
+    "clm-moriarty-0946": {
+      "text": "Moriarty should adopt a ledger-anchored certified state machine with bounded native certificates instead of general DAG PCD or per-transaction recursive history.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "medium",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "Report §§1, 10-12 over pinned sources"
+        },
+        {
+          "source_id": "src-fdeb66e604806ae46c94",
+          "relation": "supports",
+          "locator": "Report §5"
+        },
+        {
+          "source_id": "src-2b533d28b189346bfa6d",
+          "relation": "supports",
+          "locator": "Report §14.2"
+        }
+      ],
+      "notes": "Legacy CLM-0946; S2 recommendation; user-directed recursion planning assumption; not implemented or adopted."
+    },
+    "clm-moriarty-0947": {
+      "text": "On ledger 8 the ledger verifies contract-call proofs in Transaction::well_formed against the operation key in ContractState, over a ledger-built statement that does not bind network id, fees, time-to-live or a state root.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "midnight-ledger ledger-8 3fa0d1d ledger/src/verify.rs:1802-1937; structure.rs:435-472; transient-crypto/src/proofs.rs:566-583"
+        }
+      ],
+      "notes": "Legacy CLM-0947; S6 source fact for ledger 8; not reproduced on a network."
+    },
+    "clm-moriarty-0948": {
+      "text": "A Midnight contract-call proof uses a Blake2b transcript and cannot be the Poseidon-transcript inner proof required by pull request 738 verify_proof.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "PR 738 416da99 transient-crypto/src/proofs.rs:72,784; zkir-v3/src/ir_instructions/verify_proof.rs:74-84"
+        }
+      ],
+      "notes": "Legacy CLM-0948; S3 unreleased interface; source fact."
+    },
+    "clm-moriarty-0949": {
+      "text": "The ledger rejects changed transcript reads at application with ReadMismatch; Compact writes emit no read, section placement is chosen by the transaction builder, and the pool admits PartialSuccess.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "ledger-8 onchain-vm/src/result_mode.rs:44-59; semantics.rs:147-190,1383-1406; construct.rs:1111-1162; compact 11e7ec5a midnight-ledger.ss:547-556; node release/node-1.0.2 versions/common/mod.rs:959-974"
+        }
+      ],
+      "notes": "Legacy CLM-0949; S6 source fact; E1 must observe it on Preview."
+    },
+    "clm-moriarty-0950": {
+      "text": "An empty maintenance committee with threshold 1 makes operation keys immutable, while threshold 0 accepts unsigned maintenance updates because the threshold is never validated.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "ledger-8 onchain-state/src/state.rs:710-716; ledger/src/verify.rs:354-363,1789-1795; midnight-docs deploy-and-operate.mdx:616-628"
+        }
+      ],
+      "notes": "Legacy CLM-0950; S6 source fact; not reproduced."
+    },
+    "clm-moriarty-0951": {
+      "text": "Cross-contract call atomicity is one-directional: a claimed call must exist, but nothing requires a call to be claimed; Compact emits cross-contract calls from toolchain 0.33.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "ledger-8 ledger/src/verify.rs:1001-1053,1563-1607; construct.rs:1066-1077; compactc-v0.34.0 release notes"
+        }
+      ],
+      "notes": "Legacy CLM-0951; S6 ledger rule; S5 Compact support; E4 must confirm the recovery rule."
+    },
+    "clm-moriarty-0952": {
+      "text": "No released ledger generation soundly supports application-defined recursion, and Compact and ZKIR up to IR 3.0 have no proof-verification primitive.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "ledger-8/9/10 transient-crypto proofs.rs and zkir ir.rs; MPS-0014; MIP draft pull request 198 f49199163"
+        }
+      ],
+      "notes": "Legacy CLM-0952; S6 absence; S2 Midnight plan."
+    },
+    "clm-moriarty-0953": {
+      "text": "Pull request 738 adds ZKIR InnerProof and VerifyProof with compile-time inner keys, 96-byte deferred accumulators and one ledger pairing per accumulator, with unpriced pairings, a disabling zero guard and a Collapsed decider lacking key and state checks.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "PR 738 416da99 transient-crypto/src/proofs.rs:146-153,397-404,764-802; zkir-v3/src/decider.rs:48-52,142-220; ledger/src/structure.rs:2045-2047"
+        }
+      ],
+      "notes": "Legacy CLM-0953; S3 unmerged; moving fact observed 2026-09-11."
+    },
+    "clm-moriarty-0954": {
+      "text": "Midnight implements Halo2-derived PLONK with KZG over BLS12-381 and no curve cycle, contradicting the 2023 Pluto/Eris design record.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "midnight-zk 695351f proofs/src/poly/kzg; curves/src; circuits/src/verifier/accumulator.rs:13-27; midnight-architecture eabbedf adrs/0013-proof-system.md"
+        }
+      ],
+      "notes": "Legacy CLM-0954; S6 source fact; contradiction recorded in CLM-0960."
+    },
+    "clm-moriarty-0955": {
+      "text": "Preview, Preprod and Mainnet reported node 1.0.2-eb71e64e, runtime spec 1000000 and transaction version 3 on 2026-09-11.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "midnight-network-runtime-versions-2026-09-11.json observed_at 2026-09-11T06:29:22Z"
+        }
+      ],
+      "notes": "Legacy CLM-0955; S6 moving fact; observed."
+    },
+    "clm-moriarty-0956": {
+      "text": "Midnight IVC example at 695351f fails key generation at K=17 and at K=18 proves in about 19.5 s per step over 100 steps with a 5,264 B proof and 4.4 GiB peak on one six-core machine.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-2b533d28b189346bfa6d",
+          "relation": "supports",
+          "locator": "bench/logs/ivc_k18_n1000_s1.log, ivc_k18_n1000_s10_neg.log, ivc_k18_n1000_s100.log, ivc_n1000_s1.log"
+        }
+      ],
+      "notes": "Legacy CLM-0956; S3 reproduced on one machine; not general costs."
+    },
+    "clm-moriarty-0957": {
+      "text": "Pull request 738 verify_proof test outer circuits need k=18 (150,966 rows, 34.8 s, 4.1 GiB) or k=19 (514,873 rows, 81.9 s, 7.8 GiB); invalid inner proofs yield outer proofs rejected only at the ledger accumulator pairing.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-2b533d28b189346bfa6d",
+          "relation": "supports",
+          "locator": "bench/logs/e2e_verify_proof_without_a_decider.log, _rerun.log, e2e_verify_proof_with_a_collapsed_decider.log"
+        }
+      ],
+      "notes": "Legacy CLM-0957; S3 reproduced with in-process test SRS on one machine. Memory figures corrected on 2026-09-11 to the retained peaks of 4,168 MiB and 8,004 MiB."
+    },
+    "clm-moriarty-0958": {
+      "text": "The Moriarty loan initialize Compact circuit proves at k=14 in 1.16-1.74 s with a 4,508 B proof and 249 MiB proof-server peak.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-2b533d28b189346bfa6d",
+          "relation": "supports",
+          "locator": "bench/proof-server/run.log, mem_run.log"
+        }
+      ],
+      "notes": "Legacy CLM-0958; Partially reproduced; proofs not verified."
+    },
+    "clm-moriarty-0959": {
+      "text": "Only atomic KZG accumulation fits a BLS12-381 KZG Halo2 stack without a new curve; folding needs a cycle or heavy non-native arithmetic, aggregation gives no predecessor validity, and successors must receive private state they read.",
+      "location": {
+        "path": "wiki/decisions/pcd-midnight-native-architecture.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "medium",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-fdeb66e604806ae46c94",
+          "relation": "supports",
+          "locator": "BCMS20 §2.4.2, §5.1; KS23 §1.2; KST22 §5; GMN22 §6; OB22"
+        }
+      ],
+      "notes": "Legacy CLM-0959; S2 research; definitions high confidence, stack fit inferred."
+    },
+    "clm-moriarty-0960": {
+      "text": "Five PCD source and design conflicts are preserved: proof-system record versus implementation, draft MIP batched pairing versus separate pairings, test SRS comment versus published files, Moriarty recursion proposal versus Midnight capability, and fixed-verifier intent versus replaceable deployed keys.",
+      "location": {
+        "path": "wiki/contradictions.md",
+        "anchor": null
+      },
+      "risk": "normal",
+      "assessment": "provisional",
+      "confidence": "high",
+      "reviewed_at": "2026-09-11",
+      "evidence": [
+        {
+          "source_id": "src-593d731c69dc2d598bf7",
+          "relation": "supports",
+          "locator": "adrs/0013; MIP f49199163; PR 738 verify_proof_e2e.rs:70-73; ledger-8 state.rs:710-716"
+        },
+        {
+          "source_id": "src-2b533d28b189346bfa6d",
+          "relation": "supports",
+          "locator": "MEASUREMENTS.md §3 SRS hashes"
+        }
+      ],
+      "notes": "Legacy CLM-0960; Contradiction records; no winner selected silently."
     }
   },
-  "generated_at": "2026-09-09T22:50:07Z",
+  "generated_at": "2026-09-11T17:24:22Z",
   "schema": "claude-obsidian.claim-ledger.v1"
 }

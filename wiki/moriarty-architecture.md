@@ -3,8 +3,11 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-09T22:50:07Z
+updated_at: 2026-09-11T17:24:22Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0109
   - SRC-0110
   - SRC-0104
@@ -39,7 +42,7 @@ sources:
   - SRC-0031
   - SRC-0033
 created: 2026-09-02
-updated: 2026-09-09
+updated: 2026-09-11
 tags:
   - moriarty
   - research
@@ -144,6 +147,8 @@ for a high-assurance kernel. A later composition layer can use signed capability
 manifests and hash allowlists without claiming that external code inherits
 Moriarty proofs.
 
+**Superseded in part, 2026-09-11.** For `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim` only, the [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) allows claimed cross-contract calls between Moriarty contracts from Compact 0.33 on ledger 9, pending the user's confirmation (decision PD4). External non-Moriarty calls stay excluded.
+
 ## DeFi product architecture
 
 The 12 DeFiFormal areas and the first report's M4+ mapping remain benchmark and
@@ -198,3 +203,21 @@ Grammar lessons: completeness claims name a profile. [The grammar review](../del
 **CLM-0944.** Recommend bounded asset/claim/encumbrance records and operation-specific transformation rules, with reusable financial and policy profiles. Keep asset quantities distinct from share units, economic exposure, legal title and nominal debt. Normal and exceptional authority must be separate. This extends the existing token-indexed amount/residual-duty direction; it does not add one Core constructor per standard. Source: SRC-0110, lines 317–473; S2 design inference/recommendation, reviewed 2026-09-09; not implemented or reproduced; confidence medium. [Three approaches, proposed semantics and eight cases](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md).
 
 Place the specification in SP01, types/EBNF in SP02, and Felleisen–Hieb reductions/K in SP03. SP07 owns scheduled servicing; SP08 owns DeFi transformations and pending claims; SP06/SP09 bind history and ledger correspondence; SP10 handles private bounded composition; SP11 conformance and SP12 developer release complete the path. SP04 requalifies affected native components. SP05 supplies Docker then Midnight Preview evidence only after the profile is admitted. The [exact sprint crosswalk](../deliverables/security-token-transformations-2026-09-09/DESIGN-IMPLICATIONS.md) preserves MC/RP gates, existing fixture counts and the shared-file ownership order. These are proposed refinements, not roadmap acceptance or new grammar. See [[wiki/security#Security-token policy paths — 2026-09-09|policy-path risks]].
+
+## Midnight-native PCD realization — 2026-09-11
+
+The [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]] places the Moriarty-to-Midnight seam at the operation key in `ContractState.operations`, over the ledger-built statement (CLM-0947).
+
+**Generated contract shape.**
+
+- **Entry points.** `Initialize`, `Step`, `Split`, `Join` and `Terminate`, with an optional principal-threshold `Pause`; cross-contract `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim` from the Compact 0.33 toolchain.
+- **State.** Public state holds per-head commitments; private state stays with entitled parties as encrypted openings.
+- **Authority.** An empty maintenance committee with threshold at least 1 (CLM-0950).
+- **Intent.** The signed intent digest binds network tag, contract, instance, head, revision, program digest, effect bounds, observation policy, certificate requirements, nonce and validity window.
+
+**Compiler invariants.**
+
+- Every head write reads the head or its absence.
+- Read, write and native effects share one transcript section with no checkpoint between them (CLM-0949).
+
+See the [report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md) §§10–12 and the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md). S2 proposal; not implemented.

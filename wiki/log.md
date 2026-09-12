@@ -4,11 +4,11 @@ title: Moriarty research log
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-10
+updated: 2026-09-12
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-10T10:38:55.104875+00:00
+updated_at: 2026-09-12T02:40:00Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -1082,3 +1082,45 @@ Source06 review addendum: Grok found a launcher schema incompatibility; GPT-6 re
 Source07 outcome: GPT-6 and Grok approved the repaired driver-to-launcher retention boundary. Full ledger suite306 pass, zero skips; [source disposition](../deliverables/sp05-financial-integration-2026-09-09/receipt-observer-01/source-disposition-07.json). No new execution or finality/financial acceptance. Next is fixed initialized-loan continuation and actual SDK coin-wrapper validation.
 
 Initialized continuation lessons: verified SDK `coin.utxo` mapping and mutating-read behavior. Source08 implements exact history/current-state gates, a raw private snapshot with separate namespace inspection, and only accrue/settle. [Design](../deliverables/sp05-financial-integration-2026-09-09/initialized-continuation-01/DESIGN.md);372 source/synthetic tests pass. Both source/resource reviews pending; no actual private access, new service window or transaction.
+
+## [2026-09-11] ingest | Midnight-native PCD architecture decision
+
+Capture `capture-pcd-midnight-native-20260911`; ingest `ingest-pcd-midnight-native-20260911`.
+
+**Sources registered.**
+
+- **SRC-0111.** A collection manifest over 19 Midnight captures: design records, the draft MIP and review, recursion pull-request metadata, release notes and network version observations. It also records implementation pins.
+- **SRC-0112.** 35 literature captures.
+- **SRC-0113.** 33 retained measurement files.
+
+**Pages.** Added the [[wiki/decisions/pcd-midnight-native-architecture|decision page]] with CLM-0946–CLM-0960, and updated formal assurance, architecture, benchmarks, open questions and contradictions.
+
+**Deliverables.** The [report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md), a [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) linked from ROADMAP.md, and [evidence](../evidence/pcd-midnight-native-2026-09-11/README.md).
+
+**Network activity.** Read-only RPC version calls to Preview, Preprod and Mainnet; GitHub API and documentation reads; literature downloads.
+
+**Not performed.** No Midnight transaction, Moriarty proof, ledger acceptance or roadmap adoption. The recursion planning assumption is user-directed. Existing MC01–MC08 and SP01–SP12 gates are unchanged.
+
+## [2026-09-11] planning | PCD roadmap adopted into OpenSpec
+
+**Deliverables.** The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md), the [PCD change package](../openspec/changes/pcd-ledger-anchored-acceptance/README.md) and the updated [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md).
+
+**Changes.** Atomic F3 rests on the Stage 0 seam instead of recursive stages. SP04 and SP06 deliver certificates, and `release` still requires them. MC04 and MC05 no longer depend on MC03. CLM-0957 memory figures now match the retained logs.
+
+**Not performed.** No proof, campaign, deployment, transaction or commit. Six design defaults and the certificate k bound await the user.
+
+## [2026-09-12] research | Protocol graph for the Moriarty DeFi kernel
+
+**Deliverables.** [[wiki/defi-kernel-protocol-graph|Protocol graph page]]; graph outputs at `~/protocol-graph/graphify-out/`; topic inventory and pinned clone provenance captured to raw storage.
+
+**Method.** Thirteen shallow clones, topic scoping to 695 files, structural extraction over code, grok 4.6 semantic extraction over 367 documents in seventeen chunks.
+
+**Not performed.** No protocol interaction, no transaction, no commit to the Moriarty repository from this step.
+
+## [2026-09-12] decision | DeFi kernel SDK interface, fee model and operator compensation
+
+**Deliverables.** [[wiki/defi-kernel-sdk-interface|SDK interface decision page]]; normative text at `docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md`, committed with the kernel study and its design on branch `DeFiInterface`.
+
+**Decisions.** Five cost planes rather than four, adding foreign execution as its own plane. Budget exhaustion stops work instead of falling back to unsigned charges. Capacity is purchased, not staked. Adjudication of a false imported fact uses a separate quorum, disclosed as another trusted import. Admission is staged in three tiers so local orchestration can ship while value-moving foreign legs stay gated.
+
+**Not performed.** No adapter test, finality experiment or benchmark. Every tariff, bond, quorum size and exposure cap is a proposed launch parameter. No language change admitted, no push.
