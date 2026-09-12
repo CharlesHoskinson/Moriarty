@@ -1,5 +1,5 @@
 /** Exact source spellings for the separately reviewed financial expression profile. */
-import { GENERIC_PRIMARIES, FINANCIAL_GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
+import { GENERIC_PRIMARIES, FINANCIAL_GENERIC_PRIMARIES, FINANCIAL_READ_GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
 import type { Expression, TypeNode, Span } from './frontend.ts';
 import type { Schema, ValueType } from './financial-expression-types-v1.ts';
 import { ExpressionFailure } from './expression-wire-v1.ts';
@@ -12,9 +12,14 @@ const INTRINSICS = ['u256', 'some_value', 'quanta', 'mantissa', 'is_negative', '
 const TERM_RESERVED = new Set([...SOURCE_KEYWORDS, ...INTRINSICS, ...SCALARS,
   'pre', 'post', 'obs', 'Amount', 'Shares', 'Rate', 'Price', 'Quantity', 'Units',
   'Record', 'Enum', 'Operation', 'Option', 'Collection', 'Asset', 'Variant', 'AmountProduct', 'ScaledAmount', 'SignedScaledAmount', 'SignedAmount', 'NetAmount']);
-export function reservedSourceTerm(name: string): boolean { return TERM_RESERVED.has(name); }
+export function reservedSourceTerm(name: string, extra: readonly string[] = []): boolean {
+  return TERM_RESERVED.has(name) || extra.includes(name);
+}
 const METADATA_RESERVED = new Set([...SOURCE_KEYWORDS, ...GENERIC_PRIMARIES, ...FINANCIAL_GENERIC_PRIMARIES]);
-export function reservedSourceSchemaName(name: string): boolean { return METADATA_RESERVED.has(name); }
+export function reservedSourceSchemaName(name: string, extra: readonly string[] = []): boolean {
+  return METADATA_RESERVED.has(name) || extra.includes(name);
+}
+export const FINANCIAL_READ_INTRINSICS = FINANCIAL_READ_GENERIC_PRIMARIES;
 export function asciiIdentifier(s: string): boolean {
   return /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(s) && !/[\r\n\u2028\u2029]/.test(s);
 }
@@ -75,9 +80,27 @@ function identity(e: Expression): string {
 function count(actual: number, expected: number, span: Span): void {
   if (actual !== expected) sourceFailure('SOURCE_ARITY', span);
 }
-export function sourceExtension(schema: Schema) {
+const READ_CONSTRUCTORS: Record<string, { constructor: string; generic: 'unit' | 'asset' }> = {
+  outstanding: { constructor: 'ReadOutstanding', generic: 'unit' },
+  principal: { constructor: 'ReadPrincipal', generic: 'unit' },
+  accrued: { constructor: 'ReadAccrued', generic: 'unit' },
+  balance: { constructor: 'ReadBalance', generic: 'asset' },
+  allowance_remaining: { constructor: 'ReadAllowanceRemaining', generic: 'asset' },
+  allowance_spent: { constructor: 'ReadAllowanceSpent', generic: 'asset' },
+};
+export function sourceExtension(schema: Schema, options?: { financialReads?: boolean }) {
   return (e: Expression, lower: (e: Expression) => SourceCoreNode): SourceCoreNode | undefined => {
     const n = (tag: string, operands: Record<string, any>) => sourceNode(tag, operands, e.span);
+    if (options?.financialReads && e.tag === 'Call' && Object.hasOwn(READ_CONSTRUCTORS, e.name)) {
+      const types = e.typeArguments ?? [];
+      count(types.length, 1, e.span);
+      count(e.arguments.length, 1, e.span);
+      const spec = READ_CONSTRUCTORS[e.name]!;
+      return n(spec.constructor, {
+        [spec.generic]: nominal(types[0]),
+        identity: lower(e.arguments[0]),
+      });
+    }
     if (e.tag === 'Conditional') return n('Select', { condition: lower(e.condition), consequent: lower(e.consequent), alternative: lower(e.alternative) });
     if (e.tag === 'IntegerLiteral') {
       const value = integer(e);

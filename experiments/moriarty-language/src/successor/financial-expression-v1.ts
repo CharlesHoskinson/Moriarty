@@ -5,8 +5,12 @@ import type { ExpressionSpan } from './expression-wire-v1.ts';
 import { NUMERIC, aggregateBound, numericFits, resolve, same, schemaShape, typeShape,
   unitShape, validateSchema, validateSnapshot, valueBound, valueDomain, valueSize } from './financial-expression-types-v1.ts';
 import type { Schema, ValueType } from './financial-expression-types-v1.ts';
+import { admitRepaymentStateJSON } from './repayment.ts';
+import type { Allowance, Balance, Obligation, RepaymentState } from './repayment.ts';
 
 export const FINANCIAL_EXPRESSION_CONTRACT_V1 = 'moriarty-financial-expression-contract/1';
+export const FINANCIAL_EXPRESSION_CONTRACT_V2 = 'moriarty-financial-expression-contract/2';
+const KERNEL_IDENTIFIER = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 type CoreNode = { constructor: string; operands: Record<string, any>; span: ExpressionSpan };
 type Action = { statements: CoreNode[]; span: ExpressionSpan };
 export type ExpressionResult =
@@ -47,7 +51,33 @@ const OPERANDS: Record<string, [string, Role][]> = {
   NextWrite: [['field', 'id'], ['value', 'expr']], Ensure: [['condition', 'expr']],
   Emit: [['operation', 'id'], ['fields', 'expr']],
 };
+const READ_OPERANDS: Record<string, [string, Role][]> = {
+  ReadOutstanding: [['unit', 'id'], ['identity', 'expr']],
+  ReadPrincipal: [['unit', 'id'], ['identity', 'expr']],
+  ReadAccrued: [['unit', 'id'], ['identity', 'expr']],
+  ReadBalance: [['asset', 'id'], ['identity', 'expr']],
+  ReadAllowanceRemaining: [['asset', 'id'], ['identity', 'expr']],
+  ReadAllowanceSpent: [['asset', 'id'], ['identity', 'expr']],
+};
+const OBLIGATION_READS: Record<string, 'outstanding' | 'principal' | 'accrued'> = {
+  ReadOutstanding: 'outstanding',
+  ReadPrincipal: 'principal',
+  ReadAccrued: 'accrued',
+};
+const ALLOWANCE_READS: Record<string, 'remaining' | 'spent'> = {
+  ReadAllowanceRemaining: 'remaining',
+  ReadAllowanceSpent: 'spent',
+};
+const FINANCIAL_READS = new Set([
+  ...Object.keys(OBLIGATION_READS), 'ReadBalance', ...Object.keys(ALLOWANCE_READS),
+]);
 const STATEMENTS = new Set(['Require', 'Let', 'NextWrite', 'Ensure', 'Emit']);
+function pairKey(party: string, asset: string): string {
+  return party + '\u0000' + asset;
+}
+function operandsFor(contract: string): Record<string, [string, Role][]> {
+  return contract === FINANCIAL_EXPRESSION_CONTRACT_V2 ? { ...OPERANDS, ...READ_OPERANDS } : OPERANDS;
+}
 function has(v: object, name: string): boolean { return Object.hasOwn(v, name); }
 function validSpan(v: any, sourceBytes: number): v is ExpressionSpan {
   if (v === null || typeof v !== 'object' || Array.isArray(v)
@@ -59,6 +89,12 @@ function validSpan(v: any, sourceBytes: number): v is ExpressionSpan {
 
 class Machine {
   schema: Schema;
+  contract: string;
+  operandTable: Record<string, [string, Role][]>;
+  financialPre: RepaymentState | undefined;
+  obligations = new Map<string, Obligation>();
+  balances = new Map<string, Balance>();
+  allowances = new Map<string, Allowance>();
   sourceBytes = 0;
   initial = 0;
   remaining = 0;
@@ -73,7 +109,17 @@ class Machine {
   args: Record<string, any> = {};
   obs: Record<string, any> = {};
   located = new WeakSet<ExpressionFailure>();
-  constructor(schema: Schema) { this.schema = schema; }
+  constructor(schema: Schema, contract = FINANCIAL_EXPRESSION_CONTRACT_V1, financialPre?: RepaymentState) {
+    this.schema = schema;
+    this.contract = contract;
+    this.operandTable = operandsFor(contract);
+    this.financialPre = financialPre;
+    if (financialPre !== undefined) {
+      for (const item of financialPre.obligations) this.obligations.set(item.id, item);
+      for (const item of financialPre.balances) this.balances.set(pairKey(item.party, item.asset), item);
+      for (const item of financialPre.allowances) this.allowances.set(pairKey(item.party, item.asset), item);
+    }
+  }
   site<T>(node: any, path: number[], f: () => T): T {
     try { return f(); } catch (error) {
       if (error instanceof ExpressionFailure && !this.located.has(error)) {
@@ -90,7 +136,7 @@ class Machine {
   }
   children(n: CoreNode): CoreNode[] {
     const result: CoreNode[] = [];
-    for (const [name, role] of OPERANDS[n.constructor]) {
+    for (const [name, role] of this.operandTable[n.constructor]) {
       if (role === 'expr') result.push(n.operands[name]);
       else if (role === 'list') result.push(...n.operands[name]);
       else if (role === 'fields') result.push(...n.operands[name].map((x: any) => x.value));
@@ -101,8 +147,8 @@ class Machine {
     this.site(n, path, () => {
       if (depth > 64 || ++count.nodes > 4096) fail('INPUT_BOUND');
       closed(n, ['constructor', 'operands', 'span']); this.spanShape(n.span);
-      if (typeof n.constructor !== 'string' || !has(OPERANDS, n.constructor)) fail('TYPE_CONSTRUCTOR');
-      const roles = OPERANDS[n.constructor]; closed(n.operands, roles.map(([name]) => name));
+      if (typeof n.constructor !== 'string' || !has(this.operandTable, n.constructor)) fail('TYPE_CONSTRUCTOR');
+      const roles = this.operandTable[n.constructor]; closed(n.operands, roles.map(([name]) => name));
       let index = 0;
       for (const [name, role] of roles) {
         const v = n.operands[name];
@@ -215,6 +261,17 @@ class Machine {
       else if (k === 'Let') { this.localTypes.set(o.name, childTypes[0]); t = ['Unit']; }
       else if (k === 'NextWrite') { this.requireType(childTypes[0], s.fields[o.field].type); this.written.add(o.field); t = ['Unit']; }
       else if (k === 'Emit') { this.requireType(childTypes[0], ['Record', s.operations[o.operation]]); t = ['Unit']; }
+      else if (FINANCIAL_READS.has(k)) {
+        this.requireType(childTypes[0], ['Text']);
+        if (k in OBLIGATION_READS) {
+          if (!s.units.includes(o.unit)) fail('TYPE_NAME');
+          t = ['Quantity', [[o.unit, '1']], '0'];
+        } else {
+          if (!s.assets.includes(o.asset)) fail('TYPE_NAME');
+          t = ['Amount', o.asset];
+        }
+        resolve(t, s);
+      }
       else throw new Error('Unimplemented admitted constructor: ' + k);
       this.types.set(n, t); return t;
     });
@@ -317,6 +374,25 @@ class Machine {
         for (const d of this.descriptors) { const z = valueSize(['Operation', d.operation], d, this.schema); nodes += z.nodes; depth = Math.max(depth, 1 + z.depth); }
         if (this.descriptors.length > 128 || bytes(canonical(this.descriptors)) > 65536 || nodes > 4096 || depth > 64) fail('DESCRIPTOR_BOUND');
         return;
+      } else if (FINANCIAL_READS.has(k)) {
+        if (this.financialPre === undefined) fail('FINANCIAL_CONTEXT_REQUIRED');
+        const identity = v[0];
+        if (typeof identity !== 'string' || !KERNEL_IDENTIFIER.test(identity)) fail('INVALID_IDENTIFIER');
+        if (k in OBLIGATION_READS) {
+          const obligation = this.obligations.get(identity);
+          if (obligation === undefined) fail('MISSING_OBLIGATION');
+          if (obligation.denomination !== o.unit) fail('NOMINAL_UNIT');
+          result = obligation[OBLIGATION_READS[k]];
+          if (!numericFits(type, result)) fail('ARITH_RANGE');
+        } else if (k === 'ReadBalance') {
+          const balance = this.balances.get(pairKey(identity, o.asset));
+          if (balance === undefined) fail('MISSING_BALANCE');
+          result = balance.amount;
+        } else {
+          const allowance = this.allowances.get(pairKey(identity, o.asset));
+          if (allowance === undefined) fail('MISSING_ALLOWANCE');
+          result = allowance[ALLOWANCE_READS[k]];
+        }
       } else throw new Error('Unimplemented admitted constructor: ' + k);
       valueBound(type, result, this.schema, 'VALUE_BOUND'); return result;
     });
@@ -328,7 +404,7 @@ class Machine {
       // its own independent65536-byte ceiling below.
       const r = parseCanonical(request, 2_000_000);
       closed(r, ['contract', 'source', 'core', 'Pre', 'Args', 'Obs', 'workInitial']);
-      if (r.contract !== FINANCIAL_EXPRESSION_CONTRACT_V1 || typeof r.source !== 'string') fail('INPUT_SCHEMA');
+      if (r.contract !== this.contract || typeof r.source !== 'string') fail('INPUT_SCHEMA');
       this.sourceBytes = bytes(r.source); if (this.sourceBytes > 65536) fail('INPUT_BOUND');
       decimal(r.workInitial); const work = BigInt(r.workInitial);
       if (work < 0n || work > 65536n) fail('INPUT_BOUND');
@@ -353,6 +429,9 @@ class Machine {
         }));
       } else this.infer(r.core, [], false);
       if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
+      if (this.contract === FINANCIAL_EXPRESSION_CONTRACT_V2 && this.financialPre === undefined) {
+        fail('FINANCIAL_CONTEXT_REQUIRED');
+      }
       const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
       validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
       this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
@@ -391,5 +470,55 @@ export function createFinancialExpressionContractV1(schemaCanonicalJSON: string)
   return Object.freeze({
     evaluate: (request: string) => run(request, false) as ExpressionResult,
     check: (request: string) => run(request, true) as ExpressionCheckResult,
+  });
+}
+
+function runFinancialContract(
+  schemaCanonicalJSON: string,
+  requestCanonicalJSON: string,
+  checkOnly: boolean,
+  contract: string,
+  financialStateJSON?: unknown,
+): ExpressionResult | ExpressionCheckResult {
+  let schema: Schema;
+  try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+  catch (error) {
+    if (!(error instanceof ExpressionFailure)) throw error;
+    return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+  }
+  let financialPre: RepaymentState | undefined;
+  if (!checkOnly && contract === FINANCIAL_EXPRESSION_CONTRACT_V2 && financialStateJSON !== undefined) {
+    const admitted = admitRepaymentStateJSON(financialStateJSON);
+    if (!admitted.ok) {
+      return {
+        status: 'Rejected',
+        code: admitted.result.code,
+        span: SYNTHETIC_SPAN,
+        nodePath: [],
+        workUsed: '0',
+      };
+    }
+    financialPre = Object.freeze(admitted.value);
+  }
+  return new Machine(schema, contract, financialPre).run(requestCanonicalJSON, checkOnly);
+}
+
+/** Core /2 admits the six financial reads. evaluate without a primitive state
+ * string rejects FINANCIAL_CONTEXT_REQUIRED after typing. Static check does not
+ * require live state. The optional state argument is primitive JSON only. */
+export function createFinancialExpressionContractV2(
+  schemaCanonicalJSON: string,
+  financialStateJSON: string | undefined = undefined,
+): {
+  evaluate(requestCanonicalJSON: string): ExpressionResult;
+  check(requestCanonicalJSON: string): ExpressionCheckResult;
+} {
+  return Object.freeze({
+    evaluate: (request: string) => runFinancialContract(
+      schemaCanonicalJSON, request, false, FINANCIAL_EXPRESSION_CONTRACT_V2, financialStateJSON,
+    ) as ExpressionResult,
+    check: (request: string) => runFinancialContract(
+      schemaCanonicalJSON, request, true, FINANCIAL_EXPRESSION_CONTRACT_V2,
+    ) as ExpressionCheckResult,
   });
 }
