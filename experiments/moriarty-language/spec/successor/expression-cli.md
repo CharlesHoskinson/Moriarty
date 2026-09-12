@@ -15,6 +15,7 @@ node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-expression-source/1 SOURCE.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema SCHEMA_JSON --snapshots SNAPSHOTS_JSON --repayment-state STATE_JSON SOURCE.mori
 ```
 
 Paths resolve against the working directory. SCHEMA_JSON is the trusted canonical
@@ -27,12 +28,19 @@ source header. Flags appear in the shown order, once each. Unknown commands,
 missing/duplicate/extra/reordered flags and empty arguments reject CLI_USAGE.
 Unknown --profile values reject CLI_PROFILE before opening files. Formatting
 accepts no schema; checking requires one. There is no stdin, output-file or
-in-place mode, profile inference, callback, or financial execution.
+in-place mode, profile inference, or callback. Without `--repayment-state` the
+CLI does not execute financial operations. With that option it still does not
+contact a ledger.
 Use a path such as ./--example.mori for a filename beginning with --.
 
 Simulation takes the exact ordered form `simulate --profile PROFILE --schema
-SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori`. It is a local-only adapter
-for the selected source API's `evaluate(source, snapshotCanonicalJSON)` method.
+SCHEMA_JSON --snapshots SNAPSHOTS_JSON SOURCE.mori`. The financial profile may
+place `--repayment-state STATE_JSON` immediately before SOURCE. That option is
+illegal for check, format, and `moriarty-expression-source/1`. Without the
+option, simulation remains a local-only adapter for the selected source API's
+`evaluate(source, snapshotCanonicalJSON)` method. With the option it calls
+`createFundedFinancialExpressionSourceV1(schema).evaluate(source, snapshots, state)`
+as specified in [funded-expression-source.md](funded-expression-source.md).
 It accepts neither caller-supplied Core nor a check-only shortcut. The source
 profile and trusted schema select the same factories as checking. Snapshots are
 canonical JSON with exactly `Pre`, `Args`, `Obs`, and `workInitial`, as defined
@@ -48,21 +56,23 @@ stderr, and exits0:
 
 `PROFILE`, `SNAPSHOT_PRE`, `SNAPSHOT_WORK_INITIAL`, and `API_SUCCESS_RESULT`
 stand for their JSON values. `result` is the exact successful result returned by
-the selected API. The wrapper does not add a success `workUsed` field; consumers
-can derive consumed work from `initialWork` and the exact result's
-`workRemaining` where present. The CLI parses the snapshots for `pre` and
-`initialWork` only after evaluation succeeds. An API record with
+the selected API. A funded success record also includes `financialPre`, the
+parsed initial repayment state. The wrapper does not add a success `workUsed`
+field; consumers can derive consumed work from `initialWork` and the exact
+result's `workRemaining` where present. The CLI parses the snapshots for `pre`
+and `initialWork` only after evaluation succeeds. An API record with
 `status: "Rejected"` is written unchanged to stderr, stdout stays empty, and
 the command exits1. In particular, successful `status: "ExpressionPrepared"`
-is not a rejection. Rejected output contains no CLI-created tentative post-state
-or descriptor fields.
+or `status: "FundedExpressionPrepared"` is not a rejection. Rejected output
+contains no CLI-created tentative post-state or descriptor fields.
 
 Checking writes the exact successful SourceChecked API record as one JSON line
 to stdout, followed by LF. It writes no stderr and exits0. A language rejection
 writes the exact API Rejected record, without added/removed fields, as one JSON
 line to stderr and exits1; stdout is empty. This includes its code, span, nodePath
 and workUsed. Check and format accept no AST, Core, or snapshot. Simulation
-accepts only its snapshots file; no command accepts caller-supplied AST or Core.
+accepts only its snapshots file and, for the financial profile, the optional
+repayment-state file; no command accepts caller-supplied AST or Core.
 
 Formatting writes exactly the selected profile formatter's result to stdout and exits0,
 with no stderr. It uses the same parser and formatter as the API, so it does not
@@ -74,17 +84,19 @@ CLI transport failure instead. Formatting never writes the source file.
 
 CLI admission/read failures write exactly
 `{"status":"CliRejected","code":CODE,"input":INPUT}` as one JSON stderr line,
-with empty stdout. INPUT is arguments, schema, source or snapshots. Codes/exits are:
+with empty stdout. INPUT is arguments, schema, source, snapshots or
+repayment-state. Codes/exits are:
 
 | Code | Input | Exit | Meaning |
 | --- | --- | --- | --- |
 | CLI_USAGE | arguments | 2 | Invocation differs from the forms above |
 | CLI_PROFILE | arguments | 2 | Explicit profile identifier is unsupported |
-| CLI_IO | schema, source or snapshots | 2 | File cannot be opened/read or is not regular |
+| CLI_IO | schema, source, snapshots or repayment-state | 2 | File cannot be opened/read or is not regular |
 | INPUT_BOUND | schema | 1 | Schema exceeds65536 bytes |
 | SOURCE_BOUND | source | 1 | Source exceeds65536 bytes |
 | INPUT_BOUND | snapshots | 1 | Snapshots exceed2,000,000 bytes |
-| INVALID_UTF8 | schema, source or snapshots | 1 | File bytes are not valid UTF-8 |
+| INPUT_BOUND | repayment-state | 1 | Repayment state exceeds65536 bytes |
+| INVALID_UTF8 | schema, source, snapshots or repayment-state | 1 | File bytes are not valid UTF-8 |
 | CLI_INTERNAL | arguments | 2 | Unexpected internal failure; no host error detail exposed |
 
 All failures have empty stdout; no partial formatted output is emitted. No
@@ -93,8 +105,8 @@ Unexpected internal errors cannot be reported as a successful source check.
 
 Admission order: validate complete CLI shape, validate --profile; for check read
 and decode schema then source, for format read and decode source, and for
-simulation read and decode schema then source then snapshots; call the selected
-API.
+simulation read and decode schema then source then snapshots, then repayment-state
+when that option is present; call the selected API.
 Transport admission necessarily precedes language phases. After valid transport,
 check results equal the API exactly. A schema file with a trailing newline is not
 canonical and the existing API determines its rejection. A BOM is retained by
