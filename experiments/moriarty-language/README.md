@@ -110,3 +110,18 @@ to use acceptance without a deployment-owned proof backend returns PROOF_INVALID
 The example does not sign an authority or move assets. `src/lower-compact.ts` and
 [compact/MAPPING.md](compact/MAPPING.md) describe the restricted generated numeric
 kernels; their generated ledger snapshots do not implement financial settlement.
+
+## Run a computed funded repayment
+
+From `experiments/moriarty-language/`, the financial expression CLI can evaluate a computed
+payment and, with `--repayment-state`, prepare the retained Transfer/Repay kernel
+in one local step. See
+[spec/successor/funded-expression-source.md](spec/successor/funded-expression-source.md).
+
+```sh
+node src/cli.ts simulate --profile moriarty-financial-expression-source/1 --schema spec/successor/examples/expression-funded-payment.schema.json --snapshots spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/expression-funded-payment.mori
+```
+
+The example adds two Quantity arguments, guards a nonnegative sum, updates ordinary
+`paid`, and emits the computed cash and nominal. Default 10+20 pays 30 against due
+100. Success is local preparation only.

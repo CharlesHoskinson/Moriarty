@@ -1,0 +1,27 @@
+profile "moriarty-financial-expression-source/1";
+agreement FundedPayment {
+  action pay(first: Quantity<Units<Cash,1>,0>, second: Quantity<Units<Cash,1>,0>,
+             transferId: Text, allocationId: Text) {
+    requires pre.due > 0;
+    let nominal = first + second;
+    requires is_negative(nominal) == false;
+    let payment = magnitude(nominal);
+    requires payment > 0;
+    next.paid = pre.paid + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Payer",
+      to: "Lender",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Repay {
+      allocationId: allocationId,
+      transferId: transferId,
+      obligationId: "Due100",
+      payer: "Payer",
+      nominalAmount: nominal
+    };
+    ensures post.paid == pre.paid + payment;
+  }
+}
