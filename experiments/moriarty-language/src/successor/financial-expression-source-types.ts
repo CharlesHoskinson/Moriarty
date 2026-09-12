@@ -14,6 +14,7 @@ const TERM_RESERVED = new Set([...SOURCE_KEYWORDS, ...INTRINSICS, ...SCALARS,
   'Record', 'Enum', 'Operation', 'Option', 'Collection', 'Asset', 'Variant', 'AmountProduct', 'ScaledAmount', 'SignedScaledAmount', 'SignedAmount', 'NetAmount']);
 export function reservedSourceTerm(name: string): boolean { return TERM_RESERVED.has(name); }
 const METADATA_RESERVED = new Set([...SOURCE_KEYWORDS, ...GENERIC_PRIMARIES, ...FINANCIAL_GENERIC_PRIMARIES]);
+export function reservedSourceSchemaName(name: string): boolean { return METADATA_RESERVED.has(name); }
 export function asciiIdentifier(s: string): boolean {
   return /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(s) && !/[\r\n\u2028\u2029]/.test(s);
 }
@@ -24,7 +25,7 @@ export function validateSourceSchemaNames(s: Schema): void {
   for (const fields of Object.values(s.recordTypes)) names.push(...Object.keys(fields as object));
   for (const cases of Object.values(s.variantTypes)) names.push(...Object.keys(cases as object));
   for (const members of Object.values(s.enumTypes)) names.push(...members as string[]);
-  if (names.some(n => !asciiIdentifier(n) || METADATA_RESERVED.has(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
+  if (names.some(n => !asciiIdentifier(n) || reservedSourceSchemaName(n))) throw new ExpressionFailure('SOURCE_SCHEMA_NAME');
   const prefixes = new Set(['pre', 'post', 'obs']);
   for (const key of ['units', 'assets', 'vaults', 'parties']) s[key].forEach((n: string) => prefixes.add(n));
   for (const key of ['recordTypes', 'variantTypes', 'fields', 'args', 'observations', 'operations']) Object.keys(s[key]).forEach(n => prefixes.add(n));

@@ -1,0 +1,48 @@
+// λ🙂 original offsets
+profile "moriarty-financial-agreement-source/1";
+agreement FundedPayment {
+  unit Cash;
+  asset Cash: Asset;
+  record TransferFields {
+    id: Text;
+    from: Text;
+    to: Text;
+    settlementAsset: Text;
+    transferAmount: Amount<Cash>;
+  }
+  record RepayFields {
+    allocationId: Text;
+    transferId: Text;
+    obligationId: Text;
+    payer: Operation<Repay>;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+  }
+  operation Transfer: TransferFields;
+  operation Repay: RepayFields;
+  state due: UInt128;
+  state paid: UInt128;
+  action pay(first: Quantity<Units<Cash,1>,0>, second: Quantity<Units<Cash,1>,0>,
+             transferId: Text, allocationId: Text) {
+    requires pre.due > 0;
+    let nominal = first + second;
+    requires is_negative(nominal) == false;
+    let payment = magnitude(nominal);
+    requires payment > 0;
+    next.paid = pre.paid + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Payer",
+      to: "Lender",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Repay {
+      allocationId: allocationId,
+      transferId: transferId,
+      obligationId: "Due100",
+      payer: "Payer",
+      nominalAmount: nominal
+    };
+    ensures post.paid == pre.paid + payment;
+  }
+}

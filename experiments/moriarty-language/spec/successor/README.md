@@ -61,3 +61,7 @@ The [funded financial expression adapter](funded-expression-source.md) is a late
 local slice. It keeps the financial expression profile and, with an explicit
 CLI `--repayment-state` file, prepares Transfer/Repay through the retained
 kernel after expression evaluation succeeds.
+
+The [source-defined agreement profile](financial-agreement-source.md) declares
+units, assets, records, ordinary state and protected Transfer/Repay operations
+in one `.mori` file and reuses that funded path without an external schema.

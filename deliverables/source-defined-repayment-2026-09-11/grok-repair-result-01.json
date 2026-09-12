@@ -1,0 +1,27 @@
+{
+  "text": "I'll load the findings and the existing worktree state first, then reproduce the four declaration diagnostic gaps independently before fixing them.Using systematic debugging and TDD on the four declaration-span gaps. I'll run CLI status, read the probe, and reproduce each failure independently.I'll reproduce the four diagnostic gaps with the root probe, then add failing regression tests before changing production code.The four gaps reproduce: three `TYPE_NAME` results use a synthetic `0:0` span, and `OPERATION_BINDING` points at `TransferFields`. Next I\u2019ll add failing regression tests, then fix the shared type walk and binding diagnostic.The four declaration diagnostic gaps are fixed. Source failures now point at the offending original form with UTF-8 offsets; the independent probe passes unchanged.\n\n## What was wrong\n\nIndependently reproduced with the frozen root probe (prefix `// original UTF-8 offsets: \u03bb\ud83d\ude42`):\n\n| Case | Before | After |\n| --- | --- | --- |\n| Parameter `Quantity<Units<Missing,1>,0>` | `TYPE_NAME` synthetic `0:0` | source span on `Missing` |\n| State `ScaledAmount<Missing,2>` | `TYPE_NAME` synthetic `0:0` | source span on `Missing` |\n| Parameter `Record<Missing>` | `TYPE_NAME` synthetic `0:0` | source span on `Missing` |\n| Repay `nominalAmount: UInt128` | `OPERATION_BINDING` on whole `TransferFields` | source span on `nominalAmount: UInt128;` |\n\nRoot cause: parameter types and several indexed constructors skipped source-aware resolution and fell through `validateSchema`. Binding failures always used the Transfer record span instead of the field that actually failed.\n\n## Changes\n\n- `experiments/moriarty-language/src/successor/financial-agreement-source-v1.ts`  \n  Walks every declared `TypeNode` (record fields, state, parameters), including nested `Option`/`Collection` and Amount/Quantity/ScaledAmount/Shares/Price/AmountProduct/Record/Enum/Variant/Operation forms. Failures keep the inner identifier\u2019s original span.\n- `experiments/moriarty-language/src/successor/funded-expression-source-v1.ts`  \n  Shared `operationBinding` now carries internal `{ operation, field }` detail. Public funded rejections stay `{ status: \"Rejected\", code: \"OPERATION_BINDING\" }` with no extra fields.\n- `experiments/moriarty-language/tests/financial-agreement-source.test.mjs`  \n  New test `declared type and binding failures keep original UTF-8 spans on the offending form` covering the four probe cases plus nested/indexed constructors.\n\n`independent-diagnostic-probes.mjs` was not modified (sha256 `bdaf78d8a2b816f00938f1dab86e17c21e300574a02b0e8c15c7d50934fbe311`).\n\n## Checks\n\n| Command | Result |\n| --- | --- |\n| Independent probe (red) | 4 failed \u2014 saved `author-repair-probe-red.txt` |\n| Independent probe (final) | 4 passed, exit 0 |\n| `npm run typecheck` | exit 0 |\n| `npm test` | 718 pass, 0 fail |\n\nNew receipts (prior evidence kept):\n\n- `/home/charl/Moriarty/deliverables/source-defined-repayment-2026-09-11/author-repair-probe-red.txt`\n- `/home/charl/Moriarty/deliverables/source-defined-repayment-2026-09-11/author-repair-checks.txt`\n\nNo commits, publication, live operations, or infrastructure work. Fresh Astra medium audit is still due on this terminal candidate.",
+  "stopReason": "end_turn",
+  "sessionId": "01a09288-cc1a-7871-9703-04544cf69322",
+  "requestId": "507956e9-b19b-4c2c-99f5-0948f57527b7",
+  "usage": {
+    "input_tokens": 51232,
+    "cache_read_input_tokens": 3697792,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 21309,
+    "reasoning_tokens": 18808,
+    "total_tokens": 3770333
+  },
+  "num_turns": 16,
+  "total_cost_usd": 1.41386552,
+  "total_cost_usd_ticks": 14138655200,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 51232,
+      "outputTokens": 21309,
+      "cacheReadInputTokens": 3697792,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 16,
+      "costUSD": 1.41386552
+    }
+  }
+}
