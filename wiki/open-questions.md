@@ -3,8 +3,11 @@ id: research.open-questions
 type: question
 title: Open questions
 status: active
-updated_at: 2026-09-03T14:43:01Z
+updated_at: 2026-09-11T17:24:22Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0003
   - SRC-0005
   - SRC-0007
@@ -12,7 +15,7 @@ sources:
   - SRC-0036
   - SRC-0038
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-11
 tags:
   - moriarty
   - research
@@ -53,3 +56,15 @@ until resolved or explicitly deferred.
 - Can the K definition be checked against the arc-zkir Agda model rather than only against the Rust crate, for example by generating the same witness and constraint traces for the precompile programs and comparing them with the Agda `synth` and preprocess functions? This needs the Agda toolchain (`nix run .#agda`) which has not been run locally. Status 2026-09-05: the whole v3 development type-checks with its Nix toolchain (`evidence/arc-zkir-agda-typecheck-2026-09-05.txt`), but it is parametric over an `Assumptions` record (field, curve and hash primitives) with no concrete instance, so it cannot execute programs; a concrete run needs an Agda implementation of the trust base, which does not exist in the repository.
 - Does Midnight's `k-rust` accept a definition that uses `MInt`, `Bytes`, and hooked `Int` operations, so that the ZKIR semantics can run inside the Midnight TypeScript tooling without canonical K? Not yet tested; `k-rust` is S4. Answered in part 2026-09-05: k-rust 0.4.0 parses the definition (`krust kast` on `ZKIR-SYNTAX` terms works) and runs the K tutorial lesson, but `krust kcompile` of the full ZKIR definition did not finish within 25 minutes (`evidence/k-rust-compatibility-2026-09-05.txt`); whether the in-process backend supports the `Bytes` and `^%Int` hooks remains untested because compilation never completed.
 - What does `compactc --feature-zkir-v3` emit for the Moriarty escrow and swap circuits, and do those programs stay inside the 34-instruction surface? The E00 experiment produced ZKIR 3 artifacts that can be re-read for this. Partly answered 2026-09-05: the seven escrow and swap artifacts in `experiments/` are version 3.0 and use only nine of the 34 instructions (`assert`, `bytes32_into_low_high`, `cond_select`, `constrain_bits`, `constrain_to_boolean`, `impact`, `persistent_hash`, `private_input`, `public_input`, `test_eq`); they parse and type-check in the base definition and agree with the Rust crate on every preimage tried, but no run reaches a successful witness with generated inputs because their assertions need a consistent transaction context (`evidence/zkir-k-differential-92e8bdd3-2026-09-05.txt`).
+
+## Midnight-native PCD (added 2026-09-11)
+
+From the [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]]; experiments E1–E5 are in the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md).
+
+- Does head read-then-write give exactly-once consumption on Preview, including fallible sections and pool reordering (E1)?
+- Does the fused step relation fit k ≤ 17, 600 s and 8 GiB on the proof server (E2)?
+- Will pull request 738's formats and hazards (fees, guards, collapsed decider) be fixed before `ledger-10` release candidate (E3)?
+- Do the published k ≥ 18 prover parameters share the embedded verifier parameters' setup, and are they served to provers?
+- Does the cross-contract `Reclaim` rule keep an unclaimed `Release` recoverable exactly once (E4)?
+- Is an off-ledger IVC segment certificate worth about 20 s per step and a 411 MB proving key (E5)?
+- Can join summaries express every Moriarty merge rule without full branch history?

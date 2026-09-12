@@ -4,8 +4,11 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-09T00:00:00Z
+updated_at: 2026-09-11T17:24:22Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0109
   - SRC-0106
   - SRC-0107
@@ -49,7 +52,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-09
+updated: 2026-09-11
 tags:
   - moriarty
   - research
@@ -257,3 +260,20 @@ SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the
 ## Language-design evidence limits
 
 **CLM-0942.** The [paper atlas](../deliverables/language-design-2026-09-09/PAPER-ATLAS.md) preserves positive and negative task findings. U02 Auction/Casino are financial authoring tasks, but not Moriarty evidence; its Auction p-value denominator and harder-task escape-hatch misuse matter. U04 typing benefits vary by task; U05 quiz gains do not establish programming-outcome gains; U06 prose compresses heterogeneous table differences. Unison introductory “unique by name” wording is qualified by its UUID-bearing reference. The [convergence record](../deliverables/language-design-2026-09-09/CONVERGENCE.md) retains withdrawn overclaims and dissent on static conservation, teachability, hash display and permanent database exclusion. SRC-0109; S2, not reproduced; confidence high for the named source qualifications, medium for recommendations.
+
+## Midnight PCD source conflicts — 2026-09-11
+
+**CLM-0960.** Preserve these conflicts; none is resolved by selecting the newer-looking source. Observed 2026-09-11; SRC-0111 unless noted; contradiction records; S2 disposition; confidence high.
+
+| Conflict | Scopes | Provisional disposition |
+| --- | --- | --- |
+| midnight-architecture `adrs/0013-proof-system.md` @`eabbedf` chose Halo 2 over Pluto/Eris with KZG for its cycle; midnight-zk `695351f` implements BLS12-381 only, with no Pluto/Eris code. | 2023 accepted design record versus current implementation | Design against the implementation: same-curve accumulation, no cycle recursion. |
+| Draft MIP (pull request 198 @`f49199163`) says outer and inner decider pairings are batched into one pairing; pull request 738 @`416da99` checks each accumulator separately after the outer verify. | Draft proposal versus unmerged implementation | Budget n+1 pairings per call until a batched path ships. |
+| Pull request 738 `zkir-v3/tests/verify_proof_e2e.rs:70-73` says published parameters stop at degree 17; the ceremony's `midnight-srs-2p18` and `2p19` files are published and match the trusted-setup catalog (SRC-0113). | Test-harness parameter path versus published ceremony files | Files exist; whether the proof server and data provider serve them, and share the embedded verifier setup, remains open. |
+| Moriarty's PCD design (README proof-carrying transactions; MC05/SP09) expects recursive predecessor proofs and a transaction-level claim manifest; contract proofs cannot be recursively verified on Midnight (CLM-0948). | Moriarty design intent versus Midnight implementation | Adopt ledger-anchored history plus bounded certificates as a proposal; existing gates remain until design review. Adopted into OpenSpec planning on 2026-09-11; decisions PD1–PD7 await the user. |
+| README says deployment policy fixes verifier/key versions; the deployed Preview contracts use a one-key maintenance committee that can replace keys (CLM-0950). | Moriarty intent versus deployed configuration | Require committee [] with threshold at least 1, or an all-principal committee with delay, checked by a deploy audit. |
+
+## Cross-contract calls and memory figures — 2026-09-11
+
+- **Cross-contract calls.** The [architecture page](moriarty-architecture.md) keeps cross-contract calls outside the initial Core. The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) needs claimed calls for `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim`. Decision PD4 resolves this for those entry points only, pending the user's confirmation. External non-Moriarty calls stay excluded in both positions.
+- **Memory figures.** Earlier vault pages quoted 4.3 GiB and 8.2 GiB for the pull request 738 tests. The retained logs give peaks of 4,168 MiB and 8,004 MiB, about 4.1 GiB and 7.8 GiB. The decision page, the benchmark page and CLM-0957 now use the retained values.

@@ -3,14 +3,17 @@ id: experiments.benchmarks
 type: benchmark
 title: Reproduced benchmarks and experiments
 status: active
-updated_at: 2026-09-03T06:48:47Z
+updated_at: 2026-09-11T17:24:22Z
 sources:
+  - SRC-0111
+  - SRC-0112
+  - SRC-0113
   - SRC-0002
   - SRC-0005
   - SRC-0007
   - SRC-0019
 created: 2026-09-02
-updated: 2026-09-07
+updated: 2026-09-11
 tags:
   - moriarty
   - research
@@ -126,3 +129,16 @@ The generated Compact remains an abstract template. The manifest specifies the
 constructor types and required encodings, but concrete Midnight addresses,
 authority hashes, and token colors are unbound. A deployment manifest and client
 verification remain required before a network experiment.
+
+## Midnight-native PCD measurements — 2026-09-11
+
+Reproduced on one machine: Intel Core Ultra 7 365, 6 cores, 31 GiB, WSL2. SRC-0113; full record in [the evidence directory](../evidence/pcd-midnight-native-2026-09-11/MEASUREMENTS.md).
+
+| Component | Circuit | Prove | Verify | Proof | Peak memory |
+| --- | --- | --- | --- | --- | --- |
+| midnight-zk IVC example, `695351f`, 1,000 Poseidon rounds per step | K=18, 163,172 rows (K=17 as shipped fails key generation) | 19.5 s per step over 100 steps | about 12.5 ms | 5,264 B | 4.4 GiB |
+| Pull request 738 `verify_proof`, one trivial inner proof | k=18, 150,966 rows | 34.8 s | 5.9 ms | 6,550 B | 4.1 GiB |
+| Pull request 738, two levels (collapsed decider) | k=19, 514,873 rows | 81.9 s | 6.2 ms | 6,550 B | 7.8 GiB |
+| Proof server 8.1.0, Moriarty loan `initialize` (compiler 0.31.1) | k=14 | 1.16–1.74 s | not verified | 4,508 B | 249 MiB |
+
+CLM-0956–CLM-0958. Invalid inner proofs are not refused at proving time; the ledger's accumulator pairing rejects them. No network submission or ledger acceptance occurred. Branch, join, stale-state and multi-party scenarios were not measured.
