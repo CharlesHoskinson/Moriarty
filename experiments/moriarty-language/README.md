@@ -167,3 +167,19 @@ node src/cli.ts check --profile moriarty-financial-agreement-source/4 spec/succe
 node src/cli.ts simulate --profile moriarty-financial-agreement-source/4 --action repay --snapshots spec/successor/examples/financial-state-payment.snapshots.json --repayment-state spec/successor/examples/financial-state-payment.state.json spec/successor/examples/financial-postconditions-payment.mori
 npm run financial-postconditions-demo
 ```
+
+The `/5` profile adds protected Originate and Accrue on
+`moriarty-financial-lifecycle/1`. Nested `record<Row>{...}` constructors and
+`u64(...)` literals supply conversion, terms, period and time. Quantity and
+Amount stay distinct; source U=A as names. See
+[spec/successor/financial-agreement-source-v5.md](spec/successor/financial-agreement-source-v5.md).
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/5 spec/successor/examples/financial-lifecycle-payment.mori
+node src/cli.ts format --profile moriarty-financial-agreement-source/5 spec/successor/examples/financial-lifecycle-payment.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots spec/successor/examples/financial-lifecycle-payment.snapshots.json --repayment-state spec/successor/examples/financial-lifecycle-payment.state.json spec/successor/examples/financial-lifecycle-payment.mori
+npm run financial-lifecycle-demo
+```
+
+The current demo originates 100, accrues 10 and repays 30. Outstanding 80
+remains. Full settlement is Task 3.

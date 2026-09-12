@@ -81,3 +81,8 @@ separate `/4` entry with Core contract `/3`. It adds six Ensure-only POST
 reads and prepares the kernel once before every `ensures` expression.
 Unprefixed reads keep financial PRE meaning. Older profiles keep their
 reserved names and constructor sets.
+
+The [origination and accrual profile](financial-agreement-source-v5.md) is a
+separate `/5` entry with Core contract `/4` and kernel
+`moriarty-financial-lifecycle/1`. It adds protected Originate and Accrue
+with nested record constructors. Older profiles keep their exact schemas.
