@@ -134,3 +134,13 @@ file and runs without `--schema`. See
 node src/cli.ts check --profile moriarty-financial-agreement-source/1 spec/successor/examples/source-defined-payment.mori
 node src/cli.ts simulate --profile moriarty-financial-agreement-source/1 --snapshots spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/source-defined-payment.mori
 ```
+
+The `/2` profile keeps those shared declarations and admits multiple named
+actions in one file. Check still inspects every action. Simulate requires
+`--action` and executes exactly one selected funded action. See
+[spec/successor/financial-agreement-source-v2.md](spec/successor/financial-agreement-source-v2.md).
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/2 spec/successor/examples/multiple-action-payment.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/2 --action repay --snapshots spec/successor/examples/multiple-action-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/multiple-action-payment.mori
+```

@@ -3,6 +3,7 @@ import {
   parseSuccessorExpressionSource,
   parseSuccessorFinancialExpressionSource,
   parseSuccessorFinancialAgreementSource,
+  parseSuccessorFinancialAgreementSourceV2,
   SuccessorSyntaxError,
   SYNTAX_BOUNDS,
   type Declaration,
@@ -224,4 +225,8 @@ export function formatSuccessorFinancialExpressionSource(source: string): string
 
 export function formatSuccessorFinancialAgreementSource(source: string): string {
   return formatParsedSource(parseSuccessorFinancialAgreementSource(source));
+}
+
+export function formatSuccessorFinancialAgreementSourceV2(source: string): string {
+  return formatParsedSource(parseSuccessorFinancialAgreementSourceV2(source));
 }
