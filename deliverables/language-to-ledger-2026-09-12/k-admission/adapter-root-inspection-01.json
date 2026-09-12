@@ -1,0 +1,19 @@
+{
+  "timestampUTC": "2026-09-12T06:19:24.122433+00:00",
+  "scope": "Provisional root actual-path inspection before adapter-ready/freeze, not terminal author audit. Recheck findings on frozen bytes.",
+  "sourceSHA256": "de02a76e59089aa2fc129e26449f4876dc7e02c7e474c461cc1d160011242b3b",
+  "findings": [
+    {
+      "id": "bounded-capture",
+      "path": "_native_spawn",
+      "observation": "proc.communicate(timeout=child_seconds) buffers complete stdout/stderr in memory before truncation. It is not bounded stream capture; a noisy native process can exceed memory before the deadline.",
+      "required": "Stream each pipe with bounded retained buffers and incremental count/hash, stop/reap child group on overflow/deadline within monotonic bound; retain overflow failure and raw exit, never113assertion on truncated output. Tests must exercise actual callable capture with harmless controlled Python child, not only injected prebounded result."
+    },
+    {
+      "id": "process-attribution",
+      "path": "parse_process_evidence",
+      "observation": "Any SIGSEGV token plus last killed-by line is attributed to interpreterExit without binding PID to interpreter exec. A parser or macro process SIGSEGV after another process execs interpreter is misattributed.",
+      "required": "Bind signal to observed interpreter PID/exec and explicit PID trace lines or leave interpreterExit unknown; raw independent result review still required. Add separate parser-signal/interpreter-normal/ambiguousPID controls."
+    }
+  ]
+}

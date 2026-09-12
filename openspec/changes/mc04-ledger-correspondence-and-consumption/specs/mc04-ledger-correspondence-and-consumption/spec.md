@@ -10,6 +10,7 @@ The adapter SHALL demonstrate that the selected Midnight acceptance path verifie
 #### Scenario: Missing interface
 - **WHEN** the target lacks an interface that checks the required native relation
 - **THEN** the adapter remains interface-blocked; host assertions and mocked verification cannot substitute.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Declared ledger verification seam": the core interface is ledger `well_formed` against the operation key in contract state, so the core is not interface-blocked; host assertions and mocked verification still cannot substitute.
 
 ### Requirement: Named compiler correspondence
 The package SHALL state and mechanically check source-to-Core-to-proof-to-ledger correspondence for its supported finite domain.
@@ -32,6 +33,7 @@ The acceptance path SHALL enforce authorization and predecessor consumption acro
 #### Scenario: Duplicate authority
 - **WHEN** proposals share a consumed nonce or predecessor, including changed-intent-hash and concurrent valid-branch cases
 - **THEN** at most one conflicting proposal settles; restart does not restore consumed authority.
+- **Amended by** `pcd-ledger-anchored-acceptance` requirement "Head read-then-write discipline": unique consumption is enforced by reading each head before writing it, checked over generated ZKIR and by E1.
 
 ### Requirement: Independent audit and provenance
 The package SHALL bind acceptance evidence to exact sources, commands, environment, outputs, and both required audit identities.
@@ -68,3 +70,4 @@ RP02 source and component preparation SHALL run before dependent native investme
 #### Scenario: Report requirement omitted
 - **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
 - **THEN** acceptance remains pending under [the report reconciliation](../../../../REPORT-RECONCILIATION-2026-09-07.md).
+- **Amended by** `pcd-ledger-anchored-acceptance` requirements "Declared ledger verification seam" and "Bounded native certificates": early feasibility is the Stage 0 seam for the core and E3 for certificates; no in-circuit pairing is required.

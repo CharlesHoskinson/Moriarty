@@ -1,0 +1,894 @@
+{
+  "schemaVersion": 1,
+  "status": "specified-only",
+  "amendment": "openspec/PCD-INTEGRATION-2026-09-11.md",
+  "stageMapping": [
+    {
+      "id": "PCD-S0",
+      "title": "Pin the verifier boundary",
+      "stage": "f0",
+      "tasks": [
+        "SP01.4"
+      ]
+    },
+    {
+      "id": "PCD-S0-paths",
+      "title": "Path ownership before authorship",
+      "stage": "native-path-freeze",
+      "tasks": [
+        "SP01.5"
+      ]
+    },
+    {
+      "id": "PCD-S1",
+      "title": "One native transition proof",
+      "stage": "f3",
+      "tasks": [
+        "SP09.1"
+      ]
+    },
+    {
+      "id": "PCD-S2",
+      "title": "One authenticated predecessor extension",
+      "stage": "f3",
+      "tasks": [
+        "SP09.1"
+      ]
+    },
+    {
+      "id": "PCD-S3",
+      "title": "Ledger-enforced acceptance on Preview",
+      "stage": "f3",
+      "tasks": [
+        "SP09.1"
+      ]
+    },
+    {
+      "id": "PCD-S4",
+      "title": "Sequential history and termination",
+      "stage": "mandatory",
+      "tasks": [
+        "SP09.2",
+        "SP09.5"
+      ]
+    },
+    {
+      "id": "PCD-S5",
+      "title": "Cross-party successor",
+      "stage": "composition",
+      "tasks": [
+        "SP10.2"
+      ]
+    },
+    {
+      "id": "PCD-S6",
+      "title": "Branch, join, release and reclaim",
+      "stage": "composition",
+      "tasks": [
+        "SP10.3"
+      ]
+    },
+    {
+      "id": "PCD-S6-migration",
+      "title": "Forward-declared migration",
+      "stage": "mandatory",
+      "tasks": [
+        "SP09.3"
+      ]
+    },
+    {
+      "id": "PCD-S7-authorship",
+      "title": "Certificate-relation authorship",
+      "stage": "f0a",
+      "tasks": [
+        "SP04.1"
+      ]
+    },
+    {
+      "id": "PCD-S7-fixtures",
+      "title": "Independent certificate fixtures",
+      "stage": "f1-fixtures",
+      "tasks": [
+        "SP04.2"
+      ]
+    },
+    {
+      "id": "PCD-S7-certificate",
+      "title": "Native certificate on ledger-10",
+      "stage": "f1",
+      "tasks": [
+        "SP04.3"
+      ]
+    },
+    {
+      "id": "PCD-S7-segment",
+      "title": "Off-ledger segment certificate",
+      "stage": "f2",
+      "tasks": [
+        "SP06.1",
+        "SP06.2",
+        "SP06.3"
+      ]
+    },
+    {
+      "id": "PCD-S8",
+      "title": "Performance and profile freeze",
+      "stage": "finance",
+      "tasks": [
+        "SP11.1"
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E1",
+      "title": "Head read-then-write linearity on Preview",
+      "stage": "f3",
+      "tasks": [
+        "SP09.1"
+      ]
+    },
+    {
+      "id": "E2",
+      "title": "Fused step relation fit",
+      "stage": "f3",
+      "tasks": [
+        "SP09.1"
+      ]
+    },
+    {
+      "id": "E3",
+      "title": "Native certificate with negative controls on ledger-10",
+      "stage": "f1",
+      "tasks": [
+        "SP04.3"
+      ]
+    },
+    {
+      "id": "E4-migration",
+      "title": "Immutable keys and forward-declared migration",
+      "stage": "mandatory",
+      "tasks": [
+        "SP09.3"
+      ]
+    },
+    {
+      "id": "E4-reclaim",
+      "title": "Cross-contract release and reclaim",
+      "stage": "composition",
+      "tasks": [
+        "SP10.3"
+      ]
+    },
+    {
+      "id": "E5",
+      "title": "Off-ledger segment certificate at 1, 10 and 100 steps",
+      "stage": "f2",
+      "tasks": [
+        "SP06.2",
+        "SP06.3"
+      ]
+    }
+  ],
+  "supersessions": [
+    {
+      "spec": "openspec/changes/mc03-native-recursive-proof/specs/mc03-native-recursive-proof/spec.md",
+      "requirement": "Reviewed restart",
+      "scenario": "Checked smaller encoding",
+      "disposition": "removed",
+      "note": "The fixed 54-limb relation and its smaller-encoding retry are retired (decision PD7).",
+      "governing": [
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc03-native-recursive-proof/specs/mc03-native-recursive-proof/spec.md",
+      "requirement": "Real recursion and independent verification",
+      "scenario": "Valid episode",
+      "disposition": "mechanism-replaced",
+      "note": "The fixed two-step episode becomes E5 segment certificates at 1, 10 and 100 steps.",
+      "governing": [
+        "Bounded native certificates",
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc03-native-recursive-proof/specs/mc03-native-recursive-proof/spec.md",
+      "requirement": "Real recursion and independent verification",
+      "scenario": "Invalid proof context",
+      "disposition": "extended",
+      "note": "Rejections add free or mismatched guards, substituted vk_repr and unbound inner instances.",
+      "governing": [
+        "Bounded native certificates"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc03-native-recursive-proof/specs/mc03-native-recursive-proof/spec.md",
+      "requirement": "Complete backend decision before native dispatch",
+      "scenario": null,
+      "disposition": "mechanism-replaced",
+      "note": "The backend decision is the certificate route under the dependency tracker.",
+      "governing": [
+        "Recursion dependency tracking and stop"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc04-ledger-correspondence-and-consumption/specs/mc04-ledger-correspondence-and-consumption/spec.md",
+      "requirement": "Actual verifier compatibility",
+      "scenario": "Missing interface",
+      "disposition": "mechanism-replaced",
+      "note": "The core is not interface-blocked; host assertions and mocked verification still cannot substitute.",
+      "governing": [
+        "Declared ledger verification seam"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc04-ledger-correspondence-and-consumption/specs/mc04-ledger-correspondence-and-consumption/spec.md",
+      "requirement": "Durable one-time consumption",
+      "scenario": "Duplicate authority",
+      "disposition": "mechanism-replaced",
+      "note": "Unique consumption uses head read-then-write discipline and E1.",
+      "governing": [
+        "Head read-then-write discipline"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc04-ledger-correspondence-and-consumption/specs/mc04-ledger-correspondence-and-consumption/spec.md",
+      "requirement": "Early complete verifier feasibility",
+      "scenario": null,
+      "disposition": "mechanism-replaced",
+      "note": "Early feasibility is the Stage 0 seam for the core and E3 for certificates.",
+      "governing": [
+        "Declared ledger verification seam",
+        "Bounded native certificates"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "requirement": "Mandatory acceptance",
+      "scenario": "Downgrade attack",
+      "disposition": "mechanism-replaced",
+      "note": "Claims are compiled into immutable operation keys checked by the deploy audit.",
+      "governing": [
+        "Immutable authority deployment audit",
+        "Claim discharge map",
+        "Forward-declared migration replaces in-place revocation"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "requirement": "Intent refinement and complete effects",
+      "scenario": "Authorized route choice",
+      "disposition": "mechanism-replaced",
+      "note": "Route choice uses outcome mode with a program-digest allowlist and consumed nonce.",
+      "governing": [
+        "Intent digest v2 and program digest"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "requirement": "No circular or simulated evidence",
+      "scenario": "Bound outcome claims",
+      "disposition": "mechanism-replaced",
+      "note": "The signature binds digest v2 fields; the head read replaces predecessor lists.",
+      "governing": [
+        "Intent digest v2 and program digest"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "requirement": "Authority covers liabilities and all protected effects",
+      "scenario": "Revoked verifier or inactive specification",
+      "disposition": "mechanism-replaced",
+      "note": "A defective or compromised program is stopped by Pause and migration, not key revocation (decision PD2).",
+      "governing": [
+        "Forward-declared migration replaces in-place revocation"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc05-mandatory-claim-acceptance/specs/mc05-mandatory-claim-acceptance/spec.md",
+      "requirement": "Authority covers liabilities and all protected effects",
+      "scenario": "Oversized verification input",
+      "disposition": "mechanism-replaced",
+      "note": "The registered budget is the Π_P bound set, checked before proving.",
+      "governing": [
+        "Intent digest v2 and program digest",
+        "Measured bounds frozen into the program digest"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc06-private-handoff-and-composition/specs/mc06-private-handoff-and-composition/spec.md",
+      "requirement": "Bounded history composition",
+      "scenario": "Compatible composition",
+      "disposition": "mechanism-replaced",
+      "note": "On-ledger branches need no branch proofs; off-ledger branches join through certificates.",
+      "governing": [
+        "Ledger-atomic split and join",
+        "Cross-contract release with reclaim"
+      ]
+    },
+    {
+      "spec": "openspec/changes/mc06-private-handoff-and-composition/specs/mc06-private-handoff-and-composition/spec.md",
+      "requirement": "Composition operators and witness ownership",
+      "scenario": "Report requirement omitted",
+      "disposition": "mechanism-replaced",
+      "note": "On-ledger successors need no predecessor proof verification; handoff carries recipient-encrypted openings.",
+      "governing": [
+        "Recipient-keyed successor handoff",
+        "Composition operators under head discipline"
+      ]
+    }
+  ],
+  "lockedTasks": [
+    {
+      "package": "MC03",
+      "taskId": "1.1",
+      "disposition": "removed",
+      "note": "Retired with the fixed relation (decision PD7); SP06.1 reviews the segment relation encoding instead.",
+      "governing": [
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "2.1",
+      "disposition": "mechanism-replaced",
+      "note": "Preimage, arithmetic, context and malformed-genesis tests apply to the segment relation; limb-boundary tests are removed.",
+      "governing": [
+        "Constrained genesis and termination",
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "2.2",
+      "disposition": "retained",
+      "note": "Applies to the Moriarty step folded by the segment.",
+      "governing": [
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "3.1",
+      "disposition": "retained",
+      "note": "The separate verifier process applies to certificates.",
+      "governing": [
+        "Bounded native certificates",
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "3.2",
+      "disposition": "retained",
+      "note": "Fresh deserialization, key and SRS identity and accumulator obligations apply to certificates.",
+      "governing": [
+        "Bounded native certificates",
+        "Off-ledger segment certificate"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "4.2",
+      "disposition": "mechanism-replaced",
+      "note": "E5 runs 1, 10 and 100 steps under a reviewed resource amendment; stop on the first failed predicate is retained.",
+      "governing": [
+        "Off-ledger segment certificate",
+        "Recursion dependency tracking and stop"
+      ]
+    },
+    {
+      "package": "MC03",
+      "taskId": "D.1",
+      "disposition": "mechanism-replaced",
+      "note": "The intake pins the released pull request 738 / ledger-10 formats.",
+      "governing": [
+        "Recursion dependency tracking and stop"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "1.1",
+      "disposition": "retained",
+      "note": "Becomes the Stage 0 toolchain manifest and seam.",
+      "governing": [
+        "Declared ledger verification seam"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "1.2",
+      "disposition": "retained",
+      "note": "Becomes the Stage 1 positive probe with mutated controls.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "4.1",
+      "disposition": "mechanism-replaced",
+      "note": "Conflict and restart tests run against head discipline and E1.",
+      "governing": [
+        "Head read-then-write discipline"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "4.2",
+      "disposition": "mechanism-replaced",
+      "note": "At most one finalized success follows from head discipline, shown by E1.",
+      "governing": [
+        "Head read-then-write discipline"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.1",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.2",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.3",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.4",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.5",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.6",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "P.7",
+      "disposition": "mechanism-replaced",
+      "note": "Compact step circuits proved by the proof server and verified by a Rust harness; no MC03 proof input.",
+      "governing": [
+        "Fused step relation per entry point"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "D.1",
+      "disposition": "mechanism-replaced",
+      "note": "The intake outcome is the declared seam; the core needs no wrapper alternative.",
+      "governing": [
+        "Declared ledger verification seam"
+      ]
+    },
+    {
+      "package": "MC04",
+      "taskId": "D.2",
+      "disposition": "retained",
+      "note": "Adds immutable authority, the deploy audit and netTag.",
+      "governing": [
+        "Immutable authority deployment audit",
+        "Forward-declared migration replaces in-place revocation"
+      ]
+    },
+    {
+      "package": "MC05",
+      "taskId": "1.1",
+      "disposition": "mechanism-replaced",
+      "note": "Test vectors and mutations for Π_P, intent digest v2 and genesis body v2; certificate keys are circuit constants.",
+      "governing": [
+        "Intent digest v2 and program digest"
+      ]
+    },
+    {
+      "package": "MC05",
+      "taskId": "1.2",
+      "disposition": "mechanism-replaced",
+      "note": "Rejections cover every digest v2 field.",
+      "governing": [
+        "Intent digest v2 and program digest"
+      ]
+    },
+    {
+      "package": "MC05",
+      "taskId": "3.1",
+      "disposition": "mechanism-replaced",
+      "note": "Absent-proof and intent-invalid tests run against the fused step relation; no MC03 artifact is an input.",
+      "governing": [
+        "Fused step relation per entry point",
+        "Claim discharge map"
+      ]
+    },
+    {
+      "package": "MC05",
+      "taskId": "4.1",
+      "disposition": "retained",
+      "note": "Real evidence only for supported profiles.",
+      "governing": [
+        "Claim discharge map"
+      ]
+    },
+    {
+      "package": "MC05",
+      "taskId": "D.1",
+      "disposition": "mechanism-replaced",
+      "note": "Signed intents are verified in the circuit with JubJub Schnorr; E2 measures fit.",
+      "governing": [
+        "Fused step relation per entry point",
+        "Intent digest v2 and program digest"
+      ]
+    },
+    {
+      "package": "MC06",
+      "taskId": "3.1",
+      "disposition": "retained",
+      "note": "Duplicate, policy, fan-in and amplification controls apply to heads.",
+      "governing": [
+        "Ledger-atomic split and join"
+      ]
+    },
+    {
+      "package": "MC06",
+      "taskId": "3.2",
+      "disposition": "mechanism-replaced",
+      "note": "Ledger-atomic split and join; branch proofs only for off-ledger branches.",
+      "governing": [
+        "Ledger-atomic split and join",
+        "Cross-contract release with reclaim"
+      ]
+    },
+    {
+      "package": "MC06",
+      "taskId": "4.1",
+      "disposition": "retained",
+      "note": "Recovery scenarios add Reclaim.",
+      "governing": [
+        "Cross-contract release with reclaim"
+      ]
+    },
+    {
+      "package": "MC06",
+      "taskId": "D.1",
+      "disposition": "mechanism-replaced",
+      "note": "Same-contract realization on ledger 8, cross-contract on ledger 9.",
+      "governing": [
+        "Ledger-atomic split and join",
+        "Cross-contract release with reclaim",
+        "Recipient-keyed successor handoff"
+      ]
+    }
+  ],
+  "dependencyTracker": [
+    {
+      "item": "Pull request 738 merged and ledger-10 released and deployed",
+      "neededBy": "f0a, f1, f2",
+      "status": "Open; merge conditionally agreed",
+      "class": "M3 (Midnight)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Fee accounting for accumulator public inputs and pairings",
+      "neededBy": "f1 exit, f2",
+      "status": "Absent at the pull request head",
+      "class": "M3 (Midnight)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Guard lint for VerifyProof and InnerProof",
+      "neededBy": "f0a",
+      "status": "Absent; Moriarty lint covers it meanwhile",
+      "class": "M2",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Collapsed decider checking vk_repr and state",
+      "neededBy": "f0a, f2",
+      "status": "Absent; the Moriarty outer relation covers it meanwhile",
+      "class": "M2 or M3",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "k >= 18 parameters served through the proof server and data provider",
+      "neededBy": "f1, f2",
+      "status": "Ceremony files published; serving path unverified",
+      "class": "M1 or M2",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Compact verifyProof frontend",
+      "neededBy": "f0a ergonomics",
+      "status": "Draft MIP only; ZKIR hand emission meanwhile",
+      "class": "M2",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "midnight-js and proof-server inner-proof plumbing; Poseidon proving for zk-stdlib relations",
+      "neededBy": "f1, f2",
+      "status": "Absent; Moriarty Rust prover meanwhile",
+      "class": "M2 (M0 workaround)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Published IVC module with instance and accumulator serialization",
+      "neededBy": "f2",
+      "status": "Unpublished",
+      "class": "M2",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Recipient-keyed private-state handoff",
+      "neededBy": "composition",
+      "status": "Absent; Moriarty encryption meanwhile",
+      "class": "M2 (M0 workaround)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Network id in the contract statement",
+      "neededBy": "Residual replay risk",
+      "status": "Absent; netTag separates networks but not byte-identical replicated deployments",
+      "class": "M3 (optional)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Maintenance-authority threshold validation",
+      "neededBy": "Defense in depth",
+      "status": "Absent; the deploy audit covers it",
+      "class": "M3 (optional)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Ledger 9 on Preview",
+      "neededBy": "mandatory (SP09.3), composition (SP10.3)",
+      "status": "Hard fork in node 2.1.0-beta.1; Preview runs ledger 8",
+      "class": "M3 (Midnight)",
+      "observed": "2026-09-11"
+    },
+    {
+      "item": "Reviewed resource amendment for certificate k",
+      "neededBy": "f1, f2",
+      "status": "Not requested; campaigns capped at k <= 17",
+      "class": "Moriarty decision",
+      "observed": "2026-09-11"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "PD1",
+      "question": "Intent signing modes",
+      "default": "Exact-head and outcome modes; cross-instance route choice owned by SP08 with MC05",
+      "owner": "MC05, SP08",
+      "blocks": "Stage 1 digest",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PD2",
+      "question": "Revocation and upgrade",
+      "default": "Immutable keys, declared or unanimous migration and optional principal-threshold Pause; an all-principal committee with update delay only as a Π_P-declared option for long-lived profiles after review",
+      "owner": "MC05, SP09.3",
+      "blocks": "Stage 3 deploy configuration; E4",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PD3",
+      "question": "Where the ContractProperty certificate is checked",
+      "default": "The deploy audit acts as governed registration",
+      "owner": "MC05, SP09.2",
+      "blocks": "Stage 0 audit scope",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PD4",
+      "question": "Cross-contract calls in the Core",
+      "default": "Allowed for Release, JoinFrom, Migrate, ImportFrom and Reclaim from Compact 0.33 on ledger 9; supersedes wiki/moriarty-architecture.md:143 for these only; external calls stay excluded",
+      "owner": "MC05, MC06",
+      "blocks": "Stage 6",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PD5",
+      "question": "Shared-state interleaving, asynchronous messaging and Pending",
+      "default": "Redesign under head discipline in SP10 before any campaign advertises them",
+      "owner": "MC06, SP10.1",
+      "blocks": "Stage 6 scope",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PD6",
+      "question": "Certificate entry point k bound",
+      "default": null,
+      "owner": "Program resource authority, MC03",
+      "blocks": "f1, f2",
+      "status": "user-decision-required"
+    },
+    {
+      "id": "PD7",
+      "question": "Fixed MC03 54-limb relation",
+      "default": "Retire it; its k17 failure stays failed evidence; segment certificates replace it",
+      "owner": "MC03, SP06",
+      "blocks": "Stage 7",
+      "status": "default-pending-confirmation"
+    },
+    {
+      "id": "PO01",
+      "question": "Contract layout: one contract per instance or several heads per contract",
+      "default": null,
+      "owner": "MC04",
+      "blocks": "Stage 2",
+      "status": "open"
+    },
+    {
+      "id": "PO02",
+      "question": "Single step entry point to hide the action type",
+      "default": null,
+      "owner": "MC06, SP10 with SP02",
+      "blocks": "Stage 1 circuit shape",
+      "status": "open"
+    },
+    {
+      "id": "PO03",
+      "question": "Join-summary content per profile",
+      "default": null,
+      "owner": "MC06, SP10 with RP01",
+      "blocks": "Stage 6",
+      "status": "open"
+    },
+    {
+      "id": "PO04",
+      "question": "Migration of requiredClaimRoot to the compiled claim set",
+      "default": null,
+      "owner": "MC01 with MC05",
+      "blocks": "Stage 1",
+      "status": "open"
+    },
+    {
+      "id": "PO05",
+      "question": "Per-head lifetime details across split, join and migration",
+      "default": null,
+      "owner": "MC01 with MC06",
+      "blocks": "Stage 6",
+      "status": "open"
+    },
+    {
+      "id": "PO06",
+      "question": "now as a block-time-bounded value and accrual rounding",
+      "default": null,
+      "owner": "SP01, SP07 with MC05",
+      "blocks": "Stage 1",
+      "status": "open"
+    },
+    {
+      "id": "PO07",
+      "question": "Unshielded versus contract-owned shielded settlement",
+      "default": null,
+      "owner": "MC02, SP05 with MC06",
+      "blocks": "Stage 3",
+      "status": "open"
+    },
+    {
+      "id": "PO08",
+      "question": "State commitment hash: SHA-256 persistentHash unless a reviewed decision moves to Poseidon",
+      "default": null,
+      "owner": "SP04 with MC04",
+      "blocks": "E2",
+      "status": "open"
+    },
+    {
+      "id": "PO09",
+      "question": "Network DUST fee caps: wallet policy versus proof",
+      "default": null,
+      "owner": "SP08 with MC08, SP12",
+      "blocks": "Stage 1",
+      "status": "open"
+    },
+    {
+      "id": "PO10",
+      "question": "netTag residual for replicated deployments and a network-id request to Midnight",
+      "default": null,
+      "owner": "MC04",
+      "blocks": "Stage 1",
+      "status": "open"
+    },
+    {
+      "id": "PO11",
+      "question": "Toolchain per network and the ledger-9 fork date",
+      "default": null,
+      "owner": "MC02, SP05 with RP03",
+      "blocks": "Stage 6",
+      "status": "open"
+    },
+    {
+      "id": "PO12",
+      "question": "Compact versus hand-written zk-stdlib step relation",
+      "default": null,
+      "owner": "MC04, SP09 with SP04",
+      "blocks": "E2",
+      "status": "open"
+    },
+    {
+      "id": "PO13",
+      "question": "Canonical claim vocabulary and site wording",
+      "default": null,
+      "owner": "MC01, SP01 with MC08, SP12",
+      "blocks": "Stage 0",
+      "status": "open"
+    },
+    {
+      "id": "PO14",
+      "question": "Handoff encryption scheme, key directory and recovery owner",
+      "default": null,
+      "owner": "MC06, SP10.2",
+      "blocks": "Stage 5",
+      "status": "open"
+    },
+    {
+      "id": "PO15",
+      "question": "Fallible-section placement and PartialSuccess handling",
+      "default": null,
+      "owner": "MC04",
+      "blocks": "E1",
+      "status": "open"
+    },
+    {
+      "id": "PO16",
+      "question": "ledger-10 certificate soundness: parameter serving, format pin, subgroup and trailing-byte checks, unpriced accumulators",
+      "default": null,
+      "owner": "MC03, SP04",
+      "blocks": "Stage 7",
+      "status": "open"
+    },
+    {
+      "id": "PO17",
+      "question": "Exported history proof for off-ledger auditors",
+      "default": null,
+      "owner": "MC08, SP12",
+      "blocks": "Outside acceptance",
+      "status": "open"
+    },
+    {
+      "id": "PO18",
+      "question": "Signature griefing by intervening steps",
+      "default": null,
+      "owner": "SP08 with MC06",
+      "blocks": "Stage 5",
+      "status": "open"
+    }
+  ],
+  "sourceDigests": {
+    "deliverables/pcd-midnight-native-2026-09-11/REPORT.md": "b5aa5b09129e8a65bbf1e63d1d62333ce7f5580fb567a16c25b73bc0555e07a1",
+    "openspec/PCD-ROADMAP-2026-09-11.md": "f017d8fb1c4aaff2b0d15d9d73e5c8a9b4b2498751fd0f595609b6f82be7e082"
+  }
+}

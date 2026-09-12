@@ -1,0 +1,150 @@
+{
+  "reviewer": "gpt-6-astra",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "candidateSha256": "d67bc1b755e0ead5d1b3aa4391f117eaf5472e17e0fbebd1e7ce67c822a54005",
+  "verdict": "CHANGES_REQUIRED",
+  "mayBeginItem2": false,
+  "approvedItems": [],
+  "approvedScope": [],
+  "reviewedScope": "Item 2 complete callable executor SOURCE requirements, including all four applicable OpenSpec files, full existing collector and tests, historical execute-once as text only, and actual guarded runner/caller handoff.",
+  "findings": [
+    {
+      "id": "A08-1",
+      "severity": "blocking",
+      "classification": "repository observation and source-interface gap",
+      "title": "Authenticated invocation handoff has no specified actual producer/consumer protocol",
+      "references": [
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:4",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:19",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:32",
+        "plugins/moriarty-dev/scripts/moriarty_dev/runner.py:59",
+        "plugins/moriarty-dev/scripts/moriarty_dev/runner.py:138",
+        "plugins/moriarty-dev/scripts/moriarty_dev/cli.py:385"
+      ],
+      "finding": "The executor must authenticate the current reservation and outer start/deadline before setup, but runner.execute keeps started only in local memory, receives reservation_id only in its own call, and starts the fixed argv with stdin DEVNULL and no explicit invocation channel. load_runner hash-binds existing argv files, including the required --admission operand, and CLI revalidates the same runner digest after reservation and after execution. The source contract calls this mutable invocation evidence outside the runner digest but does not define how the actual caller produces, conveys and authenticates it without circular or stale admission commitments. A fake dependency can satisfy executor-only tests while the real registered caller remains unable to provide the required input.",
+      "requiredChange": "Specify the minimal existing runner/CLI handoff repair within item 2: producer timing after the current reservation, concrete authenticated channel/record and clock identity, reservation/action/candidate/runner/store linkage, replay and parent-loss handling, and how mutable admission observations are excluded narrowly from immutable file commitments while still authenticated. Require an isolated real runner-to-executor handoff test plus forged/stale/wrong-reservation rejection. No new dispatcher or live instance is needed."
+    },
+    {
+      "id": "A08-2",
+      "severity": "blocking",
+      "classification": "requirements contradiction",
+      "title": "The stated 60-second outer margin is not preserved for permitted delayed entry",
+      "references": [
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:30",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:32"
+      ],
+      "finding": "The spec promises 60 seconds inside the outer 1800-second timeout and says command-start delay cannot consume that margin, but admits any executor entry with at least 1740 seconds remaining and caps deadlines only at the outer deadline. If executor T0 is outerStart+50, 1750 seconds remain so setup is permitted; T0+1740 is outerStart+1790, leaving only 10 seconds. These source predicates cannot establish the stated fixed margin.",
+      "requiredChange": "Explicitly cap cleanup/final-result completion at outerDeadline-60 (and derive earlier phase cutoffs consistently), or state and review a different minimum-margin policy. Add delayed-entry boundary tests through the authenticated handoff; do not restart clocks."
+    }
+  ],
+  "positiveAssessment": [
+    "Named real import-safe module, function and CLI; requires installed normal collector package and complete caller tests instead of collect-once refusal.",
+    "Durable terminal-before-stop ordering, real stop versus receipt persistence distinction, nonzero/unknown main exit classification, explicit prover/launcher ownership and independent timer containment are substantive and independently testable.",
+    "The 120/1500/120 nominal phase sum is 1740 seconds; 1800+5+30 debit arithmetic is 1835 seconds. Missing concrete grant/role/fee/loan instance values alone are not a source approval blocker."
+  ],
+  "hashVerification": {
+    "allMatch": true,
+    "files": [
+      {
+        "path": "openspec/changes/afk-live-financial-execution/proposal.md",
+        "expected": "5927b588bac403e812e91ffbf531012bbe3703402047241acea9425c8f9a3009",
+        "actual": "5927b588bac403e812e91ffbf531012bbe3703402047241acea9425c8f9a3009"
+      },
+      {
+        "path": "openspec/changes/afk-live-financial-execution/tasks.md",
+        "expected": "3d080ea42866daa0809f3bbaaae0ffeb881494ce0e41623b8b5745a45823e487",
+        "actual": "3d080ea42866daa0809f3bbaaae0ffeb881494ce0e41623b8b5745a45823e487"
+      },
+      {
+        "path": "openspec/changes/afk-live-financial-execution/specs/afk-live-financial-execution/spec.md",
+        "expected": "c363c0cae313e71c39ab8f3f48fb4e29e83a79cc49abbe35481b9db681893ae0",
+        "actual": "c363c0cae313e71c39ab8f3f48fb4e29e83a79cc49abbe35481b9db681893ae0"
+      },
+      {
+        "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+        "expected": "50b0ca0a4c59b66710a6873028ff1c9c7aace967ca02106bd51d68cdeb9732cc",
+        "actual": "50b0ca0a4c59b66710a6873028ff1c9c7aace967ca02106bd51d68cdeb9732cc"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/cli.py",
+        "expected": "01227e7a13afa4fdced705668f6bf87001f5a3ac2abc7a373748bb4ae82561ec",
+        "actual": "01227e7a13afa4fdced705668f6bf87001f5a3ac2abc7a373748bb4ae82561ec"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+        "expected": "4e769b21109d871e62c207b22d5d3164e7e252ab115020d72d5e7ef0e0cd264c",
+        "actual": "4e769b21109d871e62c207b22d5d3164e7e252ab115020d72d5e7ef0e0cd264c"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/launch_contract.py",
+        "expected": "15861d1ca4ce9f8fe771d270f4d618b02080ecebc0eb51e0d0ea1d17c05da3c7",
+        "actual": "15861d1ca4ce9f8fe771d270f4d618b02080ecebc0eb51e0d0ea1d17c05da3c7"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/loan_exit_operator.py",
+        "expected": "a36ec7ec562e88b2ddf162fc1ca403537f16bf479a9d6581e3aeb5ffd71cb8f9",
+        "actual": "a36ec7ec562e88b2ddf162fc1ca403537f16bf479a9d6581e3aeb5ffd71cb8f9"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/terminal_predicate.py",
+        "expected": "25a9724f63b8a89c5e1159b0060d4d040557709e24e16cf08746fee53765b9e9",
+        "actual": "25a9724f63b8a89c5e1159b0060d4d040557709e24e16cf08746fee53765b9e9"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_exit_retention.py",
+        "expected": "505d7a46497bd2427f595418eb671435e4039942eefc0319a637bd8b4f5ca60c",
+        "actual": "505d7a46497bd2427f595418eb671435e4039942eefc0319a637bd8b4f5ca60c"
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_terminal_predicate.py",
+        "expected": "a6a406977dfd7a1bf860d0708bcfe58d543690e006ef2055c686b46d233b9f30",
+        "actual": "a6a406977dfd7a1bf860d0708bcfe58d543690e006ef2055c686b46d233b9f30"
+      },
+      {
+        "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/execute-once.py",
+        "expected": "c8040549e015f0402a72b1b37f2ec3772bf79eaeec4b69a4f07b4af9fd7c16fb",
+        "actual": "c8040549e015f0402a72b1b37f2ec3772bf79eaeec4b69a4f07b4af9fd7c16fb"
+      },
+      {
+        "path": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+        "expected": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+        "actual": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a"
+      },
+      {
+        "path": "plugins/moriarty-dev/skills/develop/SKILL.md",
+        "expected": "319ce19b11af19e3031ebc318e066b58c9af36b73cb39503ee86a6c4c79a92f1",
+        "actual": "319ce19b11af19e3031ebc318e066b58c9af36b73cb39503ee86a6c4c79a92f1"
+      },
+      {
+        "path": "deliverables/roadmap-loop-2026-09-10/ACTIVE-ROUTING.md",
+        "expected": "7e2327ffc31d5fa794c15d11a22cba0575848e37c8bbd875ca58df08f8430e61",
+        "actual": "7e2327ffc31d5fa794c15d11a22cba0575848e37c8bbd875ca58df08f8430e61"
+      }
+    ]
+  },
+  "startupStatus": {
+    "artifact": "astra-startup-status.json",
+    "testInterval": "none; no tests or actionful commands run",
+    "permittedStatusWrite": "Required guarded startup status ran before review. Exact UTC start/end and pre/post git status retained in artifact.",
+    "preStoreDigestAndCounts": null,
+    "preStoreLimitation": "Not captured before the single startup status; cannot claim exact before/after SQLite write isolation. No second status run used to manufacture a baseline.",
+    "postStoreSha256": "313c42011cffdcff656eaaaaafb54ef7151dd09e83b3a9c5d0684336d900f764",
+    "postStoreTableCounts": {
+      "events": 609,
+      "sqlite_sequence": 3,
+      "reservations": 2,
+      "admin_intervals": 495,
+      "outbox": 32,
+      "runner_claims": 1
+    }
+  },
+  "limits": [
+    "Requirements review only; no source code changes, live grant/plan/adoption, network/wallet/financial operation, systemd/Docker start, dispatch or test execution.",
+    "Historical execute-once.py was read as text only and never imported or executed.",
+    "No Opus review was read or consulted; this is an independent Astra verdict.",
+    "cli.py was inspected as supplemental current caller evidence but is not one of the pinned 15 manifest files; a repaired full-source candidate must pin all changed caller dependencies.",
+    "All observations are source inspection, not demonstrated implementation or live financial acceptance."
+  ],
+  "completedAt": "2026-09-11T08:04:49.137487+00:00"
+}

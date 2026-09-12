@@ -1,0 +1,5 @@
+Adds source `/5` and Core `/4` actions that originate fully funded obligations and accrue bounded interest with explicit floor/ceil rounding, immutable lifetime liability caps, and duplicate-period protection. Financial postconditions run against the tentative resulting state; rejection publishes no changes. Earlier source/Core APIs remain unchanged.
+
+Includes runnable syntax, CLI and partial repayment examples. The complete source-driven settlement example follows separately; this PR establishes local evaluation, with K and authenticated ledger acceptance still open.
+
+Validation: 874 package tests, typecheck, 37 independent kernel cases, 13 source cases, legacy runtime and API compatibility checks, exact result-size/work boundaries, and documented README commands. Fresh Astra medium approved the full 215-file candidate (`2a3a69e6170e000f3b9c85991868bcfc1ed080266f96434569163ca8ddf47a61`); audit and actual Grok 4.6 author receipts are retained under `deliverables/language-to-ledger-2026-09-12/origination/`.

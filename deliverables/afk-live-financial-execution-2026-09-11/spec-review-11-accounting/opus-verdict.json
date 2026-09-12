@@ -1,0 +1,88 @@
+{
+  "reviewer": "fresh-independent-claude-opus-producer14",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "identityBasis": "Delegated fresh Claude Opus medium requirements review from inline bytes; no provider attestation available.",
+  "candidateSha256": "3ae3eaa0542a2c563e11cd936de3798c982d038ccf7472f0404a9c58c5aa44f5",
+  "verdict": "CHANGES_REQUIRED",
+  "mayBeginProducer": false,
+  "approvedScope": "None for the 1.3 accounting producer or cmd_run integration. This review does not touch or revoke the retained 1.3 direct-observer approval, whose requirement text is unchanged. No grant, projection instance, resource vote, token/history adoption, live observation, lock, debit, claim or dispatch is authorized.",
+  "resolvedPrior": {
+    "O13-1": "a, b, c, d and f resolved (expected, observerExecution, parent evidence, vote receipt, budget.lock path). e is only partially resolved; see P14-2.",
+    "O13-2": "Resolved: single sequence, predebit_gate, db_path/history-reader boundary, reserve_preflight with handover, 90/120 s with L=30.",
+    "O13-3": "Resolved: O_EXCL application marker, SQLite debit-intent counterparts, rollback fault matrix.",
+    "O13-5": "Resolved: alloc=G, zero binding/successor allocation, exact Decimal/Fraction from JSON tokens."
+  },
+  "findings": [
+    {
+      "id": "P14-1",
+      "severity": "blocking",
+      "path": "afk-live-accounting/spec.md#Exact attempts and actual submission consumer; #Authenticated MC02 envelope; #Authenticated context discovery",
+      "finding": "The runtime-debit predicates have no closed field that the resource votes bind. (1) Funding admission must compare receipt amounts with the admitted maximum, but no field in projection, context or expected carries the required DUST/token minimums, DUST fee ceiling, token gross ceiling, the max of 4 submissions or cumulative attempt number 3. The amendment 'SHALL state' them, but votes bind only the projection digest, and the amendment's closed keys are not specified to hold them. (2) History outcomes entries (receiptSha256, defectClass, outcome, resolvedBy) carry no attempt classification, so 'exactly two prior loan-case attempts' cannot be derived from closed data. (3) The producer must 'bind and reconcile' providers.mjs reservation path, bindingFor and submission guard, but no path, identity fields or check is named.",
+      "requiredCorrection": "1. Add a closed, vote-bound object to the projection, e.g. financialBounds, with exact fields: attemptNumber=3; priorLoanAttemptReceipts (exactly two history receipt digests); maxSubmissions; dustFeeCeiling {amount,unit}; tokenGrossCeiling {tokenId,amount,unit}; fundingMinimums keyed by asset. Amounts are integer decimal strings.\n2. Define the comparison: observed available >= required for the identical asset and unit, with no conversion.\n3. Specify the attempt-count derivation from those receipts.\n4. For providers.mjs, either define the exact producer-emitted binding (reservation path source, bindingFor inputs = chargeId/reservationId/candidate/runnerDigest), or move it explicitly to executor scope while the producer denies with a named reason until it is defined.",
+      "expectedOutcome": "Independently recomputable fixtures in which each of these denies before runtime debit: insufficient by one unit, unit/asset mismatch, prior attempts not equal to 2, missing submission bound."
+    },
+    {
+      "id": "P14-2",
+      "severity": "blocking",
+      "path": "afk-live-accounting/spec.md#Separately charged bounded read-only preflight; #Independently bound observer launch and resource identities",
+      "finding": "The executor-facing handoff interface is still undefined.\n- 'Authenticated parent channel' and 'authenticated invocation handoff' name no mechanism. runner.execute passes no env or fd (close_fds, start_new_session, strong containment), and argv is static.\n- The ownership record is not closed ('SHALL bind', not 'exactly') and has no state enum or terminal released/unresolved state.\n- Nothing makes executor start one-shot. Any executor process started while launchClaim=claimed and the record shows runtime IDs validates identically, and the parent cannot tell whether zero, one or two executors consumed the handoff.",
+      "requiredCorrection": "1. Close the ownership schema, e.g. moriarty.i2-wallet-ownership/1: schema, contextSha256, projectionSha256, storeIdentity, state, preflightReservationId, preflightChargeId, runtimeReservationId, runtimeChargeId, runnerDigest.\n2. Define state as exactly preflight-held | runtime-handed-over | released | unresolved, with allowed transitions.\n3. Replace 'parent channel' with a concrete one-shot executor-start transition, e.g. an O_EXCL marker bound to runtimeChargeId, the master claim and the record digest. The executor must create it before wallet access. The parent, after execute, requires exactly one marker; absent or ambiguous markers leave the record unresolved.\n4. Define release, and state that a successor denies on any non-released record.",
+      "expectedOutcome": "Tests where each case denies or stays unresolved as specified: second executor start, executor before handover, stale or foreign record, parent death, released-then-reused path."
+    },
+    {
+      "id": "P14-3",
+      "severity": "blocking (textual contradiction)",
+      "path": "afk-live-accounting/spec.md#Authenticated context discovery (correspondence); #Master projection and global one-shot claim; #Single preflight caller",
+      "finding": "The sequence requires master/projection/correspondence replacement and a lock-held correspondence check at application and preflight debit, before any observation exists. The closed correspondence allows only runtimeChargeId and reservationId to be null. It also must be created 'only from its own successful bounded observer result'. The pre-observation correspondence state, and what authenticates master\u2194projection before the preflight claim, cannot be satisfied as written.",
+      "requiredCorrection": "Choose one:\n- Allow observationSha256 to be null in a named pre-observation state, and define the check at the preflight claim.\n- State that before observation, master\u2194projection agreement is proven by the marker plus SQLite intent plus a master/projection digest pair, with correspondence first written after the observer.\nAlso state which correspondence fields each sequence step must match.",
+      "expectedOutcome": "Crash or rollback between preflight debit and projection write, or before the preflight claim, denies deterministically with no observer start."
+    },
+    {
+      "id": "P14-4",
+      "severity": "non-blocking; fix in same revision",
+      "path": "afk-live-accounting/spec.md#Single preflight caller; afk-live-financial-execution/spec.md#Operational history is evidence",
+      "finding": "The spec does not name the event kinds for preflight reservation, debit intents, handover, preflight failure or charged-but-unlaunched runtime, nor how history treats them. The post-observer 'recheck source/history' could deny on the caller's own in-flight events. Alternatively, a failed preflight could be invisible to later history.",
+      "requiredCorrection": "Name the event kinds. State that rechecks exclude in-flight events only by exact own reservation/charge IDs. State that terminal failed/unknown preflight and charged-unlaunched runtime are retained lineage outcomes, unresolved for later actions until explicitly resolved, with a stated defectClass.",
+      "expectedOutcome": "The own in-flight preflight does not self-deny. A failed preflight blocks a later live action until resolved."
+    },
+    {
+      "id": "P14-5",
+      "severity": "non-blocking",
+      "path": "store.py; afk-live-accounting/spec.md#Durable debit intent",
+      "finding": "Two store locations are unnamed. (1) The persisted identityToken location is not specified, so fixtures and later adoption could diverge. (2) The debit-intent 'keyed by chargeId' has no uniqueness mechanism. runner_claims.charge_id cannot hold it, because store.reserve later inserts the runtime chargeId there and the spec requires intent to be distinct from launch claim.",
+      "requiredCorrection": "Name the token table/column and the intent's uniqueness constraint (table, or namespaced key) inside the existing SQLite store.",
+      "expectedOutcome": "Duplicate intent insert fails transactionally, and a later runtime reserve still claims its own charge."
+    },
+    {
+      "id": "P14-6",
+      "severity": "non-blocking",
+      "path": "records.py::_remaining_from_current; afk-live-accounting/spec.md#Master projection",
+      "finding": "The spec does not say whether the reader-invoked projection validator acquires budget.lock. Status must not, and reacquiring flock on a new file description inside cmd_run self-deadlocks. It also does not fix the lock-holding span across correspondence check and claim transition.",
+      "requiredCorrection": "State that the reader validator is lock-free and non-granting, or accepts a lock-held proof from cmd_run. State that cmd_run holds budget.lock across each read\u2192verify\u2192write and across the final correspondence check plus master claim transition.",
+      "expectedOutcome": "No self-deadlock, and status performs no lock or authority writes."
+    },
+    {
+      "id": "P14-7",
+      "severity": "non-blocking",
+      "path": "afk-live-accounting/spec.md#Master projection (debit row fields)",
+      "finding": "For funding-preflight rows, three values are undefined: the chargeId derivation, the runnerDigest/'observer bound digest' canonicalization, and candidateHash semantics. Independent recomputation depends on them.",
+      "requiredCorrection": "Define the preflight chargeId derivation. Define the digest as sha256 of canonical JSON (sort_keys, compact separators, matching runner) over observerExecution plus contextSha256. State that load_runner never matches preflight rows.",
+      "expectedOutcome": "Reviewers can recompute the preflight row byte-exactly."
+    },
+    {
+      "id": "P14-8",
+      "severity": "non-blocking, conditional",
+      "path": "afk-live-accounting/spec.md#observerExecution; runner.py::load_runner",
+      "finding": "The spec requires the Foreman launcher to run through the pinned Node interpreter. load_runner treats launcher[0] as a separately chosen executable for FOREMAN_LAUNCHER. If Foreman is not a Node entry, the contract cannot be implemented. Full command composition is also unstated.",
+      "requiredCorrection": "Confirm Foreman is Node-executable, or add launcherInterpreter {path,sha256}. State the exact composed command: [launcherInterpreter, launcher.path, --timeout, 90, --grace, 5, --require-containment, strong, --, interpreter.path, entry.path, ...argv].",
+      "expectedOutcome": "The observer launch command is byte-exactly determined by the context."
+    }
+  ],
+  "limitations": [
+    "Inline bytes only. No file or manifest digest was recomputed. policy.py, store.get_history, the store schema, RESOURCE_AMENDMENT_KEYS, FOREMAN_LAUNCHER, providers.mjs and canonical-store-before-source.json were not inspected.",
+    "No tools, tests, store/lock access, wallet or network activity.",
+    "The observer-module approval was not re-reviewed.",
+    "Grants no resource vote, instance value, adoption, debit, dispatch or acceptance."
+  ]
+}

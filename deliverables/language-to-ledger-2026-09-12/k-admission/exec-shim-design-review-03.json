@@ -1,0 +1,56 @@
+{
+  "kind": "independent-changed-approach-design-review/3",
+  "timestampUTC": "2026-09-12T06:48:07.771006+00:00",
+  "reviewerAgent": "/root/k_exec_shim_design_review",
+  "identityDisclosure": "Fresh delegated non-author context; requested GPT-6 Astra medium per parent. No independent provider-returned model/effort attestation exposed.",
+  "verdict": "APPROVE_DESIGN_ONLY_WITH_MANDATORY_IMPLEMENTATION_CHECKS",
+  "designSha256": "dbe43c5031f4bad1d73c275f9e09ecdce3c7ce599ca02f841fcad6e0e3b46aec",
+  "designApproved": true,
+  "sourceApproved": false,
+  "dispatchApproved": false,
+  "actualKResultApproved": false,
+  "scope": "Replace duplicate diagnostic collector with preflight plus execve; same one-case trace106 diagnostic, corrected SP03.4 and unchanged C7/D1/G60. No plugin/framework changes.",
+  "reasoning": [
+    "Both preserved audits reproduce defects in duplicate process inference, cleanup claims and selected closure. Removing collector, parser and observation producer changes the approach and removes those repeated mechanisms.",
+    "Existing runner.execute incrementally hashes all drained bytes and retains bounded prefixes. UTF-8 replacement decoding is lossy for invalid input, but exact UTF-8 re-encoding hash AND byte-length equality makes proposed acceptance fail closed. Overflow, ambiguous completion and timeout must independently exclude acceptance.",
+    "CLI run prints only a summary. Full execute return is persisted by store.finish as reservations.receipt_json and, for verified reproduction, event payload. Root must recover from that exact reservation, with runnerDigest/candidate/action/charge matching, rather than interpreting CLI stdout as the raw result.",
+    "Existing bound-runner schema admits timeout20/grace5/charge60: load_runner requires at least20+5+30=55. execute has a further wait(timeout=5) after its outer cutoff, so retaining the full60 debit is necessary; the5 seconds are not reusable credit. No tighter universal wall-clock completion guarantee is inferred from source.",
+    "Nix registered requisite/NAR identities are an explicit trusted OS/store boundary, not an independent transitive byte verification. Full K package hashes and selected executable hashes strengthen that scoped boundary without requiring a159-package rebuild.",
+    "Existing runner assertion can emit reproducer_verified for113 and empty stdout before raw recovery. This event is only the narrow wrapper observation; final diagnostic acceptance requires raw validation and fresh substantive result review. Corrected SP03.4 adds a conjunction and replaces no existing K/product predicate."
+  ],
+  "mandatoryImplementationChecks": [
+    {
+      "id": "D03-I1",
+      "requirement": "Account for Foreman user namespace ownership before spending the grant. Launcher prefers --user --map-current-user, so host UID0 may appear as overflow UID65534. Do not require literal child st_uid==0 or treat arbitrary overflow UID as proven host-root ownership. Revalidate host root ownership in the host-side final read-only admission inspection; pin that evidence and validate the namespace mapping plus effective non-writability in the child. If this ownership relation cannot be established, stop before dispatch. Exercise the final preflight under actual strong containment with exec injected/harmless target."
+    },
+    {
+      "id": "D03-I2",
+      "requirement": "Freeze exact PATH/environment and selected utility identities in pins. Preserve existing HOME but suppress environment injection and selected runtimes user-site/startup/config loading where applicable. Check actual wrapper PATH modifications and parser shebang resolution; a minimal inherited environment alone does not demonstrate those selections."
+    },
+    {
+      "id": "D03-I3",
+      "requirement": "Recover raw streams from exact stored reservation receipt; UTF-8 encode and compare outputSha256 and outputBytes for both streams. Reject outputLimitExceeded, completionAmbiguous, timeout124, missing receipt and identity mismatch. Keep wrapper113 assertion separate from actual-result acceptance."
+    },
+    {
+      "id": "D03-I4",
+      "requirement": "Run the specified harmless existing-runner tests before the sole native invocation: exact recovery including invalid UTF-8 rejection,113, timeout, overflow and detached descendant completion. These are still unperformed by this review. No mocked launcher establishes strong containment."
+    },
+    {
+      "id": "D03-I5",
+      "requirement": "Bind shim, pins, full K map, requisite manifest and explicit tool identities in final source/candidate files. Keep external K dependencies inside reviewed manifest checked by shim: runner._check_files only accepts its executable/Foreman as external direct inputs. Final plan digest and exact debit must change with timeout/argv/files changes, retaining original amount and unique charge."
+    }
+  ],
+  "blockingDesignFindings": [],
+  "limitations": [
+    "Source review only; no proposed shim implementation existed in reviewed design scope.",
+    "No K, strace, Docker, network, compiler, provider call, actual runner execution or accounting mutation.",
+    "Root endorsement was disclosed but no root-authored source was changed or independently certified.",
+    "Host ownership/namespace handling is a mandatory concrete source-admission condition, not permission to weaken root ownership into any unmapped owner."
+  ],
+  "inspectedSources": {
+    "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+    "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": "01305ac6242d4df1bf8e98891c94df4c5d212f4f09afcbe833e419e58c664c88",
+    "plugins/moriarty-dev/scripts/moriarty_dev/store.py": "66417c0a1b73fd0c1ad9ee627c74430fdb1edfc8afba2aec155479dba994dfa5",
+    "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js": "63b934958c6dd883a4420d1e33a48338366e58223929c23b47873a199a9ec322"
+  }
+}

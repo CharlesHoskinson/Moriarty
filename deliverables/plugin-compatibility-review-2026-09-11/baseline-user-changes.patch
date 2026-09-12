@@ -1,0 +1,136 @@
+diff --git a/plugins/moriarty-dev/.codex-plugin/plugin.json b/plugins/moriarty-dev/.codex-plugin/plugin.json
+index 96000ba..10668ad 100644
+--- a/plugins/moriarty-dev/.codex-plugin/plugin.json
++++ b/plugins/moriarty-dev/.codex-plugin/plugin.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "moriarty-dev",
+-  "version": "0.1.0+codex.20260911061236",
++  "version": "0.1.0+codex.20260911181517",
+   "description": "Development plugin that prevents orchestration displacement and directs Moriarty financial development.",
+   "author": {
+     "name": "Moriarty contributors"
+diff --git a/plugins/moriarty-dev/scripts/moriarty_dev/hook.py b/plugins/moriarty-dev/scripts/moriarty_dev/hook.py
+index c4951b8..3118515 100755
+--- a/plugins/moriarty-dev/scripts/moriarty_dev/hook.py
++++ b/plugins/moriarty-dev/scripts/moriarty_dev/hook.py
+@@ -26,6 +26,9 @@ def _last_result(repo):
+ 
+ 
+ def _output(event, **fields):
++    # Stop accepts common output only; an event-specific envelope is invalid
++    # in Codex even when it contains nothing but hookEventName.
++    if event == 'Stop': return {}
+     return {'hookSpecificOutput':{'hookEventName':event,**fields}}
+ 
+ 
+@@ -90,7 +93,7 @@ def main():
+ 
+ def handle_event(event_name,payload,repo):
+     if not (repo/'.moriarty-dev/actions.json').is_file():
+-        return _output(event_name,permissionDecision='allow') if event_name=='PreToolUse' else _output(event_name)
++        return _output(event_name)
+     if event_name=='SessionStart': return handle_session_start(repo)
+     if event_name=='PreToolUse': return handle_pre_tool_use(payload,repo)
+     if event_name=='PostToolUse':
+@@ -136,7 +139,7 @@ def handle_pre_tool_use(payload,repo):
+     # commands. Do not block a source edit merely because it names an action.
+     name=payload.get('tool_name',payload.get('toolName',''))
+     if name not in ('Bash','bash','shell','exec_command','execute_command'):
+-        return _output(event,permissionDecision='allow')
++        return _output(event)
+     try:
+         inp=payload.get('tool_input',payload.get('toolInput',{}))
+         if not isinstance(inp,dict): return _diagnostic(event)
+@@ -156,6 +159,8 @@ def handle_pre_tool_use(payload,repo):
+             if not dec['allow']:
+                 return _output(event,permissionDecision='deny',permissionDecisionReason=f"Repeated unresolved failure or unavailable admission ({dec.get('reasonCode')}). Run {dec.get('nextActionId') or 'CLI status'}.")
+     except Exception: return _diagnostic(event)
+-    return _output(event,permissionDecision='allow')
++    # No decision leaves the host's normal permission handling in place.
++    # Codex rejects the Claude-style explicit "allow" decision.
++    return _output(event)
+ 
+ if __name__=='__main__': main()
+diff --git a/plugins/moriarty-dev/tests/test_hooks.py b/plugins/moriarty-dev/tests/test_hooks.py
+index dbec771..2bb3d68 100644
+--- a/plugins/moriarty-dev/tests/test_hooks.py
++++ b/plugins/moriarty-dev/tests/test_hooks.py
+@@ -62,10 +62,11 @@ class HookContractTestCase(unittest.TestCase):
+                                 )
+                                 self.assertEqual(proc.returncode, 0, proc.stderr)
+                                 self.assertEqual(proc.stderr, "")
+-                                self.assertEqual(
+-                                    json.loads(proc.stdout)["hookSpecificOutput"]["hookEventName"],
+-                                    event,
+-                                )
++                                output = json.loads(proc.stdout)
++                                if event == "Stop":
++                                    self.assertEqual(output, {})
++                                else:
++                                    self.assertEqual(output["hookSpecificOutput"]["hookEventName"], event)
+ 
+     def run_hook(self, event_name, payload):
+         cmd = [sys.executable, str(self.hook_py), event_name]
+@@ -92,7 +93,7 @@ class HookContractTestCase(unittest.TestCase):
+             "toolInput": {"command": "ls -la"},
+         }
+         res = self.run_hook("PreToolUse", payload)
+-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
++        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
+ 
+     def test_malformed_input_does_not_crash(self):
+         cmd = [sys.executable, str(self.hook_py), "PreToolUse"]
+@@ -104,7 +105,7 @@ class HookContractTestCase(unittest.TestCase):
+         )
+         self.assertEqual(proc.returncode, 0)
+         res = json.loads(proc.stdout.strip() or "{}")
+-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
++        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
+ 
+     def test_denied_known_dispatch(self):
+         # Set up genuine registers in self.root with 2 failures
+@@ -150,7 +151,7 @@ class HookContractTestCase(unittest.TestCase):
+             "toolInput": {"command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py status"},
+         }
+         res = self.run_hook("PreToolUse", payload)
+-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
++        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
+ 
+     def test_stop_called_twice_has_no_auto_continuation(self):
+         payload = {"hookEventName": "Stop", "cwd": str(self.root)}
+diff --git a/plugins/moriarty-dev/tests/test_host_adapter.py b/plugins/moriarty-dev/tests/test_host_adapter.py
+index 0584a88..7bd1fe8 100644
+--- a/plugins/moriarty-dev/tests/test_host_adapter.py
++++ b/plugins/moriarty-dev/tests/test_host_adapter.py
+@@ -94,4 +94,30 @@ class HostAdapter(unittest.TestCase):
+         self.assertEqual(p.returncode,0,p.stderr)
+         self.assertIn('systemMessage',json.loads(p.stdout))
+ 
++    def test_stop_uses_common_output_without_event_specific_envelope(self):
++        # Codex rejects hookSpecificOutput for Stop even when the process exits 0.
++        for cwd in (str(self.root), str(self.root / 'unrelated'), '\x00'):
++            with self.subTest(cwd=cwd):
++                p=subprocess.run([sys.executable,hook.__file__,'Stop'],
++                    input=json.dumps({'cwd':cwd}),text=True,capture_output=True,timeout=0.95)
++                self.assertEqual(p.returncode,0,p.stderr)
++                out=json.loads(p.stdout)
++                self.assertNotIn('hookSpecificOutput',out)
++                self.assertNotIn('decision',out)
++                self.assertNotIn('continue',out)
++                if cwd == '\x00': self.assertIn('systemMessage',out)
++                else: self.assertEqual(out,{})
++
++    def test_permitted_pre_tool_use_omits_unsupported_allow_decision(self):
++        cases = [
++            (self.root, {'tool_name':'apply_patch','tool_input':{'patch':'text'}}),
++            (self.root, {'tool_name':'exec_command','tool_input':{'cmd':'pwd'}}),
++            (self.root / 'unrelated', {'tool_name':'exec_command','tool_input':{'cmd':'pwd'}}),
++        ]
++        with patch.object(hook,'read_actions',return_value=[]):
++            for repo,payload in cases:
++                with self.subTest(repo=repo,payload=payload):
++                    out=hook.handle_event('PreToolUse',payload,repo)
++                    self.assertEqual(out,{'hookSpecificOutput':{'hookEventName':'PreToolUse'}})
++
+ if __name__=='__main__': unittest.main()

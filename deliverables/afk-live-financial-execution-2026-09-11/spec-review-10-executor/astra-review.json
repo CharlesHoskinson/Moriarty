@@ -1,0 +1,139 @@
+{
+  "reviewer": "gpt-6-astra",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "identityBasis": "Fresh delegated Astra medium review assignment; no separate provider checkpoint attestation available.",
+  "candidateSha256": "0b33e38a8106a3df3ef40dac9a40a56a2f6229e020ad67e57144e266be2c0baf",
+  "executorSpecSha256": "844c14e2407c3856f9ea2b6c6f9e9aa09d64db9decaa4ce397ad9b4b87236d01",
+  "verdict": "CHANGES_REQUIRED",
+  "mayBeginItem2": false,
+  "approvedItems": [],
+  "reviewedScope": "Item 2 loan executor requirements only: complete pinned executor specification, actual existing runner/cmd_run/store caller context, and all pinned collector modules/tests. Accounting/binding implementations and live instance authority remain separate dependencies.",
+  "findings": [
+    {
+      "id": "A10-1",
+      "severity": "blocking",
+      "classification": "requirements gap; source-grounded failure-path inference",
+      "title": "The prover has no independent lifetime bound in the post-start, pre-receipt crash window",
+      "references": [
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:68",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:70",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:77",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:84",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:86"
+      ],
+      "finding": "The independent timer is armed before resource startup, but its helper must refuse to kill a resource when the ownership receipt is missing. That receipt requires actual post-start container StartedAt and launcher InvocationID/control group. Consider successful Docker start followed immediately by executor/Foreman death, or ownership receipt write/fsync failure, before the complete receipt exists. The timer remains armed but is required to refuse the prover kill; if the launcher has not yet started, neither listed backstop exists. Even after launcher start, RuntimeMaxSec and financial bootstrap hard exit bound the financial service, not the detached Docker prover. Durable unresolved ownership correctly prevents a new attempt but does not bound the already running prover. The historical execute-once source starts Docker before the launcher and uses an unconditional name-based timer; retaining that old fallback would violate the new identity requirement.",
+      "requiredChange": "Specify an identity-safe prover lifetime backstop that is established before prover startup and remains effective if the executor dies or every subsequent ownership receipt write fails. Define the startup/ownership ordering and the source-level mechanism that closes this window; alternatively refuse prover startup unless such a bound already exists and is verified under the admitted identity. Preserve replacement protection, unresolved-result classification and no-retry accounting. Do not fall back to stopping a reused container by name. Add isolated actual-caller failure cases for death immediately after successful prover start, failed post-start ownership fsync, and launcher activation failure, demonstrating bounded cleanup or refusal before prover start."
+    }
+  ],
+  "positiveAssessment": [
+    "The immutable wrapper/financial-plan split and fixed admission operand remove mutable runtime data from fixed runner commitments while retaining current authority validation.",
+    "The one-shot AF_UNIX protocol specifies an actual runner/store producer, nonce authentication, host ancestry/start-tick checks, canonical event linkage, replay denial and parent-loss behavior. Isolated real runner-to-script exchange is mandatory.",
+    "The +120/+1600/+1606/+1618/+1620/+1740 cutoffs share the authenticated outer start; delayed entry no longer consumes the 60-second cleanup margin. The 1835-second prepaid debit is explicit.",
+    "The closed exit classifier preserves zero/nonzero/signal/unknown distinctions. Exact bounded argv, persistence-before-evidence-stop, separate stop and receipt outcomes, and CLI/history unknown handling are substantially specified.",
+    "The current accounting validator is an explicit implementation dependency; absence of current resource values does not by itself block source requirements approval. No fake approval/stub, new grant, live adoption or financial acceptance follows from fixtures."
+  ],
+  "hashVerification": {
+    "manifestMatch": true,
+    "allPinsMatch": true,
+    "files": [
+      {
+        "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+        "sha256": "844c14e2407c3856f9ea2b6c6f9e9aa09d64db9decaa4ce397ad9b4b87236d01",
+        "actualSha256": "844c14e2407c3856f9ea2b6c6f9e9aa09d64db9decaa4ce397ad9b4b87236d01",
+        "match": true
+      },
+      {
+        "path": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+        "sha256": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+        "actualSha256": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+        "match": true
+      },
+      {
+        "path": "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+        "sha256": "7588e0fef3fd2c778e0bc42987cdb5207ae41aabd67886ff0afbebbb6edce947",
+        "actualSha256": "7588e0fef3fd2c778e0bc42987cdb5207ae41aabd67886ff0afbebbb6edce947",
+        "match": true
+      },
+      {
+        "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+        "sha256": "a4a7d05877210402347f833037a03ce7db01d2cbd5a284526149a7a48c00329b",
+        "actualSha256": "a4a7d05877210402347f833037a03ce7db01d2cbd5a284526149a7a48c00329b",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/cli.py",
+        "sha256": "01227e7a13afa4fdced705668f6bf87001f5a3ac2abc7a373748bb4ae82561ec",
+        "actualSha256": "01227e7a13afa4fdced705668f6bf87001f5a3ac2abc7a373748bb4ae82561ec",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/exit_retention.py",
+        "sha256": "4e769b21109d871e62c207b22d5d3164e7e252ab115020d72d5e7ef0e0cd264c",
+        "actualSha256": "4e769b21109d871e62c207b22d5d3164e7e252ab115020d72d5e7ef0e0cd264c",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/launch_contract.py",
+        "sha256": "15861d1ca4ce9f8fe771d270f4d618b02080ecebc0eb51e0d0ea1d17c05da3c7",
+        "actualSha256": "15861d1ca4ce9f8fe771d270f4d618b02080ecebc0eb51e0d0ea1d17c05da3c7",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/loan_exit_operator.py",
+        "sha256": "a36ec7ec562e88b2ddf162fc1ca403537f16bf479a9d6581e3aeb5ffd71cb8f9",
+        "actualSha256": "a36ec7ec562e88b2ddf162fc1ca403537f16bf479a9d6581e3aeb5ffd71cb8f9",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/terminal_predicate.py",
+        "sha256": "25a9724f63b8a89c5e1159b0060d4d040557709e24e16cf08746fee53765b9e9",
+        "actualSha256": "25a9724f63b8a89c5e1159b0060d4d040557709e24e16cf08746fee53765b9e9",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_exit_retention.py",
+        "sha256": "505d7a46497bd2427f595418eb671435e4039942eefc0319a637bd8b4f5ca60c",
+        "actualSha256": "505d7a46497bd2427f595418eb671435e4039942eefc0319a637bd8b4f5ca60c",
+        "match": true
+      },
+      {
+        "path": "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/test_terminal_predicate.py",
+        "sha256": "a6a406977dfd7a1bf860d0708bcfe58d543690e006ef2055c686b46d233b9f30",
+        "actualSha256": "a6a406977dfd7a1bf860d0708bcfe58d543690e006ef2055c686b46d233b9f30",
+        "match": true
+      }
+    ]
+  },
+  "supplementalSourceObservations": [
+    {
+      "path": "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js",
+      "sha256": "63b934958c6dd883a4420d1e33a48338366e58223929c23b47873a199a9ec322",
+      "scope": "Targeted inspection of buildExecveEnv, planPidnsExecve, liveChildSpawner, strong-mode refusal and namespace flags; environment inheritance appears supported by source. Not a runtime test, not in this candidate manifest."
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/execute-once.py",
+      "sha256": "c8040549e015f0402a72b1b37f2ec3772bf79eaeec4b69a4f07b4af9fd7c16fb",
+      "scope": "Text only; prior detached Docker start precedes financial launcher activation. Never imported or executed."
+    }
+  ],
+  "startupAdministrativeWrites": {
+    "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+    "checkout": "/home/charl/Moriarty",
+    "invocations": 1,
+    "exitCode": 0,
+    "pendingTransactions": [],
+    "observedOutcome": "Dependent dispatch blocked by stale binding/candidate, missing current accounting/resource state and operational history.",
+    "permittedWrite": "Required startup status can append admin_intervals and admin_cycle events to the main repository store. These are administrative writes, not tests, dispatch, accounting reconciliation or source changes.",
+    "limitation": "No pre-status database baseline was captured, and concurrent agents share the store. Exact per-call before/after store delta is not claimed; no second status was run."
+  },
+  "validationLimits": [
+    "Requirements review only. No implementation, source acceptance, resource vote, concrete allocation/admission or actual-result acceptance.",
+    "No tests were executed. Future callable/offline tests are specified-only. No wallet, network, systemd, Docker, historical actionful script or registered campaign was executed.",
+    "No source/spec files were edited. Only this review artifact was written apart from permitted guarded startup administrative events.",
+    "The current Opus verdict was not read. The supplied prompt contained prior round-08 findings, which were used only as historical context; the complete current executor specification was independently inspected.",
+    "Generic/accounting specifications being edited independently were not expanded into this review or treated as pinned. Their production interfaces and full current source integration require subsequent exact-candidate checks.",
+    "No installed systemd CLD interface or strong-mode service reachability experiment was performed. Those are expressly implementation/instance prerequisites."
+  ],
+  "completedAt": "2026-09-11T08:25:34.213298+00:00"
+}

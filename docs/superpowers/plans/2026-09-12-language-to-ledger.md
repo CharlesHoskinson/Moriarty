@@ -156,6 +156,7 @@ Interfaces: source-bound program/profile and complete lifecycle state feed the c
 - [ ] Obtain task-specific design review of those constraints and the network failure/fee oracle before production edits.
 - [ ] Add failing substitution, stale-revision, unauthorized debt, replay and fee-inclusive result cases.
 - [ ] Implement the actual lowerer/custody/driver/comparator path together.
+- [ ] Compile the generated lifecycle Compact contract and retain actual compiler output, compiled artifacts and their reviewed source/profile bindings before Docker execution.
 - [ ] Implement the already specified exit-retaining executor and static prover lifetime boundary where missing.
 - [ ] Run offline ledger, compiled, finalized-state and Preview adapter tests in their actual declared scope.
 - [ ] Obtain fresh complete source audit before any service or public invocation.
@@ -182,4 +183,4 @@ ACTION is obtained from current registered admission, never invented. Missing gr
 
 The active native goal names all six outcomes. Root checks actual state, selects one eligible task, supplies independent expectations, dispatches Grok, verifies results, obtains fresh Astra audit, repairs and safely publishes. Current source tasks use isolated worktrees. Existing plugin run handles registered campaign actions. Do not create a Foreman scheduler, new daemon or process-only approval project.
 
-The first author task is financial postconditions. Next tasks start only after their semantic dependency is reviewed; independent status reconciliation continues when eligible. Every completed scope retains full candidate and result receipts. Overall completion requires all six outcomes; an external gate stays explicit rather than being silently waived.
+After the complete source lifecycle passes its fresh audit, continue with K agreement and the source-to-Compact path with authenticated state, permissions and time. Compile that contract, validate its complete lifecycle on Docker, and then execute on Preview with current funding and an approved bounded allocation. Next tasks start only after their semantic dependency is reviewed; independent status reconciliation continues when eligible. Every completed scope retains full candidate and result receipts. Overall completion requires all six outcomes; an external gate stays explicit rather than being silently waived.

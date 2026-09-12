@@ -1,0 +1,1558 @@
+You are fresh Grok4.6 high implementer for independent observer component of SAME Moriarty I2 delivery, not another campaign. OpenSpec observerONLY requirements are independently approved by Opus07 and Astra07 explicitscopeclarification (provided). NO accountingproducer/source labels/locks/master/store edits or actual SDK/wallet/network invocation authorized. Implement NEW experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs plus corresponding NEW observe-preview-funding.test.mjs. No other existing source edits except necessary importcontext you should avoid. Callable actual CLI and exported pure/injected core; main constructs real pinned direct child transports, isolated tests call realmodule with SDKdoubles. Follow O13-6 EXACT: explicit expectednetwork triple, publicKey/address, selectedtoken, walletstate dir, seedfile and separateoutput path; reject mismatch; strictoriginalidentityrestore, nofallback, directDust/Unshielded APIs, NoOpstorage, nofacade/checkbalance/createwallet/role secret/password reads. Output public aggregate only, no secret errors. Module cannot choose authority. It does NOT fill finalreceipt allocation/preflightcharge/pending-use proof/correspondence or implement locks/debits. Retain limitation pending-use authenticity laterproducer; don't infer restored emptypending provesabsence. Runtime pin check can reuse existing non-actionful inspectLocalLaunchRuntime but avoid imports of actionful execution or importing fullwalletfacade default initialization; inspect given context. Actual SDK API shapes in source below. Need network/protocol observations separately validated through pinned public readonly RPC beforeprivatereads, injected transport for tests. 90second bound5stopgrace, finite errors, partialinit+late restorecleanup, stop every createdchild before READY. Pinnedruntime imports only inmain/noninjectedreal construction. Tests use only fixture seed/snapshot files owneronly; parent asserts digests and forbiddencalls/writes. Test stale/futuretime, identity/networkmismatch, restorefailure, timeout, stopfailure/timeout, latecompletion. No realSDKcalls duringtests. Avoid secretlogging. Return ONE complete apply_patch only, no drafts. No tool use. Finish600sec. Root applies and tests; finalsource bothaudited.
+
+FULL FILE openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md
+## ADDED Requirements
+
+### Requirement: Item 1.3 concrete source producer and existing caller
+After both fresh specification approvals, Grok SHALL implement import-safe `plugins/moriarty-dev/scripts/moriarty_dev/accounting.py`, called by existing `cli.py::cmd_run` for the exact `finalized-financial-settlement` profile. It SHALL provide preparation, current-projection validation and one-shot launch-claim operations within existing runner/store/record modules. It SHALL not create a new service, scheduler or alternate launcher. Tests SHALL use explicit isolated master, budget lock, projection, admission records and SQLite files including WAL/SHM; live stores/locks/registries and identity adoption remain untouched.
+
+Input SHALL be the selected registered action, frozen hash-bound runner plan, canonical-store anchor and history reconciliation, contained current accounting reference, actual master path, exact reviewed resource amendment and both vote references, and current public observation references, discovered only through the authenticated resource-context requirement below. Output SHALL be either a named denial with no financial child, or a durable debit/current projection and a single matching plugin/master launch claim consumed by the existing guarded run. Missing or malformed authority/identity/projection input SHALL reject; tests may supply anchored fixture arguments, while live authority must come only from separately reviewed contained admission evidence. The separately declared read-only preflight allowance below is the sole exception allowing observation work before funding evidence exists.
+
+The existing runner-plan validation SHALL be factored so preflight can verify exact executable/launcher/argv/action/candidate bytes before a debit exists. Sequence SHALL be source/resource authorization and canonical-history/primary/retry preflight; lock and commit debit/projection; final existing prepaid `load_snapshot`/policy and `load_runner` validation; transactional `store.reserve`; post-reservation checks; master one-shot claim; existing `execute`. No final-admission-before-debit cycle and no skip of final admission is allowed. Changed source after freeze needs both new source reviews and new current admission.
+
+#### Scenario: Real integrated source path
+- **WHEN** isolated real producer/runner/CLI code receives complete current fixture authority, accounting and both claim owners
+- **THEN** it commits exactly one debit before one stubbed child call through the actual caller, with independently recomputable output and no live writes.
+
+#### Scenario: Missing instance evidence
+- **WHEN** a concrete grant, canonical anchor/history, observation or final executor is absent
+- **THEN** the source emits a named unavailable result before financial debit/launch; only the expressly authorized read-only preflight below may obtain a missing funding observation. Deterministic source repair/testing may proceed without inventing instance values.
+
+### Requirement: Authenticated context discovery and closed evidence payloads
+Within the same hash-bound resource amendment's existing `resources` object, `executionContext` SHALL contain exactly `path,sha256` for a contained immutable file. Its digest SHALL be committed by the immutable projection through a new required field `executionContextSha256`, so both projection resource votes also approve this context. The producer SHALL reject missing/disagreeing context digests; no argument, environment variable, CLI override or free-standing I2/SP01 reconciliation file supplies authority. `cli.py::cmd_run` SHALL resolve this context before constructing its live history reader and pass the positively validated anchor/history into existing store consumers. Ordinary non-live initialization/status/review SHALL not acquire authority or write tokens through this route.
+
+The context SHALL contain exactly `schema,repository,gitCommonDir,store,history,observer,correspondencePath`, with schema `moriarty.i2-execution-context/1`. Repository and gitCommonDir SHALL be canonical absolute identities for the authorized checkout/common directory, checked by the existing repository resolver. Store SHALL contain exactly `path,identityToken,inventory`, where path equals the canonical resolver's SQLite path and inventory is a contained immutable `{path,sha256}` reference to the pre-adoption inventory. The persisted in-store token SHALL exactly match identityToken. This declares a later reviewed adoption target; a missing token is unavailable, not permission to create it. Linked worktrees must resolve to the same authorized common store.
+
+History SHALL be a contained immutable `{path,sha256}` reference. Its closed payload SHALL contain exactly `schema,repositoryKeys,requirement,capability,receipts,outcomes,eventBindings`, schema `moriarty.i2-retained-history/1`. RepositoryKeys is the exact reviewed list of historical checkout/common-directory keys to include, and requirement/capability are the current selected action's exact lineage. Receipts is a list of contained immutable `{path,sha256}` references to actual retained loan/related-operation outcomes. Each outcomes entry SHALL contain exactly `receiptSha256,defectClass,outcome,resolvedBy`, where outcome is exactly `failed`, `unknown` or `verified-success`, and resolvedBy is a list of explicit same-defect resolution receipt digests (empty means unresolved). Each eventBindings entry SHALL contain exactly `repository,requirement,capability,eventIds`, identifying already reconciled canonical-store rows. Verify those rows and receipt contents; unknown outcomes are not zero failures. Every referenced failed/unknown outcome must remain represented in history until an explicit applicable resolution is verified. Empty history/receipt/event mappings or mismatched checkout lineage deny the live action. Actual live reconciliation and token adoption are separately reviewed operations, not automatic initialization.
+
+Observer SHALL contain exactly `entryPath,entrySha256,receiptPath,maxAgeSeconds,preflightSeconds,preflightAttempts,lockPath`. Entry identifies the pinned contained observer source in the candidate; maxAgeSeconds SHALL be 120, preflightSeconds SHALL be 125 (90-second observer + 5-second stop grace + 30-second launch/retention allowance), and preflightAttempts SHALL be 1. ReceiptPath and correspondencePath SHALL be contained mutable evidence destinations outside source inputs/binding inputs/runner plan; lockPath SHALL be the explicitly approved existing exclusive wallet-use lock destination. Acquisition must fail on active/unknown ownership; no lock stealing or identity reset. The immutable context pins these destinations and bounds, not future observation contents.
+
+The mutable observer receipt SHALL contain exactly `schema,allocationId,preflightChargeId,sourceSha256,observedAt,syncTime,network,roleIdentity,amounts,unitNames,finalityRef,pendingUseDispositionSha256,canonicalInputsUnchanged,childrenStopped`; schema `moriarty.i2-funding-observation/1`. Amounts SHALL be exact nonnegative integer decimal strings by selected asset identity, and unitNames an equal-key map of explicit units. Bind allocation/source/role/network to the context and actual final plan; validate timestamps, independent pending-use receipt and both true unchanged/stop facts against retained observer evidence rather than trust caller-written booleans. The producer SHALL create final correspondence only from its own successful bounded observer result, rejecting a preexisting arbitrary receipt.
+
+ObservedAt and syncTime SHALL be UTC ISO-8601 strings; network SHALL contain exactly `networkId,genesisHash,protocolVersion` and roleIdentity exactly `publicKey,address`, all matched to the final plan and genuine observations. FinalityRef SHALL be a contained immutable `{path,sha256}` reference to the actual public state/finality evidence. PendingUseDispositionSha256 SHALL identify one of the exact reviewed history receipts, not an unrelated caller digest. CanonicalInputsUnchanged and childrenStopped SHALL be booleans, checked against the actual bounded observer's retained execution/containment evidence.
+
+The mutable correspondence SHALL contain exactly `schema,allocationId,executionContextSha256,masterSha256,projectionSha256,observationSha256,preflightChargeId,runtimeChargeId,reservationId`, schema `moriarty.i2-current-correspondence/1`. RuntimeChargeId/reservationId may be null before the financial debit/reservation. Under the existing master lock, the consumer SHALL verify every current digest, exact ownership and allowed transition; the final live check requires matching non-null runtime IDs. Observation refresh updates only mutable receipts/correspondence, not immutable context, runner digest, binding or a prior charge.
+
+#### Scenario: Actual CLI discovers an anchored valid fixture
+- **WHEN** isolated real cmd_run follows binding → amendment → projection/context/votes and validates the closed canonical store/history records and matching mutable correspondence
+- **THEN** it supplies that exact anchor and reconciled lineage to the real history reader and proceeds to the remaining guarded checks, rather than always returning unavailable or accepting an override.
+
+#### Scenario: Unbound context or seeded evidence
+- **WHEN** an anchor/history/observer receipt is supplied outside the committed context, a resource vote binds another context, canonical-store event mapping is absent, a receipt is caller-fabricated or any closed payload has missing/extra fields
+- **THEN** admission rejects; a new unrelated store event or self-asserted observed balance cannot establish authority.
+
+### Requirement: Separately charged bounded read-only preflight
+The exact resource projection and both votes SHALL include the context's 125-second one-attempt observer allowance within G and its single resource-operation use within N, separately from the financial runtime allowance. The producer may initialize the approved grant, acquire the declared exclusive wallet-use lock and commit this preflight-only charge before wallet funding observation exists, but only after source/resource/context/canonical-history authorization and non-funding preflight checks pass. This bounded read-only authority permits no financial submission, proving, wallet persistence or runtime debit. No extra clock/grant is inferred from the desire to observe funding.
+
+New debit rows SHALL use purpose exactly `funding-preflight` or `financial-runtime`. Both count toward S/n and preserve master dispatch history; a funding-preflight charge reserves exactly 125 seconds before that observer child and consumes its one approved preflight attempt even on failure. Its one-shot master claim binds the exact observer source/argv/bound digest and canonical ownership; it is executed as the explicitly authorized bounded sub-operation of existing cmd_run, not a new public campaign/action. The financial runtime later uses the existing plugin reservation plus master claim sequence. A funding-preflight is not loan-case attempt 3 because it cannot submit a financial transaction; only the financial-runtime debit commits that cumulative attempt. If the observer fails or fresh evidence expires, retain the preflight charge and deny runtime; no second preflight is authorized by this one-attempt context. A further observer allocation requires new explicit reviewed resource authority, not a free refresh.
+
+Retain the exclusive current wallet-use lock across observation and final runtime handoff so intervening known wallet use cannot invalidate the observed unreserved funds. A failure before handoff must release only this invocation's owned lock after child containment, retaining unresolved ownership as a blocker; a successful handoff transfers the exact ownership token to the admitted executor, whose cleanup releases it. Source tests SHALL cover same-owner handoff, competitor rejection, observer timeout/stop failure, missing lock and attempted free retry.
+
+#### Scenario: Funding observation without a circular grant dependency
+- **WHEN** exact source/resource votes authorize G/N including one 125-second read-only preflight, but current funding is not yet observed
+- **THEN** only that charged exclusive preflight may run; its successful current receipt can satisfy later funding admission, while failure consumes its allowance without starting or charging financial attempt 3.
+
+### Requirement: Closed existing accounting fields and bounded successor semantics
+The producer SHALL preserve the existing `moriarty.supervised-accounting/1` top-level key family and `currentAccounting`'s closed `schema,path,passBinding,passLedger` fields. Original authority SHA SHALL remain `f6b7f17d1bda437d5f83abc656ccf4a0d9c7a57a83995668387c29bd0328f492`. Observation/identity/claim metadata SHALL not be added as unknown top-level keys. Preserve all original ledger bytes and historical rows; new charge/reservation entries may carry exact scoped provenance validated by this producer. Unknown historical costs remain unknown in referenced immutable dispositions, never a synthetic numeric zero.
+
+An explicit two-vote successor amendment MAY close historical residual credit through a new `reserved` row and place exclusively new bounded credit in one `successorEnvelopes` entry. A new closure row SHALL contain exactly `id,seconds,basis,sourceSha256,amendmentSha256`, where basis is exactly `historical-credit-closure-not-paid-cost`, seconds is a nonnegative integer and digests bind the original/current grant evidence. Use conservative ceiling for fractional represented remainder (7 seconds for the inspected approximately 6.95267 seconds), with no rounding refund or assertion of actual historical payment. A deficit is not erased. Old envelopes SHALL have no spendable current remainder; their originals remain immutable. No historical remainder may be borrowed into a new grant.
+
+The current MC02 envelope SHALL use existing `remainingReservedSeconds,workerDispatches,workerDispatchLimit` plus exact immutable grant identity/provenance committed by resource evidence. The following authenticated owner-mode requirement fixes its active-grant semantics while preserving top-level MC01 ownership. Missing the concrete reviewed projection instance SHALL reject with `resource-package-projection-unresolved`; implementing these exact deterministic semantics on isolated fixtures does not adopt a live instance.
+
+The concrete amendment SHALL state exact seconds, partitions, master/package/aggregate dispatch increments, current envelope identity and public attempt/submission/fee bounds. It SHALL disposition the unestablished 197630/71 ancestry and the two later direct delegated amendments honestly, without inventing retrospective majority approval. The September 7 successor authority permits two substantive votes on the exact new grant; specification approval and the eight-hour clock are not these votes. Immutable vote paths/digests SHALL be checked before application; each amendment applies once.
+
+#### Scenario: New grant only
+- **WHEN** a reviewed concrete successor closes all historical credit, preserves unknowns and supplies an exact enforceable active MC02 projection
+- **THEN** spendable credit is at most the new grant minus its actual committed usage, with old limits/counters preserved as history and no lifetime-global total claim.
+
+#### Scenario: Shape-valid fabricated credit
+- **WHEN** the input omits external charges, guesses unknown costs, relabels package ownership, lacks the exact projection disposition, repeats an amendment, uses missing votes or presents invalid numeric/extra top-level fields
+- **THEN** the actual producer/consumer rejects before debit or launch, even if the old reader alone would accept its shape.
+
+### Requirement: Authenticated MC02 envelope on the preserved MC01 master
+For `finalized-financial-settlement`, the producer SHALL select the campaign from the canonical campaign store and read its contained `resourceAmendment`, whose exact bytes SHALL be committed by the verified campaign binding's `inputs`. Within that amendment's existing `resources` object, `projection` SHALL contain exactly `path,sha256`, and `votes` SHALL contain exactly two distinct `{path,sha256}` references. All references SHALL resolve contained immutable files. Each substantive approving vote SHALL bind the same projection digest and applicable grant scope. No unbound envelope selection or caller override is accepted. Votes bind the immutable projection rather than the final amendment's digest; the final amendment includes their references, then the binding is frozen, avoiding self-reference.
+
+The projection file SHALL contain exactly `schema,predecessor,ledgerOwner,selectedOwner,envelopeId,grantSeconds,grantDispatches,closureSeconds,closureAdjustmentSeconds,campaignId,actionId,historicalDispositions,executionContextSha256`. Schema is `moriarty.mc02-successor-projection/1`; predecessor is exactly `{path,sha256}` for the original external master; owner values are exactly `MC01` and `MC02`; historicalDispositions is a list of distinct contained `{path,sha256}` references to explicit historical closure/deficit/authority dispositions. The predecessor path is the producer's explicitly authorized external-master input, never an excuse for the reader to bypass containment. Campaign/action/envelope identity and executionContextSha256 SHALL exactly match the current admitted scope and committed execution context. Concrete predecessor digest and historical dispositions remain subject to separate resource votes.
+
+Before first application, verify the predecessor digest against the locked actual master and retain those exact predecessor bytes in immutable existing admission evidence. Subsequent validations SHALL authenticate that retained predecessor by its committed digest and current master/projection correspondence; they SHALL not require the legitimately advanced master to keep its old digest or permit replay of the first application. Historical disposition evidence SHALL reference the exact retained predecessor path/digest so that U, M and preserved fields remain independently recomputable after mutation.
+
+Let G=grantSeconds and N=grantDispatches, positive integers; C=closureSeconds and D=closureAdjustmentSeconds, nonnegative integers. Preserve predecessor `package=MC01`, `charges`, `planning_charge_seconds`, `planning_overhead_reserved_seconds`, `package_limit_seconds`, `worker_dispatches` and `worker_dispatch_limit` unchanged. Preserve every existing external row's owner and bytes. Append new MC02 debits only to `externalPackageCharges`, with `package=MC02`, current `envelope` ID and exact charge/action/candidate/runner identifiers. Do not move old rows or relabel top-level MC01 52/52 as MC02 usage.
+
+Let M be predecessor master_limit_seconds and U be its planning plus overhead plus all ordinary/external charges and reserved rows. Require C=ceil(max(0,M-U)), using the specified closure row, and D=max(0,ceil(U+C)-M). The exact resource votes SHALL approve D separately as nonspendable closure reconciliation and any pre-existing deficit disposition; the formula itself grants nothing. Set current master_limit_seconds=M+D+G. Omitted/unapproved D or deficit disposition rejects a fully reserved G instead of silently increasing the ceiling. Any integer rounding slack SHALL remain nonspendable outside G. Unknown historical actual costs remain unknown in immutable dispositions, never credit.
+
+The current envelope SHALL contain exactly `owner,projectionSha256,amendmentSha256,remainingReservedSeconds,workerDispatches,workerDispatchLimit`, with owner MC02, exact approved provenance, remainingReservedSeconds=G-S, workerDispatches=n and workerDispatchLimit=N. S and n SHALL be independently recomputed from committed current-envelope debit rows, not trusted counters alone. A corresponding reserved row for that envelope SHALL contain exactly `id,seconds,basis,sourceSha256,amendmentSha256`, use basis `mc02-successor-reserve-not-paid-cost`, and start at seconds=G. A debit of c atomically decreases that row by c and appends the same-c MC02 external charge; remaining reserve and envelope remainder stay equal. Current master used therefore equals U+C+G regardless of S. All old residual reserves/envelopes are nonspendable under the reviewed closure disposition; no old reserve or master rounding slack supplements the selected grant. If an unresolved old cost could still consume this active envelope, deny launch until explicitly dispositioned.
+
+Top-level externalWorkerDispatches SHALL equal its predecessor value plus n, and master_worker_dispatch_limit its predecessor value plus N. In the observed predecessor these are 31+n and 83+N; aggregate usage remains 52+31+n. The current MC02 envelope's active package limit is G and N, not a lifetime MC02 total. Before each new debit require S+c<=G, n+1<=N and aggregate usage+1<=aggregate ceiling, in addition to source/history/attempt/funding constraints. Every live kind consumes the same bounds; failures and partial initialization never refund or decrement committed usage.
+
+In this authenticated mode only, `records._remaining_from_current` SHALL invoke `accounting`'s current-projection validator before choosing package semantics. Match the authenticated selected owner MC02 to campaign ownership while independently requiring ledger owner MC01. Replace the legacy MC01 `package_used=planning+overhead+charges`, package ceiling and top-level worker checks for this action with S/G and n/N; retain full master summation, aggregate dispatch verification and all common identity/authority checks. Legacy profiles retain their existing behavior. A declared envelope owner or action profile alone cannot enable this branch without the hash-bound amendment/projection/votes.
+
+#### Scenario: Preserved master with active MC02 quota
+- **WHEN** isolated actual producer/reader code authenticates the exact MC02 projection and votes, reserves G, then transfers c into a current-envelope external charge
+- **THEN** MC01 owner/rows/counters remain unchanged, master used stays U+C+G, MC02 remaining equals G-c, aggregate dispatch increases once, and only this authenticated active quota governs the MC02 action.
+
+#### Scenario: Projection arithmetic or authority mismatch
+- **WHEN** selected owner/scope, predecessor digest, votes, G/N/C/D, historical disposition, reserve-transfer identity, recomputed S/n or unchanged predecessor fields disagree
+- **THEN** current-resource validation rejects without live debit/launch or borrowing from old credit, even if top-level JSON shape is valid.
+
+### Requirement: Single allocation, all-kind limits and prepaid boundary
+For the live action, its resource allocation SHALL occur once in `resourceAmendment`; binding `resources.allocationSeconds` SHALL be absent or zero and the same grant SHALL not recur in `successorAmendments`. Hash identity, not different filenames, SHALL identify duplicates. The producer SHALL enforce current-envelope, selected-package and aggregate-master time/dispatch and Preview attempt/submission bounds for every live kind, including report/admin/verify/review/reproduce. A new resource vote must expressly extend exhausted aggregate 83/83 or package ceilings where applicable; it cannot reset the retained 52/52 MC01 counter.
+
+At the limit a genuinely prepaid invocation may claim and launch once. The exact current charge of c seconds is already included in S and the external charges. For a predicate expressed as available-for-this-invocation versus c, define A=G-S+c only for that exact previously committed charge and require A>=c; after accounting for that invocation the remainder is A-c=G-S. This is a validation credit for its already reserved execution, not new spendable grant or a refund; every other caller sees only G-S. Retain master nonnegative slack validation without requiring the fully reserved G to appear a second time as unreserved master headroom. The current reader's final nonnegative-remainder contract may equivalently use G-S directly in the prepaid branch and SHALL NOT subtract c again. Require declared action cost<=c and the exact charge/runner bound<=G.
+
+Before `store.reserve`, the exact plugin charge claim SHALL be absent and the master launch claim unclaimed. After reserve, final rechecks MAY accept only the same current reservation with identical action/candidate/runner/debit/store identity while its master launch claim is still unclaimed; another reservation or a previously claimed/launched invocation rejects. Launch then requires the single durable master transition already specified below. Equality S=G or n=N is valid only for this matching own prepaid invocation; it cannot authorize a new debit or replay. Reservations/fees/attempts remain consumed on failure, and actual paid fees remain separately observed.
+
+#### Scenario: Last authorized resource race
+- **WHEN** two real isolated callers compete for one remaining dispatch or the same final seconds
+- **THEN** existing lock/store serialization lets at most one commit and launch; both kind-switch and duplicated allocation paths reject.
+
+#### Scenario: Own prepaid equality and post-reservation recheck
+- **WHEN** the exact c-second debit makes S=G or n=N and the CLI rechecks after claiming its own identical reservation but before the master launch transition
+- **THEN** A=G-S+c covers exactly c once and final remainder G-S is nonnegative; that own invocation passes resource validation while another reservation, changed charge or completed launch is denied.
+
+### Requirement: Master projection and global one-shot claim
+The master remains at its existing external location, accessed by the explicit producer under `budget.lock`; `records.py` and `runner.py` continue to read only contained projection paths. Write/fsync temporary master/projection/admission correspondence files, replace and fsync their directories. Separate replacements SHALL not be called one atomic transaction. Current correspondence evidence SHALL bind exact master/projection generations/digests and be checked under the lock before final launch. Interrupted/mismatched correspondence yields unavailable credit until explicit reconciliation.
+
+New debit rows SHALL contain exactly `id,seconds,actionId,candidateHash,runnerDigest,package,envelope,storeIdentity,reservationId,launchClaim,purpose`, with package MC02, the authenticated current envelope ID and purpose exactly funding-preflight or financial-runtime. Before reservation, `reservationId` may be null and `launchClaim` exactly `unclaimed`; for financial-runtime, after reserve the unique matching reservation ID is recorded while launchClaim remains unclaimed for the own-reservation recheck, then launchClaim transitions once to `claimed` before launch. Funding-preflight retains null plugin reservationId and uses its separately scoped one-shot master claim. The persisted in-store identity must positively match the authorized canonical repository anchor. For financial-runtime the master claim and existing SQLite unique charge claim both bind the same ownership; a claim token is not just a filename. No second `claimed` transition or launch is allowed for either purpose. Recovery never clears/rewrites consumed rows.
+
+The canonical inventory `canonical-store-before-source.json` records no persisted token and only SP01 design/report events. Concrete token adoption and loan-history reconciliation SHALL be independently reviewed against that original inventory; no ordinary initializer/status/review call or override can create authority. Normalize checkout/common-directory event identity through that reviewed reconciliation and retain every linked-worktree/external failure; no unrelated seeded event or renamed capability establishes zero failures. These live-instance mutations remain pending after source repair.
+
+Observation/correspondence digests SHALL be mutable evidence outside candidate inputs, binding inputs and runner plan, bound in final admission. Refreshing them SHALL not change candidate, runner digest, binding hash or committed debit.
+
+#### Scenario: Persistence and claim crash matrix
+- **WHEN** isolated fault injection interrupts before debit, after debit before projection, between file replacements, between SQLite/master claim, or after master claim before child launch
+- **THEN** no unauthorized child starts; committed charges remain consumed, correspondence/claim disagreement denies, and an unlaunched committed invocation receives an explicit failed/unknown disposition without retry credit.
+
+#### Scenario: Store rollback or clone replay
+- **WHEN** an already committed debit is presented with another clone/default-resolved store, a new/fallback store, a restored same-token pre-claim backup or conflicting ownership
+- **THEN** canonical identity and master one-shot claim deny another launch while preserving the existing SQLite guard and historical charge.
+
+### Requirement: Exact attempts and actual submission consumer
+Retained loan allocations/runs SHALL establish exactly two prior consumed loan attempts before the proposed cumulative attempt 3; zero master Preview counters and cumulative reservation totals are not attempt evidence. The new invocation SHALL have at most four public submission calls for the actual deploy → initialize → accrue → settle path, subject to both resource votes and confirmation that the final executor uses that path. A charged but unlaunched attempt consumes attempt 3 with zero observed submissions plus its reserved maximum; no attempt 4 follows automatically.
+
+The actual producer SHALL bind and reconcile the existing `ledger/providers.mjs` durable reservation path, `bindingFor` and submission guard with the invocation/accounting identity. Every SDK submission/retry must reach that guard; a Python launch counter alone is insufficient. Exact DUST SPECK fee ceilings, selected token/domain gross ceilings and actual paid indexer fee units SHALL remain distinct. No tNight/USD conversion, refund against gross debit or unknown-unit equivalence is inferred. Final concrete financial bounds remain pending resource votes.
+
+#### Scenario: Retry and attempt accounting
+- **WHEN** four allowed submissions are consumed or attempt 3 commits then fails before launch
+- **THEN** a fifth submission, counter reset, reservation-path switch or fourth invocation is denied and every real transaction/failed attempt remains retained.
+
+### Requirement: Direct nonpersisting SDK funding observer
+Source scope includes `experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs`, invoked as a bounded child by accounting preflight. It SHALL directly use the pinned SDK `DustWallet(configuration).restore` and `UnshieldedWallet(configuration).restore`, their child `start`, `waitForSyncedState(0n)` and `stop` APIs. Reuse strict original snapshot/identity checks from `preview-bootstrap.mjs:76–89`, not `launchPreviewFinancialCase`, `createWallet`, check-balance or the facade's submission/proving services. Use NoOp transaction history and an outer 90-second maximum with 5-second stop grace. This permits only synchronization of a disposable restored in-memory copy; canonical wallet files/keys/identity and chain/contract state remain unchanged.
+
+The observer privately reads only the existing seed and dust/unshielded snapshots necessary to derive and verify the original role identity, with original owner-only/no-symlink validation. It SHALL not create a wallet, fallback on failed restore, read role secrets/contract passwords, serialize/persist wallet state, register, transfer, balance, sign, prove, finalize or submit. Clear temporary sensitive buffers where supported; log no private state/error objects. Stop every partially initialized child; containment failure makes observation unavailable. Independent tests SHALL compare canonical input bytes/digests before/after and trap every forbidden API/write.
+
+Unshielded funding SHALL use exact selected-token available balances. DUST funding SHALL sum `availableCoins[*].generatedNow` at native sync time, excluding pending entries; raw `balance(Date)` and hypothetical generation are not substitutes. SDK restore resets `pendingDust`, so independent old-allocation/finality/persistence history SHALL rule out unresolved prior spend before declaring funds unreserved. Missing that evidence yields unavailable funding. Require connected/strictly-complete progress, exact original public key/address/network, canonical network/protocol reference, sync/observation age at most 120 seconds at launch, no future timestamps and explicit units. Output only public aggregate funding/identity/freshness metadata to a separate evidence destination.
+
+Pending-use reconciliation SHALL cover the actual retained allocation/reservation/persistence/finality lineage for the two identified Preview loan allocations, intervening swaps and any other material observed use of this wallet, together with exclusive current wallet ownership and fresh SDK sync. Unresolved material observed use SHALL block funding. Exhaustive proof against hypothetical external use, or host-global lifetime accounting of unrelated accounts, SHALL NOT be added as a funding predicate; retain those limits honestly without treating known pending ambiguity as resolved.
+
+#### Scenario: Strict observed funds
+- **WHEN** isolated real observer logic restores the original identity without fallback, syncs within bounds, has independently cleared pending-spend lineage, and all canonical files remain unchanged
+- **THEN** it returns exact timestamped available token/DUST quantities for admission comparison; observation is not spend reservation or a promise of finality.
+
+#### Scenario: Unavailable or mutating observer
+- **WHEN** identity differs, restore fails, old pending spend is unresolved, units/timestamps are unknown, sync/stop times out, a forbidden API/write is attempted or snapshot bytes change
+- **THEN** funding is unavailable and live admission fails. Empty restored pending state, a recent indexer tip or green fixture alone cannot pass.
+
+### Requirement: Source approval and live adoption stay separate
+These requirements authorize no concrete grant, live wallet observation or adoption. Both fresh reviewers must approve this exact source specification before implementation; source tests then exercise real producer/caller/observer code entirely on isolated fixtures and transports, followed by both frozen full-source audits. A later concrete grant, exact MC02 projection disposition, canonical history/token adoption, prior-attempt reconciliation, final executor and live observations are separately reviewed prerequisites to the existing guarded run. Their absence SHALL be reported precisely while eligible deterministic source work proceeds; no new record service or broad historical survey is required.
+
+#### Scenario: Source-ready but instance-blocked
+- **WHEN** actual isolated producer/observer tests and both source reviews pass but concrete resource/adoption evidence remains pending
+- **THEN** record only source readiness, preserve named live blockers and continue their concrete preparation without claiming admission or financial acceptance.
+
+FULL FILE experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs
+/** Existing Preview wallet bootstrap. No implicit wallet creation or recovery.
+ * Actual invocation requires the separately admitted public plan and containment.
+ */
+import {readFileSync,mkdirSync,lstatSync,renameSync,unlinkSync,existsSync,openSync,writeFileSync,closeSync,fsyncSync,constants} from 'node:fs';
+import {join,dirname,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+import {validatePreviewLaunchPlan,retainPreviewIntegrationResult,retainPreviewStage,publicPreviewLaunchEvent,validatePreviewFinancialCompletion} from './preview-launch.mjs';
+import {readPrivateLaunchFile,readLocalStoragePassword,decodeSavedWalletEnvelope,inspectLocalLaunchRuntime,retainPublicSubmissions} from './launch-local.mjs';
+import {inspectFinancialBuild} from './proven-assets.mjs';
+import {createPreviewRpc} from './financial-rpc.mjs';
+import {integratePreviewFinancialCase} from './integrate-preview.mjs';
+import {PINNED_NM} from './providers.mjs';
+const check=(ok,code)=>{if(!ok)throw Error(code);};
+const hash=x=>createHash('sha256').update(x).digest('hex');
+const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+const childKinds=['shielded','unshielded','dust'];
+const pendingMarker='.moriarty-persistence-pending.json';
+function privateDirectory(path){for(let p=path;;p=dirname(p)){check(!lstatSync(p).isSymbolicLink(),'PREVIEW_LAUNCH_SYMLINK');if(dirname(p)===p)break;}const s=lstatSync(path);check(s.isDirectory()&&s.uid===process.getuid()&&(s.mode&0o077)===0,'PREVIEW_LAUNCH_DIRECTORY');}
+function syncDirectory(path){const fd=openSync(path,constants.O_RDONLY);try{fsyncSync(fd);}finally{closeSync(fd);}}
+function retain(path,value){const fd=openSync(path,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,JSON.stringify(value)+'\n');fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(path));}
+function deadlineCheck(deadline){check(Number.isSafeInteger(deadline)&&Date.now()<deadline,'PREVIEW_LAUNCH_DEADLINE');}
+async function within(deadline,fn){deadlineCheck(deadline);let timer;try{const result=await Promise.race([Promise.resolve().then(()=>{deadlineCheck(deadline);return fn();}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('PREVIEW_LAUNCH_DEADLINE')),Math.max(1,Math.min(2147483647,deadline-Date.now())));})]);deadlineCheck(deadline);return result;}finally{clearTimeout(timer);}}
+/** Public checks only, before any private wallet reads or new private paths. */
+export async function preflightPreviewLaunch(plan){
+ const p=validatePreviewLaunchPlan(plan),deadline=p.limits.deadlineMs;
+ await within(deadline,()=>inspectFinancialBuild({case:p.kind,...p.build}));
+ await within(deadline,inspectLocalLaunchRuntime);
+ const genesis=await within(deadline,()=>createPreviewRpc({node:p.networkConfig.node,deadlineMs:Math.min(deadline,Date.now()+15000)})('chain_getBlockHash',[0]));
+ check(genesis==='0x'+p.networkTag,'PREVIEW_GENESIS_MISMATCH');
+ return {status:'PUBLIC_PREFLIGHT_CHECKED',genesis,network:'preview',walletStarted:false,networkAcceptance:false};
+}
+async function runtime(){
+ await inspectLocalLaunchRuntime();
+ const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)==='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195','PREVIEW_RUNTIME_MANIFEST_PIN');const pins=JSON.parse(raw);
+ const load=name=>import(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href);
+ const [sdk,ledger,network,rx,ws]=await Promise.all(['@midnight-ntwrk/wallet-sdk','@midnight-ntwrk/midnight-js-protocol','@midnight-ntwrk/midnight-js-network-id','rxjs','ws'].map(load));
+ globalThis.WebSocket=ws.WebSocket;return {sdk,ledger,network,rx};
+}
+/** Persist the actual SDK serializeState strings in the existing version1 format.
+ * Original snapshots stay private in an exclusive backup. A pending marker makes
+ * any interrupted three-file replacement fail closed at the next launch.
+ */
+export async function persistPreviewWalletState({wallet,stateDirectory,allocationId,original,deadlineMs}){
+ check(resolve(stateDirectory)===stateDirectory&&typeof allocationId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(allocationId),'PREVIEW_PERSIST_BINDING');
+ const parent=join(stateDirectory,'.midnight-wallet-state/preview');privateDirectory(parent);deadlineCheck(deadlineMs);
+ check(!existsSync(join(parent,pendingMarker)),'PREVIEW_PERSIST_PENDING');
+ const next={};
+ for(const kind of childKinds){check(Buffer.isBuffer(original[kind])&&readPrivateLaunchFile(join(parent,kind+'.json')).equals(original[kind]),'PREVIEW_PERSIST_ORIGINAL_CHANGED');const state=await within(deadlineMs,()=>wallet[kind].serializeState());decodeSavedWalletEnvelope({version:1,state});next[kind]=Buffer.from(JSON.stringify({version:1,state})+'\n');check(next[kind].length<=32*1024*1024,'PREVIEW_PERSIST_BOUND');}
+ const backup=join(parent,'.moriarty-backup-'+allocationId);mkdirSync(backup,{mode:0o700});syncDirectory(parent);
+ const save=(file,raw)=>{const fd=openSync(file,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,raw);fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(file));};
+ for(const kind of childKinds){save(join(backup,kind+'.json'),original[kind]);save(join(backup,'next-'+kind+'.json'),next[kind]);}
+ deadlineCheck(deadlineMs);retain(join(parent,pendingMarker),{schema:'moriarty.preview-wallet-persistence-pending/1',allocationId});
+ for(const kind of childKinds){deadlineCheck(deadlineMs);check(readPrivateLaunchFile(join(parent,kind+'.json')).equals(original[kind]),'PREVIEW_PERSIST_ORIGINAL_CHANGED');renameSync(join(backup,'next-'+kind+'.json'),join(parent,kind+'.json'));}
+ for(const kind of childKinds)check(readPrivateLaunchFile(join(parent,kind+'.json')).equals(next[kind]),'PREVIEW_PERSIST_VERIFY');
+ syncDirectory(parent);deadlineCheck(deadlineMs);unlinkSync(join(parent,pendingMarker));syncDirectory(parent);deadlineCheck(deadlineMs);
+ return {status:'PERSISTED',children:3};
+}
+export async function launchPreviewFinancialCase(plan){
+ const p=validatePreviewLaunchPlan(plan);process.umask(0o077);const deadline=p.limits.deadlineMs;
+ const preflight=await preflightPreviewLaunch(p);
+ privateDirectory(dirname(p.outputDirectory));privateDirectory(dirname(p.privateState.directory));
+ mkdirSync(p.outputDirectory,{mode:0o700});syncDirectory(dirname(p.outputDirectory));
+ retain(join(p.outputDirectory,'plan.json'),p);retain(join(p.outputDirectory,'public-preflight.json'),preflight);
+ let sequence=0,phase='private-inputs',wallet,ownershipTransferred=false,seed;const children=[];
+ const append=value=>retain(join(p.outputDirectory,`${String(++sequence).padStart(3,'0')}.json`),value);
+ try{
+  // Both directory reservations are exclusive. Existing contract stores are never opened.
+  mkdirSync(p.privateState.directory,{mode:0o700});syncDirectory(dirname(p.privateState.directory));
+  privateDirectory(p.wallet.stateDirectory);check(!existsSync(join(p.wallet.stateDirectory,'.midnight-wallet-state/preview',pendingMarker)),'PREVIEW_PERSIST_PENDING');deadlineCheck(deadline);
+  const roleData=JSON.parse(readPrivateLaunchFile(p.roles.secretsFile));
+  check(roleData&&Object.keys(roleData).sort().join(',')==='firstSecret,secondSecret'&&hex(roleData.firstSecret)&&hex(roleData.secondSecret),'PREVIEW_ROLE_SECRETS');
+  const password=await within(deadline,()=>readLocalStoragePassword(p.privateState.passwordFile));
+  const saved={},original={};for(const kind of childKinds){original[kind]=readPrivateLaunchFile(join(p.wallet.stateDirectory,'.midnight-wallet-state/preview',kind+'.json'));saved[kind]=decodeSavedWalletEnvelope(JSON.parse(original[kind]));}
+  seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(hex(seedHex),'PREVIEW_EXISTING_SEED');
+  phase='restore';const {sdk,ledger,network,rx}=await within(deadline,runtime);network.setNetworkId('preview');
+  const hd=sdk.HDWallet.fromSeed(Buffer.from(seedHex,'hex'));seed.fill(0);seedHex=undefined;check(hd.type==='seedOk','PREVIEW_SEED_DERIVATION');
+  let keys;try{const result=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal,sdk.Roles.Dust]).deriveKeysAt(0);check(result.type==='keysDerived','PREVIEW_SEED_DERIVATION');keys=result.keys;}finally{hd.hdWallet.clear();}
+  const shieldedSecretKeys=ledger.ZswapSecretKeys.fromSeed(keys[sdk.Roles.Zswap]),dustSecretKey=ledger.DustSecretKey.fromSeed(keys[sdk.Roles.Dust]),unshieldedKeystore=sdk.createKeystore(keys[sdk.Roles.NightExternal],'preview');
+  check(unshieldedKeystore.getBech32Address().asString()===p.wallet.expectedAddress&&unshieldedKeystore.getAddress()===p.roles.firstAddress,'PREVIEW_EXISTING_IDENTITY');
+  const signingBytes=unshieldedKeystore.getSecretKey();let deploymentSigningKey;try{deploymentSigningKey=ledger.signingKeyFromBip340(signingBytes);}finally{signingBytes.fill(0);}
+  check(ledger.signatureVerifyingKey(deploymentSigningKey)===unshieldedKeystore.getPublicKey(),'PREVIEW_SIGNING_IDENTITY');
+  const restore=(factory,kind)=>async config=>{const child=await factory(config).restore(saved[kind]);children.push(child);if(Date.now()>=deadline){await child.stop();throw Error('PREVIEW_LAUNCH_DEADLINE');}return child;};
+  wallet=await within(deadline,()=>sdk.WalletFacade.init({configuration:{networkId:'preview',indexerClientConnection:{indexerHttpUrl:p.networkConfig.indexer,indexerWsUrl:p.networkConfig.indexerWS},provingServerUrl:new URL(p.networkConfig.proofServer),relayURL:new URL('wss://rpc.preview.midnight.network'),txHistoryStorage:new sdk.NoOpTransactionHistoryStorage(),costParameters:{additionalFeeOverhead:300000000000000n,feeBlocksMargin:5}},shielded:restore(sdk.ShieldedWallet,'shielded'),unshielded:restore(sdk.UnshieldedWallet,'unshielded'),dust:restore(sdk.DustWallet,'dust')}).then(async value=>{if(Date.now()>=deadline){await value.stop();throw Error('PREVIEW_LAUNCH_DEADLINE');}return value;}));
+  const restored=await within(deadline,()=>rx.firstValueFrom(wallet.unshielded.state));
+  check(restored.state.networkId==='preview'&&restored.state.publicKey.publicKey===unshieldedKeystore.getPublicKey()&&restored.state.publicKey.addressHex===p.roles.firstAddress&&restored.state.publicKey.address===p.wallet.expectedAddress,'PREVIEW_RESTORED_IDENTITY');
+  phase='sync';await within(deadline,()=>wallet.start(shieldedSecretKeys,dustSecretKey));const synced=await within(deadline,()=>wallet.waitForSyncedState());
+  check(synced.isSynced===true&&synced.dust.availableCoins.length>0,'PREVIEW_REGISTERED_DUST_REQUIRED');
+  for(const kind of childKinds)check(synced[kind]?.progress?.isConnected===true&&synced[kind].progress.isStrictlyComplete()===true,'PREVIEW_SYNC_INCOMPLETE');
+  check(Array.isArray(synced.unshielded.pendingCoins)&&synced.unshielded.pendingCoins.length===0&&Array.isArray(synced.dust.state?.pendingDust)&&synced.dust.state.pendingDust.length===0,'PREVIEW_PENDING_WALLET');
+  const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
+  let stopping,persisted=false,walletStopped=false;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));persisted=true;}finally{await target.stop();walletStopped=true;}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
+  const retainedWallet=retainPublicSubmissions({wallet:persistentWallet,ledger,directory:submissionDirectory});
+  const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicPreviewLaunchEvent(e)),onStage:s=>retainPreviewStage(p.outputDirectory,s)};
+  phase='integration';ownershipTransferred=true;let result;
+  try{result=await integratePreviewFinancialCase(options);}catch(error){if(error.publicIntegrationResult!==undefined)retainPreviewIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('PREVIEW_FINANCIAL_RUN_INCOMPLETE');}
+  check(persisted&&walletStopped,'PREVIEW_COMPLETION_PERSISTENCE');validatePreviewFinancialCompletion(result);
+  retainPreviewIntegrationResult(p.outputDirectory,result);deadlineCheck(deadline);return result;
+ }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('PREVIEW_FINANCIAL_LAUNCH_FAILED');}
+ finally{seed?.fill(0);if(!ownershipTransferred){let timer;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Independent outer containment remains required. */}finally{clearTimeout(timer);}}}
+}
+export function previewFinancialExitCode(result,deadlineMs){deadlineCheck(deadlineMs);validatePreviewFinancialCompletion(result);deadlineCheck(deadlineMs);return 0;}
+if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+ let timer;
+ try{const args=process.argv.slice(2);check(args.length===5&&args[0]==='--run'&&args[1]==='--plan'&&args[3]==='--sha256'&&hex(args[4]),'PREVIEW_LAUNCH_USAGE');const raw=readPrivateLaunchFile(args[2]);check(hash(raw)===args[4],'PREVIEW_PLAN_HASH');const p=validatePreviewLaunchPlan(JSON.parse(raw));timer=setTimeout(()=>process.exit(124),Math.max(1,p.limits.deadlineMs-Date.now()+6000));const r=await launchPreviewFinancialCase(p);process.stdout.write(JSON.stringify({status:r.status,containmentComplete:r.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=previewFinancialExitCode(r,p.limits.deadlineMs);}
+ catch{process.stderr.write('Preview financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+ finally{clearTimeout(timer);}process.exit(process.exitCode??0);
+}
+
+FULL FILE experiments/moriarty-midnight-financial/ledger/launch-local.mjs
+import {validateLocalFinancialCompletion,localFinancialExitCode} from './local-completion.mjs';
+export {localFinancialExitCode} from './local-completion.mjs';
+import {isDeepStrictEqual} from 'node:util';
+import {decodeNativeFinancialTransaction} from './receipt.mjs';
+import {validateStaleLoanPlan,STALE_LOAN} from './stale-loan-plan.mjs';
+import {preflightLocalStaleLoan} from './integrate-local.mjs';
+import {validateInitializedSwapPlan} from './continue-swap-plan.mjs';
+import {preflightLocalInitializedSwap} from './integrate-local.mjs';
+/** Existing-wallet local entry point. Actual execution requires separate admission
+ * and outer process containment. Importing this module never reads private files,
+ * constructs a wallet, imports SDK code, or contacts a service.
+ */
+import {readFileSync,openSync,closeSync,fstatSync,lstatSync,writeFileSync,fsyncSync,mkdirSync,constants} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {join,dirname,isAbsolute,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+import {validatePublicDriverFailure} from './run-local.mjs';
+import {inspectFinancialBuild} from './proven-assets.mjs';
+import {integrateLocalFinancialCase,preflightLocalRecovery,preflightLocalInitializedLoan,validatePublicIntegrationFailureCode} from './integrate-local.mjs';
+import {waitForLocalTip,guardLocalWallet} from './local-tip.mjs';
+import {validateExistingLoanPlan} from './recover-deployment.mjs';
+import {validateInitializedLoanPlan} from './continue-loan-plan.mjs';
+
+const check=(ok,code)=>{if(!ok)throw Error(code);};
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const hex=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
+// SDK transaction identifiers are not 32-byte transaction hashes.
+const transactionIdentifier=x=>typeof x==='string'&&/^[a-f0-9]{1,256}$/.test(x);
+const decimal=x=>typeof x==='string'&&/^(0|[1-9][0-9]*)$/.test(x)&&x.length<=39&&BigInt(x)<1n<<128n;
+const exact=(o,keys)=>check(o&&Object.getPrototypeOf(o)===Object.prototype&&Object.keys(o).sort().join('|')===keys.split(',').sort().join('|'),'LAUNCH_FIELDS');
+const absolute=p=>check(typeof p==='string'&&isAbsolute(p)&&resolve(p)===p,'LAUNCH_PATH');
+const childKinds=['shielded','unshielded','dust'];
+const PIN_MANIFEST_SHA256='4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195';
+function runtimePins(){const raw=readFileSync(new URL('./launch-runtime-pins.json',import.meta.url));check(hash(raw)===PIN_MANIFEST_SHA256,'LAUNCH_PIN_MANIFEST');return JSON.parse(raw);}
+export function validateLocalLaunchPlan(p){
+ const stale=Object.hasOwn(p??{},'existingStaleLoan');
+ const recovery=Object.hasOwn(p??{},'existingDeployment'),loanContinuation=Object.hasOwn(p??{},'existingInitializedLoan'),swapContinuation=Object.hasOwn(p??{},'existingInitializedSwap'),continuation=loanContinuation||swapContinuation;
+ check([stale,recovery,loanContinuation,swapContinuation].filter(Boolean).length<=1,'LAUNCH_MUTUALLY_EXCLUSIVE_MODES');
+ const continuationField=swapContinuation?'existingInitializedSwap':'existingInitializedLoan';
+ check(!(recovery&&continuation),'LAUNCH_MUTUALLY_EXCLUSIVE_MODES');
+ exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory'+(stale?',existingStaleLoan':recovery?',existingDeployment':continuation?','+continuationField:''));
+ check(p.schema==='moriarty.local-financial-launch/1'&&['loan','swap'].includes(p.kind),'LAUNCH_SCHEMA');
+ exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hex(p.build.receiptSha256)&&hex(p.build.sourceManifestHash),'LAUNCH_BUILD_HASH');
+ exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');check(p.networkConfig.networkId==='undeployed','LAUNCH_NETWORK');
+ for(const key of ['node','indexer','indexerWS','proofServer']){const u=new URL(p.networkConfig[key]);check(u.protocol===(key==='indexerWS'?'ws:':'http:')&&['127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&!u.hash,'LAUNCH_LOOPBACK');}
+ exact(p.wallet,'seedFile,stateDirectory,expectedAddress');absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);check(typeof p.wallet.expectedAddress==='string'&&/^mn_addr_undeployed1[a-z0-9]+$/.test(p.wallet.expectedAddress),'LAUNCH_WALLET_ADDRESS');
+ exact(p.roles,'firstAddress,secondAddress,secretsFile');absolute(p.roles.secretsFile);check(hex(p.roles.firstAddress)&&hex(p.roles.secondAddress)&&p.roles.firstAddress!==p.roles.secondAddress,'LAUNCH_ROLES');
+ exact(p.privateState,'directory,passwordFile');absolute(p.privateState.directory);absolute(p.privateState.passwordFile);absolute(p.outputDirectory);
+ const paths=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory];check(new Set(paths).size===3&&paths.every((a,i)=>paths.every((b,j)=>i===j||!a.startsWith(b+'/'))),'LAUNCH_DISTINCT_DIRECTORIES');
+ check(hex(p.networkTag)&&Number.isSafeInteger(p.expectedProtocolVersion)&&p.expectedProtocolVersion>=0,'LAUNCH_BINDINGS');
+ exact(p.limits,'allocationId,deadlineMs,submissions,dustFee,grossByLogicalAsset');check(typeof p.limits.allocationId==='string'&&/^[a-zA-Z0-9_-]{1,80}$/.test(p.limits.allocationId),'LAUNCH_ALLOCATION');
+ check(Number.isSafeInteger(p.limits.deadlineMs)&&p.limits.deadlineMs>Date.now()&&p.limits.deadlineMs<=Date.now()+3600000&&p.limits.submissions===(stale?1:continuation?2:recovery?3:4)&&decimal(p.limits.dustFee),'LAUNCH_LIMITS');
+ exact(p.limits.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(p.limits.grossByLogicalAsset).every(decimal),'LAUNCH_ASSET_LIMITS');
+ if(stale||recovery||continuation){
+  if(stale)validateStaleLoanPlan(p.existingStaleLoan,p);
+  else if(recovery)validateExistingLoanPlan(p.existingDeployment,p);
+  else if(swapContinuation)validateInitializedSwapPlan(p.existingInitializedSwap,p);else validateInitializedLoanPlan(p.existingInitializedLoan,p);
+  check(p.wallet.seedFile==='/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed'&&p.wallet.stateDirectory==='/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2'&&p.wallet.expectedAddress==='mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9','LAUNCH_RECOVERY_ORIGINAL_WALLET');
+  check(p.roles.firstAddress==='9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb'&&p.roles.secondAddress==='c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e','LAUNCH_RECOVERY_ORIGINAL_ROLES');
+  const roots=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory,...(stale?[p.existingStaleLoan.snapshotDirectory,p.existingStaleLoan.inspectionDirectory]:continuation?[p[continuationField].snapshotDirectory,p[continuationField].inspectionDirectory]:[p.existingDeployment.inspectionDirectory])];
+  check(roots.every((a,i)=>roots.every((b,j)=>i===j||(a!==b&&!a.startsWith(b+'/')))),'LAUNCH_RECOVERY_DIRECTORY_OVERLAP');
+  check(!p.privateState.passwordFile.startsWith(p.wallet.stateDirectory+'/'),'LAUNCH_RECOVERY_PRESERVE_WALLET');
+ }
+ return structuredClone(p);
+}
+/** Called only after the actual integration result is retained. The validated
+ * launch mode chooses fresh completion versus the existing returned-status contract.
+ */
+export function localFinancialCommandExitCode(result,plan){
+ const p=validateLocalLaunchPlan(plan);
+ const existing=['existingDeployment','existingInitializedLoan','existingInitializedSwap','existingStaleLoan'].some(k=>Object.hasOwn(p,k));
+ if(!existing)return localFinancialExitCode(result,p.limits.deadlineMs);
+ check(result&&Object.values(Object.getOwnPropertyDescriptors(result)).every(d=>Object.hasOwn(d,'value'))&&result.schema==='moriarty.local-financial-integration/1'&&result.kind===p.kind&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false&&['PASS','FAILED','INCOMPLETE'].includes(result.status),'LAUNCH_EXISTING_RESULT');
+ if(result.status==='PASS')check(result.cleanup?.containmentComplete===true&&result.cleanup?.walletStopped===true&&result.cleanup?.pendingOperations===0&&result.setupPendingOperations===0,'LAUNCH_EXISTING_RESULT');
+ check(Date.now()<p.limits.deadlineMs,'LAUNCH_DEADLINE');return result.status==='PASS'?0:2;
+}
+function safeAncestors(p){for(let d=p;;d=dirname(d)){check(!lstatSync(d).isSymbolicLink(),'LAUNCH_SYMLINK');if(dirname(d)===d)break;}}
+export function readPrivateLaunchFile(p){
+ absolute(p);safeAncestors(p);let fd;
+ // Nonblocking open lets fstat reject a FIFO even when it has no writer.
+ try{fd=openSync(p,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);const s=fstatSync(fd);check(s.isFile()&&(s.mode&0o077)===0&&s.uid===process.getuid()&&s.size>0&&s.size<=32*1024*1024,'LAUNCH_PRIVATE_FILE');return readFileSync(fd);}
+ finally{if(fd!==undefined)closeSync(fd);}
+}
+/** Apply the installed private-store policy before wallet restore or submission.
+ * Pin the actual validator, never mirror its rules or expose its error text.
+ */
+export async function readLocalStoragePassword(file){
+ const password=readPrivateLaunchFile(file).toString('utf8').trim();
+ const entry=join(PINNED_NM,'@midnight-ntwrk/midnight-js-utils/dist/index.mjs');
+ check(hash(readFileSync(entry))==='812b7644d7280797bd68bbf72b3c3bd64015158404ca5af29b8ecaec95f2c5de','LAUNCH_PASSWORD_POLICY_PIN');
+ const {validatePassword}=await import(pathToFileURL(entry).href);
+ try{validatePassword(password);}catch{throw Error('LAUNCH_PRIVATE_PASSWORD');}
+ return password;
+}
+export function decodeSavedWalletEnvelope(wrapper){exact(wrapper,'version,state');check(wrapper.version===1&&typeof wrapper.state==='string'&&wrapper.state.length>0,'LAUNCH_SAVED_STATE');return wrapper.state;}
+function privateJson(p){try{return JSON.parse(readPrivateLaunchFile(p));}catch{throw Error('LAUNCH_PRIVATE_JSON');}}
+function privateDirectory(p){absolute(p);safeAncestors(p);const s=lstatSync(p);check(s.isDirectory()&&(s.mode&0o077)===0&&s.uid===process.getuid(),'LAUNCH_PRIVATE_DIRECTORY');}
+function syncDirectory(p){const d=openSync(p,constants.O_RDONLY);try{fsyncSync(d);}finally{closeSync(d);}}
+function durableBytes(p,bytes){const fd=openSync(p,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);try{writeFileSync(fd,bytes);fsyncSync(fd);}finally{closeSync(fd);}syncDirectory(dirname(p));}
+function durableFile(p,value){durableBytes(p,JSON.stringify(value)+'\n');}
+/** Called only at the wallet submission boundary, after provider reservations.
+ * Retains native finalized public payloads, never recipes or SDK private objects.
+ */
+export function retainPublicSubmissions({wallet,ledger,directory}){
+ privateDirectory(directory);check(typeof wallet?.submitTransaction==='function','LAUNCH_SUBMIT_API');
+ const submit=wallet.submitTransaction.bind(wallet);
+ return new Proxy(wallet,{get(target,key){
+  if(key==='submitTransaction')return async tx=>{
+   check(tx instanceof ledger.Transaction&&Object.getPrototypeOf(tx)===ledger.Transaction.prototype,'LAUNCH_NATIVE_TRANSACTION');
+   const raw=Buffer.from(tx.serialize());check(raw.length>0&&raw.length<=16*1024*1024,'LAUNCH_PUBLIC_TRANSACTION_SIZE');
+   const canonical=ledger.Transaction.deserialize('signature','proof','binding',raw);
+   check(Buffer.from(canonical.serialize()).equals(raw),'LAUNCH_NONCANONICAL_TRANSACTION');
+   const transactionHash=canonical.transactionHash(),identifiers=[...canonical.identifiers()];check(hex(transactionHash)&&identifiers.length>0&&identifiers.length<=128&&identifiers.every(transactionIdentifier),'LAUNCH_TRANSACTION_IDENTITY');
+   const file=transactionHash+'.bin';
+   durableBytes(join(directory,file),raw);
+   durableFile(join(directory,transactionHash+'.json'),{schema:'moriarty.public-submission-bytes/1',transactionHash,identifiers,rawSha256:hash(raw),bytes:raw.length,file,scope:'Finalized public native bytes retained before wallet submission; submission and ledger acceptance unknown'});
+   return submit(canonical);
+  };
+  const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;
+ }});
+}
+/** Only the actual reviewed integration producer reaches this writer in the CLI.
+ * That producer already closes nested observations/comparisons. This is retention,
+ * not a sanitizer for caller-supplied SDK errors or private results.
+ */
+export function retainPublicIntegrationResult(directory,result){
+ const failure=result&&Object.getOwnPropertyDescriptor(result,'failureCode');
+ check(result&&Object.values(Object.getOwnPropertyDescriptors(result)).every(d=>Object.hasOwn(d,'value'))&&Reflect.ownKeys(result).length===Object.keys(result).length,'LAUNCH_PUBLIC_RESULT_FIELDS');
+ exact(result,'schema,status,kind,sourceTestOnly,networkAcceptance,proofAcceptance,financialAcceptance,build,assetBindings,phase,driver,cleanup,setupPendingOperations,comparisons,financialComparison,scope'+(failure?',failureCode':'')+(Object.hasOwn(result,'adverse')?',adverse':''));
+ if(failure){check(Object.hasOwn(failure,'value')&&['FAILED','INCOMPLETE'].includes(result.status),'LAUNCH_PUBLIC_FAILURE_CODE');validatePublicIntegrationFailureCode(failure.value);}
+ check(result.schema==='moriarty.local-financial-integration/1'&&['PASS','FINANCIAL_COMPLETE','FAILED','INCOMPLETE'].includes(result.status)&&result.sourceTestOnly===false&&result.networkAcceptance===false&&result.proofAcceptance===false&&result.financialAcceptance===false,'LAUNCH_PUBLIC_RESULT');
+ if(result.driver!==undefined){
+  const d=result.driver,diagnostic=Object.getOwnPropertyDescriptor(d,'failure');
+  exact(d,'schema,status,kind,contractAddress,stages,transactionIds,cleanup,operationalState,scope'+(Object.hasOwn(d,'assetBindings')?',assetBindings':'')+(diagnostic?',failure':''));
+  check(d.schema==='moriarty.local-financial-run/1','LAUNCH_PUBLIC_DRIVER');
+  if(diagnostic){check(Object.hasOwn(diagnostic,'value')&&d.status==='FAILED','LAUNCH_PUBLIC_DRIVER_FAILURE');validatePublicDriverFailure(diagnostic.value);}
+ }
+ if(result.financialComparison!==undefined)exact(result.financialComparison,'status,kind,contractAddress,expectationsSha256,stages,scope,networkAcceptance,proofAcceptance');
+ if(result.adverse!==undefined){validatePublicAdverseValue(result.adverse);if(result.adverse.candidate!==undefined)check(isDeepStrictEqual(publicJsonValue(result.adverse.candidate),JSON.parse(readFileSync(join(directory,'adverse-candidate.json'),'utf8'))),'LAUNCH_ADVERSE_CANDIDATE_BINDING');}
+ if(result.status==='FINANCIAL_COMPLETE')validateLocalFinancialCompletion(result);
+ durableFile(join(directory,'integration-result.json'),publicJsonValue(structuredClone(result)));
+}
+function publicJsonValue(value){
+ let count=0;
+ function visit(v){check(++count<=20000,'LAUNCH_ADVERSE_BOUND');if(typeof v==='bigint')return v.toString();if(v instanceof Uint8Array)return {hex:Buffer.from(v).toString('hex')};if(v===undefined||v===null||typeof v==='string'||typeof v==='boolean'||typeof v==='number')return v;
+  check(v&&typeof v==='object'&&(Array.isArray(v)||Object.getPrototypeOf(v)===Object.prototype),'LAUNCH_ADVERSE_VALUE');const ds=Object.getOwnPropertyDescriptors(v);check(Reflect.ownKeys(ds).every(k=>typeof k==='string'&&Object.hasOwn(ds[k],'value')),'LAUNCH_ADVERSE_ACCESSOR');return Array.isArray(v)?v.map(visit):Object.fromEntries(Object.entries(v).map(([k,x])=>[k,visit(x)]));}
+ const result=visit(value);check(Buffer.byteLength(JSON.stringify(result))<=1024*1024,'LAUNCH_ADVERSE_BOUND');return result;
+}
+function validatePublicAdverseValue(value){
+ const allowed=['status','rejection','candidate','before','terminalBarrier','after','equality','financialNonmutationEstablished','feeAccounting','scope','failure','providerSubmissionAttempted','reservations'];
+ check(value&&Object.getPrototypeOf(value)===Object.prototype&&Reflect.ownKeys(value).every(k=>allowed.includes(k))&&Object.values(Object.getOwnPropertyDescriptors(value)).every(d=>Object.hasOwn(d,'value')),'LAUNCH_ADVERSE_FIELDS');
+ check(value.scope===undefined||typeof value.scope==='string','LAUNCH_ADVERSE_SCOPE');
+ check(['NODE_REJECTION_FINANCIAL_NONMUTATION','OUTCOME_UNKNOWN','UNEXPECTED_SUBMISSION_SUCCESS','INCOMPLETE'].includes(value.status)&&typeof value.financialNonmutationEstablished==='boolean','LAUNCH_ADVERSE_STATUS');publicJsonValue(value);
+ for(const key of ['failure','rejection'])if(value[key]!==undefined){const f=value[key];check(f&&Object.getPrototypeOf(f)===Object.prototype&&Object.keys(f).every(k=>['status','phase','code','nodeRejectionEstablished','stalePredicateEstablished','rpcCode'].includes(k))&&Object.values(f).every(x=>['string','number','boolean'].includes(typeof x)),'LAUNCH_ADVERSE_DIAGNOSTIC');}
+ if(value.candidate!==undefined)exact(value.candidate,'schema,rawSha256,transactionHash,identifiers,inputs,outputs,actions,grossByAsset,dustFee,proofVerified,ledgerAccepted');
+ for(const key of ['before','after'])if(value[key]!==undefined){const snapshot=value[key];exact(snapshot,'schema,contractAddress,blockHash,blockHeight,serializedStateHex,stateSha256,balances,state,source,authenticatedStateProof,noInterveningActionsAfterAnchorEstablished');
+  const raw=readFileSync(STALE_LOAN.settledProbeFile);check(hash(raw)===STALE_LOAN.settledProbeSha256,'LAUNCH_ADVERSE_REFERENCE');const reference=JSON.parse(raw).snapshots[0];
+  check(snapshot.contractAddress===STALE_LOAN.contractAddress&&snapshot.stateSha256===STALE_LOAN.settledStateSha256&&snapshot.serializedStateHex===reference.serializedStateHex&&isDeepStrictEqual(publicJsonValue(snapshot.state),reference.state)&&isDeepStrictEqual(snapshot.balances,reference.balances),'LAUNCH_ADVERSE_SNAPSHOT');
+ }
+ if(value.equality!==undefined){exact(value.equality,'status,beforeHash,afterHash,stateSha256,nodeRejectionEstablished,scope');check(value.equality.status==='FINANCIAL_STATE_UNCHANGED'&&typeof value.equality.scope==='string'&&value.equality.nodeRejectionEstablished===false&&hex(value.equality.stateSha256)&&/^0x[a-f0-9]{64}$/.test(value.equality.beforeHash)&&/^0x[a-f0-9]{64}$/.test(value.equality.afterHash),'LAUNCH_ADVERSE_EQUALITY');}
+ if(value.terminalBarrier!==undefined){exact(value.terminalBarrier,'blockHash,blockHeight');check(/^0x[a-f0-9]{64}$/.test(value.terminalBarrier.blockHash)&&Number.isSafeInteger(value.terminalBarrier.blockHeight)&&value.terminalBarrier.blockHeight>=0,'LAUNCH_ADVERSE_BARRIER');}
+ if(value.feeAccounting!==undefined){exact(value.feeAccounting,'candidateDustFeeSpeck,paidFeeSpeck,paidStatus,reservationReleasePerformed');check(decimal(value.feeAccounting.candidateDustFeeSpeck)&&value.feeAccounting.paidFeeSpeck===null&&value.feeAccounting.paidStatus==='UNKNOWN'&&value.feeAccounting.reservationReleasePerformed===false,'LAUNCH_ADVERSE_FEES');}
+ if(value.reservations!==undefined){const r=publicJsonValue(value.reservations);exact(r,'reservedSubmissions,reservedDustFee,reservedGrossByAsset,identifiers,pendingOperations');check(Number.isSafeInteger(r.reservedSubmissions)&&r.reservedSubmissions>=0&&r.reservedSubmissions<=1&&decimal(r.reservedDustFee)&&r.reservedGrossByAsset&&Object.getPrototypeOf(r.reservedGrossByAsset)===Object.prototype&&Object.entries(r.reservedGrossByAsset).every(([k,v])=>hex(k)&&decimal(v)&&BigInt(v)===0n)&&Array.isArray(r.identifiers)&&r.identifiers.every(transactionIdentifier)&&Number.isSafeInteger(r.pendingOperations)&&r.pendingOperations>=0,'LAUNCH_ADVERSE_RESERVATIONS');}
+ if(value.financialNonmutationEstablished)check(value.status==='NODE_REJECTION_FINANCIAL_NONMUTATION'&&value.rejection?.nodeRejectionEstablished===true&&value.equality?.status==='FINANCIAL_STATE_UNCHANGED'&&value.before&&value.after&&value.terminalBarrier&&value.after.blockHeight>value.terminalBarrier.blockHeight&&value.terminalBarrier.blockHeight>=value.before.blockHeight,'LAUNCH_ADVERSE_ACCEPTANCE');
+}
+export async function retainPublicAdverseCandidate(directory,value){
+ exact(value,'raw,transaction');check(Object.values(Object.getOwnPropertyDescriptors(value)).every(d=>Object.hasOwn(d,'value')),'LAUNCH_ADVERSE_ACCESSOR');const {raw,transaction}=value;const copy=publicJsonValue(transaction);
+ privateDirectory(directory);check(raw instanceof Uint8Array&&raw.length>0&&raw.length<=16*1024*1024&&copy?.rawSha256===hash(raw),'LAUNCH_ADVERSE_CANDIDATE');
+ const ledger=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs').href);check(isDeepStrictEqual(copy,publicJsonValue(decodeNativeFinancialTransaction(raw,ledger))),'LAUNCH_ADVERSE_CANDIDATE_BINDING');
+ durableBytes(join(directory,'adverse-candidate.bin'),Buffer.from(raw));durableFile(join(directory,'adverse-candidate.json'),copy);return {status:'RECORDED',rawSha256:copy.rawSha256};
+}
+export function retainPublicAdverseOutcome(directory,value){
+ privateDirectory(directory);check(value&&Object.getPrototypeOf(value)===Object.prototype&&Object.values(Object.getOwnPropertyDescriptors(value)).every(d=>Object.hasOwn(d,'value'))&&Reflect.ownKeys(value).every(k=>['candidateRawSha256','status','phase','code','nodeRejectionEstablished','stalePredicateEstablished','rpcCode'].includes(k)),'LAUNCH_ADVERSE_OUTCOME');
+ check(hex(value.candidateRawSha256)&&['NODE_REJECTED','OUTCOME_UNKNOWN'].includes(value.status)&&value.phase==='submit'&&value.nodeRejectionEstablished===(value.status==='NODE_REJECTED')&&['NODE_TRANSACTION_INVALID','NODE_RPC_INVALID_TRANSACTION','UNCLASSIFIED_SUBMIT_FAILURE','STALE_LOAN_DEADLINE','OBSERVATION_TIMEOUT_UNKNOWN','RPC_DEADLINE'].includes(value.code),'LAUNCH_ADVERSE_OUTCOME');
+ durableFile(join(directory,'adverse-submission-outcome.json'),publicJsonValue(value));return {status:'RECORDED',candidateRawSha256:value.candidateRawSha256,code:value.code};
+}
+export function publicLaunchEvent(e){
+ check(e&&['submitted','stopped'].includes(e.kind),'LAUNCH_EVENT_KIND');
+ check(Array.isArray(e.identifiers)&&e.identifiers.length<=128&&e.identifiers.every(transactionIdentifier),'LAUNCH_EVENT_IDS');
+ if(e.kind==='submitted'){check(typeof e.txId==='string'&&e.identifiers.includes(e.txId)&&hex(e.transactionHash),'LAUNCH_EVENT_TX');return {kind:e.kind,txId:e.txId,identifiers:[...e.identifiers],transactionHash:e.transactionHash};}
+ check(Number.isSafeInteger(e.pendingOperations)&&e.pendingOperations>=0&&e.reservationRetained===true,'LAUNCH_EVENT_STOP');
+ return {kind:e.kind,identifiers:[...e.identifiers],reservationRetained:true,pendingOperations:e.pendingOperations};
+}
+export async function inspectLocalLaunchRuntime(){
+ const pins=runtimePins();let files=0;
+ for(const [name,pin] of Object.entries(pins))for(const [entry,digest] of Object.entries(pin.files)){check(hash(readFileSync(join(PINNED_NM,name,entry)))===digest,'LAUNCH_SDK_PIN');files++;}
+ return {status:'SOURCE_INSPECTED',files,walletStarted:false};
+}
+async function runtime(){
+ await inspectLocalLaunchRuntime();const pins=runtimePins();
+ const load=name=>import(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href);
+ const [sdk,ledger,network,rx,ws]=await Promise.all(['@midnight-ntwrk/wallet-sdk','@midnight-ntwrk/midnight-js-protocol','@midnight-ntwrk/midnight-js-network-id','rxjs','ws'].map(load));
+ globalThis.WebSocket=ws.WebSocket;return {sdk,ledger,network,rx};
+}
+/** Imports exact SDK code but creates no wallet, key, proof or network request. */
+export async function inspectLocalLaunchApi(){
+ const {sdk,ledger,network,rx}=await runtime();
+ check(['ShieldedWallet','UnshieldedWallet','DustWallet','createKeystore','NoOpTransactionHistoryStorage'].every(k=>typeof sdk[k]==='function')&&typeof sdk.WalletFacade.init==='function'&&typeof sdk.HDWallet.fromSeed==='function'&&typeof ledger.signingKeyFromBip340==='function'&&typeof network.setNetworkId==='function'&&typeof rx.firstValueFrom==='function','LAUNCH_SDK_API');
+ return {status:'API_INSPECTED',walletStarted:false,keysCreated:false,networkRequests:0};
+}
+// No caller-supplied SDK/runtime adapters: only the fixed inspected SDK reaches execution.
+export async function launchLocalFinancialCase(plan){
+ const p=validateLocalLaunchPlan(plan);process.umask(0o077);
+ privateDirectory(p.wallet.stateDirectory);privateDirectory(dirname(p.outputDirectory));privateDirectory(p.privateState.directory);
+ // Inspect real proving assets before opening private wallet material.
+ await inspectFinancialBuild({case:p.kind,...p.build});await inspectLocalLaunchRuntime();
+ // Repeat the operational read-only gate inside the launcher, before seed/HD or writes.
+ if(p.existingStaleLoan){await preflightLocalStaleLoan(p);mkdirSync(p.outputDirectory,{mode:0o700});syncDirectory(dirname(p.outputDirectory));durableFile(join(p.outputDirectory,'plan.json'),p);}
+ if(p.existingDeployment)await preflightLocalRecovery(p);
+ if(p.existingInitializedLoan)await preflightLocalInitializedLoan(p);
+ if(p.existingInitializedSwap)await preflightLocalInitializedSwap(p);
+ const roleData=privateJson(p.roles.secretsFile);exact(roleData,'firstSecret,secondSecret');check(hex(roleData.firstSecret)&&hex(roleData.secondSecret),'LAUNCH_ROLE_SECRET');
+ const password=await readLocalStoragePassword(p.privateState.passwordFile);
+ const saved={};for(const kind of childKinds)saved[kind]=decodeSavedWalletEnvelope(privateJson(join(p.wallet.stateDirectory,'.midnight-wallet-state/undeployed',kind+'.json')));
+ const seed=readPrivateLaunchFile(p.wallet.seedFile);let seedHex=seed.toString('utf8').trim();check(/^[a-f0-9]{64}$/.test(seedHex),'LAUNCH_EXISTING_SEED');
+ if(!p.existingStaleLoan){mkdirSync(p.outputDirectory,{mode:0o700});syncDirectory(dirname(p.outputDirectory));durableFile(join(p.outputDirectory,'plan.json'),p);} // Exclusive run, never resume.
+ let sequence=0,wallet,ownershipTransferred=false,phase='restore';const children=[];
+ const append=value=>durableFile(join(p.outputDirectory,`${String(++sequence).padStart(3,'0')}.json`),value);
+ const deadline=p.limits.deadlineMs;
+ const within=async fn=>{check(Date.now()<deadline,'LAUNCH_DEADLINE');let t;try{return await Promise.race([Promise.resolve().then(fn),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('LAUNCH_DEADLINE')),Math.max(1,deadline-Date.now()));})]);}finally{clearTimeout(t);}};
+ try{
+  const {sdk,ledger,network,rx}=await within(runtime);network.setNetworkId('undeployed');
+  const tipOptions={node:p.networkConfig.node,indexer:p.networkConfig.indexer,deadlineMs:deadline};
+  phase='tip-readiness';append(await within(()=>waitForLocalTip(tipOptions)));phase='restore';
+  const hd=sdk.HDWallet.fromSeed(Buffer.from(seedHex,'hex'));seed.fill(0);seedHex=undefined;check(hd.type==='seedOk','LAUNCH_SEED_DERIVATION');
+  let keys;try{const result=hd.hdWallet.selectAccount(0).selectRoles([sdk.Roles.Zswap,sdk.Roles.NightExternal,sdk.Roles.Dust]).deriveKeysAt(0);check(result.type==='keysDerived','LAUNCH_SEED_DERIVATION');keys=result.keys;}finally{hd.hdWallet.clear();}
+  const shieldedSecretKeys=ledger.ZswapSecretKeys.fromSeed(keys[sdk.Roles.Zswap]),dustSecretKey=ledger.DustSecretKey.fromSeed(keys[sdk.Roles.Dust]),unshieldedKeystore=sdk.createKeystore(keys[sdk.Roles.NightExternal],'undeployed');
+  check(unshieldedKeystore.getBech32Address().asString()===p.wallet.expectedAddress&&unshieldedKeystore.getAddress()===p.roles.firstAddress,'LAUNCH_EXISTING_IDENTITY');
+  const signingBytes=unshieldedKeystore.getSecretKey();let deploymentSigningKey;try{deploymentSigningKey=ledger.signingKeyFromBip340(signingBytes);}finally{signingBytes.fill(0);}
+  check(ledger.signatureVerifyingKey(deploymentSigningKey)===unshieldedKeystore.getPublicKey(),'LAUNCH_SIGNING_IDENTITY');
+  const restore=(factory,kind)=>async c=>{const child=await factory(c).restore(saved[kind]);children.push(child);if(Date.now()>=deadline){await child.stop();throw Error('LAUNCH_DEADLINE');}return child;};
+  wallet=await within(()=>sdk.WalletFacade.init({configuration:{networkId:'undeployed',indexerClientConnection:{indexerHttpUrl:p.networkConfig.indexer,indexerWsUrl:p.networkConfig.indexerWS},provingServerUrl:new URL(p.networkConfig.proofServer),relayURL:new URL(p.networkConfig.node.replace(/^http/,'ws')),txHistoryStorage:new sdk.NoOpTransactionHistoryStorage(),costParameters:{additionalFeeOverhead:300000000000000n,feeBlocksMargin:5}},shielded:restore(sdk.ShieldedWallet,'shielded'),unshielded:restore(sdk.UnshieldedWallet,'unshielded'),dust:restore(sdk.DustWallet,'dust')}).then(async value=>{if(Date.now()>=deadline){await value.stop();throw Error('LAUNCH_DEADLINE');}return value;}));
+  const restored=await within(()=>rx.firstValueFrom(wallet.unshielded.state));
+  check(restored.state.networkId==='undeployed'&&restored.state.publicKey.publicKey===unshieldedKeystore.getPublicKey()&&restored.state.publicKey.addressHex===p.roles.firstAddress&&restored.state.publicKey.address===p.wallet.expectedAddress,'LAUNCH_RESTORED_IDENTITY');
+  phase='sync';await within(()=>wallet.start(shieldedSecretKeys,dustSecretKey));const synced=await within(()=>wallet.waitForSyncedState());check(synced.isSynced===true&&synced.dust.availableCoins.length>0,'LAUNCH_REGISTERED_DUST_REQUIRED');
+ const submissionDirectory=join(p.outputDirectory,'public-transactions');mkdirSync(submissionDirectory,{mode:0o700});syncDirectory(p.outputDirectory);
+  const guardedWallet=guardLocalWallet({wallet,...tipOptions,onTip:append});
+  const retainedWallet=retainPublicSubmissions({wallet:guardedWallet,ledger,directory:submissionDirectory});
+  phase='integration';ownershipTransferred=true;
+  const options={kind:p.kind,build:p.build,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicLaunchEvent(e)),onStage:summary=>{check(summary?.status==='PASS'&&['deploy','initialize','accrue','settle','swap','close'].includes(summary.stage),'LAUNCH_STAGE');durableFile(join(p.outputDirectory,'stage-'+summary.stage+'.json'),summary);return {status:'RECORDED',stage:summary.stage,txId:summary.txId};}};
+  let result;
+  if(p.existingStaleLoan){options.staleLoanPlan=p;options.retainAdverseCandidate=value=>retainPublicAdverseCandidate(p.outputDirectory,value);options.retainAdverseOutcome=value=>retainPublicAdverseOutcome(p.outputDirectory,value);}
+  if(p.existingDeployment)options.recoveryPlan=p;
+  if(p.existingInitializedLoan||p.existingInitializedSwap)options.continuationPlan=p;
+  try{result=await integrateLocalFinancialCase(options);}
+  catch(error){if(error.publicIntegrationResult!==undefined)retainPublicIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('LOCAL_FINANCIAL_RUN_INCOMPLETE');}
+  retainPublicIntegrationResult(p.outputDirectory,result);check(Date.now()<deadline,'LAUNCH_DEADLINE');return result;
+ }catch{append({kind:'failure',phase,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false});throw Error('LOCAL_FINANCIAL_LAUNCH_FAILED');}
+ finally{seed.fill(0);if(!ownershipTransferred){let t;try{await Promise.race([Promise.allSettled((wallet?[wallet]:children).map(w=>w.stop())),new Promise((_,reject)=>{t=setTimeout(()=>reject(Error('STOP_TIMEOUT')),5000);})]);}catch{/* Outer process containment remains required. */}finally{clearTimeout(t);}}}
+}
+if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){
+ let hardTimer;
+ try{const a=process.argv.slice(2);check(a.length===5&&a[0]==='--run'&&a[1]==='--plan'&&a[3]==='--sha256'&&hex(a[4]),'LAUNCH_USAGE');const raw=readPrivateLaunchFile(a[2]);check(hash(raw)===a[4],'LAUNCH_PLAN_HASH');const plan=validateLocalLaunchPlan(JSON.parse(raw));hardTimer=setTimeout(()=>process.exit(124),Math.max(1,plan.limits.deadlineMs-Date.now()+6000));const result=await launchLocalFinancialCase(plan);process.stdout.write(JSON.stringify({status:result.status,containmentComplete:result.cleanup.containmentComplete,networkAcceptance:false,proofAcceptance:false,financialAcceptance:false})+'\n');process.exitCode=localFinancialCommandExitCode(result,plan);}
+ catch{process.stderr.write('Local financial launch failed; inspect retained public run records.\n');process.exitCode=1;}
+ finally{clearTimeout(hardTimer);}
+ process.exit(process.exitCode??0);
+}
+
+FULL FILE experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json
+{
+  "@midnight-ntwrk/wallet-sdk": {
+    "version": "1.2.0",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "e47c2c120d65fa3e4a4241c1c7657fd18ffdd71ca11e8071547401ebda7e6698",
+      "./dist/index.js": "5f87bf263998a548a05670325830ddacee17f016780c38bf3f9364e9247c65d0"
+    }
+  },
+  "@midnight-ntwrk/wallet-sdk-facade": {
+    "version": "4.1.0",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "83180a2e69759e912c899d396efcf736a61315b8edb4ce99b6126c5ff07aaf18",
+      "./dist/index.js": "bb63f609499432f54b7db424d124d7dc80ad7a466af3c39cf7033f52b33f7562"
+    }
+  },
+  "@midnight-ntwrk/wallet-sdk-hd": {
+    "version": "3.0.3",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "e4d5164883df5fee0003475ba7cac5ac137a53cd96da10ace84bd49896354174",
+      "./dist/index.js": "ec6566edb0e30393d0728f35eda4c813d0ea7b66aad467642fe4978b70151ddb"
+    }
+  },
+  "@midnight-ntwrk/wallet-sdk-unshielded-wallet": {
+    "version": "3.1.0",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "ff6af8e4bb3b610bf6260246643c8cc72f9e417e02d10160d864468af1275c7c",
+      "./dist/index.js": "7f6dc625b333bfb9148a6bcca4e7ccda5c7a7644db462c70800ba84d762558f7",
+      "dist/KeyStore.js": "57fa43ea0e9d3db76ad7a89552687452bcf304fb6d696f554557528b835158fb",
+      "dist/v1/Serialization.js": "4b2f43172bce46885b2bf48be71beadd180a8f8160825fd08cb03069ad7def17"
+    }
+  },
+  "@midnight-ntwrk/wallet-sdk-dust-wallet": {
+    "version": "4.2.0",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "c840895bf5d3ca1c0718282083ab1b59344467c9b6c93d1058074958b6c060ec",
+      "./dist/index.js": "afe9581fee29ba9e7174919877ccf23ca35ecec16cdf70302e81816a0da7393b"
+    }
+  },
+  "@midnight-ntwrk/wallet-sdk-shielded": {
+    "version": "3.0.2",
+    "entry": "./dist/index.js",
+    "files": {
+      "package.json": "4332c2716c9a9968bc42fc4f4730deaf40848de1f91502178eb4735394b7345e",
+      "./dist/index.js": "59e785f5d2ac412d8250f084937677603903b2d5677753ad67c642b2b4da2e07"
+    }
+  },
+  "@midnight-ntwrk/midnight-js-network-id": {
+    "version": "4.1.1",
+    "entry": "dist/index.mjs",
+    "files": {
+      "package.json": "e3c76854c63bd0322da0548c6fb7961551a28d996add7522aa8ea44f32f0d5c3",
+      "dist/index.mjs": "c4c035dc49196098de80ec81b42a27632901da60f3e2a0bafa1876847f2db503"
+    }
+  },
+  "@midnight-ntwrk/midnight-js-protocol": {
+    "version": "4.1.1",
+    "entry": "dist/ledger.mjs",
+    "files": {
+      "package.json": "bdfe30f046627f364fd057fdf4dd756655fb4a4309722b64bb3e46484bf9effd",
+      "dist/ledger.mjs": "4db121cdee21bb88cecca5dc1433c6d30cc12c1ac1f4c5e40a606440e08ac840"
+    }
+  },
+  "@midnight-ntwrk/ledger-v8": {
+    "version": "8.1.0",
+    "entry": "midnight_ledger_wasm_fs.js",
+    "files": {
+      "package.json": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+      "midnight_ledger_wasm_fs.js": "125acbc6327afcf5540e70fe2a42de58af909695fc284a0e663e20a3666d296c",
+      "midnight_ledger_wasm_bg.js": "0fcb6f30ec4c0f894917d516db627d78de5630377bf7918bac08466b894cb716",
+      "midnight_ledger_wasm_bg.wasm": "88ff7c7c47c30138ee8f3a0c8bcbf12dbdcdeba591edebfb955c30d732ea7638"
+    }
+  },
+  "rxjs": {
+    "version": "7.8.2",
+    "entry": "dist/cjs/index.js",
+    "files": {
+      "package.json": "2399f5d968d1d693ecd206e7972fd26cb7e3daa45931ecc12202b3a924be38b7",
+      "dist/cjs/index.js": "bde56ab43879fcb76c9be9176daeb7abf1a775deed1606d0e88d0ac3012f4886"
+    }
+  },
+  "ws": {
+    "version": "8.21.3",
+    "entry": "wrapper.mjs",
+    "files": {
+      "package.json": "a56a3fd55945a3ce177e3ca165dafae6f7eb03b7aefd58c092ac723d5741a6fb",
+      "wrapper.mjs": "fe154662301fd558f935f9c217fccbe7a7dac02ff39e648a000589403ff27c7f"
+    }
+  }
+}
+
+FULL FILE experiments/moriarty-midnight-financial/ledger/preview-bootstrap.test.mjs
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const api=await import('./preview-bootstrap.mjs').catch(()=>({}));
+test('Preview bootstrap exposes an explicit existing-wallet launch and public preflight',()=>{
+ assert.equal(typeof api.launchPreviewFinancialCase,'function');assert.equal(typeof api.preflightPreviewLaunch,'function');
+});
+import {mkdtempSync,mkdirSync,readFileSync,existsSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
+const originalHelpers=await import('./launch-local.mjs');
+const pins=JSON.parse(readFileSync(new URL('./launch-runtime-pins.json',import.meta.url)));
+async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false,skipStop=false,stopFailure=false,persistenceFailure=false}={}){
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-bootstrap-')),events=[];t.after(()=>rmSync(dir,{recursive:true,force:true}));mkdirSync(join(dir,'wallet'),{mode:0o700});
+ const p={schema:'moriarty.preview-financial-launch/1',kind:'loan',build:{receiptPath:'/public-fixture',receiptSha256:'ab'.repeat(32),sourceManifestHash:'cd'.repeat(32)},networkConfig:{networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},wallet:{stateDirectory:join(dir,'wallet'),seedFile:join(dir,'seed'),expectedAddress:'CONTROLLED_PREVIEW_ADDRESS'},roles:{secretsFile:join(dir,'roles'),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)},privateState:{directory:join(dir,'contract'),passwordFile:join(dir,'password')},networkTag:'03'.repeat(32),expectedProtocolVersion:1000000,limits:{allocationId:'fixture',submissions:4,deadlineMs:Date.now()+10000,dustFee:'1000',grossByLogicalAsset:{USD_TEST_ASSET:'20000000000'}},outputDirectory:join(dir,'run')};
+ if(reuse)mkdirSync(p.outputDirectory,{mode:0o700});
+ const childDir=join(p.wallet.stateDirectory,'.midnight-wallet-state/preview');mkdirSync(childDir,{recursive:true,mode:0o700});for(const kind of ['shielded','unshielded','dust'])writeFileSync(join(childDir,kind+'.json'),JSON.stringify({version:1,state:'persisted-'+kind}),{mode:0o600});
+ // Dependency modules are mocked only by the Node source-test runner. Production
+ // launch accepts no adapter objects and uses the fixed real imports.
+ t.mock.module(new URL('./preview-launch.mjs',import.meta.url).href,{namedExports:{validatePreviewLaunchPlan:x=>structuredClone(x),validatePreviewFinancialCompletion:x=>x,retainPreviewIntegrationResult:(_d,r)=>{events.push('result:'+r.status);},retainPreviewStage:(_d,s)=>({status:'RECORDED',stage:s.stage,txId:s.txId}),publicPreviewLaunchEvent:e=>e}});
+ t.mock.module(new URL('./proven-assets.mjs',import.meta.url).href,{namedExports:{inspectFinancialBuild:async()=>{events.push('build');}}});
+ t.mock.module(new URL('./financial-rpc.mjs',import.meta.url).href,{namedExports:{createPreviewRpc:()=>async(m,params)=>{assert.equal(m,'chain_getBlockHash');assert.deepEqual(params,[0]);events.push('genesis');return '0x'+(genesisWrong?'ff'.repeat(32):p.networkTag);}}});
+ t.mock.module(new URL('./launch-local.mjs',import.meta.url).href,{namedExports:{...originalHelpers,inspectLocalLaunchRuntime:async()=>{events.push('pins');},readLocalStoragePassword:async()=>{events.push('private-password');return 'CONTROLLED_PASSWORD';},readPrivateLaunchFile:file=>{
+  events.push('private:'+file);assert.ok(existsSync(p.outputDirectory));assert.ok(events.includes('genesis'));
+  if(missing&&file.endsWith('/'+missing+'.json'))throw Error('MISSING_PERSISTED_CHILD');
+  if(invalid&&file.endsWith('/'+invalid+'.json'))return Buffer.from('{"version":1,"state":""}');
+  if(file===p.wallet.seedFile)return Buffer.from('11'.repeat(32));
+  if(file===p.roles.secretsFile)return Buffer.from(JSON.stringify({firstSecret:'22'.repeat(32),secondSecret:'33'.repeat(32)}));
+  const kind=file.split('/').at(-1).replace('.json','');assert.ok(file.includes('/.midnight-wallet-state/preview/'));return readFileSync(file);
+ }}});
+ let stopped=0;
+ const progress={isConnected:true,isStrictlyComplete:()=>true};
+ const wallet={unshielded:{state:{}},stop:async()=>{stopped++;events.push('stop');if(stopFailure)throw Error('CONTROLLED_STOP_FAILURE');},start:async()=>events.push('start'),waitForSyncedState:async()=>({isSynced:true,shielded:{progress},unshielded:{progress,pendingCoins:[]},dust:{progress,availableCoins:[{}],state:{pendingDust:[]}}}),submitTransaction:async()=>{throw Error('NO_SUBMIT');}};
+ for(const kind of ['shielded','unshielded','dust'])wallet[kind]={...wallet[kind],serializeState:async()=>{if(persistenceFailure)throw Error('CONTROLLED_PERSIST_FAILURE');return 'updated-'+kind;}};
+ const sdk={Roles:{Zswap:'z',NightExternal:'n',Dust:'d'},HDWallet:{fromSeed:()=>({type:'seedOk',hdWallet:{selectAccount:()=>({selectRoles:()=>({deriveKeysAt:()=>({type:'keysDerived',keys:{z:new Uint8Array(32),n:new Uint8Array(32),d:new Uint8Array(32)}})})}),clear(){events.push('hd-clear');}}})},createKeystore:(_k,n)=>{assert.equal(n,'preview');return {getBech32Address:()=>({asString:()=>p.wallet.expectedAddress,toString:()=>p.wallet.expectedAddress}),getAddress:()=>p.roles.firstAddress,getSecretKey:()=>new Uint8Array(32),getPublicKey:()=> 'public-key'};},NoOpTransactionHistoryStorage:class{},WalletFacade:{init:async o=>{events.push('facade-init');assert.equal(o.configuration.networkId,'preview');for(const name of ['shielded','unshielded','dust'])await o[name]({});return wallet;}}};
+ for(const [key,kind] of [['ShieldedWallet','shielded'],['UnshieldedWallet','unshielded'],['DustWallet','dust']])sdk[key]=()=>({restore:async state=>{events.push('restore:'+kind);assert.equal(state,'persisted-'+kind);return {stop:async()=>{stopped++;}};}});
+ const modules={'@midnight-ntwrk/wallet-sdk':sdk,'@midnight-ntwrk/midnight-js-protocol':{ZswapSecretKeys:{fromSeed:()=>({})},DustSecretKey:{fromSeed:()=>({})},signingKeyFromBip340:()=> 'controlled-key',signatureVerifyingKey:()=> 'public-key'},'@midnight-ntwrk/midnight-js-network-id':{setNetworkId:n=>{assert.equal(n,'preview');events.push('network');}},rxjs:{firstValueFrom:async()=>({state:{networkId:wrongRestore?'undeployed':'preview',publicKey:{publicKey:'public-key',addressHex:p.roles.firstAddress,address:p.wallet.expectedAddress}}})},ws:{WebSocket:class{}}};
+ for(const [name,exports] of Object.entries(modules))t.mock.module(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href,{namedExports:exports});
+ t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');if(!skipStop)await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
+ const subject=await import('./preview-bootstrap.mjs?fixture='+Math.random());return {p,events,subject,stops:()=>stopped};
+}
+test('existing Preview children restore before guarded integration and durable result',async t=>{
+ const f=await fixture(t);const r=await f.subject.launchPreviewFinancialCase(f.p);assert.equal(r.status,'PASS');assert.equal(f.stops(),1);assert.equal(f.events.at(-1),'result:PASS');
+ assert.ok(f.events.indexOf('genesis')<f.events.findIndex(x=>x.startsWith('private:')));assert.ok(f.events.findIndex(x=>x.endsWith('/dust.json'))<f.events.indexOf('facade-init'));assert.ok(f.events.indexOf('restore:dust')<f.events.indexOf('integration'));
+});
+for(const kind of ['shielded','unshielded','dust'])test('missing persisted '+kind+' stops before any SDK child restore',async t=>{
+ const f=await fixture(t,{missing:kind});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.includes('facade-init'));assert.ok(!f.events.includes('integration'));
+});
+test('reused output and wrong genesis stop before private material is read',async t=>{
+ const f=await fixture(t,{reuse:true});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.some(x=>x.startsWith('private')));
+});
+test('wrong genesis stops before output or private preparation',async t=>{
+ const f=await fixture(t,{genesisWrong:true});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.equal(existsSync(f.p.outputDirectory),false);assert.ok(!f.events.some(x=>x.startsWith('private')));
+});
+test('wrong restored network stops wallet before start or integration',async t=>{
+ const f=await fixture(t,{wrongRestore:true});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.equal(f.stops(),1);assert.ok(!f.events.includes('start'));assert.ok(!f.events.includes('integration'));
+});
+
+for(const kind of ['shielded','unshielded','dust'])test('invalid persisted '+kind+' does not fall back to child creation',async t=>{
+ const f=await fixture(t,{invalid:kind});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.includes('facade-init'));assert.ok(!f.events.includes('integration'));
+});
+import {writeFileSync} from 'node:fs';
+test('wallet persistence preserves previous snapshots and replaces only a complete serialized set',async t=>{
+ assert.equal(typeof api.persistPreviewWalletState,'function');const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-persist-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const stateDirectory=dir,parent=join(dir,'.midnight-wallet-state','preview');mkdirSync(parent,{recursive:true,mode:0o700});const original={},wallet={};
+ for(const kind of ['shielded','unshielded','dust']){original[kind]=Buffer.from(JSON.stringify({version:1,state:'original-'+kind}));writeFileSync(join(parent,kind+'.json'),original[kind],{mode:0o600});wallet[kind]={serializeState:async()=> 'updated-'+kind};}
+ const r=await api.persistPreviewWalletState({wallet,stateDirectory,allocationId:'fixture-persist',original,deadlineMs:Date.now()+1000});assert.deepEqual(r,{status:'PERSISTED',children:3});
+ for(const kind of ['shielded','unshielded','dust']){assert.deepEqual(readFileSync(join(parent,'.moriarty-backup-fixture-persist',kind+'.json')),original[kind]);assert.equal(JSON.parse(readFileSync(join(parent,kind+'.json'))).state,'updated-'+kind);}
+});
+test('failed child serialization leaves all original snapshots untouched',async t=>{
+ assert.equal(typeof api.persistPreviewWalletState,'function');const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-persist-fail-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const parent=join(dir,'.midnight-wallet-state','preview');mkdirSync(parent,{recursive:true,mode:0o700});const original={},wallet={};
+ for(const kind of ['shielded','unshielded','dust']){original[kind]=Buffer.from(JSON.stringify({version:1,state:'original-'+kind}));writeFileSync(join(parent,kind+'.json'),original[kind],{mode:0o600});wallet[kind]={serializeState:async()=>{if(kind==='dust')throw Error('CONTROLLED_SERIALIZE_FAIL');return 'updated-'+kind;}};}
+ await assert.rejects(api.persistPreviewWalletState({wallet,stateDirectory:dir,allocationId:'fixture-fail',original,deadlineMs:Date.now()+1000}));
+ for(const kind of ['shielded','unshielded','dust'])assert.deepEqual(readFileSync(join(parent,kind+'.json')),original[kind]);
+});
+import fs from 'node:fs';import {syncBuiltinESMExports} from 'node:module';
+test('interrupted multi-child replacement retains backups and blocks further bootstrap restoration',async t=>{
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-interrupted-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const parent=join(dir,'.midnight-wallet-state','preview');mkdirSync(parent,{recursive:true,mode:0o700});const original={},wallet={};
+ for(const kind of ['shielded','unshielded','dust']){original[kind]=Buffer.from(JSON.stringify({version:1,state:'original-'+kind}));writeFileSync(join(parent,kind+'.json'),original[kind],{mode:0o600});wallet[kind]={serializeState:async()=> 'updated-'+kind};}
+ const rename=fs.renameSync;let renames=0;t.mock.method(fs,'renameSync',(...args)=>{if(++renames===2)throw Error('CONTROLLED_RENAME_FAILURE');return rename(...args);});syncBuiltinESMExports();t.after(()=>{t.mock.restoreAll();syncBuiltinESMExports();});
+ const options={wallet,stateDirectory:dir,allocationId:'fixture-partial',original,deadlineMs:Date.now()+1000};await assert.rejects(api.persistPreviewWalletState(options),{message:'CONTROLLED_RENAME_FAILURE'});
+ assert.equal(existsSync(join(parent,'.moriarty-persistence-pending.json')),true);
+ for(const kind of ['shielded','unshielded','dust'])assert.deepEqual(readFileSync(join(parent,'.moriarty-backup-fixture-partial',kind+'.json')),original[kind]);
+ assert.equal(JSON.parse(readFileSync(join(parent,'shielded.json'))).state,'updated-shielded');assert.deepEqual(readFileSync(join(parent,'dust.json')),original.dust);
+ await assert.rejects(api.persistPreviewWalletState({...options,allocationId:'fixture-next'}),{message:'PREVIEW_PERSIST_PENDING'});
+});
+test('a pending persistence marker stops launch before any private material or SDK restore',async t=>{
+ const f=await fixture(t);writeFileSync(join(f.p.wallet.stateDirectory,'.midnight-wallet-state/preview/.moriarty-persistence-pending.json'),'{}',{mode:0o600});
+ await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.some(x=>x.startsWith('private')));assert.ok(!f.events.includes('facade-init'));
+});
+test('final persistence fsync crossing deadline rejects without undoing a coherent saved set',async t=>{
+ const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-final-fsync-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
+ const parent=join(dir,'.midnight-wallet-state','preview');mkdirSync(parent,{recursive:true,mode:0o700});const original={},wallet={};
+ for(const kind of ['shielded','unshielded','dust']){original[kind]=Buffer.from(JSON.stringify({version:1,state:'original-'+kind}));writeFileSync(join(parent,kind+'.json'),original[kind],{mode:0o600});wallet[kind]={serializeState:async()=> 'updated-'+kind};}
+ let clock=Date.now(),removed=false;const deadline=clock+1000,unlink=fs.unlinkSync,fsync=fs.fsyncSync;
+ t.mock.method(Date,'now',()=>clock);
+ t.mock.method(fs,'unlinkSync',(...args)=>{const r=unlink(...args);if(args[0]===join(parent,'.moriarty-persistence-pending.json'))removed=true;return r;});
+ t.mock.method(fs,'fsyncSync',(...args)=>{const r=fsync(...args);if(removed)clock=deadline+1;return r;});syncBuiltinESMExports();t.after(()=>{t.mock.restoreAll();syncBuiltinESMExports();});
+ await assert.rejects(api.persistPreviewWalletState({wallet,stateDirectory:dir,allocationId:'fixture-fsync',original,deadlineMs:deadline}),{message:'PREVIEW_LAUNCH_DEADLINE'});
+ assert.equal(removed,true);assert.equal(existsSync(join(parent,'.moriarty-persistence-pending.json')),false);
+ for(const kind of ['shielded','unshielded','dust']){assert.equal(JSON.parse(readFileSync(join(parent,kind+'.json'))).state,'updated-'+kind);assert.deepEqual(readFileSync(join(parent,'.moriarty-backup-fixture-fsync',kind+'.json')),original[kind]);}
+});
+
+for(const control of [{skipStop:true},{stopFailure:true},{persistenceFailure:true}])test('bootstrap refuses success without its own completed persistence and wallet stop',async t=>{
+ const f=await fixture(t,control);await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));assert.ok(!f.events.some(x=>x.startsWith('result:')));
+});
+
+FULL FILE deliverables/afk-live-financial-execution-2026-09-11/funding-observer-source-diagnosis.md
+# Nonpersisting existing-wallet funding observer: source diagnosis
+
+Read-only source inspection, 2026-09-11. No wallet/seed/snapshot contents were read, no SDK module was executed, and no network, proof, transaction, service or wallet connection was started. The proposed observer is not implemented or validated by this note.
+
+## Feasible narrow consumer
+
+The installed SDK supports restoring existing child-wallet serialized states into memory, starting indexer synchronization, observing funding, and stopping without persistence. Prefer direct existing `DustWallet` and `UnshieldedWallet` child APIs for this narrow observation; they avoid the facade default submission/proving service initialization and do not need the shielded wallet for unshielded/DUST funding. Use strict original identity/snapshot validation from the existing Preview bootstrap; do not invoke its financial launch function.
+
+SDK root: `/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/`.
+
+| API / code | Exact behavior relevant to observer |
+| --- | --- |
+| `wallet-sdk-dust-wallet/dist/DustWallet.d.ts:44,60,86,96` | `DustWallet(configuration).restore(serializedState)` returns child wallet; `start(secretKey): Promise<void>`; `waitForSyncedState(allowedGap?: bigint): Promise<DustWalletState>`; inherited `stop(): Promise<void>`. Restore is not from-seed creation. |
+| `wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.d.ts:44,60,69` | `UnshieldedWallet(configuration).restore(serializedState)`; `start(): Promise<void>`; `waitForSyncedState(allowedGap?: bigint): Promise<UnshieldedWalletState>`. Public key comes from restored state and must match independently derived existing identity. |
+| `wallet-sdk-dust-wallet/dist/DustWallet.js:34,55,81,91,158` | `state.availableCoins` and `state.pendingCoins`; `balance(time: Date)`; restore deserializes then initializes runtime; start only dispatches background sync; synced wait filters progress. |
+| `wallet-sdk-dust-wallet/dist/v1/CoinsAndBalances.js` | Available coins exclude pending nonce entries. Each `availableCoins` row has `generatedNow`; getter defaults time to native `state.syncTime`. `balance(time)` instead forwards raw ledger `walletBalance(time)` without explicitly applying the SDK pending filter. Sum available `generatedNow` for an observed unreserved-DUST projection and label its evaluation time; do not substitute total balance. |
+| `wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js:28–38` | `balances` uses `getAvailableBalances`, plus `availableCoins`/`pendingCoins`. Retain only aggregate selected token amounts/counts; do not publish UTXO detail or raw snapshot state. |
+| `wallet-sdk-runtime/dist/WalletBuilder.js:105` | `stop()` closes the runtime Effect scope. No snapshot persistence appears in this stop implementation. |
+| `wallet-sdk-dust-wallet/dist/v1/RunningV1Variant.js:61` | Start forks sync into the child scope and updates an in-memory subscription reference. Sync may call configured transaction-history storage and retries with exponential delay; use `NoOpTransactionHistoryStorage` and an external absolute runtime deadline. |
+| `wallet-sdk-facade/dist/index.js:179,309,655,663` | Facade init also initializes default submission/proving/pending services; start starts three children and pending service; synced wait combines children; stop closes children/submission/pending scope. No direct serialization/persistence in these start/stop methods. Direct children are a smaller observer dependency. |
+
+Existing repository pattern: `experiments/moriarty-midnight-financial/ledger/preview-bootstrap.mjs:76–89` reads strict existing envelopes, derives the original seed roles, restores each child without fallback, checks restored network/public key/address against existing identity, then starts/syncs. Reuse its logic narrowly. Its surrounding `launchPreviewFinancialCase` creates directories, reads role/password material, executes financial work and persists snapshots; never use it merely to observe funding. `hello-world/src/wallet.ts:createWallet` falls back to fresh sync if restore fails, and `check-balance.ts` calls `getOrCreateWallet` and persistence; neither is suitable unchanged.
+
+## Necessary boundaries and caveats
+
+1. Restoration requires privately reading existing snapshot contents and deriving the existing DUST key from the existing seed in the eventual admitted observer process. This is reuse, not generation of a new identity. This diagnosis did not perform those reads. Do not read role secrets or contract-store password when the narrow observer does not need them. Never log error objects, private SDK state, keys or raw websocket responses.
+2. Use strict owner-only files/directories, no symlinks/fallback, original address/key/network match, no pending persistence marker, exact snapshot bytes/digests before and after, and exclusive wallet usage. Derivation must use the same account/role/index as production (`HDWallet.fromSeed(...).selectAccount(0).selectRoles(...).deriveKeysAt(0)`), then clear temporary key material where supported.
+3. **Restoration loses an important pending-state signal:** dust `v1/Serialization.js:63–70` calls `CoreWallet.restore(..., [], ...)`, resetting `pendingDust` to empty. Therefore restored pendingCoins empty does not prove no earlier unresolved spend. Existing consumed allocation records and public transaction finality/persistence lineage must independently exclude unresolved transactions before calling funds unreserved. Do not turn this into a wallet reset or spend permission.
+4. `waitForSyncedState(0n)` filters progress, not a fresh canonical timestamp. Check `progress.isConnected` and `isStrictlyComplete`, current network/genesis/protocol and an independently bounded freshness anchor. Reject future/stale native sync time. Funding is a timestamped observation, not a reservation or guarantee that a later transaction will balance/prove/finalize.
+5. A wallet balance threshold cannot establish exact future fee/proof feasibility. Record available generated DUST and target need separately. `estimateDustGeneration` uses hypothetical coins; do not label its result currently spendable funding. No registration, transfer, balancing, signing, proving, finalizing, submission or persistence call belongs in the observer.
+6. Synchronization mutates in-memory wallet state and may issue indexer history queries/subscriptions and retry. It need not mutate wallet files or chain state. Use NoOp history storage; no LevelDB provider. Finite outer containment is still needed because Promise.race does not cancel background work, and SDK internal retry count is not an independent hard bound.
+7. Always stop every created child, including partial initialization and late completion; missing stop or exceeded deadline yields UNKNOWN, not a ready observation. A stopped read-only observer must leave original seed/snapshots/markers unchanged. A bounded output receipt may be written to a separate evidence destination by its caller, never inside original wallet state.
+8. Pin the actual SDK closure used by the new caller. These direct entry hashes are observations, not a transitive dependency attestation. Controlled-source tests should enforce no forbidden APIs, no fallback, no writes to original files and cleanup after errors before any admitted live observation.
+
+## Observed source hashes
+
+| Installed source relative to SDK root | SHA-256 |
+| --- | --- |
+| wallet-sdk-dust-wallet/dist/DustWallet.js | `6122952c8d140f4421edd2ad41eb648706c5c4341eb91e79bfb78a0461938a02` |
+| wallet-sdk-dust-wallet/dist/DustWallet.d.ts | `c0bad03a4c609fdf6e67006ce9c9f84dc4d7b15a2bb5b37c3291aae47c4a151a` |
+| wallet-sdk-dust-wallet/dist/v1/CoinsAndBalances.js | `b2e6e462c0709cc3f3945e1e0c16f6fcbf45ce8e58c70b22e2e11b300373fc37` |
+| wallet-sdk-dust-wallet/dist/v1/Serialization.js | `41236f39928c2ba7ebe0470d7fc1de8b9724399c356bd70648597e599ddb4090` |
+| wallet-sdk-dust-wallet/dist/v1/RunningV1Variant.js | `a676c5bef4ec5df1b55cdf6c05d22268f7f4df424a662eb36dcd983d899c13f6` |
+| wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js | `703c24afc04f7e6907a3fe581a429985512fa514ca58b377580200c687d828f0` |
+| wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.d.ts | `84c8941c96abef2b24185c23ebefc8a9a4c34e952fde17e2dea1614fc34e6cae` |
+| wallet-sdk-facade/dist/index.js | `bb63f609499432f54b7db424d124d7dc80ad7a466af3c39cf7033f52b33f7562` |
+| wallet-sdk-runtime/dist/WalletBuilder.js | `32d1d45b8194c29df1fff2370da7f3d4570c763ed2ba29116d118b62e68594ee` |
+
+FULL FILE deliverables/afk-live-financial-execution-2026-09-11/spec-review-07-accounting/opus-verdict.json
+{
+  "reviewer": "fresh-independent-claude-opus-focused13",
+  "model": "claude-opus-5",
+  "effort": "medium",
+  "identityBasis": "Fresh delegated Claude Opus medium assignment; no separate provider attestation available to this reviewer.",
+  "candidateSha256": "3ee54f0062164e43cea52f323e98120b67cd564b6ed45ae5de67c0dded26b45e",
+  "verdict": "PARTIALLY APPROVED: 1.3 direct nonpersisting SDK funding-observer source and its isolated tests APPROVED; MC02 projection/arithmetic contract adequate (R05-A1 substantively resolved); 1.3 accounting producer and actual cmd_run integration BLOCKED on O13-1, O13-2 and O13-3",
+  "approvedScope": "Requirements approval for source implementation of experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs and its callable isolated tests only, under 'Direct nonpersisting SDK funding observer' plus the O13-6 conditions. Tests use controlled SDK doubles or transports and fixture seeds/snapshots. Excluded: accounting.py, cmd_run/records/runner/store changes, preflight charge, wallet-use lock acquisition or handoff, receipt/correspondence writing, and any real observer invocation. Also excluded: concrete grant, MC02 projection instance, resource votes, token/history adoption, live wallet read, budget.lock acquisition, debit, claim or dispatch. The finding that the MC02 envelope arithmetic is adequate (O13-5) is a requirements judgment. It does not authorize producer implementation before O13-1..3 are revised and both reviewers approve the new bytes. The other required reviewer must independently approve the same bytes and a compatible scope. Frozen implemented bytes then need both fresh full-source audits.",
+  "approvedItems": [
+    "1.3 direct nonpersisting SDK funding-observer module and its isolated 1.4 checks (conditions O13-6)"
+  ],
+  "mayBeginProducer": false,
+  "mayBeginObserver": true,
+  "findings": [
+    {
+      "id": "O13-1",
+      "severity": "blocking for producer/CLI integration",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated context discovery and closed evidence payloads; #Separately charged bounded read-only preflight; #Direct nonpersisting SDK funding observer",
+      "finding": "The closed immutable payloads have no field for several values the spec requires the producer to bind. (a) The receipt must 'bind allocation/source/role/network to the context', but the context's exact field set (schema, repository, gitCommonDir, store, history, observer, correspondencePath) has no expected allocationId, roleIdentity {publicKey,address}, network {networkId,genesisHash,protocolVersion}, selected token identity or wallet-state location. The projection also has none; it holds campaign/action/envelope IDs only. The runner plan's closed keys have none, and 'final plan' has no concrete source because the item-2 executor is not frozen. As written, the only possible identity check is seed/snapshot self-consistency, so any internally consistent funded wallet could satisfy funding admission. (b) The preflight claim must bind the 'exact observer source/argv/bound digest', and the observer must use a 'pinned SDK'. Observer fields name only entryPath/entrySha256. Nothing pins the node interpreter, the SDK closure (which lives in another worktree's node_modules outside candidate containment), the launcher or containment mode, the argv, or the environment. That is unpinned code with private seed access. (c) canonicalInputsUnchanged and childrenStopped must be checked against 'retained observer execution/containment evidence', but no independent parent-side producer of that evidence is named. Without one, both values are self-reported by the process that read the secrets. (d) Resource votes must 'bind the same projection digest' but have no exact receipt contract. Scope string, verdict, candidateSha256 formula and required reviewer identities are unstated, unlike the precisely specified SP01 disposition receipts. So a positive fixture is not independently calculable. (e) The wallet-use lock 'ownership token' must be handed to the admitted executor. The runner argv is static and hash-bound, and execute() passes no bound env, so no handoff channel exists that leaves the runner digest unchanged. (f) The budget.lock location relative to projection.predecessor.path is implicit.",
+      "requiredCorrection": "Add exact closed fields, e.g. context.observer or a sibling closed object, for: expected allocationId; network triple; role publicKey/address; selected token id; wallet-state directory; and an observer launch plan. The launch plan names absolute interpreter path+sha256, SDK closure manifest {path,sha256} with per-file hashes, existing Foreman launcher with --timeout 90 --grace 5 --require-containment strong, and exact argv/env allowlist. State that the parent computes before/after canonical wallet-file digests and derives childrenStopped from the Foreman containment result. Define the resource vote receipt fields, exact scope string, verdict APPROVED, candidateSha256 = projection sha256, and the two required distinct fresh non-author identities. Define wallet-lock handoff as a lock-file ownership record keyed by the committed runtime chargeId/reservationId, validated by the executor from the projection, not argv/env. State that budget.lock is the sibling of projection.predecessor.path. Test values may be fixtures; field set and checks must be normative.",
+      "expectedOutcome": "A positive isolated fixture can then be recomputed end to end. Substituting the wallet, network, token, interpreter, SDK file or launcher, or supplying a caller-asserted unchanged/stopped boolean or an unbound vote scope, each rejects before any debit."
+    },
+    {
+      "id": "O13-2",
+      "severity": "blocking for producer/CLI integration",
+      "path": "specs/afk-live-accounting/spec.md#Item 1.3 concrete source producer and existing caller; cli.py::cmd_run; records.py::_remaining_from_current; specs/afk-live-financial-execution/spec.md#Operational history is evidence",
+      "finding": "The live cmd_run sequence is not one explicit, consistent interface. (a) The normative sequence (authorization \u2192 debit/projection \u2192 final prepaid admission \u2192 reserve \u2192 post checks \u2192 master claim \u2192 execute) omits the preflight debit, observer claim, observer child, receipt and correspondence steps defined in a later requirement. (b) A pre-debit 'canonical-history/primary/retry preflight' is required, but it cannot use existing load_snapshot/assess. For a runner-registered action, _remaining_from_current calls load_runner, which raises without the debit, so the resource predicate always denies before debit. The spec names no history/primary/retry-only callable and no non-granting pending-prepaid resource state. An implementer must either skip the pre-debit gate, and then attempt 3 can be charged for a predictably denied action, or weaken the reader. (c) The spec requires cmd_run to resolve the context 'before constructing its live history reader'. Current cmd_run receives history_reader and db_path already constructed by its caller, so the exact CLI boundary is undefined, including rejection of a db_path that differs from context.store.path. (d) The preflight has a null plugin reservation, so the primary slot is unoccupied during the up-to-125-second observer. That contradicts 'a live-profile action SHALL both obey and occupy the primary slot regardless of kind'. An implement/repair reservation taken in that window, or between the runtime debit and store.reserve, makes the post-debit final admission deny, which consumes cumulative attempt 3 without launch. (e) Nothing requires a freshness margin before the runtime debit. An observation at age 115 s can pass and then expire before launch, again consuming attempt 3; the spec forbids a second preflight.",
+      "requiredCorrection": "Write one ordered live-profile cmd_run sequence including the preflight substeps. Name the pre-debit gate callable, e.g. policy history/retry/primary assessment with the resource predicate excluded and unable to grant allow, and state that only post-debit load_snapshot may accept resources. State where the live history reader and db_path are constructed and that live mode rejects any db_path other than the canonical resolver/context store path. Specify primary occupancy from preflight through runtime reservation. Either use a preflight plugin reservation that the runtime reservation supersedes inside one BEGIN IMMEDIATE, or explicitly accept the window with an immediately-before-debit primary recheck and a named charged-but-unlaunched 'primary-preempted' disposition. Require a pre-runtime-debit observation age of at most 120 \u2212 L seconds for a stated post-debit launch allowance L.",
+      "expectedOutcome": "Tests through the actual cmd_run cover: a pre-debit history/retry/primary denial with no debit; implement reserved during observer and during debit\u2192reserve, with the specified outcome; age just under/over the margin; and a db_path override rejected in live mode while an isolated repo root resolves its own anchored fixture store."
+    },
+    {
+      "id": "O13-3",
+      "severity": "blocking for producer (replay/refund hardening)",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated MC02 envelope on the preserved MC01 master; #Master projection and global one-shot claim",
+      "finding": "The spec detects rollback of the SQLite store via the master claim, but not rollback of the master. First versus subsequent application is decided from master state: 'verify the predecessor digest against the locked actual master' before first application. If the master, projection and mutable correspondence are restored to predecessor bytes, e.g. during a crash 'reconciliation', the amendment re-applies with a fresh G and N. A committed funding-preflight has a null plugin reservation and therefore no SQLite counterpart, so it becomes replayable: a second secret-reading observer run with no new authority. A runtime debit committed before store.reserve also has no runner_claims row, so attempt 3 is silently refunded. This contradicts 'each amendment applies once', 'no second preflight' and 'charged-but-unlaunched consumes attempt 3'.",
+      "requiredCorrection": "Make first application write-once in immutable evidence. If the retained predecessor evidence exists, re-application is denied even when the master digest equals the predecessor. Require a durable counterpart outside the master before any child starts: a SQLite event or claim row for the preflight chargeId, and for the runtime chargeId at debit commit. A master missing a debit that the counterpart records then denies with retained consumption.",
+      "expectedOutcome": "Fault tests restore master+projection+correspondence to the predecessor or to a pre-debit generation after each commit point. Every case denies re-application, re-preflight and relaunch, and records explicit unavailable/reconciliation state."
+    },
+    {
+      "id": "O13-4",
+      "severity": "non-blocking; fix in the same revision",
+      "path": "specs/afk-live-financial-execution/spec.md#Per-item specification approval before execution; tasks.md 1.S; proposal.md Revision 4",
+      "finding": "The per-item requirement enumerates only 1.1a, 1.2 and the matching 1.4 checks as item-1 source subparts reviewers MAY approve while resources are pending, and says approval 'SHALL NOT authorize unapproved subparts'. It still names 1.1a as the 'immediate next approval scope'. The accounting spec separately authorizes 1.3 source work after both approvals. The more specific accounting requirement 'Source approval and live adoption stay separate' governs this observer approval, but the enumerations conflict literally.",
+      "requiredCorrection": "Add the 1.3 observer and producer source subparts to the enumerated MAY list with the same exclusions. Update the stale 'immediate next scope' text in spec.md, tasks.md 1.S and the proposal.",
+      "expectedOutcome": "No text-level ambiguity about whether a 1.3 source approval is permitted."
+    },
+    {
+      "id": "O13-5",
+      "severity": "non-blocking; R05-A1 substantively resolved",
+      "path": "specs/afk-live-accounting/spec.md#Authenticated MC02 envelope on the preserved MC01 master; #Single allocation, all-kind limits and prepaid boundary; records.py::_verify_resource/_remaining_from_current",
+      "finding": "The arithmetic is complete and consistent with the existing reader. For the inspected master: M=210890; U=2323.0473305040214+165+108960+300+99135=210883.0473305\u2026; C=ceil(6.95267)=7; D=ceil(U+C)\u2212M=1; limit=M+D+G. Master used stays U+C+G across the reserve\u2192external transfer, leaving slack \u22480.95267 \u2265 0. With M an integer and M \u2265 U, D \u2208 {0,1}; deficits go to D and require a disposition. Keeping MC01 top-level rows/counters and appending MC02 rows to externalPackageCharges with S/n recomputed from rows is non-duplicating. At S=G the prepaid branch computes min(slack, G\u2212S, alloc)\u22120 \u2265 0 without subtracting c again. Before a debit the producer, not the reader, enforces S+c \u2264 G, n+1 \u2264 N and aggregate+1 \u2264 83+N. Preflight and runtime both count toward S and n, so a successful run needs N \u2265 2 and G \u2265 125+c. No hash self-reference: candidate \u2192 context \u2192 projection \u2192 votes \u2192 amendment \u2192 binding, with master/receipt/correspondence mutable. Two small gaps: (i) nothing states that _amendment_seconds(resourceAmendment) equals G, yet the reader's prepaid check uses chargedSeconds \u2264 alloc; (ii) float parsing can misround ceil when M\u2212U is near an integer.",
+      "requiredCorrection": "State alloc = amendment seconds = G exactly, with successor and binding allocations zero. Compute U, C and D from exact decimal parsing of the JSON number text (Decimal/Fraction), not binary floats.",
+      "expectedOutcome": "The normative worked fixture (above values, one 125-second preflight, one c-second runtime debit, S=G equality) is independently recomputable. The omitted-row, wrong-owner, duplicate-amendment, stale-predecessor and old-reserve-borrowing variants reject."
+    },
+    {
+      "id": "O13-6",
+      "severity": "non-blocking conditions on approved observer scope",
+      "path": "specs/afk-live-accounting/spec.md#Direct nonpersisting SDK funding observer; funding-observer-source-diagnosis.md",
+      "finding": "The observer requirement is concrete enough to implement and test independently of the producer. It fixes: direct DustWallet/UnshieldedWallet restore/start/waitForSyncedState(0n)/stop; strict preview-bootstrap identity checks with no createWallet/check-balance/facade; NoOp history; a 90-second outer bound and 5-second stop grace; generatedNow-only DUST excluding pending coins; selected-token available balance; connected, strictly complete progress; and stop-on-partial-init. Its authority inputs are unanchored until O13-1, so the module must not choose them itself.",
+      "requiredCorrection": "Implementation conditions: take expected network triple, role publicKey/address, selected token id, wallet-state directory and output destination as explicit caller inputs, and reject any mismatch. Never read role secrets or contract passwords. On any restore failure exit with a named unavailable result, with no fallback. Write only a public aggregate result to the given destination, never inside wallet state. Report ready only after every created child's stop is confirmed. Tests must trap forbidden modules/APIs and filesystem writes, and compare fixture seed/snapshot digests from the test harness (parent side) before and after. They must cover stale/future syncTime, identity/network mismatch, restore failure, sync timeout, stop failure/timeout and late completion after deadline. Do not implement lock, charge, receipt-field completion (allocationId, preflightChargeId, pendingUseDispositionSha256) or correspondence in this scope.",
+      "expectedOutcome": "A callable observer whose output the later producer can consume. Its approval does not establish funding, the accounting caller or 1.3 completion."
+    }
+  ],
+  "limitations": [
+    "Requirements review only, from bytes supplied inline in the request. This session had no repository filesystem access, so neither the listed file digests nor the candidate manifest digest were independently recomputed. canonical-store-before-source.json, providers.mjs, preview-bootstrap.mjs, policy.py and the full records/CLI dependency closure were not inspected.",
+    "No guarded status/review call, tests, SDK import, network call, wallet read, budget.lock acquisition or store write was performed by this reviewer.",
+    "Astra review05 (candidate 19b1\u2026) was read as historical context only. This review does not substitute for Astra's fresh vote on candidate 3ee54f00\u2026.",
+    "Practical risk, not a source defect: restoring a snapshot last persisted on 2026-09-10 may not reach strictly complete sync within 90 seconds. The one-attempt preflight would then be consumed and new resource authority required. No live timing was measured.",
+    "Grants no SP01 disposition, concrete G/N/C/D instance, resource vote, token/history adoption, funding observation, debit, dispatch, actual-result acceptance, I2 completion or SP05/SP01 progress. No 1.2 or item-2 vote is given."
+  ]
+}
+
+FULL FILE deliverables/afk-live-financial-execution-2026-09-11/spec-review-07-accounting/observer-scope-clarification.json
+{
+  "reviewer": "fresh-independent-astra-accounting-review07",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "recordedAt": "2026-09-11T08:18:48.245851+00:00",
+  "candidateSha256": "3ee54f0062164e43cea52f323e98120b67cd564b6ed45ae5de67c0dded26b45e",
+  "accountingSpecSha256": "87f50d1f805bbd6552fe9ea288a1e43d7598b430824cbd72071971a4cf525db4",
+  "verdict": "YES: observer-only scope and O13-6 conditions approved",
+  "agreesObserverSubset": true,
+  "mayBeginObserver": true,
+  "jointProducerApproval": false,
+  "approvedScope": "Source implementation of experiments/moriarty-midnight-financial/ledger/observe-preview-funding.mjs and its callable isolated tests only. Apply all O13-6 conditions. No accounting.py or cmd_run/records/runner/store integration, lock acquisition/handoff, charge/claim, admission receipt-field completion, correspondence, live wallet access, real SDK invocation or live observation is authorized by this shared scope. Frozen implementation requires both fresh full-source audits.",
+  "reasoning": [
+    "The direct restore/start/sync/stop and exact available-funds calculation interfaces are independently implementable without the accounting producer. Explicit expected network, role identity, selected token, wallet-state location and result destination are caller inputs, not authority selected by the module. Unknown or mismatched inputs must reject.",
+    "Controlled SDK doubles or transports and fixture-only seed/snapshot inputs allow actual callable behavior and partial-initialization/late-completion cleanup to be tested without real wallet access. Harness-side before/after input digests and forbidden API/write traps provide independent evidence for those fixture outcomes.",
+    "A public aggregate module result may be written only to the explicit safe result destination, outside wallet state. This is not completion or authentication of the funding-admission receipt: allocationId, preflightChargeId, pendingUseDispositionSha256 and correspondence remain excluded. No lock or grant handling is added to make the module appear integrated.",
+    "Ready requires verified identity/network, fresh nonfuture syncTime, strictly complete connected progress, appropriate pending-use evidence and confirmed stop of every created child. Restore/sync/stop failure, timeout or late completion must return named unavailable without fallback. Neither fixture success nor ready module output establishes live funding."
+  ],
+  "conditions": [
+    "All O13-6 explicit caller-input, no-secret/password, no-fallback, public-output, stop-confirmation, fixture digest, forbidden API/write and timeout/late-completion conditions apply.",
+    "Only isolated tests may call the observer in this scope; no real SDK or live wallet invocation.",
+    "Both required fresh reviewers must audit the exact frozen implemented source and tests before source acceptance."
+  ],
+  "reviewRelationship": "This clarification narrows the common implementation scope of the two current votes. Astra initial review remains preserved as its independent historical verdict. Opus producer blockers O13-1..3 are not waived, resolved or re-reviewed here, and there is no producer approval convergence.",
+  "observations": {
+    "unchangedCandidateAndAccountingSpecVerified": true,
+    "opusVerdictSha256": "b768151eeb99c33ac58d31b2fd8191282df727fa9ce34deba432f78f7999338b"
+  },
+  "limitations": [
+    "Read O13-6 and surrounding Opus scope after completing the independent original review, solely for the requested scope reconciliation.",
+    "No status call, tests, SDK execution, wallet read, lock/store/master mutation or production edit during this clarification. Only this clarification JSON was written."
+  ]
+}
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js
+// This file is part of MIDNIGHT-WALLET-SDK.
+// Copyright (C) Midnight Foundation
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+import { DustSecretKey, } from '@midnight-ntwrk/ledger-v8';
+import { ProtocolVersion } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { WalletBuilder } from '@midnight-ntwrk/wallet-sdk-runtime';
+import { Effect, Either } from 'effect';
+import * as rx from 'rxjs';
+import { CoreWallet } from './v1/CoreWallet.js';
+import { V1Tag } from './v1/RunningV1Variant.js';
+import { V1Builder } from './v1/V1Builder.js';
+export class DustWalletState {
+    static mapState = (variant) => (state) => {
+        const { serialization, coinsAndBalances, keys } = variant;
+        const { transactionHistory } = variant;
+        return new DustWalletState(state, { serialization, coinsAndBalances, keys }, { transactionHistory });
+    };
+    protocolVersion;
+    state;
+    capabilities;
+    services;
+    get totalCoins() {
+        return this.capabilities.coinsAndBalances.getTotalCoins(this.state);
+    }
+    get availableCoins() {
+        return this.capabilities.coinsAndBalances.getAvailableCoins(this.state);
+    }
+    get pendingCoins() {
+        return this.capabilities.coinsAndBalances.getPendingCoins(this.state);
+    }
+    get publicKey() {
+        return this.capabilities.keys.getPublicKey(this.state);
+    }
+    get address() {
+        return this.capabilities.keys.getAddress(this.state);
+    }
+    get progress() {
+        return this.state.progress;
+    }
+    constructor(state, capabilities, services) {
+        this.protocolVersion = state.version;
+        this.state = state.state;
+        this.capabilities = capabilities;
+        this.services = services;
+    }
+    balance(time) {
+        return this.capabilities.coinsAndBalances.getWalletBalance(this.state, time);
+    }
+    estimateDustGeneration(nightUtxos, currentTime) {
+        return this.capabilities.coinsAndBalances.estimateDustGeneration(this.state, nightUtxos, currentTime);
+    }
+    serialize() {
+        return this.capabilities.serialization.serialize(this.state);
+    }
+}
+export function DustWallet(configuration) {
+    return CustomDustWallet(configuration, new V1Builder().withDefaults());
+}
+export function CustomDustWallet(configuration, builder) {
+    const buildArgs = [configuration];
+    const BaseWallet = WalletBuilder.init()
+        .withVariant(ProtocolVersion.MinSupportedVersion, builder)
+        .build(...buildArgs);
+    return class CustomDustWalletImplementation extends BaseWallet {
+        static startWithSeed(seed, dustParameters) {
+            const dustSecretKey = DustSecretKey.fromSeed(seed);
+            return CustomDustWalletImplementation.startFirst(CustomDustWalletImplementation, CoreWallet.initEmpty(dustParameters, dustSecretKey, CustomDustWalletImplementation.configuration.networkId));
+        }
+        static startWithSecretKey(secretKey, dustParameters) {
+            return CustomDustWalletImplementation.startFirst(CustomDustWalletImplementation, CoreWallet.initEmpty(dustParameters, secretKey, CustomDustWalletImplementation.configuration.networkId));
+        }
+        static restore(serializedState) {
+            const deserialized = CustomDustWalletImplementation.allVariantsRecord()[V1Tag].variant.deserializeState(serializedState)
+                .pipe(Either.getOrThrow);
+            return CustomDustWalletImplementation.startFirst(CustomDustWalletImplementation, deserialized);
+        }
+        state;
+        constructor(runtime, scope) {
+            super(runtime, scope);
+            this.state = this.rawState.pipe(rx.map(DustWalletState.mapState(CustomDustWalletImplementation.allVariantsRecord()[V1Tag].variant)), rx.shareReplay({ refCount: true, bufferSize: 1 }));
+        }
+        start(secretKey) {
+            return this.runtime.dispatch({ [V1Tag]: (v1) => v1.startSyncInBackground(secretKey) }).pipe(Effect.runPromise);
+        }
+        async createDustGenerationTransaction(currentTime, ttl, nightUtxos, nightVerifyingKey, dustReceiverAddress) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.createDustGenerationTransaction(currentTime, ttl, nightUtxos, nightVerifyingKey, dustReceiverAddress),
+            })
+                .pipe(Effect.runPromise);
+        }
+        async splitNightUtxosForDustRegistration(currentTime, nightUtxos, isRegistration) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.splitNightUtxosForDustRegistration(currentTime, nightUtxos, isRegistration),
+            })
+                .pipe(Effect.runPromise);
+        }
+        async attachDustRegistration(transaction, currentTime, nightVerifyingKey, dustReceiverAddress, feePayment) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.attachDustRegistration(transaction, currentTime, nightVerifyingKey, dustReceiverAddress, feePayment),
+            })
+                .pipe(Effect.runPromise);
+        }
+        addDustGenerationSignature(transaction, signature) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.addDustGenerationSignature(transaction, signature),
+            })
+                .pipe(Effect.runPromise);
+        }
+        addDustRegistrationSignature(transaction, signature) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.addDustRegistrationSignature(transaction, signature),
+            })
+                .pipe(Effect.runPromise);
+        }
+        calculateFee(transactions) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.calculateFee(transactions),
+            })
+                .pipe(Effect.runPromise);
+        }
+        estimateFee(secretKey, transactions, ttl, currentTime) {
+            const effectiveTtl = ttl ?? new Date(Date.now() + 60 * 60 * 1000);
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.estimateFee(secretKey, transactions, effectiveTtl, currentTime),
+            })
+                .pipe(Effect.runPromise);
+        }
+        balanceTransactions(secretKey, transactions, ttl, currentTime) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.balanceTransactions(secretKey, transactions, ttl, currentTime),
+            })
+                .pipe(Effect.runPromise);
+        }
+        revertTransaction(transaction) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.revertTransaction(transaction),
+            })
+                .pipe(Effect.runPromise);
+        }
+        waitForSyncedState(allowedGap = 0n) {
+            return rx.firstValueFrom(this.state.pipe(rx.filter((state) => state.state.progress.isCompleteWithin(allowedGap))));
+        }
+        async waitForGeneratedDust(nightUtxos, requiredAmount, clock, opts) {
+            if (nightUtxos.length === 0) {
+                throw Error('At least one Night UTXO is required.');
+            }
+            if (requiredAmount <= 0n) {
+                return;
+            }
+            const timeoutMs = opts?.timeoutMs ?? 300_000;
+            // Combine the dust state stream with a 1 s tick — the dust state only emits when sync
+            // updates apply, but the generation projection depends on a current-time reading, which
+            // advances continuously. Without a periodic tick the filter would never re-run between
+            // state emissions on a quiet wallet, and the wait would hang.
+            await rx.firstValueFrom(rx.combineLatest([this.state, rx.timer(0, 1000)]).pipe(rx.filter(([dustState]) => {
+                // The registration's allow_fee_payment is capped at the single highest-generation
+                // unregistered Night UTxO (splitNightUtxos puts only 1 UTxO in the guaranteed slot),
+                // so the wait must track that same quantity — summing across UTxOs would resolve
+                // optimistically and the registration would still fail the fee check.
+                const maxGeneratedNow = dustState
+                    .estimateDustGeneration(nightUtxos, clock.now())
+                    .filter((u) => !u.utxo.registeredForDustGeneration)
+                    .reduce((max, u) => (u.dust.generatedNow > max ? u.dust.generatedNow : max), 0n);
+                return maxGeneratedNow >= requiredAmount;
+            }), rx.timeout({ first: timeoutMs })));
+        }
+        serializeState() {
+            return rx.firstValueFrom(this.state).then((state) => state.serialize());
+        }
+        getAddress() {
+            return rx.firstValueFrom(this.state).then((state) => state.address);
+        }
+    };
+}
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.d.ts
+import { type DustParameters, type DustPublicKey, DustSecretKey, type FinalizedTransaction, type Signature, type SignatureVerifyingKey, type UnprovenTransaction } from '@midnight-ntwrk/ledger-v8';
+import { type ProtocolState, ProtocolVersion, type SyncProgress } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { type DustAddress } from '@midnight-ntwrk/wallet-sdk-address-format';
+import { type Variant, type VariantBuilder, type WalletLike } from '@midnight-ntwrk/wallet-sdk-runtime/abstractions';
+import { type Clock } from '@midnight-ntwrk/wallet-sdk-utilities';
+import * as rx from 'rxjs';
+import { type Balance, type CoinsAndBalancesCapability, type UtxoWithFullDustDetails } from './v1/CoinsAndBalances.js';
+import { CoreWallet } from './v1/CoreWallet.js';
+import { type KeysCapability } from './v1/Keys.js';
+import { type SerializationCapability } from './v1/Serialization.js';
+import { type NightUtxoSplitForDustRegistration } from './v1/Transacting.js';
+import { type DustFullInfo, type UtxoWithMeta } from './v1/types/Dust.js';
+import { type AnyTransaction } from './v1/types/ledger.js';
+import { type BaseV1Configuration, type DefaultV1Configuration, type V1Variant } from './v1/V1Builder.js';
+import { type WalletSyncUpdate } from './v1/Sync.js';
+import { type TransactionHistoryService } from './v1/TransactionHistory.js';
+export type DustWalletCapabilities<TSerialized = string> = {
+    serialization: SerializationCapability<CoreWallet, null, TSerialized>;
+    coinsAndBalances: CoinsAndBalancesCapability<CoreWallet>;
+    keys: KeysCapability<CoreWallet>;
+};
+export type DustWalletServices = {
+    transactionHistory: TransactionHistoryService;
+};
+export declare class DustWalletState<TSerialized = string> {
+    static readonly mapState: <TSerialized_1 = string>(variant: DustWalletCapabilities<TSerialized_1> & DustWalletServices) => (state: ProtocolState.ProtocolState<CoreWallet>) => DustWalletState<TSerialized_1>;
+    readonly protocolVersion: ProtocolVersion.ProtocolVersion;
+    readonly state: CoreWallet;
+    readonly capabilities: DustWalletCapabilities<TSerialized>;
+    readonly services: DustWalletServices;
+    get totalCoins(): readonly DustFullInfo[];
+    get availableCoins(): readonly DustFullInfo[];
+    get pendingCoins(): readonly DustFullInfo[];
+    get publicKey(): DustPublicKey;
+    get address(): DustAddress;
+    get progress(): SyncProgress.SyncProgress;
+    constructor(state: ProtocolState.ProtocolState<CoreWallet>, capabilities: DustWalletCapabilities<TSerialized>, services: DustWalletServices);
+    balance(time: Date): Balance;
+    estimateDustGeneration(nightUtxos: ReadonlyArray<UtxoWithMeta>, currentTime: Date): ReadonlyArray<UtxoWithFullDustDetails>;
+    serialize(): TSerialized;
+}
+export type DustWalletAPI<TStartAux = DustSecretKey, TSerialized = string> = {
+    readonly state: rx.Observable<DustWalletState<TSerialized>>;
+    start(secretKey: TStartAux): Promise<void>;
+    createDustGenerationTransaction(currentTime: Date | undefined, ttl: Date, nightUtxos: Array<UtxoWithMeta>, nightVerifyingKey: SignatureVerifyingKey, dustReceiverAddress: DustAddress | undefined): Promise<UnprovenTransaction>;
+    splitNightUtxosForDustRegistration(currentTime: Date, nightUtxos: ReadonlyArray<UtxoWithMeta>, isRegistration: boolean): Promise<NightUtxoSplitForDustRegistration>;
+    attachDustRegistration(transaction: UnprovenTransaction, currentTime: Date, nightVerifyingKey: SignatureVerifyingKey, dustReceiverAddress: DustAddress | undefined, feePayment: bigint): Promise<UnprovenTransaction>;
+    addDustGenerationSignature(transaction: UnprovenTransaction, signature: Signature): Promise<UnprovenTransaction>;
+    /**
+     * Attaches a signature to the DustRegistration in segment 1's `dustActions` only. Unlike
+     * {@link addDustGenerationSignature}, this does NOT touch the unshielded offers — those should be signed separately
+     * via the unshielded-wallet signing path. Use this when the caller orchestrates signing across both packages (e.g.
+     * the facade's `signRecipe`).
+     */
+    addDustRegistrationSignature(transaction: UnprovenTransaction, signature: Signature): Promise<UnprovenTransaction>;
+    calculateFee(transactions: ReadonlyArray<AnyTransaction>): Promise<bigint>;
+    estimateFee(secretKey: DustSecretKey, transactions: ReadonlyArray<AnyTransaction>, ttl?: Date, currentTime?: Date): Promise<bigint>;
+    balanceTransactions(secretKey: DustSecretKey, transactions: ReadonlyArray<AnyTransaction>, ttl: Date, currentTime?: Date): Promise<UnprovenTransaction>;
+    serializeState(): Promise<TSerialized>;
+    waitForSyncedState(allowedGap?: bigint): Promise<DustWalletState<TSerialized>>;
+    /**
+     * Resolves when the dust projected to be generated by the single highest-generation unregistered Night UTxO reaches
+     * `requiredAmount`. The projection is re-evaluated every second so the wait advances even when the dust state stream
+     * is quiet. Tracks the same quantity used as `allow_fee_payment` for the registration (the maximum across the UTxOs,
+     * not their sum, since `splitNightUtxos` puts only one UTxO in the guaranteed slot), so pairing with
+     * `WalletFacade.estimateRegistration` to pick `requiredAmount` guarantees the subsequent
+     * `registerNightUtxosForDustGeneration` will pass its fee-coverage guard.
+     *
+     * @param nightUtxos - UTxOs to project generation for; same set passed to `registerNightUtxosForDustGeneration`.
+     *   Already-registered UTxOs are ignored. Must be non-empty.
+     * @param requiredAmount - Threshold to wait for, as a Dust amount. Resolves immediately if `<= 0n`.
+     * @param clock - Source of current time, read on every tick. Required, and a {@link Clock.Clock} rather than a
+     *   snapshot `Date` like the other methods' `currentTime`: the projection only advances because the time is re-read
+     *   each tick, and callers must inject their own clock so simulator-driven tests respect simulator time.
+     * @param opts.timeoutMs - Deadline, in ms from subscription, for `requiredAmount` to be reached; rejects if it is
+     *   not. Default `300_000`.
+     * @returns A promise that resolves once the projected dust reaches `requiredAmount`.
+     * @throws Error if `nightUtxos` is empty.
+     * @throws TimeoutError if `requiredAmount` is not reached within `opts.timeoutMs`.
+     */
+    waitForGeneratedDust(nightUtxos: ReadonlyArray<UtxoWithMeta>, requiredAmount: bigint, clock: Clock.Clock, opts?: {
+        timeoutMs?: number;
+    }): Promise<void>;
+    revertTransaction(transaction: AnyTransaction): Promise<void>;
+    getAddress(): Promise<DustAddress>;
+    stop(): Promise<void>;
+};
+export type CustomizedDustWallet<TStartAux = DustSecretKey, TTransaction = FinalizedTransaction, TSyncUpdate = WalletSyncUpdate, TSerialized = string> = DustWalletAPI<TStartAux, TSerialized> & WalletLike.WalletLike<[Variant.VersionedVariant<V1Variant<TSerialized, TSyncUpdate, TTransaction, TStartAux>>]>;
+export type DefaultDustConfiguration = DefaultV1Configuration;
+export interface CustomizedDustWalletClass<TStartAux = DustSecretKey, TTransaction = FinalizedTransaction, TSyncUpdate = WalletSyncUpdate, TSerialized = string, TConfig extends BaseV1Configuration = DefaultDustConfiguration> extends WalletLike.BaseWalletClass<[
+    Variant.VersionedVariant<V1Variant<TSerialized, TSyncUpdate, TTransaction, TStartAux>>
+]> {
+    configuration: TConfig;
+    startWithSeed(seed: Uint8Array, dustParameters: DustParameters): CustomizedDustWallet<TStartAux, TTransaction, TSyncUpdate, TSerialized>;
+    startWithSecretKey(secretKey: DustSecretKey, dustParameters: DustParameters): CustomizedDustWallet<TStartAux, TTransaction, TSyncUpdate, TSerialized>;
+    restore(serializedState: TSerialized): CustomizedDustWallet<TStartAux, TTransaction, TSyncUpdate, TSerialized>;
+}
+export type DustWallet = CustomizedDustWallet<DustSecretKey, FinalizedTransaction, WalletSyncUpdate, string>;
+export type DustWalletClass = CustomizedDustWalletClass<DustSecretKey, FinalizedTransaction, WalletSyncUpdate, string>;
+export declare function DustWallet(configuration: DefaultDustConfiguration): DustWalletClass;
+export declare function CustomDustWallet<TConfig extends BaseV1Configuration = DefaultDustConfiguration, TStartAux = DustSecretKey, TTransaction = FinalizedTransaction, TSyncUpdate = WalletSyncUpdate, TSerialized = string>(configuration: TConfig, builder: VariantBuilder.VariantBuilder<V1Variant<TSerialized, TSyncUpdate, TTransaction, TStartAux>, TConfig>): CustomizedDustWalletClass<TStartAux, TTransaction, TSyncUpdate, TSerialized, TConfig>;
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/v1/CoinsAndBalances.js
+// This file is part of MIDNIGHT-WALLET-SDK.
+// Copyright (C) Midnight Foundation
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+import * as ledger from '@midnight-ntwrk/ledger-v8';
+import { DateOps } from '@midnight-ntwrk/wallet-sdk-utilities';
+import { pipe, Array as Arr, Order } from 'effect';
+export const chooseCoin = (coins) => coins
+    .filter((coin) => coin.value > 0n)
+    .toSorted((a, b) => Number(a.value - b.value))
+    .at(0);
+const FAKE_NONCE = '0'.repeat(64);
+export const makeDefaultCoinsAndBalancesCapability = (_config, getContext) => {
+    const getWalletBalance = (state, time) => {
+        return state.state.walletBalance(time);
+    };
+    const getGenerationInfo = (state, coin) => {
+        const info = state.state.generationInfo(coin);
+        return info && info.dtime
+            ? {
+                ...info,
+                dtime: new Date(+info.dtime), // TODO: remove when the ledger start to return a date instead of the number
+            }
+            : info;
+    };
+    const resolveTime = (state, time) => time ?? state.state.syncTime;
+    const toFullInfo = (state, coins, time) => coins.flatMap((coin) => {
+        const genInfo = getGenerationInfo(state, coin);
+        return genInfo ? [{ token: coin, ...getFullDustInfo(state.state.params, genInfo, coin, time) }] : [];
+    });
+    const availableDustTokens = (state) => {
+        const pendingSpends = new Set([...state.pendingDust.values()].map((coin) => coin.nonce));
+        return pipe(state.state.utxos, Arr.filter((coin) => !pendingSpends.has(coin.nonce)));
+    };
+    const getAvailableCoins = (state, time) => toFullInfo(state, availableDustTokens(state), resolveTime(state, time));
+    const getPendingCoins = (state, time) => toFullInfo(state, state.pendingDust, resolveTime(state, time));
+    const getTotalCoins = (state, time) => {
+        const effectiveTime = resolveTime(state, time);
+        return [...getAvailableCoins(state, effectiveTime), ...getPendingCoins(state, effectiveTime)];
+    };
+    const getAvailableCoinsWithGeneratedDust = (state, currentTime) => getAvailableCoins(state, currentTime).map((info) => ({ token: info.token, value: info.generatedNow }));
+    const getFullDustInfo = (parameters, genInfo, coin, currentTime) => {
+        const generatedValue = ledger.updatedValue(coin.ctime, coin.initialValue, genInfo, currentTime, parameters);
+        return {
+            dtime: genInfo.dtime,
+            maxCap: genInfo.value * parameters.nightDustRatio,
+            maxCapReachedAt: DateOps.addSeconds(coin.ctime, parameters.timeToCapSeconds),
+            generatedNow: generatedValue,
+            rate: genInfo.value * parameters.generationDecayRate,
+        };
+    };
+    const estimateDustGeneration = (state, nightUtxos, currentTime) => {
+        const dustPublicKey = getContext().keysCapability.getPublicKey(state);
+        return pipe(nightUtxos, Arr.map((utxo) => {
+            const genInfo = fakeGenerationInfo(utxo, dustPublicKey);
+            const fakeDustCoin = fakeDustToken(dustPublicKey, utxo);
+            const details = getFullDustInfo(state.state.params, genInfo, fakeDustCoin, currentTime);
+            return { utxo, dust: details };
+        }));
+    };
+    /** Create a fake generation info for a given Utxo. It allows to estimate the Dust generation from it */
+    const fakeGenerationInfo = (utxo, dustPublicKey) => {
+        return {
+            value: utxo.value,
+            owner: dustPublicKey,
+            nonce: FAKE_NONCE,
+            dtime: undefined,
+        };
+    };
+    /** Create a fake dust coin for a given Utxo. It allows to estimate full details of the Dust generation from it */
+    const fakeDustToken = (dustPublicKey, utxo) => ({
+        initialValue: 0n,
+        owner: dustPublicKey,
+        nonce: 0n,
+        seq: 0,
+        ctime: utxo.ctime,
+        backingNight: '',
+        mtIndex: 0n,
+    });
+    const splitNightUtxos = (utxos) => {
+        const [guaranteed, fallible] = pipe(utxos, Arr.sort(pipe(Order.bigint, Order.reverse, Order.mapInput((coin) => coin.dust.generatedNow))), Arr.splitAt(1));
+        return { guaranteed, fallible };
+    };
+    return {
+        getWalletBalance,
+        getAvailableCoins,
+        getPendingCoins,
+        getTotalCoins,
+        getAvailableCoinsWithGeneratedDust,
+        getGenerationInfo,
+        estimateDustGeneration,
+        splitNightUtxos,
+    };
+};
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/v1/CoreWallet.d.ts
+import { type Bindingish, DustLocalState, type DustNullifier, type DustParameters, type DustPublicKey, type DustSecretKey, type DustStateChanges, type Proofish, type Signaturish, type Transaction, type Event } from '@midnight-ntwrk/ledger-v8';
+import { ProtocolVersion, SyncProgress } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { type Dust, type DustWithNullifier } from './types/Dust.js';
+import { type CoinWithValue } from './CoinsAndBalances.js';
+import { type NetworkId, type UnprovenDustSpend } from './types/ledger.js';
+export type PublicKey = {
+    publicKey: DustPublicKey;
+};
+export declare const PublicKey: {
+    fromSecretKey: (secretKey: DustSecretKey) => PublicKey;
+};
+export type CoreWallet = Readonly<{
+    state: DustLocalState;
+    publicKey: PublicKey;
+    protocolVersion: ProtocolVersion.ProtocolVersion;
+    progress: SyncProgress.SyncProgress;
+    networkId: NetworkId;
+    pendingDust: Array<DustWithNullifier>;
+}>;
+export declare const CoreWallet: {
+    init(localState: DustLocalState, secretKey: DustSecretKey, networkId: NetworkId): CoreWallet;
+    initEmpty(dustParameters: DustParameters, secretKey: DustSecretKey, networkId: NetworkId): CoreWallet;
+    empty(localState: DustLocalState, publicKey: PublicKey, networkId: NetworkId): CoreWallet;
+    restore(localState: DustLocalState, publicKey: PublicKey, pendingTokens: Array<DustWithNullifier>, syncProgress: Omit<SyncProgress.SyncProgressData, "isConnected">, protocolVersion: bigint, networkId: NetworkId): CoreWallet;
+    applyEventsWithChanges(wallet: CoreWallet, secretKey: DustSecretKey, events: Event[], currentTime: Date): [CoreWallet, DustStateChanges[]];
+    applyFailed(wallet: CoreWallet, tx: Transaction<Signaturish, Proofish, Bindingish>): CoreWallet;
+    revertTransaction<TTransaction extends Transaction<Signaturish, Proofish, Bindingish>>(wallet: CoreWallet, tx: TTransaction): CoreWallet;
+    updateProgress(wallet: CoreWallet, { appliedIndex, highestRelevantWalletIndex, highestIndex, highestRelevantIndex, isConnected, }: Partial<SyncProgress.SyncProgressData>): CoreWallet;
+    spendCoins(wallet: CoreWallet, secretKey: DustSecretKey, coins: ReadonlyArray<CoinWithValue<Dust>>, currentTime: Date): [ReadonlyArray<UnprovenDustSpend>, CoreWallet];
+    pendingDustToMap(coins: Array<DustWithNullifier>): Map<DustNullifier, Dust>;
+};
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js
+// This file is part of MIDNIGHT-WALLET-SDK.
+// Copyright (C) Midnight Foundation
+// SPDX-License-Identifier: Apache-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// You may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+import { ProtocolVersion } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { V1Builder, V1Tag, CoreWallet, } from './v1/index.js';
+import { Effect, Either } from 'effect';
+import * as rx from 'rxjs';
+import { WalletBuilder } from '@midnight-ntwrk/wallet-sdk-runtime';
+export class UnshieldedWalletState {
+    static mapState = (variant) => (state) => {
+        const { serialization, coinsAndBalances, keys } = variant;
+        const { transactionHistory } = variant;
+        return new UnshieldedWalletState(state, { serialization, coinsAndBalances, keys }, { transactionHistory });
+    };
+    protocolVersion;
+    state;
+    capabilities;
+    services;
+    get balances() {
+        return this.capabilities.coinsAndBalances.getAvailableBalances(this.state);
+    }
+    get totalCoins() {
+        return this.capabilities.coinsAndBalances.getTotalCoins(this.state);
+    }
+    get availableCoins() {
+        return this.capabilities.coinsAndBalances.getAvailableCoins(this.state);
+    }
+    get pendingCoins() {
+        return this.capabilities.coinsAndBalances.getPendingCoins(this.state);
+    }
+    get address() {
+        return this.capabilities.keys.getAddress(this.state);
+    }
+    get progress() {
+        return this.state.progress;
+    }
+    constructor(state, capabilities, services) {
+        this.protocolVersion = state.version;
+        this.state = state.state;
+        this.capabilities = capabilities;
+        this.services = services;
+    }
+    serialize() {
+        return this.capabilities.serialization.serialize(this.state);
+    }
+}
+export function UnshieldedWallet(configuration) {
+    return CustomUnshieldedWallet(configuration, new V1Builder().withDefaults());
+}
+export function CustomUnshieldedWallet(configuration, builder) {
+    const buildArgs = [configuration];
+    const BaseWallet = WalletBuilder.init()
+        .withVariant(ProtocolVersion.MinSupportedVersion, builder)
+        .build(...buildArgs);
+    return class CustomUnshieldedWalletImplementation extends BaseWallet {
+        static startWithPublicKey(publicKeys) {
+            return CustomUnshieldedWalletImplementation.startFirst(CustomUnshieldedWalletImplementation, CoreWallet.init(publicKeys, configuration.networkId));
+        }
+        static restore(serializedState) {
+            const deserialized = CustomUnshieldedWalletImplementation.allVariantsRecord()[V1Tag].variant.deserializeState(serializedState)
+                .pipe(Either.getOrThrow);
+            return CustomUnshieldedWalletImplementation.startFirst(CustomUnshieldedWalletImplementation, deserialized);
+        }
+        state;
+        constructor(runtime, scope) {
+            super(runtime, scope);
+            this.state = this.rawState.pipe(rx.map(UnshieldedWalletState.mapState(CustomUnshieldedWalletImplementation.allVariantsRecord()[V1Tag].variant)), rx.shareReplay({ refCount: true, bufferSize: 1 }));
+        }
+        start() {
+            return this.runtime.dispatch({ [V1Tag]: (v1) => v1.startSyncInBackground() }).pipe(Effect.runPromise);
+        }
+        balanceFinalizedTransaction(tx) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.balanceFinalizedTransaction(tx),
+            })
+                .pipe(Effect.runPromise);
+        }
+        balanceUnboundTransaction(tx) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.balanceUnboundTransaction(tx),
+            })
+                .pipe(Effect.runPromise);
+        }
+        balanceUnprovenTransaction(tx) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.balanceUnprovenTransaction(tx),
+            })
+                .pipe(Effect.runPromise);
+        }
+        transferTransaction(outputs, ttl) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.transferTransaction(outputs, ttl),
+            })
+                .pipe(Effect.runPromise);
+        }
+        rotateUtxos(guaranteedUtxos, fallibleUtxos, nightVerifyingKey, ttl) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.rotateUtxos(guaranteedUtxos, fallibleUtxos, nightVerifyingKey, ttl),
+            })
+                .pipe(Effect.runPromise);
+        }
+        initSwap(desiredInputs, desiredOutputs, ttl) {
+            return this.runtime
+                .dispatch({ [V1Tag]: (v1) => v1.initSwap(desiredInputs, desiredOutputs, ttl) })
+                .pipe(Effect.runPromise);
+        }
+        signUnprovenTransaction(transaction, signSegment) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.signUnprovenTransaction(transaction, signSegment),
+            })
+                .pipe(Effect.runPromise);
+        }
+        signUnboundTransaction(transaction, signSegment) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.signUnboundTransaction(transaction, signSegment),
+            })
+                .pipe(Effect.runPromise);
+        }
+        revertTransaction(transaction) {
+            return this.runtime
+                .dispatch({
+                [V1Tag]: (v1) => v1.revertTransaction(transaction),
+            })
+                .pipe(Effect.runPromise);
+        }
+        waitForSyncedState(allowedGap = 0n) {
+            return rx.firstValueFrom(this.state.pipe(rx.filter((state) => state.state.progress.isCompleteWithin(allowedGap))));
+        }
+        /**
+         * Serializes the most recent state It's preferable to use [[UnshieldedWalletState.serialize]] instead, to know
+         * exactly, which state is serialized
+         */
+        serializeState() {
+            return rx.firstValueFrom(this.state).then((state) => state.serialize());
+        }
+        getAddress() {
+            return rx.firstValueFrom(this.state).then((state) => state.address);
+        }
+    };
+}
+
+FULL FILE /home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.d.ts
+import { type ProtocolState, ProtocolVersion } from '@midnight-ntwrk/wallet-sdk-abstractions';
+import { type BaseV1Configuration, type DefaultV1Configuration, type V1Variant, CoreWallet, type UnboundTransaction } from './v1/index.js';
+import type * as ledger from '@midnight-ntwrk/ledger-v8';
+import * as rx from 'rxjs';
+import { type SerializationCapability } from './v1/Serialization.js';
+import { type TransactionHistoryService } from './v1/TransactionHistory.js';
+import { type CoinsAndBalancesCapability } from './v1/CoinsAndBalances.js';
+import { type KeysCapability } from './v1/Keys.js';
+import { type TokenTransfer, type FinalizedTransactionBalanceResult, type UnboundTransactionBalanceResult, type UnprovenTransactionBalanceResult } from './v1/Transacting.js';
+import { type WalletSyncUpdate } from './v1/SyncSchema.js';
+import { type UtxoWithMeta } from './v1/UnshieldedState.js';
+import { type Variant, type VariantBuilder, type WalletLike } from '@midnight-ntwrk/wallet-sdk-runtime/abstractions';
+import { type PublicKey } from './KeyStore.js';
+import { type SyncProgress } from './v1/SyncProgress.js';
+import { type UnshieldedAddress } from '@midnight-ntwrk/wallet-sdk-address-format';
+export type UnshieldedWalletCapabilities<TSerialized = string> = {
+    serialization: SerializationCapability<CoreWallet, TSerialized>;
+    coinsAndBalances: CoinsAndBalancesCapability<CoreWallet>;
+    keys: KeysCapability<CoreWallet>;
+};
+export type UnshieldedWalletServices = {
+    transactionHistory: TransactionHistoryService;
+};
+export declare class UnshieldedWalletState<TSerialized = string> {
+    static readonly mapState: <TSerialized_1 = string>(variant: UnshieldedWalletCapabilities<TSerialized_1> & UnshieldedWalletServices) => (state: ProtocolState.ProtocolState<CoreWallet>) => UnshieldedWalletState<TSerialized_1>;
+    readonly protocolVersion: ProtocolVersion.ProtocolVersion;
+    readonly state: CoreWallet;
+    readonly capabilities: UnshieldedWalletCapabilities<TSerialized>;
+    readonly services: UnshieldedWalletServices;
+    get balances(): Record<ledger.RawTokenType, bigint>;
+    get totalCoins(): readonly UtxoWithMeta[];
+    get availableCoins(): readonly UtxoWithMeta[];
+    get pendingCoins(): readonly UtxoWithMeta[];
+    get address(): UnshieldedAddress;
+    get progress(): SyncProgress;
+    constructor(state: ProtocolState.ProtocolState<CoreWallet>, capabilities: UnshieldedWalletCapabilities<TSerialized>, services: UnshieldedWalletServices);
+    serialize(): TSerialized;
+}
+export type UnshieldedWallet = CustomizedUnshieldedWallet<WalletSyncUpdate, string>;
+export type DefaultUnshieldedConfiguration = DefaultV1Configuration;
+export type UnshieldedWalletClass = CustomizedUnshieldedWalletClass<WalletSyncUpdate, string, DefaultUnshieldedConfiguration>;
+export type UnshieldedWalletAPI<TSerialized = string> = {
+    readonly state: rx.Observable<UnshieldedWalletState<TSerialized>>;
+    start(): Promise<void>;
+    balanceFinalizedTransaction(tx: ledger.FinalizedTransaction): Promise<FinalizedTransactionBalanceResult>;
+    balanceUnboundTransaction(tx: UnboundTransaction): Promise<UnboundTransactionBalanceResult>;
+    balanceUnprovenTransaction(tx: ledger.UnprovenTransaction): Promise<UnprovenTransactionBalanceResult>;
+    transferTransaction(outputs: readonly TokenTransfer[], ttl: Date): Promise<ledger.UnprovenTransaction>;
+    /**
+     * Books a caller-supplied set of Night UTxOs and returns an unproven transaction that moves them back to the same
+     * owner, split between the guaranteed (segment 0) and fallible (segment 1) sections of a single intent. Booking moves
+     * the UTxOs from available to pending so a concurrent build call cannot reuse them. The fallible section is available
+     * for callers that want to attach further actions (e.g. a Dust registration) at segment 1.
+     */
+    rotateUtxos(guaranteedUtxos: readonly UtxoWithMeta[], fallibleUtxos: readonly UtxoWithMeta[], nightVerifyingKey: ledger.SignatureVerifyingKey, ttl: Date): Promise<ledger.UnprovenTransaction>;
+    initSwap(desiredInputs: Record<ledger.RawTokenType, bigint>, desiredOutputs: readonly TokenTransfer[], ttl: Date): Promise<ledger.UnprovenTransaction>;
+    signUnprovenTransaction(transaction: ledger.UnprovenTransaction, signSegment: (data: Uint8Array) => ledger.Signature): Promise<ledger.UnprovenTransaction>;
+    signUnboundTransaction(transaction: UnboundTransaction, signSegment: (data: Uint8Array) => ledger.Signature): Promise<UnboundTransaction>;
+    serializeState(): Promise<TSerialized>;
+    waitForSyncedState(allowedGap?: bigint): Promise<UnshieldedWalletState<TSerialized>>;
+    revertTransaction(transaction: ledger.Transaction<ledger.Signaturish, ledger.Proofish, ledger.Bindingish>): Promise<void>;
+    getAddress(): Promise<UnshieldedAddress>;
+    stop(): Promise<void>;
+};
+export type CustomizedUnshieldedWallet<TSyncUpdate = WalletSyncUpdate, TSerialized = string> = UnshieldedWalletAPI<TSerialized> & WalletLike.WalletLike<[Variant.VersionedVariant<V1Variant<TSerialized, TSyncUpdate>>]>;
+export interface CustomizedUnshieldedWalletClass<TSyncUpdate = WalletSyncUpdate, TSerialized = string, TConfig extends BaseV1Configuration = DefaultV1Configuration> extends WalletLike.BaseWalletClass<[Variant.VersionedVariant<V1Variant<TSerialized, TSyncUpdate>>]> {
+    configuration: TConfig;
+    startWithPublicKey(publicKey: PublicKey): CustomizedUnshieldedWallet<TSyncUpdate, TSerialized>;
+    restore(serializedState: TSerialized): CustomizedUnshieldedWallet<TSyncUpdate, TSerialized>;
+}
+export declare function UnshieldedWallet(configuration: DefaultV1Configuration): UnshieldedWalletClass;
+export declare function CustomUnshieldedWallet<TConfig extends BaseV1Configuration = DefaultV1Configuration, TSyncUpdate = WalletSyncUpdate, TSerialized = string>(configuration: TConfig, builder: VariantBuilder.VariantBuilder<V1Variant<TSerialized, TSyncUpdate>, TConfig>): CustomizedUnshieldedWalletClass<TSyncUpdate, TSerialized, TConfig>;

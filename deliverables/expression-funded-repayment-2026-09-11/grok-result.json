@@ -1,0 +1,28 @@
+{
+  "text": "I'll load the develop skill, AGENTS.md, and plugin status first, then implement the approved expression-funded-repayment plan in the given worktree.Using the Moriarty develop skill for this authorized implementation. Next I\u2019ll take CLI status, then read the plan and preimplementation review.Status is loaded: admission is blocked for live dispatch only, and this local source task stays in scope. I\u2019ll inspect the existing evaluator, kernel, CLI, and tests next.I'll read the evaluator, kernel, CLI, and existing funded/source tests so the adapter matches real interfaces.I have the evaluator, kernel, and CLI contracts. Next I\u2019ll write the adapter tests, run them red, and save that output before any implementation.The adapter tests failed as expected on the missing module. I\u2019ll save that red output, then implement the adapter.Red output is saved. I\u2019ll implement the funded adapter next, keeping the kernel and expression evaluator unchanged.`amount` is reserved in the financial source schema, so I\u2019ll map a legal `transferAmount` field onto the kernel `amount` and keep units and atomicity unchanged.Adapter tests are green. Next I\u2019ll write CLI tests, run them red, then add the option, example, and docs.CLI tests failed on the missing option, as expected. I\u2019ll add the CLI path, example files, and docs next.Focused tests all passed. Next I\u2019ll run typecheck, the full package tests, and the real CLI example.Root preaudit asked the published example to compute both Transfer and Repay from source arguments. I\u2019ll update that example, then re-run the checks.Implemented the bounded funded adapter and normal CLI path in this worktree. Grok 4.6 is the author. Fresh Astra medium audit is still outstanding.\n\n**Behavior.** `createFundedFinancialExpressionSourceV1(schema).evaluate(source, snapshots, state)` reuses the financial expression evaluator and one `prepareRepayment` call. Success is `FundedExpressionPrepared` with ordinary `post`, full `financialPost`, ordered kernel `effects`, and combined `workRemaining`. Rejection has diagnostics only. Work is `remainingAfter = remainingBefore - E - N`, `spentAfter = spentBefore + E + N`, reserve unchanged.\n\n**Interface correction.** Financial source reserves the schema field name `amount`. The Transfer Amount field is `transferAmount` and maps to kernel `amount`. Units, atomicity, and kernel identifiers are unchanged.\n\n**Example.** Default args `10+20` pay 30 against due 100. A second CLI call with the same `.mori` and args `10+10` pays another 20.\n\n**Changed files (language package only).**\n- `experiments/moriarty-language/src/successor/funded-expression-source-v1.ts`\n- `experiments/moriarty-language/src/cli.ts`\n- `experiments/moriarty-language/tests/funded-expression-source.test.mjs`\n- `experiments/moriarty-language/tests/funded-expression-cli.test.mjs`\n- `experiments/moriarty-language/spec/successor/examples/expression-funded-payment.{mori,schema.json,snapshots.json,state.json}`\n- `experiments/moriarty-language/spec/successor/funded-expression-source.md`\n- `experiments/moriarty-language/spec/successor/expression-cli.md`\n- `experiments/moriarty-language/spec/successor/README.md`\n- `experiments/moriarty-language/README.md`\n\n**Checks.**\n| Command | Result |\n| --- | --- |\n| focused adapter+CLI tests | 16 pass, 0 fail |\n| `npm --prefix experiments/moriarty-language test` | 698 pass, 0 fail |\n| `npm --prefix experiments/moriarty-language run typecheck` | EXIT 0 |\n| real funded CLI example | EXIT 0; payer 70, lender 30, principal 70, allowance 70/30, nominal 30, reserve 16 |\n| adverse `workInitial` 40 vs remaining 100 | EXIT 1, empty stdout, `WORK_MISMATCH` |\n\nRed runs and final outputs are under `/home/charl/Moriarty/deliverables/expression-funded-repayment-2026-09-11/author-checks-*`. Baseline logs were not edited. No commit, no live dispatch, no proofs.\n\n**Limits still open.** Local preparation only. No K, proof, Preview, or profile/compiler change. Campaign admission remains blocked for dependent live dispatch. Astra medium audit of this candidate is not done.",
+  "stopReason": "end_turn",
+  "sessionId": "01a09248-fc3e-7b71-b023-077691ce7337",
+  "requestId": "b4fb6a66-bc3f-4cb2-bcd1-18227a1596cd",
+  "usage": {
+    "input_tokens": 217463,
+    "cache_read_input_tokens": 8505344,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 70950,
+    "reasoning_tokens": 58601,
+    "total_tokens": 8793757
+  },
+  "num_turns": 58,
+  "total_cost_usd": 2.0099372,
+  "total_cost_usd_ticks": 20099372000,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 217463,
+      "outputTokens": 70950,
+      "cacheReadInputTokens": 8505344,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 58,
+      "costUSD": 2.0099372
+    }
+  },
+  "redactionNote": "Provider private reasoning omitted; terminal identity, usage, and response preserved."
+}

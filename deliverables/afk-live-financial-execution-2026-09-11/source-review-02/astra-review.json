@@ -1,0 +1,108 @@
+{
+  "reviewer": "fresh-independent-astra-source-review02",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "identityBasis": "Fresh delegated Astra medium reviewer assignment; separate provider attestation unavailable",
+  "recordedAt": "2026-09-11T08:23:01.268938+00:00",
+  "candidateSha256": "c2de77480ed02560c9464ef323f5e25b9896eecc4195d12b8253af69bce15fab",
+  "head": "89b0c7b9809b501c091223c78f6dd2df8581936c",
+  "verdict": "CHANGES_REQUIRED",
+  "scope": "Full current task 1.1a source guard candidate: complete policy.py, store.py, cli.py and both changed test files; applicable exact specification and spec-review04 F1-F7. No live adoption, accounting, label/bridge, runner, financial result or admission approval.",
+  "approvedScope": [],
+  "findings": [
+    {
+      "id": "ASTRA-S02-F1",
+      "severity": "high",
+      "blocking": true,
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "line": 297,
+      "title": "Removed historical worktree metadata silently drops retained findings",
+      "evidence": "In isolated two-linked-worktree fixture, two defect rows under old checkout key and a neutral common-directory seed yield sameDefectFailures=2 through actual catalog_live_lineage -> guarded reader -> load_snapshot and cmd_status. Removing only old checkout .git changes count to 0 with no operational-history gap; both defect rows remain. Restoring metadata restores count2.",
+      "cause": "_expand_related_repo_ids authenticates historical key relation solely from current filesystem metadata and silently omits unresolved keys. Its exception fallback likewise returns only requested_ids, with no ambiguity signal.",
+      "requiredChange": "For live guarded history, uncertain same-lineage repository coverage must return unavailable rather than a partial verified count. Preserve compatibility for positively attributable keys without assuming removed or unresolvable keys are irrelevant. Add removed historical worktree/common-key seed regression through actual caller; cover expansion failure paths. Do not perform live identity adoption or historical reconciliation.",
+      "scopeQualification": "Production no-anchor still returns unavailable. This falsifies the approved anchored-fixture counted-or-unavailable guard, not a demonstrated production live launch."
+    },
+    {
+      "id": "ASTRA-S02-F2",
+      "severity": "high",
+      "blocking": true,
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "line": 210,
+      "title": "Active reservation without its own start borrows a finished reservation profile",
+      "evidence": "Finish a local-runtime verify reservation, insert an active verify reservation with identical repository/requirement/capability/candidate/action identity but a different reservation ID and no action_start. get_history primaryActive=false, has_other_primary=false, and a second live reservation succeeds.",
+      "cause": "_action_start_profiles returns all fallback profiles when no reservationId match exists, including starts explicitly belonging to different finished reservations. This converts unknown active profile into known non-live.",
+      "requiredChange": "Never use an action_start explicitly bound to another reservation as evidence of this reservation profile. If current active reservation profile cannot be positively attributed, occupy the primary slot. Handle legacy untagged starts conservatively; add all-three-consumer test with an older finished non-live start plus missing current start.",
+      "scopeQualification": "Isolated direct store fault injection tests malformed/incomplete retained state required by F2. No live reservation or runner was used."
+    }
+  ],
+  "validation": {
+    "hashVerification": {
+      "manifestSha256Matches": true,
+      "verifiedFiles": 16,
+      "mismatches": []
+    },
+    "sourceInspection": "Read complete current changed policy.py, store.py, cli.py and test_execution.py/test_live_policy_history.py. Inspected unchanged records load_snapshot/_apply_history/_select_next/_repository_identity caller context. Reviewed applicable task1.1a specification and both spec-review04 binding readings, and retained source-review01 Astra findings; not diff-only.",
+    "independentTests": "60 supplied focused test_live_policy_history tests PASS; astra-focused-tests.txt. Independent fault script adds10 profile cases plus identity/history/approval controls and2 failing cases; astra-fault-results.json.",
+    "previousFindings": "ASTRA-S01-F1 fixed for malformed/unsupported profile values including false,7,empty,whitespace,[],{},null. Existing related linked-worktree common-key seed now counts2; unresolved metadata variation remains F1 here.",
+    "positiveObservations": [
+      "All seven exact live-profile kinds obey history/primary/retry rules; repair retains two readiness flags.",
+      "No production CLI/env/file anchor added; SCHEMA_SQL and bootstrap do not create store_identity.",
+      "Approval without explicit resolution list preserves findings; source/spec/resource label semantics remain later scope.",
+      "Normal live reservations atomically occupy in both orderings; malformed profile cases conservatively occupy; syntax/local-runtime controls remain non-occupying."
+    ],
+    "liveNonMutation": {
+      "at": "2026-09-11T08:23:01.268564+00:00",
+      "hashes": {
+        "/home/charl/Moriarty/.git/moriarty-dev/state.sqlite3": {
+          "exists": true,
+          "size": 303104,
+          "sha256": "6e3917e45ed36704f7cf1fe9b14ec590ccea1f363549fa461520b432c2070f6f"
+        },
+        "/home/charl/Moriarty/.git/moriarty-dev/state.sqlite3-wal": {
+          "exists": true,
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "/home/charl/Moriarty/.git/moriarty-dev/state.sqlite3-shm": {
+          "exists": true,
+          "size": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        }
+      },
+      "counts": {
+        "events": 613,
+        "sqlite_sequence": 3,
+        "reservations": 2,
+        "admin_intervals": 499,
+        "outbox": 32,
+        "runner_claims": 1
+      },
+      "unchanged": false
+    },
+    "startupStatus": {
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "cwd": "/home/charl/Moriarty/.worktrees/afk-live-financial-execution",
+      "observedRow": "admin_intervals498; event612 admin_cycle; 2026-09-11T08:18:13.019932Z",
+      "pendingTransactions": [],
+      "limitation": "I did not capture pre-status hashes/counts. Do not infer startup before/after equality. Post-startup metadata initialized before baseline. Custom fault interval has exact DB/WAL/SHM hashes/sizes/counts equality. Broader interval including60 focused tests has a concurrent administrative write: events612->613 and admin_intervals498->499; DB digest differs, WAL/SHM identical; reservations/claims/outbox counts unchanged. No broader unchanged-store claim. Attribution retained in astra-concurrent-admin.json; this reviewer issued no live writes after startup."
+    },
+    "concurrentAdministrativeWriteAttribution": {
+      "eventId": 613,
+      "adminIntervalId": 499,
+      "repository": "/home/charl/Moriarty",
+      "observedAt": "2026-09-11T08:22:42.212731+00:00",
+      "activity": "status",
+      "attribution": "Parent reports fresh executor-review10 Astra startup around08:22 likely responsible. Row/time/checkout support that attribution; process identity not independently attested.",
+      "effect": "Broader review interval digest inequality retained. Earlier independent fault interval remained byte/count identical."
+    }
+  },
+  "limitations": [
+    "Current concurrent Opus source verdict was not read. Parent supplied later nonbinding conservative repair suggestion after independent F1 reproduced; no source was modified.",
+    "The profile orphan case injects incomplete retained state through isolated SQL; reserve normally writes reservation and start atomically. F2 contract nevertheless requires unknown active profile to occupy.",
+    "Expansion exception fallback risk identified by source inspection, not separately fault-injected.",
+    "No full234-test rerun: parent supplied author full-suite evidence; independently ran60 focused tests and custom faults.",
+    "No canonical store identity/adoption, budget lock, wallet access, runner invocation, live review ingestion or specification/source mutation.",
+    "Labels/SP01 bridge, cumulative accounting/master claim, historical external receipt reconciliation, actual executor and actual financial result remain separate. No I2/SP05 or proof acceptance claim.",
+    "Broader test-interval non-mutation evidence does not meet literal equality because of a concurrent live status administrative event. Isolated fault interval does meet equality; no exclusion or waiver of the observed broader digest change."
+  ]
+}

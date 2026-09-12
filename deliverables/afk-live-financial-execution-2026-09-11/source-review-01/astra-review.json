@@ -1,0 +1,61 @@
+{
+  "reviewer": "fresh-independent-astra-source-review01",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "recordedAt": "2026-09-11T07:53:55.339684+00:00",
+  "candidateSha256": "fe7482477f068ed87a7ad93a27b9cba2893044a7429176dc3546615cae8feaf7",
+  "verdict": "CHANGES_REQUIRED",
+  "scope": "Full current source audit of task 1.1a policy/store/CLI guards and corresponding tests, with records, runner, hook and notifications inspected as caller/context modules. No resource, result, live adoption or admission acceptance.",
+  "approvedScope": [],
+  "findings": [
+    {
+      "id": "ASTRA-S01-F1",
+      "severity": "high",
+      "blocking": true,
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "line": 219,
+      "title": "Unknown stored profiles are treated as known non-live reservations",
+      "evidence": "An active verify reservation whose action_start evidenceProfile is false, 7, empty string or unknown-profile yields primaryActive=false and has_other_primary=false, and permits a second live reservation. Null correctly blocks. Reproduced through reserve/get_history/has_other_primary on isolated SQLite.",
+      "cause": "_action_start_profile returns any single distinct hashable value; _reservation_occupies_primary only treats None or the exact live string as primary. This infers non-live status from malformed or unsupported profile data.",
+      "requiredChange": "Only positively recognized, well-typed non-live profile values may exempt an existing reservation; malformed, missing, unsupported or ambiguous values must occupy the slot. Exercise all three consumers with these fault values, preserving genuine non-live controls.",
+      "scopeQualification": "This is the explicitly required unknown-active-profile guard. No live dispatch was attempted or demonstrated."
+    },
+    {
+      "id": "ASTRA-S01-F2",
+      "severity": "high",
+      "blocking": true,
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "line": 428,
+      "title": "Anchored history can report zero after a common-directory seed hides worktree findings",
+      "evidence": "In a /tmp linked-worktree fixture with persisted token and matching in-process anchor, two defect events use the checkout key. The actual catalog_live_lineage -> guarded reader -> load_snapshot path initially returns unavailable. Adding one neutral event for the same requirement/capability under the git-common-dir key changes sameDefectFailures to 0 and removes operational-history; direct checkout-key history still counts 2.",
+      "cause": "records supplies the common-directory identity while store writers use checkout paths. _exact_lineage_recorded accepts any event under that requested key, and get_history does not include sibling checkout keys when invoked with the common directory. The new existence guard therefore permits an unrelated seed to mask retained failures.",
+      "requiredChange": "Within the source-only guard scope, retain unavailable history when exact canonical lineage coverage is ambiguous, or conservatively account for authenticated applicable keys. Add an isolated linked-worktree/common-key seeded case through actual records keying; do not create live identity or reconcile live history as part of this fix.",
+      "scopeQualification": "The missing production anchor still denies live history. This is a failure of the approved anchored-fixture/no-false-zero contract, not evidence of a current live admission bypass; later identity adoption and external receipt reconciliation remain separate."
+    }
+  ],
+  "validation": {
+    "hashVerification": {
+      "manifestSha256Matches": true,
+      "verifiedFiles": 28,
+      "mismatches": []
+    },
+    "sourceInspection": "Read the complete current policy.py, store.py, cli.py, records.py, runner.py, hook.py and notifications.py, plus all five supplied policy/execution/history/regression/connection test files and applicable task/specification requirements; audit was not diff-only.",
+    "productionPath": "main constructs make_guarded_history_reader without identity_anchor; cmd_review also does so. status/next/run load real snapshots, run performs reserve and post-reservation has_other_primary. No production identity initializer, CLI anchor option or environment anchor was introduced.",
+    "positiveObservations": [
+      "Policy applies history, primary and retry gates to all seven exact live-profile kinds, including report; repair readiness requires both flags after two failures.",
+      "Explicit-only same-lineage resolution replaces clear-all approval behavior; other-lineage and unnamed findings remain. Receipt scope-label semantics are separately pending.",
+      "Reserve uses BEGIN IMMEDIATE and atomically stores reservation plus action_start profile; normal live reservations block both orderings and remain occupied until recorded terminal disposition.",
+      "SCHEMA_SQL does not create store_identity."
+    ],
+    "independentExperiment": "python3 source-review-01/astra-fault-checks.py; actual stored-profile and linked-worktree history fault outcomes retained in astra-fault-results.json.",
+    "isolation": "All experiment databases and simulated Git metadata were explicitly under /tmp. No runner, budget lock, wallet, live reservation, live claim or live review ingestion was used. Live database/WAL/SHM hashes and all captured table counts were identical before and after fault checks.",
+    "startupStatus": "Required status ran 2026-09-11T07:50:29.262809+00:00 to 07:50:29.335866+00:00 outside test interval; before/after evidence in astra-startup-status.json. Events 606->607 and admin_intervals 492->493; reservations 2 and runner_claims 1 unchanged. No pending transactions.",
+    "parentTestEvidence": "Inspected supplied receipts reporting 49 targeted and 223 full plugin tests passing with unchanged live store. Did not independently rerun those suites; independent fault checks reveal missing coverage despite those passes."
+  },
+  "limitations": [
+    "No current Opus source-review01 verdict consulted. Parent supplied the linked-worktree key-variance pressure case after this reviewer had identified stored-profile validation; this reviewer independently built and ran both reproducers.",
+    "Current live binding labels, SP01 bridge, producer/accounting, master claim, identity adoption, external history reconciliation, resource authority and financial acceptance are outside this source scope and remain unapproved.",
+    "Hook still uses the ordinary history reader; guarded CLI is the specified authoritative fallback, and host interception remains unverified. This is an integration limitation, not a task1.1a live launch demonstration.",
+    "No source/specification files changed. Wrote only review/validation artifacts in the main source-review directory."
+  ]
+}

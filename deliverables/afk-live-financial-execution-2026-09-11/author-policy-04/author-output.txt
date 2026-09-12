@@ -1,0 +1,47 @@
+SQLite TEXT affinity turned the integer `7` into `'7'`. The test will store a real BLOB token and pass a non-string anchor directly. Production code stays unchanged.
+
+```text
+*** Begin Patch
+*** Update File: plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+         self.assertIsNone(
+             get_live_history(
+                 self.db_path, str(self.root), REQ, CAP, identity_anchor=" "
+             )
+         )
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor=7
++            )
++        )
+         conn = init_db(self.db_path)
+         try:
+             with conn:
+                 conn.execute("DELETE FROM store_identity")
+                 conn.execute("INSERT INTO store_identity (token) VALUES (?)", ("   ",))
+         finally:
+             conn.close()
+         self.assertIsNone(read_store_identity(self.db_path))
+         self.assertIsNone(
+             get_live_history(
+                 self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
+             )
+         )
+         conn = init_db(self.db_path)
+         try:
+             with conn:
+                 conn.execute("DELETE FROM store_identity")
+-                conn.execute("INSERT INTO store_identity (token) VALUES (?)", (7,))
++                conn.execute("DROP TABLE store_identity")
++                conn.execute("CREATE TABLE store_identity (token BLOB NOT NULL)")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?)",
++                    (b"\x00\x01nonstring",),
++                )
+         finally:
+             conn.close()
+         self.assertIsNone(read_store_identity(self.db_path))
+*** End Patch
+```
+
+The integer insert was converted by SQLite TEXT affinity, so it never reached the non-string guard. The BLOB row stays bytes on read, and `identity_anchor=7` checks the in-process type check with a valid string token still present.

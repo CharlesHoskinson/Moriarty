@@ -108,36 +108,26 @@ def get_db_path(repo_root: str | Path) -> Path:
     return fallback
 
 
-def _canonical_repo_ids(repo: str | Path) -> list[str]:
-    repo_path = Path(repo).resolve()
-    ids = [str(repo), str(repo_path)]
-    git_entry = repo_path / ".git"
-    try:
-        if git_entry.is_file():
-            text = git_entry.read_text(encoding="utf-8").strip()
-            if text.startswith("gitdir:"):
-                gitdir = Path(text.split("gitdir:", 1)[1].strip())
-                if not gitdir.is_absolute():
-                    gitdir = (repo_path / gitdir).resolve()
-                ids.append(str(gitdir))
-                commondir_file = gitdir / "commondir"
-                if commondir_file.is_file():
-                    cd_text = commondir_file.read_text(encoding="utf-8").strip()
-                    common = Path(cd_text)
-                    if not common.is_absolute():
-                        common = (gitdir / common).resolve()
-                    ids.append(str(common))
-        elif git_entry.is_dir():
-            ids.append(str(git_entry.resolve()))
-    except Exception:
-        pass
-    seen = set()
-    result = []
-    for i in ids:
-        if i not in seen:
-            seen.add(i)
-            result.append(i)
-    return result
+def _owns_store_db(db_path: Path, repo: str | Path) -> bool:
+    """One operational database belongs to one repository/common directory.
+
+    Readers may identify the checkout or its common Git directory. Historical
+    rows retain their original checkout keys, including removed worktrees.
+    Ownership is checked before projecting all rows in the shared database.
+    """
+    root = Path(repo).resolve()
+    database = Path(db_path).resolve()
+    return database in {
+        get_db_path(root).resolve(),
+        (root / "moriarty-dev" / "state.sqlite3").resolve(),
+    }
+
+
+def _resolution_ids(receipt):
+    value = receipt.get("resolvedFindings", receipt.get("resolved", []))
+    if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
+        raise StoreError("resolvedFindings/resolved must be a list of nonempty finding IDs")
+    return value
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
@@ -183,7 +173,7 @@ def make_history_reader(db_path: Path, *, timeout: float = 10.0):
 
 
 def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
-    if not db_path.is_file():
+    if not db_path.is_file() or not _owns_store_db(db_path, repo):
         return None
 
     try:
@@ -201,7 +191,11 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
         if not cur.fetchone():
             return None
 
-        repo_ids = _canonical_repo_ids(repo)
+        # Preserve old checkout-keyed rows without a migration. Database
+        # ownership was verified above; linked/removed worktrees share history.
+        repo_ids = [row[0] for row in conn.execute(
+            "SELECT repository FROM events UNION SELECT repository FROM admin_intervals"
+        )]
         placeholders = ",".join("?" for _ in repo_ids)
 
         # Total events for repository: schema-only or unrecorded database returns None
@@ -272,12 +266,11 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
             elif kind == "result_review":
                 verdict = payload.get("verdict") or payload.get("scopedVerdict")
                 if verdict == "APPROVED":
-                    resolved = payload.get("resolvedFindings") or payload.get("resolved")
-                    if resolved and isinstance(resolved, list):
-                        for rf in resolved:
-                            unresolved_findings.discard(str(rf))
-                    else:
-                        unresolved_findings.clear()
+                    try:
+                        resolved = _resolution_ids(payload)
+                    except StoreError:
+                        resolved = []  # Historical malformed receipts clear nothing.
+                    unresolved_findings.difference_update(resolved)
             # Notice: kind == "defect_resolved" is ignored; author events cannot erase blockers
 
         # Admin cycles
@@ -626,6 +619,7 @@ def record_review(db_path: Path, repo: str, receipt_data: dict, action: dict | N
         act_id = receipt_data.get("actionId", "review")
 
     verdict = receipt_data.get("verdict", receipt_data.get("scopedVerdict", ""))
+    _resolution_ids(receipt_data)  # Validate before opening or mutating the store.
     findings = receipt_data.get("findings")
     if findings is None:
         findings = receipt_data.get("blockers", [])
@@ -715,6 +709,8 @@ def record_admin_interval(db_path: Path, repo: str, start_time: float, end_time:
 
 
 def enqueue_tx(db_path: Path, repo: str, tx_id: str, status: str, details: dict):
+    if not _owns_store_db(db_path, repo):
+        raise StoreError("Transaction database belongs to another repository")
     if status != "submitted":
         raise StoreError("Only a selected public submitted transaction may enter the outbox")
     if not isinstance(tx_id, str) or not re.fullmatch(r"[A-Za-z0-9:_-]{1,256}", tx_id) or not isinstance(details, dict):
@@ -751,8 +747,8 @@ def enqueue_tx(db_path: Path, repo: str, tx_id: str, status: str, details: dict)
         try:
             existing = conn.execute("SELECT repository FROM outbox WHERE tx_id = ?", (tx_id,)).fetchone()
             if existing:
-                if get_db_path(existing[0]).resolve() != get_db_path(repo).resolve():
-                    raise StoreError("Transaction belongs to another repository")
+                # The verified database owns historical outbox rows even when
+                # their original checkout no longer exists.
                 conn.commit()
                 return
             conn.execute(
@@ -838,7 +834,7 @@ def update_tx_status(db_path: Path, tx_id: str, new_status: str, note: str | Non
 
 
 def get_undelivered_txs(db_path: Path, repo: str | None = None, *, timeout: float = 5.0, limit: int | None = None) -> list[dict]:
-    if not db_path.is_file():
+    if not db_path.is_file() or (repo is not None and not _owns_store_db(db_path, repo)):
         return []
     conn = sqlite3.connect(str(db_path), timeout=timeout)
     try:
@@ -849,8 +845,6 @@ def get_undelivered_txs(db_path: Path, repo: str | None = None, *, timeout: floa
         rows = cur.fetchall()
         result = []
         for tx_id, status, details_str, enq, owner in rows:
-            if repo and get_db_path(owner).resolve() != get_db_path(repo).resolve():
-                continue
             try:
                 details = json.loads(details_str)
             except Exception:

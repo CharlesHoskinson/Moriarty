@@ -2,7 +2,7 @@
 
 ## Inputs and dependencies
 
-Dependencies: MC01, MC02, MC03.
+Dependencies: MC01, MC02. The PCD integration removed MC03; the ledger-anchored core takes no MC03 proof.
 
 - `docs/research/2026-09-06-midnight-native-recursion.md`
 - `experiments/moriarty-language/src/lower-compact.ts`
@@ -30,7 +30,7 @@ LedgerAdapter consumes a versioned compiled program, typed proof artifact, full 
 ## Native relation extension: adapter-profile-01
 
 Implement compiled loan and swap transition relations, complete effects, and durable authorization bindings.
-Establish the retained MC03 verifier interface before extending the relation. Requalify correspondence using the new loan/swap proofs.
+Use the declared ledger verification seam; no MC03 proof is an input. Requalify correspondence using the new loan/swap proofs.
 Freeze at most 6 positive transitions and meaningful invalid proof/context controls.
 The charter allocates one campaign with 20 cumulative proving/verification minutes.
 Require both audits before launch and independent retained-byte verification after proving.

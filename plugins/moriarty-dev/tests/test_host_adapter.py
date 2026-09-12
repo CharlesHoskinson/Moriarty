@@ -94,4 +94,30 @@ class HostAdapter(unittest.TestCase):
         self.assertEqual(p.returncode,0,p.stderr)
         self.assertIn('systemMessage',json.loads(p.stdout))
 
+    def test_stop_uses_common_output_without_event_specific_envelope(self):
+        # Codex rejects hookSpecificOutput for Stop even when the process exits 0.
+        for cwd in (str(self.root), str(self.root / 'unrelated'), '\x00'):
+            with self.subTest(cwd=cwd):
+                p=subprocess.run([sys.executable,hook.__file__,'Stop'],
+                    input=json.dumps({'cwd':cwd}),text=True,capture_output=True,timeout=0.95)
+                self.assertEqual(p.returncode,0,p.stderr)
+                out=json.loads(p.stdout)
+                self.assertNotIn('hookSpecificOutput',out)
+                self.assertNotIn('decision',out)
+                self.assertNotIn('continue',out)
+                if cwd == '\x00': self.assertIn('systemMessage',out)
+                else: self.assertEqual(out,{})
+
+    def test_permitted_pre_tool_use_omits_unsupported_allow_decision(self):
+        cases = [
+            (self.root, {'tool_name':'apply_patch','tool_input':{'patch':'text'}}),
+            (self.root, {'tool_name':'exec_command','tool_input':{'cmd':'pwd'}}),
+            (self.root / 'unrelated', {'tool_name':'exec_command','tool_input':{'cmd':'pwd'}}),
+        ]
+        with patch.object(hook,'read_actions',return_value=[]):
+            for repo,payload in cases:
+                with self.subTest(repo=repo,payload=payload):
+                    out=hook.handle_event('PreToolUse',payload,repo)
+                    self.assertEqual(out,{'hookSpecificOutput':{'hookEventName':'PreToolUse'}})
+
 if __name__=='__main__': unittest.main()

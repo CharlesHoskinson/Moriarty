@@ -62,10 +62,11 @@ class HookContractTestCase(unittest.TestCase):
                                 )
                                 self.assertEqual(proc.returncode, 0, proc.stderr)
                                 self.assertEqual(proc.stderr, "")
-                                self.assertEqual(
-                                    json.loads(proc.stdout)["hookSpecificOutput"]["hookEventName"],
-                                    event,
-                                )
+                                output = json.loads(proc.stdout)
+                                if event == "Stop":
+                                    self.assertEqual(output, {})
+                                else:
+                                    self.assertEqual(output["hookSpecificOutput"]["hookEventName"], event)
 
     def run_hook(self, event_name, payload):
         cmd = [sys.executable, str(self.hook_py), event_name]
@@ -92,7 +93,7 @@ class HookContractTestCase(unittest.TestCase):
             "toolInput": {"command": "ls -la"},
         }
         res = self.run_hook("PreToolUse", payload)
-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
+        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
 
     def test_malformed_input_does_not_crash(self):
         cmd = [sys.executable, str(self.hook_py), "PreToolUse"]
@@ -104,7 +105,7 @@ class HookContractTestCase(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         res = json.loads(proc.stdout.strip() or "{}")
-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
+        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
 
     def test_denied_known_dispatch(self):
         # Set up genuine registers in self.root with 2 failures
@@ -150,7 +151,7 @@ class HookContractTestCase(unittest.TestCase):
             "toolInput": {"command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py status"},
         }
         res = self.run_hook("PreToolUse", payload)
-        self.assertEqual(res.get("hookSpecificOutput", {}).get("permissionDecision"), "allow")
+        self.assertNotIn("permissionDecision", res.get("hookSpecificOutput", {}))
 
     def test_stop_called_twice_has_no_auto_continuation(self):
         payload = {"hookEventName": "Stop", "cwd": str(self.root)}

@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import time
 
+from moriarty_dev.compatibility import inspect_compatibility, observed_coverage
 from moriarty_dev.policy import assess
 from moriarty_dev.runner import load_runner, execute
 from moriarty_dev.notifications import observe_delivery, notification_line
@@ -70,15 +71,35 @@ def _derive_sprint_reports(repo: Path) -> list[dict]:
         except Exception:
             pass
 
+    # Resolve completion as a least fixed point. Unknown references and cycles
+    # cannot gain completion merely because their local stages have finished.
+    completed = set()
+    counts = {}
+    for sprint in sprints_data:
+        counts[sprint["id"]] = counts.get(sprint["id"], 0) + 1
+    while True:
+        newly_complete = set()
+        for sprint in sprints_data:
+            stages = sprint.get("stages", [])
+            required = sprint.get("completionRequires", [])
+            if (counts[sprint["id"]] == 1 and isinstance(stages, list) and stages
+                    and all(isinstance(stage, str) and stage_status_map.get(stage) == "complete" for stage in stages)
+                    and isinstance(required, list)
+                    and all(isinstance(dependency, str) and dependency in completed for dependency in required)):
+                newly_complete.add(sprint["id"])
+        if newly_complete <= completed:
+            break
+        completed.update(newly_complete)
+
     rows = []
     for sp in sprints_data:
         sp_id = sp.get("id")
         title = sp.get("title")
         stages = sp.get("stages", [])
-        all_complete = stages and all(stage_status_map.get(st) == "complete" for st in stages)
+        all_complete = sp_id in completed
         missing_stages = [stage for stage in stages if stage_status_map.get(stage) != "complete"]
-        required = sp.get("completionRequires", [])
-        if all_complete and not required:
+        required = [dependency for dependency in sp.get("completionRequires", []) if dependency not in completed]
+        if all_complete:
             predicate = "All registered stages are complete"
         else:
             pieces = []
@@ -99,9 +120,10 @@ def _derive_sprint_reports(repo: Path) -> list[dict]:
 
 def main():
     json_parent = argparse.ArgumentParser(add_help=False)
-    json_parent.add_argument("--json", action="store_true", help="Output in JSON format")
+    json_parent.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="Output in JSON format")
 
-    parser = argparse.ArgumentParser(prog="moriarty-dev", parents=[json_parent])
+    parser = argparse.ArgumentParser(prog="moriarty-dev")
+    parser.add_argument("--json", action="store_true", help="Output in JSON format")
     parser.add_argument("--repo", default=".", help="Repository root")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -117,7 +139,9 @@ def main():
     review_parser.add_argument("--action", help="Action ID to bind review to")
 
     subparsers.add_parser("report", parents=[json_parent])
-    subparsers.add_parser("doctor", parents=[json_parent])
+    doctor_parser = subparsers.add_parser("doctor", parents=[json_parent])
+    doctor_parser.add_argument("--expected-plugin-root", action="append", default=[],
+                               help="Check a cache path retained by an active session; repeatable, read-only")
     subparsers.add_parser("bootstrap", parents=[json_parent])
 
     deliver_parser = subparsers.add_parser("deliver", parents=[json_parent])
@@ -155,7 +179,7 @@ def main():
     elif args.command == "report":
         cmd_report(repo, db_path, history_reader, args.json)
     elif args.command == "doctor":
-        cmd_doctor(repo, db_path, args.json)
+        cmd_doctor(repo, db_path, args.json, args.expected_plugin_root)
     elif args.command == "bootstrap":
         cmd_bootstrap(repo, db_path, args.json)
     elif args.command == "deliver":
@@ -594,10 +618,12 @@ def cmd_report(repo: Path, db_path: Path, history_reader, as_json: bool):
     sprint_rows = _derive_sprint_reports(repo)
     undelivered = get_undelivered_txs(db_path, str(repo))
 
+    compatibility = inspect_compatibility(Path(__file__).resolve().parents[2])
     out = {
         "allSprints": sprint_rows,
         "pendingTransactions": undelivered,
-        "hostCoverage": "unverified" if not (Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "plugins" / "moriarty-dev").is_dir() else "installed-unverified",
+        "hostCoverage": observed_coverage(compatibility),
+        "compatibility": compatibility,
     }
     if as_json:
         print(json.dumps(out, indent=2))
@@ -613,19 +639,18 @@ def cmd_report(repo: Path, db_path: Path, history_reader, as_json: bool):
     sys.exit(0)
 
 
-def cmd_doctor(repo: Path, db_path: Path, as_json: bool):
+def cmd_doctor(repo: Path, db_path: Path, as_json: bool, expected_roots=()):
     actions_file = repo / ".moriarty-dev" / "actions.json"
     actions_ok = actions_file.is_file()
 
     # Registration/source presence is observable; actual host interception is
     # not derivable from files. Never promote a self-authored coverage flag.
-    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
     source = Path(__file__).resolve().parents[2]
-    cache = codex_home / "plugins" / "cache"
-    host_installed = source.is_relative_to(cache.resolve()) or (codex_home / "plugins" / "moriarty-dev").is_dir()
+    compatibility = inspect_compatibility(source, expected_roots)
+    coverage = observed_coverage(compatibility)
+    host_installed = coverage == "installed-unverified"
     hook_definitions_present = (source / "hooks" / "hooks.json").is_file()
-    hooks_registered = False  # Host activation/trust is not observable from source files.
-    coverage = "installed-unverified" if host_installed else "unverified"
+    hooks_registered = False  # Activation/trust cannot be inferred from files.
     guarantees = "Registered action launch is guarded through CLI run"
     limitations = "Host tool interception requires observed host evidence; source or registration presence does not establish coverage"
 
@@ -635,6 +660,7 @@ def cmd_doctor(repo: Path, db_path: Path, as_json: bool):
         "storeInitialized": db_path.is_file(),
         "actionsRegistered": actions_ok,
         "hostInstalled": host_installed,
+        "compatibility": compatibility,
         "hooksRegistered": hooks_registered,
         "hookDefinitionsPresent": hook_definitions_present,
         "hostCoverage": coverage,
@@ -648,6 +674,10 @@ def cmd_doctor(repo: Path, db_path: Path, as_json: bool):
         print(f"Store DB: {db_path} ({'initialized' if db_path.is_file() else 'missing'})")
         print(f"Actions file: {'present' if actions_ok else 'missing'}")
         print(f"Host coverage: {coverage}")
+        print(f"Executing plugin: {source}")
+        for root in compatibility["cachedRoots"] + compatibility["expectedRoots"]:
+            state = "present (runtime unverified)" if root["usable"] else "missing or incomplete"
+            print(f"Plugin root: {root['path']} ({state})")
         print(f"Guarantees: {guarantees}")
         print(f"Limitations: {limitations}")
     sys.exit(0)

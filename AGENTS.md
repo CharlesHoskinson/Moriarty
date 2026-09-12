@@ -35,6 +35,10 @@ silently bypass it or start an installation/infrastructure loop.
 Actual host interception remains unverified until observed; loading the skill
 does not establish hook trust or product acceptance.
 
+## Active roadmap routing recovery
+
+At every startup or continuation, read [ACTIVE-ROUTING.md](deliverables/roadmap-loop-2026-09-10/ACTIVE-ROUTING.md) and the [September 10 user routing](raw/assignments/moriarty-grok-opus-astra-routing-2026-09-10.md) before following recovered model assignments. These later instructions select Grok 4.6 implementation with fresh Claude Opus and GPT-6 Astra medium reviews, superseding older model routing below. The original roadmap design remains normative for scope and acceptance gates; consult ACTIVE-ROUTING for the reviewed prompt revision and its adoption status. Preserve historical authorship and audit identities.
+
 ## Prevent orchestration displacement
 
 Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).

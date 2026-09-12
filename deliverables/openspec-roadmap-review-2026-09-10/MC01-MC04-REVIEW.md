@@ -1,0 +1,52 @@
+# Moriarty MC01–MC04 and SP01–SP06 review
+
+Review date: 2026-09-10. Checkout: `/home/charl/Moriarty`. This is read-only review, not stage admission, independent re-execution or product acceptance. Loaded AGENTS.md and Moriarty develop skill and inspected guarded status. The companion inventory hashes all 35 files reviewed in full; SP01–SP06 records in sprints.json were additionally reviewed. Full source code, every historical receipt and binary proof artifacts were outside this bounded review.
+
+## Recommendation
+
+**Next sprint: SP05, Financial integration on Preview. Next concrete task: finish SP05.2's real local adverse-transaction/nonmutation evidence, then enter SP05.3 under a separately reviewed Preview allocation.** Do not repeat already successful local loan and swap traces just to produce fresh green receipts, and do not jump directly from their positive result summaries to Preview dispatch.
+
+The existing accepted `atomic-accept` and `rp01-mc02` are SP05's exact stage prerequisites. Whole-SP01 closure is explicitly not an entry barrier (`openspec/sprints/sp05-financial-integration-on-preview.md:15`; `sprints.json`, SP05 entryGates). Conversely SP02 requires rp01-full, SP03 full stage requires successor-frontend, SP04 requires f0 plus native-path-freeze, and SP06 requires atomic-accept/rp01-mc03/f1/native-path-freeze. SP05 therefore has the clearest path to the user's next visible language capability while successor design and native feasibility remain separate open tracks.
+
+SP05.2 explicitly says failed transactions must leave no financial state mutation (`openspec/sprints/sp05-financial-integration-on-preview.md:43`). The report refinement requires local Docker transaction checks before Preview and wrong-payer, wrong-recipient and omitted-fee controls through the callable production path (`:74`). A rejection of a fabricated comparator JSON alone does not meet that production-path obligation. A pre-submit Compact error must be labeled pre-submit; it cannot be relabeled ledger rollback or included failed settlement. A transaction that charges network fees may still preserve financial contract state: financial state/assets and network fees must be accounted separately, not hidden by an assertion of total zero mutation.
+
+## Verified scoped progress
+
+- MC01 atomic scope: SP01.1/.8 acceptance is candidate-bound at `2f1fb86407537720174bbf73cb50426499744986e97ce8a5dde9f792577e0b5e`; only the old atomic implementation predicate is closed (`openspec/sprints/execution/SP01.md:43`). RP01-MC02 four-row design subset is accepted at `982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f` (`:53`). Native export and RP01-MC03 remain separate (`:61`). Full map/signing-contract blockers remain (`:67`).
+- K scope: bounded projection executes Transfer and Transfer/Repay; it is expressly not the full successor Core (`openspec/sprints/execution/SP03.md:16`). Initial 16 cases and branch 16 cases are observed (`:73`, `:116`); Transfer-only and numeric extension are recorded, with 42 previous distinct cases and 22 new numeric cases (`:125`, `:148`, `:156`). Required full base-domain metatheorems are still required and cannot be replaced by differential traces (`openspec/sprints/sp03-executable-bounded-semantics-in-k.md:55`).
+- Loan: GPT-6 Astra and Grok scoped result approvals are recorded; all four local financial comparisons pass, partial settlement pays 533972602 units and leaves principal 4500000000 (`deliverables/sp05-financial-integration-2026-09-09/local-continuation-02/REVIEWED-RESULT.md:3`, `:5`, `:7`).
+- Swap: both scoped result reviews pass, all four local comparisons pass, and only swap/close were newly submitted (`deliverables/sp05-financial-integration-2026-09-09/local-swap-continuation-01/REVIEWED-RESULT.md:3`). Net swap is 10000 A for 19743 B, with 90000 A change; close returns 1010000 A and 1980257 B and empties both reserves (`:7`, `:8`).
+- Both current result artifacts explicitly remain local `undeployed`. Their raw inner statuses remain INCOMPLETE; independent outer containment is a separate observed result, not grounds to rewrite the diagnostics (`local-swap-continuation-01/REVIEWED-RESULT.md:12`). Swap scope excludes Preview, independently funded counterparties, full SP05 and PCD (`:14`, `reviewed-result.json:notAccepted`).
+
+## Sprint assessment
+
+| Sprint | Current scope retained | Required remainder |
+|---|---|---|
+| SP01 | Accepted atomic preparation/acceptance and loan/swap design subset; local fixture utility. | Full map and signing contract; RP01-MC03 binding/export requirements; bounded F0 decision and native path freeze. See SP01 lines41–86 and execution lines65–75. |
+| SP02 | Provisional syntax, parsing and formatting exist in current project context; complete stage not accepted. | Full lexical/EBNF/static/canonical contract; typed asset/share/debt/request distinctions; positive and negative source cases; actual participant matched syntax study, not model votes. SP02 lines39–56,76–78. |
+| SP03 | Real bounded K local projection and independent comparisons. | Complete frozen base-Core constructors, actual successor simulation, required determinism/progress/rejection/type/termination/residual-duty/elaboration/evaluator proofs. SP03 lines47–56. |
+| SP04 | No full outer verifier component acceptance in reviewed records. | F0/F0a source route and real commands, independent non-loan fixtures, P1 transcript/carried accumulator, P2 canonical transport, P3 actual full final decision. P1/P3 must run in chosen outer circuit. SP04 lines34–51. |
+| SP05 | Reviewed local positive loan and swap financial traces. | Local adverse nonmutation and production-path controls; complete identity/custody/funding scope; separate Preview campaign and full readback/effects/audits. SP05 lines35–54,73–75. |
+| SP06 | No real two-step proof acceptance in reviewed records. | Changed reviewed encoding after k17 exhaustion, stage prerequisites, bounded two-step native proof and separate fresh verification with mutations. SP06 lines33–50,70–72. |
+
+## Contradictions and stale documents
+
+1. **Current SP05 execution note contradicts latest actual evidence.** `openspec/sprints/execution/SP05.md:19` still calls local execution next; `:23` says no local financial transaction was submitted. The September 10 result artifacts contain actual finalized local loan and swap IDs. Add a current disposition that preserves the older historical paragraphs and points to exact result artifacts; do not rewrite old raw receipts.
+2. **Review routing is stale in maintained MC01–MC04 boilerplate.** Every package's old execution contract and missing-reviewer scenario still says exact Fable 5.1. Example `openspec/changes/mc02-preview-financial-operation/specs/mc02-preview-financial-operation/spec.md:44`, tasks `:63`, design `:47`. AGENTS.md's September 9 routing selects GPT-6 implementation and fresh GPT-6 Astra + Grok 4.6 reviews. This is already explicitly superseded authority, not a need to call Fable or collect another design vote. Historical audit identities must remain unchanged.
+3. **Package-wide 'specified-only / all unchecked' prose obscures real partial implementation.** MC02 `tasks.md:3` and SP05's generic status fail to communicate completed scoped utilities and live local positive traces. Full acceptance stays open; link scoped completion rather than checking every parent task.
+4. **MC04 still lists Lean as a presumed output while current task is K-first.** `mc04.../design.md:20`, `:28` and proposal `:21`, `:29` list Correspondence.lean/lakefile. Current `tasks.md:30` says K-first, with only a justified supporting proof-assistant bridge. Reconcile output map to that existing requirement; do not build a Lean bridge merely because an old filename appears.
+5. **Counterparty scope is unfinished, not a cosmetic limitation.** MC02 tasks D.1 `:43` requires distinct counterparty identities and funding to be frozen. Latest swap scope says one controller holds both capabilities and does not establish independent counterparty funding/signatures. SP05.1 `:35`, refinement `:73` require explicit roles, custody and real production ownership. Preview admission must name supported participant funding/signing rather than silently promoting the single-wallet result.
+6. **Prior source/result reviews do not grant another run.** Latest swap attempt-result has retryAllowed false and consumed reservations. Scope-completion does not reset counters. The live plugin's unresolved old operational history remains visible; status reports `sp01-loan-report`, not a currently admitted SP05 public campaign. Routine document/source review can continue without machinery repair, but actual public dispatch still needs proper current admission.
+7. **Raw pending-review markers are historical, not current missing audit findings.** Both attempt-result.json files retain then-pending review fields. Their separate reviewed-result.json files bind final independent approvals. Preserve both; derive current status from the newer wrapper.
+
+## SP05.3 entry checklist
+
+- Retain accepted atomic source and RP01-MC02 references at actual candidate bytes; requalify changed source scope.
+- Finish and independently review SP05.2 local adverse nonmutation and production-path rejection controls, preserving failed attempts and real before/after financial effects.
+- Freeze case identities, custody, existing Preview wallet, supported real test-asset mapping, role ownership/funding, nominal denomination, gross debits, fee budget, change, net credits and surviving debt. Distinct payout addresses alone do not establish independently signed counterparties.
+- Use current independently reviewed source, generated contract/key artifacts, observer/decoder and pinned SDK/node/indexer versions.
+- Obtain a separate live public allocation for actual build/proof/service/submission/spend/cleanup needs without resetting historical consumption. MC02 tasks3.2 and SP05.3 limit attempts to at most two per case.
+- Retain exact public transaction bytes/IDs, indexed SUCCESS, canonical node finality and exact state/effect readback against independent expectations. Publish each actual ID/status.
+- Keep I2 receipts uncertified. MC02 integration does not close MC04 correspondence, MC05 mandatory claims, or SP09 acceptance lineage.
+
+This recommendation selects the next product increment. It grants no resource campaign and does not mark any sprint complete.

@@ -39,9 +39,9 @@ Implementation paths and verification commands are planned entry points unless r
 |---|---|---|---|
 | [MC01](changes/mc01-bounded-language/README.md) | Grammar, typing, bounded semantics, canonical encoding, initial Compact lowering | Existing target study | DSL definition |
 | [MC02](changes/mc02-preview-financial-operation/README.md) | Real loan and swap transfers; complete finalized effects match independent expectations | MC01 | Preview financial operation |
-| [MC03](changes/mc03-native-recursive-proof/README.md) | Reviewed encoding; two recursive financial steps; independent retained-proof verification | MC01 | Native recursion |
-| [MC04](changes/mc04-ledger-correspondence-and-consumption/README.md) | Proof/ledger compatibility, compiler correspondence, durable authority and consumption | MC01–MC03 | Correspondence and replay protection |
-| [MC05](changes/mc05-mandatory-claim-acceptance/README.md) | All four mandatory claims enforced in actual acceptance | MC03, MC04 | Mandatory proof acceptance |
+| [MC03](changes/mc03-native-recursive-proof/README.md) | Certificate relations and off-ledger segment certificates, independently verified | MC01 | Native recursion |
+| [MC04](changes/mc04-ledger-correspondence-and-consumption/README.md) | Proof/ledger compatibility, compiler correspondence, durable authority and consumption | MC01, MC02 | Correspondence and replay protection |
+| [MC05](changes/mc05-mandatory-claim-acceptance/README.md) | All four mandatory claims enforced in actual acceptance | MC04 | Mandatory proof acceptance |
 | [MC06](changes/mc06-private-handoff-and-composition/README.md) | Separate-party witness handoff; valid private split/join and residual obligations | MC05 | Handoff and composition |
 | [MC07](changes/mc07-complete-financial-conformance/README.md) | Full ACTUS/DeFi and held-out behavioral coverage | MC01, MC04–MC06 | Financial conformance |
 | [MC08](changes/mc08-release-evidence-and-developer-flow/README.md) | Reproducible developer workflow and independently audited completion dossier | MC01–MC07 | Combined acceptance |
@@ -52,7 +52,7 @@ flowchart LR
   MC01 --> MC02
   MC01 --> MC03
   MC02 --> MC04
-  MC03 --> MC04
+  MC03 --> MC08
   MC04 --> MC05
   MC05 --> MC06
   MC06 --> MC07
@@ -82,8 +82,9 @@ A single full-corpus implementation would delay evidence about proof and ledger 
 The selected sequence uses bounded slices, then requires full coverage before completion.
 
 MC02 transactions are integration experiments until MC05 completes mandatory acceptance.
-MC03 proves the retained financial episode under its fixed authority assumptions.
-MC04 and MC05 must extend that evidence to actual authorization and ledger acceptance.
+MC03 proves bounded native certificates and off-ledger segment history.
+MC04 and MC05 build the ledger-anchored step relation, authorization and ledger acceptance without an MC03 proof input.
+The [PCD integration](PCD-INTEGRATION-2026-09-11.md) records this change.
 MC06 must prove its additional split/join relations; the MC03 proof cannot substitute for them.
 Each extension requires a reviewed relation, valid feasible examples, and meaningful rejection controls.
 
@@ -248,7 +249,7 @@ The ledger, proof, and complete-conformance requirements remain open beyond that
 | One substantive audit | 10 minutes; 1 initial review plus at most 2 correction reviews per reviewer and task | Unavailable identity, timeout, exhausted credit, or exhausted rounds |
 | Native revision-01 preflight | 10 cumulative minutes; 8 GiB; 2 CPU jobs; no proving | First failed encoding or fit predicate |
 | Native revision-01 proving | 20 cumulative minutes; 8 GiB; 2 CPU jobs; k at most 17; 256 MiB retained outputs | First synthesis, proof, control, time, memory, or output failure |
-| MC03 revision-01 positive campaign | One campaign containing exactly two original R2 loan transitions | No restart after a failed campaign |
+| MC03 revision-01 positive campaign (retired by PD7; history only) | One campaign containing exactly two original R2 loan transitions | No restart after a failed campaign |
 | Public financial cases | At most 2 submissions per case; 20 minutes per attempt | Failed finality/effect gate stops that attempt |
 | Program Preview submissions | At most 24 submissions, including deploys and failed submissions | No attempt-counter reset across packages |
 | Test assets | At most 1,000 tNIGHT total gross external debit; 100 per case | Balance, fee, closure reserve, or denomination check fails |
@@ -280,6 +281,7 @@ This program permits the following extension campaigns within their protected pa
 Each campaign uses owned `proof/` artifacts listed in its package design and tasks.
 Each contract links its predecessor and has separate persistent counters under the common program ceiling.
 All campaigns retain k at most 17, 8 GiB process-group memory, and two CPU jobs.
+Certificate campaigns need k 18–19 on the measured evidence; they cannot be admitted until the user approves a reviewed resource amendment.
 Each allows ten cumulative preflight minutes and 256 MiB retained outputs.
 All preflight, proving, and verification time consumes the eight-hour program ceiling.
 Each campaign has one frozen positive-case manifest, one bounded execution permission, and no automatic failed-campaign retry.
@@ -293,7 +295,7 @@ A failure stops that campaign and dependent acceptance without converting earlie
 | MC06 composition-01 | Private successor, split, two branch histories, and join; at most 8 positive transitions | 20 cumulative minutes |
 | MC07 financial-coverage-01 | Required extended profiles and row-specific certificates; at most 349 positive episodes across pinned cases | 120 cumulative minutes |
 
-MC04 first probes the retained MC03 proof interface without claiming swap or dynamic-authority correspondence.
+MC04 first pins the declared ledger verification seam without claiming swap or dynamic-authority correspondence.
 MC04 then implements its own loan/swap relation before asserting correspondence for either supported compiled family.
 MC05 proves its additional signed-authority and mandatory-claim predicates and requalifies affected MC04 correspondence.
 MC06 proves composition predicates and requalifies affected acceptance and correspondence.
@@ -343,7 +345,8 @@ Preserve disagreements and rejected approaches with their reasons.
 Complete read-only verifier-interface inspection before any MC03 native proving or MC04 actionful dispatch.
 Record source pins and formats in `evidence/moriarty-completion-program-2026-09-07/verifier-interface-intake.json`.
 Distinguish a source-compatible interface from an executed positive verifier probe.
-If the interface is absent, propose a checked Compact/ZKIR decider wrapper or pinned-version alignment for review.
+The PCD integration records the core interface: ledger `well_formed` checks each contract-call proof against the operation key in contract state.
+Certificates use `ledger-10` `verify_proof`; no in-circuit decider wrapper is planned.
 A local-node alternative cannot discharge the Preview gate; any target change requires explicit user authorization.
 Keep native feasibility and target acceptance as separate results; do not replace either with a host verification bit.
 
@@ -353,7 +356,7 @@ A transaction fee-payer signature does not authorize a different application's f
 The selected path must authenticate the signed intent, domain, principal, nonce, and mandatory claims before effects apply.
 Unmeasured signature-circuit cost remains a preflight decision, not an assumption that Ed25519 fits k17.
 
-Before MC06 proving, probe successor continuation from retained artifacts and a two-predecessor join at the pinned interface.
+Before MC06 proving, probe successor continuation from a head commitment and recipient-encrypted opening, and a two-head join, at the pinned interface.
 Record `interface-blocked` if either operation lacks a checked realization.
 Use separate OS users or containers with separate mounts for Alice and Bob.
 Record denied attempts to read predecessor secrets; two directories under one unrestricted user do not establish access isolation.
@@ -384,7 +387,7 @@ Require independent mathematical and fixture checks; do not describe the missing
 ## Completion and broader release scope
 
 Close this program only after MC01–MC08 satisfy their actual predicates and both required result audits.
-Require finalized financial effects, real recursion, mandatory acceptance, composition, complete conformance, and correspondence evidence.
+Require finalized financial effects, bounded native certificates, mandatory acceptance, composition, complete conformance, and correspondence evidence.
 Require fresh-checkout deterministic re-execution of parser, semantics, theorem, and conformance checks.
 Separately re-verify retained native proof bytes and canonical chain receipts without rerunning consumed campaigns or public submissions.
 Pin SRS acquisition and verify its digest before retained-proof verification; never assume an untracked SRS is present.

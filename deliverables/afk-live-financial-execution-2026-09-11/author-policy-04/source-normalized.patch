@@ -1,0 +1,41 @@
+*** Begin Patch
+*** Update File: /home/charl/Moriarty/.worktrees/afk-live-financial-execution/plugins/moriarty-dev/tests/test_live_policy_history.py
+@@
+         self.assertIsNone(
+             get_live_history(
+                 self.db_path, str(self.root), REQ, CAP, identity_anchor=" "
+             )
+         )
++        self.assertIsNone(
++            get_live_history(
++                self.db_path, str(self.root), REQ, CAP, identity_anchor=7
++            )
++        )
+         conn = init_db(self.db_path)
+         try:
+             with conn:
+                 conn.execute("DELETE FROM store_identity")
+                 conn.execute("INSERT INTO store_identity (token) VALUES (?)", ("   ",))
+         finally:
+             conn.close()
+         self.assertIsNone(read_store_identity(self.db_path))
+         self.assertIsNone(
+             get_live_history(
+                 self.db_path, str(self.root), REQ, CAP, identity_anchor="fixture-anchor-1"
+             )
+         )
+         conn = init_db(self.db_path)
+         try:
+             with conn:
+                 conn.execute("DELETE FROM store_identity")
+-                conn.execute("INSERT INTO store_identity (token) VALUES (?)", (7,))
++                conn.execute("DROP TABLE store_identity")
++                conn.execute("CREATE TABLE store_identity (token BLOB NOT NULL)")
++                conn.execute(
++                    "INSERT INTO store_identity (token) VALUES (?)",
++                    (b"\x00\x01nonstring",),
++                )
+         finally:
+             conn.close()
+         self.assertIsNone(read_store_identity(self.db_path))
+*** End Patch
