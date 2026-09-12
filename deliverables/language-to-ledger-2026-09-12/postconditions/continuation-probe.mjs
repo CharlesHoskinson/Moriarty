@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+const root=process.argv[2],base=path.join(root,'experiments/moriarty-language');
+const load=async p=>import(pathToFileURL(path.join(base,p)).href);
+const machine=await load('src/successor/financial-expression-v1.ts');
+const {createFinancialAgreementSourceV4}=await load('src/successor/financial-agreement-source-v4.ts');
+const {canonical}=await load('src/successor/expression-wire-v1.ts');
+const src=fs.readFileSync(path.join(base,'spec/successor/examples/financial-state-payment.mori'),'utf8').replace('agreement-source/3','agreement-source/4');
+const i=src.lastIndexOf('ensures post.paid == pre.paid + payment;');
+assert.ok(i>=0);
+const text=src.slice(0,i)+src.slice(i).replace('ensures post.paid == pre.paid + payment;','ensures post.paid == pre.paid + payment; ensures post_outstanding<Cash>("Due100") == quantity<Units<Cash,1>,0>(100);');
+const state=JSON.parse(fs.readFileSync(path.join(base,'spec/successor/examples/financial-state-payment.state.json'),'utf8'));
+const snap=JSON.parse(fs.readFileSync(path.join(base,'spec/successor/examples/financial-state-payment.snapshots.json'),'utf8'));
+snap.Args={transferId:'PublicT1',allocationId:'PublicA1'};
+const api=createFinancialAgreementSourceV4();
+const result=api.evaluate(text,'repay_remaining',canonical(snap),JSON.stringify(state));
+assert.equal(result.code,'ENSURES_FAILED');
+const exported=typeof machine.evaluateFinancialExpressionV3Prefix==='function';
+if(!exported){console.log(JSON.stringify({pass:true,publicPrefixExport:false}));process.exit(0);}
+const artifact=api.elaborate(text).actions.find(a=>a.action==='repay_remaining');
+const prefix=machine.evaluateFinancialExpressionV3Prefix(artifact.schema,canonical({contract:'moriarty-financial-expression-contract/3',source:text,core:artifact.core,...snap}),state);
+assert.equal(prefix.status,'PrefixReady');
+const suffix=prefix.continueSuffix(state,2);
+console.log(JSON.stringify({pass:false,publicPrefixExport:true,normalResult:result,exposedFields:Object.keys(prefix),forgedSuffixStatus:suffix.status},null,2));
+process.exitCode=1;

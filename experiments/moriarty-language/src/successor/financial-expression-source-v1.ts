@@ -3,7 +3,7 @@
 import { parseFinancialExpressionSource, FINANCIAL_EXPRESSION_SOURCE_PROFILE } from './financial-expression-source-frontend.ts';
 import { SuccessorSyntaxError } from './frontend.ts';
 import type { ActionDecl, Program } from './frontend.ts';
-import { createFinancialExpressionContractV1, createFinancialExpressionContractV2, FINANCIAL_EXPRESSION_CONTRACT_V1, FINANCIAL_EXPRESSION_CONTRACT_V2 } from './financial-expression-v1.ts';
+import { createFinancialExpressionContractV1, createFinancialExpressionContractV2, createFinancialExpressionContractV3, FINANCIAL_EXPRESSION_CONTRACT_V1, FINANCIAL_EXPRESSION_CONTRACT_V2, FINANCIAL_EXPRESSION_CONTRACT_V3 } from './financial-expression-v1.ts';
 import type { ExpressionResult } from './financial-expression-v1.ts';
 import { ExpressionFailure, SYNTHETIC_SPAN, bytes, canonical, closed, decimal, parseCanonical, scalarString } from './expression-wire-v1.ts';
 import { schemaShape, validateSchema, same } from './financial-expression-types-v1.ts';
@@ -119,16 +119,20 @@ export function lowerAndCheckFinancialAction(
   schema: Schema,
   schemaCanonicalJSON: string,
   options?: {
-    contract?: typeof FINANCIAL_EXPRESSION_CONTRACT_V1 | typeof FINANCIAL_EXPRESSION_CONTRACT_V2;
+    contract?: typeof FINANCIAL_EXPRESSION_CONTRACT_V1 | typeof FINANCIAL_EXPRESSION_CONTRACT_V2 | typeof FINANCIAL_EXPRESSION_CONTRACT_V3;
     extraReserved?: readonly string[];
     financialReads?: boolean;
+    financialPostReads?: boolean;
   },
 ): { core: { statements: SourceCoreNode[]; span: ReturnType<typeof sourceSpan> }; staticWorkBound: string } | SourceRejected {
   const extraReserved = options?.extraReserved ?? [];
   const lowering = createFinancialSourceLowering(
     schema,
     new Set(action.parameters.map(p => p.name)),
-    { financialReads: options?.financialReads === true },
+    {
+      financialReads: options?.financialReads === true,
+      financialPostReads: options?.financialPostReads === true,
+    },
   );
   const statements = [...action.statements, ...action.postconditions].map(statement => {
     if (statement.tag === 'Let' && reservedSourceTerm(statement.name, extraReserved)) {
@@ -138,10 +142,13 @@ export function lowerAndCheckFinancialAction(
   });
   const core = { statements, span: sourceSpan(action.span) };
   const contract = options?.contract ?? FINANCIAL_EXPRESSION_CONTRACT_V1;
-  const checked = (contract === FINANCIAL_EXPRESSION_CONTRACT_V2
-    ? createFinancialExpressionContractV2(schemaCanonicalJSON)
-    : createFinancialExpressionContractV1(schemaCanonicalJSON)
-  ).check(canonical({ contract, source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
+  const request = canonical({ contract, source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' });
+  const checked = (contract === FINANCIAL_EXPRESSION_CONTRACT_V3
+    ? createFinancialExpressionContractV3(schemaCanonicalJSON)
+    : contract === FINANCIAL_EXPRESSION_CONTRACT_V2
+      ? createFinancialExpressionContractV2(schemaCanonicalJSON)
+      : createFinancialExpressionContractV1(schemaCanonicalJSON)
+  ).check(request);
   if ('status' in checked) return checked;
   return { core, staticWorkBound: workBound(core) };
 }

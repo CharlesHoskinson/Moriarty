@@ -147,11 +147,23 @@ node src/cli.ts simulate --profile moriarty-financial-agreement-source/2 --actio
 
 The `/3` profile adds typed reads of obligations, balances and allowances
 from a fully validated kernel pre-state. `repay_remaining` computes the
-payment from `outstanding<Cash>("Due100")`. See
+payment from `outstanding<Cash>("Due100")`. In `/3`, `ensures` still run
+before the kernel and unprefixed reads always mean financial PRE. See
 [spec/successor/financial-agreement-source-v3.md](spec/successor/financial-agreement-source-v3.md).
 
 ```sh
 node src/cli.ts check --profile moriarty-financial-agreement-source/3 spec/successor/examples/financial-state-payment.mori
 node src/cli.ts simulate --profile moriarty-financial-agreement-source/3 --action repay --snapshots spec/successor/examples/financial-state-payment.snapshots.json --repayment-state spec/successor/examples/financial-state-payment.state.json spec/successor/examples/financial-state-payment.mori
 npm run financial-state-demo
+```
+
+The `/4` profile adds six Ensure-only financial POST reads and runs the
+kernel once before every `ensures` expression. Unprefixed reads keep PRE
+meaning. Successful `repay_remaining` work for the example is 82. See
+[spec/successor/financial-agreement-source-v4.md](spec/successor/financial-agreement-source-v4.md).
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/4 spec/successor/examples/financial-postconditions-payment.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/4 --action repay --snapshots spec/successor/examples/financial-state-payment.snapshots.json --repayment-state spec/successor/examples/financial-state-payment.state.json spec/successor/examples/financial-postconditions-payment.mori
+npm run financial-postconditions-demo
 ```
