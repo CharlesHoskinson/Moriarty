@@ -7,6 +7,8 @@ import { EXPRESSION_SOURCE_PROFILE, formatExpressionSource } from './successor/e
 import { createFinancialExpressionSourceV1 } from './successor/financial-expression-source-v1.ts';
 import { FINANCIAL_EXPRESSION_SOURCE_PROFILE, formatFinancialExpressionSource } from './successor/financial-expression-source-frontend.ts';
 import { createFundedFinancialExpressionSourceV1 } from './successor/funded-expression-source-v1.ts';
+import { createFinancialAgreementSourceV1 } from './successor/financial-agreement-source-v1.ts';
+import { FINANCIAL_AGREEMENT_SOURCE_PROFILE, formatFinancialAgreementSource } from './successor/financial-agreement-source-frontend.ts';
 import { SuccessorSyntaxError } from './successor/frontend.ts';
 import { parseCanonical } from './successor/expression-wire-v1.ts';
 
@@ -36,18 +38,32 @@ function argumentsFor(argv: string[]): {
     typeof value === 'string' && value.length > 0 && !value.startsWith('--');
   const checking = command === 'check' && rest.length === 3 && rest[0] === '--schema'
     && fileName(rest[1]) && fileName(rest[2]);
+  const checkingBare = command === 'check' && rest.length === 1 && fileName(rest[0]);
   const formatting = command === 'format' && rest.length === 1 && fileName(rest[0]);
   const simulating = command === 'simulate' && rest.length === 5 && rest[0] === '--schema'
     && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3]) && fileName(rest[4]);
   const funded = command === 'simulate' && rest.length === 7 && rest[0] === '--schema'
     && fileName(rest[1]) && rest[2] === '--snapshots' && fileName(rest[3])
     && rest[4] === '--repayment-state' && fileName(rest[5]) && fileName(rest[6]);
-  if (flag !== '--profile' || !profile || (!checking && !formatting && !simulating && !funded))
+  const agreementSimulate = command === 'simulate' && rest.length === 5 && rest[0] === '--snapshots'
+    && fileName(rest[1]) && rest[2] === '--repayment-state' && fileName(rest[3]) && fileName(rest[4]);
+  if (flag !== '--profile' || !profile
+    || (!checking && !checkingBare && !formatting && !simulating && !funded && !agreementSimulate))
     throw new CliFailure('CLI_USAGE', 'arguments');
-  if (![EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE].includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
-  if (funded && profile !== FINANCIAL_EXPRESSION_SOURCE_PROFILE) throw new CliFailure('CLI_USAGE', 'arguments');
+  const known = [EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE, FINANCIAL_AGREEMENT_SOURCE_PROFILE];
+  if (!known.includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE) {
+    if (checking || simulating || funded || (command === 'simulate' && !agreementSimulate)
+      || (command === 'check' && !checkingBare)) {
+      throw new CliFailure('CLI_USAGE', 'arguments');
+    }
+  } else if (checkingBare || agreementSimulate || (funded && profile !== FINANCIAL_EXPRESSION_SOURCE_PROFILE)) {
+    throw new CliFailure('CLI_USAGE', 'arguments');
+  }
   return checking ? { command: 'check', profile, schema: rest[1], source: rest[2] }
+    : checkingBare ? { command: 'check', profile, source: rest[0] }
     : funded ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], repaymentState: rest[5], source: rest[6] }
+    : agreementSimulate ? { command: 'simulate', profile, snapshots: rest[1], repaymentState: rest[3], source: rest[4] }
     : simulating ? { command: 'simulate', profile, schema: rest[1], snapshots: rest[3], source: rest[4] }
     : { command: 'format', profile, source: rest[0] };
 }
@@ -84,20 +100,22 @@ function readText(file: string, input: 'schema' | 'source' | 'snapshots' | 'repa
 
 function run(io: ProcessIo): void {
   const args = argumentsFor(io.argv.slice(2));
-  const schema = args.command === 'format' ? undefined : readText(args.schema!, 'schema');
+  const schema = args.schema !== undefined ? readText(args.schema, 'schema') : undefined;
   const source = readText(args.source, 'source');
   if (args.command === 'format') {
-    const formatted = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
-      ? formatFinancialExpressionSource(source) : formatExpressionSource(source);
+    const formatted = args.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
+      ? formatFinancialAgreementSource(source)
+      : args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+        ? formatFinancialExpressionSource(source) : formatExpressionSource(source);
     io.stdout.write(formatted);
   } else {
-    const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
-      ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
     if (args.command === 'simulate') {
       const snapshots = readText(args.snapshots!, 'snapshots', SNAPSHOT_LIMIT);
       if (args.repaymentState !== undefined) {
         const repaymentState = readText(args.repaymentState, 'repayment-state');
-        const result = createFundedFinancialExpressionSourceV1(schema!).evaluate(source, snapshots, repaymentState);
+        const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
+          ? createFinancialAgreementSourceV1().evaluate(source, snapshots, repaymentState)
+          : createFundedFinancialExpressionSourceV1(schema!).evaluate(source, snapshots, repaymentState);
         if ('status' in result && result.status === 'Rejected') {
           io.stderr.write(JSON.stringify(result) + '\n');
           io.exitCode = 1;
@@ -111,6 +129,8 @@ function run(io: ProcessIo): void {
         io.exitCode = 0;
         return;
       }
+      const language = args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+        ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!);
       const result = language.evaluate(source, snapshots);
       if ('status' in result && result.status === 'Rejected') {
         io.stderr.write(JSON.stringify(result) + '\n');
@@ -123,7 +143,10 @@ function run(io: ProcessIo): void {
       io.exitCode = 0;
       return;
     }
-    const result = language.check(source);
+    const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
+      ? createFinancialAgreementSourceV1().check(source)
+      : (args.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+        ? createFinancialExpressionSourceV1(schema!) : createExpressionSourceV1(schema!)).check(source);
     if ('status' in result) {
       io.stderr.write(JSON.stringify(result) + '\n');
       io.exitCode = 1;

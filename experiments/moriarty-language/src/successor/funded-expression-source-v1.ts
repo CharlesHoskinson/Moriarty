@@ -28,7 +28,9 @@ export type FundedExpressionRejected =
 export type FundedExpressionResult = FundedExpressionPrepared | FundedExpressionRejected;
 
 type SourceRejected = Extract<ExpressionResult, { status: 'Rejected' }>;
-type Binding = { transferAsset: string; repayDenomination: string };
+export type Binding = { transferAsset: string; repayDenomination: string };
+export type BindingDiagnostic = { operation?: string; field?: string };
+export type OperationBindingFailure = { status: 'Rejected'; code: string; diagnostic?: BindingDiagnostic };
 
 function reject(code: string): FundedExpressionRejected {
   return { status: 'Rejected', code };
@@ -38,14 +40,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function recordFields(value: unknown, expected: Record<string, unknown>): boolean {
-  if (!isRecord(value)) return false;
-  const keys = Object.keys(expected);
-  if (Object.keys(value).length !== keys.length) return false;
-  return keys.every((key) => Object.hasOwn(value, key) && same(value[key] as ValueType, expected[key] as ValueType));
+function mismatchedField(value: Record<string, unknown>, expected: Record<string, unknown>): string | undefined {
+  for (const key of Object.keys(value)) {
+    if (!Object.hasOwn(expected, key)) return key;
+  }
+  for (const key of Object.keys(expected)) {
+    if (!Object.hasOwn(value, key) || !same(value[key] as ValueType, expected[key] as ValueType)) return key;
+  }
+  return undefined;
 }
 
-function parseOwnedState(text: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; result: FundedExpressionRejected } {
+function bindReject(diagnostic?: BindingDiagnostic): OperationBindingFailure {
+  return diagnostic === undefined
+    ? { status: 'Rejected', code: 'OPERATION_BINDING' }
+    : { status: 'Rejected', code: 'OPERATION_BINDING', diagnostic };
+}
+
+export function parseOwnedState(text: unknown): { ok: true; value: Record<string, unknown> } | { ok: false; result: FundedExpressionRejected } {
   if (typeof text !== 'string') return { ok: false, result: reject('INPUT_SCHEMA') };
   if (text.length > STATE_BYTES || bytes(text) > STATE_BYTES) return { ok: false, result: reject('INPUT_BOUND') };
   let parsed: unknown;
@@ -58,7 +69,7 @@ function parseOwnedState(text: unknown): { ok: true; value: Record<string, unkno
   return { ok: true, value: owned };
 }
 
-function snapshotWorkInitial(text: string): string | undefined {
+export function snapshotWorkInitial(text: string): string | undefined {
   try {
     const snapshot = parseCanonical(text, SNAPSHOT_BYTES);
     if (isRecord(snapshot) && typeof snapshot.workInitial === 'string') return snapshot.workInitial;
@@ -90,21 +101,27 @@ function signedDecimal(value: unknown): bigint | undefined {
   }
 }
 
-function operationBinding(schema: Schema): Binding | FundedExpressionRejected {
+export function operationBinding(schema: Schema): Binding | OperationBindingFailure {
   const operations = schema.operations;
-  if (!isRecord(operations) || Object.keys(operations).length !== 2
-    || typeof operations.Transfer !== 'string' || typeof operations.Repay !== 'string') {
-    return reject('OPERATION_BINDING');
+  if (!isRecord(operations)) return bindReject();
+  const names = Object.keys(operations);
+  const extra = names.find((name) => name !== 'Transfer' && name !== 'Repay');
+  if (names.length !== 2 || typeof operations.Transfer !== 'string' || typeof operations.Repay !== 'string') {
+    if (extra !== undefined) return bindReject({ operation: extra });
+    if (typeof operations.Transfer !== 'string') return bindReject({ operation: 'Transfer' });
+    if (typeof operations.Repay !== 'string') return bindReject({ operation: 'Repay' });
+    return bindReject();
   }
   const transferRecord = schema.recordTypes[operations.Transfer];
   const repayRecord = schema.recordTypes[operations.Repay];
-  if (!isRecord(transferRecord) || !isRecord(repayRecord)) return reject('OPERATION_BINDING');
+  if (!isRecord(transferRecord)) return bindReject({ operation: 'Transfer' });
+  if (!isRecord(repayRecord)) return bindReject({ operation: 'Repay' });
   // Source schema cannot name a field `amount`: that spelling is reserved as a
   // financial generic. transferAmount is the Amount<asset> operand; the kernel
   // Transfer still uses amount.
   const amount = transferRecord.transferAmount;
   if (!Array.isArray(amount) || amount.length !== 2 || amount[0] !== 'Amount' || typeof amount[1] !== 'string') {
-    return reject('OPERATION_BINDING');
+    return bindReject({ operation: 'Transfer', field: 'transferAmount' });
   }
   const transferExpected = {
     from: ['Text'],
@@ -113,15 +130,16 @@ function operationBinding(schema: Schema): Binding | FundedExpressionRejected {
     to: ['Text'],
     transferAmount: amount,
   };
-  if (!recordFields(transferRecord, transferExpected)) return reject('OPERATION_BINDING');
+  const transferField = mismatchedField(transferRecord, transferExpected);
+  if (transferField !== undefined) return bindReject({ operation: 'Transfer', field: transferField });
   const nominal = repayRecord.nominalAmount;
   if (!Array.isArray(nominal) || nominal.length !== 3 || nominal[0] !== 'Quantity' || nominal[2] !== '0') {
-    return reject('OPERATION_BINDING');
+    return bindReject({ operation: 'Repay', field: 'nominalAmount' });
   }
   const units = nominal[1];
   if (!Array.isArray(units) || units.length !== 1 || !Array.isArray(units[0]) || units[0].length !== 2
     || typeof units[0][0] !== 'string' || units[0][1] !== '1') {
-    return reject('OPERATION_BINDING');
+    return bindReject({ operation: 'Repay', field: 'nominalAmount' });
   }
   const repayExpected = {
     allocationId: ['Text'],
@@ -130,7 +148,8 @@ function operationBinding(schema: Schema): Binding | FundedExpressionRejected {
     payer: ['Text'],
     transferId: ['Text'],
   };
-  if (!recordFields(repayRecord, repayExpected)) return reject('OPERATION_BINDING');
+  const repayField = mismatchedField(repayRecord, repayExpected);
+  if (repayField !== undefined) return bindReject({ operation: 'Repay', field: repayField });
   return { transferAsset: amount[1], repayDenomination: units[0][0] };
 }
 
@@ -238,41 +257,58 @@ export function createFundedFinancialExpressionSourceV1(schemaCanonicalJSON: str
         ? snapshotWorkInitial(snapshotCanonicalJSON) : undefined;
       if (workInitial !== undefined && workInitial !== remainingText) return reject('WORK_MISMATCH');
       const evaluated = inner.evaluate(source, snapshotCanonicalJSON);
-      if ('status' in evaluated && evaluated.status === 'Rejected') return evaluated as SourceRejected;
-      if (!('status' in evaluated) || evaluated.status !== 'ExpressionPrepared') return reject('INPUT_SCHEMA');
-      let schema: Schema;
-      try { schema = parseCanonical(schemaCanonicalJSON, STATE_BYTES); }
-      catch { return reject('INPUT_SCHEMA'); }
-      for (const field of Object.values(schema.fields)) {
-        if (isRecord(field) && field.writeClass === 'financial') return reject('TYPE_FINANCIAL_WRITE');
-      }
-      const binding = operationBinding(schema);
-      if ('status' in binding) return binding;
-      const mapped = mapDescriptors(evaluated.descriptors, binding);
-      if (!mapped.ok) return mapped.result;
-      const used = unsignedDecimal(workInitial ?? remainingText);
-      const remainingAfterExpression = unsignedDecimal(evaluated.workRemaining);
-      if (used === undefined || remainingAfterExpression === undefined) return reject('INPUT_SCHEMA');
-      const expressionUsed = used - remainingAfterExpression;
-      if (expressionUsed < 0n) return reject('INPUT_SCHEMA');
-      const debited = debitExpressionWork(parsedState.value, expressionUsed);
-      if (!debited.ok) return debited.result;
-      const prepared = prepareRepayment(JSON.stringify({
-        schemaVersion: REPAYMENT_VERSION,
-        state: debited.state,
-        actions: mapped.actions,
-      }));
-      if (prepared.status === 'Rejected') return prepared;
-      if (!nominalUnitsMatch(prepared.post, mapped.actions, binding.repayDenomination)) {
-        return reject('NOMINAL_UNIT');
-      }
-      return {
-        status: 'FundedExpressionPrepared',
-        post: evaluated.post,
-        financialPost: prepared.post,
-        effects: prepared.effects,
-        workRemaining: prepared.post.work.remaining,
-      };
+      return completeFundedPreparation(
+        evaluated,
+        schemaCanonicalJSON,
+        parsedState.value,
+        remainingText,
+        workInitial,
+      );
     },
   });
+}
+
+/** Kernel binding and one repayment call after a successful expression evaluation. */
+export function completeFundedPreparation(
+  evaluated: ExpressionResult,
+  schemaCanonicalJSON: string,
+  ownedState: Record<string, unknown>,
+  remainingText: string,
+  workInitial: string | undefined,
+): FundedExpressionResult {
+  if ('status' in evaluated && evaluated.status === 'Rejected') return evaluated as SourceRejected;
+  if (!('status' in evaluated) || evaluated.status !== 'ExpressionPrepared') return reject('INPUT_SCHEMA');
+  let schema: Schema;
+  try { schema = parseCanonical(schemaCanonicalJSON, STATE_BYTES); }
+  catch { return reject('INPUT_SCHEMA'); }
+  for (const field of Object.values(schema.fields)) {
+    if (isRecord(field) && field.writeClass === 'financial') return reject('TYPE_FINANCIAL_WRITE');
+  }
+  const binding = operationBinding(schema);
+  if ('status' in binding) return reject(binding.code);
+  const mapped = mapDescriptors(evaluated.descriptors, binding);
+  if (!mapped.ok) return mapped.result;
+  const used = unsignedDecimal(workInitial ?? remainingText);
+  const remainingAfterExpression = unsignedDecimal(evaluated.workRemaining);
+  if (used === undefined || remainingAfterExpression === undefined) return reject('INPUT_SCHEMA');
+  const expressionUsed = used - remainingAfterExpression;
+  if (expressionUsed < 0n) return reject('INPUT_SCHEMA');
+  const debited = debitExpressionWork(ownedState, expressionUsed);
+  if (!debited.ok) return debited.result;
+  const prepared = prepareRepayment(JSON.stringify({
+    schemaVersion: REPAYMENT_VERSION,
+    state: debited.state,
+    actions: mapped.actions,
+  }));
+  if (prepared.status === 'Rejected') return prepared;
+  if (!nominalUnitsMatch(prepared.post, mapped.actions, binding.repayDenomination)) {
+    return reject('NOMINAL_UNIT');
+  }
+  return {
+    status: 'FundedExpressionPrepared',
+    post: evaluated.post,
+    financialPost: prepared.post,
+    effects: prepared.effects,
+    workRemaining: prepared.post.work.remaining,
+  };
 }

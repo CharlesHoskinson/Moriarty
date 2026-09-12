@@ -65,7 +65,10 @@ function sourceAction(program: Program, schema: Schema): ActionDecl {
   for (const d of declarations) {
     if (names.has(d.name)) sourceFailure('SOURCE_DUPLICATE_DECLARATION', d.span);
     names.add(d.name);
-    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl') sourceFailure('SOURCE_DECLARATION', d.span);
+    if (d.tag === 'ConstDecl' || d.tag === 'StateDecl'
+      || d.tag === 'UninitializedStateDecl' || d.tag === 'RecordDecl' || d.tag === 'OperationDecl') {
+      sourceFailure('SOURCE_DECLARATION', d.span);
+    }
     if (d.tag === 'ActionDecl') {
       if (reservedSourceTerm(d.name)) sourceFailure('SOURCE_RESERVED_NAME', d.span);
     } else {
@@ -75,7 +78,12 @@ function sourceAction(program: Program, schema: Schema): ActionDecl {
       if (!roster.includes(d.name)) sourceFailure('SOURCE_DECLARATION_NAME', d.span);
     }
   }
-  const action = actions[0], parameters = new Set<string>();
+  const action = actions[0];
+  validateFinancialActionParameters(action, schema);
+  return action;
+}
+export function validateFinancialActionParameters(action: ActionDecl, schema: Schema): void {
+  const parameters = new Set<string>();
   const otherDeclarations = new Set<string>();
   for (const key of ['units', 'assets', 'vaults', 'parties']) schema[key].forEach((n: string) => otherDeclarations.add(n));
   for (const key of ['fields', 'observations', 'recordTypes', 'enumTypes', 'variantTypes', 'operations']) Object.keys(schema[key]).forEach(n => otherDeclarations.add(n));
@@ -88,7 +96,6 @@ function sourceAction(program: Program, schema: Schema): ActionDecl {
     sourceFailure('SOURCE_PARAMETER_NAMES', action.span);
   for (const p of action.parameters) if (!same(sourceType(p.type), schema.args[p.name]))
     sourceFailure('SOURCE_PARAMETER_TYPE', p.type.span);
-  return action;
 }
 function workBound(core: object): string {
   let count = 0;
@@ -100,6 +107,24 @@ function workBound(core: object): string {
     pending.push(...Object.values(value));
   }
   return String(count);
+}
+/** Original source, parsed action and validated schema only. Never consumes caller Core. */
+export function lowerAndCheckFinancialAction(
+  source: string,
+  action: ActionDecl,
+  schema: Schema,
+  schemaCanonicalJSON: string,
+): { core: { statements: SourceCoreNode[]; span: ReturnType<typeof sourceSpan> }; staticWorkBound: string } | SourceRejected {
+  const lowering = createFinancialSourceLowering(schema, new Set(action.parameters.map(p => p.name)));
+  const statements = [...action.statements, ...action.postconditions].map(statement => {
+    if (statement.tag === 'Let' && reservedSourceTerm(statement.name)) sourceFailure('SOURCE_RESERVED_NAME', statement.span);
+    return lowering.statement(statement);
+  });
+  const core = { statements, span: sourceSpan(action.span) };
+  const checked = createFinancialExpressionContractV1(schemaCanonicalJSON).check(canonical({ contract: FINANCIAL_EXPRESSION_CONTRACT_V1,
+    source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
+  if ('status' in checked) return checked;
+  return { core, staticWorkBound: workBound(core) };
 }
 /** Trusted Σ is immutable text. Every request owns new trees, including checking
  * and returned Core. The public evaluator never consumes caller-supplied Core. */
@@ -116,18 +141,11 @@ export function createFinancialExpressionSourceV1(schemaCanonicalJSON: string) {
     const schema: Schema = parseCanonical(trustedText, COMPONENT_BYTES);
     schemaShape(schema); validateSchema(schema); validateSourceSchemaNames(schema);
     const action = sourceAction(program, schema);
-    const lowering = createFinancialSourceLowering(schema, new Set(action.parameters.map(p => p.name)));
-    const statements = [...action.statements, ...action.postconditions].map(statement => {
-      if (statement.tag === 'Let' && reservedSourceTerm(statement.name)) sourceFailure('SOURCE_RESERVED_NAME', statement.span);
-      return lowering.statement(statement);
-    });
-    const core = { statements, span: sourceSpan(action.span) };
-    const checked = createFinancialExpressionContractV1(trustedText).check(canonical({ contract: FINANCIAL_EXPRESSION_CONTRACT_V1,
-      source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' }));
-    if ('status' in checked) return checked;
+    const lowered = lowerAndCheckFinancialAction(source, action, schema, trustedText);
+    if ('status' in lowered) return lowered;
     return { judgmentResult: 'SourceElaborated', sourceProfile: FINANCIAL_EXPRESSION_SOURCE_PROFILE,
       contract: FINANCIAL_EXPRESSION_CONTRACT_V1, agreement: program.agreement.name, action: action.name,
-      staticWorkBound: workBound(core), core };
+      staticWorkBound: lowered.staticWorkBound, core: lowered.core };
   }
   return Object.freeze({
     elaborate(source: string): SourceElaborated | SourceRejected {

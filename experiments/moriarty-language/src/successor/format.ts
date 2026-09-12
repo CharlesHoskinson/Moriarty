@@ -2,6 +2,7 @@ import {
   parseSuccessorSource,
   parseSuccessorExpressionSource,
   parseSuccessorFinancialExpressionSource,
+  parseSuccessorFinancialAgreementSource,
   SuccessorSyntaxError,
   SYNTAX_BOUNDS,
   type Declaration,
@@ -168,6 +169,15 @@ function formatDeclaration(declaration: Declaration, level: number): string {
       return `${pad}const ${declaration.name}: ${formatType(declaration.type)} = ${formatExpression(declaration.value, PREC_NONE, 'none')};`;
     case 'StateDecl':
       return `${pad}state ${declaration.name}: ${formatType(declaration.type)} = ${formatExpression(declaration.value, PREC_NONE, 'none')};`;
+    case 'UninitializedStateDecl':
+      return `${pad}state ${declaration.name}: ${formatType(declaration.type)};`;
+    case 'RecordDecl': {
+      const lines = declaration.fields.map((field) => `${indent(level + 1)}${field.name}: ${formatType(field.type)};`);
+      const body = lines.length === 0 ? '' : `${lines.join('\n')}\n`;
+      return `${pad}record ${declaration.name} {\n${body}${pad}}`;
+    }
+    case 'OperationDecl':
+      return `${pad}operation ${declaration.name}: ${formatType(declaration.type)};`;
     case 'ActionDecl': {
       const params = declaration.parameters.map(formatParameter).join(', ');
       const lines: string[] = [];
@@ -210,4 +220,8 @@ export function formatSuccessorExpressionSource(source: string): string {
 
 export function formatSuccessorFinancialExpressionSource(source: string): string {
   return formatParsedSource(parseSuccessorFinancialExpressionSource(source));
+}
+
+export function formatSuccessorFinancialAgreementSource(source: string): string {
+  return formatParsedSource(parseSuccessorFinancialAgreementSource(source));
 }

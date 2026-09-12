@@ -125,3 +125,12 @@ node src/cli.ts simulate --profile moriarty-financial-expression-source/1 --sche
 The example adds two Quantity arguments, guards a nonnegative sum, updates ordinary
 `paid`, and emits the computed cash and nominal. Default 10+20 pays 30 against due
 100. Success is local preparation only.
+
+The source-defined agreement profile declares that same schema in the `.mori`
+file and runs without `--schema`. See
+[spec/successor/financial-agreement-source.md](spec/successor/financial-agreement-source.md).
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/1 spec/successor/examples/source-defined-payment.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/1 --snapshots spec/successor/examples/expression-funded-payment.snapshots.json --repayment-state spec/successor/examples/expression-funded-payment.state.json spec/successor/examples/source-defined-payment.mori
+```

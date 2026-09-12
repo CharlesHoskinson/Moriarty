@@ -1,0 +1,27 @@
+{
+  "text": "I'll load the audit findings and reproduce both remaining diagnostic gaps before changing the source/type/operation path.Using systematic debugging on the two remaining span gaps. Next I\u2019ll reproduce them from the audit files and inspect the reserved-name and cycle paths.The findings match the code: reserved names go through unlocated schema checks, and the cycle walk never follows `Operation` edges. I\u2019ll reproduce both, then change the remaining schema-validation path rather than patching isolated strings.Tests failed on synthetic spans as expected. I\u2019ll export the shared reserved-name predicate and extend the cycle walk across remaining schema-validation paths.Both remaining Astra findings are fixed with source spans on the original declarations. This second diagnostic-class pass covers the leftover schema-name and cycle paths, not just the three example strings.\n\n## Findings (reproduced, then fixed)\n\nIndependently reproduced before any edit (`author-repair-02-probe-red.txt`):\n\n| Case | Before | After |\n| --- | --- | --- |\n| `state some` | `SOURCE_SCHEMA_NAME` synthetic `0:0` | source span `state some: UInt128;` |\n| parameter `some` | `SOURCE_SCHEMA_NAME` synthetic `0:0` | source span `some: Quantity<Units<Cash,1>,0>` |\n| `payer: Operation<Repay>` | `TYPE_SCHEMA_CYCLE` synthetic `0:0` | source span `Operation<Repay>` |\n\nCause: reserved names were checked only after schema materialization (`validateSourceSchemaNames` has no AST site). Cycle walk followed `Record` only, so `Operation` \u2192 bound-record cycles fell through to unlocated `validateSchema`.\n\n## Approach\n\nDeclaration validation now runs as:\n\n1. Parse  \n2. Collect names (duplicates, one action, asset type)  \n3. **Source-aware metadata names** on unit, asset, party, record, record-field, operation, state, and parameter AST nodes, using exported `reservedSourceSchemaName` (same `METADATA_RESERVED` set; catalog not copied)  \n4. Operation \u2192 record name resolution  \n5. Source-aware type domains on record fields  \n6. **Cycle graph** over records and operations, following `Record`, `Operation`\u2192bound record, and nested `Option`/`Collection`, with the referring `TypeNode` span  \n7. State and parameter types  \n8. Canonical / `schemaShape` / `validateSchema` / `validateSourceSchemaNames` kept as backstops  \n9. Protected operation binding (unchanged contract)\n\nUnknown names stay `TYPE_NAME`. Canonical, transport, and aggregate bounds stay global unless a specific node is responsible. Old-profile trusted-schema `SOURCE_SCHEMA_NAME` is unchanged.\n\n## Files changed\n\n- `experiments/moriarty-language/src/successor/financial-expression-source-types.ts`\n- `experiments/moriarty-language/src/successor/financial-agreement-source-v1.ts`\n- `experiments/moriarty-language/tests/financial-agreement-source.test.mjs`\n\nNew tests: reserved names in every source namespace; `Operation<Repay>`, nested `Option<Operation<\u2026>>`, extra-record `Option<Collection<Operation<LoopOp>>>` cycles; `Operation<Missing>` remains `TYPE_NAME`.\n\n## Commands\n\n| Command | Result |\n| --- | --- |\n| Independent A01/A02 reproduction (red) | three synthetic spans \u2014 `author-repair-02-probe-red.txt` |\n| `npm --prefix experiments/moriarty-language run typecheck` | exit 0 |\n| `npm --prefix experiments/moriarty-language test` | **720 pass, 0 fail** |\n| `independent-diagnostic-probes.mjs` (unchanged) | exit 0 |\n| CLI check of audit `reserved-state.mori` / `reserved-param.mori` / `operation-cycle.mori` | exit 1, empty stdout, `span.kind: source`, expected text in slice |\n\nNew receipts only (audit-01, candidate manifests, and earlier author files untouched):\n\n- `/home/charl/Moriarty/deliverables/source-defined-repayment-2026-09-11/author-repair-02-probe-red.txt`\n- `/home/charl/Moriarty/deliverables/source-defined-repayment-2026-09-11/author-repair-02-checks.txt`\n\n## Limitations\n\n- Local language diagnostics only; no Preview, K, or ledger claim.\n- Enum-prefix schema collisions still have no source declaration form in this profile, so they remain a schema-level backstop.\n- No commits, publication, live execution, installs, or subagents. Fresh Astra medium audit is due on this candidate.",
+  "stopReason": "end_turn",
+  "sessionId": "01a09288-cc1a-7871-9703-04544cf69322",
+  "requestId": "2449577c-9858-48a0-ad57-c4822f409708",
+  "usage": {
+    "input_tokens": 313711,
+    "cache_read_input_tokens": 4206848,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 17238,
+    "reasoning_tokens": 12768,
+    "total_tokens": 4537797
+  },
+  "num_turns": 16,
+  "total_cost_usd": 1.92730632,
+  "total_cost_usd_ticks": 19273063200,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 313711,
+      "outputTokens": 17238,
+      "cacheReadInputTokens": 4206848,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 16,
+      "costUSD": 1.92730632
+    }
+  }
+}

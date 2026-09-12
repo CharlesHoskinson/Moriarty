@@ -1,0 +1,12 @@
+{
+  "status": 0,
+  "signal": null,
+  "output": [
+    null,
+    "profile \"moriarty-financial-agreement-source/1\";\n\nagreement FundedPayment {\n  unit Cash;\n  asset Cash: Asset;\n  record TransferFields {\n    id: Text;\n    from: Text;\n    to: Text;\n    settlementAsset: Text;\n    transferAmount: Amount<Cash>;\n  }\n  record RepayFields {\n    allocationId: Text;\n    transferId: Text;\n    obligationId: Text;\n    payer: Text;\n    nominalAmount: Quantity<Units<Cash, 1>, 0>;\n  }\n  operation Transfer: TransferFields;\n  operation Repay: RepayFields;\n  state due: UInt128;\n  state paid: UInt128;\n  action pay(first: Quantity<Units<Cash, 1>, 0>, second: Quantity<Units<Cash, 1>, 0>, transferId: Text, allocationId: Text) {\n    requires pre.due > 0;\n    let nominal = first + second;\n    requires is_negative(nominal) == false;\n    let payment = magnitude(nominal);\n    requires payment > 0;\n    next.paid = pre.paid + payment;\n    emit Transfer { id: transferId, from: \"Payer\", to: \"Lender\", settlementAsset: \"Cash\", transferAmount: amount<Cash>(payment) };\n    emit Repay { allocationId: allocationId, transferId: transferId, obligationId: \"Due100\", payer: \"Payer\", nominalAmount: nominal };\n    ensures post.paid == pre.paid + payment;\n  }\n}\n",
+    ""
+  ],
+  "pid": 3404003,
+  "stdout": "profile \"moriarty-financial-agreement-source/1\";\n\nagreement FundedPayment {\n  unit Cash;\n  asset Cash: Asset;\n  record TransferFields {\n    id: Text;\n    from: Text;\n    to: Text;\n    settlementAsset: Text;\n    transferAmount: Amount<Cash>;\n  }\n  record RepayFields {\n    allocationId: Text;\n    transferId: Text;\n    obligationId: Text;\n    payer: Text;\n    nominalAmount: Quantity<Units<Cash, 1>, 0>;\n  }\n  operation Transfer: TransferFields;\n  operation Repay: RepayFields;\n  state due: UInt128;\n  state paid: UInt128;\n  action pay(first: Quantity<Units<Cash, 1>, 0>, second: Quantity<Units<Cash, 1>, 0>, transferId: Text, allocationId: Text) {\n    requires pre.due > 0;\n    let nominal = first + second;\n    requires is_negative(nominal) == false;\n    let payment = magnitude(nominal);\n    requires payment > 0;\n    next.paid = pre.paid + payment;\n    emit Transfer { id: transferId, from: \"Payer\", to: \"Lender\", settlementAsset: \"Cash\", transferAmount: amount<Cash>(payment) };\n    emit Repay { allocationId: allocationId, transferId: transferId, obligationId: \"Due100\", payer: \"Payer\", nominalAmount: nominal };\n    ensures post.paid == pre.paid + payment;\n  }\n}\n",
+  "stderr": ""
+}

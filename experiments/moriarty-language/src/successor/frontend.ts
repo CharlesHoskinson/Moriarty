@@ -3,6 +3,7 @@
 export const SYNTAX_PROFILE = 'moriarty-successor-syntax/0';
 export const EXPRESSION_SOURCE_PROFILE = 'moriarty-expression-source/1';
 export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expression-source/1';
+export const FINANCIAL_AGREEMENT_SOURCE_PROFILE = 'moriarty-financial-agreement-source/1';
 
 export const SYNTAX_BOUNDS = Object.freeze({
   sourceUtf8Bytes: 65536,
@@ -115,6 +116,34 @@ export interface StateDecl {
   span: Span;
 }
 
+export interface UninitializedStateDecl {
+  tag: 'UninitializedStateDecl';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface RecordField {
+  tag: 'RecordField';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
+export interface RecordDecl {
+  tag: 'RecordDecl';
+  name: string;
+  fields: RecordField[];
+  span: Span;
+}
+
+export interface OperationDecl {
+  tag: 'OperationDecl';
+  name: string;
+  type: TypeNode;
+  span: Span;
+}
+
 export interface ActionDecl {
   tag: 'ActionDecl';
   name: string;
@@ -124,7 +153,16 @@ export interface ActionDecl {
   span: Span;
 }
 
-export type Declaration = UnitDecl | PartyDecl | AssetDecl | ConstDecl | StateDecl | ActionDecl;
+export type Declaration =
+  | UnitDecl
+  | PartyDecl
+  | AssetDecl
+  | ConstDecl
+  | StateDecl
+  | UninitializedStateDecl
+  | RecordDecl
+  | OperationDecl
+  | ActionDecl;
 
 export interface Requires {
   tag: 'Requires';
@@ -646,7 +684,13 @@ class Parser {
   }
 
   private get expressionProfile(): boolean { return this.profile === EXPRESSION_SOURCE_PROFILE || this.financialProfile; }
-  private get financialProfile(): boolean { return this.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE; }
+  private get financialProfile(): boolean {
+    return this.profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE;
+  }
+  private get agreementSourceProfile(): boolean {
+    return this.profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE;
+  }
 
   parseProgram(): Program {
     const profile = this.parseProfile();
@@ -772,9 +816,17 @@ class Parser {
     if (this.at('unit')) return this.parseNamedSimple('UnitDecl');
     if (this.at('party')) return this.parseNamedSimple('PartyDecl');
     if (this.at('asset')) return this.parseAsset();
-    if (this.at('const')) return this.parseConstOrState('ConstDecl');
-    if (this.at('state')) return this.parseConstOrState('StateDecl');
+    if (this.at('const') && !this.agreementSourceProfile) return this.parseConstOrState('ConstDecl');
+    if (this.at('state')) {
+      return this.agreementSourceProfile ? this.parseUninitializedState() : this.parseConstOrState('StateDecl');
+    }
     if (this.at('action')) return this.parseAction();
+    if (this.agreementSourceProfile && this.at('ident') && this.peek().text === 'record') {
+      return this.parseRecordDecl();
+    }
+    if (this.agreementSourceProfile && this.at('ident') && this.peek().text === 'operation') {
+      return this.parseOperationDecl();
+    }
     const t = this.peek();
     if (t.kind === 'ident' || KEYWORDS.has(t.kind)) {
       this.fail('UNKNOWN_DECLARATION', `unknown declaration ${t.text || t.kind}`, t.start, t.end);
@@ -801,6 +853,67 @@ class Parser {
     const semi = this.expect(';');
     return this.counted({
       tag: 'AssetDecl',
+      name: name.text,
+      type,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseUninitializedState(): UninitializedStateDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'UninitializedStateDecl',
+      name: name.text,
+      type,
+      span: { start: kw.start, end: semi.end },
+    });
+  }
+
+  private parseRecordDecl(): RecordDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect('{');
+    const fields: RecordField[] = [];
+    while (!this.at('}') && !this.at('eof')) {
+      if (fields.length >= SYNTAX_BOUNDS.recordFields) {
+        this.fail('ARITY_BOUND', 'record field bound exceeded');
+      }
+      fields.push(this.parseRecordField());
+    }
+    const close = this.expect('}');
+    return this.counted({
+      tag: 'RecordDecl',
+      name: name.text,
+      fields,
+      span: { start: kw.start, end: close.end },
+    });
+  }
+
+  private parseRecordField(): RecordField {
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'RecordField',
+      name: name.text,
+      type,
+      span: { start: name.start, end: semi.end },
+    });
+  }
+
+  private parseOperationDecl(): OperationDecl {
+    const kw = this.advance();
+    const name = this.expectIdent();
+    this.expect(':');
+    const type = this.parseType();
+    const semi = this.expect(';');
+    return this.counted({
+      tag: 'OperationDecl',
       name: name.text,
       type,
       span: { start: kw.start, end: semi.end },
@@ -1274,7 +1387,11 @@ function parseSourceProfile(source: string, profile: string): Program {
     fail('SOURCE_TYPE', 'source must be a string', 0, 0);
   }
   validateSource(source);
-  const tokens = new Lexer(source, profile !== SYNTAX_PROFILE, profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE).tokenize();
+  const tokens = new Lexer(
+    source,
+    profile !== SYNTAX_PROFILE,
+    profile === FINANCIAL_EXPRESSION_SOURCE_PROFILE || profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE,
+  ).tokenize();
   return new Parser(tokens, profile).parseProgram();
 }
 
@@ -1290,4 +1407,9 @@ export function parseSuccessorExpressionSource(source: string): Program {
 /** Explicit financial expression entry, preserving the older profile parsers. */
 export function parseSuccessorFinancialExpressionSource(source: string): Program {
   return parseSourceProfile(source, FINANCIAL_EXPRESSION_SOURCE_PROFILE);
+}
+
+/** Distinct source-defined agreement entry; older parsers never opt into it. */
+export function parseSuccessorFinancialAgreementSource(source: string): Program {
+  return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_PROFILE);
 }

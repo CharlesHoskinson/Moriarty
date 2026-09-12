@@ -110,4 +110,6 @@ A second CLI call with the same source, arguments 10+10, and the first
 `financialPost` as state pays another 20 without editing the `.mori` file.
 
 This slice does not add a profile, compiler, or financial schema language. It
-does not execute K, construct a proof, or submit a public transaction.
+does not execute K, construct a proof, or submit a public transaction. The
+later [source-defined agreement profile](financial-agreement-source.md) declares
+the same schema in source and keeps this adapter as the funded baseline.
