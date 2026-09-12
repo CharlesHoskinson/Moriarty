@@ -5,7 +5,7 @@ import type { Schema } from './financial-expression-types-v1.ts';
 export function createFinancialSourceLowering(
   schema: Schema,
   parameters: Set<string>,
-  options?: { financialReads?: boolean },
+  options?: { financialReads?: boolean; financialPostReads?: boolean },
 ) {
   return createSourceLowering(schema, parameters, sourceExtension(schema, options));
 }

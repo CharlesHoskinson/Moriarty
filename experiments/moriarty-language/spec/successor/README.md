@@ -73,4 +73,11 @@ selected funded action. The `/1` exactly-one-action contract is unchanged.
 The [kernel-backed financial-read profile](financial-agreement-source-v3.md) is
 a separate `/3` entry with Core contract `/2`. It admits the six generic
 reads of a validated local kernel pre-state. Older profiles keep their
-reserved names and Core `/1` constructors.
+reserved names and Core `/1` constructors. In `/3`, `ensures` still run
+before the kernel and there are no financial post-state reads.
+
+The [financial-postcondition profile](financial-agreement-source-v4.md) is a
+separate `/4` entry with Core contract `/3`. It adds six Ensure-only POST
+reads and prepares the kernel once before every `ensures` expression.
+Unprefixed reads keep financial PRE meaning. Older profiles keep their
+reserved names and constructor sets.

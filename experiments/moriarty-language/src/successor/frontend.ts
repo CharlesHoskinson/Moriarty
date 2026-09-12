@@ -6,11 +6,13 @@ export const FINANCIAL_EXPRESSION_SOURCE_PROFILE = 'moriarty-financial-expressio
 export const FINANCIAL_AGREEMENT_SOURCE_PROFILE = 'moriarty-financial-agreement-source/1';
 export const FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE = 'moriarty-financial-agreement-source/2';
 export const FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE = 'moriarty-financial-agreement-source/3';
+export const FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE = 'moriarty-financial-agreement-source/4';
 
 function isAgreementSourceProfile(profile: string): boolean {
   return profile === FINANCIAL_AGREEMENT_SOURCE_PROFILE
     || profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
 }
 
 function isFinancialLexerProfile(profile: string): boolean {
@@ -319,6 +321,10 @@ export const GENERIC_PRIMARIES = Object.freeze(['some', 'none', 'collection', 'q
 export const FINANCIAL_GENERIC_PRIMARIES = Object.freeze(['amount', 'shares', 'variant', 'project_variant', 'to_uint']);
 export const FINANCIAL_READ_GENERIC_PRIMARIES = Object.freeze([
   'outstanding', 'principal', 'accrued', 'balance', 'allowance_remaining', 'allowance_spent',
+]);
+export const FINANCIAL_POST_READ_GENERIC_PRIMARIES = Object.freeze([
+  'post_outstanding', 'post_principal', 'post_accrued',
+  'post_balance', 'post_allowance_remaining', 'post_allowance_spent',
 ]);
 
 const DECL_KW = new Set(['unit', 'party', 'asset', 'const', 'state', 'action']);
@@ -707,7 +713,11 @@ class Parser {
     return isAgreementSourceProfile(this.profile);
   }
   private get agreementV3Profile(): boolean {
-    return this.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+    return this.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+      || this.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
+  }
+  private get agreementV4Profile(): boolean {
+    return this.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
   }
 
   parseProgram(): Program {
@@ -1311,7 +1321,8 @@ class Parser {
       const name = this.advance();
       let typeArguments: TypeNode[] | undefined;
       const financialGeneric = this.financialProfile && FINANCIAL_GENERIC_PRIMARIES.includes(name.text);
-      const readGeneric = this.agreementV3Profile && (FINANCIAL_READ_GENERIC_PRIMARIES as readonly string[]).includes(name.text);
+      const readGeneric = (this.agreementV3Profile && (FINANCIAL_READ_GENERIC_PRIMARIES as readonly string[]).includes(name.text))
+        || (this.agreementV4Profile && (FINANCIAL_POST_READ_GENERIC_PRIMARIES as readonly string[]).includes(name.text));
       const optionalGeneric = ['amount', 'shares'].includes(name.text);
       if (this.expressionProfile && (GENERIC_PRIMARIES.includes(name.text)
           || (financialGeneric && (!optionalGeneric || this.at('<')))
@@ -1442,4 +1453,9 @@ export function parseSuccessorFinancialAgreementSourceV2(source: string): Progra
 /** Distinct kernel-backed read agreement entry; /1 and /2 never opt into it. */
 export function parseSuccessorFinancialAgreementSourceV3(source: string): Program {
   return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE);
+}
+
+/** Distinct financial-postcondition agreement entry; /1–/3 never opt into it. */
+export function parseSuccessorFinancialAgreementSourceV4(source: string): Program {
+  return parseSourceProfile(source, FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE);
 }

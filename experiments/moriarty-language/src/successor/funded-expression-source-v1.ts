@@ -214,7 +214,7 @@ function mapDescriptors(
   return { ok: true, actions };
 }
 
-function debitExpressionWork(
+export function debitExpressionWork(
   state: Record<string, unknown>,
   expressionUsed: bigint,
 ): { ok: true; state: Record<string, unknown> } | { ok: false; result: FundedExpressionRejected } {
@@ -311,4 +311,36 @@ export function completeFundedPreparation(
     effects: prepared.effects,
     workRemaining: prepared.post.work.remaining,
   };
+}
+
+/** Prefix descriptors, debit prefix work, then one kernel preparation for Core /3. */
+export function prepareStagedKernel(
+  descriptors: unknown[],
+  schemaCanonicalJSON: string,
+  ownedState: Record<string, unknown>,
+  prefixUsed: bigint,
+): { ok: true; post: RepaymentState; effects: Effect[] } | { ok: false; result: FundedExpressionRejected } {
+  if (descriptors.length === 0) return { ok: false, result: reject('EMPTY_BATCH') };
+  let schema: Schema;
+  try { schema = parseCanonical(schemaCanonicalJSON, STATE_BYTES); }
+  catch { return { ok: false, result: reject('INPUT_SCHEMA') }; }
+  for (const field of Object.values(schema.fields)) {
+    if (isRecord(field) && field.writeClass === 'financial') return { ok: false, result: reject('TYPE_FINANCIAL_WRITE') };
+  }
+  const binding = operationBinding(schema);
+  if ('status' in binding) return { ok: false, result: reject(binding.code) };
+  const mapped = mapDescriptors(descriptors, binding);
+  if (!mapped.ok) return mapped;
+  const debited = debitExpressionWork(ownedState, prefixUsed);
+  if (!debited.ok) return debited;
+  const prepared = prepareRepayment(JSON.stringify({
+    schemaVersion: REPAYMENT_VERSION,
+    state: debited.state,
+    actions: mapped.actions,
+  }));
+  if (prepared.status === 'Rejected') return { ok: false, result: prepared };
+  if (!nominalUnitsMatch(prepared.post, mapped.actions, binding.repayDenomination)) {
+    return { ok: false, result: reject('NOMINAL_UNIT') };
+  }
+  return { ok: true, post: prepared.post, effects: prepared.effects };
 }
