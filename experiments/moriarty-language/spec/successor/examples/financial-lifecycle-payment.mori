@@ -1,0 +1,125 @@
+profile "moriarty-financial-agreement-source/5";
+agreement LifecycleLoan {
+  unit Cash;
+  asset Cash: Asset;
+  record TransferFields {
+    id: Text;
+    from: Text;
+    to: Text;
+    settlementAsset: Text;
+    transferAmount: Amount<Cash>;
+  }
+  record RepayFields {
+    allocationId: Text;
+    transferId: Text;
+    obligationId: Text;
+    payer: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+  }
+  record ConversionFields {
+    mantissa: UInt128;
+    scale: UInt128;
+    rounding: Text;
+  }
+  record AccrualTermsFields {
+    numerator: UInt128;
+    denominator: UInt128;
+    rounding: Text;
+    periodSeconds: UInt64;
+    firstPeriodStart: UInt64;
+  }
+  record OriginateFields {
+    obligationId: Text;
+    transferId: Text;
+    originationId: Text;
+    debtor: Text;
+    creditor: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+    denomination: Text;
+    settlementAsset: Text;
+    conversion: Record<ConversionFields>;
+    allocationRule: Text;
+    accrualTerms: Record<AccrualTermsFields>;
+    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;
+  }
+  record AccrueFields {
+    accrualId: Text;
+    obligationId: Text;
+    periodIndex: UInt64;
+    observedTime: UInt64;
+  }
+  operation Transfer: TransferFields;
+  operation Repay: RepayFields;
+  operation Originate: OriginateFields;
+  operation Accrue: AccrueFields;
+  state due: UInt128;
+  state paid: UInt128;
+  action originate(nominal: Quantity<Units<Cash,1>,0>, cap: Quantity<Units<Cash,1>,0>, transferId: Text, originationId: Text) {
+    requires is_negative(nominal) == false;
+    let payment = magnitude(nominal);
+    requires payment > 0;
+    next.due = pre.due + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Lender",
+      to: "Borrower",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Originate {
+      obligationId: "Loan1",
+      transferId: transferId,
+      originationId: originationId,
+      debtor: "Borrower",
+      creditor: "Lender",
+      nominalAmount: nominal,
+      denomination: "Cash",
+      settlementAsset: "Cash",
+      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: "none" },
+      allocationRule: "AccrualFirst",
+      accrualTerms: record<AccrualTermsFields>{
+        numerator: 1,
+        denominator: 10,
+        rounding: "floor",
+        periodSeconds: u64(60),
+        firstPeriodStart: u64(1000)
+      },
+      nominalLiabilityCap: cap
+    };
+    ensures post.due == pre.due + payment;
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(100);
+  }
+  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {
+    requires magnitude(outstanding<Cash>("Loan1")) > 0;
+    emit Accrue {
+      accrualId: accrualId,
+      obligationId: "Loan1",
+      periodIndex: periodIndex,
+      observedTime: observedTime
+    };
+    ensures post_accrued<Cash>("Loan1") == quantity<Units<Cash,1>,0>(10);
+  }
+  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {
+    requires magnitude(outstanding<Cash>("Loan1")) > 0;
+    requires is_negative(nominal) == false;
+    let payment = magnitude(nominal);
+    requires payment > 0;
+    next.paid = pre.paid + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Borrower",
+      to: "Lender",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Repay {
+      allocationId: allocationId,
+      transferId: transferId,
+      obligationId: "Loan1",
+      payer: "Borrower",
+      nominalAmount: nominal
+    };
+    ensures post.paid == pre.paid + payment;
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(80);
+  }
+}
