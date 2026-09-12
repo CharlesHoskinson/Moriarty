@@ -1,4 +1,6 @@
-/** Explicit financial-expression /1 fork of the reviewed40-node machine. Never calls funded preparation or settlement. */
+/** Explicit financial-expression /1 fork of the reviewed40-node machine.
+ * Core /1 and /2 never call funded preparation. Core /3 evaluate is action-only
+ * funded evaluation; its prefix/kernel/suffix staging is private. */
 import { ExpressionFailure, SYNTHETIC_SPAN, array, bytes, canonical, closed, decimal,
   fail, identifier, object, parseCanonical } from './expression-wire-v1.ts';
 import type { ExpressionSpan } from './expression-wire-v1.ts';
@@ -7,10 +9,18 @@ import { NUMERIC, aggregateBound, numericFits, resolve, same, schemaShape, typeS
 import type { Schema, ValueType } from './financial-expression-types-v1.ts';
 import { admitRepaymentStateJSON } from './repayment.ts';
 import type { Allowance, Balance, Obligation, RepaymentState } from './repayment.ts';
+import { debitExpressionWork, prepareStagedKernel } from './funded-expression-source-v1.ts';
+import type { FundedExpressionResult } from './funded-expression-source-v1.ts';
 
 export const FINANCIAL_EXPRESSION_CONTRACT_V1 = 'moriarty-financial-expression-contract/1';
 export const FINANCIAL_EXPRESSION_CONTRACT_V2 = 'moriarty-financial-expression-contract/2';
+export const FINANCIAL_EXPRESSION_CONTRACT_V3 = 'moriarty-financial-expression-contract/3';
 const KERNEL_IDENTIFIER = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+function validKernelIdentity(identity: unknown, strict: boolean): identity is string {
+  if (typeof identity !== 'string') return false;
+  if (strict && /[\r\n\u2028\u2029]/.test(identity)) return false;
+  return KERNEL_IDENTIFIER.test(identity);
+}
 type CoreNode = { constructor: string; operands: Record<string, any>; span: ExpressionSpan };
 type Action = { statements: CoreNode[]; span: ExpressionSpan };
 export type ExpressionResult =
@@ -59,23 +69,44 @@ const READ_OPERANDS: Record<string, [string, Role][]> = {
   ReadAllowanceRemaining: [['asset', 'id'], ['identity', 'expr']],
   ReadAllowanceSpent: [['asset', 'id'], ['identity', 'expr']],
 };
+const POST_READ_OPERANDS: Record<string, [string, Role][]> = {
+  ReadPostOutstanding: [['unit', 'id'], ['identity', 'expr']],
+  ReadPostPrincipal: [['unit', 'id'], ['identity', 'expr']],
+  ReadPostAccrued: [['unit', 'id'], ['identity', 'expr']],
+  ReadPostBalance: [['asset', 'id'], ['identity', 'expr']],
+  ReadPostAllowanceRemaining: [['asset', 'id'], ['identity', 'expr']],
+  ReadPostAllowanceSpent: [['asset', 'id'], ['identity', 'expr']],
+};
 const OBLIGATION_READS: Record<string, 'outstanding' | 'principal' | 'accrued'> = {
   ReadOutstanding: 'outstanding',
   ReadPrincipal: 'principal',
   ReadAccrued: 'accrued',
 };
+const POST_OBLIGATION_READS: Record<string, 'outstanding' | 'principal' | 'accrued'> = {
+  ReadPostOutstanding: 'outstanding',
+  ReadPostPrincipal: 'principal',
+  ReadPostAccrued: 'accrued',
+};
 const ALLOWANCE_READS: Record<string, 'remaining' | 'spent'> = {
   ReadAllowanceRemaining: 'remaining',
   ReadAllowanceSpent: 'spent',
 };
+const POST_ALLOWANCE_READS: Record<string, 'remaining' | 'spent'> = {
+  ReadPostAllowanceRemaining: 'remaining',
+  ReadPostAllowanceSpent: 'spent',
+};
 const FINANCIAL_READS = new Set([
   ...Object.keys(OBLIGATION_READS), 'ReadBalance', ...Object.keys(ALLOWANCE_READS),
+]);
+const FINANCIAL_POST_READS = new Set([
+  ...Object.keys(POST_OBLIGATION_READS), 'ReadPostBalance', ...Object.keys(POST_ALLOWANCE_READS),
 ]);
 const STATEMENTS = new Set(['Require', 'Let', 'NextWrite', 'Ensure', 'Emit']);
 function pairKey(party: string, asset: string): string {
   return party + '\u0000' + asset;
 }
 function operandsFor(contract: string): Record<string, [string, Role][]> {
+  if (contract === FINANCIAL_EXPRESSION_CONTRACT_V3) return { ...OPERANDS, ...READ_OPERANDS, ...POST_READ_OPERANDS };
   return contract === FINANCIAL_EXPRESSION_CONTRACT_V2 ? { ...OPERANDS, ...READ_OPERANDS } : OPERANDS;
 }
 function has(v: object, name: string): boolean { return Object.hasOwn(v, name); }
@@ -92,9 +123,13 @@ class Machine {
   contract: string;
   operandTable: Record<string, [string, Role][]>;
   financialPre: RepaymentState | undefined;
+  financialPost: RepaymentState | undefined;
   obligations = new Map<string, Obligation>();
   balances = new Map<string, Balance>();
   allowances = new Map<string, Allowance>();
+  postObligations = new Map<string, Obligation>();
+  postBalances = new Map<string, Balance>();
+  postAllowances = new Map<string, Allowance>();
   sourceBytes = 0;
   initial = 0;
   remaining = 0;
@@ -261,9 +296,10 @@ class Machine {
       else if (k === 'Let') { this.localTypes.set(o.name, childTypes[0]); t = ['Unit']; }
       else if (k === 'NextWrite') { this.requireType(childTypes[0], s.fields[o.field].type); this.written.add(o.field); t = ['Unit']; }
       else if (k === 'Emit') { this.requireType(childTypes[0], ['Record', s.operations[o.operation]]); t = ['Unit']; }
-      else if (FINANCIAL_READS.has(k)) {
+      else if (FINANCIAL_READS.has(k) || FINANCIAL_POST_READS.has(k)) {
+        if (FINANCIAL_POST_READS.has(k) && !ensure) fail('TYPE_POST_SCOPE');
         this.requireType(childTypes[0], ['Text']);
-        if (k in OBLIGATION_READS) {
+        if (k in OBLIGATION_READS || k in POST_OBLIGATION_READS) {
           if (!s.units.includes(o.unit)) fail('TYPE_NAME');
           t = ['Quantity', [[o.unit, '1']], '0'];
         } else {
@@ -374,67 +410,98 @@ class Machine {
         for (const d of this.descriptors) { const z = valueSize(['Operation', d.operation], d, this.schema); nodes += z.nodes; depth = Math.max(depth, 1 + z.depth); }
         if (this.descriptors.length > 128 || bytes(canonical(this.descriptors)) > 65536 || nodes > 4096 || depth > 64) fail('DESCRIPTOR_BOUND');
         return;
-      } else if (FINANCIAL_READS.has(k)) {
-        if (this.financialPre === undefined) fail('FINANCIAL_CONTEXT_REQUIRED');
+      } else if (FINANCIAL_READS.has(k) || FINANCIAL_POST_READS.has(k)) {
+        const post = FINANCIAL_POST_READS.has(k);
+        if (post ? this.financialPost === undefined : this.financialPre === undefined) fail('FINANCIAL_CONTEXT_REQUIRED');
         const identity = v[0];
-        if (typeof identity !== 'string' || !KERNEL_IDENTIFIER.test(identity)) fail('INVALID_IDENTIFIER');
-        if (k in OBLIGATION_READS) {
-          const obligation = this.obligations.get(identity);
+        if (!validKernelIdentity(identity, this.contract === FINANCIAL_EXPRESSION_CONTRACT_V3)) fail('INVALID_IDENTIFIER');
+        if (k in OBLIGATION_READS || k in POST_OBLIGATION_READS) {
+          const field = post ? POST_OBLIGATION_READS[k] : OBLIGATION_READS[k];
+          const obligation = (post ? this.postObligations : this.obligations).get(identity);
           if (obligation === undefined) fail('MISSING_OBLIGATION');
           if (obligation.denomination !== o.unit) fail('NOMINAL_UNIT');
-          result = obligation[OBLIGATION_READS[k]];
+          result = obligation[field];
           if (!numericFits(type, result)) fail('ARITH_RANGE');
-        } else if (k === 'ReadBalance') {
-          const balance = this.balances.get(pairKey(identity, o.asset));
+        } else if (k === 'ReadBalance' || k === 'ReadPostBalance') {
+          const balance = (post ? this.postBalances : this.balances).get(pairKey(identity, o.asset));
           if (balance === undefined) fail('MISSING_BALANCE');
           result = balance.amount;
         } else {
-          const allowance = this.allowances.get(pairKey(identity, o.asset));
+          const field = post ? POST_ALLOWANCE_READS[k] : ALLOWANCE_READS[k];
+          const allowance = (post ? this.postAllowances : this.allowances).get(pairKey(identity, o.asset));
           if (allowance === undefined) fail('MISSING_ALLOWANCE');
-          result = allowance[ALLOWANCE_READS[k]];
+          result = allowance[field];
         }
       } else throw new Error('Unimplemented admitted constructor: ' + k);
       valueBound(type, result, this.schema, 'VALUE_BOUND'); return result;
     });
   }
+  catchExpression(error: unknown): Extract<ExpressionResult, { status: 'Rejected' }> {
+    if (!(error instanceof ExpressionFailure)) throw error;
+    return { status: 'Rejected', code: error.code, span: error.span, nodePath: error.path.map(String), workUsed: String(this.reducing ? this.initial - this.remaining : 0) };
+  }
+  begin(request: string, checkOnly = false): { r: any; isAction: boolean } | ExpressionCheckResult {
+    // The largest legal separate components fit below this derived envelope
+    // limit even with JSON string escaping. Each semantic component still has
+    // its own independent65536-byte ceiling below.
+    const r = parseCanonical(request, 2_000_000);
+    closed(r, ['contract', 'source', 'core', 'Pre', 'Args', 'Obs', 'workInitial']);
+    if (r.contract !== this.contract || typeof r.source !== 'string') fail('INPUT_SCHEMA');
+    this.sourceBytes = bytes(r.source); if (this.sourceBytes > 65536) fail('INPUT_BOUND');
+    decimal(r.workInitial); const work = BigInt(r.workInitial);
+    if (work < 0n || work > 65536n) fail('INPUT_BOUND');
+    this.initial = Number(work); this.remaining = this.initial;
+    for (const value of [this.schema, r.core, r.Pre, r.Args, r.Obs]) if (bytes(canonical(value)) > 65536) fail('INPUT_BOUND');
+    schemaShape(this.schema);
+    const isAction = typeof r.core === 'object' && r.core !== null && has(r.core, 'statements');
+    const count = { nodes: 0 };
+    if (isAction) this.site(r.core, [], () => {
+      closed(r.core, ['statements', 'span']); this.spanShape(r.core.span); array(r.core.statements);
+      if (r.core.statements.length > 256) fail('INPUT_BOUND');
+      r.core.statements.forEach((n: CoreNode, i: number) => this.shape(n, [i], 1, count));
+    });
+    else this.shape(r.core, [], 1, count);
+    validateSchema(this.schema);
+    if (isAction) {
+      let suffix = false;
+      r.core.statements.forEach((n: CoreNode, i: number) => this.site(n, [i], () => {
+        if (n.constructor === 'Ensure') suffix = true;
+        else if (suffix) fail('TYPE_STATEMENT_PLACEMENT');
+        this.infer(n, [i], n.constructor === 'Ensure', true);
+      }));
+    } else this.infer(r.core, [], false);
+    if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
+    return { r, isAction };
+  }
+  bindSnapshots(r: any): Record<string, ValueType> {
+    const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
+    validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
+    this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
+    return fieldTypes;
+  }
+  bindFinancialPost(post: RepaymentState): void {
+    this.financialPost = post;
+    this.postObligations = new Map();
+    this.postBalances = new Map();
+    this.postAllowances = new Map();
+    for (const item of post.obligations) this.postObligations.set(item.id, item);
+    for (const item of post.balances) this.postBalances.set(pairKey(item.party, item.asset), item);
+    for (const item of post.allowances) this.postAllowances.set(pairKey(item.party, item.asset), item);
+  }
+  chargeKernelWork(count: number): void {
+    if (this.remaining < count) fail('WORK_EXHAUSTED');
+    this.remaining -= count;
+  }
   run(request: string, checkOnly = false): ExpressionResult | ExpressionCheckResult {
     try {
-      // The largest legal separate components fit below this derived envelope
-      // limit even with JSON string escaping. Each semantic component still has
-      // its own independent65536-byte ceiling below.
-      const r = parseCanonical(request, 2_000_000);
-      closed(r, ['contract', 'source', 'core', 'Pre', 'Args', 'Obs', 'workInitial']);
-      if (r.contract !== this.contract || typeof r.source !== 'string') fail('INPUT_SCHEMA');
-      this.sourceBytes = bytes(r.source); if (this.sourceBytes > 65536) fail('INPUT_BOUND');
-      decimal(r.workInitial); const work = BigInt(r.workInitial);
-      if (work < 0n || work > 65536n) fail('INPUT_BOUND');
-      this.initial = Number(work); this.remaining = this.initial;
-      for (const value of [this.schema, r.core, r.Pre, r.Args, r.Obs]) if (bytes(canonical(value)) > 65536) fail('INPUT_BOUND');
-      schemaShape(this.schema);
-      const isAction = typeof r.core === 'object' && r.core !== null && has(r.core, 'statements');
-      const count = { nodes: 0 };
-      if (isAction) this.site(r.core, [], () => {
-        closed(r.core, ['statements', 'span']); this.spanShape(r.core.span); array(r.core.statements);
-        if (r.core.statements.length > 256) fail('INPUT_BOUND');
-        r.core.statements.forEach((n: CoreNode, i: number) => this.shape(n, [i], 1, count));
-      });
-      else this.shape(r.core, [], 1, count);
-      validateSchema(this.schema);
-      if (isAction) {
-        let suffix = false;
-        r.core.statements.forEach((n: CoreNode, i: number) => this.site(n, [i], () => {
-          if (n.constructor === 'Ensure') suffix = true;
-          else if (suffix) fail('TYPE_STATEMENT_PLACEMENT');
-          this.infer(n, [i], n.constructor === 'Ensure', true);
-        }));
-      } else this.infer(r.core, [], false);
-      if (checkOnly) return { judgmentResult: 'ExpressionChecked' };
+      const begun = this.begin(request, checkOnly);
+      if (checkOnly) return begun as ExpressionCheckResult;
+      if (!('r' in begun)) return begun;
+      const { r, isAction } = begun;
       if (this.contract === FINANCIAL_EXPRESSION_CONTRACT_V2 && this.financialPre === undefined) {
         fail('FINANCIAL_CONTEXT_REQUIRED');
       }
-      const fieldTypes = Object.fromEntries(Object.entries(this.schema.fields).map(([k, f]) => [k, (f as any).type]));
-      validateSnapshot(fieldTypes, r.Pre, this.schema); validateSnapshot(this.schema.args, r.Args, this.schema); validateSnapshot(this.schema.observations, r.Obs, this.schema);
-      this.pre = r.Pre; this.args = r.Args; this.obs = r.Obs; this.reducing = true;
+      const fieldTypes = this.bindSnapshots(r);
       if (!isAction) {
         const value = this.reduce(r.core, []); return { judgmentResult: 'ExpressionValue', type: this.types.get(r.core)!, value, workRemaining: String(this.remaining) };
       }
@@ -443,9 +510,89 @@ class Machine {
       this.site(r.core, [], () => aggregateBound(fieldTypes, post, this.schema, 'VALUE_BOUND'));
       return { status: 'ExpressionPrepared', post, descriptors: this.descriptors, workRemaining: String(this.remaining) };
     } catch (error) {
-      if (!(error instanceof ExpressionFailure)) throw error;
-      return { status: 'Rejected', code: error.code, span: error.span, nodePath: error.path.map(String), workUsed: String(this.reducing ? this.initial - this.remaining : 0) };
+      return this.catchExpression(error);
     }
+  }
+}
+
+type V3SuffixReady = {
+  status: 'SuffixReady';
+  post: Record<string, any>;
+  suffixUsed: bigint;
+  workRemaining: string;
+};
+type V3PrefixReady = {
+  status: 'PrefixReady';
+  post: Record<string, any>;
+  descriptors: any[];
+  prefixUsed: bigint;
+  continueSuffix(
+    financialPost: RepaymentState,
+    kernelActions: number,
+  ): Extract<ExpressionResult, { status: 'Rejected' }> | V3SuffixReady;
+};
+
+function checkFinancialExpressionV3(
+  schemaCanonicalJSON: string,
+  requestCanonicalJSON: string,
+): ExpressionCheckResult {
+  let schema: Schema;
+  try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+  catch (error) {
+    if (!(error instanceof ExpressionFailure)) throw error;
+    return { status: 'Rejected', code: error.code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+  }
+  return new Machine(schema, FINANCIAL_EXPRESSION_CONTRACT_V3).run(requestCanonicalJSON, true) as ExpressionCheckResult;
+}
+
+function evaluateFinancialExpressionV3Prefix(
+  schema: Schema,
+  requestCanonicalJSON: string,
+  financialPre: RepaymentState,
+): Extract<ExpressionResult, { status: 'Rejected' }> | V3PrefixReady {
+  const machine = new Machine(schema, FINANCIAL_EXPRESSION_CONTRACT_V3, financialPre);
+  try {
+    const begun = machine.begin(requestCanonicalJSON, false);
+    if (!('r' in begun)) {
+      return { status: 'Rejected', code: 'INPUT_SCHEMA', span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+    }
+    const { r, isAction } = begun;
+    if (!isAction) fail('TYPE_ACTION_REQUIRED');
+    if (machine.financialPre === undefined) fail('FINANCIAL_CONTEXT_REQUIRED');
+    const fieldTypes = machine.bindSnapshots(r);
+    const statements: CoreNode[] = r.core.statements;
+    let suffixIndex = statements.length;
+    for (let i = 0; i < statements.length; i++) {
+      if (statements[i]!.constructor === 'Ensure') { suffixIndex = i; break; }
+      machine.reduce(statements[i]!, [i]);
+    }
+    const post = { ...machine.pre, ...machine.writes };
+    machine.site(r.core, [], () => aggregateBound(fieldTypes, post, machine.schema, 'VALUE_BOUND'));
+    const prefixUsed = BigInt(machine.initial - machine.remaining);
+    return {
+      status: 'PrefixReady',
+      post,
+      descriptors: machine.descriptors,
+      prefixUsed,
+      continueSuffix(financialPost: RepaymentState, kernelActions: number) {
+        try {
+          machine.bindFinancialPost(financialPost);
+          machine.chargeKernelWork(kernelActions);
+          const remainingBeforeSuffix = machine.remaining;
+          for (let i = suffixIndex; i < statements.length; i++) machine.reduce(statements[i]!, [i]);
+          return {
+            status: 'SuffixReady',
+            post,
+            suffixUsed: BigInt(remainingBeforeSuffix - machine.remaining),
+            workRemaining: String(machine.remaining),
+          };
+        } catch (error) {
+          return machine.catchExpression(error);
+        }
+      },
+    };
+  } catch (error) {
+    return machine.catchExpression(error);
   }
 }
 
@@ -520,5 +667,67 @@ export function createFinancialExpressionContractV2(
     check: (request: string) => runFinancialContract(
       schemaCanonicalJSON, request, true, FINANCIAL_EXPRESSION_CONTRACT_V2,
     ) as ExpressionCheckResult,
+  });
+}
+
+function v3Envelope(code: string): Extract<ExpressionResult, { status: 'Rejected' }> {
+  return { status: 'Rejected', code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: '0' };
+}
+
+/** Core /3 check needs no financial state. evaluate is funded action evaluation.
+ * Prefix/kernel/suffix staging is private to this factory. */
+export function createFinancialExpressionContractV3(
+  schemaCanonicalJSON: string,
+  financialPreStateJSON: string | undefined = undefined,
+): {
+  evaluate(requestCanonicalJSON: string): FundedExpressionResult;
+  check(requestCanonicalJSON: string): ExpressionCheckResult;
+} {
+  return Object.freeze({
+    evaluate(requestCanonicalJSON: string): FundedExpressionResult {
+      if (typeof schemaCanonicalJSON !== 'string') return v3Envelope('INPUT_SCHEMA');
+      let schema: Schema;
+      try { schema = parseCanonical(schemaCanonicalJSON, 65536); }
+      catch (error) {
+        if (!(error instanceof ExpressionFailure)) throw error;
+        return v3Envelope(error.code);
+      }
+      const typed = checkFinancialExpressionV3(schemaCanonicalJSON, requestCanonicalJSON);
+      if ('status' in typed) return typed;
+      let request: any;
+      try { request = parseCanonical(requestCanonicalJSON, 2_000_000); }
+      catch (error) {
+        if (!(error instanceof ExpressionFailure)) throw error;
+        return v3Envelope(error.code);
+      }
+      const isAction = typeof request.core === 'object' && request.core !== null && has(request.core, 'statements');
+      if (!isAction) return v3Envelope('TYPE_ACTION_REQUIRED');
+      if (financialPreStateJSON === undefined) return v3Envelope('FINANCIAL_CONTEXT_REQUIRED');
+      const admitted = admitRepaymentStateJSON(financialPreStateJSON);
+      if (!admitted.ok) return admitted.result;
+      if (request.workInitial !== admitted.value.work.remaining) {
+        return { status: 'Rejected', code: 'WORK_MISMATCH' };
+      }
+      const owned = JSON.parse(JSON.stringify(admitted.value)) as Record<string, unknown>;
+      const prefix = evaluateFinancialExpressionV3Prefix(schema, requestCanonicalJSON, admitted.value);
+      if (prefix.status === 'Rejected') return prefix;
+      const prepared = prepareStagedKernel(prefix.descriptors, canonical(schema), owned, prefix.prefixUsed);
+      if (!prepared.ok) return prepared.result;
+      const suffix = prefix.continueSuffix(prepared.post, prepared.effects.length);
+      if (suffix.status === 'Rejected') return suffix;
+      const debited = debitExpressionWork(prepared.post as unknown as Record<string, unknown>, suffix.suffixUsed);
+      if (!debited.ok) return debited.result;
+      const work = debited.state.work as { remaining: string };
+      return {
+        status: 'FundedExpressionPrepared',
+        post: suffix.post,
+        financialPost: debited.state as unknown as typeof prepared.post,
+        effects: prepared.effects,
+        workRemaining: work.remaining,
+      };
+    },
+    check(requestCanonicalJSON: string): ExpressionCheckResult {
+      return checkFinancialExpressionV3(schemaCanonicalJSON, requestCanonicalJSON);
+    },
   });
 }

@@ -1,5 +1,5 @@
 /** Exact source spellings for the separately reviewed financial expression profile. */
-import { GENERIC_PRIMARIES, FINANCIAL_GENERIC_PRIMARIES, FINANCIAL_READ_GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
+import { GENERIC_PRIMARIES, FINANCIAL_GENERIC_PRIMARIES, FINANCIAL_READ_GENERIC_PRIMARIES, FINANCIAL_POST_READ_GENERIC_PRIMARIES, SOURCE_KEYWORDS } from './frontend.ts';
 import type { Expression, TypeNode, Span } from './frontend.ts';
 import type { Schema, ValueType } from './financial-expression-types-v1.ts';
 import { ExpressionFailure } from './expression-wire-v1.ts';
@@ -20,6 +20,7 @@ export function reservedSourceSchemaName(name: string, extra: readonly string[] 
   return METADATA_RESERVED.has(name) || extra.includes(name);
 }
 export const FINANCIAL_READ_INTRINSICS = FINANCIAL_READ_GENERIC_PRIMARIES;
+export const FINANCIAL_POST_READ_INTRINSICS = FINANCIAL_POST_READ_GENERIC_PRIMARIES;
 export function asciiIdentifier(s: string): boolean {
   return /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(s) && !/[\r\n\u2028\u2029]/.test(s);
 }
@@ -88,16 +89,28 @@ const READ_CONSTRUCTORS: Record<string, { constructor: string; generic: 'unit' |
   allowance_remaining: { constructor: 'ReadAllowanceRemaining', generic: 'asset' },
   allowance_spent: { constructor: 'ReadAllowanceSpent', generic: 'asset' },
 };
-export function sourceExtension(schema: Schema, options?: { financialReads?: boolean }) {
+const POST_READ_CONSTRUCTORS: Record<string, { constructor: string; generic: 'unit' | 'asset' }> = {
+  post_outstanding: { constructor: 'ReadPostOutstanding', generic: 'unit' },
+  post_principal: { constructor: 'ReadPostPrincipal', generic: 'unit' },
+  post_accrued: { constructor: 'ReadPostAccrued', generic: 'unit' },
+  post_balance: { constructor: 'ReadPostBalance', generic: 'asset' },
+  post_allowance_remaining: { constructor: 'ReadPostAllowanceRemaining', generic: 'asset' },
+  post_allowance_spent: { constructor: 'ReadPostAllowanceSpent', generic: 'asset' },
+};
+export function sourceExtension(schema: Schema, options?: { financialReads?: boolean; financialPostReads?: boolean }) {
   return (e: Expression, lower: (e: Expression) => SourceCoreNode): SourceCoreNode | undefined => {
     const n = (tag: string, operands: Record<string, any>) => sourceNode(tag, operands, e.span);
-    if (options?.financialReads && e.tag === 'Call' && Object.hasOwn(READ_CONSTRUCTORS, e.name)) {
+    const readSpec = options?.financialReads && e.tag === 'Call' && Object.hasOwn(READ_CONSTRUCTORS, e.name)
+      ? READ_CONSTRUCTORS[e.name]
+      : options?.financialPostReads && e.tag === 'Call' && Object.hasOwn(POST_READ_CONSTRUCTORS, e.name)
+        ? POST_READ_CONSTRUCTORS[e.name]
+        : undefined;
+    if (readSpec !== undefined && e.tag === 'Call') {
       const types = e.typeArguments ?? [];
       count(types.length, 1, e.span);
       count(e.arguments.length, 1, e.span);
-      const spec = READ_CONSTRUCTORS[e.name]!;
-      return n(spec.constructor, {
-        [spec.generic]: nominal(types[0]),
+      return n(readSpec.constructor, {
+        [readSpec.generic]: nominal(types[0]),
         identity: lower(e.arguments[0]),
       });
     }

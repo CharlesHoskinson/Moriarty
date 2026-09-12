@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {pathToFileURL} from 'node:url';
+const root=process.argv[2],base=path.join(root,'experiments/moriarty-language');
+const load=async p=>import(pathToFileURL(path.join(base,p)).href);
+const {createFinancialAgreementSourceV4}=await load('src/successor/financial-agreement-source-v4.ts');
+const {createFinancialExpressionContractV3}=await load('src/successor/financial-expression-v3.ts');
+const {canonical}=await load('src/successor/expression-wire-v1.ts');
+const source=fs.readFileSync(path.join(base,'spec/successor/examples/financial-state-payment.mori'),'utf8').replace('agreement-source/3','agreement-source/4');
+const a=createFinancialAgreementSourceV4().elaborate(source).actions.find(a=>a.action==='repay_remaining');
+const s=JSON.parse(fs.readFileSync(path.join(base,'spec/successor/examples/financial-state-payment.snapshots.json'),'utf8'));
+s.Args={transferId:'OwnedT1',allocationId:'OwnedA1'};
+const request=canonical({contract:'moriarty-financial-expression-contract/3',source,core:a.core,...s});
+const api=createFinancialExpressionContractV3(canonical(a.schema));
+const first=api.evaluate(request),expected=structuredClone(first);
+assert.equal(first.code,'FINANCIAL_CONTEXT_REQUIRED');
+try {first.nodePath.push('999');} catch {}
+const second=api.evaluate(request);
+const separate=createFinancialExpressionContractV3(canonical(a.schema)).evaluate(request);
+const pass=JSON.stringify(second)===JSON.stringify(expected)&&JSON.stringify(separate)===JSON.stringify(expected);
+console.log(JSON.stringify({pass,expected,second,separate},null,2));
+assert.deepEqual(second,expected,'Mutating an earlier rejection must not change later diagnostics');
+assert.deepEqual(separate,expected,'Rejected outputs must not share state across factories');

@@ -13,6 +13,8 @@ import { createFinancialAgreementSourceV2 } from './successor/financial-agreemen
 import { FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE, formatFinancialAgreementSourceV2 } from './successor/financial-agreement-source-v2-frontend.ts';
 import { createFinancialAgreementSourceV3 } from './successor/financial-agreement-source-v3.ts';
 import { FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE, formatFinancialAgreementSourceV3 } from './successor/financial-agreement-source-v3-frontend.ts';
+import { createFinancialAgreementSourceV4 } from './successor/financial-agreement-source-v4.ts';
+import { FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE, formatFinancialAgreementSourceV4 } from './successor/financial-agreement-source-v4-frontend.ts';
 import { SuccessorSyntaxError } from './successor/frontend.ts';
 import { parseCanonical } from './successor/expression-wire-v1.ts';
 
@@ -61,11 +63,12 @@ function argumentsFor(argv: string[]): {
   const known = [
     EXPRESSION_SOURCE_PROFILE, FINANCIAL_EXPRESSION_SOURCE_PROFILE,
     FINANCIAL_AGREEMENT_SOURCE_PROFILE, FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE,
-    FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE,
+    FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE, FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE,
   ];
   if (!known.includes(profile)) throw new CliFailure('CLI_PROFILE', 'arguments');
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
-    || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) {
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) {
     if (checking || simulating || funded || agreementSimulate
       || (command === 'simulate' && !agreementV2Simulate)
       || (command === 'check' && !checkingBare)) {
@@ -127,7 +130,9 @@ function run(io: ProcessIo): void {
   const schema = args.schema !== undefined ? readText(args.schema, 'schema') : undefined;
   const source = readText(args.source, 'source');
   if (args.command === 'format') {
-    const formatted = args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+    const formatted = args.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+      ? formatFinancialAgreementSourceV4(source)
+      : args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
       ? formatFinancialAgreementSourceV3(source)
       : args.profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
       ? formatFinancialAgreementSourceV2(source)
@@ -141,7 +146,9 @@ function run(io: ProcessIo): void {
       const snapshots = readText(args.snapshots!, 'snapshots', SNAPSHOT_LIMIT);
       if (args.repaymentState !== undefined) {
         const repaymentState = readText(args.repaymentState, 'repayment-state');
-        const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+        const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+          ? createFinancialAgreementSourceV4().evaluate(source, args.action!, snapshots, repaymentState)
+          : args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
           ? createFinancialAgreementSourceV3().evaluate(source, args.action!, snapshots, repaymentState)
           : args.profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
           ? createFinancialAgreementSourceV2().evaluate(source, args.action!, snapshots, repaymentState)
@@ -176,7 +183,9 @@ function run(io: ProcessIo): void {
       io.exitCode = 0;
       return;
     }
-    const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+    const result = args.profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE
+      ? createFinancialAgreementSourceV4().check(source)
+      : args.profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
       ? createFinancialAgreementSourceV3().check(source)
       : args.profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
       ? createFinancialAgreementSourceV2().check(source)
