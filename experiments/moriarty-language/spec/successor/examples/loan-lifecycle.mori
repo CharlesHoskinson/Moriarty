@@ -1,0 +1,178 @@
+profile "moriarty-financial-agreement-source/5";
+agreement LifecycleLoan {
+  unit Cash;
+  asset Cash: Asset;
+  record TransferFields {
+    id: Text;
+    from: Text;
+    to: Text;
+    settlementAsset: Text;
+    transferAmount: Amount<Cash>;
+  }
+  record RepayFields {
+    allocationId: Text;
+    transferId: Text;
+    obligationId: Text;
+    payer: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+  }
+  record ConversionFields {
+    mantissa: UInt128;
+    scale: UInt128;
+    rounding: Text;
+  }
+  record AccrualTermsFields {
+    numerator: UInt128;
+    denominator: UInt128;
+    rounding: Text;
+    periodSeconds: UInt64;
+    firstPeriodStart: UInt64;
+  }
+  record OriginateFields {
+    obligationId: Text;
+    transferId: Text;
+    originationId: Text;
+    debtor: Text;
+    creditor: Text;
+    nominalAmount: Quantity<Units<Cash,1>,0>;
+    denomination: Text;
+    settlementAsset: Text;
+    conversion: Record<ConversionFields>;
+    allocationRule: Text;
+    accrualTerms: Record<AccrualTermsFields>;
+    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;
+  }
+  record AccrueFields {
+    accrualId: Text;
+    obligationId: Text;
+    periodIndex: UInt64;
+    observedTime: UInt64;
+  }
+  operation Transfer: TransferFields;
+  operation Repay: RepayFields;
+  operation Originate: OriginateFields;
+  operation Accrue: AccrueFields;
+  state phase: UInt128;
+  state paid: UInt128;
+  action originate(transferId: Text, originationId: Text) {
+    let nominal = quantity<Units<Cash,1>,0>(100);
+    next.phase = pre.phase + 1;
+    emit Transfer {
+      id: transferId,
+      from: "Lender",
+      to: "Borrower",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(100)
+    };
+    emit Originate {
+      obligationId: "Loan1",
+      transferId: transferId,
+      originationId: originationId,
+      debtor: "Borrower",
+      creditor: "Lender",
+      nominalAmount: nominal,
+      denomination: "Cash",
+      settlementAsset: "Cash",
+      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: "none" },
+      allocationRule: "AccrualFirst",
+      accrualTerms: record<AccrualTermsFields>{
+        numerator: 1,
+        denominator: 10,
+        rounding: "floor",
+        periodSeconds: u64(60),
+        firstPeriodStart: u64(1000)
+      },
+      nominalLiabilityCap: quantity<Units<Cash,1>,0>(110)
+    };
+    ensures post.phase == pre.phase + 1;
+    ensures post.paid == pre.paid;
+    ensures post_principal<Cash>("Loan1") == quantity<Units<Cash,1>,0>(100);
+    ensures post_accrued<Cash>("Loan1") == quantity<Units<Cash,1>,0>(0);
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(100);
+    ensures post_balance<Cash>("Lender") == amount<Cash>(0);
+    ensures post_balance<Cash>("Borrower") == amount<Cash>(110);
+    ensures post_allowance_remaining<Cash>("Lender") == amount<Cash>(0);
+    ensures post_allowance_spent<Cash>("Lender") == amount<Cash>(100);
+    ensures post_allowance_remaining<Cash>("Borrower") == amount<Cash>(110);
+    ensures post_allowance_spent<Cash>("Borrower") == amount<Cash>(0);
+  }
+  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {
+    next.phase = pre.phase + 1;
+    emit Accrue {
+      accrualId: accrualId,
+      obligationId: "Loan1",
+      periodIndex: periodIndex,
+      observedTime: observedTime
+    };
+    ensures post.phase == pre.phase + 1;
+    ensures post.paid == pre.paid;
+    ensures outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(100);
+    ensures post_principal<Cash>("Loan1") == quantity<Units<Cash,1>,0>(100);
+    ensures post_accrued<Cash>("Loan1") == quantity<Units<Cash,1>,0>(10);
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(110);
+    ensures post_balance<Cash>("Lender") == amount<Cash>(0);
+    ensures post_balance<Cash>("Borrower") == amount<Cash>(110);
+    ensures post_allowance_remaining<Cash>("Lender") == amount<Cash>(0);
+    ensures post_allowance_spent<Cash>("Lender") == amount<Cash>(100);
+  }
+  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {
+    requires is_negative(nominal) == false;
+    let payment = magnitude(nominal);
+    requires payment > 0;
+    next.phase = pre.phase + 1;
+    next.paid = pre.paid + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Borrower",
+      to: "Lender",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Repay {
+      allocationId: allocationId,
+      transferId: transferId,
+      obligationId: "Loan1",
+      payer: "Borrower",
+      nominalAmount: nominal
+    };
+    ensures post.phase == pre.phase + 1;
+    ensures post.paid == pre.paid + payment;
+    ensures post_principal<Cash>("Loan1") == quantity<Units<Cash,1>,0>(80);
+    ensures post_accrued<Cash>("Loan1") == quantity<Units<Cash,1>,0>(0);
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(80);
+    ensures post_balance<Cash>("Lender") == amount<Cash>(30);
+    ensures post_balance<Cash>("Borrower") == amount<Cash>(80);
+    ensures post_allowance_remaining<Cash>("Borrower") == amount<Cash>(80);
+    ensures post_allowance_spent<Cash>("Borrower") == amount<Cash>(30);
+  }
+  action settle(transferId: Text, allocationId: Text) {
+    let debt = outstanding<Cash>("Loan1");
+    let payment = magnitude(debt);
+    requires payment > 0;
+    next.phase = pre.phase + 1;
+    next.paid = pre.paid + payment;
+    emit Transfer {
+      id: transferId,
+      from: "Borrower",
+      to: "Lender",
+      settlementAsset: "Cash",
+      transferAmount: amount<Cash>(payment)
+    };
+    emit Repay {
+      allocationId: allocationId,
+      transferId: transferId,
+      obligationId: "Loan1",
+      payer: "Borrower",
+      nominalAmount: debt
+    };
+    ensures post.phase == pre.phase + 1;
+    ensures post.paid == pre.paid + payment;
+    ensures post_principal<Cash>("Loan1") == quantity<Units<Cash,1>,0>(0);
+    ensures post_accrued<Cash>("Loan1") == quantity<Units<Cash,1>,0>(0);
+    ensures post_outstanding<Cash>("Loan1") == quantity<Units<Cash,1>,0>(0);
+    ensures post_balance<Cash>("Borrower") == amount<Cash>(0);
+    ensures post_allowance_remaining<Cash>("Borrower") == amount<Cash>(0);
+    ensures post_allowance_spent<Cash>("Borrower") == amount<Cash>(110);
+    ensures post_balance<Cash>("Lender") == amount<Cash>(110);
+  }
+}

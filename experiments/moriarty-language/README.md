@@ -182,4 +182,21 @@ npm run financial-lifecycle-demo
 ```
 
 The current demo originates 100, accrues 10 and repays 30. Outstanding 80
-remains. Full settlement is Task 3.
+remains. That example stays a partial origination/accrual/repay consumer.
+
+A separate source/5 agreement, `loan-lifecycle.mori`, drives originate,
+accrue, repay and settle through the public evaluate API. The demo copies
+each successful ordinary post and financialPost into the next call and
+sets workInitial from the preceding remaining work. Settlement reads the
+outstanding quantity in source; the consumer supplies only fresh IDs.
+Duplicate accrual and a later settle after debt 0 are retained as named
+failures. Run these from this package directory:
+
+```sh
+node src/cli.ts check --profile moriarty-financial-agreement-source/5 spec/successor/examples/loan-lifecycle.mori
+node src/cli.ts format --profile moriarty-financial-agreement-source/5 spec/successor/examples/loan-lifecycle.mori
+node src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots spec/successor/examples/loan-lifecycle.snapshots.json --repayment-state spec/successor/examples/loan-lifecycle.state.json spec/successor/examples/loan-lifecycle.mori
+npm run loan-lifecycle-demo
+```
+
+This is local preparation, not a K execution, proof, or ledger settlement.
