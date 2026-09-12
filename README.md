@@ -700,14 +700,29 @@ lifecycle kernel `moriarty-financial-lifecycle/1`. Quantity and Amount stay
 distinct; source U and settlement A are the same name. Core `/4` evaluate is
 funded action evaluation over that kernel. The current example originates
 principal 100, accrues one period of 10, and repays 30; outstanding 80
-remains and lifetime incurred stays 110. Full settlement of that example is
-Task 3. Run these from the repository root:
+remains and lifetime incurred stays 110. That demo stays a partial
+origination/accrual/repay consumer. Run these from the repository root:
 
 ```sh
 node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
 node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
 node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.state.json experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.mori
 npm --prefix experiments/moriarty-language run financial-lifecycle-demo
+```
+
+A separate `loan-lifecycle.mori` agreement on the same `/5` profile originates
+100, accrues 10, repays 30 and settles the remaining 80 through public
+`createFinancialAgreementSourceV5().evaluate`. Each successful ordinary post
+and financialPost become the next Pre and financial input; workInitial is the
+preceding remaining work. Settlement computes outstanding in source. The demo
+retains a duplicate accrual and a failed settle after debt 0. Run these from
+the repository root:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/5 --action originate --snapshots experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori
+npm --prefix experiments/moriarty-language run loan-lifecycle-demo
 ```
 
 This is local preparation, not a K execution, proof, or ledger settlement.
