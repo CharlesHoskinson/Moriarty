@@ -3,10 +3,13 @@ import {
   FINANCIAL_AGREEMENT_SOURCE_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE,
   FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE,
+  FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE,
   FINANCIAL_READ_GENERIC_PRIMARIES,
+  FINANCIAL_POST_READ_GENERIC_PRIMARIES,
   parseSuccessorFinancialAgreementSource,
   parseSuccessorFinancialAgreementSourceV2,
   parseSuccessorFinancialAgreementSourceV3,
+  parseSuccessorFinancialAgreementSourceV4,
   SuccessorSyntaxError,
 } from './frontend.ts';
 import type {
@@ -30,8 +33,10 @@ import type { SourceRejected } from './financial-expression-source-v1.ts';
 import {
   FINANCIAL_EXPRESSION_CONTRACT_V1,
   FINANCIAL_EXPRESSION_CONTRACT_V2,
+  FINANCIAL_EXPRESSION_CONTRACT_V3,
   createFinancialExpressionContractV1,
   createFinancialExpressionContractV2,
+  createFinancialExpressionContractV3,
 } from './financial-expression-v1.ts';
 import type { ExpressionResult } from './financial-expression-v1.ts';
 import {
@@ -69,14 +74,23 @@ export const COMPONENT_BYTES = 65536;
 export type AgreementProfile =
   | typeof FINANCIAL_AGREEMENT_SOURCE_PROFILE
   | typeof FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
-  | typeof FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+  | typeof FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
 
 function extraReserved(profile: AgreementProfile): readonly string[] {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) {
+    return [...FINANCIAL_READ_GENERIC_PRIMARIES, ...FINANCIAL_POST_READ_GENERIC_PRIMARIES];
+  }
   return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE ? FINANCIAL_READ_GENERIC_PRIMARIES : [];
 }
 
 function readsEnabled(profile: AgreementProfile): boolean {
-  return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE;
+  return profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE
+    || profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
+}
+
+function postReadsEnabled(profile: AgreementProfile): boolean {
+  return profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE;
 }
 
 export interface CompiledAgreementAction {
@@ -128,6 +142,21 @@ export function evaluateCompiledAction(
   repaymentStateJSON: string,
   profile: AgreementProfile = FINANCIAL_AGREEMENT_SOURCE_PROFILE,
 ): FundedExpressionResult {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) {
+    const admitted = admitRepaymentStateJSON(repaymentStateJSON);
+    if (!admitted.ok) return admitted.result;
+    const remainingText = admitted.value.work.remaining;
+    const workInitial = typeof snapshotCanonicalJSON === 'string'
+      ? snapshotWorkInitial(snapshotCanonicalJSON) : undefined;
+    if (workInitial !== undefined && workInitial !== remainingText) {
+      return { status: 'Rejected', code: 'WORK_MISMATCH' };
+    }
+    const input = snapshots(snapshotCanonicalJSON);
+    const schemaText = canonical(compiled.schema);
+    return createFinancialExpressionContractV3(schemaText, repaymentStateJSON).evaluate(canonical({
+      contract: FINANCIAL_EXPRESSION_CONTRACT_V3, source, core: compiled.core, ...input,
+    }));
+  }
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) {
     const admitted = admitRepaymentStateJSON(repaymentStateJSON);
     if (!admitted.ok) return admitted.result;
@@ -167,6 +196,7 @@ export function evaluateCompiledAction(
 }
 
 function parseAgreement(source: string, profile: AgreementProfile): Program {
+  if (profile === FINANCIAL_AGREEMENT_SOURCE_V4_PROFILE) return parseSuccessorFinancialAgreementSourceV4(source);
   if (profile === FINANCIAL_AGREEMENT_SOURCE_V3_PROFILE) return parseSuccessorFinancialAgreementSourceV3(source);
   return profile === FINANCIAL_AGREEMENT_SOURCE_V2_PROFILE
     ? parseSuccessorFinancialAgreementSourceV2(source)
@@ -536,9 +566,12 @@ export function compileAgreementSource(source: string, profile: AgreementProfile
   }
   function compileAction(action: ActionDecl, schema: Schema): CompiledAgreementAction | SourceRejected {
     const lowered = lowerAndCheckFinancialAction(source, action, schema, canonical(schema), {
-      contract: readsEnabled(profile) ? FINANCIAL_EXPRESSION_CONTRACT_V2 : FINANCIAL_EXPRESSION_CONTRACT_V1,
+      contract: postReadsEnabled(profile)
+        ? FINANCIAL_EXPRESSION_CONTRACT_V3
+        : readsEnabled(profile) ? FINANCIAL_EXPRESSION_CONTRACT_V2 : FINANCIAL_EXPRESSION_CONTRACT_V1,
       extraReserved: extraReserved(profile),
       financialReads: readsEnabled(profile),
+      financialPostReads: postReadsEnabled(profile),
     });
     if ('status' in lowered) return lowered;
     return {

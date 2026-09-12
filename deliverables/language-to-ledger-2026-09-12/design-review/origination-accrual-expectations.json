@@ -1,0 +1,2414 @@
+{
+  "schema": "moriarty.independent-expected-results/1",
+  "status": "RECOMMENDED_SPECIFIED_ONLY",
+  "scope": "Bounded Task2 exact schema proposal and independent arithmetic/rollback oracles; no implementation or authenticated admission",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "requestedEffort": "medium",
+    "forkTurns": "none",
+    "task": "/root/postconditions_design_review"
+  },
+  "createdAt": "2026-09-12T04:05:48.612919+00:00",
+  "sources": {
+    "docs/superpowers/specs/2026-09-11-defi-kernel-sdk-interface-design.md": "90731e9574d0300a98863645e553edfbe8ee0c68837a2520a87161a5c29cb897",
+    "docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md": "516a07ccd1a1cdf781eb7f65ca9f91337ce6d0c677145447ac114484b84ef262",
+    "docs/superpowers/plans/2026-09-12-language-to-ledger.md": "6b3f9e4ae9d702e66ea701008e48b38470a116658c7e1f9e3c9def8f94ed670e",
+    "openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md": "1dcb927cf7243e31f9ec44d2bd610916d5c9a3b39ca778dbf3d8441046781c52",
+    "experiments/moriarty-language/src/successor/repayment.ts": "e894be3ed41032adac41315b4eb84091ec5d5df111c9ddf54f61ab2fbec685d6"
+  },
+  "designPath": "deliverables/language-to-ledger-2026-09-12/design-review/origination-accrual-expectations.md",
+  "designSha256": "65a64399c97e24689c17523349b4d2a24d6fb7a9c47163868609ae4bfee34067",
+  "versions": {
+    "source": "moriarty-financial-agreement-source/5",
+    "core": "moriarty-financial-expression-contract/4",
+    "kernel": "moriarty-financial-lifecycle/1",
+    "state": "moriarty-financial-lifecycle-state/1"
+  },
+  "closedKeys": {
+    "state": [
+      "schemaVersion",
+      "balances",
+      "allowances",
+      "obligations",
+      "usedTransferIds",
+      "usedAllocationIds",
+      "usedOriginationIds",
+      "usedAccrualIds",
+      "work"
+    ],
+    "obligation": [
+      "id",
+      "debtor",
+      "creditor",
+      "denomination",
+      "settlementAsset",
+      "principal",
+      "accrued",
+      "outstanding",
+      "allocationRule",
+      "conversion",
+      "status",
+      "originationId",
+      "originationTransferId",
+      "initialPrincipal",
+      "nominalLiabilityCap",
+      "liabilityIncurred",
+      "accrualTerms",
+      "lastAccruedPeriod",
+      "nextAccrualAt"
+    ],
+    "accrualTerms": [
+      "numerator",
+      "denominator",
+      "rounding",
+      "periodSeconds",
+      "firstPeriodStart"
+    ],
+    "conversion": [
+      "mantissa",
+      "scale",
+      "rounding"
+    ],
+    "originateAction": [
+      "kind",
+      "obligationId",
+      "transferId",
+      "originationId",
+      "debtor",
+      "creditor",
+      "nominalAmount",
+      "denomination",
+      "settlementAsset",
+      "conversion",
+      "allocationRule",
+      "accrualTerms",
+      "nominalLiabilityCap"
+    ],
+    "accrueAction": [
+      "kind",
+      "accrualId",
+      "obligationId",
+      "periodIndex",
+      "observedTime"
+    ],
+    "originationEffect": [
+      "obligationId",
+      "transferId",
+      "originationId",
+      "debtor",
+      "creditor",
+      "nominalAmount",
+      "denomination",
+      "settlementAsset",
+      "conversion",
+      "allocationRule",
+      "accrualTerms",
+      "nominalLiabilityCap",
+      "kind",
+      "settlementAmount",
+      "liabilityIncurred",
+      "lastAccruedPeriod",
+      "nextAccrualAt"
+    ],
+    "accrualEffect": [
+      "kind",
+      "accrualId",
+      "obligationId",
+      "debtor",
+      "creditor",
+      "denomination",
+      "periodIndex",
+      "observedTime",
+      "eligibleAt",
+      "nextAccrualAt",
+      "principalBasis",
+      "numerator",
+      "denominator",
+      "rounding",
+      "interestAmount",
+      "previousAccrued",
+      "accrued",
+      "previousOutstanding",
+      "outstanding",
+      "previousLiabilityIncurred",
+      "liabilityIncurred",
+      "nominalLiabilityCap"
+    ]
+  },
+  "kernelTrace": [
+    {
+      "name": "originate100",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "256",
+          "spent": "17",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "post": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "254",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110",
+          "kind": "Origination",
+          "settlementAmount": "100",
+          "liabilityIncurred": "100",
+          "lastAccruedPeriod": "0",
+          "nextAccrualAt": "1060"
+        }
+      ],
+      "kernelWorkUsed": "2"
+    },
+    {
+      "name": "accrue10",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "254",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1060"
+        }
+      ],
+      "post": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "253",
+          "spent": "20",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Accrual",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "periodIndex": "1",
+          "observedTime": "1060",
+          "eligibleAt": "1060",
+          "nextAccrualAt": "1120",
+          "principalBasis": "100",
+          "numerator": "1",
+          "denominator": "10",
+          "rounding": "floor",
+          "interestAmount": "10",
+          "previousAccrued": "0",
+          "accrued": "10",
+          "previousOutstanding": "100",
+          "outstanding": "110",
+          "previousLiabilityIncurred": "100",
+          "liabilityIncurred": "110",
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "kernelWorkUsed": "1"
+    },
+    {
+      "name": "repay30",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "253",
+          "spent": "20",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repay",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "nominalAmount": "30"
+        }
+      ],
+      "post": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "251",
+          "spent": "22",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "20",
+          "accruedDischarged": "10",
+          "remainingOutstanding": "80"
+        }
+      ],
+      "kernelWorkUsed": "2"
+    },
+    {
+      "name": "repay80",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "251",
+          "spent": "22",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repay",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "nominalAmount": "80"
+        }
+      ],
+      "post": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Settled",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1",
+          "P2"
+        ],
+        "usedAllocationIds": [
+          "R1",
+          "R2"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "249",
+          "spent": "24",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "80",
+          "settlementAmount": "80",
+          "principalDischarged": "80",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "0"
+        }
+      ],
+      "kernelWorkUsed": "2"
+    }
+  ],
+  "negativeKernelCases": [
+    {
+      "name": "missing-disbursement",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "256",
+          "spent": "17",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "TRANSFER_NOT_IN_STEP",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "underfunded-disbursement",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "256",
+          "spent": "17",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "99"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "TRANSFER_AMOUNT_MISMATCH",
+        "actionIndex": 1
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "overfunded-disbursement",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "101"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "101",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "256",
+          "spent": "17",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "101"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "TRANSFER_AMOUNT_MISMATCH",
+        "actionIndex": 1
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "same-transfer-second-origination",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [],
+        "usedTransferIds": [],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "256",
+          "spent": "17",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan2",
+          "transferId": "D1",
+          "originationId": "O2",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "TRANSFER_ALREADY_ALLOCATED",
+        "actionIndex": 2
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "prior-step-transfer-is-not-funding",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "254",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Originate",
+          "obligationId": "Loan2",
+          "transferId": "D1",
+          "originationId": "O2",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "TRANSFER_NOT_IN_STEP",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "early-period",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "254",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1059"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "PERIOD_NOT_ELIGIBLE",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "skip-period",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "254",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "2",
+          "observedTime": "1120"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "PERIOD_SEQUENCE",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "repeat-id",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "253",
+          "spent": "20",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1060"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "DUPLICATE",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "repeat-period-fresh-id",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "253",
+          "spent": "20",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A2",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1120"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "PERIOD_SEQUENCE",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "cap-not-restored-by-payment",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "251",
+          "spent": "22",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A2",
+          "obligationId": "Loan1",
+          "periodIndex": "2",
+          "observedTime": "1120"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "LIABILITY_CAP_EXCEEDED",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "settled-debt-cannot-accrue",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Settled",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1",
+          "P2"
+        ],
+        "usedAllocationIds": [
+          "R1",
+          "R2"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "249",
+          "spent": "24",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A2",
+          "obligationId": "Loan1",
+          "periodIndex": "2",
+          "observedTime": "1120"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "NOT_OUTSTANDING",
+        "actionIndex": 0
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    },
+    {
+      "name": "reserve-is-not-accrual-work",
+      "pre": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "0",
+          "spent": "19",
+          "closureReserve": "16"
+        }
+      },
+      "actions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1060"
+        }
+      ],
+      "expected": {
+        "status": "Rejected",
+        "code": "INSUFFICIENT_WORK",
+        "actionIndex": null
+      },
+      "unchangedStateRequired": true,
+      "forbiddenOutputKeys": [
+        "post",
+        "financialPost",
+        "effects",
+        "workRemaining"
+      ]
+    }
+  ],
+  "additionalNumericOracles": [
+    {
+      "principal": "101",
+      "numerator": "1",
+      "denominator": "10",
+      "rounding": "floor",
+      "interestAmount": "10"
+    },
+    {
+      "principal": "101",
+      "numerator": "1",
+      "denominator": "10",
+      "rounding": "ceil",
+      "interestAmount": "11"
+    },
+    {
+      "principal": "1",
+      "numerator": "1",
+      "denominator": "10",
+      "rounding": "floor",
+      "interestAmount": "0",
+      "recordsPeriodAndWork": true
+    },
+    {
+      "principal": "1",
+      "numerator": "1",
+      "denominator": "10",
+      "rounding": "ceil",
+      "interestAmount": "1"
+    },
+    {
+      "principal": "100",
+      "numerator": "0",
+      "denominator": "10",
+      "rounding": "floor",
+      "interestAmount": "0",
+      "recordsPeriodAndWork": true
+    },
+    {
+      "principal": "2",
+      "numerator": "340282366920938463463374607431768211455",
+      "denominator": "340282366920938463463374607431768211455",
+      "rounding": "floor",
+      "expectedCode": "OVERFLOW",
+      "reason": "Product must fit UInt128 before division."
+    }
+  ],
+  "requiredBeforeAuthoring": [
+    "Canonical scoped freeze and independent review of exact fields/effects/versions, source denomination restriction and error priority.",
+    "Actual parsed source fixtures and independently derived source expression work after final bodies."
+  ],
+  "limits": [
+    "Expected kernel states were independently calculated by the reviewer, not emitted by an implemented lifecycle kernel.",
+    "Kernel trace work excludes source prefix/suffix work; source integration must add exact E.",
+    "Local caps/terms/time are unauthenticated input; no SDK L5 or signed aggregate liability claim.",
+    "No change to the approved package, production source, services, wallets, accounting or public network."
+  ]
+}
