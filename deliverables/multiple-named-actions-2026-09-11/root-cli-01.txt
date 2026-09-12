@@ -1,0 +1,262 @@
+{
+  "passed": 23,
+  "results": [
+    {
+      "case": "all actions check"
+    },
+    {
+      "case": "idempotent format"
+    },
+    {
+      "case": "first complete result equals reviewed isolated action",
+      "result": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "due": "100",
+          "paid": "30"
+        },
+        "financialPost": {
+          "balances": [
+            {
+              "party": "Payer",
+              "asset": "Cash",
+              "amount": "70"
+            },
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "30"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Payer",
+              "asset": "Cash",
+              "remaining": "70",
+              "spent": "30"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Due100",
+              "debtor": "Payer",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "70",
+              "accrued": "0",
+              "outstanding": "70",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Outstanding"
+            }
+          ],
+          "usedTransferIds": [
+            "T1"
+          ],
+          "usedAllocationIds": [
+            "Alloc1"
+          ],
+          "work": {
+            "remaining": "57",
+            "spent": "43",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "T1",
+            "from": "Payer",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "kind": "Repayment",
+            "allocationId": "Alloc1",
+            "transferId": "T1",
+            "obligationId": "Due100",
+            "payer": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "nominalAmount": "30",
+            "settlementAmount": "30",
+            "principalDischarged": "30",
+            "accruedDischarged": "0",
+            "remainingOutstanding": "70"
+          }
+        ],
+        "workRemaining": "57"
+      }
+    },
+    {
+      "case": "continued installment complete result equals reviewed isolated action",
+      "result": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "due": "100",
+          "paid": "50"
+        },
+        "financialPost": {
+          "balances": [
+            {
+              "party": "Payer",
+              "asset": "Cash",
+              "amount": "50"
+            },
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "50"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Payer",
+              "asset": "Cash",
+              "remaining": "50",
+              "spent": "50"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Due100",
+              "debtor": "Payer",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "50",
+              "accrued": "0",
+              "outstanding": "50",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Outstanding"
+            }
+          ],
+          "usedTransferIds": [
+            "T1",
+            "T2"
+          ],
+          "usedAllocationIds": [
+            "Alloc1",
+            "Alloc2"
+          ],
+          "work": {
+            "remaining": "12",
+            "spent": "88",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "T2",
+            "from": "Payer",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "20"
+          },
+          {
+            "kind": "Repayment",
+            "allocationId": "Alloc2",
+            "transferId": "T2",
+            "obligationId": "Due100",
+            "payer": "Payer",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "nominalAmount": "20",
+            "settlementAmount": "20",
+            "principalDischarged": "20",
+            "accruedDischarged": "0",
+            "remainingOutstanding": "50"
+          }
+        ],
+        "workRemaining": "12"
+      }
+    },
+    {
+      "case": "declaration order does not change named runtime result or work"
+    },
+    {
+      "case": "unselected runtime guard and work isolation"
+    },
+    {
+      "case": "bad selector 'missing'",
+      "code": "SOURCE_ACTION_UNKNOWN"
+    },
+    {
+      "case": "bad selector 'Repay'",
+      "code": "SOURCE_ACTION_UNKNOWN"
+    },
+    {
+      "case": "bad selector 'constructor'",
+      "code": "SOURCE_ACTION_UNKNOWN"
+    },
+    {
+      "case": "bad selector 'toString'",
+      "code": "SOURCE_ACTION_UNKNOWN"
+    },
+    {
+      "case": "bad selector '__proto__'",
+      "code": "SOURCE_ACTION_NAME"
+    },
+    {
+      "case": "missing CLI selector",
+      "code": "CLI_USAGE"
+    },
+    {
+      "case": "selector forbidden on check",
+      "code": "CLI_USAGE"
+    },
+    {
+      "case": "extra selected Args",
+      "code": "INPUT_SCHEMA"
+    },
+    {
+      "case": "missing selected Args",
+      "code": "INPUT_SCHEMA"
+    },
+    {
+      "case": "wrong selected argument type",
+      "code": "INPUT_SCHEMA"
+    },
+    {
+      "case": "duplicate action",
+      "code": "SOURCE_DUPLICATE_DECLARATION"
+    },
+    {
+      "case": "zero actions",
+      "code": "SOURCE_ACTION_COUNT"
+    },
+    {
+      "case": "unselected static error before runtime inputs",
+      "code": "TYPE_NAME"
+    },
+    {
+      "case": "another action binding is unavailable: nominal",
+      "code": "TYPE_NAME"
+    },
+    {
+      "case": "another action binding is unavailable: payment",
+      "code": "TYPE_NAME"
+    },
+    {
+      "case": "per-action parameter types are independent"
+    },
+    {
+      "case": "funding failure has no tentative output",
+      "code": "INSUFFICIENT_ALLOWANCE"
+    }
+  ]
+}

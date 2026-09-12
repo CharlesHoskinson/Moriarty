@@ -511,6 +511,66 @@ test('operation and nested collection cycles keep referring TypeNode spans', () 
   assert.equal(sourceSlice(prefix + sourceText.replace('payer: Text;', 'payer: Operation<Missing>;'), unknown).includes('Missing'), true);
 });
 
+test('compound-invalid parameter faults reject before protected binding on check, elaborate and evaluate', () => {
+  const prefix = '// UTF-8 λ🙂\n';
+  const api = language();
+  const cases = [
+    {
+      name: 'duplicate parameter and missing Repay',
+      input: prefix + sourceText
+        .replace('second: Quantity<Units<Cash,1>,0>', 'first: Quantity<Units<Cash,1>,0>')
+        .replace('operation Repay: RepayFields;', ''),
+      code: 'SOURCE_PARAMETER_NAMES',
+      needle: 'first: Quantity<Units<Cash,1>,0>',
+      from: 1,
+    },
+    {
+      name: 'duplicate parameter and extra operation',
+      input: prefix + sourceText
+        .replace('second: Quantity<Units<Cash,1>,0>', 'first: Quantity<Units<Cash,1>,0>')
+        .replace('operation Repay: RepayFields;', 'operation Repay: RepayFields; operation Notice: RepayFields;'),
+      code: 'SOURCE_PARAMETER_NAMES',
+      needle: 'first: Quantity<Units<Cash,1>,0>',
+      from: 1,
+    },
+    {
+      name: 'shared field name and missing Repay',
+      input: prefix + sourceText
+        .replace('second: Quantity<Units<Cash,1>,0>', 'due: Quantity<Units<Cash,1>,0>')
+        .replace('operation Repay: RepayFields;', ''),
+      code: 'SOURCE_RESERVED_NAME',
+      needle: 'due: Quantity<Units<Cash,1>,0>',
+      from: 0,
+    },
+    {
+      name: 'shared field name and type-mismatched Repay field',
+      input: prefix + sourceText
+        .replace('second: Quantity<Units<Cash,1>,0>', 'due: Quantity<Units<Cash,1>,0>')
+        .replace('nominalAmount: Quantity<Units<Cash,1>,0>;', 'nominalAmount: UInt128;'),
+      code: 'SOURCE_RESERVED_NAME',
+      needle: 'due: Quantity<Units<Cash,1>,0>',
+      from: 0,
+    },
+  ];
+  for (const item of cases) {
+    const start = utf8Offset(item.input, item.needle, item.from === 1
+      ? item.input.indexOf(item.needle) + 1
+      : 0);
+    for (const method of ['check', 'elaborate', 'evaluate']) {
+      const result = method === 'evaluate'
+        ? api.evaluate(item.input, snapshotsText, stateText)
+        : api[method](item.input);
+      const rejected = assertRejected(result);
+      assert.equal(rejected.code, item.code, JSON.stringify({ name: item.name, method, result }));
+      assert.equal(rejected.span.kind, 'source');
+      assert.equal(Number(rejected.span.start), start, JSON.stringify({ name: item.name, method, result }));
+      assert.deepEqual(rejected.nodePath, []);
+      assert.equal(rejected.workUsed, '0');
+      assert.equal(sourceSlice(item.input, rejected).includes(item.needle.split(':')[0]), true);
+    }
+  }
+});
+
 test('static source failures reject before snapshot-dependent work', () => {
   const dup = source('unit Cash;');
   const result = assertRejected(language().evaluate(dup, '{', '{'));

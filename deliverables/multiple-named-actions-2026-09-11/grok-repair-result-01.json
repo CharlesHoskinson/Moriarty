@@ -1,0 +1,27 @@
+{
+  "text": "I'll read the updated root findings, reproduce the /1 differential with the unchanged probe, then restore the original /1 validation order in the shared compiler.Using systematic-debugging and TDD. Next I\u2019ll reproduce the /1 differential, inspect the shared compiler\u2019s validation order, then add failing compound-invalid tests before the repair.I'll reproduce the differential against the reviewed /1 implementation, then add failing compound-invalid tests before changing the compiler.Root cause is confirmed: `/1` currently binds operations before parameter validation. I\u2019ll add failing compound-invalid `/1` tests, then restore the original order.The `/1` compatibility regression is repaired. Compound-invalid sources now reject parameter faults before protected binding, matching the reviewed `/1` compiler.\n\n**Cause.** The shared `/1` path called `requireProtectedBinding` before `validateFinancialActionParameters`. Duplicate or shared-name parameters plus a bad/missing operation therefore returned `OPERATION_BINDING` at the agreement/operation instead of `SOURCE_PARAMETER_NAMES` or `SOURCE_RESERVED_NAME` at the parameter.\n\n**Repair.** `/1` order is now: normalize schema \u2192 validate action parameters \u2192 validate protected binding \u2192 lower/check. `/2` still binds shared operations before per-action checking. Parameter validation is not repeated.\n\n**Tests added.** Compound-invalid `/1` cases for check, elaborate, and evaluate: duplicate parameter + missing/extra operation, shared field name + missing/type-mismatched Repay. Exact `code`, source span, empty `nodePath`, and `workUsed` `0` are asserted.\n\n## Checks\n\n| Check | Result | Receipt |\n|---|---|---|\n| Independent `/1` differential (unchanged) | **48/48 pass** (was 18 fail) | `author-checks-v1-differential-repair.txt` |\n| Independent API probes | **27 pass**, exit 0 | `author-checks-api-probes-repair.txt` |\n| Independent CLI probes | **23 pass**, exit 0 | `author-checks-cli-probes-repair.txt` |\n| Full package tests | **748/748 pass** (747 + 1 new) | `author-checks-npm-test-repair.txt` |\n| Typecheck | exit 0 | `author-checks-typecheck-repair.txt` |\n\nPrior failed evidence was left unchanged (`author-checks-v1-differential-red.txt`, `root-v1-differential-02.txt`).\n\n## Files changed\n\n- `experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts`\n- `experiments/moriarty-language/tests/financial-agreement-source.test.mjs`\n- new repair receipts under `/home/charl/Moriarty/deliverables/multiple-named-actions-2026-09-11/`\n\nNo commit, push, publication, install, infrastructure, subagent, or live/K/Preview work. This author result is not the Astra medium full exact-candidate audit.",
+  "stopReason": "end_turn",
+  "sessionId": "01a092c5-7057-73e2-b7da-f03ed9a35c13",
+  "requestId": "a3073d3d-c381-42e2-b2cc-130f495775fb",
+  "usage": {
+    "input_tokens": 29063,
+    "cache_read_input_tokens": 3223936,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 8458,
+    "reasoning_tokens": 7005,
+    "total_tokens": 3261457
+  },
+  "num_turns": 16,
+  "total_cost_usd": 1.02594796,
+  "total_cost_usd_ticks": 10259479600,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 29063,
+      "outputTokens": 8458,
+      "cacheReadInputTokens": 3223936,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 16,
+      "costUSD": 1.02594796
+    }
+  }
+}
