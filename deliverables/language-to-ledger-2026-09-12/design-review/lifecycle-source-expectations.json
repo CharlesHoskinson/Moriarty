@@ -1,0 +1,883 @@
+{
+  "schemaVersion": "moriarty-task3-source-expectations/1",
+  "status": "specified-only; no Task3 implementation or execution certified",
+  "scope": "Local source and public consumer only; no K, ledger, authentication, deployment or product-acceptance claim",
+  "routing": {
+    "implementation": "grok-4.6 high",
+    "audit": "fresh gpt-6-astra medium",
+    "note": "Latest task routing supersedes retained Opus prose."
+  },
+  "contract": {
+    "path": "openspec/changes/language-to-ledger-lifecycle/loan-origination-accrual-contract.md",
+    "sha256": "74299d10cca2874828c4c847f6817677b033090bb85d38bb898dd462fee98383",
+    "task2Status": "Candidate dependency not final audited at expectation time"
+  },
+  "oracleProvenance": "Financial states/effects independently specified in origination-accrual-expectations.json and checked against canonical contract equations; no evaluator output used as oracle. Work templates intentionally await final Task3 source.",
+  "recommendedOrdinarySchema": {
+    "phase": "UInt128",
+    "paid": "UInt128"
+  },
+  "seed": {
+    "ordinary": {
+      "phase": "0",
+      "paid": "0"
+    },
+    "financial": {
+      "schemaVersion": "moriarty-financial-lifecycle-state/1",
+      "balances": [
+        {
+          "party": "Lender",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "party": "Borrower",
+          "asset": "Cash",
+          "amount": "10"
+        },
+        {
+          "party": "Other",
+          "asset": "Token",
+          "amount": "7"
+        }
+      ],
+      "allowances": [
+        {
+          "party": "Lender",
+          "asset": "Cash",
+          "remaining": "100",
+          "spent": "0"
+        },
+        {
+          "party": "Borrower",
+          "asset": "Cash",
+          "remaining": "110",
+          "spent": "0"
+        },
+        {
+          "party": "Other",
+          "asset": "Token",
+          "remaining": "3",
+          "spent": "1"
+        }
+      ],
+      "obligations": [],
+      "usedTransferIds": [],
+      "usedAllocationIds": [],
+      "usedOriginationIds": [],
+      "usedAccrualIds": [],
+      "work": {
+        "remaining": "256",
+        "spent": "17",
+        "closureReserve": "16"
+      }
+    }
+  },
+  "continuationContract": {
+    "source": "One unchanged .mori text, four actions originate/accrue/repay/settle",
+    "API": "createFinancialAgreementSourceV5().evaluate(source, actionName, canonical(snapshot), JSON.stringify(financialPre))",
+    "snapshot": "Pre=previous.post; Args=current scheduled args only; Obs={}; workInitial=previous.financialPost.work.remaining",
+    "allowedConsumerChanges": "Select next action and Args; serialize or owned-copy returned states. Seed only first call. Never synthesize financial values, terms, history, balances, work or ordinary state for subsequent calls.",
+    "settlement": "Source reads outstanding<Cash>(Loan1), checks positive, derives transfer amount from magnitude; Args supplies IDs only. Consumer must not supply80.",
+    "failure": "Retain full attempted input/output; no advancement on rejection; retry same accepted predecessor; no externally published candidate state/effects."
+  },
+  "stages": [
+    {
+      "name": "originate100",
+      "action": "originate",
+      "args": {
+        "transferId": "D1",
+        "originationId": "O1"
+      },
+      "expectedKernelActions": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "kind": "Originate",
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "expectedResultTemplate": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "phase": "1",
+          "paid": "0"
+        },
+        "financialPost": {
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "balances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "0"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "amount": "110"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "amount": "7"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "remaining": "110",
+              "spent": "0"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "remaining": "3",
+              "spent": "1"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Loan1",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "100",
+              "accrued": "0",
+              "outstanding": "100",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Outstanding",
+              "originationId": "O1",
+              "originationTransferId": "D1",
+              "initialPrincipal": "100",
+              "nominalLiabilityCap": "110",
+              "liabilityIncurred": "100",
+              "accrualTerms": {
+                "numerator": "1",
+                "denominator": "10",
+                "rounding": "floor",
+                "periodSeconds": "60",
+                "firstPeriodStart": "1000"
+              },
+              "lastAccruedPeriod": "0",
+              "nextAccrualAt": "1060"
+            }
+          ],
+          "usedTransferIds": [
+            "D1"
+          ],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [
+            "O1"
+          ],
+          "usedAccrualIds": [],
+          "work": {
+            "remaining": "256 - C1",
+            "spent": "17 + C1",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "D1",
+            "from": "Lender",
+            "to": "Borrower",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "obligationId": "Loan1",
+            "transferId": "D1",
+            "originationId": "O1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "nominalAmount": "100",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "allocationRule": "AccrualFirst",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "nominalLiabilityCap": "110",
+            "kind": "Origination",
+            "settlementAmount": "100",
+            "liabilityIncurred": "100",
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "workRemaining": "256 - C1"
+      },
+      "kernelCost": 2
+    },
+    {
+      "name": "accrue10",
+      "action": "accrue",
+      "args": {
+        "accrualId": "A1",
+        "periodIndex": "1",
+        "observedTime": "1060"
+      },
+      "expectedKernelActions": [
+        {
+          "kind": "Accrue",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "periodIndex": "1",
+          "observedTime": "1060"
+        }
+      ],
+      "expectedResultTemplate": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "phase": "2",
+          "paid": "0"
+        },
+        "financialPost": {
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "balances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "0"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "amount": "110"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "amount": "7"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "remaining": "110",
+              "spent": "0"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "remaining": "3",
+              "spent": "1"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Loan1",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "100",
+              "accrued": "10",
+              "outstanding": "110",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Outstanding",
+              "originationId": "O1",
+              "originationTransferId": "D1",
+              "initialPrincipal": "100",
+              "nominalLiabilityCap": "110",
+              "liabilityIncurred": "110",
+              "accrualTerms": {
+                "numerator": "1",
+                "denominator": "10",
+                "rounding": "floor",
+                "periodSeconds": "60",
+                "firstPeriodStart": "1000"
+              },
+              "lastAccruedPeriod": "1",
+              "nextAccrualAt": "1120"
+            }
+          ],
+          "usedTransferIds": [
+            "D1"
+          ],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [
+            "O1"
+          ],
+          "usedAccrualIds": [
+            "A1"
+          ],
+          "work": {
+            "remaining": "256 - C2",
+            "spent": "17 + C2",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Accrual",
+            "accrualId": "A1",
+            "obligationId": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "periodIndex": "1",
+            "observedTime": "1060",
+            "eligibleAt": "1060",
+            "nextAccrualAt": "1120",
+            "principalBasis": "100",
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "interestAmount": "10",
+            "previousAccrued": "0",
+            "accrued": "10",
+            "previousOutstanding": "100",
+            "outstanding": "110",
+            "previousLiabilityIncurred": "100",
+            "liabilityIncurred": "110",
+            "nominalLiabilityCap": "110"
+          }
+        ],
+        "workRemaining": "256 - C2"
+      },
+      "kernelCost": 1
+    },
+    {
+      "name": "repay30",
+      "action": "repay",
+      "args": {
+        "transferId": "P1",
+        "allocationId": "R1",
+        "nominal": "30"
+      },
+      "expectedKernelActions": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repay",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "nominalAmount": "30"
+        }
+      ],
+      "expectedResultTemplate": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "phase": "3",
+          "paid": "30"
+        },
+        "financialPost": {
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "balances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "30"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "amount": "80"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "amount": "7"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "remaining": "80",
+              "spent": "30"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "remaining": "3",
+              "spent": "1"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Loan1",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "80",
+              "accrued": "0",
+              "outstanding": "80",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Outstanding",
+              "originationId": "O1",
+              "originationTransferId": "D1",
+              "initialPrincipal": "100",
+              "nominalLiabilityCap": "110",
+              "liabilityIncurred": "110",
+              "accrualTerms": {
+                "numerator": "1",
+                "denominator": "10",
+                "rounding": "floor",
+                "periodSeconds": "60",
+                "firstPeriodStart": "1000"
+              },
+              "lastAccruedPeriod": "1",
+              "nextAccrualAt": "1120"
+            }
+          ],
+          "usedTransferIds": [
+            "D1",
+            "P1"
+          ],
+          "usedAllocationIds": [
+            "R1"
+          ],
+          "usedOriginationIds": [
+            "O1"
+          ],
+          "usedAccrualIds": [
+            "A1"
+          ],
+          "work": {
+            "remaining": "256 - C3",
+            "spent": "17 + C3",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "P1",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "kind": "Repayment",
+            "allocationId": "R1",
+            "transferId": "P1",
+            "obligationId": "Loan1",
+            "payer": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "nominalAmount": "30",
+            "settlementAmount": "30",
+            "principalDischarged": "20",
+            "accruedDischarged": "10",
+            "remainingOutstanding": "80"
+          }
+        ],
+        "workRemaining": "256 - C3"
+      },
+      "kernelCost": 2
+    },
+    {
+      "name": "settle80",
+      "action": "settle",
+      "args": {
+        "transferId": "P2",
+        "allocationId": "R2"
+      },
+      "expectedKernelActions": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repay",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "nominalAmount": "80"
+        }
+      ],
+      "expectedResultTemplate": {
+        "status": "FundedExpressionPrepared",
+        "post": {
+          "phase": "4",
+          "paid": "110"
+        },
+        "financialPost": {
+          "schemaVersion": "moriarty-financial-lifecycle-state/1",
+          "balances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "amount": "110"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "amount": "0"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "amount": "7"
+            }
+          ],
+          "allowances": [
+            {
+              "party": "Lender",
+              "asset": "Cash",
+              "remaining": "0",
+              "spent": "100"
+            },
+            {
+              "party": "Borrower",
+              "asset": "Cash",
+              "remaining": "0",
+              "spent": "110"
+            },
+            {
+              "party": "Other",
+              "asset": "Token",
+              "remaining": "3",
+              "spent": "1"
+            }
+          ],
+          "obligations": [
+            {
+              "id": "Loan1",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "denomination": "Cash",
+              "settlementAsset": "Cash",
+              "principal": "0",
+              "accrued": "0",
+              "outstanding": "0",
+              "allocationRule": "AccrualFirst",
+              "conversion": {
+                "mantissa": "1",
+                "scale": "0",
+                "rounding": "none"
+              },
+              "status": "Settled",
+              "originationId": "O1",
+              "originationTransferId": "D1",
+              "initialPrincipal": "100",
+              "nominalLiabilityCap": "110",
+              "liabilityIncurred": "110",
+              "accrualTerms": {
+                "numerator": "1",
+                "denominator": "10",
+                "rounding": "floor",
+                "periodSeconds": "60",
+                "firstPeriodStart": "1000"
+              },
+              "lastAccruedPeriod": "1",
+              "nextAccrualAt": "1120"
+            }
+          ],
+          "usedTransferIds": [
+            "D1",
+            "P1",
+            "P2"
+          ],
+          "usedAllocationIds": [
+            "R1",
+            "R2"
+          ],
+          "usedOriginationIds": [
+            "O1"
+          ],
+          "usedAccrualIds": [
+            "A1"
+          ],
+          "work": {
+            "remaining": "256 - C4",
+            "spent": "17 + C4",
+            "closureReserve": "16"
+          }
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "id": "P2",
+            "from": "Borrower",
+            "to": "Lender",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "kind": "Repayment",
+            "allocationId": "R2",
+            "transferId": "P2",
+            "obligationId": "Loan1",
+            "payer": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "nominalAmount": "80",
+            "settlementAmount": "80",
+            "principalDischarged": "80",
+            "accruedDischarged": "0",
+            "remainingOutstanding": "0"
+          }
+        ],
+        "workRemaining": "256 - C4"
+      },
+      "kernelCost": 2
+    }
+  ],
+  "work": {
+    "notation": "Ei is dynamic source prefix plus suffix reductions; Ni=[2,1,2,2]; Wi=Ei+Ni; Ci=sum(W1..Wi). Work expressions in templates are metadata placeholders, NOT canonical wire decimal values.",
+    "numericFreezeStatus": "Pending final source bytes and independent constructor trace; do not claim numeric Task3 counts or successful budget256 yet. If total exceeds256, select a larger initial spendable <=65536 before freezing and substitute that seed throughout.",
+    "invariants": [
+      "result.workRemaining == result.financialPost.work.remaining",
+      "remaining + spent = 273 for seed256/spent17",
+      "closureReserve = 16; total remaining+spent+reserve=289",
+      "No failure commits work or success identities",
+      "All resulting states re-admit under lifecycle-state/1"
+    ],
+    "derivation": [
+      "Freeze source SHA256 and exact relevant semantic version. Elaborate final source; retain constructor listing with source spans.",
+      "Independently tally each actually visited statement/expression constructor, including literals, reads, conversions, nested record fields, Require/Next/Emit/Ensure and short-circuit/branch decisions. Do not infer cost from elapsed time, AST total or old example.",
+      "Separate prefix, actual emitted descriptor count N, suffix. Static source bound generally excludes N and can exceed dynamic E; use it only as a consistency check.",
+      "Publish literal decimal complete result oracles after substituting independently counted Ci. Compare all four full results and exact low-budget failures.",
+      "Freeze late-false-ensure variant separately and count through its false condition including tentative N; rejection workUsed is diagnostic, never a committed pool debit."
+    ],
+    "priorCalibrationOnly": {
+      "independentOriginFixture": {
+        "prefix": 36,
+        "N": 2,
+        "suffix": 17,
+        "total": 55
+      },
+      "independentAccrueFixture": {
+        "prefix": 10,
+        "N": 1,
+        "suffix": 10,
+        "total": 21
+      },
+      "warning": "These counts are for origination/source-fixture.mjs only; adding Task3 state, guards or ensures changes E."
+    }
+  },
+  "negativeCases": [
+    {
+      "name": "duplicate accrual from accepted stage2",
+      "predecessor": 2,
+      "action": "accrue",
+      "args": {
+        "accrualId": "A1",
+        "periodIndex": "1",
+        "observedTime": "1060"
+      },
+      "code": "DUPLICATE",
+      "reason": "No phase guard or outstanding-value guard may mask this control."
+    },
+    {
+      "name": "fresh identity repeats period",
+      "predecessor": 2,
+      "action": "accrue",
+      "args": {
+        "accrualId": "A2",
+        "periodIndex": "1",
+        "observedTime": "1120"
+      },
+      "code": "PERIOD_SEQUENCE"
+    },
+    {
+      "name": "first boundary minus one",
+      "predecessor": 1,
+      "action": "accrue",
+      "args": {
+        "accrualId": "A1",
+        "periodIndex": "1",
+        "observedTime": "1059"
+      },
+      "code": "PERIOD_NOT_ELIGIBLE",
+      "retry": "Identical predecessor and IDs at1060 succeeds."
+    },
+    {
+      "name": "incurred cap survives partial repayment",
+      "predecessor": 3,
+      "action": "accrue",
+      "args": {
+        "accrualId": "A2",
+        "periodIndex": "2",
+        "observedTime": "1120"
+      },
+      "code": "LIABILITY_CAP_EXCEEDED",
+      "reason": "8 new interest would incur118; outstanding80 does not restore cap110. Then settle from unchanged stage3."
+    },
+    {
+      "name": "late false financial ensure",
+      "predecessor": 3,
+      "action": "settle",
+      "sourceVariant": "Change only the final true post_balance Lender110 comparison to Lender111.",
+      "code": "ENSURES_FAILED",
+      "retry": "Original frozen source with identical predecessor and P2/R2 succeeds. No output or committed work from failed attempt."
+    },
+    {
+      "name": "failed borrower funding",
+      "predecessor": 2,
+      "action": "repay",
+      "args": {
+        "transferId": "PF",
+        "allocationId": "RF",
+        "nominal": "111"
+      },
+      "code": "INSUFFICIENT_BALANCE",
+      "reason": "Cash110 cannot fund111; do not add a pre-guard that masks this check. Gross allowance is also110; preserve Transfer balance-before-allowance priority.",
+      "retry": "Use nominal30 with the same fresh PF/RF from identical predecessor; complete equivalent financial values, with those IDs."
+    },
+    {
+      "name": "origination transfer funding absent",
+      "predecessor": 0,
+      "action": "originate",
+      "sourceVariant": "Remove Transfer emit while retaining Originate.",
+      "code": "TRANSFER_NOT_IN_STEP"
+    },
+    {
+      "name": "payment after settlement via public source",
+      "predecessor": 4,
+      "action": "settle",
+      "args": {
+        "transferId": "P3",
+        "allocationId": "R3"
+      },
+      "code": "GUARD_FAILED",
+      "reason": "Computed outstanding0 fails explicit positive-debt guard before emitting zero Transfer or testing empty cash. This is source guarded rejection, not a claimed kernel NOT_OUTSTANDING observation."
+    },
+    {
+      "name": "settled kernel repayment reachability",
+      "predecessor": 4,
+      "testKind": "Optional separate kernel control with Repay-only fresh IDs and positive nominal1",
+      "code": "NOT_OUTSTANDING",
+      "reason": "Only claim this if unchanged Repay priority establishes it; do not treat public guard rejection as kernel evidence."
+    },
+    {
+      "name": "unrelated malformed row",
+      "predecessor": 1,
+      "testKind": "Separate negative input fixture, never a lifecycle continuation",
+      "mutation": "Make an unrelated allowance remaining+spent exceed UInt128.",
+      "expected": "Full financial admission rejection before source execution; record exact admitted error contract."
+    },
+    {
+      "name": "preserved unrelated obligation and histories",
+      "testKind": "Separate positive initial seed",
+      "expected": "Add a valid unrelated settled obligation with its original transfer/origination IDs, cap/incurred/terms/cursor0; preserve every field and append main histories without replacement. Do not add invalid orphan origination IDs."
+    },
+    {
+      "name": "ordinary predecessor substitution sensitivity",
+      "predecessor": 2,
+      "testKind": "Consumer wiring assertion plus separately varied valid ordinary seed",
+      "expected": "Capture each public call and deep-compare Pre to prior returned post, financial JSON to prior financialPost, workInitial to prior remaining. A phase offset seed must carry through offsets; paid0 must become30 then110. This must detect hardcoded Pre even when financial outputs are correct."
+    },
+    {
+      "name": "exact work boundaries",
+      "testKind": "Separate work seeds per frozen stage",
+      "expected": "For W=Eprefix+N+Esuffix, W succeeds remaining0; W-1 fails with no output. At Eprefix+N-1 kernel preflight fails INSUFFICIENT_WORK if prefix completed; at Eprefix+N suffix exhaustion rejects WORK_EXHAUSTED. Count failed diagnostic work independently; closureReserve16 cannot supplement W."
+    }
+  ],
+  "allRejections": {
+    "forbiddenKeys": [
+      "post",
+      "financialPost",
+      "effects",
+      "descriptors",
+      "continueSuffix",
+      "workRemaining"
+    ],
+    "comparison": "Compare full serialized predecessor before/after, deterministic same-input rejection, then valid retry from exact accepted predecessor. Preserve spans/actionIndex/workUsed only as actual contract allows; never invent kernel diagnostics on source guard errors."
+  },
+  "requiredCommands": [
+    "npm --prefix experiments/moriarty-language run loan-lifecycle-demo",
+    "node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/5 experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+    "README format command exercised against actual CLI syntax; formatted source must check and reproduce full outcomes",
+    "node --test experiments/moriarty-language/tests/loan-lifecycle.test.mjs",
+    "npm --prefix experiments/moriarty-language test",
+    "npm --prefix experiments/moriarty-language run typecheck"
+  ],
+  "observedConsumerGap": {
+    "path": ".worktrees/loan-origination-accrual/experiments/moriarty-language/examples/financial-lifecycle-payment.mjs",
+    "observation": "Hardcoded Pre due100/paid0 for accrue and repay; no settle invocation; partial printed summaries. Task2 worktree may change during its separate repair."
+  }
+}
