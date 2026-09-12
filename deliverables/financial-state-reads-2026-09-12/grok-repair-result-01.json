@@ -1,0 +1,27 @@
+{
+  "text": "I'll apply the three bounded repairs from `root-findings.md`: Core/2 admission envelope, grammar arity, and README result types. First I'll read the findings and the exact current bytes.Using TDD and systematic debugging: I'll add regressions that pin the Core/2 envelope and parser-vs-static arity, then apply the three bounded repairs.Bounded repair is in. Original failures are preserved. This is still the Grok 4.6 author result, not an Astra audit and not goal completion.\n\n## Repairs\n\n1. **Core /2 admission envelope.** `runFinancialContract` no longer returns kernel `{status, code, actionIndex}` as `ExpressionResult`. Invalid or duplicate state now yields `{status: \"Rejected\", code, span: SYNTHETIC_SPAN, nodePath: [], workUsed: \"0\"}` with no `actionIndex`. The kernel code is kept. Source `/3` still returns `{status: \"Rejected\", code: \"DUPLICATE\", actionIndex: null}` for kernel validation faults.\n\n2. **Grammar arity.** Canonical `/3` EBNF and the README copy now spell `financialRead` with `typeArgs`. Extra generics still parse and format (`outstanding<Cash, Cash>(...)`); static checking still rejects `SOURCE_ARITY`. Exactly one simple generic remains a static rule.\n\n3. **README result types and reduction.** Obligation reads return `Quantity<Units<U,1>,0>`; balance and allowance reads return `Amount<A>`. The README has that table, READ-OUTST / READ-BAL judgments, and a pre-state lookup that does not mutate context and costs 1 plus identity. The Dynamic semantics row is TypeScript plus the bounded K Transfer/Repay subset, with no K-read claim.\n\nThe earlier remaining256/spent1 oracle was already corrected; no new 256-work invariant.\n\n## Checks\n\n| Command | Result |\n| --- | --- |\n| Focused red before production edits | 3 fails (envelope fields, grammar `typeArgs`); `author-repair-red.txt` |\n| `npm --prefix experiments/moriarty-language test` | **794 pass, 0 fail** |\n| `npm --prefix experiments/moriarty-language run typecheck` | exit 0 |\n| README CLI check / format / simulate repay | exit 0; simulate paid 30, remaining 211 |\n| `financial-state-demo` | exit 0; Settled then `GUARD_FAILED` |\n| Source `/3` duplicate state | `{status:\"Rejected\",code:\"DUPLICATE\",actionIndex:null}` |\n\nReceipts: `author-repair-*` under `/home/charl/Moriarty/deliverables/financial-state-reads-2026-09-12/`.\n\n## Remaining defects\n\n- Root freeze and fresh Astra medium audit have not run.\n- K still does not implement the new constructors.\n- Local state remains a supplied projection, not authenticated ledger state.\n\nNo commits, pushes, PRs, subagents, installs, or live/native/K/Preview work.",
+  "stopReason": "end_turn",
+  "sessionId": "e4b6b48a-8866-4748-8209-3429b98f788a",
+  "requestId": "b6c09b7f-1e8c-4429-be65-a1a6b806cc06",
+  "usage": {
+    "input_tokens": 26456,
+    "cache_read_input_tokens": 3911936,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 11034,
+    "reasoning_tokens": 8795,
+    "total_tokens": 3949426
+  },
+  "num_turns": 14,
+  "total_cost_usd": 1.41105712,
+  "total_cost_usd_ticks": 14110571200,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 26456,
+      "outputTokens": 11034,
+      "cacheReadInputTokens": 3911936,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 14,
+      "costUSD": 1.41105712
+    }
+  }
+}

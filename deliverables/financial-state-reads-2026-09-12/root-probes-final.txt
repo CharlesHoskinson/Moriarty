@@ -1,0 +1,318 @@
+{
+  "passed": 52,
+  "cases": [
+    "all actions checked and explicit Core/2",
+    "first payment reads financial debt despite ordinary due999",
+    "second action continues exact financial state",
+    "remaining action derives50 without nominal input",
+    "settled remaining action rejects without tentative result",
+    "caller cannot override read with extra nominal arg",
+    "caller Obs cannot provide financial values",
+    "invalid unselected action beats malformed state and selector",
+    "typed dynamic read outstanding",
+    "typed dynamic read principal",
+    "typed dynamic read accrued",
+    "typed dynamic read balance",
+    "typed dynamic read allowance_remaining",
+    "typed dynamic read allowance_spent",
+    "pre financial reads remain unchanged after emit",
+    "missing outstanding is not zero",
+    "missing balance is not zero",
+    "missing allowance_remaining is not zero",
+    "invalid read identity \"\"",
+    "invalid read identity \"__proto__\"",
+    "invalid read identity \"A\\n\"",
+    "invalid read identity \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"",
+    "zero settled obligation is readable",
+    "wrong declared nominal unit rejects dynamically",
+    "unknown generic unit rejects statically without state",
+    "financial quantities keep signed128 read bound",
+    "Amount reads retain fullUInt128 domain",
+    "interest-first partial repayment remains intact",
+    "full state admission before guard: extra field",
+    "full state admission before guard: duplicate balances",
+    "full state admission before guard: duplicate obligations",
+    "full state admission before guard: debt equality",
+    "full state admission before guard: status inconsistency",
+    "full state admission before guard: noncanonical amount",
+    "full state admission before guard: invalid unused entry",
+    "full state admission before guard: allowance overflow",
+    "full state admission before guard: work overflow",
+    "short circuit skips missing read lookup",
+    "exact first payment total work 44",
+    "exact first payment total work 45",
+    "insufficient funding leaves reusable state untouched",
+    "valid arbitrary prior spent is preserved without a fabricated budget",
+    "work mismatch rejected before execution",
+    "primitive input boundary 0",
+    "primitive input boundary 1",
+    "primitive input boundary 2",
+    "primitive input boundary 3",
+    "actual CLI check",
+    "actual CLI simulate matches complete API result",
+    "actual CLI formatter idempotence and semantic equivalence",
+    "actual CLI missing selector is usage failure",
+    "actual CLI unknown selector is semantic rejection"
+  ],
+  "first": {
+    "status": "FundedExpressionPrepared",
+    "post": {
+      "due": "999",
+      "paid": "30"
+    },
+    "financialPost": {
+      "balances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "amount": "70"
+        },
+        {
+          "party": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        }
+      ],
+      "allowances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "remaining": "70",
+          "spent": "30"
+        }
+      ],
+      "obligations": [
+        {
+          "id": "Due100",
+          "debtor": "Payer",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "principal": "70",
+          "accrued": "0",
+          "outstanding": "70",
+          "allocationRule": "AccrualFirst",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "status": "Outstanding"
+        }
+      ],
+      "usedTransferIds": [
+        "T1"
+      ],
+      "usedAllocationIds": [
+        "Alloc1"
+      ],
+      "work": {
+        "remaining": "211",
+        "spent": "45",
+        "closureReserve": "16"
+      }
+    },
+    "effects": [
+      {
+        "kind": "Transfer",
+        "id": "T1",
+        "from": "Payer",
+        "to": "Lender",
+        "asset": "Cash",
+        "amount": "30"
+      },
+      {
+        "kind": "Repayment",
+        "allocationId": "Alloc1",
+        "transferId": "T1",
+        "obligationId": "Due100",
+        "payer": "Payer",
+        "creditor": "Lender",
+        "denomination": "Cash",
+        "settlementAsset": "Cash",
+        "nominalAmount": "30",
+        "settlementAmount": "30",
+        "principalDischarged": "30",
+        "accruedDischarged": "0",
+        "remainingOutstanding": "70"
+      }
+    ],
+    "workRemaining": "211"
+  },
+  "second": {
+    "status": "FundedExpressionPrepared",
+    "post": {
+      "due": "999",
+      "paid": "50"
+    },
+    "financialPost": {
+      "balances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "amount": "50"
+        },
+        {
+          "party": "Lender",
+          "asset": "Cash",
+          "amount": "50"
+        }
+      ],
+      "allowances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "remaining": "50",
+          "spent": "50"
+        }
+      ],
+      "obligations": [
+        {
+          "id": "Due100",
+          "debtor": "Payer",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "principal": "50",
+          "accrued": "0",
+          "outstanding": "50",
+          "allocationRule": "AccrualFirst",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "status": "Outstanding"
+        }
+      ],
+      "usedTransferIds": [
+        "T1",
+        "T2"
+      ],
+      "usedAllocationIds": [
+        "Alloc1",
+        "Alloc2"
+      ],
+      "work": {
+        "remaining": "164",
+        "spent": "92",
+        "closureReserve": "16"
+      }
+    },
+    "effects": [
+      {
+        "kind": "Transfer",
+        "id": "T2",
+        "from": "Payer",
+        "to": "Lender",
+        "asset": "Cash",
+        "amount": "20"
+      },
+      {
+        "kind": "Repayment",
+        "allocationId": "Alloc2",
+        "transferId": "T2",
+        "obligationId": "Due100",
+        "payer": "Payer",
+        "creditor": "Lender",
+        "denomination": "Cash",
+        "settlementAsset": "Cash",
+        "nominalAmount": "20",
+        "settlementAmount": "20",
+        "principalDischarged": "20",
+        "accruedDischarged": "0",
+        "remainingOutstanding": "50"
+      }
+    ],
+    "workRemaining": "164"
+  },
+  "last": {
+    "status": "FundedExpressionPrepared",
+    "post": {
+      "due": "999",
+      "paid": "100"
+    },
+    "financialPost": {
+      "balances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "amount": "0"
+        },
+        {
+          "party": "Lender",
+          "asset": "Cash",
+          "amount": "100"
+        }
+      ],
+      "allowances": [
+        {
+          "party": "Payer",
+          "asset": "Cash",
+          "remaining": "0",
+          "spent": "100"
+        }
+      ],
+      "obligations": [
+        {
+          "id": "Due100",
+          "debtor": "Payer",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "principal": "0",
+          "accrued": "0",
+          "outstanding": "0",
+          "allocationRule": "AccrualFirst",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "status": "Settled"
+        }
+      ],
+      "usedTransferIds": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "usedAllocationIds": [
+        "Alloc1",
+        "Alloc2",
+        "Alloc3"
+      ],
+      "work": {
+        "remaining": "115",
+        "spent": "141",
+        "closureReserve": "16"
+      }
+    },
+    "effects": [
+      {
+        "kind": "Transfer",
+        "id": "T3",
+        "from": "Payer",
+        "to": "Lender",
+        "asset": "Cash",
+        "amount": "50"
+      },
+      {
+        "kind": "Repayment",
+        "allocationId": "Alloc3",
+        "transferId": "T3",
+        "obligationId": "Due100",
+        "payer": "Payer",
+        "creditor": "Lender",
+        "denomination": "Cash",
+        "settlementAsset": "Cash",
+        "nominalAmount": "50",
+        "settlementAmount": "50",
+        "principalDischarged": "50",
+        "accruedDischarged": "0",
+        "remainingOutstanding": "0"
+      }
+    ],
+    "workRemaining": "115"
+  }
+}

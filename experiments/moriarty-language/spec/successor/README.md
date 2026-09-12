@@ -69,3 +69,8 @@ in one `.mori` file and reuses that funded path without an external schema.
 The [multiple-action agreement profile](financial-agreement-source-v2.md) is a
 separate `/2` entry. It checks every named action and executes exactly one
 selected funded action. The `/1` exactly-one-action contract is unchanged.
+
+The [kernel-backed financial-read profile](financial-agreement-source-v3.md) is
+a separate `/3` entry with Core contract `/2`. It admits the six generic
+reads of a validated local kernel pre-state. Older profiles keep their
+reserved names and Core `/1` constructors.

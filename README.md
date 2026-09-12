@@ -33,20 +33,20 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 | Lexical structure | Separate token rules and regular expressions | Identifiers, literals, whitespace, comments and source locations |
 | Syntax | EBNF using the ISO/IEC 14977 notation for the provisional successor profile | Valid combinations of declarations, actions and expressions |
 | Static semantics | Typing and scoping judgments, illustrated by $\Gamma \vdash e : \tau$ | Name resolution, asset units, resource use and admissible bounds |
-| Dynamic semantics | Executable operational semantics in the K Framework | State transitions, financial effects, obligations and rejection |
+| Dynamic semantics | Executable TypeScript operational semantics, plus a bounded K subset for Transfer/Repay | State transitions, financial effects, obligations and rejection. K does not implement Core `/2` reads. |
 | Correctness claims | Explicit properties over those semantics | What must be established about an agreement, execution and history |
 
 [EBNF](https://www.iso.org/standard/26153.html) extends BNF with notation for repetition and optionality. It describes the grammar; it does not decide whether the source resembles Lisp or a language with braces. [ABNF, RFC 5234](https://datatracker.ietf.org/doc/html/rfc5234), is another BNF-family notation used for protocol specifications. Moriarty selects EBNF for its source grammar.
 
 [K](https://kframework.org/docs/user_manual/) describes execution through configurations and rewrite rules. It is the selected framework for Moriarty's formal operational semantics. Typing judgments define admissible programs; contract properties and Hoare-style assertions state claims to prove. Denotational models can support particular financial analyses, but do not replace the execution definition.
 
-The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. The newer `moriarty-expression-source/1` grammar is reproduced below. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile.
+The existing [atomic grammar](experiments/moriarty-language/spec/grammar.ebnf) and TypeScript evaluator use `moriarty-bounded-atomic/1`. The separate [successor syntax profile](experiments/moriarty-language/spec/successor/README.md) provides lexical rules, a parser and a formatter for `moriarty-successor-syntax/0`. Distinct later entries are `moriarty-expression-source/1`, pure `moriarty-financial-expression-source/1`, and `moriarty-financial-agreement-source/1`, `/2` and `/3`. These profiles are not interchangeable: the loan, swap and Compact workflow later in this README use the atomic profile. The complete `/3` grammar is reproduced below. The historical `/1` expression-source grammar remains at [its canonical file](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf).
 
 The [bounded repayment K definition](experiments/moriarty-language/formal/k/README.md) supports Transfer-only execution as well as Transfer followed by Repay. The Transfer-only extension is tracked in [its scoped evidence](deliverables/transfer-only-k-2026-09-09/README.md). All 16 frozen cases match the independent financial expectations and the real `.mori` source preparation result, including complete accepted state/effects and exact rejection code/index. [Execution evidence](deliverables/bounded-k-2026-09-09/README.md) records the limited projection, failed attempts and checks.
 
 The [reviewed expression specification](deliverables/sp01-expression-contract-2026-09-10/RESULT.md) now defines all 40 proposed constructors, their typing and reduction rules, and exact representations for finite byte/node bounds. GPT-6 Astra and Grok 4.6 approved that source scope. The [reviewed Boolean revision](deliverables/sp01-surface-core-contract-2026-09-10/RESULT.md) adds short-circuit And/Or rules and valid rejection spans while preserving the original source evidence. The full financial-operation, signing and history contract still needs completion.
 
-The separate [executable expression runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) now implements all 40 Core constructors and has independent GPT-6 and Grok approval. It checks types before execution, uses exact integer arithmetic, evaluates Boolean branches selectively and publishes no tentative state after rejection. Run `node deliverables/sp02-expression-runtime-2026-09-10/demo-01.mjs` to observe an accepted update and a rejected Ensure. The [reviewed source frontend](deliverables/sp02-expression-source-2026-09-10/RESULT.md) now elaborates actual `.mori` text into this runtime. Run `npm --prefix experiments/moriarty-language run expression-demo` to check and evaluate an ordinary state update from source. The factory accepts a trusted schema and one action; emitted financial operations are descriptors. Full source-defined schemas, multiple actions, financial execution and K correspondence remain open.
+The separate [executable expression runtime](deliverables/sp02-expression-runtime-2026-09-10/RESULT.md) now implements all 40 Core constructors and has independent GPT-6 and Grok approval. It checks types before execution, uses exact integer arithmetic, evaluates Boolean branches selectively and publishes no tentative state after rejection. Run `node deliverables/sp02-expression-runtime-2026-09-10/demo-01.mjs` to observe an accepted update and a rejected Ensure. The [reviewed source frontend](deliverables/sp02-expression-source-2026-09-10/RESULT.md) now elaborates actual `.mori` text into this runtime. Run `npm --prefix experiments/moriarty-language run expression-demo` to check and evaluate an ordinary state update from source. The factory accepts a trusted schema and one action; emitted financial operations are descriptors. Source-defined schemas, multiple named actions and a descriptor-to-kernel funded adapter exist in later agreement profiles. K correspondence remains open.
 
 The [financial expression runtime](deliverables/sp02-financial-pure-expression-2026-09-10/RESULT.md) adds eight pure constructors in a separate versioned API, with independent GPT-6 and Grok approval. It supports shares, tagged variants, explicit numeric conversion, conditional values, UInt256 and dimensional arithmetic. The original expression profile remains unchanged. Its vault conversion cases exercise deposit, mint, withdrawal and redemption arithmetic; they do not execute those financial actions or establish their ledger acceptance.
 
@@ -54,7 +54,7 @@ The successor semantic freeze and full SP02/SP03 acceptance remain open. A K def
 
 ### Successor source grammar (EBNF)
 
-This is the complete syntax grammar for **`moriarty-expression-source/1`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf). The parser, formatter, checker and local evaluator support all 40 Core expression constructors within this profile. Parsing a declaration does not establish executable support: constants, state declarations and multiple actions are rejected by this source factory. The [source contract](experiments/moriarty-language/spec/successor/expression-source.md) defines the supported schema binding and diagnostics. The separate [financial expression source profile](experiments/moriarty-language/spec/successor/financial-expression-source.md) adds eight constructors, UInt256 and dimensional arithmetic. Complete successor authoring remains open.
+This is the complete syntax grammar for **`moriarty-financial-agreement-source/3`**, reproduced from the [canonical EBNF](experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf). It admits uninitialized state, record and operation declarations, multiple named actions, and six generic financial reads. The parser, formatter, checker and local funded evaluator support that profile. Historical full grammars remain separate: [`syntax/0`](experiments/moriarty-language/spec/successor/grammar.ebnf), [`expression-source/1`](experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf), [`financial-expression-source/1`](experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf), [`agreement-source/1`](experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf) and [`agreement-source/2`](experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf). The [source contract](experiments/moriarty-language/spec/successor/financial-agreement-source-v3.md) defines the `/3` schema binding, Core `/2` read constructors, diagnostics and work rules. The earlier [expression-source contract](experiments/moriarty-language/spec/successor/expression-source.md) still describes the trusted-schema one-action factory. Complete successor authoring, K correspondence and Preview financial settlement remain open.
 
 The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.
 
@@ -72,115 +72,28 @@ The grammar uses **Extended Backus–Naur Form (EBNF)** with ISO/IEC 14977 notat
 
 Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use `//` or `/* ... */`.
 
-The grammar below is typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and `syntax/0` remains separate; lexical rules are `lexical.md` plus profile-gated `[` and `]` punctuation; parentheses create no AST nodes, and precedence and associativity match `syntax/0`; generic names are excluded from `ordinaryPrimaryName`; integer lexical tokens remain unsigned canonical decimals with `-` as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules; and parsing `const`, `state` or multiple actions does not make them executable. The simultaneous bounds are listed after the grammar.
-
-*Program and declarations.*
-
-```math
-\begin{array}{rcl}
-\mathit{program} & = & \mathit{profileDecl} ,\; \mathit{agreementDecl} ,\; ?\ \text{end of file}\ ? \;; \\[4pt]
-\mathit{profileDecl} & = & \texttt{"profile"} ,\; \mathit{stringToken} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{agreementDecl} & = & \texttt{"agreement"} ,\; \mathit{identifier} ,\; \texttt{"\{"} ,\; \{\, \mathit{declaration} \,\} ,\; \texttt{"\}"} \;; \\[4pt]
-\mathit{declaration} & = & \mathit{unitDecl} \\
- & \mid & \mathit{partyDecl} \\
- & \mid & \mathit{assetDecl} \\
- & \mid & \mathit{constDecl} \\
- & \mid & \mathit{stateDecl} \\
- & \mid & \mathit{actionDecl} \;; \\[4pt]
-\mathit{unitDecl} & = & \texttt{"unit"} ,\; \mathit{identifier} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{partyDecl} & = & \texttt{"party"} ,\; \mathit{identifier} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{assetDecl} & = & \texttt{"asset"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{constDecl} & = & \texttt{"const"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{stateDecl} & = & \texttt{"state"} ,\; \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{actionDecl} & = & \texttt{"action"} ,\; \mathit{identifier} ,\; \texttt{"("} ,\; [\, \mathit{parameters} \,] ,\; \texttt{")"} ,\; \\
- &  & \texttt{"\{"} ,\; \{\, \mathit{statement} \,\} ,\; \{\, \mathit{postcondition} \,\} ,\; \texttt{"\}"} \;; \\[4pt]
-\mathit{parameters} & = & \mathit{parameter} ,\; \{\, \texttt{","} ,\; \mathit{parameter} \,\} \;; \\[4pt]
-\mathit{parameter} & = & \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{type} \;;
-\end{array}
-```
-
-*Statements and postconditions.*
-
-```math
-\begin{array}{rcl}
-\mathit{statement} & = & \mathit{requirement} \mid \mathit{binding} \mid \mathit{update} \mid \mathit{emission} \;; \\[4pt]
-\mathit{requirement} & = & \texttt{"requires"} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{binding} & = & \texttt{"let"} ,\; \mathit{identifier} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{update} & = & \texttt{"next"} ,\; \texttt{"."} ,\; \mathit{identifier} ,\; \texttt{"="} ,\; \mathit{expression} ,\; \texttt{";"} \;; \\[4pt]
-\mathit{emission} & = & \texttt{"emit"} ,\; \mathit{identifier} ,\; ( \texttt{"\{"} ,\; [\, \mathit{effectFields} \,] ,\; \texttt{"\}"} \mid \mathit{expression} ) ,\; \texttt{";"} \;; \\[4pt]
-\mathit{effectFields} & = & \mathit{effectField} ,\; \{\, \texttt{","} ,\; \mathit{effectField} \,\} \;; \\[4pt]
-\mathit{effectField} & = & \mathit{identifier} ,\; \texttt{":"} ,\; \mathit{expression} \;; \\[4pt]
-\mathit{postcondition} & = & \texttt{"ensures"} ,\; \mathit{expression} ,\; \texttt{";"} \;;
-\end{array}
-```
-
-*Types.*
-
-```math
-\begin{array}{rcl}
-\mathit{type} & = & \mathit{identifier} ,\; [\, \mathit{typeArgs} \,] \;; \\[4pt]
-\mathit{typeArgs} & = & \texttt{"<"} ,\; \mathit{typeArgument} ,\; \{\, \texttt{","} ,\; \mathit{typeArgument} \,\} ,\; \texttt{">"} \;; \\[4pt]
-\mathit{typeArgument} & = & \mathit{type} \mid \mathit{signedInteger} \;; \\[4pt]
-\mathit{signedInteger} & = & [\, \texttt{"-"} \,] ,\; \mathit{integerToken} \;;
-\end{array}
-```
-
-*Expressions.*
-
-```math
-\begin{array}{rcl}
-\mathit{expression} & = & \mathit{disjunction} \;; \\[4pt]
-\mathit{disjunction} & = & \mathit{conjunction} ,\; \{\, \texttt{"or"} ,\; \mathit{conjunction} \,\} \;; \\[4pt]
-\mathit{conjunction} & = & \mathit{negation} ,\; \{\, \texttt{"and"} ,\; \mathit{negation} \,\} \;; \\[4pt]
-\mathit{negation} & = & \{\, \texttt{"not"} \,\} ,\; \mathit{comparison} \;; \\[4pt]
-\mathit{comparison} & = & \mathit{sum} ,\; [\, \mathit{comparisonOp} ,\; \mathit{sum} \,] \;; \\[4pt]
-\mathit{comparisonOp} & = & \texttt{"=="} \mid \texttt{"!="} \mid \texttt{"<"} \mid \texttt{"<="} \mid \texttt{">"} \mid \texttt{">="} \;; \\[4pt]
-\mathit{sum} & = & \mathit{product} ,\; \{\, ( \texttt{"+"} \mid \texttt{"-"} ) ,\; \mathit{product} \,\} \;; \\[4pt]
-\mathit{product} & = & \mathit{postfix} ,\; \{\, \texttt{"*"} ,\; \mathit{postfix} \,\} \;; \\[4pt]
-\mathit{postfix} & = & \mathit{primary} ,\; \{\, \texttt{"."} ,\; \mathit{identifier} \mid \texttt{"["} ,\; \mathit{expression} ,\; \texttt{"]"} \,\} \;; \\[4pt]
-\mathit{ordinaryPrimaryName} & = & ?\ \text{identifier token except some, none, collection, quantity, record}\ ? \;; \\[4pt]
-\mathit{primary} & = & \texttt{"-"} ,\; \mathit{integerToken} \\
- & \mid & \mathit{integerToken} \\
- & \mid & \mathit{stringToken} \\
- & \mid & \texttt{"true"} \\
- & \mid & \texttt{"false"} \\
- & \mid & \mathit{ordinaryPrimaryName} ,\; [\, \texttt{"("} ,\; [\, \mathit{arguments} \,] ,\; \texttt{")"} \,] \\
- & \mid & \mathit{genericCall} \\
- & \mid & \mathit{recordLiteral} \\
- & \mid & \texttt{"("} ,\; \mathit{expression} ,\; \texttt{")"} \;; \\[4pt]
-\mathit{genericCall} & = & ( \texttt{"some"} \mid \texttt{"none"} \mid \texttt{"collection"} \mid \texttt{"quantity"} ) ,\; \\
- &  & \texttt{"<"} ,\; \mathit{typeArgument} ,\; \{\, \texttt{","} ,\; \mathit{typeArgument} \,\} ,\; \texttt{">"} ,\; \\
- &  & \texttt{"("} ,\; [\, \mathit{arguments} \,] ,\; \texttt{")"} \;; \\[4pt]
-\mathit{recordLiteral} & = & \texttt{"record"} ,\; \texttt{"<"} ,\; \mathit{type} ,\; \texttt{">"} ,\; \texttt{"\{"} ,\; [\, \mathit{effectFields} \,] ,\; \texttt{"\}"} \;; \\[4pt]
-\mathit{arguments} & = & \mathit{expression} ,\; \{\, \texttt{","} ,\; \mathit{expression} \,\} \;;
-\end{array}
-```
-
-*Lexical tokens.*
-
-```math
-\begin{array}{rcl}
-\mathit{identifier} & = & ?\ \text{ASCII identifier token defined in lexical.md}\ ? \;; \\[4pt]
-\mathit{integerToken} & = & ?\ \text{canonical unsigned decimal token defined in lexical.md}\ ? \;; \\[4pt]
-\mathit{stringToken} & = & ?\ \text{JSON string token defined in lexical.md}\ ? \;;
-\end{array}
-```
+The grammar below is the complete `/3` syntax, typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and older profiles remain separate; lexical rules are `lexical.md` plus profile-gated `[`, `]` and `?` punctuation; `record` and `operation` are profile-gated declaration spellings; state fields have no initializer; parentheses create no AST nodes; conditional is right-associative below Or; generic and financial-read names are excluded from `ordinaryPrimaryName`; integer lexical tokens remain unsigned canonical decimals with `-` as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules. The simultaneous bounds are 65,536 source UTF-8 bytes, 8,192 tokens, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action, 64 record fields, 64 ordinary call arguments, 128 collection-intrinsic arguments and 256 action parameters.
 
 <details>
 <summary>Verbatim EBNF for copying</summary>
 
 ```ebnf
-(* ISO/IEC 14977 EBNF for moriarty-expression-source/1.
-   Source header must match exactly; syntax/0 remains separate.
-   Lexical rules are lexical.md plus profile-gated [ and ] punctuation.
-   Parentheses create no AST nodes; precedence and associativity match syntax/0.
-   Generic names are excluded from ordinaryPrimaryName.
+(* ISO/IEC 14977 EBNF for moriarty-financial-agreement-source/3.
+   Source header must match exactly; /1, /2 and older profiles remain separate.
+   Lexical rules are lexical.md plus the financial-expression punctuation
+   [ ] and ?. record and operation are profile-gated declaration spellings
+   and are not added to the global keyword catalog.
+   State fields in this profile have no initializer.
+   Multiple actionDecl forms are admitted in declaration order.
+   Zero actions is a semantic SOURCE_ACTION_COUNT rejection.
+   Parentheses create no AST nodes. Conditional is right-associative below Or.
    Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
-   declarations256, statements256, record fields64, ordinary call arguments64,
-   collection intrinsic arguments128, action parameters256.
+   declarations256, statements256 per action, record fields64, ordinary call
+   arguments64, collection intrinsic arguments128, action parameters256.
    Integer lexical tokens remain unsigned canonical decimals; - is separate.
+   financialRead uses typeArgs; exactly one simple generic symbol is a
+   static SOURCE_ARITY / SOURCE_TYPE_SHAPE rule, not a parse rejection.
    The source contract supplies all type/domain/metadata and diagnostic rules.
-   Parsing const/state or multiple actions does not make them executable.
 *)
 
 program = profileDecl, agreementDecl, ? end of file ? ;
@@ -192,8 +105,9 @@ agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
 declaration = unitDecl
             | partyDecl
             | assetDecl
-            | constDecl
-            | stateDecl
+            | recordDecl
+            | operationDecl
+            | uninitializedStateDecl
             | actionDecl ;
 
 unitDecl = "unit", identifier, ";" ;
@@ -202,9 +116,13 @@ partyDecl = "party", identifier, ";" ;
 
 assetDecl = "asset", identifier, ":", type, ";" ;
 
-constDecl = "const", identifier, ":", type, "=", expression, ";" ;
+recordDecl = "record", identifier, "{", { recordField }, "}" ;
 
-stateDecl = "state", identifier, ":", type, "=", expression, ";" ;
+recordField = identifier, ":", type, ";" ;
+
+operationDecl = "operation", identifier, ":", type, ";" ;
+
+uninitializedStateDecl = "state", identifier, ":", type, ";" ;
 
 actionDecl = "action", identifier, "(", [ parameters ], ")",
               "{", { statement }, { postcondition }, "}" ;
@@ -236,7 +154,9 @@ typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
 typeArgument = type | signedInteger ;
 signedInteger = [ "-" ], integerToken ;
 
-expression = disjunction ;
+expression = conditional ;
+
+conditional = disjunction, [ "?", expression, ":", conditional ] ;
 
 disjunction = conjunction, { "or", conjunction } ;
 
@@ -254,7 +174,7 @@ product = postfix, { "*", postfix } ;
 
 postfix = primary, { ".", identifier | "[", expression, "]" } ;
 
-ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record ? ;
+ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record, amount, shares, variant, project_variant, to_uint, outstanding, principal, accrued, balance, allowance_remaining, allowance_spent ? ;
 
 primary = "-", integerToken
         | integerToken
@@ -263,12 +183,25 @@ primary = "-", integerToken
         | "false"
         | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
         | genericCall
+        | dynamicOrLiteral
+        | financialGeneric
+        | financialRead
         | recordLiteral
         | "(", expression, ")" ;
 
 genericCall = ( "some" | "none" | "collection" | "quantity" ),
               "<", typeArgument, { ",", typeArgument }, ">",
               "(", [ arguments ], ")" ;
+
+dynamicOrLiteral = ( "amount" | "shares" ), [ typeArgs ],
+                   "(", [ arguments ], ")" ;
+
+financialGeneric = ( "variant" | "project_variant" | "to_uint" ),
+                   typeArgs, "(", [ arguments ], ")" ;
+
+financialRead = ( "outstanding" | "principal" | "accrued" | "balance"
+                | "allowance_remaining" | "allowance_spent" ),
+                typeArgs, "(", [ arguments ], ")" ;
 
 recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
 
@@ -279,7 +212,6 @@ identifier = ? ASCII identifier token defined in lexical.md ? ;
 integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
 
 stringToken = ? JSON string token defined in lexical.md ? ;
-
 ```
 
 </details>
@@ -501,7 +433,30 @@ $B$ is finite under the simultaneous source and Core bounds and conservatively b
 
 A `next` view rejects `TYPE_NEXT_READ` and a `post` view outside Ensure rejects `TYPE_POST_SCOPE`. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects `ARITH_RANGE` when the result does not fit $T$; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in [static-semantics.md](experiments/moriarty-language/spec/successor/static-semantics.md), mirrored machine-readably in [expression-signatures.json](experiments/moriarty-language/spec/successor/expression-signatures.json).
 
-**What is not specified.** S-FINISH ends at $\mathsf{ExpressionPrepared}$, never at an accepted `Prepared`. No rule in this repository consumes an emitted descriptor: nothing maps `Operation<Transfer>` or `Operation<Repay>` onto the funded kernel packet above, orders descriptors against staged writes, charges kernel action-work, or decides what an Ensure sees after financial effects. The contract states this composition as open. A candidate mapping is recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it changes no registered behavior.
+**Funded composition (TypeScript).** S-FINISH still ends at $\mathsf{ExpressionPrepared}$. The later funded adapter maps emitted `Transfer` and `Repay` descriptors onto the retained repayment kernel, charges expression work E plus kernel action count N, and publishes ordinary `post` with complete `financialPost` and effects only after that kernel call succeeds. Ordinary `ensures` see ordinary post-state. The `/3` financial reads see the same validated financial pre-state throughout the action, including after `emit`; descriptors do not mutate that projection. This is executable TypeScript semantics. The bounded K kernel above implements Transfer/Repay on a limited projection and does not implement the new read constructors. A candidate mapping is also recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it does not replace the adapter.
+
+**Typed financial reads.** Agreement source `/3` elaborates six generic reads to Core `/2` constructors. Each constructor has one declared unit or asset operand and one `Text` identity expression. Extra generic arguments parse; static checking requires exactly one simple declared symbol (`SOURCE_ARITY` / `SOURCE_TYPE_SHAPE`).
+
+| Source | Core | Result |
+| --- | --- | --- |
+| `outstanding<U>(e)` | `ReadOutstanding` | `Quantity<Units<U,1>,0>` |
+| `principal<U>(e)` | `ReadPrincipal` | `Quantity<Units<U,1>,0>` |
+| `accrued<U>(e)` | `ReadAccrued` | `Quantity<Units<U,1>,0>` |
+| `balance<A>(e)` | `ReadBalance` | `Amount<A>` |
+| `allowance_remaining<A>(e)` | `ReadAllowanceRemaining` | `Amount<A>` |
+| `allowance_spent<A>(e)` | `ReadAllowanceSpent` | `Amount<A>` |
+
+$U$ is a declared unit and $A$ a declared asset. $\mathit{id}$ is the reduced `Text` identity. $\sigma_F$ is the immutable admitted financial pre-state; no read or `emit` writes it.
+
+```math
+\frac{U \in \Sigma.\mathit{units} \qquad \Sigma;\Gamma;\phi \vdash e : \mathsf{Text}}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadOutstanding}(U,e) : \mathsf{Quantity}(\mathsf{Units}(U,1),0)}\ \text{(READ-OUTST)}
+```
+
+```math
+\frac{A \in \Sigma.\mathit{assets} \qquad \Sigma;\Gamma;\phi \vdash e : \mathsf{Text}}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadBalance}(A,e) : \mathsf{Amount}(A)}\ \text{(READ-BAL)}
+```
+
+Principal and accrued use the outstanding rule with their fields. Allowance remaining and spent use the balance rule with the matching allowance metric. Evaluation admits complete kernel state before any expression reduction. Reduction evaluates the identity once, looks up $\sigma_F$, and leaves $\sigma_F$ unchanged. It rejects `INVALID_IDENTIFIER` for a non-kernel identifier, `MISSING_OBLIGATION` / `MISSING_BALANCE` / `MISSING_ALLOWANCE` rather than defaulting to zero, `NOMINAL_UNIT` when an obligation denomination differs from $U$, and `ARITH_RANGE` when a Quantity exceeds signed128. Short-circuit `and` / `or` / `?` skips unselected runtime lookups; static checking still visits every branch and action. One read costs one reduction plus its identity child's actual reductions. Successful debit is E + N. These rules are TypeScript executable semantics. The bounded K kernel does not implement the new constructors.
 
 ## What a developer writes
 
@@ -672,9 +627,35 @@ transaction. The same CLI supports `moriarty-expression-source/1` with that
 profile's source and schema. See the [CLI contract](experiments/moriarty-language/spec/successor/expression-cli.md)
 for argument forms, diagnostic records and exit codes.
 
-The component supports one action against a trusted schema. Source-defined
-schemas, multiple actions, full financial transitions and full SP02 acceptance
-remain open.
+The original expression CLI still supports one action against a trusted schema.
+Source-defined schemas, multiple named actions and kernel-backed financial
+reads are later agreement profiles, documented below. Full SP02 acceptance
+and K correspondence remain open.
+
+### Check, format and simulate kernel-backed financial reads
+
+Agreement source `/3` declares records, operations, uninitialized ordinary
+state, multiple named actions and six generic reads of a validated local
+kernel pre-state. Ordinary snapshots (`Pre`, `Args`, `Obs`) stay distinct
+from that financial projection. `ensures` still see ordinary `post`. Reads
+see financial pre-state even after `emit`. Run these from the repository
+root:
+
+```sh
+node experiments/moriarty-language/src/cli.ts check --profile moriarty-financial-agreement-source/3 experiments/moriarty-language/spec/successor/examples/financial-state-payment.mori
+node experiments/moriarty-language/src/cli.ts format --profile moriarty-financial-agreement-source/3 experiments/moriarty-language/spec/successor/examples/financial-state-payment.mori
+node experiments/moriarty-language/src/cli.ts simulate --profile moriarty-financial-agreement-source/3 --action repay --snapshots experiments/moriarty-language/spec/successor/examples/financial-state-payment.snapshots.json --repayment-state experiments/moriarty-language/spec/successor/examples/financial-state-payment.state.json experiments/moriarty-language/spec/successor/examples/financial-state-payment.mori
+npm --prefix experiments/moriarty-language run financial-state-demo
+```
+
+`check` inspects every action and does not require state. `simulate` requires
+`--action` once. Starting remaining work is 256. `repay` of 30 costs E 43 plus
+N 2 and leaves outstanding 70; continuation `repay_installment` of 20 costs
+E 45 plus N 2 and leaves 50; `repay_remaining` reads that 50, costs E 47 plus
+N 2, and settles. A fourth `repay_remaining` fails the positive-payment
+guard with no effects. Work debit is E + N, where E is the selected action's
+actual expression reductions and N is the kernel action count. This is local
+preparation, not a K execution, proof, or ledger settlement.
 
 ### Inspect the generated Compact
 

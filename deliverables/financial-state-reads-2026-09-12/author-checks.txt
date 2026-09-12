@@ -1,0 +1,31 @@
+author checks 2026-09-11
+cwd /home/charl/Moriarty/.worktrees/financial-state-reads
+HEAD 96860344978e176236a6f152cd694433263c8d5f
+branch feat/financial-state-reads
+
+red (before production modules):
+  npm --prefix experiments/moriarty-language test
+  748 pass, 3 fail (ERR_MODULE_NOT_FOUND for v3/v2 modules)
+  retained: author-red-tests.txt
+
+final:
+  npm --prefix experiments/moriarty-language test
+  tests 792 pass 792 fail 0
+  npm --prefix experiments/moriarty-language run typecheck
+  exit 0
+  node experiments/moriarty-language/examples/financial-state-payment.mjs
+  exit 0
+  CLI check  exit 0  stdout SourceChecked  stderr empty
+  CLI format exit 0  stdout starts profile /3  stderr empty
+  CLI simulate repay exit 0  SourceSimulated paid 30 remaining 211
+  CLI simulate payment==1  exit 1  stdout empty  stderr GUARD_FAILED
+
+derived work from frozen example bodies:
+  repay             static 43  actual E 43  N 2  remaining 211 spent 45
+  repay_installment static 45  actual E 45  N 2  remaining 164 spent 92
+  repay_remaining   static 47  actual E 47  N 2  remaining 115 spent 141
+  fourth repay_remaining GUARD_FAILED, no posts
+
+old 100-work fixture unchanged (git diff empty).
+no pending Midnight transactions.
+no commits, pushes, PRs, subagents, installs, or K/Preview work.
