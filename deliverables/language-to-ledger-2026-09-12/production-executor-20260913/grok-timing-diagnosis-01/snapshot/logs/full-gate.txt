@@ -1,0 +1,83 @@
+...................................................................................................... [ 28%]
+.....F..F................................................... [ 45%]
+....................................... [ 56%]
+........................................................................ [ 76%]
+...................................................................................                                                          [100%]
+=================================== FAILURES ===================================
+___ Handoff.test_complete_handoff_launches_once_and_reads_the_durable_result ___
+
+self = <test_runner_handoff.Handoff testMethod=test_complete_handoff_launches_once_and_reads_the_durable_result>
+
+    def test_complete_handoff_launches_once_and_reads_the_durable_result(self):
+        os.environ["MORIARTY_INVOCATION_NONCE"] = "hostile-inherited-value"
+        os.environ["MORIARTY_INVOCATION_SOCKET"] = "/nonexistent/hostile.sock"
+        self.addCleanup(os.environ.pop, "MORIARTY_INVOCATION_NONCE", None)
+        self.addCleanup(os.environ.pop, "MORIARTY_INVOCATION_SOCKET", None)
+        rid, receipt, loan = self.execute()
+>       self.assertEqual(receipt["exitCode"], 0, receipt["stderr"])
+E       AssertionError: 3 != 0 :
+
+tests/loan_executor/test_runner_handoff.py:78: AssertionError
+___ Handoff.test_parent_loss_after_startup_yields_owned_cleanup_and_unknown ____
+
+self = <test_runner_handoff.Handoff testMethod=test_parent_loss_after_startup_yields_owned_cleanup_and_unknown>
+
+        def test_parent_loss_after_startup_yields_owned_cleanup_and_unknown(self):
+            # The runner lives in a separate process that is killed after the unit exists.
+            driver = self.fx.root / "runner-driver.py"
+            driver.write_text("""import sys, json
+    sys.path.insert(0, %r)
+    from pathlib import Path
+    from moriarty_dev import runner, store
+    from moriarty_dev.records import load_snapshot
+    from moriarty_dev.store import make_history_reader
+    root = Path(%r)
+    plan = json.loads(Path(%r).read_text())
+    db = Path(%r)
+    snap = load_snapshot(str(root), plan["action"]["id"], history_reader=make_history_reader(db))
+    rid = store.reserve(db, str(root), plan["action"], snap, charge_id=plan["chargeId"])
+    receipt = runner.execute(root, plan, %r, rid)
+    print(json.dumps(receipt["runnerReceipt"]["loanResult"]))
+    """ % (str(harness.SCRIPTS), str(self.fx.root), str(self.fx.root / "runner-plan.json"), str(self.fx.db_path),
+           self.fx.runner_digest))
+            (self.fx.root / "runner-plan.json").write_text(json.dumps(self.fx.runner))
+            self.fx.services._save("script.json", {"runningPolls": 30})
+            proc = subprocess.Popen([self.fx.python, str(driver)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            try:
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline and self.fx.services.unit(harness.UNIT) is None:
+                    time.sleep(0.05)
+                self.assertIsNotNone(self.fx.services.unit(harness.UNIT), "financial unit must have launched")
+                os.kill(proc.pid, signal.SIGKILL)
+                proc.communicate(timeout=10)
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+            result_path = self.fx.root / self.fx.plan["resultPath"]
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline and not result_path.exists():
+                time.sleep(0.1)
+            self.assertTrue(result_path.exists(), "child finished on its own after parent loss")
+            result = json.loads(result_path.read_text())
+            self.assertEqual((result["status"], result["failureCode"]), ("PROCESS_UNKNOWN", "PARENT_LOST"))
+>           self.assertTrue(result["containmentComplete"])
+E           AssertionError: False is not true
+
+tests/loan_executor/test_runner_handoff.py:288: AssertionError
+=============================== warnings summary ===============================
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+  /home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py:93: DeprecationWarning: This process (pid=7608) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/loan_executor/test_runner_handoff.py::Handoff::test_complete_handoff_launches_once_and_reads_the_durable_result - AssertionError: 3 != 0 :
+FAILED tests/loan_executor/test_runner_handoff.py::Handoff::test_parent_loss_after_startup_yields_owned_cleanup_and_unknown - AssertionError: False is not true
+2 failed, 354 passed, 2 deselected, 7 warnings, 235 subtests passed in 154.07s (0:02:34)
+GATE_EXIT:1
