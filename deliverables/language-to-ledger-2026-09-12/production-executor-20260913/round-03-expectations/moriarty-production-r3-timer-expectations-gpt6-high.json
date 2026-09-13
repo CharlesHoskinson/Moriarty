@@ -1,0 +1,38 @@
+{
+  "schema": "moriarty.source-review-notes/1",
+  "observedAt": "2026-09-13T20:47:36.845109+00:00",
+  "scope": "R2-08 fixed timer deadline and R2-10 existing wrapper caller; source/documentation only; no service invocation or approval",
+  "installedVersion": "systemd 259 (259.5-0ubuntu3.4)",
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/systemd/systemd/v259.5/man/systemd.timer.xml",
+      "localManual": "/usr/share/man/man5/systemd.timer.5.gz",
+      "localSha256": "876019cee4eeb45fbcf5f449b16efcc0d6330747f878a8738243de81cc9d363d"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/systemd/systemd/v259.5/man/org.freedesktop.systemd1.xml",
+      "localManual": "/usr/share/man/man5/org.freedesktop.systemd1.5.gz",
+      "localSha256": "e8dff008d5581b8fffabbe74a19e121f4db708f01997cabfa1af598dc031bf09"
+    }
+  ],
+  "documentationFacts": [
+    "OnActiveSec uses activation time, OnBootSec uses boot time, and OnStartupSec uses manager startup. The last two differ for a user manager. A past boot/startup timer fires immediately. Monotonic timers normally pause during suspend; WakeSystem changes the clock choice.",
+    "AccuracySec admits a window after the target; configure and validate at most one second under the normative contract, with no extra random delay.",
+    "The timer target Unit and NextElapseUSecMonotonic are independent facts. The latter is a microsecond CLOCK_MONOTONIC timestamp; neither may be inferred from active status alone."
+  ],
+  "reviewInferences": [
+    "A boot-anchored monotonic timer can avoid the measured relative-activation extension if the actual user-manager clock identity and installed semantics match. Verify actual target and elapse against authenticated outer start before resource start. This is an implementation option, not live validation.",
+    "RuntimeMaxSec alone remains activation-relative; a separate authenticated absolute bootstrap bound is still required. Timer correctness cannot establish the separate +1606 bound.",
+    "The existing static wrapper validates control and execv of supplied argv. Its source must remain present; validate the entire reviewed proof-server command at the parent before startup. Do not add an unreviewed self-certified config record or infer full argv from a two-element prefix."
+  ],
+  "expectedCases": [
+    "Activation delay leaves the same target, including fractional second rounding toward the conservative bound.",
+    "Reject missing/zero/non-numeric/too-late next elapse, wrong Unit, unexpected clock basis, excessive accuracy/random delay, stale boot/time namespace and setup expiration.",
+    "Repeated cleanup commands and writes share one absolute budget; remaining <=0 starts no new operation.",
+    "Changed proof-server argv/config denies before resource start while the pinned static wrapper parser/deadline/descendant behavior remains covered."
+  ],
+  "limitations": [
+    "No real user-manager timer was created or queried. No Docker/container read or start occurred. Documentation does not establish actual namespace/reachability/activation behavior.",
+    "Immutable plan and instance schema constraints remain normative. The author must keep derived execution evidence outside immutable runner/candidate inputs."
+  ]
+}
