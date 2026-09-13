@@ -1,0 +1,37 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-ll-loop-20260912",
+  "role": "plan",
+  "slug": "k-grounded-proposal",
+  "branch": "foreman/moriarty-ll-loop-20260912/plan/k-grounded-proposal",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-plan-k-grounded-proposal",
+  "base_sha": "056e662254c38936758af9c6f72c019705a1ff09",
+  "status": "complete",
+  "summary": "Authored the grounded change proposal (obligation 127's first leg) for the retained macro05/parse04 trace106 SIGSEGV, via the Codex implement lane, from an evidence-grounded five-part spec. No K binary was run. Obligation 127 is not claimed satisfied; no retry, audit, or admission was performed.",
+  "findings": [
+    "Two distinct SIGSEGV observations exist for trace-106: parse04 (default macro expansion, exit 139, SIGSEGV inside kore-expand-macros before configuration construction) and macro05 (macro expansion disabled, exit 113, SIGSEGV inside the LLVM interpreter, with a downstream kore-print EOF that is a consequence, not independent evidence of malformed input). The task brief's framing conflated these; the proposal corrects this explicitly.",
+    "CLM-0524 (wiki/zkir/midnight-k-tooling.md, sourced from midnightntwrk/k-rust scripts/reference-differential.toml) documents that the identical pinned canonical K release/commit (v7.1.337, 4a46d1231473b599c699160132fd6e76a5c46406) already fails in kore-expand-macros before producing a configuration for KEVM's evm-execution differential. This corroborates parse04 as a member of an already-documented upstream exclusion class at the failure-stage level, but does not establish a shared root cause and does not cover macro05's interpreter-stage crash.",
+    "Agreed with prior diagnosis (k-failure-diagnosis.md): not yet a proved stack-limit cause, ConstructNone is a supported constructor (not a parser gap), and its own specified smallest-discriminator diagnostic has not been run by anyone. Refinement added: CLM-0524 cross-project corroboration and a sharper parse04-vs-macro05 stage distinction.",
+    "Four options documented: (A) semantic-preserving iterative traversal / non-amplifying transport fix, recommended, non-narrowing; (B) reviewed bounded stack increase for the exec-shim child only, explicitly secondary and not the primary recommendation; (C) newer pinned K release / upstream engagement; (D) explicit language narrowing as an owner-approval-only last resort, not recommended. Recommendation is framed strictly as advisory to the owner and is contingent on the not-yet-run discriminator and on the fresh audits plus root admission obligation 127 itself requires."
+  ],
+  "evidence": [
+    "deliverables/language-to-ledger-2026-09-12/k-proposal/grounded-proposal-01.md",
+    "deliverables/language-to-ledger-2026-09-12/k-proposal/grounded-proposal-01.json",
+    "/tmp/claude-1000/-home-charl/b328e638-6326-4e27-a200-979fe93ee2ab/scratchpad/k-grounded-proposal-spec.md",
+    "/tmp/claude-1000/-home-charl/b328e638-6326-4e27-a200-979fe93ee2ab/scratchpad/codex-run.log",
+    "python3 -m json.tool on grounded-proposal-01.json: parses cleanly",
+    "All six required JSON sections present and non-empty (observedFailure, upstreamRelation, options, recommendation, openQuestions, notAuthorised)",
+    "All 20 unique {path, sha256} evidence pairs cited in the JSON independently recomputed with hashlib.sha256 against their named paths: 0 mismatches, 0 read errors",
+    "git status --porcelain --untracked-files=all and git diff --stat: no tracked file modified anywhere; only the two proposal files plus pre-existing untracked FOREMAN_REPORT.* templates and the codex adapter's own --output-last-message side file .foreman-last.txt were added",
+    "No K binary invocation (kompile, krun, kore-expand-macros, kast, kore-print, interpreter) and no invocation of .moriarty-dev/k-macro05-trace106-diagnostic.py found anywhere in the Codex transcript",
+    "evidence_contract: head_before=056e662254c38936758af9c6f72c019705a1ff09 head_after=056e662254c38936758af9c6f72c019705a1ff09 status_digest_before=ca6f679ef50a955b50ee8ae851416319147513fbc34c9ac59b74bc77219513e5 status_digest_after=011b5f0229883b0999c6c03b983c528a3bb8253e1af7f1583cee3db33dcd3c48 unauthorized_git_activity=false"
+  ],
+  "open_questions": [
+    "Do parse04's kore-expand-macros crash and macro05's interpreter crash share a root cause, or are they independent defects triggered by the same oversized/deeply nested input?",
+    "Is CLM-0524's stage-level corroboration sufficient to treat parse04 as an already-documented upstream exclusion class for admission, or do reviewers require a separate upstream runtimeverification/k bug report?",
+    "Who authorizes the already-specified, not-yet-executed smallest-discriminator diagnostic, and under which obligation, given that running it is itself a bounded retry variant of the frozen case?",
+    "Can Option A be implemented and correspondence-tested entirely in transport/codec/native traversal without modifying formal/k/expression-v1.k, or does task 4.2 also constrain which K semantics files may change?",
+    "Should the pinned K release (v7.1.337 / commit 4a46d1231473b599c699160132fd6e76a5c46406) be reconsidered against newer upstream releases independent of any Moriarty-side fix?",
+    "What exact content/acceptance threshold must the fresh Astra-medium and Grok-high audits meet before root admission can even be requested?"
+  ]
+}
