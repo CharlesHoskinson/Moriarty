@@ -2,6 +2,8 @@
 
 > **For agentic workers:** Use executing-plans for the assigned task only. Grok4.6 high implements; fresh Astra medium audits. Root integrates.
 
+Current continuation override: raw/assignments/moriarty-new-completion-loop-2026-09-12.md selects Grok 4.6 high authoring with separate fresh Opus and Astra medium source and actual-result reviews. Earlier single-auditor wording below records the original task routing and does not govern new work. Preserve historical authorship and receipts.
+
 **Goal:** Deliver financial postconditions, originated/accruing loans, a complete lifecycle, scoped K agreement, authenticated Docker/Preview execution and accurate roadmap status.
 
 **Architecture:** Preserve frozen profiles through explicit new versions. Reuse one staged expression machine and protected financial kernel. Carry its reviewed meaning into K and the actual Midnight caller.
@@ -184,3 +186,5 @@ ACTION is obtained from current registered admission, never invented. Missing gr
 The active native goal names all six outcomes. Root checks actual state, selects one eligible task, supplies independent expectations, dispatches Grok, verifies results, obtains fresh Astra audit, repairs and safely publishes. Current source tasks use isolated worktrees. Existing plugin run handles registered campaign actions. Do not create a Foreman scheduler, new daemon or process-only approval project.
 
 After the complete source lifecycle passes its fresh audit, continue with K agreement and the source-to-Compact path with authenticated state, permissions and time. Compile that contract, validate its complete lifecycle on Docker, and then execute on Preview with current funding and an approved bounded allocation. Next tasks start only after their semantic dependency is reviewed; independent status reconciliation continues when eligible. Every completed scope retains full candidate and result receipts. Overall completion requires all six outcomes; an external gate stays explicit rather than being silently waived.
+
+The later full-branch and new-completion-loop instructions make these six outcomes a required subset: close the current authorized loop only after the full inherited roadmap also passes. Preserve historical goals and their receipts.

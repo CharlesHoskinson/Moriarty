@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-09-12T21:29:20.962853+00:00",
+  "scope": "Harmless exact50/5 caps+GNU timeout wrapper+monotonic observation only. No Java/K/strace/bwrap/native smoke/admission/accounting action.",
+  "argv": [
+    "/usr/bin/python3.14",
+    "-I",
+    "-B",
+    "-c",
+    "import os,time;env=dict(os.environ);env['MORIARTY_LL02_ORIGIN_NS']=str(time.monotonic_ns());env.pop('FOREMAN_LAUNCH_PIDNS_INNER',None);env.pop('FOREMAN_LAUNCH_HOST_PID',None);os.execve('/usr/bin/timeout',['/usr/bin/timeout', '--signal=TERM', '--kill-after=5s', '55s', '/usr/bin/systemd-run', '--user', '--scope', '--unit=moriarty-ll02-scope-check-20260912-02', '--property=MemoryMax=8589934592', '--property=MemorySwapMax=0', '--property=CPUQuota=200%', '--property=RuntimeMaxSec=50s', '--property=RuntimeRandomizedExtraSec=0', '--property=TimeoutStopSec=5s', '--property=KillMode=control-group', '--property=FinalKillSignal=SIGKILL', '--property=SendSIGKILL=yes', '/usr/bin/python3.14', '-I', '-B', '-c', \"import json,os,pathlib,subprocess,time\\norigin=int(os.environ['MORIARTY_LL02_ORIGIN_NS']);now=time.monotonic_ns();assert 0<=now-origin<=5000000000\\ncg=next(x.split(':',2)[2] for x in pathlib.Path('/proc/self/cgroup').read_text().splitlines() if x.startswith('0::'))\\nroot=pathlib.Path('/sys/fs/cgroup')/cg.lstrip('/')\\nv={n:(root/n).read_text().strip() for n in ['memory.max','memory.swap.max','cpu.max','memory.events']}\\nassert v['memory.max']=='8589934592' and v['memory.swap.max']=='0';assert v['cpu.max']=='200000 100000'\\ns=subprocess.run(['/usr/bin/systemctl','--user','show','moriarty-ll02-scope-check-20260912-02.scope','--property=ActiveEnterTimestampMonotonic,RuntimeMaxUSec,TimeoutStopUSec,MemoryMax,MemorySwapMax,CPUQuotaPerSecUSec,KillMode,FinalKillSignal,SendSIGKILL,ControlGroup'],capture_output=True,text=True,check=True)\\np=dict(x.split('=',1) for x in s.stdout.splitlines()); active=int(p['ActiveEnterTimestampMonotonic'])*1000; assert 0<=active-origin<=5000000000\\nassert p['RuntimeMaxUSec']=='50s' and p['TimeoutStopUSec']=='5s' and p['ControlGroup']==cg\\nprint(json.dumps({'origin_ns':origin,'entry_ns':now,'scope_active_ns':active,'cgroup':cg,'limits':v,'properties':p}))\\n\"],env)"
+  ],
+  "exit_code": 0,
+  "seconds": 0.11597810999955982,
+  "stdout": "{\"origin_ns\": 16471005192929, \"entry_ns\": 16471051170804, \"scope_active_ns\": 16471034138000, \"cgroup\": \"/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-ll02-scope-check-20260912-02.scope\", \"limits\": {\"memory.max\": \"8589934592\", \"memory.swap.max\": \"0\", \"cpu.max\": \"200000 100000\", \"memory.events\": \"low 0\\nhigh 0\\nmax 0\\noom 0\\noom_kill 0\\noom_group_kill 0\"}, \"properties\": {\"ActiveEnterTimestampMonotonic\": \"16471034138\", \"TimeoutStopUSec\": \"5s\", \"RuntimeMaxUSec\": \"50s\", \"ControlGroup\": \"/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-ll02-scope-check-20260912-02.scope\", \"CPUQuotaPerSecUSec\": \"2s\", \"MemoryMax\": \"8589934592\", \"MemorySwapMax\": \"0\", \"KillMode\": \"control-group\", \"FinalKillSignal\": \"9\", \"SendSIGKILL\": \"yes\"}}\n",
+  "stderr": "Running as unit: moriarty-ll02-scope-check-20260912-02.scope; invocation ID: 78314f1eaa464909aa2fce038b39e087\n",
+  "postExit": {
+    "exit_code": 0,
+    "stdout": "ActiveState=inactive\nSubState=dead\nResult=success\n",
+    "stderr": ""
+  },
+  "toolHashes": {
+    "/usr/bin/systemd-run": "03a68bafb0ebc0f5eff41cbdf3cbbdf126a3bb87e21140f9147bf78edce36d88",
+    "/usr/bin/systemctl": "6394f5e8df92878184de9d4dfb7ac242471cb09daf89d23be4e81ae17e9c03b2",
+    "/usr/bin/timeout": "48893b0fb21436b54619db80486e83ef39dfccaf1aefe83dfa00c02d6146e8c0",
+    "/usr/bin/python3.14": "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41"
+  }
+}

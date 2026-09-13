@@ -1,0 +1,50 @@
+{
+  "scope": "Independent bounded source/reproducer triage only. Not a full-candidate audit, native approval, dispatch approval or actual-result review. No production edits or native/toolchain execution.",
+  "sourceSHA256": "675d8e04d1ea4c93dd3dad05e2cbb299b9c4f88ed29c3aca7d91783ca7223876",
+  "findings": [
+    {
+      "id": "S12b-1",
+      "disposition": "Not applicable to exact fixed argv; preserve if argv changes",
+      "evidence": "recordedArgv explicitly contains --no-expand-macros, --output json, --parser expression-parser.py; no search/pattern/statistics/debug/version flags. krun:283-284,287-300,309-312 select these flags; configVars.sh declares only PGM; backend.txt is llvm. krun:527-542 uses explicit parser, :567 invokes llvm-krun with korefile and --dry-run -nm, :570-575 selects cp, :594-630 avoids search/match, :714 selects kore-print json. kore-print:218-231 sends json to absolute bin-unwrapped/kast, never bare kprint. llvm-krun:25-27 defaults text/no pretty; :157-158 disables macros; :223-224 selects dry-run; :443-480 constructs text, cp and cat to output then exits before interpreter/mv/kprint. Reached helper commands dirname/mktemp/rm/cat/cp already have krun command selections. No IO/STDIN declared, so awk route excluded."
+    },
+    {
+      "id": "S12b-2",
+      "disposition": "Confirmed missing selected interpreter pin; source repair required",
+      "evidence": "bin-unwrapped/kast:1 selects /nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/sh; :2 invokes lib/kframework/k. Parser execs pinned bin/kast at expression-parser.py:10, so sh reached before backend, independent of successful output. Diagnostic verify_wrapper_and_parser:239-335 checks parser shebang but does not require sh. verify_selected:200-213 only validates listed entries. Actual sh symlinkTarget=bash, resolvedTarget=/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash, resolved sha256=b5aea2266b8f20e705a5bba71998c6eb40adaaf40a2c0986b83a01b3ac4c7941.",
+      "expectedRepair": "Require exact actual kast interpreter selected pin; validate resolved hash, immediate symlink and resolved target, retain existing bash identity, and bind fresh factual host ownership evidence for sh and ancestors using existing path. Ownership verifier:588-589 protects each selected path; missing host evidence must continue failing closed.",
+      "negativeCases": [
+        "Missing sh pin rejected by verify_wrapper_and_parser (existing regression).",
+        "Role present with bash path instead of sh rejected; actual interpreter path is required.",
+        "Wrong hash rejected by selected verification.",
+        "Wrong or omitted sh symlinkTarget rejected.",
+        "Wrong or omitted resolvedTarget for sh symlink rejected.",
+        "Duplicate path/role rejected.",
+        "Missing sh host entry rejected by ownership mechanism under mapped/overflow conditions.",
+        "Positive complete pins pass offline wrapper/selected checks; preserve exact argv/environment and all other existing regressions."
+      ]
+    },
+    {
+      "id": "S12b-4",
+      "disposition": "Snapshot fixture identity concern bounded and rerun against canonical parsed snapshot; annotation remains",
+      "evidence": "Canonical diagnostic and candidate-source-12.py both hash 675d8e04d1ea4c93dd3dad05e2cbb299b9c4f88ed29c3aca7d91783ca7223876. Full parsed snapshot-inventory-draft-03.json differs from canonical snapshot only in scope string; all 506 file entries, ordering, hashes, modes, sizes, identity and limit fields equal. Draft raw sha256 fd72c4e8778608f54221af17d0fc6da3b1bc93f01290c61f2e6829981122e208; canonical raw sha256 d8c84c571399d445debf6948292550d56c67b1610e4d5dc830cc02dba70a7128. Independently imported existing regression module, replaced its snapshot variable with full canonical parsed object, and ran its 14 tests without executing __main__ or overwriting historical results: pass 14, zero errors/failures. Tests reserialize temporary manifests with corresponding digests; this does not claim historical test read canonical raw bytes. _inventory_union:676 return annotation should become tuple[dict[str,str],dict] consistent with actual tuple result."
+    }
+  ],
+  "commands": [
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "-I",
+        "-B",
+        "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/shell-interpreter-regression-13.py"
+      ],
+      "exit": 1,
+      "result": "Ran 1 test; failure AssertionError: PreflightError not raised; 0.117s"
+    },
+    {
+      "command": "/usr/bin/python3 -I -B - <<'PY'\nimport importlib.util,json,unittest\nfrom pathlib import Path\np=Path('deliverables/language-to-ledger-2026-09-12/sprints/LL01/independent-snapshot-regression-12.py')\ns=importlib.util.spec_from_file_location('snapshot_review13',p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\nm.snapshot=json.loads(Path('.moriarty-dev/k-macro05-trace106-snapshot.json').read_bytes())\nr=unittest.TextTestRunner(verbosity=1).run(unittest.defaultTestLoader.loadTestsFromTestCase(m.Tests))\nraise SystemExit(not r.wasSuccessful())\nPY",
+      "exit": 0,
+      "result": "14 tests passed, zero failures/errors, 0.306s; memfd fixtures and injected final exec only"
+    }
+  ],
+  "remaining": "S12b-3 broader informational statements and all native conditions retained without independent native validation. No assertion of full candidate acceptance. Status still reports stale bindings/candidate inputs and missing current accounting/live resource state; no pending transactions."
+}

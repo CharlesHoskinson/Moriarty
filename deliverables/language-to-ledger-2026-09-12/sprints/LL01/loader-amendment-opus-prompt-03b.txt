@@ -1,0 +1,960 @@
+Independent Opus5 medium design review. Prior full100KB nonpersistent call timed out240s, zero output, NO verdict. This is a fresh bounded review of SAME exact proposal03 SHA256 357274c1d9c8429e760db2336c35d9382b1f921fd09cbd5d4d3e9e8ea644b116. No tools/subagents/execution. Return compact JSON verdict ACCEPT|REVISE|REJECT + proposal_sha256 + scope + at most6 concrete findings + implementation_conditions; <=600 words. Do not produce implementation code or hidden reasoning. Evaluate indispensable design changes separately from later implementation checks. No other reviewer vote is supplied. Source snapshots are evidence only. Native K/Java/strace forbidden pending separate source/admission.
+
+FILE /home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/loader-amendment-proposal-03.md SHA256 357274c1d9c8429e760db2336c35d9382b1f921fd09cbd5d4d3e9e8ea644b116
+# E04-1: preserve the K path in an immutable private HOME
+
+Decision requested: replace the unadopted direct-Java/output-mode proposals01/02 with this concrete namespace design. This is a source-design vote only. No native diagnostic is admitted by a vote. Both fresh Opus5 medium and Astra medium must assess this exact document and its evidence. Original D03-I1..I5, E04-2..4 and actual-result review remain mandatory.
+
+The original retained parser, toolchain lock, compiled interpreter, input, krun argv, JSON output and K shell loaders remain byte-for-byte selected as recorded. The only new runtime envelope is the installed `/usr/bin/bwrap`, called by the existing preflight shim with a fixed mount argument array. The existing canonical runner still owns timeout, process containment, capture, receipt and debit. No collector, parser replacement, K distribution copy, service shutdown or host HOME edit is proposed.
+
+## Concrete setup
+
+1. Run existing selected-tool, K package, Nix trust, binding and limits checks before any bwrap/K dispatch. Require HOME `/home/charl`, effective UID/GID1000 and original runner cwd `/home/charl/Moriarty`. Bind bwrap bytes, resolved target, ownership and all protected ancestors as selected tools. Retain exact original child environment; no inherited startup variables. Preflight Nix queries retain the existing clean query environment.
+2. Build one exact snapshot inventory from the frozen binding's488 compiled artifacts,14 source files and10 retained entries, deduplicated by absolute path with identical hashes. The current union is506 regular files and34,262,979 bytes. Reject conflicts, symlinks, nonregular files, paths outside the fixed retained tree, relative/parent traversal components, unexpected compiled file sets and changed bytes. Include the original parser's adjacent expression-toolchain.lock.json. Derive directory inventory solely from these exact paths plus original cwd. Require exact frozen modes; retain read/execute bits and remove write bits in the private view. Snapshot identity and write permissions intentionally differ from host files; executable bytes and paths do not.
+3. For each file, read at most its frozen size plus one, verify exact size/hash, write to a new memfd, rewind, and apply WRITE/GROW/SHRINK/SEAL seals. Only the verified bytes go to bwrap. All snapshot FDs are explicitly bounded, made inheritable only for that exec and closed on failure. Reject more than512 files, more than64MiB total snapshot bytes, more than32MiB per file or fewer than1024 available file descriptors. These are proposed setup limits, not new native retries. Bind the final inventory and exact mount ordering in source/pins/candidate.
+4. Exec bwrap with required `--unshare-user --uid 1000 --gid 1000 --unshare-pid --unshare-net --die-with-parent --disable-userns --cap-drop ALL`. Never use a `-try` option or network fallback. Start with `--ro-bind / /`, then private `--proc /proc --dev /dev`, then `--size 67108864 --tmpfs /home/charl`. Create the exact snapshot directories in parent-first order. For each sorted entry, use `--perms <mode-without-write> --ro-bind-data <sealed-fd> <original-absolute-path>`. Finish `--remount-ro /home/charl --size 268435456 --tmpfs /tmp --chdir /home/charl/Moriarty -- <original diagnosticArgv>`. All copied files are separate read-only mounts; the ancestor tmpfs is also read-only. A normal read-only bind of host retained files is prohibited because it shares mutable host inodes.
+5. Preserve stdin/stdout/stderr semantics from the existing runner. Bwrap must consume/close setup FDs before strace/K; no original host directory FD reaches the workload. Mount setup occurs before original strace, so process/signal capture still addresses the original K command and descendants. Existing runner containment must cover the extra bwrap lifetime and timeout. A setup failure is a failed diagnostic attempt under its existing full charge, never a native result or free retry.
+
+## Suppression and experiment meaning
+
+The private HOME has only the selected retained paths. `.local/lib/kframework/java`, `.kserver/socket` and other HOME startup data are absent, and neither the child nor ordinary external writes to host HOME can populate that private read-only view. Java retains UID1000 and the existing host passwd identity; its user.home path must resolve to the same hidden HOME. Both original input parser and output kore-print/kast therefore see this same view. The K classpath string is unchanged, but its HOME extension component has no files. The absolute ng client can still execute; its local endpoint is absent and its default TCP endpoint cannot reach any host listener in the new network namespace. No server shutdown or mere host port-absence check establishes this property.
+
+Original setenv PATH spellings and LD_LIBRARY_PATH, including the empty CWD component, remain unchanged. Cwd has its original absolute spelling but a private read-only directory with no host-provided native library. System/Nix files remain visible through the root read-only bind and retain their existing trust checks; this proposal does not claim a complete adversarial OS sandbox. Original JVM options, original checkJava version call, original K parser, native interpreter and JSON postprocessor remain selected. Preserve outer/interpreter8MiB soft stack and core0; original K Java child can still raise its soft stack to inherited hard, as before. No host semantic evaluation, type erasure or language narrowing.
+
+The result still must distinguish original wrapper113 from an observed interpreter signal/exit. Snapshot inodes/modes, namespace/PID ancestry, absent HOME extensions and network availability intentionally differ and must be disclosed in result review. Identical initial K term is not already observed; parser and input byte identity supports a structural argument only. Accepted depth5947/Core65536 and rejected depth5948/Core65547 remain unchanged. Inconclusive or setup-only results do not pass language/ledger gates.
+
+## Actual harmless evidence and limits
+
+`bwrap-data-snapshot-probe-01.json` shows that one private ro-bind-data file remains `before` after the host source changes to `after`; child writes fail EROFS. This is a single-file primitive check, not full production coverage.
+
+`bwrap-full-snapshot-probe-02.json` runs the full506-file snapshot under the existing actual strong Foreman user/PID launcher, with the proposed mount options and harmless Python instead of strace/K. All506 byte hashes match. Child writes to a snapshot file and creation of `.local`/`.kserver` fail EROFS. A host loopback listener is first verified reachable outside; the child cannot reach it, and its network namespace identity differs. Nested user namespace creation fails, effective capabilities are zero, HOME/cwd/UID/8MiB stack are preserved, and only5 FDs are observed. Private `/tmp` writes succeed. Setup+check took0.522s on this run; this is not a bound or prediction for Java/native execution. The probe source is `bwrap_full_snapshot_probe.py`. No K, Java, strace, compiler or financial action ran.
+
+Before source freeze, the selected Grok author implements this envelope in the existing shim, without copying this experiment as a production runner. Independent controls must reject every inventory/byte/path/mode/limit/FD/bwrap drift before K, test original argv/env/stack construction, temporal snapshot independence, required network isolation, FD closure and immutable HOME. Use actual existing-runner113/timeout/overflow/invalid-UTF8/detached-descendant controls required by D03; mocks do not establish those predicates. Full source receives fresh exact-candidate Opus/Astra audits.
+
+The candidate/debit/runner binding changes only through the existing canonical route after source approval. Prospective C7/D1/G60 is unchanged: one diagnostic, timeout20 including preflight/setup, grace5, charge60, compile0, retry0, no refund or slack. The proposed fixed memory/temp/FD limits require review with this setup; they do not reset any expired or exhausted budget. A design approval cannot substitute for live admission or exact raw result review. If these limits or isolation invalidate the intended experiment, reject or revise now; do not silently change the sole diagnostic.
+
+Requested verdict: ACCEPT, REVISE or REJECT with concrete indispensable corrections. Explicitly assess whether this covers both Java paths and prior C4/C10 without adding file-read tracing or changing output mode. Keep any source implementation and actual result conditions separate from approval of this design.
+
+
+FILE /home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/bwrap_full_snapshot_probe.py SHA256 0e8c88b473a303ac3c8a7e5bbb6f4f83e5c579bbbf302f5484a73f5a0a89f24e
+"""Harmless isolation experiment: snapshot retained bytes; never execute K/Java.
+
+Not a production shim or native admission. Run under the existing launcher.
+"""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import resource
+import stat
+import socket
+import subprocess
+import time
+
+ROOT = Path('/home/charl/Moriarty')
+PINS = ROOT / '.moriarty-dev/k-macro05-trace106-pins.json'
+
+
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def main():
+    pins = json.loads(PINS.read_text())
+    binding = json.loads(Path(pins['binding']['path']).read_text())
+    files = {str(Path(pins['binding']['kRoot']) / n): h for n, h in binding['sources'].items()}
+    files.update({str(Path(pins['binding']['kompiled']) / n): h for n, h in binding['artifacts'].items()})
+    files.update({i['path']: i['sha256'] for i in pins['retained']})
+    home = '/home/charl'
+    dirs = {home, str(ROOT)}
+    entries, fds = [], []
+    argv = ['/usr/bin/bwrap', '--unshare-user', '--uid', str(os.getuid()), '--gid', str(os.getgid()),
+            '--unshare-pid', '--unshare-net', '--die-with-parent', '--disable-userns', '--cap-drop', 'ALL',
+            '--ro-bind', '/', '/', '--proc', '/proc', '--dev', '/dev', '--size', '67108864', '--tmpfs', home]
+    listener = socket.socket()
+    listener.bind(('127.0.0.1', 0))
+    listener.listen(1)
+    host_net = os.readlink('/proc/self/ns/net')
+    with socket.create_connection(listener.getsockname(), timeout=1):
+        accepted, _ = listener.accept()
+        accepted.close()
+    start = time.monotonic()
+    try:
+        for name, expected in sorted(files.items()):
+            p = Path(name)
+            assert p.is_relative_to(home) and stat.S_ISREG(p.lstat().st_mode), name
+            data = p.read_bytes()
+            assert digest(data) == expected, name
+            fd = os.memfd_create('ll01-snapshot-probe', os.MFD_ALLOW_SEALING)
+            fds.append(fd)
+            with os.fdopen(os.dup(fd), 'wb') as out:
+                out.write(data)
+            os.lseek(fd, 0, os.SEEK_SET)
+            seals = fcntl.F_SEAL_WRITE | fcntl.F_SEAL_GROW | fcntl.F_SEAL_SHRINK | fcntl.F_SEAL_SEAL
+            fcntl.fcntl(fd, fcntl.F_ADD_SEALS, seals)
+            assert fcntl.fcntl(fd, fcntl.F_GET_SEALS) == seals
+            mode = stat.S_IMODE(p.stat().st_mode)
+            entries.append({'path': name, 'sha256': expected, 'bytes': len(data), 'mode': mode, 'fd': fd})
+            dirs.update(str(parent) for parent in p.parents if parent.is_relative_to(home))
+        for directory in sorted(dirs, key=lambda s: (len(Path(s).parts), s)):
+            if directory != home:
+                argv += ['--dir', directory]
+        for item in entries:
+            argv += ['--perms', oct(item['mode'] & ~0o222)[2:], '--ro-bind-data', str(item['fd']), item['path']]
+        argv += ['--remount-ro', home, '--size', '268435456', '--tmpfs', '/tmp', '--chdir', str(ROOT), '--', '/usr/bin/python3', '-I', '-B', '-c']
+        child = r'''
+import ctypes, errno, hashlib, json, os, pathlib, resource, socket, sys
+packet=json.load(sys.stdin); entries=packet['entries']; home=pathlib.Path('/home/charl')
+bad=[]
+for item in entries:
+ p=pathlib.Path(item['path'])
+ if hashlib.sha256(p.read_bytes()).hexdigest()!=item['sha256']: bad.append(str(p))
+assert not bad,bad
+assert not (home/'.local/lib/kframework/java').exists()
+assert not (home/'.kserver/socket').exists()
+denied={}
+for name in [home/'.kserver',home/'.local',pathlib.Path(entries[0]['path'])]:
+ try:
+  if name==pathlib.Path(entries[0]['path']): name.write_text('CHANGED')
+  else: name.mkdir()
+ except OSError as e: denied[str(name)]=e.errno
+assert len(denied)==3 and set(denied.values())=={errno.EROFS},denied
+pathlib.Path('/tmp/ll01-probe-write').write_text('private temporary data')
+network_socket=socket.socket(); network_socket.settimeout(.2)
+network=network_socket.connect_ex(('127.0.0.1',packet['host_port'])); network_socket.close()
+assert network!=0
+assert os.readlink('/proc/self/ns/net')!=packet['host_net']
+libc=ctypes.CDLL(None,use_errno=True)
+nested=libc.unshare(0x10000000); nested_errno=ctypes.get_errno()
+assert nested==-1
+mountinfo=pathlib.Path('/proc/self/mountinfo').read_text()
+assert ' /home/charl ro,' in mountinfo
+print(json.dumps({'verified_files':len(entries),'read_only_errors':denied,'home':os.environ['HOME'],
+ 'cwd':os.getcwd(),'uid':os.getuid(),'stack':resource.getrlimit(resource.RLIMIT_STACK),
+ 'network_connect_errno':network,'nested_userns_errno':nested_errno,
+ 'cap_eff':next(x for x in pathlib.Path('/proc/self/status').read_text().splitlines() if x.startswith('CapEff:')),
+ 'pid':os.getpid(),'fd_count':len(list(pathlib.Path('/proc/self/fd').iterdir()))}))
+'''
+        entries_json = json.dumps({'entries':entries, 'host_port':listener.getsockname()[1], 'host_net':host_net}, separators=(',', ':'))
+        argv += [child]
+        env = {'HOME': home, 'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8'}
+        r = subprocess.run(argv, pass_fds=fds, env=env, input=entries_json, text=True, capture_output=True, timeout=15)
+        print(json.dumps({'scope': 'Harmless Python snapshot reads only; no K, Java, strace or native diagnostic',
+                          'files': len(entries), 'bytes': sum(i['bytes'] for i in entries),
+                          'bwrap_sha256': digest(Path('/usr/bin/bwrap').read_bytes()),
+                          'source_sha256': digest(Path(__file__).read_bytes()),
+                          'pins_sha256': digest(PINS.read_bytes()),
+                          'argv_bytes': sum(len(s.encode())+1 for s in argv), 'argv_prefix': argv[:-1],
+                          'child_source_sha256': digest(child.encode()), 'entries_sha256': digest(entries_json.encode()),
+                          'seconds': time.monotonic()-start, 'exit_code': r.returncode,
+                          'stdout': r.stdout, 'stderr': r.stderr,
+                          'outer_stack': resource.getrlimit(resource.RLIMIT_STACK)}, indent=2))
+        return r.returncode
+    finally:
+        listener.close()
+        for fd in fds:
+            os.close(fd)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
+
+
+FILE /home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-adoption-03.json SHA256 1f938cd4af3444c475dd32f9c9d787aa27908fed60caf7d842ffc9e35ffc7e01
+{
+  "kind": "root-design-adoption/3",
+  "timestampUTC": "2026-09-12T06:59:54.676572+00:00",
+  "designSha256": "dbe43c5031f4bad1d73c275f9e09ecdce3c7ce599ca02f841fcad6e0e3b46aec",
+  "independentReviewSha256": "6223f2c2080b453e90c1381e293b82de69f1520eafa302e5680437e6ed255c9a",
+  "verdict": "ADOPT_WITH_ALL_MANDATORY_IMPLEMENTATION_CHECKS",
+  "reasoning": [
+    "Delegating capture and containment to the existing bound runner removes both repeatedly defective collector and process inference implementations. Raw evidence must pass exact stored-receipt byte recovery and substantive review; the wrapper assertion alone does not establish diagnostic acceptance.",
+    "Twenty seconds including preflight is within the original child ceiling; the full sixty-second debit remains spent without reusable slack. No new compilation, retry or product predicate is authorized.",
+    "Registered Nix closure is an explicit trusted OS/store boundary. Host ownership evidence, namespace mapping, effective nonwritability and full K package bytes must be checked; arbitrary overflow UID is not host-root evidence."
+  ],
+  "mandatoryImplementationChecks": [
+    {
+      "id": "D03-I1",
+      "requirement": "Account for Foreman user namespace ownership before spending the grant. Launcher prefers --user --map-current-user, so host UID0 may appear as overflow UID65534. Do not require literal child st_uid==0 or treat arbitrary overflow UID as proven host-root ownership. Revalidate host root ownership in the host-side final read-only admission inspection; pin that evidence and validate the namespace mapping plus effective non-writability in the child. If this ownership relation cannot be established, stop before dispatch. Exercise the final preflight under actual strong containment with exec injected/harmless target."
+    },
+    {
+      "id": "D03-I2",
+      "requirement": "Freeze exact PATH/environment and selected utility identities in pins. Preserve existing HOME but suppress environment injection and selected runtimes user-site/startup/config loading where applicable. Check actual wrapper PATH modifications and parser shebang resolution; a minimal inherited environment alone does not demonstrate those selections."
+    },
+    {
+      "id": "D03-I3",
+      "requirement": "Recover raw streams from exact stored reservation receipt; UTF-8 encode and compare outputSha256 and outputBytes for both streams. Reject outputLimitExceeded, completionAmbiguous, timeout124, missing receipt and identity mismatch. Keep wrapper113 assertion separate from actual-result acceptance."
+    },
+    {
+      "id": "D03-I4",
+      "requirement": "Run the specified harmless existing-runner tests before the sole native invocation: exact recovery including invalid UTF-8 rejection,113, timeout, overflow and detached descendant completion. These are still unperformed by this review. No mocked launcher establishes strong containment."
+    },
+    {
+      "id": "D03-I5",
+      "requirement": "Bind shim, pins, full K map, requisite manifest and explicit tool identities in final source/candidate files. Keep external K dependencies inside reviewed manifest checked by shim: runner._check_files only accepts its executable/Foreman as external direct inputs. Final plan digest and exact debit must change with timeout/argv/files changes, retaining original amount and unique charge."
+    }
+  ],
+  "sourceApproved": false,
+  "dispatchApproved": false,
+  "actualResultApproved": false
+}
+
+
+FILE /home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-parser.py SHA256 8420d151ea9e510b96fc941e73f496b27d53e1e1913e3d270b8ce4f4c0701f1f
+#!/usr/bin/env python3
+"""The krun --parser boundary: installed kast JSON-to-KORE, no evaluation."""
+import os,sys,json,hashlib
+from pathlib import Path
+H=Path(__file__).resolve().parent
+if len(sys.argv)!=2:raise SystemExit(2)
+lock=json.loads((H/'expression-toolchain.lock.json').read_text())['kast']
+p=Path(lock['path'])
+if hashlib.sha256(p.read_bytes()).hexdigest()!=lock['sha256']:raise SystemExit('TOOLCHAIN_STALE')
+os.execv(str(p),[str(p),'--input','json','--output','kore','--definition',str(H/'.build-expression-v1/expression-v1-kompiled'),sys.argv[1]])
+
+
+FILE /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/checkJava SHA256 ca205adcbd0aaede282b0ee2251c15fd1dc0806bcd946d8a8971cdedeeed5571
+#!/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash
+MIN_VERSION="17"
+echoerr() { echo "$@" 1>&2; }
+
+if type -p java >/dev/null; then
+    _java=java
+elif [[ -n "$JAVA_HOME" ]] && [[ -x "$JAVA_HOME/bin/java" ]];  then
+    _java="$JAVA_HOME/bin/java"
+else
+    echoerr -e "\033[1;31mError:\033[0m K requires Java $MIN_VERSION to run but Java was not detected."
+    echoerr "Please either add it to PATH or set the JAVA_HOME environment variable."
+    exit 1
+fi
+
+function setarch {
+  echo $version | grep '64-Bit' >& /dev/null
+  if [ $? -eq 0 ]; then
+    ARCH=64
+  else
+    ARCH=32
+  fi
+}
+
+NG="$(dirname "${BASH_SOURCE[0]}")/bin/ng"
+KSERVER_SOCKET="${KSERVER_SOCKET:-$HOME/.kserver}"
+KSERVER_INSTANCE="$NG --nailgun-server local:$KSERVER_SOCKET/socket"
+version=$($KSERVER_INSTANCE org.kframework.main.JavaVersion 2>&1)
+if [ $? -eq 0 ]; then
+  setarch
+  JAVA="$KSERVER_INSTANCE"
+else
+  version=$($NG org.kframework.main.JavaVersion 2>&1)
+  if [ $? -eq 0 ]; then
+    setarch
+    JAVA=$NG
+  else
+    version=$("$_java" --version)
+    setarch
+    if [ $ARCH -eq 64 ]; then
+      TIERED=-XX:+TieredCompilation
+    fi
+    export K_OPTS="-Xms64m -Xmx8192m -Xss32m $TIERED $K_OPTS"
+    JAVA="java -Dfile.encoding=UTF-8 -Djava.awt.headless=true $K_OPTS -ea -cp \"$(dirname "$BASH_SOURCE")/java/*:$HOME/.local/lib/kframework/java/*\""
+  fi
+fi
+
+# The Java version information we're parsing here looks something like this:
+#
+#   openjdk 21.0.2 2024-01-16
+#   OpenJDK Runtime Environment Homebrew (build 21.0.2)
+#   OpenJDK 64-Bit Server VM Homebrew (build 21.0.2, mixed mode, sharing)
+#
+# To get the major version, we need to look at the first line's second field,
+# then use a regex to extract the major version component. If the JVM changes
+# the format of the version that gets printed, this script needs to be updated
+# as well.
+
+version=$(echo "$version" | head -1 | cut -d ' ' -f2)
+version=$(echo "$version" | sed -e 's/\([0-9]*\)\(.*\)/\1/; 1q')
+
+if [[ "$version" -lt "$MIN_VERSION" ]]; then
+    echoerr -e "\033[1;31mError:\033[0m K requires Java $MIN_VERSION to run but the detected version is $version."
+    echoerr "Please either add Java $MIN_VERSION bin directory to the PATH or set the JAVA_HOME
+environment variable accordingly."
+    exit 2
+fi
+
+
+FILE /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/setenv SHA256 fa8d26333cf0d1ef90ba3c6cfc85cd9f63ff23088bfaa61f6a9c6c69c9629688
+#!/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash
+if [ `uname` = 'Darwin' ]; then
+  OS=osx
+else
+  if [ `uname` != 'Linux' ]; then
+    echo "Warning: unsupported OS detected. Defaulting to Linux mode, but errors may occur." 1>&2
+  fi
+  OS=linux
+fi
+K_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export PATH="$K_LIB_DIR/../../bin:$PATH"
+
+source "$K_LIB_DIR/checkJava" # sets ARCH and JAVA
+
+if [ `uname` = 'Darwin' ]; then
+  export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:"$K_LIB_DIR/native/osx"
+  export PATH="/usr/local/opt/bison/bin:$PATH"
+else
+  export PATH="$K_LIB_DIR/native/linux$ARCH":$PATH
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"$K_LIB_DIR/native/linux$ARCH"
+fi
+
+export LC_NUMERIC=C  # sets locale to C to avoid issues with numeric formats
+if [ -n "${TERM}" ]; then
+  export TERM;
+  export K_COLOR_SUPPORT=`tput colors`
+else
+  export K_COLOR_SUPPORT=1
+fi
+
+
+FILE /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/k SHA256 d56ba8f42a320cab88708456ec2721ab71b0d49e8b1bad42d47b497b34fda66c
+#!/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash
+source "$(dirname "$0")/setenv"
+ulimit -s "$(ulimit -H -s)"
+
+K_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../" && pwd)"
+GIT_DESCRIBE="${K_BASE}/kframework/git-describe.out"
+TIMESTAMP="${K_BASE}/kframework/timestamp.out"
+version=
+
+for flag in "$@"; do
+    if [[ "$flag" == "--version" ]]; then
+        if [[ -e "${GIT_DESCRIBE}" ]]; then
+            version="$(cat "${GIT_DESCRIBE}")"
+        fi
+        versionTimestamp="$(cat "${TIMESTAMP}")"
+        versionTimestampInMilliseconds=$((versionTimestamp / 1000))
+
+        if [ "$(uname)" = 'Darwin' ]; then
+            versionDate=$(date -r "${versionTimestampInMilliseconds}" "+%a %b %d %H:%M:%S %Z %Y")
+        else
+            versionDate=$(date -d "@${versionTimestampInMilliseconds}" "+%a %b %d %H:%M:%S %Z %Y")
+        fi
+
+        if [[ -z "${version}" ]]; then
+            version="v"$(cat "${K_BASE}"/kframework/version)
+        fi
+
+        echo "K version:    ${version}"
+        echo "Build date:   ${versionDate}"
+        exit 0
+    fi
+done
+
+eval "$JAVA" org.kframework.main.Main '"$@"'
+
+
+
+FILE /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/kore-print SHA256 f1956617796796855e288760d88c524074b5da17b4da606dfd0ebff9565a0dc0
+#!/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash
+set -e
+set -o pipefail
+set -u
+
+export PATH="$(cd "$(dirname "$0")"; pwd):$PATH"
+
+# initialize flags
+ARGV=()
+dir=.
+kompiledDir=
+filterSubst=true
+literal=false
+verboseFlag=
+outputFile=-
+outputMode=pretty
+
+
+KORE_PRINT=$(basename "$0")
+KAST_UTIL="$(dirname "$0")/kast"
+
+export KTOOL="${KORE_PRINT}"
+source "$(dirname "$0")/../lib/kframework/k-util.sh"
+
+print_usage () {
+cat <<HERE
+Usage: $KORE_PRINT <INPUT.kore> [-d DIR] [-o OUTPUT]
+Convert a KORE term into another format.
+
+Mandatory arguments to long options are mandatory for short options too.
+
+$KORE_PRINT expects exactly 1 positional argument. It must be a file and the
+contents of that file must contain a KORE pattern. By default, $KORE_PRINT will
+pretty print that term, but some customization is possible; see below.
+
+General arguments:
+
+$(k_util_usage)
+
+$KORE_PRINT arguments:
+
+      --color [on|off]     Enable/disable ANSI color codes. Overrides default,
+                           which is determined based on whether stdout is a
+                           terminal
+  -d, --definition DIR     Exact path to the kompiled directory.
+  -h, --help               Display this help and exit
+      --no-substitution-filtering  Don't filter conjuncts with anonymous
+                                   variables from substitution output
+  -o, --output MODE        Select output mode to use when unparsing. Valid
+                           values are pretty, program, kast, binary, json,
+                           kore, and none
+      --output-file FILE   Print converted term to FILE
+      --save-temps         Do not delete temporary files when $KORE_PRINT
+                           terminates
+      --version            Print version of K
+      --                   Interpret all arguments following as positional
+                           arguments
+HERE
+}
+
+ORIG_ARGV=("$@")
+
+# parse options
+while [[ $# -gt 0 ]]
+do
+  arg="$1"
+  if $literal; then
+    ARGV+=("$1")
+  else
+    case "$arg" in
+      --color)
+      case "$2" in
+        on)
+        color=true
+        ;;
+
+        off)
+        color=false
+        ;;
+
+        *)
+        error 1 'Invalid value for --color. Should be "on" or "off".'
+        ;;
+      esac
+      shift
+      ;;
+
+      -d|--definition)
+      kompiledDir="$2"
+      shift
+      ;;
+
+      -h|--help)
+      print_usage
+      exit 0
+      ;;
+
+      --no-substitution-filtering)
+      filterSubst=false
+      ;;
+
+      -o|--output)
+      case "$2" in
+        pretty) ;;
+        program) ;;
+        kast) ;;
+        binary) ;;
+        json) ;;
+        kore) ;;
+        none) ;;
+
+        *)
+        error 1 'Invalid value for --output. Should be one of "pretty", "program", "kast", "binary", "json", "kore", or "none".'
+        ;;
+      esac
+      outputMode="$2"
+      shift
+      ;;
+
+      --output-file)
+      outputFile="$2"
+      shift
+      ;;
+
+      --save-temps)
+      trap - INT TERM EXIT
+      ;;
+
+      -v| --verbose)
+      verboseFlag="--verbose"
+      verbose=1
+      shift
+      ;;
+
+      --version)
+      kompile --version
+      exit 0
+      ;;
+
+      --)
+      literal=true
+      ;;
+
+      -)
+      ARGV+=("$1")
+      ;;
+
+      -*)
+      print_usage
+      exit 1
+      ;;
+
+      *)
+      ARGV+=("$1")
+      ;;
+    esac
+  fi
+  shift
+done
+
+if [ -z "${color+unset}" ]; then
+  if [[ "$outputFile" == "-" && -t 1 ]]; then
+    color=true
+  else
+    color=false
+  fi
+fi
+
+if [[ "${#ARGV[@]}" -ne 1 ]]; then
+  print_usage
+  error 1 'Must pass exactly one KORE file as a positional argument.'
+fi
+input_file="${ARGV[0]}"
+
+# Compute kompiled directory
+hasKompiledDir=false
+if [[ -d $kompiledDir ]]; then
+  hasKompiledDir=true
+else
+  for file in "$dir"/*-kompiled; do
+    [ ! -d "$file" ] && continue
+    kompiledDir=$file
+    if $hasKompiledDir; then
+      error 1 'Multiple compiled definitions found in the current working directory: ' "$dir"/*-kompiled
+    fi
+    hasKompiledDir=true
+  done
+fi
+
+if ! $hasKompiledDir; then
+  error 1 'Could not find a compiled definition. Use --definition to specify one.'
+fi
+
+if [ ! -f "$kompiledDir/syntaxDefinition.kore" ]; then
+  (
+  if [ "$verbose" = true ]; then
+    set -x
+  fi
+  execute "$KAST_UTIL" --input kore "${ORIG_ARGV[@]}" "$verboseFlag"
+  exit $?
+  )
+fi
+
+if [[ "$input_file" == "-" ]]; then
+  input_file=/dev/stdin
+elif [ ! -r "$input_file" ]; then
+  error 1 "Could not open file: $input_file"
+fi
+
+if [ "$outputFile" = "-" ]; then
+  outputFile=/dev/stdout
+fi
+
+(
+if [ "$verbose" = true ]; then
+  set -x
+fi
+case "$outputMode" in
+  pretty)
+  output "$outputFile" kprint "$kompiledDir" "$input_file" "$color" "$filterSubst"
+  ;;
+
+  kore)
+  output "$outputFile" catNewline "$input_file"
+  ;;
+
+  none)
+  ;;
+
+  *)
+  execute "$KAST_UTIL" --input kore "${ORIG_ARGV[@]}"
+  ;;
+esac
+)
+
+
+FILE /nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/kast SHA256 49464094561435eb94f883dc23442b128e6e2b5ac1bf2b85d88cd514a1d429e5
+#!/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/sh
+"$(dirname "$0")/../lib/kframework/k" -kast "$@"
+
+
+KRUN source excerpts lines460..end (input/parser/backend/output paths)
+if [[ "${#ARGV[@]}" -gt 1 ]]; then
+  error 1 'Cannot pass more than one configuration variable as a positional argument.'
+fi
+
+# Compute kompiled directory
+hasKompiledDir=false
+if [[ -d $kompiledDir ]]; then
+  hasKompiledDir=true
+else
+  for file in "$dir"/*-kompiled; do
+    [ ! -d "$file" ] && continue
+    kompiledDir=$file
+    if $hasKompiledDir; then
+      error 1 'Multiple compiled definitions found in the current working directory: ' "$dir"/*-kompiled
+    fi
+    hasKompiledDir=true
+  done
+fi
+
+if ! $hasKompiledDir; then
+  error 1 'Could not find a compiled definition. Use --definition to specify one.'
+fi
+
+# Process configuration variables
+hasArgv=false
+if [[ "${#ARGV[@]}" -gt 0 ]]; then
+  config_var_PGM="${ARGV[0]}"
+  hasArgv=true
+  params+=("PGM")
+fi
+
+mainModuleName=$(cat "$kompiledDir"/mainModule.txt)
+
+if [ "$outputFile" = "-" ]; then
+  outputFile=/dev/stdout
+fi
+
+# verify and parse config variables/cmd line parameters
+source "$kompiledDir/configVars.sh"
+if $term; then
+  if [ -z "${parser_PGM+unset}" ]; then
+    execute kparse --definition "$kompiledDir" --module "$mainModuleName" "$config_var_PGM" > "$input_file"
+  else
+    execute $parser_PGM "$config_var_PGM" > "$input_file"
+  fi
+else
+  for configVar in ${declaredConfigVars[@]+"${declaredConfigVars[@]}"}; do
+    if [[ $configVar != "IO" && $configVar != "STDIN" && ! ${params[@]+"${params[@]}"} =~ "$configVar" ]]; then
+      error 1 "Configuration variable missing: \$$configVar. Use -c$configVar=<Value> in the command line to set."
+    fi
+  done
+  for name in ${params[@]+"${params[@]}"}; do
+    parser_name="parser_$name"
+    config_name="config_var_$name"
+    tempFile="$(mktemp ${tempDir}/tmp.in."$name".XXXXXXXXXX)"
+    tempFiles+=("$tempFile")
+    if [[ ! ${declaredConfigVars[@]+"${declaredConfigVars[@]}"} =~ "$name" ]]; then
+      if [ "$name" = "PGM" ]; then
+        error 1 "Configuration variable \$PGM does not exist. Do not pass a positional argument to $KRUN."
+      else
+        error 1 "Configuration variable \$$name does not exist. Do not pass -c$name to $KRUN."
+      fi
+    fi
+    indirectName="declaredConfigVar_$name"
+    indirectModuleName="declaredConfigVarModule_$name"
+    sortName=${!indirectName}
+    moduleName=${!indirectModuleName:-unset}
+    if [ -z "${!parser_name+unset}" ]; then
+      if [ "$name" = "PGM" ]; then
+        if $hasArgv; then
+          parser=(kparse --definition "$kompiledDir")
+        else
+          parser=(kparse --definition "$kompiledDir" --module "$mainModuleName")
+        fi
+      elif [ -z "${!indirectModuleName+unset}" ]; then
+        parser=(kparse --sort "$sortName" --definition "$kompiledDir" --module "$mainModuleName")
+      else
+        parser=(kparse --sort "$sortName" --definition "$kompiledDir" --module "$moduleName")
+      fi
+    else
+      parser=("${!parser_name}")
+    fi
+    execute ${parser[@]+"${parser[@]}"} "${!config_name}" > "$tempFile"
+    configVars="$configVars -c $name $(basename $tempFile) $sortName korefile"
+  done
+  if [[ ${declaredConfigVar_IO+unset} && "${declaredConfigVar_IO}" = "String" ]]; then
+    if $io; then
+      ioText=on
+    else
+      ioText=off
+    fi
+    configVars="$configVars -c IO \dv{SortString{}}(\"$ioText\") String kore"
+  fi
+  if [[ ${declaredConfigVar_STDIN+unset} && "${declaredConfigVar_STDIN}" = "String" ]]; then
+    if $io; then
+      stdinText=
+    else
+      unescaped=$(</dev/stdin)
+      stdinText=$(awk 'BEGIN {for(n=0;n<256;n++)ord[sprintf("%c",n)]=n} {text = text $0 ORS} END {split(text, chars, ""); for (i=1; i<=length(text); i++) { if (chars[i] == "\"") { printf("%s", "\\\"") } else if (chars[i] == "\\") { printf("%s", "\\\\") } else if (chars[i] == "\n") { printf("%s", "\\n") } else if (chars[i] == "\t") { printf("%s", "\\t") } else if (chars[i] == "\r") { printf("%s", "\\r") } else if (chars[i] == "\f") { printf("%s", "\\f") } else if (ord[chars[i]] >= 32 && ord[chars[i]] < 127) { printf("%s", chars[i]) } else { printf("\\x%02x", ord[chars[i]]) } } }' <<< "$unescaped")
+    fi
+    stdinFile="$(mktemp ${tempDir}/tmp.stdin.XXXXXXXXXX)"
+    tempFiles+=("$stdinFile")
+    printf '\dv{SortString{}}(\"%s\")\n' "$stdinText" > "$stdinFile"
+    configVars="$configVars -c STDIN $(basename $stdinFile) String korefile"
+  fi
+  abs_kompiled_dir=`echo "$(cd "$(dirname "$kompiledDir")"; pwd -P)/$(basename "$kompiledDir")"`
+  # llvm-krun creates temp files in the cwd so execute it in $tempDir instead
+  (cd $tempDir; execute llvm-krun $configVars --directory "$abs_kompiled_dir" $llvm_krun_flags --dry-run -nm -o "$(basename $input_file)")
+fi
+
+# Expand macros
+if $expandMacros; then
+  execute kore-expand-macros "$kompiledDir" "$input_file" > "$expanded_input_file"
+else
+  execute cp "$input_file" "$expanded_input_file"
+fi
+backendName=$(cat "$kompiledDir"/backend.txt)
+# Invoke backend
+if [ "$backendName" = "llvm" ]; then
+  interpreter_flags=
+
+  if $statistics; then
+    interpreter_flags=--statistics
+  fi
+
+  if $executeToBranch; then
+    interpreter_flags+=" --execute-to-branch"
+  fi
+
+  if $proofHint; then
+    interpreter_flags+=" --proof-output"
+  fi
+
+  keepTempsIfDryRun "$tempDir" "$expanded_input_file" "$kore_output"
+  if $search || [ -n "$pattern" ]; then
+    if [ ! -f "$kompiledDir/search" ] || [ ! -x "$kompiledDir/search" ]; then
+      error 1 'You must pass --enable-search to kompile to be able to use krun --search with the LLVM backend'
+    fi
+    patternFile="$(mktemp ${tempDir}/tmp.pattern.XXXXXXXXXX)"
+    tempFiles+=("$patternFile")
+    if [ -z "$pattern" ]; then
+      echo '\and{SortGeneratedTopCell{}}(VarResult:SortGeneratedTopCell{},\top{SortGeneratedTopCell{}}())' > "$patternFile"
+    else
+      execute k-compile-search-pattern --definition "$kompiledDir" "$pattern" > "$patternFile"
+    fi
+
+    if [[ $searchType != "FINAL" ]]; then
+      error 1 'Backend llvm does not support --search-all, --search-one-or-more-steps, or --search-one-step yet.'
+    fi
+    disjunctFile="$(mktemp ${tempDir}/tmp.disjunction.XXXXXXXXXX)"
+    tempFiles+=("$disjunctFile")
+    if $search; then
+      llvmCommand="$kompiledDir/search"
+      if [ -n "$bound" ]; then
+        interpreter_flags="$interpreter_flags --bound $bound"
+      fi
+    else
+      llvmCommand="$kompiledDir/interpreter"
+    fi
+    set +e
+    execute $cmdprefix "$llvmCommand" "$expanded_input_file" "${depth:--1}" "$disjunctFile" $interpreter_flags
+    result=$?
+    set -e
+    if [ -z "$noPattern" ]; then
+      execute kore-match-disjunction "$kompiledDir/definition.kore" --module "$mainModuleName" --disjunction "$disjunctFile" --match "$patternFile" --output "$kore_output"
+    else
+      execute cp "$disjunctFile" "$kore_output"
+    fi
+  else
+    set +e
+    execute $cmdprefix "$kompiledDir/interpreter" "$expanded_input_file" "${depth:--1}" "$kore_output" $interpreter_flags
+    result=$?
+    set -e
+  fi
+elif [ "$backendName" = "haskell" ] ; then
+  # Haskell backend
+  koreExecFlags=
+  depthFlags=
+  defFile="definition.kore"
+  if [ -f "$kompiledDir/haskellDefinition.bin" ]; then
+    defFile="haskellDefinition.bin"
+  fi
+
+  if [ -n "$depth" ]; then
+    depthFlags="--depth $depth"
+  fi
+  if [ -n "$smtPrelude" ]; then
+    koreExecFlags="$koreExecFlags --smt-prelude $smtPrelude"
+  fi
+  if [ -n "$smt" ]; then
+    koreExecFlags="$koreExecFlags --smt $smt"
+  fi
+  if [ -n "$smtTimeout" ]; then
+    koreExecFlags="$koreExecFlags --smt-timeout $smtTimeout"
+  fi
+  if $executeToBranch; then
+    koreExecFlags="$koreExecFlags --execute-to-branch"
+  fi
+  if $search || [ -n "$pattern" ]; then
+    patternFile="$(mktemp ${tempDir}/tmp.pattern.XXXXXXXXXX)"
+    tempFiles+=("$patternFile")
+    if [ -z "$pattern" ]; then
+      echo '\and{SortGeneratedTopCell{}}(VarResult:SortGeneratedTopCell{},\top{SortGeneratedTopCell{}}())' > "$patternFile"
+    else
+      k-compile-search-pattern --definition "$kompiledDir" "$pattern" > "$patternFile"
+    fi
+
+    if ! $search; then
+      final_input="$(mktemp ${tempDir}/tmp.in.XXXXXXXXXX)"
+      tempFiles+=("$final_input")
+      keepTempsIfDryRun "$tempDir" "$final_input" "$expanded_input_file" "$kore_output"
+      set +e
+      execute $cmdprefix "$haskellCmd" "$kompiledDir/$defFile" --module "$mainModuleName" --pattern "$expanded_input_file" --output "$final_input" $koreExecFlags
+      set -e
+      depthFlags="--depth 0"
+    else
+      final_input="$expanded_input_file"
+    fi
+
+    if [ -n "$bound" ]; then
+      koreExecFlags="$koreExecFlags --bound $bound"
+    fi
+    keepTempsIfDryRun "$tempDir" "$final_input" "$patternFile" "$kore_output"
+    set +e
+    execute $cmdprefix "$haskellCmd" "$kompiledDir/$defFile" --module "$mainModuleName" --pattern "$final_input" --output "$kore_output" --searchType "$searchType" --search "$patternFile" $koreExecFlags $depthFlags
+    result=$?
+    set -e
+  else
+    keepTempsIfDryRun "$tempDir" "$expanded_input_file" "$kore_output"
+    set +e
+    execute $cmdprefix "$haskellCmd" "$kompiledDir/$defFile" --module "$mainModuleName" --pattern "$expanded_input_file" --output "$kore_output" $koreExecFlags $depthFlags
+    result=$?
+    set -e
+  fi
+else
+  error 1 "Backend $backendName not supported."
+fi
+
+if $proofHint; then
+  output "$outputFile" execute cat "$kore_output"
+  exit ${result}
+fi
+
+# Unparsing
+if ! $dryRun; then
+  if [ -f "$kore_output" ]; then
+    if $statistics; then
+      steps=$(head -1 "$kore_output")
+      echo "[$steps steps]"
+      kore_output2="$(mktemp ${tempDir}/tmp.out.XXXXXXXXXX)"
+      tail -1 "$kore_output" > "$kore_output2"
+      mv "$kore_output2" "$kore_output"
+    fi
+
+    output "$outputFile" execute kore-print --definition "$kompiledDir" --output "$outputMode" "$kore_output" --color "$colorOpt" $filterSubst
+  else
+    error ${result} "Backend crashed during rewriting with exit code ${result}"
+  fi
+fi
+
+exit ${result}
+
+Existing canonical runner excerpt
+    if type(launcher) is not list or len(launcher) != 2 or launcher[1] != str(FOREMAN_LAUNCHER):
+        raise ValueError("runner must use the existing Foreman launcher")
+    if not Path(launcher[0]).is_absolute() or not os.access(launcher[0], os.X_OK):
+        raise ValueError("launcher executable must be absolute")
+    if str(FOREMAN_LAUNCHER) not in plan["launcherFiles"]:
+        raise ValueError("Foreman bytes are not hash-bound")
+    _check_files(root, plan["launcherFiles"], launcher[0])
+    for key, low, high in (("timeoutSeconds", 1, 1800), ("graceSeconds", 1, 10), ("outputLimitBytes", 256, 1048576)):
+        if type(plan[key]) is not int or not low <= plan[key] <= high:
+            raise ValueError("invalid runner bound: " + key)
+    if type(plan["chargedSeconds"]) is not int or plan["chargedSeconds"] < plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
+        raise ValueError("charge does not cover startup, execution and cleanup")
+    if type(plan["chargeId"]) is not str or not plan["chargeId"].strip():
+        raise ValueError("runner charge identity unavailable")
+    assertion = plan.get("assertion")
+    if action["kind"] == "reproduce":
+        if type(assertion) is not dict or set(assertion) != {"id", "exitCode", "stdoutSha256"}:
+            raise ValueError("reproducer requires an admitted behavioral assertion")
+        if type(assertion["id"]) is not str or not assertion["id"].strip():
+            raise ValueError("empty behavioral assertion ID")
+        if type(assertion["exitCode"]) is not int or not 2 <= assertion["exitCode"] <= 123:
+            raise ValueError("behavioral exit must differ from ordinary failure and timeout")
+        if type(assertion["stdoutSha256"]) is not str or len(assertion["stdoutSha256"]) != 64:
+            raise ValueError("behavioral output commitment unavailable")
+    elif assertion is not None:
+        raise ValueError("assertion supplied for a non-reproducer")
+    digest = hashlib.sha256(json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    if campaign["currentAccounting"]["path"] != plan["accountingPath"]:
+        raise ValueError("charge source differs from current campaign accounting")
+    budget = _json(_contained(root, plan["accountingPath"]))
+    charges = budget["charges"] + budget["externalPackageCharges"]
+    matching = [row for row in charges if row.get("id") == plan["chargeId"]]
+    if len(matching) != 1:
+        raise ValueError("exactly one existing debit is required")
+    charge = matching[0]
+    expected = {"seconds": plan["chargedSeconds"], "candidateHash": action["candidate"],
+                "actionId": action["id"], "runnerDigest": digest}
+    if any(charge.get(k) != v for k, v in expected.items()):
+        raise ValueError("existing debit is not bound to this runner/action/candidate")
+    return plan, digest
+
+
+def execute(root, plan, digest, reservation_id):
+    """Observe the actual process; retain bounded output while hashing all bytes."""
+    command = [*plan["launcher"], "--timeout", str(plan["timeoutSeconds"]),
+               "--grace", str(plan["graceSeconds"]), "--require-containment", "strong", "--", *plan["argv"]]
+    started = time.monotonic()
+    proc = subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    selector = selectors.DefaultSelector()
+    streams = {"stdout": bytearray(), "stderr": bytearray()}
+    hashes = {name: hashlib.sha256() for name in streams}
+    sizes = {name: 0 for name in streams}
+    for pipe, name in ((proc.stdout, "stdout"), (proc.stderr, "stderr")):
+        selector.register(pipe, selectors.EVENT_READ, name)
+    limit = plan["outputLimitBytes"]
+    ambiguous = False
+    try:
+        while selector.get_map() or proc.poll() is None:
+            if time.monotonic() - started > plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
+                ambiguous = True
+                os.killpg(proc.pid, signal.SIGKILL)
+                break
+            for key, _ in selector.select(0.1):
+                chunk = os.read(key.fileobj.fileno(), 16384)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                    continue
+                name = key.data
+                hashes[name].update(chunk)
+                sizes[name] += len(chunk)
+                streams[name].extend(chunk[:max(0, limit - len(streams[name]))])
+        ret = proc.wait(timeout=5)
+        # A signal, launcher failure, or namespace signal encoding does not
+        # establish completion. Foreman's confirmed timeout uses exit 124.
+        ambiguous = ambiguous or ret < 0 or ret >= 125
+    finally:
+        selector.close()
+        proc.stdout.close()
+        proc.stderr.close()
+    overflow = any(size > limit for size in sizes.values())
+    assertion = plan.get("assertion")
+    verified = bool(not ambiguous and not overflow and assertion and ret == assertion["exitCode"]
+                    and hashes["stdout"].hexdigest() == assertion["stdoutSha256"])
+    observed = {"actionId": plan["action"]["id"], "candidateHash": plan["action"]["candidate"],
+                "runnerDigest": digest, "chargeId": plan["chargeId"], "reservationId": reservation_id,
+                "argv": command, "exitCode": ret, "elapsedSeconds": time.monotonic() - started,
+                "outputSha256": {name: h.hexdigest() for name, h in hashes.items()}, "outputBytes": sizes,
+                "completionAmbiguous": ambiguous, "outputLimitExceeded": overflow,
+                "behavioralAssertions": [{"assertionId": assertion["id"], "candidateHash": plan["action"]["candidate"],
+                                          "outcome": "defect-observed"}] if verified else []}
+    return {"exitCode": ret, "stdout": streams["stdout"].decode("utf-8", errors="replace"),
+            "stderr": streams["stderr"].decode("utf-8", errors="replace"), "runnerReceipt": observed}
+
+ACTUAL harmless strong-launcher full snapshot observation
+{"exit": 0, "stderr": "foreman-launch: capability=posix_pidns_userns_strong unshare=/usr/bin/unshare flags=--user --map-current-user --pid --mount-proc --fork --kill-child host_pid=126807\nforeman-launch: capability=posix_pidns_userns_strong already_inner host_pid=126807\n", "observation": {"scope": "Harmless Python snapshot reads only; no K, Java, strace or native diagnostic", "files": 506, "bytes": 34262979, "bwrap_sha256": "0abea81db798ebf6b4742ac0664802d97521547a353c2a0dbdc21d76cbbfd2c0", "source_sha256": "0e8c88b473a303ac3c8a7e5bbb6f4f83e5c579bbbf302f5484a73f5a0a89f24e", "pins_sha256": "2a9472f5494fcd56116433de32be20244f5d32ff1aa9176b97349d989395b7ef", "argv_bytes": 119861, "child_source_sha256": "22ba3be6db8ec8ec9256add3a593bb3a9729780a03a87c8a0bf6e12a3e986b2d", "entries_sha256": "de66bb80e4dd2bc4ee23161b0ad9c935432ed3852570522ccc04c3fdc2169fc4", "seconds": 0.5220905309997761, "exit_code": 0, "stdout": "{\"verified_files\": 506, \"read_only_errors\": {\"/home/charl/.kserver\": 30, \"/home/charl/.local\": 30, \"/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/binding.json\": 30}, \"home\": \"/home/charl\", \"cwd\": \"/home/charl/Moriarty\", \"uid\": 1000, \"stack\": [8388608, -1], \"network_connect_errno\": 111, \"nested_userns_errno\": 28, \"cap_eff\": \"CapEff:\\t0000000000000000\", \"pid\": 2, \"fd_count\": 5}\n", "stderr": "", "outer_stack": [8388608, -1]}}
+
+Actual source observation: pwd.getpwuid(1000) returns charl,uid1000,gid1000,home=/home/charl. /etc/passwd and /etc/nsswitch.conf will be hash+host-owner pinned as identity files. Current configVars.sh declares only PGM=ERequest, so original krun STDIN/awk branch is not selected. No Java user.home native canary ran. Private /tmp can contain trusted workload scratch; not every descendant cwd is read-only. Snapshot64MiB is source-byte limit, not whole RSS, and ro-bind-data mounts do not count against HOME tmpfs64MiB.

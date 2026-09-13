@@ -1,0 +1,13 @@
+# Loader conditions: bounded source analysis
+
+C4 is not met by the current launcher. Foreman provides PID/user containment and mount-proc, with no worktree write protection. The compiled directory and inspected ancestors are writable. A read-only bind of original files still shares host inodes and does not prevent external writes.
+
+The smallest existing snapshot primitive is installed bwrap's documented `--ro-bind-data FD DEST`: it copies bytes into a read-only mounted file. A defensible C4 amendment would combine an exact-byte syntaxDefinition.kore snapshot with private, unmodifiable path ancestors at the original absolute path. Protecting all consumed compiled files consistently requires a private snapshot of the 488-file tree (30,309,653 bytes; syntax alone 260,431 bytes). Original files and HOME need not change. Snapshot identities differ and must be recorded. This is a design change, not an already working command.
+
+The existing runner can carry reviewed argv under its existing Foreman launcher; no collector or runner edit is inherently needed. Filesystem setup still needs source/tool commitments, reviewed mount ordering, preserved executable modes, descriptor/memory/temp accounting, nested namespace controls and proof that outside source replacement cannot change the private view. A plain directory ro-bind or preflight hash is insufficient. No bwrap probe was run.
+
+Package inspection does not close Java config loading. Main uses ServiceLoader<KModule> and Jansi startup; the package service descriptors select pinned Haskell and LLVM provider classes. Only KServerFrontEnd in the core K jar contains literal user.home, but dependency jars contain HOME-reading classes. Jansi's loader references native-library paths and temp extraction. Those constants neither prove nor disprove execution of a HOME-reading branch on fixed JSON-to-KORE. Complete startup/provider/selected-parser source or bytecode tracing, or separately reviewed native file-access evidence, remains required before claiming suppression.
+
+C10 has an evidence mismatch: the fixed strace command captures process/signal calls, not openat. It cannot establish absence of HOME file access. Either revise C10 to rely on independently established config suppression and retain process-only crash evidence, or explicitly review broader file tracing with its timing/output/identity consequences. No changed tracing, standalone native probe or new resources follow from either conditional design vote.
+
+Only local source, installed manpage and JAR ZIP/class constants were read; no native command or namespace/network probe was launched. Exact hashes, findings and prospective controls are in loader-condition-analysis.json.

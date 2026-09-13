@@ -157,3 +157,18 @@ The identity-correction worker then changed this comparator, the tests, and this
 The reporting-completion dispatch also timed out with exit124. Its standalone52-test capture does not establish a completed author run. Both identity passes requested Grok4.6 at high effort; their actual serving model identity is unavailable in the terminal receipts.
 
 The root independently completed verify5 with52passing tests, and GPT-6 approved the exact comparator source after independent financial and adversarial checks. A separate root report-closure run again passed52tests. Current command, source hashes and exact captured bytes are in test-evidence.json. These are root and reviewer results; neither timed-out author dispatch is retroactively marked successful. Reports were recovered by the root orchestrator without changing the reviewed comparator, tests or fixtures.
+
+## Retained artifact pointers for the gated suites
+
+Four suites refuse to compile or rebuild. They verify previously retained artifacts and fail closed when the pointer is absent, so they need these environment variables. The paths are machine-local state, outside the repository.
+
+```
+MORIARTY_SWAP_BUILD_RECEIPT=/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json
+MORIARTY_CUSTODY_ARTIFACTS=/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/binding-completion/20260908T084719Z
+```
+
+`MORIARTY_SWAP_BUILD_RECEIPT` serves `test:finalized-state` and `test:compiled-rejection`. The receipt hashes to `3789da217a36cecd5f7603cbbaead32671418da36ecc5c2d20b1709b9577f362`, which is the value `ledger/finalized-financial-state.test.mjs` pins, so a substituted build fails rather than passing quietly.
+
+`MORIARTY_CUSTODY_ARTIFACTS` serves `test:compiled`. Its receipt hashes to `9db3f62ac580a559503fd343dd814bb1e5961229223e9b0ebba05dd954a6d666` and declares the skip-zk custody build that `ledger/compiled-comparison.test.mjs` requires: schema `moriarty.custody-build/1`, `skipZk` true, no generated keys or proofs, and every recorded command exiting zero.
+
+Setting these variables supplies an existing retained build. It does not compile, admit, or fund anything, and it does not close any Compact compilation, Docker or Preview gate.

@@ -1,0 +1,28 @@
+{
+  "review": "independent-opus5-medium-design",
+  "proposal_sha256": "357274c1d9c8429e760db2336c35d9382b1f921fd09cbd5d4d3e9e8ea644b116",
+  "verdict": "ACCEPT",
+  "scope": "Source-design vote only on E04-1 private-HOME bwrap envelope in the existing preflight shim. No native/K/Java/strace admission, no dispatch, no actual-result acceptance. Snapshots are evidence only.",
+  "coverage_assessment": {
+    "both_java_paths": "Yes. Input path (expression-parser.py -> kast/kparse) and output path (kore-print --output json -> kast) are the two Java invocations; the native LLVM $kompiledDir/interpreter is unaffected by HOME. Both Java entries see the same private read-only HOME.",
+    "C4_C10": "Addressed. Absent .kserver/socket + unshare-net defeats nailgun local-socket and default-TCP server reuse (C4); empty $HOME/.local/lib/kframework/java classpath extension forces the direct-java branch of checkJava (C10). K_OPTS/classpath string unchanged.",
+    "no_file_read_tracing": "Confirmed; strace untouched, no new file tracing introduced.",
+    "output_mode_unchanged": "Confirmed; kore-print --output mode and JSON postprocessor selection are unchanged."
+  },
+  "findings": [
+    "F1 (design-adjacent, must gate freeze): The 20s timeout is fixed INCLUDING preflight/setup with zero slack (C7/D1/G60). 506 sequential ro-bind-data mounts + 506 hashes are unmeasured under the real launcher for K/Java; the 0.522s Python probe is explicitly not a bound. If mount/setup wall-time materially erodes compute, the previously-accepted depth5947 run could flip to inconclusive, silently narrowing the sole diagnostic. Require measured setup headroom before freeze.",
+    "F2 (core claim unverified): The decisive property\u2014Java resolving user.home to the private empty-classpath HOME\u2014was never exercised (no Java user.home canary ran; forbidden pending admission). Design is internally consistent but its mechanism rests on getpwuid(1000).pw_dir + pinned /etc/passwd + /etc/nsswitch.conf routing to files, not network/socket userdb absent in the netns. Must be proven at live admission.",
+    "F3: Read-only cwd /home/charl/Moriarty. krun self-mitigates (cd $tempDir for llvm-krun temps), but any K/kast/kore-print tool writing to cwd fails. Verify no selected tool writes to the RO cwd; confirm TMPDIR/mktemp resolve to the writable private /tmp.",
+    "F4: --cap-drop ALL inside the new userns: subsequent strace admission must confirm ptrace of same-uid direct children still works (yama/no-caps) so process/signal capture over the nested PID ns addresses the original K command and descendants.",
+    "F5: Nested PID/user namespaces (Foreman already-inner posix_pidns_userns_strong, then bwrap --unshare-pid --disable-userns): confirm runner killpg/timeout/113/124 and detached-descendant completion still propagate to bwrap-as-init and its subtree; die-with-parent must not mask the runner's containment obligations.",
+    "F6: Residual host surface via --ro-bind / / (host /sys, /run, sockets) is acknowledged as not-a-complete-sandbox. Acceptable for scope, but disclose that only .kserver/.local/net isolation, not full OS confinement, is claimed."
+  ],
+  "implementation_conditions": [
+    "Bind final inventory (506/34262979), exact mount ordering, per-file sealed-fd modes-without-write, and all fixed limits (<=512 files, <=64MiB total source bytes, <=32MiB/file, >=1024 fds) in source/pins/candidate; runner._check_files must still accept only executable+Foreman as external inputs (D03-I5).",
+    "Preserve D03-I1..I5, E04-2..4 and actual-result review; wrapper113 vs interpreter signal/exit must remain distinguishable and disclosed.",
+    "Independent controls must reject every inventory/byte/path/mode/limit/FD/bwrap-hash/argv/env/stack drift, temporal snapshot dependence, missing net isolation, and FD leakage before any K dispatch; mocks do not establish these.",
+    "Measure and record real bwrap setup wall-time under the strong launcher; demonstrate accepted depth5947 completes with margin under the envelope, else REVISE (do not silently change the diagnostic).",
+    "Live admission must run a Java user.home canary confirming empty classpath extension and direct-java selection for BOTH parser and kore-print/kast before any financial/language-ledger gate.",
+    "Charge/timeout/candidate binding changes only via the existing canonical route; fixed memory/temp/FD limits reset no expired budget; design approval does not substitute for admission or raw result review."
+  ]
+}

@@ -1,0 +1,187 @@
+Your scratch candidate09 now matches actual pinned Bash stage PATH. Two independent red failures remain. Return ONLY compact exact replacement JSON {status:"patch",changes:[{path,old,new}],notes:[]}, <=70 changed lines. Root applies relay patch to candidate09. No tools or production execution. Preserve original E04-1 open.
+1. In stage loop you skip hash verification if stage-selected path differs from by_role[name].path. Actual regression substituted a temporary executable as checkJava dirname, changed commandSelections to match, absent from selectedExecutables. verify_selected + verify_wrapper_and_parser accepted and never hashed it. Require every stage selection match a full selectedExecutables entry by absolute path; reject missing or ambiguous conflicting bindings. Verify its expected bytes and resolved/symlink selection. Existing verify_selected + verify_requisites protects all listed entries; do not let a command outside those entries pass. Support legitimate per-stage different paths via separately listed selected role, with unique role names; never weaken selected ownership. Do not rehash all Nix roots or change trust schema.
+2. setenvNativeDirMissing bool conversion accepts strings false,true and integer1. Require this field explicitly present and type exactly bool before existence comparison. Derived native dir equality remains mandatory.
+Independent tests and exact current function follow. No broad rewrite/test creation needed; root reruns existing six independent tests (4 pass/2 red) then normal suite. Original patches08+09 are scratch only, canonical still07.
+
+CURRENT FUNCTION
+def verify_wrapper_and_parser(pins: dict) -> None:
+    krun = next(item for item in pins["selectedExecutables"] if item["role"] == "krun")
+    dirs = WRAPPER_PATH_RE.findall(Path(krun["path"]).read_text())
+    if dirs != pins["wrapperPathDirs"]:
+        raise PreflightError("WRAPPER_PATH_DRIFT")
+    missing = set(pins.get("wrapperPathDirsMissing") or [])
+    for directory in dirs:
+        present = Path(directory).is_dir()
+        if directory in missing:
+            if present:
+                raise PreflightError("WRAPPER_PATH_UNEXPECTED", directory)
+        elif not present:
+            raise PreflightError("WRAPPER_PATH_MISSING", directory)
+    by_role = {}
+    for item in pins["selectedExecutables"]:
+        role = item.get("role")
+        if role in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+        by_role[role] = item
+    for role in REQUIRED_HELPERS + ("java", "llvm", "kore"):
+        if role not in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+    kast_item = by_role["kast"]
+    kast_dirs = WRAPPER_PATH_RE.findall(Path(kast_item["path"]).read_text())
+    if kast_dirs != pins["wrapperPathDirs"]:
+        raise PreflightError("WRAPPER_PATH_DRIFT", "kast")
+    wrapped = pins["childEnv"]["PATH"].split(":")
+    for directory in pins["wrapperPathDirs"]:
+        wrapped = prepend_path_dir(wrapped, directory)
+    unwrapped_dir = str(Path(by_role["krun-unwrapped"]["path"]).parent)
+    krun_stage = [unwrapped_dir] + wrapped
+    kast_stage = list(krun_stage)
+    for directory in kast_dirs:
+        kast_stage = prepend_path_dir(kast_stage, directory)
+    k_lib_dir = str(Path(krun["path"]).parent.parent / "lib" / "kframework")
+    setenv_bin = k_lib_dir + "/../../bin"
+    native = k_lib_dir + "/native/linux64"
+    if pins["setenvNativeDir"] != native:
+        raise PreflightError("PINS_BOUNDS", "setenvNativeDir")
+    if Path(native).is_dir() == bool(pins.get("setenvNativeDirMissing")):
+        raise PreflightError("SETENV_NATIVE", native)
+    checkjava_stage = [setenv_bin] + kast_stage
+    stages = {"krun": krun_stage, "kast": kast_stage, "setenv": kast_stage, "checkJava": checkjava_stage}
+    selections = pins["commandSelections"]
+    if type(selections) is not dict or set(selections) != set(STAGE_COMMANDS):
+        raise PreflightError("PINS_SCHEMA", "commandSelections")
+    for stage, names in STAGE_COMMANDS.items():
+        pinned_stage = selections.get(stage)
+        if type(pinned_stage) is not dict or set(pinned_stage) != set(names):
+            raise PreflightError("PINS_SCHEMA", stage)
+        for name in names:
+            resolved = resolve_command(name, stages[stage])
+            expected = pinned_stage[name]
+            if resolved is None or str(resolved) != expected:
+                raise PreflightError("COMMAND_SELECTION", stage + ":" + name)
+            item = by_role.get(name)
+            if item is not None and item["path"] == expected and sha256_file(resolved) != item["sha256"]:
+                raise PreflightError("PIN_MISMATCH", name)
+    for role, default in (("llvm", "llvm-krun"), ("kore", "kore-print")):
+        item = by_role[role]
+        resolved = resolve_command(item.get("command", default), stages["krun"])
+        if resolved is None or str(resolved) != item["path"] or sha256_file(resolved) != item["sha256"]:
+            raise PreflightError("COMMAND_SELECTION", role)
+    parser = next(item for item in pins["retained"] if item["role"] == "parser")
+    shebang = pins["parserShebang"]
+    if Path(parser["path"]).read_text().splitlines()[0] != shebang["line"]:
+        raise PreflightError("PARSER_SHEBANG")
+    resolved = resolve_command(shebang["argument"], stages["krun"])
+    if resolved is None or str(resolved) != shebang["resolvedOnWrapperPath"]:
+        raise PreflightError("PARSER_PYTHON", str(resolved))
+    if str(resolved.resolve()) != shebang["resolvedTarget"]:
+        raise PreflightError("PARSER_PYTHON_TARGET")
+    if sha256_file(resolved) != shebang["sha256"]:
+        raise PreflightError("PIN_MISMATCH", "parser-python")
+
+
+
+REGRESSION
+#!/usr/bin/env python3
+"""Scratch candidate09 regression; harmless Bash PATH only, no K/native tools."""
+from pathlib import Path
+import copy,hashlib,importlib.util,json,os,subprocess,tempfile,unittest
+from unittest.mock import patch
+O=Path(__file__).resolve().parent
+R=O.parents[3]
+S=O/'candidate-source-09.py'
+spec=importlib.util.spec_from_file_location('candidate09',S);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+base=json.loads((R/'.moriarty-dev/k-macro05-trace106-pins.json').read_text())
+old=json.loads((O/'path-stage-reproducer-08.json').read_text())
+# Execute ONLY already recorded PATH assignments and printf, not sourced loaders.
+run=subprocess.run(old['argv'],env={'PATH':base['childEnv']['PATH'],'HOME':os.environ['HOME'],'LANG':'C.UTF-8'},capture_output=True,text=True,check=True)
+actual={line.split('=',1)[0]:line.split('=',1)[1].split(':') for line in run.stdout.splitlines()}
+stages={'krun':actual['krun'],'kast':actual['kast'],'setenv':actual['kast'],'checkJava':actual['checkJava']}
+pins=copy.deepcopy(base)
+pins['setenvNativeDir']=actual['setenv'][0]
+pins['setenvNativeDirMissing']=True
+byrole={i['role']:i for i in pins['selectedExecutables']}
+for role,command in [(n,n) for n in m.REQUIRED_HELPERS+('java',)]+[('llvm','llvm-krun'),('kore','kore-print')]:
+ p=m.resolve_command(command,stages['krun']);assert p is not None
+ item={'role':role,'command':command,'path':str(p),'sha256':sha(p),'resolvedTarget':str(p.resolve())}
+ if p.is_symlink():item['symlinkTarget']=os.readlink(p)
+ if role not in byrole:pins['selectedExecutables'].append(item)
+ else:byrole[role].update(item)
+for item in pins['selectedExecutables']:
+ item['resolvedTarget']=str(Path(item['path']).resolve())
+pins['commandSelections']={stage:{name:str(m.resolve_command(name,dirs)) for name in m.STAGE_COMMANDS[stage]} for stage,dirs in stages.items()}
+obs={}
+class Regression(unittest.TestCase):
+ def test_actual_bash_stage_paths_match_candidate(self):
+  seen=[];original=m.resolve_command
+  def track(n,dirs):seen.append((n,list(dirs)));return original(n,dirs)
+  with patch.object(m,'resolve_command',track):m.verify_wrapper_and_parser(copy.deepcopy(pins))
+  cursor=0
+  for stage,names in m.STAGE_COMMANDS.items():
+   self.assertEqual([p for _,p in seen[cursor:cursor+len(names)]],[stages[stage]]*len(names),stage);cursor+=len(names)
+  obs['actualStagePathsMatch']=True
+ def test_first_duplicate_only_wrapper_prepend_matches_bash(self):
+  directory=pins['wrapperPathDirs'][0]
+  block=old['argv'][4].split('export PATH\n',1)[0]+'export PATH\nprintf "%s" "$PATH"'
+  incoming=[directory,'/usr/bin',directory,'/bin']
+  result=subprocess.run([old['argv'][0],'--noprofile','--norc','-c',block],env={'PATH':':'.join(incoming)},capture_output=True,text=True,check=True)
+  self.assertEqual(m.prepend_path_dir(incoming,directory),result.stdout.split(':'))
+  obs['firstDuplicateSemanticsMatch']=True
+ def test_stage_selected_uncommitted_helper_rejected(self):
+  with tempfile.TemporaryDirectory(prefix='e04-2-09-') as raw:
+   candidate=Path(raw)/'dirname';candidate.write_text('#!/bin/sh\nexit 0\n');candidate.chmod(0o755)
+   mutated=copy.deepcopy(pins);mutated['commandSelections']['checkJava']['dirname']=str(candidate)
+   original=m.resolve_command
+   def select(name,dirs):
+    if name=='dirname' and dirs==stages['checkJava']:return candidate
+    return original(name,dirs)
+   hashed=[];original_hash=m.sha256_file
+   def hashing(path):hashed.append(str(path));return original_hash(path)
+   with patch.object(m,'resolve_command',select),patch.object(m,'sha256_file',hashing):
+    error=None
+    try:m.verify_selected(mutated);m.verify_wrapper_and_parser(mutated)
+    except m.PreflightError as exc:error=exc.code
+   obs['uncommittedStageSelection']={'rejected':error is not None,'error':error,'selectedPathHasEntry':any(i['path']==str(candidate) for i in mutated['selectedExecutables']),'selectedPathHashed':str(candidate) in hashed,'mechanism':'Mocked resolver for checkJava dirname only; actual temporary executable file never executed. Both real verify_selected and verify_wrapper_and_parser called.'}
+   self.assertIsNotNone(error,'uncommitted stage helper accepted without bytes/symlink/ownership binding')
+ def test_non_boolean_native_missing_rejected(self):
+  accepted=[]
+  for value in ['false','true',1,[],{}]:
+   mutated=copy.deepcopy(pins);mutated['setenvNativeDirMissing']=value
+   try:m.verify_wrapper_and_parser(mutated)
+   except m.PreflightError:continue
+   accepted.append(value)
+  obs['malformedNativeMissingAccepted']=accepted
+  self.assertEqual(accepted,[])
+ def test_present_native_expectation_and_changed_native_path_rejected(self):
+  for value in [False,None]:
+   mutated=copy.deepcopy(pins);mutated['setenvNativeDirMissing']=value
+   with self.assertRaises(m.PreflightError):m.verify_wrapper_and_parser(mutated)
+  mutated=copy.deepcopy(pins);mutated['setenvNativeDir']='/tmp/uncommitted-native'
+  with self.assertRaises(m.PreflightError):m.verify_wrapper_and_parser(mutated)
+ def test_real_helpers_have_valid_host_link_and_target_binding(self):
+  own=json.loads((R/'.moriarty-dev/k-macro05-trace106-ownership.json').read_text())
+  entries=m.load_host_evidence(own)
+  _,uid=m.read_namespace_mapping(own)
+  checked=[]
+  for item in pins['selectedExecutables']:
+   if item['role'] not in m.REQUIRED_HELPERS+('java','llvm','kore'):continue
+   for path in {item['path'],str(Path(item['path']).resolve())}:
+    m.verify_ownership(path,entries,uid,own['hostRootUid']);checked.append(path)
+  obs['actualHostOwnershipChecks']=len(checked)
+ def test_bound_helper_hash_and_symlink_drift_rejected(self):
+  for field,value in [('sha256','0'*64),('symlinkTarget','not-the-real-link'),('resolvedTarget','/not/the/target')]:
+   mutated=copy.deepcopy(pins);item=next(i for i in mutated['selectedExecutables'] if i['role']=='dirname');item[field]=value
+   with self.assertRaises(m.PreflightError):m.verify_selected(mutated)
+
+if __name__=='__main__':
+ result=unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Regression))
+ own=json.loads((R/'.moriarty-dev/k-macro05-trace106-ownership.json').read_text());host=json.loads(Path(own['hostEvidencePath']).read_text());entries={i['path']:i for i in host['entries']}
+ helpers=[]
+ for item in pins['selectedExecutables']:
+  if item['role'] not in m.REQUIRED_HELPERS+('java','llvm','kore'):continue
+  p=Path(item['path']);helpers.append({'role':item['role'],'path':str(p),'resolvedTarget':str(p.resolve()),'sha256':sha(p),'symlinkTarget':os.readlink(p) if p.is_symlink() else None,'directHostEvidence':str(p) in entries,'targetHostEvidence':str(p.resolve()) in entries,'hostWritable':os.access(p,os.W_OK)})
+ report={'kind':'LL01-independent-E04-2-regression/09','testsRun':result.testsRun,'failures':[{'test':str(t),'trace':s} for t,s in result.failures],'errors':[{'test':str(t),'trace':s} for t,s in result.errors],'observations':obs,'actualBashPaths':actual,'helperObservations':helpers,'candidateSHA256':sha(S),'patchSHA256':sha(O/'author-patch-09.json'),'scope':'Scratch candidate functions and actual harmless pinned Bash PATH statements. No K, Java, strace, native diagnostic or guarded dispatch. Synthetic pins generated in memory from real helper observations; not adopted manifests or fabricated host evidence. Ownership coverage is inspected actual evidence membership, not refreshed admission. No canonical source edits.','requiredCorrection':['Every commandSelections path must map to a required selectedExecutables entry by path (role or stage-specific role may differ). Enforce bytes, exact symlink/non-symlink and resolved target binding; every such entry must traverse full host link/target ownership checks. Do not skip checks when by_role[name].path differs.','Require setenvNativeDirMissing as an explicit bool and enforce reviewed fixed missing=True policy here; reject a non-directory existing file or dangling symlink, not merely is_dir=False.','Turn09 setenv means pre-checkJava uname/dirname phase, whereas earlier reproducer setenv means post-native prepend. Name both phases unambiguously and cover later commands. REQUIRED_HELPERS still omits awk required by Opus C3; recheck actual reachable helper set.']}
+ (O/'independent-e04-2-regression-09.json').write_text(json.dumps(report,indent=2)+'\n')
+ print(json.dumps({'testsRun':result.testsRun,'failures':len(result.failures),'errors':len(result.errors),'observations':obs}))
+ raise SystemExit(0 if result.wasSuccessful() else 1)

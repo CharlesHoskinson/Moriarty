@@ -1,0 +1,590 @@
+You are the selected Grok 4.6 author for a bounded Moriarty hook repair. Parent loaded moriarty-dev skill and CLI status. Current user says fix warning "Moriarty hook input or records unavailable; use guarded CLI status/run. Host coverage remains unverified." No campaign dispatch or tools are needed. Parent independently reproduced: valid PostToolUse with 9000 character tool_response warns, small inputs work, because INPUT_LIMIT=8192. Implement smallest correction, returning JSON only with a files array of {path,content}, complete replacement file bytes for changed files. Do not edit hook.py unless necessary. Expected behavior independently defined by parent: accept valid normal host envelopes including 64KiB tool input and 1MiB output; retain finite UTF8 byte input budget (choose 8MiB); reject over-budget, invalid JSON, non-object, invalid UTF8/cwd before repository access; unchanged output cap, deadline, no explicit allow, Stop shape and dispatch denials. Keep a diagnostic for truly invalid/oversized inputs; make input-size diagnostic precise if simple without weakening existing other diagnostics. Add focused regression cases for valid large PostToolUse, valid large PreToolUse preserving a deny on registered argv, and over-limit/multibyte input using constant rather than old literal 8192. Parent will apply tests first and verify failure, then apply source. Read full supplied current source and tests. No need to read repo instructions via tools. Return compact JSON only, no markdown, no reasoning, no tools.
+
+FILE plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py
+"""Conservative JSON wire contract shared by supported hook hosts.
+
+The host owns permissions. Absence of a decision is the only permitted-call
+response we emit; Stop uses common output only. No host version guessing.
+"""
+import json
+
+EVENTS = frozenset({"SessionStart", "PreToolUse", "PostToolUse", "Stop"})
+INPUT_LIMIT = 8192
+OUTPUT_LIMIT = 2048
+DIAGNOSTIC = (
+    "Moriarty hook input or records unavailable; use guarded CLI status/run. "
+    "Host coverage remains unverified."
+)
+
+
+def supported_event(value):
+    return isinstance(value, str) and value in EVENTS
+
+
+def output(event, **fields):
+    if event == "Stop" or not supported_event(event):
+        return {}
+    return {"hookSpecificOutput": {"hookEventName": event, **fields}}
+
+
+def diagnostic(event):
+    return {**output(event), "systemMessage": DIAGNOSTIC}
+
+
+def read_payload(stream):
+    """Read at most limit+1 bytes; reject damaged input before repository work."""
+    raw = getattr(stream, "buffer", stream).read(INPUT_LIMIT + 1)
+    if isinstance(raw, str):  # StringIO/in-process callers, not host stdin.
+        raw = raw.encode("utf-8")
+    if len(raw) > INPUT_LIMIT:
+        raise ValueError("hook input exceeds byte limit")
+    text = raw.decode("utf-8")
+    payload = json.loads(text) if text.strip() else {}
+    if not isinstance(payload, dict):
+        raise ValueError("hook input must be an object")
+    if "cwd" in payload:
+        cwd = payload["cwd"]
+        if not isinstance(cwd, str) or not cwd or "\x00" in cwd:
+            raise ValueError("invalid hook cwd")
+        cwd.encode("utf-8")
+    return payload
+
+
+def serialize(response):
+    """Keep denial semantics even when escaped JSON exceeds the byte budget."""
+    response = dict(response)
+    inner = dict(response.get("hookSpecificOutput", {}))
+    if "hookSpecificOutput" in response:
+        response["hookSpecificOutput"] = inner
+    for owner, key, limit in ((inner, "additionalContext", 1300),
+                              (inner, "permissionDecisionReason", 350),
+                              (response, "systemMessage", 180)):
+        if isinstance(owner.get(key), str):
+            owner[key] = owner[key].encode("utf-8", errors="replace")[:limit].decode("utf-8", errors="ignore")
+    # ASCII JSON also works under non-UTF8 host stdout encodings.
+    text = json.dumps(response, ensure_ascii=True, separators=(",", ":"))
+    if len(text.encode("ascii")) + 1 <= OUTPUT_LIMIT:
+        return text
+    if inner.get("permissionDecision") == "deny":
+        response = output("PreToolUse", permissionDecision="deny",
+                          permissionDecisionReason="Moriarty denied this action; use CLI status for details.")
+    else:
+        response = {"systemMessage": "Moriarty hook output exceeded bound; use CLI status."}
+    return json.dumps(response, separators=(",", ":"))
+
+FILE plugins/moriarty-dev/scripts/moriarty_dev/hook.py
+#!/usr/bin/env python3
+"""Read-only lifecycle adapter; the guarded CLI remains the launch gate."""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import signal
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from moriarty_dev.hook_protocol import (
+    diagnostic as _diagnostic,
+    output as _output,
+    read_payload,
+    serialize as _bounded_json,
+    supported_event,
+)
+from moriarty_dev.policy import assess
+from moriarty_dev.records import load_snapshot, read_actions
+from moriarty_dev.store import get_db_path, get_undelivered_txs, make_history_reader
+from moriarty_dev.notifications import notification_line
+
+
+def _last_result(repo):
+    try:
+        data = json.loads((repo / "openspec/moriarty-completion-program.json").read_text(encoding="utf-8"))
+        stages = data.get("reportReconciliation", {}).get("stageAdmission", {}).get("stages", [])
+        done = [row["id"] for row in stages if row.get("status") == "complete"]
+        return "Stages complete: " + (", ".join(done) if done else "none")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return "No readable program stage record"
+
+
+def _pending(repo):
+    rows = get_undelivered_txs(get_db_path(repo), str(repo), timeout=0.05, limit=5)
+    if not rows:
+        return ""
+    text = "Pending public observations: post dedicated notification message, then use deliver.\n"
+    text += "\n".join(notification_line(tx) for tx in rows[:4])
+    if len(rows) > 4:
+        text += "\nMore pending IDs: use report --json."
+    return text
+
+
+def main():
+    event = sys.argv[1] if len(sys.argv) > 1 else ""
+    timer_supported = hasattr(signal, "setitimer")
+    previous_handler = None
+
+    class HookDeadline(BaseException):
+        pass
+
+    def deadline(_signum, _frame):
+        raise HookDeadline()
+
+    try:
+        if timer_supported:
+            previous_handler = signal.signal(signal.SIGALRM, deadline)
+            signal.setitimer(signal.ITIMER_REAL, 0.75)
+        payload = read_payload(sys.stdin)
+        event = event or payload.get("hook_event_name", payload.get("hookEventName", ""))
+        if not supported_event(event):
+            raise ValueError("unsupported hook event")
+        repo = Path(payload.get("cwd", os.getcwd())).resolve()
+        for ancestor in (repo, *repo.parents):
+            if (ancestor / ".moriarty-dev/actions.json").is_file():
+                repo = ancestor
+                break
+            if (ancestor / ".git").exists():
+                break
+        response = handle_event(event, payload, repo)
+    except (HookDeadline, Exception):
+        response = _diagnostic(event)
+    finally:
+        if timer_supported and previous_handler is not None:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+    print(_bounded_json(response))
+
+
+def handle_event(event_name, payload, repo):
+    if not supported_event(event_name):
+        return _diagnostic(event_name)
+    if not (repo / ".moriarty-dev/actions.json").is_file():
+        return _output(event_name)
+    if event_name == "SessionStart":
+        return handle_session_start(repo)
+    if event_name == "PreToolUse":
+        return handle_pre_tool_use(payload, repo)
+    if event_name == "PostToolUse":
+        try:
+            return _output(event_name, additionalContext=_pending(repo))
+        except Exception:
+            return _diagnostic(event_name)
+    return _output(event_name)  # Stop never blocks or invokes another action.
+
+
+def handle_session_start(repo):
+    try:
+        actions = read_actions(str(repo))
+        if not actions:
+            return _output("SessionStart")
+        action = next((row for row in actions if row.get("kind") != "report"), actions[0])
+        snapshot = load_snapshot(str(repo), action["id"], history_reader=make_history_reader(get_db_path(repo), timeout=0.05))
+        lines = [f"Capability: {action.get('requirement')} {action.get('capability')}",
+                 f"Last result: {_last_result(repo)}",
+                 f"Next: {snapshot.get('nextActionId') or action['id']}"]
+        failures = snapshot.get("sameDefectFailures")
+        if isinstance(failures, int) and failures >= 2:
+            lines.append("Blocked: another broad correction; reproduce the unresolved defect.")
+        elif failures is None:
+            lines.append("History unresolved; inspect CLI status before dispatch.")
+        pending = _pending(repo)
+        if pending:
+            lines.append(pending)
+        return _output("SessionStart", additionalContext="\n".join(lines))
+    except Exception:
+        return _diagnostic("SessionStart")
+
+
+def _registered_argv(repo, action):
+    ref = action.get("commandRef", "")
+    if "#" not in ref:
+        return None
+    filename, key = ref.split("#", 1)
+    path = (repo / filename).resolve()
+    if not path.is_relative_to(repo.resolve()):
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        argv = data.get("commands", {}).get(key, {}).get("argv")
+        return argv if isinstance(argv, list) and all(isinstance(value, str) for value in argv) else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def _dispatch_request(tokens):
+    """Recognize simple Python CLI run forms, never arbitrary action mentions.
+
+    Shell composition, wrappers and interpreter code strings are deliberately
+    outside this recognizer. It is a workflow guard, not a shell parser.
+    """
+    if not tokens:
+        return None
+    args = list(tokens)
+    if re.fullmatch(r"python(?:\d+(?:\.\d+)*)?", Path(args[0]).name):
+        args.pop(0)
+        while args and args[0] in ("-B", "-u"):
+            args.pop(0)
+        if args[:2] == ["-m", "moriarty_dev.cli"]:
+            args = args[2:]
+        elif args and Path(args[0]).name == "cli.py":
+            args.pop(0)
+        else:
+            return None
+    elif Path(args[0]).name == "cli.py":
+        args.pop(0)
+    else:
+        return None
+    target_repo = None
+    while args:
+        if args[0] == "--json":
+            args.pop(0)
+        elif args[0] == "--repo" and len(args) > 1:
+            target_repo = args[1]
+            args = args[2:]
+        elif args[0].startswith("--repo="):
+            target_repo = args.pop(0).split("=", 1)[1]
+        else:
+            break
+    if not args or args.pop(0) != "run":
+        return None
+    action_id = None
+    while args:
+        flag = args.pop(0)
+        if flag == "--json":
+            continue
+        if flag == "--action" and args:
+            action_id = args.pop(0)
+        elif flag.startswith("--action="):
+            action_id = flag.split("=", 1)[1]
+        else:
+            return None
+    return (action_id, target_repo) if action_id else None
+
+
+def handle_pre_tool_use(payload, repo):
+    event = "PreToolUse"
+    name = payload.get("tool_name", payload.get("toolName", ""))
+    if not isinstance(name, str):
+        return _diagnostic(event)
+    if name not in ("Bash", "bash", "shell", "exec_command", "execute_command"):
+        return _output(event)
+    try:
+        inp = payload.get("tool_input", payload.get("toolInput", {}))
+        if not isinstance(inp, dict):
+            return _diagnostic(event)
+        value = next((inp[key] for key in ("command", "cmd", "argv") if key in inp), "")
+        tokens = shlex.split(value) if isinstance(value, str) else value
+        if not isinstance(tokens, list) or not all(isinstance(token, str) for token in tokens):
+            return _diagnostic(event)
+        request = _dispatch_request(tokens)
+        if request and request[1] is not None:
+            repo = (Path(payload.get("cwd", repo)) / request[1]).resolve()
+        actions = read_actions(str(repo))
+        for action in actions:
+            argv = _registered_argv(repo, action)
+            if argv and tokens == argv:
+                return _output(event, permissionDecision="deny",
+                               permissionDecisionReason=f"Registered dispatch requires guarded CLI run --action {action['id']}.")
+            if not request or action["id"] != request[0]:
+                continue
+            snapshot = load_snapshot(str(repo), action["id"], history_reader=make_history_reader(get_db_path(repo), timeout=0.05))
+            decision = assess(snapshot, action)
+            if not decision["allow"]:
+                return _output(event, permissionDecision="deny",
+                               permissionDecisionReason=f"Repeated unresolved failure or unavailable admission ({decision.get('reasonCode')}). Run {decision.get('nextActionId') or 'CLI status'}.")
+    except Exception:
+        return _diagnostic(event)
+    return _output(event)
+
+
+if __name__ == "__main__":
+    main()
+
+FILE plugins/moriarty-dev/tests/test_compatibility.py
+"""Package-local contracts: runnable from a copied plugin without repo fixtures."""
+import contextlib
+import io
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+PLUGIN = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PLUGIN / "scripts"))
+from moriarty_dev import cli, hook, records, store
+
+
+class WireCompatibilityTests(unittest.TestCase):
+    def invoke(self, raw, event="PreToolUse"):
+        args = [sys.executable, str(PLUGIN / "scripts/moriarty_dev/hook.py")]
+        if event is not None:
+            args.append(event)
+        result = subprocess.run(args, input=raw, capture_output=True, timeout=2)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, b"")
+        self.assertLessEqual(len(result.stdout), 2048)
+        return json.loads(result.stdout)
+
+    def test_invalid_inputs_produce_common_diagnostics(self):
+        for raw in (b"not-json", b"[]", b"null", b"\xff", b'{"x":"' + b"x" * 8192 + b'"}',
+                    json.dumps({"cwd": 3}).encode(), json.dumps({"cwd": ""}).encode()):
+            with self.subTest(raw=raw[:60]):
+                response = self.invoke(raw)
+                self.assertIn("systemMessage", response)
+                self.assertNotIn("permissionDecision", response.get("hookSpecificOutput", {}))
+
+    def test_unknown_or_invalid_events_never_leak_into_envelope(self):
+        for event in (None, 1, {}, [], "FutureEvent", ""):
+            with self.subTest(event=event):
+                response = self.invoke(json.dumps({"hook_event_name": event}).encode(), event=None)
+                self.assertIn("systemMessage", response)
+                self.assertNotIn("hookSpecificOutput", response)
+
+    def test_input_limit_counts_utf8_bytes(self):
+        raw = json.dumps({"x": "界" * 3000}, ensure_ascii=False).encode()
+        self.assertLess(len(raw.decode()), 8192)
+        self.assertIn("systemMessage", self.invoke(raw))
+
+    def test_malformed_input_never_calls_repository_handler(self):
+        captured = io.StringIO()
+        with patch.object(sys, "stdin", io.StringIO("[broken")), patch.object(sys, "argv", ["hook.py", "PreToolUse"]), patch.object(hook, "handle_event") as handler, contextlib.redirect_stdout(captured):
+            hook.main()
+        handler.assert_not_called()
+        self.assertIn("systemMessage", json.loads(captured.getvalue()))
+
+    def test_surrogate_in_payload_does_not_break_stdout_encoding(self):
+        response = self.invoke(b'{"cwd":"\\ud800"}')
+        self.assertIn("systemMessage", response)
+
+    def test_stop_and_permitted_pretool_closed_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            raw = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "pwd"}}).encode()
+            self.assertEqual(self.invoke(raw, "Stop"), {})
+            self.assertEqual(self.invoke(raw), {"hookSpecificOutput": {"hookEventName": "PreToolUse"}})
+
+
+class DispatchRecognitionTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.action = {"id": "blocked-action", "commandRef": "commands.json#run"}
+
+    def output(self, command):
+        with patch.object(hook, "read_actions", return_value=[self.action]), patch.object(hook, "load_snapshot", return_value={}), patch.object(hook, "assess", return_value={"allow": False, "reasonCode": "AUTHORITY_UNAVAILABLE"}):
+            return hook.handle_pre_tool_use({"tool_name": "Bash", "tool_input": {"command": command}}, self.root)
+
+    def test_mentions_and_non_run_commands_are_not_dispatches(self):
+        for command in ('rg blocked-action actions.json', 'printf "%s\\n" blocked-action',
+                        'echo python3 cli.py run --action blocked-action',
+                        'python3 cli.py review --action blocked-action --receipt review.json',
+                        'python3 cli.py --repo blocked-action status'):
+            with self.subTest(command=command):
+                self.assertNotIn("permissionDecision", self.output(command)["hookSpecificOutput"])
+
+    def test_supported_run_forms_retain_denials(self):
+        for command in ('python3 cli.py run --action blocked-action',
+                        'python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action=blocked-action',
+                        'python3 -m moriarty_dev.cli --json run --action blocked-action',
+                        ['python3', 'cli.py', 'run', '--action', 'blocked-action']):
+            with self.subTest(command=command):
+                self.assertEqual(self.output(command)["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_exact_raw_argv_denial_does_not_require_action_id(self):
+        (self.root / "commands.json").write_text(json.dumps({"commands": {"run": {"argv": ["python3", "driver.py"]}}}))
+        self.assertEqual(self.output("python3 driver.py")["hookSpecificOutput"]["permissionDecision"], "deny")
+
+
+class InstallationCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="moriarty compatibility ")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.home = self.root / "codex home"
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        (self.repo / ".git").mkdir()
+
+    def run_cli(self, command, plugin=PLUGIN, before=False, extra=()):
+        args = [sys.executable, str(plugin / "scripts/moriarty_dev/cli.py"), "--repo", str(self.repo)]
+        args += ["--json", command] if before else [command, "--json"]
+        result = subprocess.run(args + list(extra), env={**os.environ, "CODEX_HOME": str(self.home)}, capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def copy_plugin(self, version):
+        dest = self.home / "plugins/cache/personal/moriarty-dev" / version
+        shutil.copytree(PLUGIN, dest, ignore=shutil.ignore_patterns("__pycache__"))
+        return dest
+
+    def test_source_cached_report_and_doctor_agree(self):
+        cached = self.copy_plugin("old-version")
+        source = self.run_cli("doctor")
+        installed = self.run_cli("doctor", cached)
+        report = self.run_cli("report")
+        self.assertTrue(source["hostInstalled"])
+        self.assertEqual(source["hostCoverage"], installed["hostCoverage"])
+        self.assertEqual(source["hostCoverage"], report["hostCoverage"])
+        self.assertNotEqual(source["hostCoverage"], "host-verified")
+        self.assertEqual(source["compatibility"]["activation"], "unknown")
+
+    def test_json_flag_works_before_and_after_subcommand(self):
+        self.assertEqual(self.run_cli("doctor"), self.run_cli("doctor", before=True))
+
+    def test_expected_old_root_is_diagnosed_without_repair(self):
+        missing = self.home / "plugins/cache/personal/moriarty-dev/missing-version"
+        result = self.run_cli("doctor", extra=("--expected-plugin-root", str(missing)))
+        observation = result["compatibility"]["expectedRoots"][0]
+        self.assertEqual(observation["path"], str(missing))
+        self.assertFalse(observation["usable"])
+        self.assertFalse(missing.exists())
+
+    def test_broken_cached_package_is_not_usable(self):
+        cached = self.copy_plugin("broken-version")
+        (cached / "scripts/moriarty_dev/hook.py").unlink()
+        result = self.run_cli("doctor")
+        self.assertFalse(result["hostInstalled"])
+        observation = result["compatibility"]["cachedRoots"][0]
+        self.assertFalse(observation["usable"])
+        self.assertIn("scripts/moriarty_dev/hook.py", observation["missingFiles"])
+
+    def test_coexisting_versions_execute_registered_commands(self):
+        old = self.copy_plugin("old-version")
+        old_bytes = (old / "scripts/moriarty_dev/hook.py").read_bytes()
+        new = self.copy_plugin("new-version")
+        for plugin in (old, new):
+            definition = json.loads((plugin / "hooks/hooks.json").read_text())
+            for event, groups in definition["hooks"].items():
+                command = groups[0]["hooks"][0]["command"]
+                result = subprocess.run(["bash", "-c", command], input=json.dumps({"cwd": str(self.repo)}), env={**os.environ, "PLUGIN_ROOT": str(plugin), "CLAUDE_PLUGIN_ROOT": "/stale"}, capture_output=True, text=True, timeout=2)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                output = json.loads(result.stdout)
+                self.assertEqual(output, {} if event == "Stop" else {"hookSpecificOutput": {"hookEventName": event}})
+        self.assertEqual(old_bytes, (old / "scripts/moriarty_dev/hook.py").read_bytes())
+        result = self.run_cli("doctor")
+        self.assertEqual(len(result["compatibility"]["cachedRoots"]), 2)
+
+
+class StoreHistoryCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name) / "main"
+        (self.root / ".git").mkdir(parents=True)
+        self.linked = Path(self.tmp.name) / "linked"
+        self.linked.mkdir()
+        gitdir = self.root / ".git/worktrees/linked"
+        gitdir.mkdir(parents=True)
+        (gitdir / "commondir").write_text("../..")
+        (self.linked / ".git").write_text("gitdir: " + str(gitdir))
+        self.db = store.get_db_path(self.root)
+
+    def record_failure(self, root, name):
+        store.record_event(self.db, str(root), "SP01", "cap", "a" * 64, "action", "defect_failure", {"findingId": name})
+
+    def history(self, root):
+        return store.make_history_reader(self.db)({"repository": records._repository_identity(root, []), "requirement": "SP01", "capability": "cap"})
+
+    def test_historical_worktree_rows_and_admin_intervals_share_identity(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.linked, "F2")
+        store.record_admin_interval(self.db, str(self.root), 0, 20, "review")
+        store.record_admin_interval(self.db, str(self.linked), 10, 30, "review")
+        for root in (self.root, self.linked):
+            with self.subTest(root=root):
+                history = self.history(root)
+                self.assertIsNotNone(history)
+                self.assertEqual(history["sameDefectFailures"], 2)
+                self.assertEqual(history["adminSeconds"], 30)
+
+    def test_removed_worktree_history_remains_and_other_repo_stays_isolated(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.linked, "F2")
+        (self.linked / ".git").unlink()
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 2)
+        other = Path(self.tmp.name) / "other"
+        (other / ".git").mkdir(parents=True)
+        self.assertIsNone(store.get_history(self.db, str(other), "SP01", "cap"))
+
+    def receipt(self, **extra):
+        return {"requirement": "SP01", "capability": "cap", "candidateHash": "b" * 64,
+                "scope": "reviewed candidate", "author": "author", "reviewer": "independent", "verdict": "APPROVED", **extra}
+
+    def test_approval_without_named_resolutions_cannot_clear_blockers(self):
+        self.record_failure(self.root, "F1")
+        for extra in ({}, {"resolvedFindings": []}):
+            store.record_review(self.db, str(self.root), self.receipt(**extra))
+            self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+
+    def test_explicit_resolutions_clear_only_named_stable_ids(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.root, "F2")
+        store.record_review(self.db, str(self.root), self.receipt(resolvedFindings=["F1"]))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+        store.record_review(self.db, str(self.root), self.receipt(resolved=["F2"]))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 0)
+
+    def test_malformed_resolution_list_rejected_before_state_write(self):
+        self.record_failure(self.root, "F1")
+        for value in ("F1", [None], [""], [" "], [1], {}):
+            with self.subTest(value=value), self.assertRaises(store.StoreError):
+                store.record_review(self.db, str(self.root), self.receipt(resolvedFindings=value))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+
+    def test_outbox_survives_removed_worktree_and_duplicate_observation(self):
+        store.enqueue_tx(self.db, str(self.linked), "fixture-removed-worktree", "submitted", {"network": "preview"})
+        (self.linked / ".git").unlink()
+        pending = store.get_undelivered_txs(self.db, str(self.root))
+        self.assertEqual([row["txId"] for row in pending], ["fixture-removed-worktree"])
+        store.enqueue_tx(self.db, str(self.root), "fixture-removed-worktree", "submitted", {"network": "preview"})
+        self.assertEqual(len(store.get_undelivered_txs(self.db, str(self.root))), 1)
+        other = Path(self.tmp.name) / "other"
+        (other / ".git").mkdir(parents=True)
+        self.assertEqual(store.get_undelivered_txs(self.db, str(other)), [])
+        with self.assertRaises(store.StoreError):
+            store.enqueue_tx(self.db, str(other), "fixture-removed-worktree", "submitted", {"network": "preview"})
+
+    def test_outbox_rejects_wrong_database_before_creating_it(self):
+        wrong_db = Path(self.tmp.name) / "other/.git/moriarty-dev/state.sqlite3"
+        with self.assertRaises(store.StoreError):
+            store.enqueue_tx(wrong_db, str(self.root), "fixture-wrong-database", "submitted", {"network": "preview"})
+        self.assertFalse(wrong_db.exists())
+
+
+class SprintCompletionTests(unittest.TestCase):
+    def reports(self, sprints):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "openspec/sprints").mkdir(parents=True)
+            (root / "openspec/sprints/sprints.json").write_text(json.dumps({"sprints": sprints}))
+            (root / "openspec/moriarty-completion-program.json").write_text(json.dumps({"reportReconciliation": {"stageAdmission": {"stages": [{"id": "done", "status": "complete"}]}}}))
+            return {row["sprint"]: row for row in cli._derive_sprint_reports(root)}
+
+    def sprint(self, name, required=(), stages=("done",)):
+        return {"id": name, "title": name, "stages": list(stages), "completionRequires": list(required)}
+
+    def test_dependencies_missing_and_cycles_stay_open(self):
+        for sprints in ([self.sprint("SP05", ["SP01"])],
+                        [self.sprint("SP05", ["SP01"]), self.sprint("SP01", stages=["open"])],
+                        [self.sprint("SP05", ["SP01"]), self.sprint("SP01", ["SP05"])],
+                        [self.sprint("SP05", ["SP05"])],
+                        [self.sprint("SP05", stages=[])]):
+            with self.subTest(sprints=sprints):
+                result = self.reports(sprints)["SP05"]
+                self.assertEqual(result["status"], "open")
+                self.assertFalse(result["demonstrated"])
+
+    def test_completion_propagates_independent_of_list_order(self):
+        result = self.reports([self.sprint("SP05", ["SP02"]), self.sprint("SP02", ["SP01"]), self.sprint("SP01")])
+        self.assertTrue(all(row["demonstrated"] for row in result.values()))
+        self.assertNotIn("completion requirements:", result["SP05"]["predicate"])
+
+
+if __name__ == "__main__":
+    unittest.main()

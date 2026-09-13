@@ -1,0 +1,874 @@
+{
+  "input_sha256": "c14d06fb296c070bafde03009538cd35de9b6f588397bf5a503536a3b361ae95",
+  "summary": "Design-only sprint plan for branch feat/session-handoff-2026-09-12 at HEAD 056e662. Branch scope is SESSION-ROADMAP.md: PR1-PR7 local source work is merged and historical, so the remaining branch goals are outcome 4 (scoped K/evaluator agreement including the retained trace106 failure), outcome 5 (authenticated source-to-Compact, compilation, artifact binding, real SDK caller, Docker lifecycle, then admitted Preview), and outcome 6 (truthful final reconciliation). Nine sprints are proposed. Sprints 1-3 close the K track under the one-use C7/D1/G60 admission with exact depth5947/Core65536 accepted and depth5948/Core65547 rejected. Sprints 4-6 build the authenticated lowering, real executor/prover lifetime and actual Compact compilation with artifact binding. Sprints 7-8 reconcile fresh current accounting and run Docker before Preview. Sprint 9 executes the admitted Preview action and reconciles status without closing unrelated gates. Branch completion is not program acceptance: MC01-MC08, SP01-SP12, PCD, native recursion, private handoff, ACTUS and DeFi obligations remain open and separately owned.",
+  "scope": {
+    "branch_completion": "Close SESSION-ROADMAP remaining checkboxes and openspec/changes/language-to-ledger-lifecycle tasks 0.1-0.4, 4.1-4.5, 5.1-5.8 and 6.1-6.3, producing: fresh-audited K exec-shim source, one admitted guarded diagnostic, a repaired backend with a complete positive/negative lifecycle K corpus and independent result audit, an authenticated source/Core/profile/head/state/authority/time to Compact lowering, actual compiler artifacts bound to the reviewed source, a real SDK caller with the specified exit-retaining executor and PID 1 prover lifetime, a complete Docker lifecycle with native readback and raw exit, an independently audited admitted Preview execution with reported transaction IDs and fee-inclusive readback, and a truthful reconciliation of scoped status.",
+    "remaining_program_obligations": "Unchanged and not touched by this branch: MC01-MC08 acceptance, SP01-SP12 sprint gates including SP05 loan and swap Preview coverage and SP09 verification-enabled mandatory acceptance, the PCD ledger-anchored roadmap and its nine gates and five experiments, native recursion F0/F0a/F1/F2/F3 stages and RP01/RP02/RP03 gate records, private handoff and the five composition operators, all 277 ACTUS fixtures with 32 dispositions and all 72 DeFi rows, G01-G24 release gates, and the open loan raw-exit gap in preview-loan-exit-01. Completing all nine sprints closes branch scope only."
+  },
+  "alternatives": [
+    {
+      "name": "A. Strict sequential roadmap order (K fully closed before any ledger work)",
+      "tradeoffs": "Simplest ownership and matches the written delivery order. But the K track is blocked on a resource admission that root does not control, so an admission stall idles the whole branch. The ledger source work needs no admission and would wait for no reason. Highest calendar risk, lowest coordination cost."
+    },
+    {
+      "name": "B. Dependency-honest two-track sequencing (recommended)",
+      "tradeoffs": "K repair/admission/diagnostic runs as one track while authenticated lowering design, executor implementation and offline ledger tests run as a second track. One delivery implementation writer still owns shared files at a time; independent expected-results, oracle derivation, review and preparatory inventory run concurrently. Resource failures block only dependent dispatch. Costs more root sequencing attention and requires explicit file-ownership fencing between formal/k and experiments/moriarty-midnight-financial."
+    },
+    {
+      "name": "C. Ledger-first, K deferred to the end",
+      "tradeoffs": "Reaches Docker and Preview evidence soonest and keeps the hardest external gate last. But it risks discovering a Core/K semantic discrepancy after the Compact lowering is already frozen and compiled, forcing a requalification of artifact bindings. Also weakens the stated branch order without a user decision."
+    }
+  ],
+  "recommended_approach": "Adopt B. Sprints 1-3 (K track) and sprints 4-6 (ledger source track) proceed in parallel with strict file ownership: the K author owns formal/k and .moriarty-dev diagnostic files; the ledger author owns experiments/moriarty-midnight-financial and successor lowering files. Only one of the two may hold a live implementation dispatch at a time; the other track uses preparatory or review work when the writer is busy. Sprint 7 (accounting reconciliation) is the single serialization point before any resource-consuming execution: Docker in sprint 8, Preview in sprint 9. Sprint 3 must complete before sprint 8 Docker execution, because the K corpus is the semantic oracle that the compiled lifecycle is compared against; sprints 4-6 may finish first and wait at the sprint 7 gate.",
+  "sprints": [
+    {
+      "id": "S1",
+      "title": "K exec-shim source repair and fresh exact-source audit",
+      "depends_on": [],
+      "deliverable": "A repaired six-file exec-shim diagnostic source that clears findings E04-1 through E04-4, with a fresh independent exact-source audit verdict, plus strict validation of the OpenSpec package.",
+      "existing_inputs": [
+        "deliverables/language-to-ledger-2026-09-12/k-admission/audit-exec-shim-04.json",
+        "deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-freeze-04.json",
+        "deliverables/language-to-ledger-2026-09-12/k-admission/exec-shim-design-03.md",
+        ".moriarty-dev/k-macro05-trace106-{diagnostic.py,pins.json,requisites.json,k-package-map.json,ownership.json}",
+        ".moriarty-dev/test_k_macro05_trace106_diagnostic.py"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-freeze-05.json",
+        "deliverables/language-to-ledger-2026-09-12/k-admission/audit-exec-shim-05.json",
+        "deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-observations-05.md"
+      ],
+      "requirements": [
+        {
+          "name": "Loader selection is bound and fails closed",
+          "shall": "The preflight SHALL bind the actual Java loader selection, covering both nailgun endpoint branches and the HOME classpath directory, and SHALL refuse execution when any selection falls outside the frozen immutable closure. HOME SHALL be preserved, not deleted.",
+          "positive_scenario": "With no user kserver socket and no user Java classpath present, the preflight records the checked absence for each branch and exits zero.",
+          "negative_scenario": "With a reachable nailgun socket or a present HOME Java classpath directory, the preflight refuses with a named selection code and performs no exec."
+        },
+        {
+          "name": "Selected helpers and ownership are pinned",
+          "shall": "The preflight SHALL pin the actual resolved paths, symlink targets and final targets of every PATH-selected helper, the selected Java and LLVM/kore loaders, SHALL compute the real stage-specific PATH prepend order including the bin-unwrapped directory, and SHALL verify ownership of selected links, resolved targets, the query tool and the Nix database and its ancestors, comparing link fields with link fields and target fields with target fields.",
+          "positive_scenario": "All 22 selected entries, their symlink targets and the trusted database resolve to root-owned nonwritable paths and the reversed prepend order matches the actual wrapper behaviour.",
+          "negative_scenario": "An unobserved or overflow-owned selected path, or a missing host binding for the database, refuses rather than falling back to a UID or nonwritability check."
+        },
+        {
+          "name": "Fresh audit before any admission",
+          "shall": "After repair, the complete source SHALL be refrozen with a new candidate hash and audited by a fresh non-author Astra medium context. Admission work SHALL NOT start while sourceApproved is false.",
+          "positive_scenario": "audit-exec-shim-05.json records frozenFilesMatch true and sourceApproved true against the new candidate hash.",
+          "negative_scenario": "A blocked or partially approved audit returns the candidate to the same author for bounded repair and leaves S2 entry closed."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Route the repair to the latest retained K author session with resume, using the verified Node Foreman launcher and requested grok-4.6 high.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k/author-launch-05.json"
+          ],
+          "verification_command": "existing: plugin/launcher terminal record inspection",
+          "expected_result": "A valid provider terminal result exists, or a recorded timeout with no fabricated success."
+        },
+        {
+          "action": "Repair the four findings and add the reviewed -I -B startup isolation in the bound runner argv.",
+          "paths": [
+            ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+            ".moriarty-dev/test_k_macro05_trace106_diagnostic.py"
+          ],
+          "verification_command": "existing: python3 -I -B -m pytest .moriarty-dev/test_k_macro05_trace106_diagnostic.py",
+          "expected_result": "All existing tests pass plus new failing-then-passing tests for loader branches, prepend order, symlink mode and database ownership."
+        },
+        {
+          "action": "Run the strong-containment preflight in injected-exec mode only and retain stdout/stderr digests.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-observations-05.md"
+          ],
+          "verification_command": "existing: the frozen preflight entry point with exec injection",
+          "expected_result": "status exec-injected, exit 0, and the recorded argv identical to the frozen trace106 command."
+        },
+        {
+          "action": "Freeze the six files and dispatch a fresh Astra medium exact-source audit.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k-admission/audit-exec-shim-05.json"
+          ],
+          "verification_command": "existing: openspec validate language-to-ledger-lifecycle --strict --no-interactive",
+          "expected_result": "Strict validation succeeds and the audit records an explicit verdict bound to the new candidate hash."
+        }
+      ],
+      "entry_gate": "Branch HEAD 056e662 present; audit-exec-shim-04 findings understood as blocking; no K compile or native run performed.",
+      "exit_gate": "Fresh audit sourceApproved true against a refrozen candidate; strict OpenSpec validation passes; tasks 0.3 and 0.4 recorded.",
+      "stop_conditions": "Two same-class audit blocks on the same finding: reproduce the defect and change approach before another broad repair. No source approval means no admission finalization.",
+      "parallel_work": "Independent constructor inventory refresh and S4 constraint drafting may proceed.",
+      "review_roles": [
+        "delivery implementation writer: Grok 4.6 high on the retained K author session",
+        "independent source audit: fresh GPT-6 Astra medium, non-author",
+        "root integration and freeze: Opus 5"
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "One-use admission finalization and the sole guarded diagnostic",
+      "depends_on": [
+        "S1"
+      ],
+      "deliverable": "Finalized C7/D1/G60 admission records with exact source, digest and debit values, and either one executed guarded native diagnostic with retained exit, stderr and stack evidence, or an explicit unadmitted disposition.",
+      "existing_inputs": [
+        "deliverables/language-to-ledger-2026-09-12/k-admission/root-runner-consumer-probes-03.{py,json}",
+        "routing SP03.4 k-retained-trace106-diagnostic and corrected routing02",
+        "adopted exec-shim design03",
+        ".worktrees/sp03-expression-k-macro05 parser and compiled artifacts, trace-106.*"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/k-admission/root-admission-final-01.json",
+        "deliverables/language-to-ledger-2026-09-12/k/diagnostic-result-01.json",
+        "deliverables/language-to-ledger-2026-09-12/k/audit-diagnostic-result-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Exact prepaid one-use admission",
+          "shall": "The admission record SHALL bind the exact approved source digest, candidate hash, manifest and pointer commitments, runner timeout 20 seconds including preflight, grace 5 seconds and a full 60-second charge, with no compiles, no retries, no refund and no reusable slack. Placeholder or draft values SHALL be rejected.",
+          "positive_scenario": "All draft fields resolve to concrete finalized values, the required substantive votes are recorded, and the record becomes admissible exactly once.",
+          "negative_scenario": "Any unresolved draft value, the stale 25-second runner timeout, or a missing vote leaves the record inadmissible and no dispatch occurs."
+        },
+        {
+          "name": "Preserve prior charges and failures",
+          "shall": "Historical charges, exhausted budgets, unresolved liabilities and returned provider identities SHALL be preserved. No counter SHALL be reset and no accounting SHALL be created from zero.",
+          "positive_scenario": "The finalized record cites prior compiler and krun charges and adds only the new prepaid 60-second debit.",
+          "negative_scenario": "A proposed record that omits or recomputes historical charges is rejected before dispatch."
+        },
+        {
+          "name": "Diagnostic evidence is raw and bounded",
+          "shall": "The single diagnostic SHALL run the frozen trace106 input against its exact existing compiled artifact at the fixed 8 MiB soft stack, retaining raw exit, stderr, signal attribution and pins. A crash, timeout or codec failure SHALL be recorded as an execution failure, never as a semantic result.",
+          "positive_scenario": "The diagnostic terminates within 20 seconds and its raw native streams and exit are retained before cleanup.",
+          "negative_scenario": "The runner is killed at grace or the artifact hash mismatches; the stage records an execution failure, consumes the charge, and does not admit a retry."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Finalize every draft admission field against the S1 approved source and freeze the record.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k-admission/root-admission-final-01.json"
+          ],
+          "verification_command": "proposed: an admission-record validator that rejects null or placeholder fields",
+          "expected_result": "Validator reports zero unresolved fields and exactly one available use."
+        },
+        {
+          "action": "Refresh host ownership evidence immediately before dispatch and bind its digest into the record.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k-admission/root-ownership-refresh-05.json"
+          ],
+          "verification_command": "existing: the frozen preflight ownership verification path",
+          "expected_result": "Zero actual drift; the bound evidence digest matches the record."
+        },
+        {
+          "action": "Execute the sole guarded diagnostic through the existing plugin runner with the admitted exact command.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k/diagnostic-result-01.json"
+          ],
+          "verification_command": "existing: python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action ACTION",
+          "expected_result": "One retained raw result with actual exit and stderr; ACTION comes from the registered admission and is never invented."
+        },
+        {
+          "action": "Obtain a fresh independent actual-result audit of the diagnostic evidence.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k/audit-diagnostic-result-01.json"
+          ],
+          "verification_command": "proposed: audit receipt schema check",
+          "expected_result": "An explicit verdict naming the reproduced cause or the unresolved gap."
+        }
+      ],
+      "entry_gate": "S1 exit gate met; refreshed ownership evidence; finalized admission with required votes.",
+      "exit_gate": "Either a retained raw diagnostic result with an independent audit, or a recorded inadmissible disposition with the precise missing authority.",
+      "stop_conditions": "Missing resource state, missing votes or unresolved digests block only this dispatch. The charge is consumed once; a second attempt requires a new reviewed amendment.",
+      "parallel_work": "S4 constraint freeze and S5 offline executor tests continue regardless of admission state.",
+      "review_roles": [
+        "dispatch and containment: root Opus 5",
+        "independent result audit: fresh GPT-6 Astra medium",
+        "preparatory record inventory: Gemini 3.8 Flash, non-authoritative"
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "Backend repair and complete lifecycle K agreement",
+      "depends_on": [
+        "S2"
+      ],
+      "deliverable": "A semantics-preserving repair of the reproduced backend defect plus the implemented lifecycle K contract, executed against a fresh positive and negative differential corpus with an independent result audit.",
+      "existing_inputs": [
+        "openspec/changes/language-to-ledger-lifecycle/lifecycle-k-contract.md",
+        "deliverables/language-to-ledger-2026-09-12/design-review/lifecycle-k-expectations.{md,json}",
+        "deliverables/language-to-ledger-2026-09-12/k/root-complete-oracle-01.json",
+        "deliverables/language-to-ledger-2026-09-12/k/independent-constructor-inventory-01.json",
+        "deliverables/session-handoff-2026-09-12/active-k-files.json",
+        "experiments/moriarty-language/formal/k/{run.py,codec.py,lifecycle_codec.py,lifecycle-corpus.mjs}"
+      ],
+      "proposed_outputs": [
+        "experiments/moriarty-language/formal/k/financial-lifecycle-v1 entry and semantic modules",
+        "experiments/moriarty-language/tests/lifecycle-k-corpus.test.mjs",
+        "deliverables/language-to-ledger-2026-09-12/k-agreement/RESULT.md",
+        "deliverables/language-to-ledger-2026-09-12/k-agreement/audit-k-results-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Repair preserves accepted bounds",
+          "shall": "The repair SHALL keep metadata depth 5947 with Core 65536 accepted and depth 5948 with Core 65547 rejected as INPUT_BOUND. It SHALL NOT cap metadata at 1500, erase type metadata, raise the 8 MiB stack limit, omit the trace or add a host typing flag.",
+          "positive_scenario": "After repair, the accepted case evaluates to its expected result and the rejected case returns INPUT_BOUND.",
+          "negative_scenario": "A repair that passes only by lowering the metadata limit is rejected in review and the defect is reported for separate product decision."
+        },
+        {
+          "name": "K owns every semantic decision",
+          "shall": "K SHALL independently validate schema, financial context and runtime snapshots in actual Core/4 order, own state admission, descriptor mapping, checked arithmetic, work debit and rejection, and SHALL produce only the closed output variants. No unobserved field SHALL be copied from host input.",
+          "positive_scenario": "The four lifecycle actions decode to lcPrepared envelopes whose work totals are 99, 65, 88 and 86 with remaining 413, 348, 260 and 174.",
+          "negative_scenario": "A native crash, timeout, stuck term or codec failure is recorded as an execution failure, never as an lcExpressionRejected value."
+        },
+        {
+          "name": "Differential corpus detects wrong answers",
+          "shall": "The corpus SHALL include the 38 specified cases plus both rounding modes, duplicate and reversed periods, funding reuse, wrong units, overflow, failed postconditions, work exhaustion and residual debt, and SHALL include mutation controls that alter the debt split, allowance spent, work, cursor, effect metadata and history ordering.",
+          "positive_scenario": "Independent arithmetic, TypeScript evaluation and K agree on all material state, ordered effects and carried work.",
+          "negative_scenario": "Every mutation control fails comparison; if any mutation passes, the comparator itself is defective and the stage stays incomplete."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Copy the reviewed K source modules from the pinned worktree as integration inputs without their compiled artifacts or historical budget.",
+          "paths": [
+            "experiments/moriarty-language/formal/k/"
+          ],
+          "verification_command": "existing: sha256 comparison against deliverables/session-handoff-2026-09-12/active-k-files.json",
+          "expected_result": "Every copied file matches its recorded hash and no failure history is deleted."
+        },
+        {
+          "action": "Write failing offline structural, codec, loader and comparator tests before semantic code.",
+          "paths": [
+            "experiments/moriarty-language/tests/lifecycle-k-corpus.test.mjs",
+            "experiments/moriarty-language/formal/k/test_lifecycle_codec.py"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-language test",
+          "expected_result": "New tests fail for the named missing behaviour; existing tests still pass."
+        },
+        {
+          "action": "Implement the lifecycle entry and semantic modules, then run the full corpus under a bounded reviewed grant.",
+          "paths": [
+            "experiments/moriarty-language/formal/k/"
+          ],
+          "verification_command": "proposed: python3 experiments/moriarty-language/formal/k/run.py --suite financial-lifecycle-v1",
+          "expected_result": "All positive cases match the independent oracle and all negative and mutation cases reject."
+        },
+        {
+          "action": "Run the full language regression and typecheck, then obtain a fresh independent K-result audit.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/k-agreement/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-language run typecheck",
+          "expected_result": "Typecheck passes and the audit approves actual K results; metatheorem and correspondence gates stay explicitly open."
+        }
+      ],
+      "entry_gate": "S2 diagnostic result with an identified cause and an approved semantics-preserving repair; a bounded reviewed runtime grant for the conformance corpus.",
+      "exit_gate": "Fresh full applicable K results match evaluator and oracle, mutation controls all fail, and an independent result audit approves.",
+      "stop_conditions": "No runtime grant keeps this incomplete with the failed command named; TypeScript tests never substitute. Narrowing accepted bounds to pass is a hard stop.",
+      "parallel_work": "S4 and S5 continue; the independent oracle and expectation fixtures can be derived before K is runnable.",
+      "review_roles": [
+        "delivery implementation writer: Grok 4.6 high, same session for same-author repair",
+        "independent source and result audits: two fresh GPT-6 Astra medium contexts",
+        "oracle derivation: root Opus 5"
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "Authenticated source-to-Compact constraint freeze",
+      "depends_on": [],
+      "deliverable": "A frozen, independently reviewed mapping from the merged Source/5 lifecycle to Compact, naming every authenticated field and the failure and fee oracle, before any production edit.",
+      "existing_inputs": [
+        "deliverables/language-to-ledger-2026-09-12/design-review/ledger-seam-observations.md",
+        "experiments/moriarty-midnight-financial/custody/{loan.compact,generate.mjs,bindings.json}",
+        "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/source-to-compact-contract-01.md",
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/design-review-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Complete authenticated binding set",
+          "shall": "The contract SHALL bind source and Core digests, profile ID, program identity, deployment and network identity, expected head and revision, debtor and lender authority, balances, allowances, outstanding principal and accrued interest, period and replay history, observed time and complete financial effects. Fees SHALL stay distinct from settlement amounts and enter fee-inclusive net goals.",
+          "positive_scenario": "Every field in the reviewed Source/5 lifecycle state has a named circuit-constrained counterpart or an explicit unsupported disposition.",
+          "negative_scenario": "A field carried only as host JSON or a host-computed validity flag is marked unsupported and blocks the freeze until resolved."
+        },
+        {
+          "name": "Time eligibility is constrained",
+          "shall": "Accrual eligibility SHALL be constrained in circuit by pairing the disclosed observed time with the existing block-time constraint, so early accrual is impossible. A host timestamp read alone SHALL NOT be accepted as evidence.",
+          "positive_scenario": "A test replaces the whole runtime block context and an accrual at a time before the period boundary is rejected by constraints.",
+          "negative_scenario": "An implementation that checks the period only in TypeScript fails the review."
+        },
+        {
+          "name": "Independent review before edits",
+          "shall": "A task-specific independent design review SHALL approve the contract and the network failure and fee oracle before production lowering edits begin.",
+          "positive_scenario": "design-review-01.json records an agreeing substantive review bound to the contract digest.",
+          "negative_scenario": "Absent or disagreeing review keeps S5 entry closed; source exploration continues but no lowering edit is published."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Inventory the Source/5 lifecycle state and effects against the existing custody circuits and record each supported or unsupported disposition.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/source-to-compact-contract-01.md"
+          ],
+          "verification_command": "existing: read-only inspection, no services started",
+          "expected_result": "Every state field and protected operation has a disposition and owner."
+        },
+        {
+          "action": "Specify the failure and fee oracle, including rejection reasons, gross debit, net credit and DUST fees.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/source-to-compact-contract-01.md"
+          ],
+          "verification_command": "proposed: contract self-check against the ledger spec requirements",
+          "expected_result": "Each requirement in lifecycle-ledger-integration/spec.md maps to a named constraint."
+        },
+        {
+          "action": "Freeze the contract digest and obtain the independent design review.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/design-review-01.json"
+          ],
+          "verification_command": "proposed: review receipt schema check",
+          "expected_result": "An explicit approve or block verdict bound to the frozen digest."
+        }
+      ],
+      "entry_gate": "Merged PR7 lifecycle is the normative source; no service, wallet or network access.",
+      "exit_gate": "Frozen contract with an agreeing independent review.",
+      "stop_conditions": "An undefined essential ledger interface stops lowering edits and is reported for separate decision rather than filled with an assumption.",
+      "parallel_work": "Runs concurrently with S1-S3; uses read-only inspection only.",
+      "review_roles": [
+        "contract author: Grok 4.6 high or root Opus 5 when the writer is held by the K track",
+        "independent design review: fresh GPT-6 Astra medium"
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "Real lowerer, custody, SDK caller and prover lifetime",
+      "depends_on": [
+        "S4"
+      ],
+      "deliverable": "The implemented lowering, custody circuit, exit-retaining executor and static PID 1 prover lifetime wrapper, with complete offline tests and a fresh source audit.",
+      "existing_inputs": [
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+        "deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/",
+        "experiments/moriarty-midnight-financial/ledger/{run-local,integrate-local,launch-local,providers,receipt,financial-comparison,finalized-financial-state,contract-balances}.mjs"
+      ],
+      "proposed_outputs": [
+        "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+        "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/",
+        "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c",
+        "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "experiments/moriarty-midnight-financial/custody/lifecycle.compact",
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/audit-source-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Executor classification and containment",
+          "shall": "The executor SHALL implement the specified plan and admission parsing, runner socket handoff, fixed outer-anchored deadlines, the closed rawMainExit classification table and the fault disposition table, and SHALL write the durable moriarty.loan-process-result/1 document with file and directory fsync.",
+          "positive_scenario": "An isolated caller test with fake transports produces PROCESS_SUCCESS only with a durable zero terminal, stop receipt, observed containment and confirmed timer cancellation.",
+          "negative_scenario": "A terminal write failure, stop failure or unresolved containment yields PROCESS_UNKNOWN and never stops a running service to manufacture a main exit."
+        },
+        {
+          "name": "Independent prover lifetime",
+          "shall": "The static PID 1 wrapper SHALL enforce both its own entry plus 1500 seconds and the authenticated outer plus 1620 cutoff, refuse a late start from its persisted control record, and terminate all descendants through private PID namespace teardown, independent of any post-start ownership receipt.",
+          "positive_scenario": "With the caller killed immediately after Docker start, controlled child programs that fork, change process group and ignore signals are all ended by the fixed bound.",
+          "negative_scenario": "A missing, malformed, oversize or clock-mismatched control file yields refusal with no proof-server child."
+        },
+        {
+          "name": "Fee-inclusive comparator",
+          "shall": "The comparator SHALL compute complete independent expectations including gross debit, net role balances, allowance spent, obligations, periods and actual DUST fees, and SHALL reject a JSON financialPost comparison as a substitute for accepted ledger reads.",
+          "positive_scenario": "An offline fixture with known fees reconciles to zero residual across all accounts.",
+          "negative_scenario": "Omitting fees from the net goal makes the comparison fail rather than silently pass."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Write failing substitution, stale-revision, unauthorized-debt, replay and fee-inclusive tests before implementation.",
+          "paths": [
+            "experiments/moriarty-midnight-financial/ledger/",
+            "plugins/moriarty-dev/tests/loan_executor/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:ledger",
+          "expected_result": "New tests fail for the named missing behaviour; existing ledger tests still pass."
+        },
+        {
+          "action": "Implement the lowerer, custody lifecycle circuit, executor, cleanup helper and static wrapper together.",
+          "paths": [
+            "experiments/moriarty-midnight-financial/",
+            "plugins/moriarty-dev/scripts/moriarty_dev/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:ledger",
+          "expected_result": "All ledger tests pass with no live Docker, wallet, network or store mutation."
+        },
+        {
+          "action": "Compile and test the static wrapper with controlled child programs in an isolated PID namespace.",
+          "paths": [
+            "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c"
+          ],
+          "verification_command": "proposed: reproducible build command plus offline wrapper tests",
+          "expected_result": "Deadline, reap, signal and refusal behaviours all hold, or an explicit unavailable result if the host cannot supply a namespace."
+        },
+        {
+          "action": "Freeze the complete source manifest and obtain a fresh independent source audit.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/audit-source-01.json"
+          ],
+          "verification_command": "proposed: audit receipt schema check",
+          "expected_result": "Source readiness recorded only; no instance, grant or submission is approved."
+        },
+        {
+          "action": "Run the offline finalized-state and Preview adapter tests in their declared scope.",
+          "paths": [
+            "experiments/moriarty-midnight-financial/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:finalized-state && npm --prefix experiments/moriarty-midnight-financial run test:preview",
+          "expected_result": "All pass and are labelled mock-transport unit evidence."
+        }
+      ],
+      "entry_gate": "S4 frozen contract approved.",
+      "exit_gate": "All offline ledger, finalized-state and Preview adapter tests pass and an independent source audit approves the frozen manifest.",
+      "stop_conditions": "After two same-class failures, reproduce the defect and change approach. Source approval grants no container creation, start or submission.",
+      "parallel_work": "Independent expectation fixtures and the S6 compilation checklist can be prepared concurrently.",
+      "review_roles": [
+        "delivery implementation writer: Grok 4.6 high; GPT-6 Astra only if a provider result establishes credit exhaustion",
+        "independent source audit: fresh GPT-6 Astra medium",
+        "root integration: Opus 5"
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "Actual Compact compilation and artifact binding",
+      "depends_on": [
+        "S5"
+      ],
+      "deliverable": "Actual compiler output for the generated lifecycle contract with retained artifacts bound to the reviewed source, profile and program digests.",
+      "existing_inputs": [
+        "experiments/moriarty-midnight-financial/custody/{build.mjs,bindings.json}",
+        "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+        "the S4 frozen contract and S5 approved source"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/compilation-01.json",
+        "updated custody bindings for the lifecycle profile"
+      ],
+      "requirements": [
+        {
+          "name": "Artifacts bind to reviewed source",
+          "shall": "Compilation SHALL retain the exact compiler version, command, exit, stdout and the digests of every produced artifact, and SHALL bind each artifact to the reviewed source digest, Core digest, profile ID and program identity.",
+          "positive_scenario": "A recomputed binding record reproduces the same artifact digests from the same pinned source.",
+          "negative_scenario": "An artifact whose source digest does not match the reviewed candidate blocks Docker execution."
+        },
+        {
+          "name": "Compiled behaviour is checked before execution",
+          "shall": "Compiled comparison and rejection tests SHALL run against the new artifacts before any service starts, covering at least one meaningful rejection case.",
+          "positive_scenario": "Compiled comparison passes and the rejection test proves an invalid transition is refused by constraints.",
+          "negative_scenario": "A passing comparison with no exercised rejection leaves this stage incomplete."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Compile the generated lifecycle Compact contract and retain the full compiler transcript.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/compilation-01.json"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run build",
+          "expected_result": "Exit zero with retained artifact digests, or a retained failure with the exact compiler diagnostic."
+        },
+        {
+          "action": "Run compiled comparison and compiled rejection against the new artifacts.",
+          "paths": [
+            "experiments/moriarty-midnight-financial/ledger/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:compiled && npm --prefix experiments/moriarty-midnight-financial run test:compiled-rejection",
+          "expected_result": "Comparison passes and the rejection case is refused."
+        },
+        {
+          "action": "Record the artifact-to-source binding and cross-check it against the K corpus expectations from S3.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/compilation-01.json"
+          ],
+          "verification_command": "proposed: binding cross-check script comparing compiled behaviour to the K oracle",
+          "expected_result": "Compiled results agree with the K and evaluator oracle on the four lifecycle actions."
+        }
+      ],
+      "entry_gate": "S5 source audit approved; S3 oracle available for cross-check.",
+      "exit_gate": "Retained compiler artifacts bound to the reviewed source with compiled comparison and rejection passing.",
+      "stop_conditions": "A compilation failure stops Docker preparation; the failure transcript is preserved and the defect returns to the same author.",
+      "parallel_work": "S7 accounting reconciliation runs concurrently.",
+      "review_roles": [
+        "compilation execution: root Opus 5",
+        "independent artifact-binding review: fresh GPT-6 Astra medium"
+      ]
+    },
+    {
+      "id": "S7",
+      "title": "Fresh current accounting, funding and admission reconciliation",
+      "depends_on": [],
+      "deliverable": "A current accounting record, resolved plugin bindings and candidate inputs, positive funding evidence and a bounded reviewed attempt authority sufficient to unblock dependent dispatch.",
+      "existing_inputs": [
+        "current plugin status missingEvidence list",
+        "deliverables/language-to-ledger-2026-09-12/ k-admission records",
+        "historical charges, reservations and exhausted public attempts"
+      ],
+      "proposed_outputs": [
+        ".moriarty-dev/runtime/current-accounting.json",
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/admission-reconciliation-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Fresh accounting without resets",
+          "shall": "Current accounting SHALL be produced from actual historical charges and immutable records. No counter SHALL be reset, no wallet created and no accounting fabricated from zero.",
+          "positive_scenario": "current-accounting.json reconciles to the retained historical debits and the plugin no longer reports current-accounting-missing.",
+          "negative_scenario": "If historical charges cannot be resolved, the record stays unresolved and dependent dispatch stays blocked while independent work continues."
+        },
+        {
+          "name": "Bounded amendment with real votes",
+          "shall": "Any new grant or attempt amendment SHALL cite actual predecessor evidence, state explicit limits and carry the required substantive votes before dispatch.",
+          "positive_scenario": "A Docker execution amendment records concrete limits and two substantive agreeing votes.",
+          "negative_scenario": "A missing vote or an unbounded limit leaves the amendment inadmissible."
+        },
+        {
+          "name": "Stale bindings resolved",
+          "shall": "The stale binding and candidate inputs named in plugin status SHALL be refreshed against current artifacts, and resource live state SHALL be positively validated.",
+          "positive_scenario": "Plugin status reports no missing evidence for the dependent action.",
+          "negative_scenario": "Any remaining missing-evidence entry keeps the public action unavailable."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Reconstruct current accounting from retained immutable records and preserve all prior liabilities.",
+          "paths": [
+            ".moriarty-dev/runtime/current-accounting.json"
+          ],
+          "verification_command": "existing: python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status",
+          "expected_result": "The current-accounting-missing entry disappears and historical charges are unchanged."
+        },
+        {
+          "action": "Refresh the stale binding and candidate inputs for the dependent action.",
+          "paths": [
+            "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
+          ],
+          "verification_command": "existing: plugin status",
+          "expected_result": "binding-input-stale and candidate-input-stale entries clear."
+        },
+        {
+          "action": "Record a bounded Docker and Preview attempt amendment with limits, stop conditions and votes.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/admission-reconciliation-01.json"
+          ],
+          "verification_command": "proposed: admission record validator",
+          "expected_result": "Admissible record with explicit one-use limits and preserved prior charges."
+        }
+      ],
+      "entry_gate": "No dependency; may start immediately.",
+      "exit_gate": "Plugin status reports no missing evidence for the dependent action and a bounded amendment is admissible.",
+      "stop_conditions": "Unresolvable accounting blocks only Docker and Preview dispatch. Never invent records to unblock.",
+      "parallel_work": "Runs concurrently with S1-S6.",
+      "review_roles": [
+        "reconciliation: root Opus 5",
+        "independent accounting review: fresh GPT-6 Astra medium",
+        "record inventory extraction: Gemini 3.8 Flash, non-authoritative"
+      ]
+    },
+    {
+      "id": "S8",
+      "title": "Complete authenticated Docker lifecycle with independent audit",
+      "depends_on": [
+        "S3",
+        "S6",
+        "S7"
+      ],
+      "deliverable": "A complete Docker lifecycle execution with native readback, a rejection control, raw exit and containment, plus an independent result audit.",
+      "existing_inputs": [
+        "existing Docker services with preserved identities",
+        "S6 compiled artifacts",
+        "S5 executor and prover lifetime",
+        "S3 K and evaluator oracle"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/docker-lifecycle-01/RESULT.md",
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/docker-lifecycle-01/audit-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Complete independent readback",
+          "shall": "Evidence SHALL include transaction status, complete decoded native states, asset balances, allowances, obligations, periods, fees and the raw command exit for every lifecycle action, compared against the independent oracle.",
+          "positive_scenario": "Deploy, originate, accrue, repay and settle finalize and independent readback matches the oracle exactly, with the driver exiting zero and owned resources contained.",
+          "negative_scenario": "A missing raw exit or an unavailable decoded state keeps the stage incomplete, as with the retained preview-loan-exit-01 gap."
+        },
+        {
+          "name": "Rejection control with before and after state",
+          "shall": "At least one invalid transition SHALL be submitted and rejected, with independent before and after state readback proving no financial change.",
+          "positive_scenario": "A stale-revision or unauthorized-debt submission is rejected and both endpoints show equal complete state.",
+          "negative_scenario": "A rejection without before and after readback does not satisfy the control."
+        },
+        {
+          "name": "Identity and state preservation",
+          "shall": "Services SHALL start with preserved identities under the admitted lifetime contract. No wallet, key or state SHALL be recreated or reset.",
+          "positive_scenario": "Preserved-identity services start, execute and are contained with retained receipts.",
+          "negative_scenario": "Any identity drift halts execution before submission."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Start only admitted preserved-identity services under the verified lifetime boundary.",
+          "paths": [
+            "experiments/moriarty-midnight-financial/"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:ledger as a pre-start gate",
+          "expected_result": "All offline gates pass before any service starts."
+        },
+        {
+          "action": "Execute the complete lifecycle through the real caller and retain raw exit before cleanup.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/docker-lifecycle-01/"
+          ],
+          "verification_command": "existing: the ledger run-local driver under the executor",
+          "expected_result": "Exit zero with a durable moriarty.loan-process-result/1 document and observed containment."
+        },
+        {
+          "action": "Decode complete final state independently and compare to the oracle including fees.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/docker-lifecycle-01/RESULT.md"
+          ],
+          "verification_command": "existing: npm --prefix experiments/moriarty-midnight-financial run test:finalized-state plus independent decode",
+          "expected_result": "Zero residual across debt, balances, allowances, periods and fees."
+        },
+        {
+          "action": "Obtain a fresh independent Docker result audit.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/docker-lifecycle-01/audit-01.json"
+          ],
+          "verification_command": "proposed: audit receipt schema check",
+          "expected_result": "Explicit approval of actual results or a named blocking finding."
+        }
+      ],
+      "entry_gate": "S3 K agreement audited, S6 artifacts bound, S7 admission admissible, services stopped and identities preserved.",
+      "exit_gate": "Complete Docker lifecycle evidence with rejection control, raw exit, containment and an approving independent audit.",
+      "stop_conditions": "Stop on the first failed required control. A failed run preserves evidence; another attempt needs a changed hypothesis and a new bounded amendment.",
+      "parallel_work": "Preview admission preparation may run once the Docker audit is dispatched.",
+      "review_roles": [
+        "execution and containment: root Opus 5",
+        "independent result audit: fresh GPT-6 Astra medium"
+      ]
+    },
+    {
+      "id": "S9",
+      "title": "Admitted Preview execution, audit and truthful reconciliation",
+      "depends_on": [
+        "S8"
+      ],
+      "deliverable": "An admitted Preview lifecycle execution with reported transaction IDs and statuses, complete fee-inclusive independent readback, a fresh result audit, and a final scoped reconciliation that closes only branch scope.",
+      "existing_inputs": [
+        "S8 approved Docker evidence",
+        "S7 bounded Preview admission",
+        "plugins/moriarty-dev guarded run path",
+        "ROADMAP.md, SESSION-ROADMAP.md, openspec/changes/language-to-ledger-lifecycle/"
+      ],
+      "proposed_outputs": [
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/preview-lifecycle-01/RESULT.md",
+        "deliverables/language-to-ledger-2026-09-12/ledger-integration/preview-lifecycle-01/audit-01.json",
+        "deliverables/language-to-ledger-2026-09-12/reconciliation/final-01.json"
+      ],
+      "requirements": [
+        {
+          "name": "Guarded dispatch only",
+          "shall": "Every public action SHALL run through the existing plugin guarded run with a registered ACTION, current candidate-bound authority, reviewed limits, current accounting, funding evidence and remaining attempts. ACTION SHALL NOT be invented.",
+          "positive_scenario": "The guarded run launches once and reports actual transaction IDs and statuses through the plugin notification flow.",
+          "negative_scenario": "Any unvalidated authority, funding or attempt capacity prevents the child from launching; independent work continues."
+        },
+        {
+          "name": "Complete public financial acceptance evidence",
+          "shall": "Completion SHALL require finalized transactions with canonical finality, complete independent fee-inclusive readback, actual exit zero and a current independent result audit.",
+          "positive_scenario": "All lifecycle transactions finalize, readback matches the oracle including DUST fees, and the audit approves.",
+          "negative_scenario": "A submitted transaction without finality, effects, exit status or audit retains the observed partial status and claims no completion."
+        },
+        {
+          "name": "Truthful scoped reconciliation",
+          "shall": "The final record SHALL state which branch requirements have a current result and which retain a precise open blocker, and SHALL preserve MC01-MC08, SP01-SP12, PCD, native recursion, private handoff, ACTUS and DeFi obligations as open. Branch completion SHALL NOT be reported as program acceptance.",
+          "positive_scenario": "Every branch checkbox has either a cited current result or a named blocker, and wider gates stay unchecked.",
+          "negative_scenario": "Any attempt to close an unrelated MC or SP checkbox from this branch's evidence is rejected in review."
+        }
+      ],
+      "tasks": [
+        {
+          "action": "Confirm current admission, funding and remaining attempts immediately before dispatch.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/preview-lifecycle-01/"
+          ],
+          "verification_command": "existing: python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status",
+          "expected_result": "No missing evidence and a positive attempt capacity."
+        },
+        {
+          "action": "Execute the admitted Preview action through the guarded plugin run.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/preview-lifecycle-01/RESULT.md"
+          ],
+          "verification_command": "existing: python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action ACTION",
+          "expected_result": "Reported transaction IDs and statuses with retained finality, fees, native state and actual exit zero."
+        },
+        {
+          "action": "Perform full independent fee-inclusive readback and obtain a fresh result audit.",
+          "paths": [
+            "deliverables/language-to-ledger-2026-09-12/ledger-integration/preview-lifecycle-01/audit-01.json"
+          ],
+          "verification_command": "proposed: independent finalized-state decode plus audit receipt check",
+          "expected_result": "Complete effects match the oracle and the audit approves."
+        },
+        {
+          "action": "Write the final reconciliation and update scoped roadmap evidence only.",
+          "paths": [
+            "ROADMAP.md",
+            "SESSION-ROADMAP.md",
+            "openspec/changes/language-to-ledger-lifecycle/tasks.md",
+            "deliverables/language-to-ledger-2026-09-12/reconciliation/final-01.json"
+          ],
+          "verification_command": "existing: openspec validate language-to-ledger-lifecycle --strict --no-interactive",
+          "expected_result": "Strict validation passes; unrelated user changes and wider gates are preserved unchanged."
+        }
+      ],
+      "entry_gate": "S8 Docker audit approved; current Preview admission with positive funding and remaining attempts.",
+      "exit_gate": "Audited Preview evidence or a precise recorded blocker, plus a truthful reconciliation preserving all wider obligations.",
+      "stop_conditions": "Missing admission blocks only this dispatch. Do not claim completion from a partial public outcome. Do not close the native goal unless all six outcomes pass.",
+      "parallel_work": "Reconciliation drafting may proceed while the Preview audit is pending.",
+      "review_roles": [
+        "dispatch: root Opus 5 through the existing plugin",
+        "independent result audit: fresh GPT-6 Astra medium",
+        "final reconciliation review: fresh GPT-6 Astra medium"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "original_task": "Outcome 1-3 (postconditions, origination/accrual, complete lifecycle) \u2014 PR5/PR6/PR7",
+      "sprint": "historical, merged; not redone. Cited as input to S3 and S4 only."
+    },
+    {
+      "original_task": "Outcome 4: scoped K/evaluator agreement",
+      "sprint": "S1, S2, S3"
+    },
+    {
+      "original_task": "Outcome 5: authenticated Compact, compilation, Docker, Preview",
+      "sprint": "S4, S5, S6, S7, S8, S9"
+    },
+    {
+      "original_task": "Outcome 6: final reconciliation and native goal closure",
+      "sprint": "S9"
+    },
+    {
+      "original_task": "Roadmap K box 1: K crash diagnostic source repair and fresh Astra audit",
+      "sprint": "S1"
+    },
+    {
+      "original_task": "Roadmap K box 2: one-use admission records and sole guarded diagnostic",
+      "sprint": "S2"
+    },
+    {
+      "original_task": "Roadmap K box 3: resolve native failure without narrowing bounds",
+      "sprint": "S3"
+    },
+    {
+      "original_task": "Roadmap K box 4: lifecycle K contract, differential corpus, result audit",
+      "sprint": "S3"
+    },
+    {
+      "original_task": "Roadmap Midnight box 1: authenticated source-to-Compact translation",
+      "sprint": "S4, S5"
+    },
+    {
+      "original_task": "Roadmap Midnight box 2: SDK executor/lifetime boundary",
+      "sprint": "S5"
+    },
+    {
+      "original_task": "Roadmap Midnight box 3: compile and bind compiler artifacts",
+      "sprint": "S6"
+    },
+    {
+      "original_task": "Roadmap Midnight box 4: reconcile accounting then Docker lifecycle",
+      "sprint": "S7, S8"
+    },
+    {
+      "original_task": "Roadmap Midnight box 5: independent Docker audit and Preview admission",
+      "sprint": "S8, S7"
+    },
+    {
+      "original_task": "Roadmap Midnight box 6: Preview execution and finalized effects audit",
+      "sprint": "S9"
+    },
+    {
+      "original_task": "Roadmap Midnight box 7: final roadmap/publication reconciliation",
+      "sprint": "S9"
+    },
+    {
+      "original_task": "tasks.md 0.1-0.2 preserve preimages and roadmap scope",
+      "sprint": "S1 preparatory, confirmed in S9"
+    },
+    {
+      "original_task": "tasks.md 0.3 strict openspec validation",
+      "sprint": "S1 and S9"
+    },
+    {
+      "original_task": "tasks.md 0.4 review complete design and plan",
+      "sprint": "S1"
+    },
+    {
+      "original_task": "tasks.md 4.1-4.2",
+      "sprint": "S1, S2, S3"
+    },
+    {
+      "original_task": "tasks.md 4.3-4.5",
+      "sprint": "S3"
+    },
+    {
+      "original_task": "tasks.md 5.1 and 5.1a",
+      "sprint": "S4, S5"
+    },
+    {
+      "original_task": "tasks.md 5.2 and 5.2a",
+      "sprint": "S5, S6"
+    },
+    {
+      "original_task": "tasks.md 5.3",
+      "sprint": "S5, S6"
+    },
+    {
+      "original_task": "tasks.md 5.4",
+      "sprint": "S7"
+    },
+    {
+      "original_task": "tasks.md 5.5-5.6",
+      "sprint": "S8"
+    },
+    {
+      "original_task": "tasks.md 5.7-5.8",
+      "sprint": "S9"
+    },
+    {
+      "original_task": "tasks.md 6.1-6.3",
+      "sprint": "S9"
+    }
+  ],
+  "conflicts_or_stale_records": [
+    "design.md and the plan header cite baseline main 229545f with PR1-PR4 at merge dc9d516, while the branch base is cd240b8 and PR5-PR7 are merged through 81bed86. Update the baseline statement without rewriting merged history.",
+    "tasks.md 0.1 names only PR1-PR4 receipts; PR5-PR7 receipts must be added.",
+    "Plugin status reports four missing-evidence entries: stale binding and candidate inputs for sp01-financial-contract-and-execution-admission.md, missing .moriarty-dev/runtime/current-accounting.json, and unavailable resource live state for sp01-loan-swap-grok-01. These block dependent dispatch only.",
+    "The draft runner still carries a 25-second timeout and unresolved candidate and shim hashes; the corrected values are 20 seconds including preflight, 5-second grace and a full 60-second charge.",
+    "The 883 passing tests from the PR7 candidate and the 441 and 682 counts elsewhere are historical candidate evidence, not current runs on this branch.",
+    "audit-exec-shim-04 finding E04-4 is a comparison mismatch of 28 symlink entries, not observed host drift; do not record it as drift.",
+    "lifecycle-k-contract frozen work totals (99/65/88/86) differ from the plan Task 1 fixture total of 82 because the bodies differ; both must be derived independently, not cross-copied.",
+    "preview-loan-exit-01 retains a missing raw main-process exit; that gap stays open and is not repaired by later swap success or by this branch.",
+    "Recovered execution queues in recovery-selection.json (obligations 106-145) are superseded for this task; obligation 145 still names the six-stage goal and must not be shrunk or recreated.",
+    "Retained worktrees .worktrees/lifecycle-k and .worktrees/sp03-expression-k-macro05 hold unmerged K files; reconcile before adoption and never delete their failure history."
+  ],
+  "open_questions": [
+    "Whether the S2 one-use admission can be finalized at all depends on resource state the design cannot observe; if not, S3 stays incomplete with a named blocker and S4-S7 continue.",
+    "Whether the repaired backend defect requires a product change to K or to the toolchain pin; if so it is reported for separate review rather than absorbed here.",
+    "Whether the existing custody circuit family supports the full Source/5 state without a compiler capability that is not yet identified; S4 must record this as supported or unsupported rather than assume.",
+    "Whether Preview attempt capacity remains after the two consumed public attempts for loan and swap, or whether S9 needs a separate reviewed amendment.",
+    "Whether Grok credit exhaustion is ever actually established; only a real provider result switches authoring to Astra, and a timeout with 124 does not."
+  ],
+  "self_review": {
+    "coverage": "All four remaining SESSION-ROADMAP K checkboxes, all seven remaining Midnight checkboxes, all six original delivery outcomes and every open tasks.md item (0.1-0.4, 4.1-4.5, 5.1-5.8, 6.1-6.3) map to a sprint in the coverage table. PR1-PR7 are treated as merged history and are not re-planned. Wider MC01-MC08, SP01-SP12, PCD, native recursion, private handoff, ACTUS and DeFi obligations are listed as preserved and are deliberately out of sprint scope.",
+    "consistency": "Sprint dependencies are acyclic: S1 to S2 to S3; S4 to S5 to S6; S7 independent; S8 depends on S3, S6 and S7; S9 depends on S8. Docker precedes Preview. Compilation precedes Docker. Accounting reconciliation precedes both executions. Exact bounds are carried verbatim: depth 5947 with Core 65536 accepted, depth 5948 with Core 65547 rejected, 8 MiB soft stack, C7/D1/G60, runner timeout 20, grace 5, full charge 60. One delivery implementation writer is held across S1-S6; reviews, oracles and preparatory inventory run in parallel.",
+    "placeholders": "No TBD, TODO or unresolved field appears. Proposed future outputs, commands and paths are labelled proposed; existing commands are labelled existing. ACTION in the guarded Preview run is intentionally symbolic because it must come from registered admission and must never be invented."
+  }
+}

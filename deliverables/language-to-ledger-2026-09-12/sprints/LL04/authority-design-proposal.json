@@ -1,0 +1,942 @@
+{
+  "recordKind": "LL04-authority-design-proposal",
+  "createdAt": "2026-09-12T19:53:29.737582+00:00",
+  "branch": "feat/session-handoff-2026-09-12",
+  "status": "proposed; independent Opus/Astra review pending; no implementation or admission",
+  "selectedDesign": "Explicit one-time debtor-signed native verifier activation at immutable financial genesis, then impossible maintenance authority; real lender/borrower funding via role-specific existing provider contexts; explicitly public bounded accrual",
+  "scope": "Authorization/consent extension to full ledger-contract-draft only; all original financial state, effects, bounds and obligations inherited, not replaced",
+  "LLIdentities": [
+    "LL04.1",
+    "LL04.2",
+    "LL04.3",
+    "LL04.4",
+    "LL04.5",
+    "LL04.6",
+    "LL04.7"
+  ],
+  "inheritedRequirements": [
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md",
+      "requirement": "Explicit funded origination and authority boundary"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md",
+      "requirement": "Monotone period and duplicate protection"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md",
+      "requirement": "Whole-stack operation support"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md",
+      "requirement": "Authenticated financial state and actual language consumer"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md",
+      "requirement": "Docker financial lifecycle before Preview"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md",
+      "requirement": "Current guarded Preview admission"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md",
+      "requirement": "Independent public financial acceptance"
+    }
+  ],
+  "sourceFacts": [
+    {
+      "id": "A01",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "line": 153,
+      "anchor": "circuit capabilityHash",
+      "observation": "Current role capability hashes only domain/network/program/secret. Constructor accepts both secrets and payouts; a successful secret equality is not evidence of the named debtor signing terms, cap or a state head."
+    },
+    {
+      "id": "A02",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "line": 74,
+      "anchor": "function inspect(txs",
+      "observation": "Current provider requires every unshielded input owner to equal its single selected payer and verifies native signatures over intent.signatureData(segment). It counts gross inputs, not only net payment."
+    },
+    {
+      "id": "A03",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "line": 109,
+      "anchor": "function bindingFor",
+      "observation": "Reservation identity includes allocation/path/account/payer/network and exact limits. Payer cannot be swapped under the same reservation record."
+    },
+    {
+      "id": "A04",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "line": 726,
+      "anchor": "export class ContractMaintenanceAuthority",
+      "observation": "Native authority supports public-key committee, threshold and replay counter. Threshold greater than committee length cannot authorize an update. No new wallet identity is necessary."
+    },
+    {
+      "id": "A05",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "line": 2202,
+      "anchor": "export class MaintenanceUpdate",
+      "observation": "Native update supports exact address, ordered updates, counter, dataToSign and addSignature. ReplaceAuthority, VerifierKeyRemove and VerifierKeyInsert are existing operations."
+    },
+    {
+      "id": "A06",
+      "kind": "source fact",
+      "path": "repos/midnightntwrk/midnight-ledger/ledger/src/structure.rs",
+      "line": 2739,
+      "anchor": "data.extend(b\"midnight:contract-update:\")",
+      "observation": "Maintenance signature message serializes the domain, contract address, ordered updates and counter. It does not independently serialize network, arbitrary financial state or an external receipt hash."
+    },
+    {
+      "id": "A07",
+      "kind": "source fact",
+      "path": "repos/midnightntwrk/midnight-ledger/ledger/src/structure.rs",
+      "line": 2538,
+      "anchor": "let mut writer = digest_io::IoWrapper(Sha256::new());",
+      "observation": "ContractDeploy address hashes tagged serialization of deployment, including initial state and nonce. This binds deployment state only; later mutable data is not automatically signed by signing its address."
+    },
+    {
+      "id": "A08",
+      "kind": "source fact",
+      "path": "repos/midnightntwrk/midnight-ledger/ledger/src/verify.rs",
+      "line": 1748,
+      "anchor": "impl<D: DB> MaintenanceUpdate<D>",
+      "observation": "Ledger validation requires ordered nonduplicate committee indices, valid signatures when signature validation is enabled, sufficient threshold, and replacement-authority counter equal old update counter plus one."
+    },
+    {
+      "id": "A09",
+      "kind": "source fact",
+      "path": "repos/midnightntwrk/midnight-ledger/ledger/src/semantics.rs",
+      "line": 1481,
+      "anchor": "if cstate.maintenance_authority.counter != upd.counter",
+      "observation": "Application rejects stale maintenance counter; updates increment it, then carry out ordered key changes/authority replacement. Consent needs a successful finalized native update, not only locally valid signature bytes."
+    },
+    {
+      "id": "A10",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/KeyStore.js",
+      "line": 34,
+      "anchor": "signData: (data)",
+      "observation": "Existing keystore exposes getPublicKey/getAddress/signData, delegating BIP-340 operations to installed ledger-v8. Proposed consent signer uses these callbacks; no secret extraction or new key generation."
+    },
+    {
+      "id": "A11",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs",
+      "line": 288,
+      "anchor": "const unprovenTxFromContractUpdates",
+      "observation": "Installed SDK builds native maintenance transactions through Transaction.fromParts(networkId,...Intent.new(ttl).addMaintenanceUpdate(...)). Public helpers normally submit one maintenance operation; proposed atomic multi-update must use existing low-level native update API and submitTx."
+    },
+    {
+      "id": "A12",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs",
+      "line": 873,
+      "anchor": "const createUnprovenLedgerDeployTx",
+      "observation": "SDK turns constructor-produced native contract state into ContractDeploy and a native transaction. Current public deployment wrapper installs generated operations; it does not expose proposed selective bootstrap deployment."
+    },
+    {
+      "id": "A13",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs",
+      "line": 897,
+      "anchor": "const op = toLedgerContractState(initialContractState).operation(circuitId);",
+      "observation": "Call construction requires the operation to exist on current contract state. Native verifier availability, not a host consent Boolean, is the selected liability gate."
+    },
+    {
+      "id": "A14",
+      "kind": "source fact",
+      "path": "repos/LFDT-Minokawa/compact/compiler/standard-library.compact",
+      "line": 320,
+      "anchor": "export circuit receiveUnshielded",
+      "observation": "receiveUnshielded increases expected inputs by token/amount; it has no input-owner argument. sendUnshielded constrains recipient outputs. This source observation is corroborated by installed Effects typings; repository compiler source is not evidence of an installed compiler run."
+    },
+    {
+      "id": "A15",
+      "kind": "source fact",
+      "path": ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts",
+      "line": 372,
+      "anchor": "unshieldedInputs: Map<TokenType, bigint>",
+      "observation": "Installed transcript Effects record expected unshielded inputs as token-to-amount, not payer-to-input ownership. Required payer equality is currently an actual-provider/comparator predicate, not a proved circuit predicate."
+    },
+    {
+      "id": "A16",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "line": 90,
+      "anchor": "const payerAddress=roles.firstAddress;",
+      "observation": "Current driver fixes one payer and calls initialize/accrue/settle for loan. It cannot execute a lender-funded originate or a consent setup stage without changes."
+    },
+    {
+      "id": "A17",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "line": 304,
+      "anchor": "const checkBinding=()=>",
+      "observation": "Current integration binds its wallet to firstAddress. Separate existing lender and borrower contexts and role-specific reservations are required; an address string is insufficient funding authority."
+    },
+    {
+      "id": "A18",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "line": 157,
+      "anchor": "circuit constrainNow",
+      "observation": "Existing now constraint checks UInt64 window overflow, blockTimeGte(now), blockTimeLt(now+300), and horizon below 2000000000. It must constrain the actual source Accrue observedTime."
+    },
+    {
+      "id": "A19",
+      "kind": "source fact",
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+      "line": 57,
+      "anchor": "action originate(",
+      "observation": "Original source keeps originate/accrue/repay/settle actions. Origination terms are principal100/cap110, conversion1 scale0 none, AccrualFirst, rate1/10 floor, period60 firstPeriodStart1000; permission setup is outside these financial actions."
+    },
+    {
+      "id": "A20",
+      "kind": "source fact",
+      "path": "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs",
+      "line": 28,
+      "anchor": "export async function prepareFinancialDeployment",
+      "observation": "Current prepared deploy validates six constructor args and stores a private maintenance signing key. Proposed bootstrap must freeze selective native state before deriving address; old prepared bytes/private stores must not be edited or reused."
+    }
+  ],
+  "wireAndLedgerBindings": {
+    "domain": "moriarty-lifecycle-authority/1 (proposed frozen descriptor, not a new acceptance framework)",
+    "program": [
+      "exact Source5 primitive bytes/hash",
+      "profile source/5 and Core/4",
+      "source-derived schema and ordered Core/actions",
+      "registered bounds/canonicalization",
+      "lifecycle state/kernel versions",
+      "lowering version",
+      "generated Compact source and exact bootstrap/financial artifact bundle commitments"
+    ],
+    "roles": [
+      "Borrower text identity to existing native UserAddress and BIP-340 verifying key",
+      "Lender text identity to distinct existing native UserAddress and verifying key",
+      "Other/Token public mapping retained, no spending permission granted"
+    ],
+    "genesis": [
+      "full initial ordinary phase0/paid0",
+      "full LifecycleState with exact arrays and types from initialFinancialState",
+      "financial revision0",
+      "consent genesis digest recomputed from full typed state, not accepted as host truth",
+      "no financial effect/history or work changes during activation"
+    ],
+    "loan": {
+      "obligationId": "Loan1",
+      "debtor": "Borrower",
+      "creditor": "Lender",
+      "principal": "100",
+      "nominalLiabilityCap": "110",
+      "denomination": "Cash",
+      "settlementAsset": "Cash",
+      "conversion": {
+        "mantissa": "1",
+        "scale": "0",
+        "rounding": "none"
+      },
+      "allocationRule": "AccrualFirst",
+      "accrualTerms": {
+        "numerator": "1",
+        "denominator": "10",
+        "rounding": "floor",
+        "periodSeconds": "60",
+        "firstPeriodStart": "1000"
+      }
+    },
+    "funding": [
+      "Cash native domain and issuer-bound color; source mapping derives color from actual new contract address",
+      "originate native input payer Lender -> Borrower100",
+      "repay/settle native input payer Borrower -> Lender source-computed amount",
+      "actual source arguments remain dynamic and checked; D1/O1 etc are oracle cases, not new hardcoded language restrictions"
+    ],
+    "permission": {
+      "originate": "One source-authorized origination after native debtor activation, lender-funded through authenticated actual consumer. No blanket borrowed role secret permission.",
+      "accrue": "Any caller, explicitly authorized in immutable debtor-consented descriptor, only the exact source Accrue predicates/time/cap/period/work; no cash movement and no debit of another party for fees.",
+      "repay": "Borrower-funded actual source Repay; no creditor spending permission.",
+      "settle": "Borrower-funded source-computed remaining debt; no creditor spending permission."
+    },
+    "network": [
+      "network ID and genesis/protocol identity committed in deployment descriptor and rechecked by actual consumer",
+      "expected deployed ContractAddress is included directly in native signature",
+      "maintenance signature by itself does not carry network ID"
+    ],
+    "head": [
+      "immutable consented financial genesis/revision0 committed in deployment; initialize can produce only that exact genesis",
+      "activation native maintenance counter0 ->1, independent of financial revision",
+      "finalized initialize/activation transaction IDs and block references retained by actual observer, not cyclically embedded in their own signatures",
+      "every financial action consumes actual accepted semantic head/revision and checks immutable descriptor; no head supplied as arbitrary JSON"
+    ],
+    "fees": [
+      "source allowances/work unchanged by setup",
+      "native gross-input and fee limits are separately reviewed exact resources",
+      "each actor funds its own native fees under role-specific allowance",
+      "all setup fees and cumulative historical charges preserved"
+    ]
+  },
+  "fullInitialFinancialState": {
+    "schemaVersion": "moriarty-financial-lifecycle-state/1",
+    "balances": [
+      {
+        "party": "Lender",
+        "asset": "Cash",
+        "amount": "100"
+      },
+      {
+        "party": "Borrower",
+        "asset": "Cash",
+        "amount": "10"
+      },
+      {
+        "party": "Other",
+        "asset": "Token",
+        "amount": "7"
+      }
+    ],
+    "allowances": [
+      {
+        "party": "Lender",
+        "asset": "Cash",
+        "remaining": "100",
+        "spent": "0"
+      },
+      {
+        "party": "Borrower",
+        "asset": "Cash",
+        "remaining": "110",
+        "spent": "0"
+      },
+      {
+        "party": "Other",
+        "asset": "Token",
+        "remaining": "3",
+        "spent": "1"
+      }
+    ],
+    "obligations": [],
+    "usedTransferIds": [],
+    "usedAllocationIds": [],
+    "usedOriginationIds": [],
+    "usedAccrualIds": [],
+    "work": {
+      "remaining": "512",
+      "spent": "17",
+      "closureReserve": "16"
+    }
+  },
+  "fullInitialOrdinaryState": {
+    "phase": "0",
+    "paid": "0"
+  },
+  "fullStateInventoryInherited": {
+    "Conversion": [
+      "mantissa: UInt128Text;",
+      "scale: UInt128Text;",
+      "rounding: Rounding;"
+    ],
+    "AccrualTerms": [
+      "numerator: UInt128Text;",
+      "denominator: UInt128Text;",
+      "rounding: AccrualRounding;",
+      "periodSeconds: UInt64Text;",
+      "firstPeriodStart: UInt64Text;"
+    ],
+    "Balance": [
+      "party: Identifier;",
+      "asset: Identifier;",
+      "amount: UInt128Text;"
+    ],
+    "Allowance": [
+      "party: Identifier;",
+      "asset: Identifier;",
+      "remaining: UInt128Text;",
+      "spent: UInt128Text;"
+    ],
+    "Work": [
+      "remaining: UInt128Text;",
+      "spent: UInt128Text;",
+      "closureReserve: UInt128Text;"
+    ],
+    "LifecycleObligation": [
+      "id: Identifier;",
+      "debtor: Identifier;",
+      "creditor: Identifier;",
+      "denomination: Identifier;",
+      "settlementAsset: Identifier;",
+      "principal: UInt128Text;",
+      "accrued: UInt128Text;",
+      "outstanding: UInt128Text;",
+      "allocationRule: AllocationRule;",
+      "conversion: Conversion;",
+      "status: ObligationStatus;",
+      "originationId: Identifier;",
+      "originationTransferId: Identifier;",
+      "initialPrincipal: UInt128Text;",
+      "nominalLiabilityCap: UInt128Text;",
+      "liabilityIncurred: UInt128Text;",
+      "accrualTerms: AccrualTerms;",
+      "lastAccruedPeriod: UInt64Text;",
+      "nextAccrualAt: UInt64Text;"
+    ],
+    "LifecycleState": [
+      "schemaVersion: typeof LIFECYCLE_STATE_VERSION;",
+      "balances: Balance[];",
+      "allowances: Allowance[];",
+      "obligations: LifecycleObligation[];",
+      "usedTransferIds: Identifier[];",
+      "usedAllocationIds: Identifier[];",
+      "usedOriginationIds: Identifier[];",
+      "usedAccrualIds: Identifier[];",
+      "work: Work;"
+    ],
+    "TransferAction": [
+      "kind: 'Transfer';",
+      "id: Identifier;",
+      "from: Identifier;",
+      "to: Identifier;",
+      "asset: Identifier;",
+      "amount: UInt128Text;"
+    ],
+    "RepaymentEffect": [
+      "kind: 'Repayment';",
+      "allocationId: Identifier;",
+      "transferId: Identifier;",
+      "obligationId: Identifier;",
+      "payer: Identifier;",
+      "creditor: Identifier;",
+      "denomination: Identifier;",
+      "settlementAsset: Identifier;",
+      "nominalAmount: UInt128Text;",
+      "settlementAmount: UInt128Text;",
+      "principalDischarged: UInt128Text;",
+      "accruedDischarged: UInt128Text;",
+      "remainingOutstanding: UInt128Text;"
+    ],
+    "OriginationEffect": [
+      "obligationId: Identifier;",
+      "transferId: Identifier;",
+      "originationId: Identifier;",
+      "debtor: Identifier;",
+      "creditor: Identifier;",
+      "nominalAmount: UInt128Text;",
+      "denomination: Identifier;",
+      "settlementAsset: Identifier;",
+      "conversion: Conversion;",
+      "allocationRule: AllocationRule;",
+      "accrualTerms: AccrualTerms;",
+      "nominalLiabilityCap: UInt128Text;",
+      "kind: 'Origination';",
+      "settlementAmount: UInt128Text;",
+      "liabilityIncurred: UInt128Text;",
+      "lastAccruedPeriod: UInt64Text;",
+      "nextAccrualAt: UInt64Text;"
+    ],
+    "AccrualEffect": [
+      "kind: 'Accrual';",
+      "accrualId: Identifier;",
+      "obligationId: Identifier;",
+      "debtor: Identifier;",
+      "creditor: Identifier;",
+      "denomination: Identifier;",
+      "periodIndex: UInt64Text;",
+      "observedTime: UInt64Text;",
+      "eligibleAt: UInt64Text;",
+      "nextAccrualAt: UInt64Text;",
+      "principalBasis: UInt128Text;",
+      "numerator: UInt128Text;",
+      "denominator: UInt128Text;",
+      "rounding: AccrualRounding;",
+      "interestAmount: UInt128Text;",
+      "previousAccrued: UInt128Text;",
+      "accrued: UInt128Text;",
+      "previousOutstanding: UInt128Text;",
+      "outstanding: UInt128Text;",
+      "previousLiabilityIncurred: UInt128Text;",
+      "liabilityIncurred: UInt128Text;",
+      "nominalLiabilityCap: UInt128Text;"
+    ]
+  },
+  "sourceOracleReference": "ledger-contract-draft.json#/oracle",
+  "nativeActivation": {
+    "initialOperationNames": [
+      "initialize"
+    ],
+    "initialAuthority": {
+      "committee": [
+        "existingBorrowerUnshieldedVerifyingKey"
+      ],
+      "threshold": 1,
+      "counter": "0"
+    },
+    "nativeMessageFields": [
+      "midnight:contract-update:",
+      "contractAddress",
+      "ordered updates",
+      "counter0"
+    ],
+    "orderedUpdates": [
+      {
+        "type": "VerifierKeyRemove",
+        "operation": "initialize",
+        "version": "v3"
+      },
+      {
+        "type": "VerifierKeyInsert",
+        "operation": "originate",
+        "version": "v3",
+        "rawVerifierKey": "exact independently reviewed compiled originate key bytes"
+      },
+      {
+        "type": "VerifierKeyInsert",
+        "operation": "accrue",
+        "version": "v3",
+        "rawVerifierKey": "exact independently reviewed compiled accrue key bytes"
+      },
+      {
+        "type": "VerifierKeyInsert",
+        "operation": "repay",
+        "version": "v3",
+        "rawVerifierKey": "exact independently reviewed compiled repay key bytes"
+      },
+      {
+        "type": "VerifierKeyInsert",
+        "operation": "settle",
+        "version": "v3",
+        "rawVerifierKey": "exact independently reviewed compiled settle key bytes"
+      },
+      {
+        "type": "ReplaceAuthority",
+        "committee": [],
+        "threshold": 1,
+        "counter": "1"
+      }
+    ],
+    "signature": "existing borrower keystore.signData(update.dataToSign), addSignature(0n, signature); strict native signature/threshold verification required",
+    "newNativeState": "only four reviewed financial operations; empty committee threshold1 counter1; financial data unchanged",
+    "sourceActionsAdded": [],
+    "setupStages": [
+      "deploy-bootstrap",
+      "initialize",
+      "activate-lifecycle-consent"
+    ],
+    "financialStages": [
+      "originate",
+      "accrue",
+      "repay",
+      "settle"
+    ],
+    "freshMinimumSubmissionCount": 7,
+    "countQualification": "One action per transaction, combined six-update activation is one transaction. This is a proposed fresh-instance count, not an allocation; any separate funding setup or retry adds actual submissions and fees."
+  },
+  "alternativesRejected": [
+    {
+      "design": "Role-secret or maintenance-key possession as implicit assent",
+      "reason": "Does not show debtor signed exact terms/cap/head; existing constructor operator can know both secrets."
+    },
+    {
+      "design": "Off-chain BIP-340 signature passed to receiveUnshielded or host consent flag",
+      "reason": "Installed native verifySignature is host/native signature verification, not evidence of a Compact BIP-340 primitive or a required contract-call signature. No proven in-circuit enforcement at current interface."
+    },
+    {
+      "design": "Bearer consent token",
+      "reason": "Mint/receive can bind asset/amount, but transferability and absent input-owner predicate do not prove original debtor signed the particular activation action. Adds token accounting without closing that gap."
+    }
+  ],
+  "specifiedControls": [
+    {
+      "id": "LL04-AUTH-P01",
+      "kind": "positive",
+      "input": "Exact bootstrap and initialized genesis, existing debtor signature on exact six-update activation, valid counter0 and finalized success.",
+      "expected": "Only four exact financial verifier keys remain; maintenance committee empty threshold1 counter1; financial PRE, ordinary PRE, work and all histories unchanged. Full native setup and fee receipt retained.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-P02",
+      "kind": "positive",
+      "input": "Authenticated consent state, real lender wallet funding100 through reviewed source originate with D1/O1.",
+      "expected": "Native input owners/signatures match lender; borrower receives100; full prior oracle originate state/effects including retained terms/cap and work match.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-P03",
+      "kind": "positive",
+      "input": "Unprivileged caller requests accrue A1/period1 with valid constrained T under explicit public-accrual policy.",
+      "expected": "No borrower secret needed; exactly10 interest and65 work charged, no Cash transfer; complete cursor/history matches source. Policy permission is explicit in debtor-consented descriptor.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-P04",
+      "kind": "positive",
+      "input": "Real borrower funds repay30 P1/R1 then settle80 P2/R2 at successive native heads.",
+      "expected": "Complete full-state/effect oracle matches; distinct native signature/gross-input/fee evidence per call; consent genesis remains retained after obligation settles.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N01",
+      "kind": "negative",
+      "input": "Originate/accrue/repay/settle before activation or omit activation result.",
+      "expected": "SDK missing operation/native contract verification rejects. A host consent=true or role secret cannot enable an absent key.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N02",
+      "kind": "negative",
+      "input": "Activation has no signature, maintenance/deployer key signature, lender-only signature, wrong committee index or duplicate signature index.",
+      "expected": "Native authorization rejects; data, operations, authority and financial state remain unchanged. Failed fee debit is separately observed, never asserted zero.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N03",
+      "kind": "negative",
+      "input": "After signing, change address, one operation name, one verifier byte, update order, remove the freeze, or change counter.",
+      "expected": "Exact native maintenance signature or replay checks reject; no partial enabling is accepted.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N04",
+      "kind": "negative",
+      "input": "Borrower signs while expecting cap110 but deployment commits120, wrong debtor/lender, source/profile/bounds/Core, conversion, allocation policy, time terms, initial liabilities, work or histories.",
+      "expected": "Independent borrower pre-sign consumer rejects exact deployment/genesis/descriptor mismatch. Cryptographic signature cannot establish informed approval if signer blindly signs; this is an explicit signer obligation.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N05",
+      "kind": "negative",
+      "input": "Prepare update at financial revision1 or permit a mutable bootstrap circuit to change genesis before activation.",
+      "expected": "Reject descriptor/readback and deployment. Selected design requires deterministic initialize once and no enabled financial/mutation circuit before activation; if not established, head binding is missing.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N06",
+      "kind": "negative",
+      "input": "Replay exact activation after success or attempt a new update under the old debtor key.",
+      "expected": "Counter or impossible authority rejects; empty committee threshold0 is an invalid design substitution.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N07",
+      "kind": "negative",
+      "input": "Deploy with hidden operation/alternate version or leave initialize/extra verifier after activation.",
+      "expected": "Exact operation-map readback rejects; checking only four expected names is insufficient.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N08",
+      "kind": "negative",
+      "input": "Relay maintenance signature to another network or mirrored deployment with matching declared tag.",
+      "expected": "Consumer rejects live genesis/protocol/contract history mismatch. Standalone maintenance signature has no explicit network field; do not count this as an in-circuit rejection without a real native control.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N09",
+      "kind": "negative",
+      "input": "Originate using borrower/third-party Cash UTXOs but correct token/amount; repay using lender UTXOs.",
+      "expected": "Reviewed provider rejects owner mismatch before signing and complete observer refuses financial acceptance. Direct arbitrary-client native transaction must separately test the documented payer-enforcement gap; do not claim native receive alone rejects it.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N10",
+      "kind": "negative",
+      "input": "Provide lender address or capability secret without a matching existing lender wallet/funded UTXOs.",
+      "expected": "Fail funding preflight; no substitute wallet creation or fictional reserve. Borrower receives funds only after real matching transfer.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N11",
+      "kind": "negative",
+      "input": "Public accrual with old time, window mismatch, wrong period, duplicate ID, changed terms, cap overflow, extra Cash effect or suffix ensure failure.",
+      "expected": "Source-derived circuit rejects atomically under actual full time context; public permission does not waive any financial constraint.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N12",
+      "kind": "negative",
+      "input": "Transfer100 from gross150 under cap100 and return50; add other asset/recipient or skip consent fee in cumulative charges.",
+      "expected": "Gross/complete effect/cumulative fee checks reject; setup fees and historical charges remain visible.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N13",
+      "kind": "negative",
+      "input": "Report activation from signature verification, indexer-only status, partial segment, or expected JSON without native finality/readback.",
+      "expected": "Remain incomplete; require signed native bytes, successful maintenance action and exact finalized state. A maintenance action is not observed as a ContractCall.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N14",
+      "kind": "negative",
+      "input": "Move consent into source action history, reset financial work after activation, delete Other Token row, or erase settled obligation/IDs.",
+      "expected": "Full state/history comparison rejects. Setup lives in native history; four financial actions and seven ordered source effects retain original identities.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N15",
+      "kind": "negative",
+      "input": "Swap lender/borrower provider under one reservation file, restart spent allocation, or run new seven-stage sequence under old four-call plan.",
+      "expected": "Identity/resource admission rejects; no accounting reset or expired AFK clock revival.",
+      "status": "specified-only"
+    },
+    {
+      "id": "LL04-AUTH-N16",
+      "kind": "negative",
+      "input": "Submit already signed maintenance activation before initialize.",
+      "expected": "It may activate keys because maintenance itself has no financial-state condition. Each financial circuit must assert initialized plus exact consented genesis at originate; consumer requires initialize finalized before signing. Early activation cannot originate debt; it may strand the instance after initialize removal and must be reported as failed setup, not silently recovered.",
+      "status": "specified-only"
+    }
+  ],
+  "remainingIssues": [
+    {
+      "id": "payer-enforcement-boundary",
+      "classification": "remaining acceptance gap",
+      "disposition": "The selected native activation solves explicit debtor consent to the frozen deployment/program. It does not add sender introspection to Compact receiveUnshielded. Lender/borrower equality is enforced by the real provider and independently observed native inputs. If required predicate is rejection by the ledger against arbitrary alternative clients, that predicate is NOT established by this design. Keep LL04.1/LL04.2 and full correspondence open until independent review accepts the bounded consumer trust boundary or supplies separately reviewed native enforcement; no weakened contract or automatic approval."
+    },
+    {
+      "id": "maintenance-head-network",
+      "classification": "bounded design assumption with required controls",
+      "disposition": "Do not claim native maintenance signs a mutable state snapshot or network. Bind full immutable genesis and policy in deployment, freeze one-shot initialize, inspect exact current native state and chain before signing, use separate finalized setup and financial revisions. Early activation can strand setup, not create debt, if every action enforces initialized/genesis. Direct replay across mirrored chains remains a consumer-chain predicate."
+    },
+    {
+      "id": "installed-implementation",
+      "classification": "unperformed evidence",
+      "disposition": "Native classes and keystore callback are installed. Combined activation/filtered bootstrap/adapted observer are absent in Moriarty. Inspected Rust sources corroborate semantics but were not proved byte-equivalent to installed WASM; actual strict native verification and compiled runtime tests remain required."
+    },
+    {
+      "id": "funding-and-resource",
+      "classification": "dependent dispatch blocker",
+      "disposition": "Existing lender wallet access/funding has not been inspected and is not assumed. Current accounting/resource missing and stale SP01 binding still block public dispatch. Proposed seven-stage sequence and signer-specific reservations require the existing substantive resource amendment process; no numerical cap or extra attempt authorized here."
+    }
+  ],
+  "implementationConsumers": [
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/generate.mjs",
+      "requiredChange": "Source-derived lifecycle circuits; deterministic initialize; immutable descriptor/genesis and full state; financial actions require initialized and authenticated current revision. Publish bootstrap and exact financial operation maps separately."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs",
+      "requiredChange": "New lifecycle preparation: construct fresh native state from real generated constructor data, only initialize operation, borrower public-key authority. Fix final state before ContractDeploy/address. Preserve old six-arg helper and recovery deployments."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs",
+      "requiredChange": "Obtain two existing actor contexts by public-bound callbacks; verify exact borrower consent manifest/deployment/genesis before signData; construct one native six-update transaction and submit through guarded provider+SDK submitTx."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "requiredChange": "Separate payer-bound immutable provider/reservation identities per borrower/lender; verify exact maintenance action and updates in proposed consent path; preserve gross/fee limits and history. No context mutation under old allocation."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "requiredChange": "Actual seven-stage lifecycle caller. Lender pays originate; borrower pays setup/repay/settle; selected actual accrue caller pays fee. Extend closed stage diagnostics and completion predicate."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.mjs",
+      "requiredChange": "Decode and verify native MaintenanceUpdate independently; current ContractCall receipt path cannot represent consent. Retain full native before/after operation map, authority, data and balances; chain/head/finality and fee attribution."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+      "requiredChange": "Independent activation diff limited to key map/authority/counter; financial state exactly invariant. Real lender and borrower native inputs/outputs, full inherited source oracle and all setup fees."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/build-proven.mjs",
+      "requiredChange": "Compile/pin bootstrap initialize and four real source-derived financial circuits only under later LL06 admission; compiled evidence is absent here."
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs",
+      "requiredChange": "Validate full reviewed artifact bundle, selective deployment operation map and exact activated operation map; do not require financial keys to be deployed before debtor signature."
+    }
+  ],
+  "resourceImplications": {
+    "status": "proposed only",
+    "oldFourSubmissionPlanCompatible": false,
+    "newAttemptAuthorized": false,
+    "requiredDelta": [
+      "fresh seven-submission minimum plus explicitly counted funding setup if needed",
+      "additional consent native transaction and fee",
+      "existing actor-specific funded inputs and gross/native fee caps",
+      "current unexpired deadline and preserved prior debits/failed attempts",
+      "reviewed exact plan-schema/stage/observer changes; no reinterpretation of historical initialize/accrue/settle receipts"
+    ]
+  },
+  "sourcePreimages": {
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/built-ins.d.ts": {
+      "sha256": "619be60985d945809f2b30b5297d429fac3bedafbf94920bf91e5470d97da6e9",
+      "bytes": 5502
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/zswap.d.ts": {
+      "sha256": "14cc4f7538ed1b0b1fb422d8e71182c58bda0baafc1465b68a582cc26e6c6899",
+      "bytes": 6181
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts": {
+      "sha256": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36",
+      "bytes": 93666
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/package.json": {
+      "sha256": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+      "bytes": 860
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs": {
+      "sha256": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072",
+      "bytes": 97750
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/package.json": {
+      "sha256": "d3b6cc94cb5522a37f64ebc2a080e1db228a5901e2e8dfb7c3d14b01ca496701",
+      "bytes": 1469
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/KeyStore.js": {
+      "sha256": "57fa43ea0e9d3db76ad7a89552687452bcf304fb6d696f554557528b835158fb",
+      "bytes": 1761
+    },
+    ".worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/package.json": {
+      "sha256": "ff6af8e4bb3b610bf6260246643c8cc72f9e417e02d10160d864468af1275c7c",
+      "bytes": 1707
+    },
+    "AGENTS.md": {
+      "sha256": "5dee5d3597b499d4ed30ef5143d47550cf6e6da0634835e45521e2e4afc271e7",
+      "bytes": 11321
+    },
+    "deliverables/language-to-ledger-2026-09-12/sprints/LL04/ledger-contract-draft.json": {
+      "sha256": "f2f5af3aad3363424849dbe4f8af5531470b6ce9228eaf34046f938f4b992649",
+      "bytes": 79293
+    },
+    "deliverables/language-to-ledger-2026-09-12/sprints/LL04/ledger-contract-draft.md": {
+      "sha256": "afd4c1de7bbdc3fa4de448921f3e9fbeb39dda7886063b48c7581fa17be4d1e5",
+      "bytes": 27404
+    },
+    "deliverables/roadmap-loop-2026-09-10/ACTIVE-ROUTING.md": {
+      "sha256": "91540ba7b6645956c783ae0e3d110cbe5c04dc7962ce293c4fc51716c15f0c07",
+      "bytes": 2428
+    },
+    "docs/FOOTGUNS.md": {
+      "sha256": "01641c296c1166e3ef12d239a343e7c2b76527ac1eed653ac2c83ad83142e855",
+      "bytes": 17632
+    },
+    "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori": {
+      "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+      "bytes": 6320
+    },
+    "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json": {
+      "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+      "bytes": 589
+    },
+    "experiments/moriarty-language/src/successor/financial-lifecycle.ts": {
+      "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+      "bytes": 54723
+    },
+    "experiments/moriarty-midnight-financial/custody/generate.mjs": {
+      "sha256": "a0c6b4d6d1f96c4b1e9f1e1c763b6f9d03c0c499ead862377846cddf1da61e81",
+      "bytes": 24905
+    },
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": {
+      "sha256": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+      "bytes": 14339
+    },
+    "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs": {
+      "sha256": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+      "bytes": 20999
+    },
+    "experiments/moriarty-midnight-financial/ledger/integrate-local.mjs": {
+      "sha256": "b1bda64796bf10e483e118a87cee6aac807d1b394ce323e94b5a763436862f5c",
+      "bytes": 49773
+    },
+    "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json": {
+      "sha256": "4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195",
+      "bytes": 3728
+    },
+    "experiments/moriarty-midnight-financial/ledger/prepare-deployment.mjs": {
+      "sha256": "f15d87530063ea73c27b39c0778416b67971f41ad079c88933fdc0aec1903bd6",
+      "bytes": 5355
+    },
+    "experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": {
+      "sha256": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+      "bytes": 16635
+    },
+    "experiments/moriarty-midnight-financial/ledger/providers.mjs": {
+      "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "bytes": 30563
+    },
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": {
+      "sha256": "f7d0266f5a798bce4433a4c4e474e68f2fe67d824f40a1afe2bd0856a9673e46",
+      "bytes": 13393
+    },
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": {
+      "sha256": "0b7886c8e3851db0791fa74051a57c3093e7cf0598ca1fb5b03f9c58b34d28ae",
+      "bytes": 14937
+    },
+    "openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md": {
+      "sha256": "5e841976f842d53b1c9f6f20680c396fee45a1a26b9a43c8879a700839bfbb96",
+      "bytes": 3093
+    },
+    "openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md": {
+      "sha256": "1dcb927cf7243e31f9ec44d2bd610916d5c9a3b39ca778dbf3d8441046781c52",
+      "bytes": 3579
+    },
+    "openspec/changes/session-completion-sprints/design.md": {
+      "sha256": "0e1fd88bc7acb336f2d4e5397366f620fd19a0ea8475c7f86b8a8de08ba9b486",
+      "bytes": 22176
+    },
+    "openspec/changes/session-completion-sprints/tasks.md": {
+      "sha256": "5e6c26b49e12e88e11cf39eb6e011284e9585ce3d08cfada73a3ddd2511d5211",
+      "bytes": 11400
+    },
+    "plugins/moriarty-dev/skills/develop/SKILL.md": {
+      "sha256": "319ce19b11af19e3031ebc318e066b58c9af36b73cb39503ee86a6c4c79a92f1",
+      "bytes": 8445
+    },
+    "raw/assignments/moriarty-full-branch-loop-2026-09-12.md": {
+      "sha256": "828b2e71e1e5c1879e16b67831ab54be02198b7352dcb5eb8e6bf9980f26e5a8",
+      "bytes": 1423
+    },
+    "raw/assignments/moriarty-grok-opus-astra-routing-2026-09-10.md": {
+      "sha256": "02f959d0c9f4511aeb79c05bb5a15715c4329754ed436678ccf3a18c3fc7af89",
+      "bytes": 1541
+    },
+    "repos/LFDT-Minokawa/compact/compiler/standard-library.compact": {
+      "sha256": "166487c61232e4058f0a5cb1a2a154d5b926a574ba5bc24f5def905c2a938e52",
+      "bytes": 12994
+    },
+    "repos/midnightntwrk/midnight-ledger/ledger/src/semantics.rs": {
+      "sha256": "026dcb941afb021e6e04e66f88e9a43b7a492db79fae607bb0617561a843c954",
+      "bytes": 90684
+    },
+    "repos/midnightntwrk/midnight-ledger/ledger/src/structure.rs": {
+      "sha256": "eaa0e25fad3b1f1db0af0980be46a6754571ff2812b3d6380ac2aac647291c49",
+      "bytes": 116532
+    },
+    "repos/midnightntwrk/midnight-ledger/ledger/src/verify.rs": {
+      "sha256": "fe77c458885c09200f8f491b74583840a875bf78a8c2488b70fab01138ece5d1",
+      "bytes": 101356
+    }
+  },
+  "corroboratingRepositories": [
+    {
+      "path": "repos/midnightntwrk/midnight-ledger",
+      "commit": "a8ab82ba2124c36f92795c683e70bd888bc1d1fb"
+    },
+    {
+      "path": "repos/LFDT-Minokawa/compact",
+      "commit": "11e7ec5abeecb99297c4faa74d30ef9adc7b51f3"
+    }
+  ],
+  "checksPerformed": [
+    "guarded read-only CLI status",
+    "source/interface inspection",
+    "preimage hashing",
+    "static requirement/control coverage and document consistency"
+  ],
+  "notPerformed": [
+    "implementation",
+    "native execution or compiler invocation",
+    "K or proofs",
+    "Docker/Preview/network",
+    "wallet or private-file access",
+    "signature creation",
+    "accounting/registry/resource mutation",
+    "approval or acceptance claim"
+  ]
+}

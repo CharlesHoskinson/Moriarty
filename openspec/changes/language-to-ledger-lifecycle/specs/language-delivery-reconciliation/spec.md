@@ -17,6 +17,8 @@ Reconciliation SHALL preserve all unrelated roadmap amendments and existing MC/S
 ### Requirement: Persistent evidence and honest loop state
 The existing native goal SHALL retain the ordered six-item objective. The record SHALL contain current worktree/commit, actual author identity, reviewed bytes, checks and next eligible task. Liveness SHALL be queried from actual runtime state. No extra scheduler SHALL be introduced. A failed gate SHALL keep its dependent item incomplete without erasing independent completed work.
 
+For the September 12 full-branch and new-completion-loop continuation, the six outcomes are a required subset of the current authorized goal. Active-loop completion additionally requires all retained MC01–MC08, SP01–SP12 and wider branch acceptance obligations. Preserve historical goals and receipts; neither this six-item wording nor a blocker authorizes scope reduction or another goal recreation.
+
 #### Scenario: Resuming after a failure
 - **WHEN** a process stops or a repeated defect triggers the stop rule
 - **THEN** the loop SHALL preserve its evidence, reproduce the defect and change the bounded approach before another broad retry.

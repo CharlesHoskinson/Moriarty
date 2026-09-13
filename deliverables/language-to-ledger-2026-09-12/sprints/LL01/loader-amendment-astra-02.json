@@ -1,0 +1,128 @@
+{
+  "kind": "LL01-loader-amendment-independent-design-vote/2",
+  "timestampUTC": "2026-09-12T18:35:19.088361+00:00",
+  "reviewer": {
+    "agent": "/root/ll01_loader_amendment_audit",
+    "requestedModel": "gpt-6-astra",
+    "requestedEffort": "medium",
+    "identityDisclosure": "Independent non-author reviewer. This is a new substantive review of revision 2 in the same independent context that reviewed revision 1, not a newly spawned context. Parent requested Astra medium; separate provider-returned model/effort attestation is not exposed. No Opus opinion read."
+  },
+  "proposalSha256": "6b301ee1b441e9efb5112321d645d210fb0a1c1bc817fa527a7ea77bf0ef75b0",
+  "verdict": "ACCEPT",
+  "approvalScope": "Conditional source-design acceptance of this exact revision only, subject to all mandatory implementation/admission checks. No current implementation bytes approved.",
+  "reason": "Explicit kore output plus protected exact syntaxDefinition.kore removes the output Java fallback for the supported retained LLVM path. Input Java fallback is replaced by pinned package-only Main -kast. These changes preserve the target interpreter/input and allow raw process/signal discrimination; final result must establish that discrimination rather than assume it. The native LD_LIBRARY_PATH difference and parser-child stack scope are now explicit.",
+  "designApproved": true,
+  "sourceApproved": false,
+  "dispatchApproved": false,
+  "resourceApproved": false,
+  "actualResultApproved": false,
+  "priorVoteDisposition": "Revision1 remains REVISE. Its recommendation against an unreviewed output-mode change was not user authority; revision2 explicitly submits that change and is assessed on its merits.",
+  "sourceObservations": [
+    "kore-print missing-syntax fallback precedes output-mode case; exact durable syntax presence is essential.",
+    "With syntax present and mode kore, kore-print selects catNewline; catNewline calls cat then echo. Newline addition means stdout is not byte-identical to interpreter result file.",
+    "Fixed backend.txt reads llvm; krun retains interpreter result, conditionally postprocesses result.kore, then exits result if postprocessing completes. set -e can make a postprocessing error replace outer status.",
+    "The parser-child soft-stack raise cannot alter krun parent/interpreter limits when implemented only in that child. Native stack causal diagnosis remains an empirical question."
+  ],
+  "expectedParserJavaArgv": [
+    "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin/java",
+    "-Dfile.encoding=UTF-8",
+    "-Djava.awt.headless=true",
+    "-Xms64m",
+    "-Xmx8192m",
+    "-Xss32m",
+    "-XX:+TieredCompilation",
+    "-ea",
+    "-cp",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/java/*",
+    "org.kframework.main.Main",
+    "-kast",
+    "--input",
+    "json",
+    "--output",
+    "kore",
+    "--definition",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/trace-106.input"
+  ],
+  "mandatoryConditions": [
+    {
+      "id": "A01",
+      "requirement": "Enforce the newly proposed diagnostic-only --output kore and new parser value as the only two changes to retained krun argv; preserve original recordedArgv. Bind exact supported argument shape and backend.txt=llvm. Require exact regular/pinned syntaxDefinition.kore and ensure its presence/identity remains protected through postprocessing under the adopted execution trust boundary. Missing, replaced or drifted syntax must fail before dispatch, since kore-print has an unconditional earlier Java fallback on absence. Do not depend on predicted crash or snapshot absence alone. Cover result-file absent, complete and partial/nonzero interpreter outcomes."
+    },
+    {
+      "id": "A02",
+      "requirement": "Pin exact Java executable and complete package jar closure. Parser argv must be an array with no shell/eval: fixed JVM flags followed by org.kframework.main.Main -kast --input json --output kore --definition EXACT_RETAINED_DEFINITION EXACT_RAW_INPUT. Keep package Java wildcard as one argv element or justify any enumerated classpath ordering change. No HOME, relative, empty or unbound classpath entries; no ng process or server selection. Bind jar symlink targets as well as package map/requisites."
+    },
+    {
+      "id": "A03",
+      "requirement": "Preserve fixed applicable fallback JVM options in source order: -Dfile.encoding=UTF-8 -Djava.awt.headless=true -Xms64m -Xmx8192m -Xss32m -XX:+TieredCompilation -ea -cp PACKAGE_JAVA_WILDCARD. TieredCompilation applies to pinned 64-bit Java; bind architecture/version evidence offline. Do not invoke Java --version as an unbudgeted probe. K_OPTS is absent in clean original diagnostic environment; accept no ambient K_OPTS or JAVA/JAVA_HOME override."
+    },
+    {
+      "id": "A04",
+      "requirement": "Freeze explicit package-only LD_LIBRARY_PATH=<K>/lib/kframework/native/linux64 without the old empty CWD component. Bind absence of that currently absent directory under protected package ancestors and existing native dependencies through the retained requisite/NAR boundary. Retain applicable native PATH prefix in the parser-child environment (or document and audit a justified selection difference), LC_NUMERIC=C, K_COLOR_SUPPORT=1, original HOME, and absent TERM. Do not claim identical native environment or invent libraries. Full exact-source review must verify constructed environment and actual helper paths."
+    },
+    {
+      "id": "A05",
+      "requirement": "In the parser child only, reproduce k shell soft-stack raise to inherited hard limit before Java exec, keeping hard limit unchanged. Record exact inherited hard limit and handle RLIM_INFINITY explicitly; reject incompatible drift/failed limit change before exec. Do not impose Java 8 MiB soft stack accidentally. JVM -Xss32m is distinct from OS RLIMIT_STACK. Outer krun and retained interpreter retain 8388608-byte soft stack and core0; parser subprocess stack mutation must not affect parent/interpreter. Record process lineage change from bypassing shell wrappers; never claim identical provenance."
+    },
+    {
+      "id": "A06",
+      "requirement": "Construct an allowlisted environment before Python startup and Java invocation. Suppress PYTHONPATH/PYTHONHOME/user-site/startup selection, BASH_ENV/ENV and exported shell functions, JAVA_TOOL_OPTIONS/_JAVA_OPTIONS/JDK_JAVA_OPTIONS, CLASSPATH/K_OPTS/JAVA overrides and dynamic-loader injection. Keep HOME identity/value unchanged. Present HOME extension, local socket configuration and default nailgun configuration must not alter executable selections. No endpoint connection is an offline test."
+    },
+    {
+      "id": "A07",
+      "requirement": "Keep original expression-parser.py, lock/binding bytes, full original compiled definition/interpreter and trace106 immutable. Bind new diagnostic-only parser separately. Preserve original recordedArgv and record amended argv; constrain every difference to expressly adopted loader changes. Input/definition/executable/closure drift rejects before exec. No host semantic parsing, evaluator, admission narrowing, type erasure, replacement JSON-to-KORE implementation, compile or copied/edited Nix distribution."
+    },
+    {
+      "id": "A08",
+      "requirement": "Preserve accepted metadata depth5947/Core65536 and rejected depth5948/Core65547. Preserve --no-expand-macros and exact interpreter/trace bytes. Loader completion or parser failure is not interpreter failure evidence; actual review must distinguish parser, interpreter and output-conversion process outcomes from raw records."
+    },
+    {
+      "id": "A09",
+      "requirement": "Repair E04-2..4 and retain D03-I1..I5. Verify actual reverse wrapper prepend/de-duplication and krun/setenv stages; pin every selected helper, env/shebang interpreter, Java/LLVM/kore and resolved target. Require host binding for links and targets, query package and trusted Nix database/ancestors; compare stat to stat and lstat to lstat. No unbound UID/overflow fallback. Revalidate mapping and effective nonwritability under actual strong containment with injected exec."
+    },
+    {
+      "id": "A10",
+      "requirement": "Run offline actual callable construction tests with Java exec and limit mutation injected. Check exact argv/env, input/definition/executable/jar/helper drift, earlier PATH competitor, ownership and symlink failures, HOME extension and both server configs, Java/Python/dynamic-loader injection, finite/infinite hard stack and failed stack mutation. Exercise actual supplied output source with present and absent result files and absent/drifted syntax rejection; establish no reachable checkJava selection in supported admitted paths. catNewline executes pinned cat plus Bash builtin echo, adding a newline; bind script and shell, suppress exported-function/startup overrides, and do not assert byte-identical raw KORE stdout. Required strong containment controls remain separate from source reasoning."
+    },
+    {
+      "id": "A11",
+      "requirement": "Freeze complete augmented candidate and obtain both fresh independent exact-source audits; preserve original audits. Update canonical runner/pointer/manifest/argv/candidate/debit identities without resets. Retain exact stored-receipt stream recovery, UTF8 hash/byte checks, rejection of overflow/ambiguity/124/missing or mismatched receipt, existing harmless runner controls and separate actual-result review."
+    },
+    {
+      "id": "A12",
+      "requirement": "No resource or dispatch authority follows this vote. C7/D1/G60 stays prospective: one diagnostic, timeout20 including preflight, grace5, full60 charge, compile0/retry0/no refund/no slack. Separate native parser-equivalence testing would need separately reviewed bounded resources; do not spend this diagnostic on a canary. No new runner, collector or campaign."
+    },
+    {
+      "id": "A13",
+      "requirement": "Preserve raw strace/exit evidence and existing runner recovery. krun saves interpreter result before output and exits with that result when postprocessing succeeds; a postprocessing failure under set -e may replace outer status, so neither outer exit nor KORE text alone classifies interpreter outcome. Parser failure, interpreter SIGSEGV, wrapper113 and output failure require distinct actual-result assessment. A changed or inconclusive crash is not equivalence proof or permission to retry. This design does not require a separate native parser canary; any subsequently required native equivalence test needs separate bounded resource review."
+    }
+  ],
+  "retainedBytesVerified": {
+    "parser": "8420d151ea9e510b96fc941e73f496b27d53e1e1913e3d270b8ce4f4c0701f1f",
+    "trace106": "6c29dc49a828956f5056605b672b519a515129383c7dd46b0dc34bba174c3c1b",
+    "interpreter": "32869ebd481d5c6bd0d5b0d7e4a8697b4ce514677b3b0695805211a0fc4cb212"
+  },
+  "evidenceClass": "Local source inspection and hashing. No runtime equivalence claim; no native command or tests run by this review. Previously inspected base loader and original adoption/audit retained as source context.",
+  "inspectedHashes": {
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/loader-amendment-proposal-02.md": "6b301ee1b441e9efb5112321d645d210fb0a1c1bc817fa527a7ea77bf0ef75b0",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/independent-reproducer.md": "b6a6ba3e420f75acb3cbab09d8ee4e074ac873e74a772b7d47f850fb5ae3d19d",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL01/independent-reproducer.json": "b9166f71f56686ae68fb300ccaeaa78f232ced02b12c7b44bba93a4f71ce69f3",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/k-admission/root-exec-shim-adoption-03.json": "1f938cd4af3444c475dd32f9c9d787aa27908fed60caf7d842ffc9e35ffc7e01",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/k-admission/audit-exec-shim-04.json": "9f5677a802708f71bcfec191346f105351ede1e0ddfa9b0016656844bb4fbdf0",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-parser.py": "8420d151ea9e510b96fc941e73f496b27d53e1e1913e3d270b8ce4f4c0701f1f",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-toolchain.lock.json": "c0c842ce548d6d5e44c41913660edf400757cf28bedc030379d66ffb1409a2f7",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled/backend.txt": "ef5a927f5a4ae8bdfa7d187079fa7b2aabc8d72ce219c564f78c9498ff59d2f9",
+    "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled/syntaxDefinition.kore": "6c195fee48b26eed556f3d9e64af88b67d78117faf4866272d16ec7e5eaf2038",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin/kast": "29e8f002b7454df4d5833ab75b4779c45af203ef3ca0a47a0a75c3f270023988",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin/krun": "f204de804ce78072c897ff76610fcd542637d16d8e51ca2021d38c138b7c00c5",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/kast": "49464094561435eb94f883dc23442b128e6e2b5ac1bf2b85d88cd514a1d429e5",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/krun": "80dea6c5e96142084fe7b4514a22f883db906daef63701b2bcad949d1ff5d743",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/kore-print": "f1956617796796855e288760d88c524074b5da17b4da606dfd0ebff9565a0dc0",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/k": "d56ba8f42a320cab88708456ec2721ab71b0d49e8b1bad42d47b497b34fda66c",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/setenv": "fa8d26333cf0d1ef90ba3c6cfc85cd9f63ff23088bfaa61f6a9c6c69c9629688",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/checkJava": "ca205adcbd0aaede282b0ee2251c15fd1dc0806bcd946d8a8971cdedeeed5571",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/k-util.sh": "7a07230c54bb4e0fe2a1464611a18d4af8bb0ecd33607189040ad15ea3ec67ad"
+  },
+  "limits": "Only status CLI, local source reads/hashes, and these two review outputs. No K/Java/ng/strace/compile/native command, endpoint connection, source mutation, resource/accounting change, or Opus-opinion access. CLI status remains blocked for dependent dispatch and has no pending transactions."
+}

@@ -1,0 +1,27 @@
+{
+  "text": "{\"status\":\"patch\",\"changes\":[{\"path\":\".moriarty-dev/k-macro05-trace106-diagnostic.py\",\"old\":\"    if pins[\\\"setenvNativeDir\\\"] != native:\\n        raise PreflightError(\\\"PINS_BOUNDS\\\", \\\"setenvNativeDir\\\")\\n    if Path(native).is_dir() == bool(pins.get(\\\"setenvNativeDirMissing\\\")):\\n        raise PreflightError(\\\"SETENV_NATIVE\\\", native)\",\"new\":\"    if pins[\\\"setenvNativeDir\\\"] != native:\\n        raise PreflightError(\\\"PINS_BOUNDS\\\", \\\"setenvNativeDir\\\")\\n    if \\\"setenvNativeDirMissing\\\" not in pins or type(pins[\\\"setenvNativeDirMissing\\\"]) is not bool or pins[\\\"setenvNativeDirMissing\\\"] is not True:\\n        raise PreflightError(\\\"PINS_SCHEMA\\\", \\\"setenvNativeDirMissing\\\")\\n    native_path = Path(native)\\n    if native_path.is_symlink() or native_path.is_file():\\n        raise PreflightError(\\\"SETENV_NATIVE\\\", native)\\n    if native_path.is_dir() == pins[\\\"setenvNativeDirMissing\\\"]:\\n        raise PreflightError(\\\"SETENV_NATIVE\\\", native)\"},{\"path\":\".moriarty-dev/k-macro05-trace106-diagnostic.py\",\"old\":\"        by_role[role] = item\\n    for role in REQUIRED_HELPERS + (\\\"java\\\", \\\"llvm\\\", \\\"kore\\\"):\",\"new\":\"        by_role[role] = item\\n    by_path = {}\\n    for item in pins[\\\"selectedExecutables\\\"]:\\n        path_text = item[\\\"path\\\"]\\n        if path_text in by_path:\\n            raise PreflightError(\\\"PINS_SCHEMA\\\", path_text)\\n        by_path[path_text] = item\\n    for role in REQUIRED_HELPERS + (\\\"java\\\", \\\"llvm\\\", \\\"kore\\\"):\"},{\"path\":\".moriarty-dev/k-macro05-trace106-diagnostic.py\",\"old\":\"            if resolved is None or str(resolved) != expected:\\n                raise PreflightError(\\\"COMMAND_SELECTION\\\", stage + \\\":\\\" + name)\\n            item = by_role.get(name)\\n            if item is not None and item[\\\"path\\\"] == expected and sha256_file(resolved) != item[\\\"sha256\\\"]:\\n                raise PreflightError(\\\"PIN_MISMATCH\\\", name)\",\"new\":\"            if resolved is None or str(resolved) != expected:\\n                raise PreflightError(\\\"COMMAND_SELECTION\\\", stage + \\\":\\\" + name)\\n            item = by_path.get(expected)\\n            if item is None:\\n                raise PreflightError(\\\"COMMAND_SELECTION\\\", stage + \\\":\\\" + name)\\n            if sha256_file(resolved) != item[\\\"sha256\\\"]:\\n                raise PreflightError(\\\"PIN_MISMATCH\\\", stage + \\\":\\\" + name)\\n            _check_symlink(item[\\\"path\\\"], item.get(\\\"symlinkTarget\\\"))\\n            expected_resolved = item.get(\\\"resolvedTarget\\\")\\n            if expected_resolved is not None and str(Path(item[\\\"path\\\"]).resolve()) != expected_resolved:\\n                raise PreflightError(\\\"SYMLINK_DRIFT\\\", item[\\\"path\\\"])\\n            if item.get(\\\"symlinkTarget\\\") is not None and expected_resolved is None:\\n                raise PreflightError(\\\"SYMLINK_DRIFT\\\", item[\\\"path\\\"])\"}],\"notes\":[\"Stage commandSelections paths must uniquely match selectedExecutables.path; missing/duplicate paths fail closed and bytes/symlink/resolvedTarget are checked. Per-stage helpers use a separately listed unique role.\",\"setenvNativeDirMissing must be present and exactly True; dangling links and non-dir files are rejected. E04-1 remains open.\"]}",
+  "stopReason": "end_turn",
+  "sessionId": "27f1f3c5-957b-469a-b36b-8f5fe36dd1b2",
+  "requestId": "c5db73b8-e290-432f-9992-1e5c0d6ac515",
+  "usage": {
+    "input_tokens": 10432,
+    "cache_read_input_tokens": 202752,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 4496,
+    "reasoning_tokens": 3628,
+    "total_tokens": 217680
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.10146688,
+  "total_cost_usd_ticks": 1014668800,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 10432,
+      "outputTokens": 4496,
+      "cacheReadInputTokens": 202752,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.10146688
+    }
+  }
+}

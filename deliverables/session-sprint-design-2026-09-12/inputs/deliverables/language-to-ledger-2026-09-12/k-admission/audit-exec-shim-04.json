@@ -1,0 +1,162 @@
+{
+  "kind": "independent-full-exact-exec-shim-source-audit/4",
+  "timestampUTC": "2026-09-12T14:38:10.318459+00:00",
+  "reviewer": {
+    "agent": "/root/k_exec_shim_source_audit_04",
+    "requestedModel": "gpt-6-astra",
+    "requestedEffort": "medium",
+    "identityDisclosure": "Fresh delegated non-author context. Parent selected Astra medium; no separate provider-returned model/effort attestation exposed. Did not edit source."
+  },
+  "authorLimit": "Author turn04 outer launcher returned124 after20minutes. Private result invalid/empty; no valid source-ready or successful provider terminal claim. Review covers frozen current complete bytes, not an inferred author success.",
+  "verdict": "BLOCKED_PENDING_SAME_AUTHOR_REPAIR",
+  "sourceApproved": false,
+  "dispatchApproved": false,
+  "actualResultApproved": false,
+  "candidateHash": "7c0c4c7abe5b784f0c4c484db9979811e96bc4f767a8614e498c46241e4dcfae",
+  "frozenFiles": {
+    ".moriarty-dev/k-macro05-trace106-diagnostic.py": "edf6e965b7a3d0c8bcde12890b20862d23c9e1f46dcf78d6b3606a73f4d25e9f",
+    ".moriarty-dev/k-macro05-trace106-pins.json": "bf29e8630b21726198a6bdb93613567236cb7c2460f83dd1c5b76644e4563bf7",
+    ".moriarty-dev/k-macro05-trace106-requisites.json": "ec4998d7dee6d2f1df15f4ed9314e5948d6a984b40ce5df3eae07b2dd6919b0e",
+    ".moriarty-dev/k-macro05-trace106-k-package-map.json": "195ebcab58cb73cd5906a996156dbfdba72e458fa68396044ca16492212b7140",
+    ".moriarty-dev/k-macro05-trace106-ownership.json": "c1780f8f78de547043923431955c3c330e6ced5dc03de10d9b4def8b533e373a",
+    ".moriarty-dev/test_k_macro05_trace106_diagnostic.py": "10ef821157c9d0025b418b3a65a6717c3d012d6ebcc8534130ff5a91c42fdd08"
+  },
+  "frozenFilesMatch": true,
+  "findings": [
+    {
+      "id": "E04-1",
+      "severity": "blocking",
+      "mandatory": "D03-I2",
+      "title": "Selected Java loader still consumes uncommitted HOME and nailgun code",
+      "observation": "The full-map lib/kframework/checkJava first invokes ng against $HOME/.kserver/socket, then default ng endpoint, and otherwise constructs Java classpath with $HOME/.local/lib/kframework/java/*. child_env preserves HOME and only suppresses injection environment variables; no preflight predicate excludes these runtime selections. Both HOME paths happen to be absent now; absence is not checked by shim. No server connection was attempted by audit.",
+      "impact": "Preflight can pass while parser execution uses a user server or user Java extensions outside the selected immutable closure. This violates the mandatory user-site/startup/config suppression; current source cannot be approved.",
+      "repair": "Same author must bind and fail closed on the actual loader selection, including both nailgun endpoint branches and HOME classpath. Preserve HOME. Use a bounded reviewed suppression/absence policy that actually covers the unchanged loader, or present a minimal loader-selection adjustment for review if absence cannot safely establish it; do not just add environment names the loader ignores."
+    },
+    {
+      "id": "E04-2",
+      "severity": "blocking",
+      "mandatory": "D03-I2 and D03-I5",
+      "title": "PATH-selected host helpers and selected Java are not committed; PATH model has wrong prepend order",
+      "observation": "Actual krun wrapper prepends each directory, yielding reversed wrapperPathDirs order, then bin-unwrapped/krun prepends its own directory. verify_wrapper_and_parser instead concatenates the forward list and ignores bin-unwrapped. Python resolves to the same pinned Python3.11 today, so this is no demonstrated current Python runtime failure. Selected host dirname, basename, mktemp, date, rm, cat, cp, fold, uname, grep, head, cut and sed paths/symlink targets are absent from selectedExecutables. Java executable is absent from direct byte hashes. LLVM llvm-krun bytes are covered indirectly by the full K map symlink; kore-print and K loaders also are in full map, so do not claim their bytes wholly unverified.",
+      "impact": "A fixed PATH string alone does not enforce selected identities outside Nix. This is an explicit adopted-design gap even with a correct159-requisite NAR boundary.",
+      "repair": "Pin actual selected helpers, symlink targets and final resolved targets; add explicit selected Java/LLVM/kore identities while retaining map coverage. Compute stage-specific actual PATH prepend order and check actual selections rather than merely parsing directory text. Include loader helper paths under setenv/checkJava and shell-selected commands."
+    },
+    {
+      "id": "E04-3",
+      "severity": "blocking",
+      "mandatory": "D03-I1",
+      "title": "Ownership verification silently falls back for unobserved paths and omits trusted Nix database",
+      "observation": "verify_requisites uses verify_nonwritable when bind_path_for_ownership returns None. That branch accepts an unobserved root/overflow-owned selected file without pinned host inode/device evidence. Actual /usr/bin/env takes that branch; tests explicitly endorse it. os.access follows symlink target while owner check uses lstat(link), so target host-root ownership is not established there. The pinned query binary is likewise outside the K requisites and lacks a bound root entry; /nix/var/nix/db and db.sqlite are not referenced or checked. Actual inspected DB is currently UID0 and nonwritable, but the required preflight predicate is absent.",
+      "impact": "Arbitrary overflow owner is accepted for selected paths despite adopted prohibition, and the database relied on for registered NAR trust is not included in runtime protected-path validation.",
+      "repair": "Extend host evidence to selected links, resolved executable targets, query-tool package and trusted database/ancestor paths. Reject missing host binding rather than falling back to UID/nonwritability only. Validate mapping, correct stat identity and effective nonwritability for those concrete paths under strong containment."
+    },
+    {
+      "id": "E04-4",
+      "severity": "medium",
+      "mandatory": "D03-I1",
+      "title": "Host evidence target mode is compared with link mode",
+      "observation": "Host entries.mode is followed stat mode, but verify_ownership compares path.lstat().st_mode. Independent full evidence revalidation found no actual host drift using the declared stat fields;28 symlink entries would fail the shim mode comparison. Current preflight avoids these entries, so this is a latent false rejection, not a proven current execution failure.",
+      "repair": "Keep link and target stat fields separate, bind both identities where needed, and compare like fields. Exercise real selected symlink ownership in namespace tests before freezing repair."
+    }
+  ],
+  "checks": {
+    "authorTests": "18 passed with actual offline Python; real preflight test uses injected exec. No K/strace.",
+    "freshStrongPreflight": {
+      "exitCode": 0,
+      "stdoutSHA256": "6d834e29d61bc453fe0f5185c4d52b41a9f86ca3f25f8d92ca11e8015bb92453",
+      "stderrSHA256": "75e6f83c4006bcf0d16d6b5081eeec9b5e248d5bea7811392c15383606427230",
+      "result": {
+        "status": "exec-injected",
+        "argv": [
+          "/usr/bin/strace",
+          "-f",
+          "-k",
+          "-e",
+          "trace=process,signal",
+          "-e",
+          "signal=SIGSEGV",
+          "--",
+          "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin/krun",
+          "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/trace-106.input",
+          "--definition",
+          "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/.build-expression-v1/expression-v1-kompiled",
+          "--output",
+          "json",
+          "--parser",
+          "/home/charl/Moriarty/.worktrees/sp03-expression-k-macro05/experiments/moriarty-language/formal/k/expression-parser.py",
+          "--no-expand-macros"
+        ],
+        "env": {
+          "PATH": "/usr/bin:/bin",
+          "HOME": "/home/charl",
+          "LANG": "C.UTF-8",
+          "LC_ALL": "C.UTF-8",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "PYTHONNOUSERSITE": "1",
+          "PYTHONSAFEPATH": "1"
+        },
+        "preflight": {
+          "selected": 22,
+          "artifacts": 488,
+          "kFiles": 255,
+          "requisites": 159
+        },
+        "uidMap": "      1000       1000          1\n"
+      }
+    },
+    "closure": "778 unique hashed files match; independently enumerated actual255-file K package set equals map;488 compiled artifacts checked;159 exact requisites and NAR hashes queried by actual shim in strong namespace.",
+    "hostOwnership": {
+      "actualDrift": [],
+      "mismatchedLstatModeComparisons": 28,
+      "explanation": "Evidence mode is stat(target) mode, while shim compares lstat(link) mode. Earlier probe field was a comparison mismatch, not actual host drift."
+    },
+    "runnerStore": "Read full runner.execute/load_runner and store.finish consumer. Reviewed root actual six-case/30-identity-rejection evidence against unchanged runner/store hashes. Root probes are inspected empirical evidence, not claimed rerun by this agent."
+  },
+  "mandatoryDisposition": {
+    "D03-I1": "BLOCKED by E04-3/E04-4; actual final strong preflight passes but does not implement every mandatory predicate. Host420-path target/link stat evidence revalidated with no actual drift.",
+    "D03-I2": "BLOCKED by E04-1/E04-2. Query explicitly suppresses NIX_USER_CONF_FILES and NIX_CONFIG inheritance; exact env removes listed injections and parser Python resolves correctly today. HOME loader escapes remain.",
+    "D03-I3": "Root recover reads exact reservation receipt_json with repository/action/candidate/status plus five receipt identity checks; UTF8 re-encode hashes and lengths, flags/124 checked. Actual result remains unperformed; future recovery must use exact live reservation and agreed source.",
+    "D03-I4": "Root evidence six actual harmless runner/temporary-SQLite cases meets required exact/113/invalid-UTF8/timeout/overflow/detached checks, thirty identity rejections. Fresh final strong shim probe performed separately by auditor.",
+    "D03-I5": "Shim manifests are transitively hash-bound in pins and current freeze hashes all six files. Full final runner/candidate/accounting adoption remains pending; existing draft runner still25seconds and unresolved candidate/shim hashes, omits pins/manifest commitments. Recognized prospective records, not an admitted dispatch."
+  },
+  "runtimeBlockingDefectEvidence": "No current runtime-blocking failure demonstrated: final actual strong preflight passes and all18 author tests pass. Findings block acceptance because mandatory selections/ownership remain unenforced; E04-4 is a reproduced source/evidence comparison mismatch for28 symlinks currently bypassed, not a current native crash. No native execution performed.",
+  "additionalAdmissionConditions": [
+    "After repair freeze complete source and obtain fresh independent exact-source audit.",
+    "Finalize actual runner timeout20/grace5/full60 debit, source/manifests/pointer plus inputs and candidate bindings; preserve unique charge and all existing gates. Reject unresolved draft values.",
+    "Bound runner argv must suppress Python startup environment before loading shim (e.g. reviewed -I -B); child_env cannot undo injection before shim starts. Current draft omits isolation; fresh strong audit probe explicitly used -I -B.",
+    "Refresh host ownership evidence immediately before sole admitted native dispatch and bind updated evidence digest.",
+    "Use existing guarded CLI only after actual admission. Raw runner113 is a wrapper observation. Fresh independent actual-result review remains required, with no compiles/retries/refund."
+  ],
+  "positiveObservations": [
+    "Duplicate collector/process inference and observation producer removed; exec preserves native streams without rewritten signal attribution.",
+    "Fixed retained argv/input/parser/source/artifacts match and no compile/retry branch exists. Soft stack8MiB checked, core limit0 applied; no inference that Java loader does not alter its own child stack.",
+    "Local Nix DB and OS are explicitly trusted; no159-package byte rebuild is required or claimed. Full255-file map covers selected K loader scripts and dispatch symlinks.",
+    "Current query environment is explicit; requisite SET and all159 registered hashes are actually rechecked before exec."
+  ],
+  "inspectedSourceHashes": {
+    "/home/charl/Moriarty/.worktrees/lifecycle-k/plugins/moriarty-dev/scripts/moriarty_dev/runner.py": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+    "/home/charl/Moriarty/.worktrees/lifecycle-k/plugins/moriarty-dev/scripts/moriarty_dev/store.py": "66417c0a1b73fd0c1ad9ee627c74430fdb1edfc8afba2aec155479dba994dfa5",
+    "/home/charl/foreman/skills/foreman/runtime/dist/foreman-launch.js": "63b934958c6dd883a4420d1e33a48338366e58223929c23b47873a199a9ec322"
+  },
+  "evidenceHashes": {
+    "exec-shim-design-03.md": "dbe43c5031f4bad1d73c275f9e09ecdce3c7ce599ca02f841fcad6e0e3b46aec",
+    "exec-shim-design-review-03.json": "6223f2c2080b453e90c1381e293b82de69f1520eafa302e5680437e6ed255c9a",
+    "root-exec-shim-adoption-03.json": "1f938cd4af3444c475dd32f9c9d787aa27908fed60caf7d842ffc9e35ffc7e01",
+    "root-exec-shim-freeze-04.json": "9f06aaf1ace8e456b76bd38b0d30c64db35e158d0b0e35ba31c8d56168b0ac03",
+    "root-exec-shim-observations-04.md": "955b4385080ff5d9ddfb4595fcc4391efe1ce6f9e34eb5b5576b9a1fc83f9299",
+    "audit-adapter-01.json": "1deec17a4d7979659a90f924a7dbffacff7e37541f3e16bd2f30af42eed4edf7",
+    "audit-adapter-02.json": "498293ef641ce58e32f741b4c073d1f4b7ca75e16d9b0eff3014ce7c7b31411c",
+    "root-runner-consumer-probes-03.py": "58d9672890ef0bf81968863162c2099d28fa60e0017a03b5cbe81c18aaf0b17e",
+    "root-runner-consumer-probes-03.json": "466f3cf3805cd60fc33104d9c4a3ebfc0e199bfa208af45889f7e77bc30b8078",
+    "audit-exec-shim-probes-04.py": "6cd5f34774760638c01ae2ec5116bd26a2a97b83f6e52d28c5059831b85c9b88",
+    "audit-exec-shim-probes-04.json": "d3ceae3558a15cd96b660f54a833ddec014b162acbfa632714cb994eef6eaeee",
+    "audit-exec-shim-closure-04.json": "9250420ccbf2f046c0621767b17bde3ac54558a9f96af69e62cf9a1c884008f9",
+    "audit-exec-shim-preflight-04.stdout": "6d834e29d61bc453fe0f5185c4d52b41a9f86ca3f25f8d92ca11e8015bb92453",
+    "audit-exec-shim-preflight-04.stderr": "75e6f83c4006bcf0d16d6b5081eeec9b5e248d5bea7811392c15383606427230"
+  },
+  "limitations": [
+    "Binary bytes/hash coverage is not semantic certification or independent transitive library rebuild.",
+    "No K, strace, compiler, Docker, network/provider call, native guarded action, live store/accounting/campaign mutation, source edit or product acceptance.",
+    "Earlier audits retain historical verdicts; new approach removes their collector failure mechanism but does not erase history."
+  ]
+}

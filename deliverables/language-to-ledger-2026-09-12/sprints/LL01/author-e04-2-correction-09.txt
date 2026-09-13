@@ -1,0 +1,285 @@
+Your E04-2 patch08 is NOT applied yet. Root constructed a scratch candidate and executed only the pinned wrappers' PATH assignments under pinned Bash (no K/Java/strace). Decisive actual result: krun stage matched; kast and setenv do not match because kast inherits bin-unwrapped and setenv adds the literal K_LIB_DIR/../../bin spelling. Full fixture below. Correct only this precise defect before root applies08+09 together. Return compact JSON {status:"patch",changes:[{path,old,new}],notes:[...]}; replacements apply to your CANDIDATE08 source, not prior canonical source. No tools, new tests, permission requests or broad rewrite; <=100 replacement lines.
+
+Required exact staging: wrapper PATH first-occurrence de-dup/prepend; krun-unwrapped then plain prepends its bin-unwrapped directory WITHOUT de-dup; kast wrapper runs on that inherited krun PATH and repeats its full actual wrapper list (read and verify kast list equals expected separately). bin-unwrapped/kast adds no PATH prefix. setenv before checkJava plain prepends literal K_LIB_DIR/../../bin; its uname before that must use kast stage. checkJava commands use this pre-native stage. After checkJava, Linux64 native path is plain prepended. Preserve textual spelling of paths for actual command resolution. Enforce pins.setenvNativeDir equals actual derived KROOT/lib/kframework/native/linux64 and validate the recorded absence/presence under pinned immutable package. Do not trust caller-chosen arbitrary directory. Add explicit checkJava stage to required command selections; root regenerates metadata exactly. No need broad changes to otherwise working helper checker. If any required command resolves to different paths between stages, schema must bind per-stage selected executable instead of falsely assuming one role path; current fixture likely shares helpers but do not erase mismatch evidence. Keep native Java uninvoked, selected protected host data, full Kmap hashes and originalpathchecks.
+
+Preserve E04-1 as open; root has two conditional loader-direction votes with actual remaining conditions, no source/dispatch approval.
+
+YOUR CURRENT CANDIDATE FUNCTION
+def verify_wrapper_and_parser(pins: dict) -> None:
+    krun = next(item for item in pins["selectedExecutables"] if item["role"] == "krun")
+    dirs = WRAPPER_PATH_RE.findall(Path(krun["path"]).read_text())
+    if dirs != pins["wrapperPathDirs"]:
+        raise PreflightError("WRAPPER_PATH_DRIFT")
+    missing = set(pins.get("wrapperPathDirsMissing") or [])
+    for directory in dirs:
+        present = Path(directory).is_dir()
+        if directory in missing:
+            if present:
+                raise PreflightError("WRAPPER_PATH_UNEXPECTED", directory)
+        elif not present:
+            raise PreflightError("WRAPPER_PATH_MISSING", directory)
+    by_role = {}
+    for item in pins["selectedExecutables"]:
+        role = item.get("role")
+        if role in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+        by_role[role] = item
+    for role in REQUIRED_HELPERS + ("java", "llvm", "kore"):
+        if role not in by_role:
+            raise PreflightError("PINS_SCHEMA", role)
+    wrapped = pins["childEnv"]["PATH"].split(":")
+    for directory in pins["wrapperPathDirs"]:
+        wrapped = prepend_path_dir(wrapped, directory)
+    unwrapped_dir = str(Path(krun["path"]).parent.parent / "bin-unwrapped")
+    stages = {
+        "krun": prepend_path_dir(wrapped, unwrapped_dir),
+        "kast": list(wrapped),
+        "setenv": prepend_path_dir(prepend_path_dir(list(wrapped), str(Path(krun["path"]).parent)), pins["setenvNativeDir"]),
+    }
+    selections = pins["commandSelections"]
+    if type(selections) is not dict or set(selections) != set(STAGE_COMMANDS):
+        raise PreflightError("PINS_SCHEMA", "commandSelections")
+    for stage, names in STAGE_COMMANDS.items():
+        pinned_stage = selections.get(stage)
+        if type(pinned_stage) is not dict or set(pinned_stage) != set(names):
+            raise PreflightError("PINS_SCHEMA", stage)
+        for name in names:
+            resolved = resolve_command(name, stages[stage])
+            expected = pinned_stage[name]
+            item = by_role.get(name)
+            if resolved is None or str(resolved) != expected or item is None or item["path"] != expected:
+                raise PreflightError("COMMAND_SELECTION", stage + ":" + name)
+            if sha256_file(resolved) != item["sha256"]:
+                raise PreflightError("PIN_MISMATCH", name)
+    for role, default in (("llvm", "llvm-krun"), ("kore", "kore-print")):
+        item = by_role[role]
+        resolved = resolve_command(item.get("command", default), stages["krun"])
+        if resolved is None or str(resolved) != item["path"] or sha256_file(resolved) != item["sha256"]:
+            raise PreflightError("COMMAND_SELECTION", role)
+    parser = next(item for item in pins["retained"] if item["role"] == "parser")
+    shebang = pins["parserShebang"]
+    if Path(parser["path"]).read_text().splitlines()[0] != shebang["line"]:
+        raise PreflightError("PARSER_SHEBANG")
+    resolved = resolve_command(shebang["argument"], stages["krun"])
+    if resolved is None or str(resolved) != shebang["resolvedOnWrapperPath"]:
+        raise PreflightError("PARSER_PYTHON", str(resolved))
+    if str(resolved.resolve()) != shebang["resolvedTarget"]:
+        raise PreflightError("PARSER_PYTHON_TARGET")
+    if sha256_file(resolved) != shebang["sha256"]:
+        raise PreflightError("PIN_MISMATCH", "parser-python")
+YOUR HELPERS
+REQUIRED_HELPERS = (
+    "dirname", "basename", "mktemp", "date", "rm", "cat", "cp", "fold",
+    "uname", "grep", "head", "cut", "sed",
+)
+STAGE_COMMANDS = {
+    "krun": REQUIRED_HELPERS + ("java",),
+    "kast": ("dirname", "uname", "grep", "head", "cut", "sed", "java"),
+    "setenv": ("uname", "dirname", "grep", "head", "cut", "sed", "java"),
+}
+
+
+def prepend_path_dir(path_dirs: list[str], directory: str) -> list[str]:
+    out = []
+    removed = False
+    for item in path_dirs:
+        if not removed and item == directory:
+            removed = True
+            continue
+        out.append(item)
+    return [directory] + out
+
+
+def resolve_command(name: str, directories: list[str]) -> Path | None:
+    for directory in directories:
+        candidate = Path(directory) / name
+        if candidate.is_dir() or not os.access(candidate, os.X_OK):
+            continue
+        return candidate
+    return None
+ACTUAL REPRO
+{
+  "candidatePatch": "author-patch-08.json",
+  "scope": "Actual pinned Bash PATH statements only; no K, Java, strace or native execution",
+  "argv": [
+    "/nix/store/306znyj77fv49kwnkpxmb0j2znqpa8bj-bash-5.2p26/bin/bash",
+    "--noprofile",
+    "--norc",
+    "-c",
+    "PATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin'':'/':'}\nPATH='/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin'':'/':'}\nPATH='/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin'':'/':'}\nPATH='/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin'':'/':'}\nPATH='/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin'':'/':'}\nPATH='/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin'':'/':'}\nPATH='/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin'':'/':'}\nPATH='/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin'':'/':'}\nPATH='/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin'':'/':'}\nPATH='/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin'':'/':'}\nPATH='/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin'':'/':'}\nPATH='/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin'':'/':'}\nPATH='/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin'':'/':'}\nPATH='/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nprintf \"krun-wrapper=%s\\n\" \"$PATH\"\nexport PATH=\"$(cd \"$(dirname \"$0\")\"; pwd):$PATH\"\nprintf \"krun=%s\\n\" \"$PATH\"\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin'':'/':'}\nPATH='/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin'':'/':'}\nPATH='/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin'':'/':'}\nPATH='/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin'':'/':'}\nPATH='/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin'':'/':'}\nPATH='/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin'':'/':'}\nPATH='/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin'':'/':'}\nPATH='/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin'':'/':'}\nPATH='/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin'':'/':'}\nPATH='/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin'':'/':'}\nPATH='/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin'':'/':'}\nPATH='/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin'':'/':'}\nPATH='/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nPATH=${PATH:+':'$PATH':'}\nPATH=${PATH/':''/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin'':'/':'}\nPATH='/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin'$PATH\nPATH=${PATH#':'}\nPATH=${PATH%':'}\nexport PATH\nprintf \"kast=%s\\n\" \"$PATH\"\nK_LIB_DIR=\"$1\"\nexport PATH=\"$K_LIB_DIR/../../bin:$PATH\"\nprintf \"checkJava=%s\\n\" \"$PATH\"\nexport PATH=\"$K_LIB_DIR/native/linux64:$PATH\"\nprintf \"setenv=%s\\n\" \"$PATH\"\n",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/krun",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework"
+  ],
+  "exit_code": 0,
+  "actual": {
+    "krun-wrapper": [
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/usr/bin",
+      "/bin"
+    ],
+    "krun": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped",
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/usr/bin",
+      "/bin"
+    ],
+    "kast": [
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped",
+      "/usr/bin",
+      "/bin"
+    ],
+    "checkJava": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/../../bin",
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped",
+      "/usr/bin",
+      "/bin"
+    ],
+    "setenv": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/native/linux64",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/../../bin",
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped",
+      "/usr/bin",
+      "/bin"
+    ]
+  },
+  "predicted08": {
+    "krun": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped",
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/usr/bin",
+      "/bin"
+    ],
+    "kast": [
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/usr/bin",
+      "/bin"
+    ],
+    "setenv": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/native/linux64",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin",
+      "/nix/store/abm55q8k9lsbz7kv2v68ns7hkdks2v2q-bison-3.8.2/bin",
+      "/nix/store/z1fkfc5ca0rra7m5zrh8i92mx18w9i00-flex-2.6.4/bin",
+      "/nix/store/9bv7dcvmfcjnmg5mnqwqlq2wxfn8d7yi-gcc-wrapper-13.2.0/bin",
+      "/nix/store/rx6nkd40819acppajq29g1hxa4d9r35f-gmp-with-cxx-6.3.0/bin",
+      "/nix/store/kjb3a2ip8ydb3zm604agim5ccjja3vfj-openjdk-headless-minimal-jre-21+35/bin",
+      "/nix/store/fyr5dbvc94fh9rabx010m7aqv7sd5an1-mpfr-4.2.1/bin",
+      "/nix/store/j4m3lwhh4x0bzilvi77d512ahry775nq-ncurses-6.4/bin",
+      "/nix/store/zdvrzlvzbn9ymb0z8na50w995j8np16z-pkg-config-wrapper-0.29.2/bin",
+      "/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin",
+      "/nix/store/ih51sgk8g57fnkbd5r82ddi8k5vln8cl-z3-4.13.4/bin",
+      "/nix/store/5p6kb76qjrdwjvjmm6l7l2683k41ay1r-kore-38afc81/bin",
+      "/nix/store/p7hjh21dj4bc1s6kfcdwk45knp5n4cc0-llvm-backend-0.1.140/bin",
+      "/nix/store/wjl553m0vxgnrcwhywph5nh3w86zb9cj-gdb-14.2/bin",
+      "/usr/bin",
+      "/bin"
+    ]
+  },
+  "comparison": {
+    "krun": true,
+    "kast": false,
+    "setenv": false
+  },
+  "missingFrom08": {
+    "krun": [],
+    "kast": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped"
+    ],
+    "setenv": [
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/../../bin",
+      "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped"
+    ]
+  },
+  "sourceHashes": {
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin/krun": "f204de804ce78072c897ff76610fcd542637d16d8e51ca2021d38c138b7c00c5",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin/kast": "29e8f002b7454df4d5833ab75b4779c45af203ef3ca0a47a0a75c3f270023988",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/bin-unwrapped/krun": "80dea6c5e96142084fe7b4514a22f883db906daef63701b2bcad949d1ff5d743",
+    "/nix/store/y63xkr8pk2bqd5lh4889rlwldw26v9f4-k-7.1.337-4a46d1231473b599c699160132fd6e76a5c46406/lib/kframework/setenv": "fa8d26333cf0d1ef90ba3c6cfc85cd9f63ff23088bfaa61f6a9c6c69c9629688"
+  }
+}

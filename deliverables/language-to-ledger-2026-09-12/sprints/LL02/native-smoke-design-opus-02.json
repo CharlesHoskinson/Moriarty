@@ -1,0 +1,182 @@
+{
+  "review": {
+    "proposal_sha256": "ea8ebc08d590c4b81c04dc6786241e2d2dcd437b34ce527b357627e71df213ca",
+    "review": "fresh-independent-claude-opus-5-medium design-and-prospective-resource review, revision02 native-loader smoke",
+    "verdict": "REVISE",
+    "verdict_summary": "The overall shape is sound: one separately charged use, the source13 run_shim(execve=...) seam, delimiter-positional suffix replacement, the unchanged tracer prefix, prepaid 20/5/60, and a fixed outer scope. The fixes below are narrow design-text corrections. None requires new resources, a framework, or a source13 change. Three of them decide whether the single use can actually answer its question: F1/F2 result classification under near-certain stderr overflow, F3 a redundant and possibly infeasible activation-timestamp dependency, and F4 an undefined deadline for the 25s check. The resource vote below is conditional on these fixes. It does not approve execution.",
+    "hash_note": "The proposal digest is as supplied. It was not recomputed. No tools, commands, network, or subagents were used.",
+    "findings": [
+      {
+        "id": "R02-1",
+        "severity": "high",
+        "topic": "Evidence classification under unchanged strace prefix",
+        "evidence": "The prefix is strace -f -k -e trace=process,signal -e signal=SIGSEGV. trace=signal records every rt_sigaction/rt_sigprocmask call. HotSpot makes these per thread and at startup handler installation. The bash/sh wrappers make them per fork. -k attaches an unwound stack to every event. Up to five JVMs start: phaseA, then checkJava `java --version` and the actual kast JVM for each of two kast paths. With the shell helper forks added, 1048576 bytes of stderr is very likely exceeded before phaseB's output-path kast exec is recorded. Revision02 says any predicate absent from the retained prefix makes the loader outcome inconclusive 'even if stdout matches'. As written, the single use will most likely yield inconclusive for its main question.",
+        "necessary_correction": "Before source freeze, pre-declare tiered result predicates. Tier A (envelope/K compatibility) is established by raw exit 0, full stdout size 18054 and SHA256 13a4564d..., fixture phase outcome (R02-2), and a tracer that stayed attached (strace would otherwise exit non-zero or fail to start). Tier A is valid regardless of stderr overflow. It establishes that the unchanged tracer, nested bwrap namespaces, the memfd snapshot, the read-only HOME/cwd and the JSON output path allowed a correct small result. Tier B (trace-derived identities: direct-Java -kast for both paths, native interpreter exec, no successful ng) is OBSERVED only from the retained prefix, otherwise UNOBSERVED. Say explicitly which Tier B conclusions follow structurally from Tier A plus the private view (no .kserver socket, isolated netns), and which require the trace. Record full-stream stderr size as the explicit overflow-feasibility datum for trace106."
+      },
+      {
+        "id": "R02-2",
+        "severity": "medium",
+        "topic": "Phase outcomes must survive stderr truncation",
+        "evidence": "Fixture phase/monotonic markers go to the same stderr pipe as strace output. After overflow they fall outside the retained prefix. Only the exit code and the full-stream hash/size survive.",
+        "necessary_correction": "Specify a fixed fixture exit-code map for pre-K outcomes: identity/cgroup/timing refusal, Java non-zero, Java signaled, input-literal hash mismatch, callback returned or raised. Use distinct values in 3..99 that avoid 1, 2, 113, 124, 125 and >=125. Propagate krun's own exit unchanged only after all pre-K checks pass. Result review must treat collisions as ambiguous. Emit the pre-K markers before starting Java so they fall within the earliest stderr bytes, and keep them fixed-format and minimal."
+      },
+      {
+        "id": "R02-3",
+        "severity": "high",
+        "topic": "Active-enter timestamp observation: redundant and feasibility-unobserved",
+        "evidence": "The fixture runs as a Foreman child inside user+PID namespaces. The only source for ActiveEnterTimestampMonotonic is the systemd user bus (systemctl/D-Bus). That needs XDG_RUNTIME_DIR/DBUS_SESSION_BUS_ADDRESS to survive runner.execute (which inherits env) and the Foreman launcher (env handling not reviewed here), plus bus credential acceptance from inside the userns. That would be a new unbound tool and subprocess in the fixture. The harmless scope check ran without Foreman and without reading this property. The check is also redundant. Activation must occur after origin and before fixture entry, so observing monotonic_ns - origin <= 5s at fixture entry already proves activation <= origin+5s.",
+        "necessary_correction": "Remove the in-fixture active-enter timestamp predicate and any in-fixture systemctl/D-Bus call. Base native admission on: the fresh origin (not in the future, elapsed <= 5s at run_shim entry), /proc/self/cgroup 0:: path equal to the exact named scope leaf with no escape or child, and leaf memory.max, memory.swap.max and cpu.max read directly from /sys/fs/cgroup. Collect unit properties, Result and journal from outside after the run as retained evidence only. If the root keeps the timestamp predicate anyway, a harmless check must first prove it under actual strong Foreman, and a fail-closed unavailability must not consume the canary use."
+      },
+      {
+        "id": "R02-4",
+        "severity": "medium",
+        "topic": "The 'fewer than 25s remain' deadline is undefined",
+        "evidence": "Revision02 does not say which deadline the pre-Java check measures against: origin+55 (GNU timeout), origin+60 (kill-after), or activation+50 (scope runtime). The Foreman 20s timer starts at launcher entry, and the fixture cannot observe it. So the check neither protects nor measures the Foreman budget.",
+        "necessary_correction": "Define the deadline as origin_ns + 50s. That is the tightest bound implied by activation >= origin, and it needs no systemd timestamp. Refuse Java if fewer than 25s remain against it. State plainly that Foreman 20/5 remains the operative child bound, and that exceeding it yields a consumed timeout (124), never a retry."
+      },
+      {
+        "id": "R02-5",
+        "severity": "medium",
+        "topic": "Harmless pre-freeze mechanism check must cover the actual chain",
+        "evidence": "scope-mechanism-check-01 shows exact cgroup caps for a bare Python child with 55/5 properties. It does not show any of the following: env var propagation through runner.execute Popen and the Foreman launcher; the /proc/self/cgroup path and /sys/fs/cgroup visibility inside Foreman's namespaces (a cgroupns unshare would present '/'); the same CLOCK_MONOTONIC base inside Foreman (no time namespace offset); or behavior inside the fixture's own bwrap for memory.events reads.",
+        "necessary_correction": "Before freeze, run one harmless check using the exact final outer statement shape: Python -I -B -c, /usr/bin/timeout 55s/kill-after 5s, systemd-run with the final 50/5 properties, and a distinct check unit name. Wrap the actual strong Foreman launcher around a harmless Python child. No guarded run, charge, Java, K, strace or bwrap-workload. The child must verify MORIARTY_LL02_ORIGIN_NS arrival, a monotonic delta within bound, the exact scope leaf path and caps, absence of FOREMAN_LAUNCH_* from the inner environment, and readable memory.events. Also record timeout/scope cleanup on a deliberately hung harmless child. Bind the receipt in the admission candidate."
+      },
+      {
+        "id": "R02-6",
+        "severity": "medium",
+        "topic": "Outer environment for systemd-run --user",
+        "evidence": "The outer statement removes two FOREMAN variables and execs timeout. systemd-run --user needs the user bus (XDG_RUNTIME_DIR and/or DBUS_SESSION_BUS_ADDRESS), and the CLI and fixture need HOME=/home/charl. Revision02 does not say whether the rest of the environment is inherited or constructed.",
+        "necessary_correction": "Freeze the outer environment rule explicitly. Either inherit os.environ minus exactly the two FOREMAN_LAUNCH variables plus the added origin, or use a fixed literal environment including HOME, XDG_RUNTIME_DIR, PATH, and the bus address if required. Bind it in admission and record it in the launch receipt."
+      },
+      {
+        "id": "R02-7",
+        "severity": "low",
+        "topic": "Unit-name collision",
+        "evidence": "The fixed unit name moriarty-ll02-native-smoke-20260912-01 would be refused if a unit of that name is already loaded, for example from an aborted attempt. That turns a prepaid use into a pre-activation failure.",
+        "necessary_correction": "Make a read-only pre-launch observation of LoadState=not-found for the exact unit name part of admission, taken after the harmless checks and immediately before origin sampling. It is not a retry mechanism."
+      },
+      {
+        "id": "R02-8",
+        "severity": "low",
+        "topic": "Runner watchdog is shadowed by the scope",
+        "evidence": "runner.execute kills and marks ambiguity at timeout+grace+30 = 55s after Popen. The scope stops everything at activation+50s. In a pathological Foreman hang, the scope kills the canonical CLI before its own watchdog records an ambiguous receipt and store.finish. Revision02 already leaves that case unresolved and consumed.",
+        "necessary_correction": "Disclose that under this scope the runner watchdog path cannot be reached. Pathological hangs therefore produce unresolved reservations, not ambiguous finished receipts. No change to runner, charge or scope numbers."
+      },
+      {
+        "id": "R02-9",
+        "severity": "low",
+        "topic": "Physical versus accounting bound",
+        "evidence": "Native-capable descendants start only if fixture entry is within origin+5s, so scope expiry bounds them by origin+60s. A late-activated scope can outlive origin+60s. GNU timeout kills only the CLI; Foreman runs in a new session inside the scope. Those descendants refuse native entry but can persist harmlessly for up to Foreman 20+5.",
+        "necessary_correction": "State that 60s is the charged launch envelope. The physical native bound is origin+60s through the entry check. Non-native late-scope residue is bounded by Foreman and the scope, is not native execution, and gets no refund or extension."
+      },
+      {
+        "id": "R02-10",
+        "severity": "low",
+        "topic": "Adapter loading namespace",
+        "evidence": "Executing the adapter's verified bytes with canonical __file__ in a namespace where __name__ == '__main__' would run main(). main calls run_shim() with no callback and then execs bwrap with the real trace106 argv. That is the sole diagnostic and is forbidden.",
+        "necessary_correction": "Require compile(verified_bytes, canonical_path, 'exec') into a fresh dict with __name__ set to a fixed non-'__main__' value and __file__ set to the canonical path. Assert that main is never referenced. Add an offline test that fails if the module namespace name is '__main__'."
+      },
+      {
+        "id": "R02-11",
+        "severity": "info",
+        "topic": "JVM SIGSEGV noise",
+        "evidence": "HotSpot uses SIGSEGV internally for implicit null checks and polling pages. Under -e signal=SIGSEGV, benign SIGSEGV deliveries in Java PIDs will appear in stderr.",
+        "necessary_correction": "Actual-result review must attribute any SIGSEGV line to a PID and its exec identity. A Java-PID SIGSEGV followed by normal continuation is not a native crash. Carry the same rule into trace106 classification."
+      },
+      {
+        "id": "R02-12",
+        "severity": "info",
+        "topic": "Seam and delimiter logic",
+        "evidence": "In source13, run_shim calls execve(BWRAP_PATH, argv, env) after preflight, apply_limits, child_env and seal_snapshot. build_bwrap_argv appends '--' then diagnosticArgv, whose own '--' is at index 7. Snapshot/fd/perms tokens cannot equal '--'. So k = len(argv) - len(diagnosticArgv) - 1 with the stated checks is correct. A successful callback os.execve never returns, which leaves the finally/_close_fds path inert, and the injected dict return is reached only on failure, where exit status must be non-zero. Python 3.14 and strace identities are pinned in source13 selectedExecutables per host evidence.",
+        "necessary_correction": "None beyond R02-10. Bind the adapter, pins, snapshot, ownership and pointer as relative files in the runner plan so that runner._check_files covers them. Confirm that the existing action schema accepts kind 'verify' with no assertion. cli.py and records.py were not reviewed here."
+      }
+    ],
+    "resource_vote": {
+      "vote": "APPROVE_PROSPECTIVE_RESOURCE_DECISION_CONDITIONAL_ON_REVISION",
+      "substance": "I support one separate prospective tranche with these bounds: one use; timeout 20s including real preflight, sealing, mount, Java and K; grace 5s; prepaid charge 60s; zero compiles, retries, refunds and reusable slack; exactly one krun and one phaseA java; output limit 1048576 bytes per stream; unchanged 506-file snapshot; HOME tmpfs 64MiB; /tmp tmpfs 256MiB; stack 8MiB; core 0. The outer scope sets MemoryMax=8589934592, MemorySwapMax=0, CPUQuota=200%, RuntimeMaxSec=50s, RuntimeRandomizedExtraSec=0, TimeoutStopSec=5s, KillMode=control-group, FinalKillSignal=SIGKILL and SendSIGKILL=yes, inside GNU timeout 55s with kill-after 5s. The scope is a bounded physical cap. It is not a new executor or accounting path, and it preserves the canonical guarded CLI and Foreman strong containment. This vote mints no funds and admits no action. It is void if any applicable non-amendable shared cap or known liability must consume this tranche.",
+      "preserved": "C7/D1/G60 and root-resource-vote-01 are untouched, and their sole trace106 diagnostic is not consumed. All 405 debit rows, 8 reservations, exhausted envelopes and counters, and known and unknown liabilities remain preserved. There is no historical reset, no waiver of unknown liabilities, and no borrowing. If the later trace106 diagnostic is placed under this scope mechanism, that is a change to its approved envelope and needs its own review.",
+      "risk_disclosure": "Under 2-CPU bandwidth, with strace -k on up to five JVM starts plus a full production preflight (Nix queries, hashing 255+488 files, sealing 506 memfds), the 20s timeout may be exceeded. The CLI-entry 5s allowance is also unmeasured. Either outcome is a consumed failure or inconclusive result, accepted as the price of a bounded single observation."
+    },
+    "ordering_dispositions": {
+      "N13-C1": {
+        "vote": "AGREE",
+        "reason": "Requiring accepted-depth 5947/Core65536 to succeed before its crash is diagnosed is circular. Keep 5947 success and 5948/Core65547 rejection as mandatory post-correction conformance. This supersedes the pre-freeze wording in Opus03b's condition by reordering it, without removing it. Record it as such."
+      },
+      "N13-C2": {
+        "vote": "AGREE",
+        "reason": "Credit bwrap-full-snapshot-probe-02 and the source12 six-case envelope controls at their own source hashes and limits. Ptrace, JVM, ELF/memfd exec, and current production preflight and native timing remain open, and are what this smoke observes."
+      },
+      "N13-C3": {
+        "vote": "AGREE",
+        "reason": "The final diagnostic runner is 20/5/60 as enforced by source13 load_pins. The draft runner records with 25s are stale history and confer no canary credit or extra seconds."
+      },
+      "N13-C4": {
+        "vote": "AGREE",
+        "reason": "Wrapper 113 stays an observed wrapper-failure condition only. Result review must separate setup, parser, output, timeout, overflow and launcher codes from a PID-attributed native signal or exit. The trace106 argv is not changed and exit 113 is not forced. The runner's reproduce kind requires exit 2..123 plus a stdout commitment, so any assertion change for trace106 needs explicit bound-candidate review."
+      }
+    },
+    "source_admission_result_conditions": {
+      "source": [
+        "Revise the design text for R02-1..R02-4, R02-6 and R02-10, then get fresh substantive agreement. R02-7..R02-9 may be recorded as disclosures in the same revision.",
+        "Only two new files, native-loader-smoke.py and test_native_loader_smoke.py. Source13 candidate 805e3e3f... and the adapter 6e6949de... stay byte-unchanged. Verify the adapter hash before compiling it, under a non-main module name.",
+        "The callback is mandatory and exec happens exactly once. Enforce the positional delimiter checks and preserve argv[:k+1] byte-for-byte. The suffix is the original 8-token strace prefix followed by /usr/bin/python3.14 -I -B -c <literal>. Reject the trace106 input or the unmodified diagnostic suffix anywhere in the final argv. Callback return or exception maps to a distinct non-zero exit with no fallback.",
+        "The inner literal embeds the 13830 trace01 bytes (SHA256 f10a7237...), writes /tmp/ll01-canary-13.input with O_EXCL, and checks UID/GID 1000, HOME, cwd, stack 8MiB, core 0, absence of HOME extensions, scope leaf caps and the origin deadline before Java. PhaseA stdout goes to stderr. Java failure skips K. The exit-code map follows R02-2.",
+        "Offline tests cover: both delimiters; no native call on import; mandatory callback; exactly-once substituted exec; the verified-byte loading path; wrong source, argv, identity, cgroup, timing or env refusal; Java failure skipping K; raw-output inheritance; normal and signaled exits; and the exit-code map. Use real source13 preflight with the final exec injected. No Java, K, strace or bwrap-workload execution.",
+        "Fresh independent Opus and Astra audits of the complete fixture, final outer statement literal, and tool hashes (timeout, systemd-run, python3.14, Foreman, CLI)."
+      ],
+      "admission": [
+        "Fresh independent votes on the revised design and resource numbers, with a majority of actual substantive votes. Missing reviewers do not vote. User confirmation does not substitute.",
+        "Harmless pre-freeze chain check per R02-5, plus timeout/scope cleanup checks on a hung harmless child. Bind their receipts.",
+        "Install through the existing canonical route: exact new charge row (60s) bound to the runner digest, action and candidate; unique one-use verify action; command mapping; files map including adapter, pins, snapshot, ownership and pointer; outputLimitBytes 1048576; timeout 20; grace 5. Accounting must be current, and no pending transaction may block.",
+        "Refresh host ownership evidence and host-job observation for the two-job rule, and confirm the unit name is unused (R02-7). Freeze the outer environment rule (R02-6).",
+        "Execute only through: one outer Python -I -B -c statement, GNU timeout 55/5, systemd-run with the exact 50/5 scope, and the guarded CLI --repo /home/charl/Moriarty run --action <bound>, with cwd /home/charl/Moriarty. There is exactly one invocation. Any failure is consumed. No retry, refund or reconciliation from inactive state."
+      ],
+      "actual_result": [
+        "Retain the complete runner/store receipt, or the unresolved reservation, plus unit properties, Result and journal collected from outside afterwards, and full stderr/stdout sizes and hashes.",
+        "Classify Tier A and Tier B separately per R02-1. Tier B predicates missing from the retained prefix are UNOBSERVED. Attribute SIGSEGV lines by PID and exec identity (R02-11). Classify OOM only with memory.events evidence. Treat an unexplained SIGKILL as inconclusive.",
+        "Keep setup failure, pre-native refusal, Java failure, K non-zero, timeout 124, launcher 125, overflow and ambiguity distinct. None is a semantic rejection, a diagnostic use, a financial result or a trace106 conclusion.",
+        "Two fresh independent actual-result reviews. Success establishes only small-case loader/envelope compatibility under the unchanged tracer, plus stderr-volume evidence relevant to trace106."
+      ]
+    },
+    "scope_limitations": [
+      "Narrow corrected-design and prospective-resource review of revision02 only. Not a source approval, admission, dispatch, live-execution approval, or actual-result acceptance. It mints no resources.",
+      "Read: the supplied revision02, proposal-13, loader proposal03, Opus03b, source audits Astra13 and Opus13, root-resource-vote-01, the full source13 adapter, runner.py, the develop SKILL, the loop assignment, and the scope-mechanism observation. Not read: cli.py, records.py, store.py, foreman-launch.js env and namespace handling, systemd/GNU timeout sources, and JVM/strace internals. Stderr-volume, timing and env-propagation assessments are engineering judgment, not observations.",
+      "No tools, native commands, network or subagents were used. Hashes are as supplied. Provider modelUsage attestation is the root's to attach, and exclusive model identity is not claimed.",
+      "C7/D1/G60 and its sole trace106 diagnostic, accepted-depth conformance, PCD, financial lifecycle, and actual Midnight Preview deployment and settlement all remain open. The full remaining roadmap (LL02..LL09, MC01..MC08, SP01..SP12) is unaffected by this vote."
+    ]
+  },
+  "providerModelUsage": {
+    "claude-haiku-4-5-20251001": {
+      "inputTokens": 49861,
+      "outputTokens": 19,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.049956,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "thinkingTokens": 0,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    },
+    "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 20644,
+      "cacheReadInputTokens": 1360,
+      "cacheCreationInputTokens": 69704,
+      "webSearchRequests": 0,
+      "costUSD": 1.21383,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 12688,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "stop_reason": "end_turn",
+  "is_error": false,
+  "identityLimitation": "Substantive Opus5 output with Haiku4.5 auxiliary invocation (19 output tokens); not an exclusive-model session. Reviewer GNU shorthand is factually stale: observed binary uutils0.8.0.",
+  "raw_sha256": "bcdc31d42769ed2e55573eeca69b1690a127aa74b0b7ff7cf7d12df5e1faad9b"
+}

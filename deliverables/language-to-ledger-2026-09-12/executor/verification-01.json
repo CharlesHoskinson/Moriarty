@@ -1,0 +1,247 @@
+{
+  "schemaVersion": "moriarty-executor-verification/1",
+  "task": "5.2 Implement the already specified executor/lifetime boundary and offline fault matrix",
+  "recordedAt": "2026-09-12T23:51:27Z",
+  "lane": {
+    "implementer": "GPT-5.6 Sol via Codex CLI, reasoning effort high",
+    "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-scope-reconciliation",
+    "branch": "foreman/moriarty-ll-loop-20260912/implement/scope-reconciliation",
+    "baseCommit": "056e662254c38936758af9c6f72c019705a1ff09",
+    "laneReportUsable": true,
+    "laneReportNote": "The supervising agent initially exited leaving the template, so the orchestrator verified independently first. The lane later returned a complete report whose counts match the orchestrator run exactly."
+  },
+  "artifacts": {
+    "executor-caller.mjs": {
+      "sha256": "3673c4fe93128905429990e8146a517d64f73d6323e93da2747eda4cdd2c124f",
+      "bytes": 8676
+    },
+    "executor-caller.test.mjs": {
+      "sha256": "613a86fc70dffa063c4e9e8927f001341e9ed4d58a4c6683aafe5a66c1f94baf",
+      "bytes": 11037
+    },
+    "fault-matrix.mjs": {
+      "sha256": "5cd49eb330548ba2ed40efc5a479de08bad532ad51749be02a317995692267d6",
+      "bytes": 3663
+    },
+    "fault-matrix.test.mjs": {
+      "sha256": "e8d799a784d5b7c7a7328846072cc707e97aacb08510c99e655d5ac8f07e30a9",
+      "bytes": 5922
+    },
+    "prover-lifetime.mjs": {
+      "sha256": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+      "bytes": 4949
+    },
+    "prover-lifetime.test.mjs": {
+      "sha256": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed",
+      "bytes": 6219
+    }
+  },
+  "verification": {
+    "method": "Re-run by the orchestrator inside the worktree with both retained-artifact pointers exported.",
+    "newSuites": {
+      "command": "npm run test:executor",
+      "tests": 45,
+      "pass": 45,
+      "fail": 0
+    },
+    "baselines": {
+      "npm test": {
+        "tests": 52,
+        "pass": 52,
+        "fail": 0
+      },
+      "test:ledger": {
+        "tests": 524,
+        "pass": 524,
+        "fail": 0
+      },
+      "test:compiled": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0
+      },
+      "test:compiled-rejection": {
+        "tests": 11,
+        "pass": 11,
+        "fail": 0
+      },
+      "test:finalized-state": {
+        "tests": 27,
+        "pass": 27,
+        "fail": 0
+      },
+      "test:preview": {
+        "tests": 89,
+        "pass": 89,
+        "fail": 0
+      }
+    },
+    "baselinesUnchanged": true,
+    "openspec": {
+      "command": "openspec validate --all --strict --no-interactive",
+      "worktreeResult": "12 passed, 0 failed",
+      "mainResult": "13 passed, 0 failed",
+      "differenceExplained": "openspec/changes/session-completion-sprints is untracked in main, so it is absent from a worktree created at HEAD. Not a regression."
+    },
+    "constraintChecks": {
+      "existingTestFilesModified": 0,
+      "filesWrittenOutsideAllowedPackage": 0,
+      "retainedArtifactsRebuilt": false,
+      "gatedSuitesStillVerifyPinnedHashes": true
+    }
+  },
+  "status": "accepted-increment-task-5.2-still-open",
+  "limits": "Offline source implementation only. This does not establish process containment, financial success, Docker execution or Preview acceptance, and grants no admission.",
+  "laneDeclaredGaps": [
+    {
+      "id": 1,
+      "summary": "No AF_UNIX socket or nonce handshake. The caller uses the documented argv protocol of launch-local.mjs and preview-launch.mjs instead; the socket protocol belongs to a separate executor.",
+      "severity": "low",
+      "reviewNeeded": false
+    },
+    {
+      "id": 2,
+      "summary": "writeControlRecord and readDurableResult are injectable dependencies with no production filesystem default wired this round.",
+      "severity": "medium",
+      "reviewNeeded": true
+    },
+    {
+      "id": 3,
+      "summary": "startupValid, evidencePreexists and invocationIdMismatch are passed conservative literal defaults in executor-caller.mjs rather than detected against a real store. fault-matrix.mjs implements and tests those rows independently.",
+      "severity": "medium",
+      "reviewNeeded": true
+    },
+    {
+      "id": 4,
+      "summary": "terminalEvidencePersisted and stopReceiptPersisted are conflated: one durable-result read stands in for both.",
+      "severity": "medium",
+      "reviewNeeded": true
+    },
+    {
+      "id": 5,
+      "summary": "No hard-wired call to validatePreviewFinancialCompletion or localFinancialCommandExitCode inside executor-caller.mjs; left to a production caller supplying readDurableResult.",
+      "severity": "low",
+      "reviewNeeded": false
+    },
+    {
+      "id": 6,
+      "summary": "The total precedence order across the 14 fault-matrix rows is the implementer\u2019s own choice. The spec states only two ordering rules explicitly. Documented and tested, but another spec-consistent ordering is possible.",
+      "severity": "medium",
+      "reviewNeeded": true
+    }
+  ],
+  "laneReportUsable": true,
+  "orchestratorCorrections": [
+    {
+      "laneClaim": "the repository currently has 12 change directories",
+      "correction": "Main holds 13 change directories. The worktree holds 12 because openspec/changes/session-completion-sprints is untracked in main and therefore absent from a worktree created at HEAD.",
+      "materiality": "none for this diff, which touches nothing under openspec/"
+    },
+    {
+      "laneClaim": "test:ledger 523/524 inside the Codex sandbox",
+      "correction": "An EPERM on spawnSync in the pre-existing launch-local.test.mjs FIFO test under the workspace-write sandbox. Both the lane and the orchestrator measured 524/524 outside that sandbox, so it is a sandbox artifact, not a regression.",
+      "materiality": "none"
+    }
+  ],
+  "correctionRound1": {
+    "trigger": "Independent Opus audit AUDIT-OPUS-01 returned BLOCKED with 11 findings, 2 high and blocking.",
+    "orchestratorReverified": true,
+    "suitesAfterCorrection": {
+      "npm test": 52,
+      "test:ledger": 576,
+      "test:compiled": 3,
+      "test:compiled-rejection": 11,
+      "test:finalized-state": 27,
+      "test:preview": 89,
+      "test:executor": 52
+    },
+    "ledgerCountNote": "test:ledger rose from 524 to 576 because the three executor suites were appended to it, so they can no longer rot unnoticed. The original 524 are preserved as a subset.",
+    "executorSuiteGrowth": "45 to 52 assertions, 7 added for the fixes.",
+    "spotChecksByOrchestrator": {
+      "F1 provenance present": "killRequested appears 3 times in executor-caller.mjs",
+      "F2 no invented scalars": "line 94 reads terminalEvidencePersisted:false, stopReturnCode:null, stopErrorClass:null, stopReceiptPersisted:false",
+      "F9 dead assertion": "cleanupCalls no longer present in fault-matrix.test.mjs",
+      "F4 and F7 de-scoped cleanly": "no AF_UNIX, invocation socket or nonce env names, or C wrapper filename anywhere in the six files"
+    },
+    "functionalConsequence": "PROCESS_SUCCESS is no longer reachable from this caller, because it never durably writes terminal evidence and now reports that honestly instead of supplying an invented zero. This is the spec-correct outcome, and it is a real functional limit to carry forward, not a defect.",
+    "openWork": [
+      {
+        "id": "F4",
+        "summary": "The one-shot runner invocation handoff protocol: AF_UNIX socket and mode bits, 256-bit nonce, env pinning, constant-time comparison, peer UID, /proc PID ancestry, one-handshake rule, pre-handshake durable event, EOF semantics, and the seven denial cases. Not attempted.",
+        "severity": "high"
+      },
+      {
+        "id": "F7",
+        "summary": "The static PID 1 prover-lifetime C wrapper, its reproducible build, and offline tests that compile it and drive children that exit, hang, fork, change process group and ignore signals. No such file exists. The delivered module is a correct pure model of its arithmetic and control-record bytes only.",
+        "severity": "medium"
+      }
+    ],
+    "artifactsAfterCorrection": {
+      "executor-caller.mjs": "2d614732704946541f1b3306b4c3363b810b400a2536ff5b5749393de316d893",
+      "executor-caller.test.mjs": "4d53e804ef477b3b2e160af2f42edfb916a4eab5a10913854d9fac724705341d",
+      "fault-matrix.mjs": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+      "fault-matrix.test.mjs": "19f0c29eb2ebd5d4947f61a648628abd5c131926a14dbde71d824c6d0bf91386"
+    },
+    "unchangedByCorrection": {
+      "prover-lifetime.mjs": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+      "prover-lifetime.test.mjs": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed"
+    }
+  },
+  "taskCompletionStatement": "Task 5.2 is NOT complete. Of its three scoped spec requirements, the fault matrix and the prover-lifetime arithmetic model are delivered and audited, while the one-shot handoff protocol and the static C wrapper are open. Closing 5.2 requires both.",
+  "auditRound2": {
+    "verdict": "APPROVED",
+    "artifact": "AUDIT-OPUS-02.md / .json at the lane worktree root",
+    "priorBlockingFindings": {
+      "F1": "fixed, verified by mutation and live probe",
+      "F2": "fixed, unreachable success judged spec-correct rather than an overshoot"
+    },
+    "method": "The auditor proved F1 by mutation: collapsing the substitution site fails the retitled test, and hoisting the provenance flag above the guard so a denied kill also launders fails the new denied-kill test. It proved the seven new tests load-bearing by making ten separate reversions on a scratch copy, each of which killed exactly the expected test. It compared the matrix exhaustively across 368,640 inputs.",
+    "auditorSelfCorrection": "In round one the auditor proposed mapping a caller kill to DEADLINE_EXCEEDED. It now records that the spec assigns MAIN_EXIT_UNAVAILABLE to an outer kill without a retained terminal observation, which is tighter than its own earlier suggestion, and that the implementer followed the spec rather than the reviewer. It also explicitly retracted a round-one overstatement.",
+    "exhaustiveMatrixComparison": {
+      "inputsCompared": 368640,
+      "classificationsChanged": 4608,
+      "realHoleClosed": 2,
+      "relabelOnly": 4606,
+      "note": "The two closed cases are significant: success was previously reachable with no observed main exit."
+    },
+    "newFindings": [
+      {
+        "id": "N1",
+        "severity": "low",
+        "summary": "Because terminalEvidencePersisted is unconditionally false, every clean run now reports EVIDENCE_WRITE_FAILED for a write that was never attempted, which masks a real deadline crossing in one branch.",
+        "followUp": true
+      },
+      {
+        "id": "N2",
+        "severity": "low",
+        "summary": "The new row absorbs STOP_FAILED and DEADLINE_EXCEEDED among 4,606 relabelled classifications, all with unknown raw exit.",
+        "followUp": true
+      },
+      {
+        "id": "N3",
+        "severity": "low",
+        "summary": "The post-kill bound settles the promise but not the process: measured 305ms settle against 4,028ms parent exit, with the child pipes still held and no pid returned for the outstanding cleanup owner.",
+        "followUp": true
+      },
+      {
+        "id": "N4",
+        "severity": "low",
+        "summary": "startupValid is still passed as true unobserved, and is no longer disclosed as such.",
+        "followUp": true
+      },
+      {
+        "id": "N5",
+        "severity": "low",
+        "summary": "The control-record await is unbounded.",
+        "followUp": true
+      },
+      {
+        "id": "N6",
+        "severity": "low",
+        "summary": "The containment validation added for F3 no longer gates anything.",
+        "followUp": true
+      }
+    ],
+    "acceptanceDecision": "Accepted as a verified increment. The audit approved it, both blocking defects are genuinely fixed, and the orchestrator independently re-ran all seven suites. The six new findings are all low and are recorded as open follow-ups rather than treated as resolved. N1 in particular will mislead a reader and should be fixed before this caller is used in anger."
+  }
+}

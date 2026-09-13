@@ -143,32 +143,78 @@ class ShimContractTests(unittest.TestCase):
         with self.assertRaisesRegex(adapter.PreflightError, "HOST_EVIDENCE_SCHEMA"):
             adapter.load_host_evidence(ownership)
 
-    def test_env_is_not_claimed_host_root(self):
+    def test_env_is_bound_and_missing_host_evidence_fails(self):
         adapter = load_adapter()
         ownership = json.loads((HERE / "k-macro05-trace106-ownership.json").read_text())
         host = adapter.load_host_evidence(ownership)
-        self.assertNotIn("/usr/bin/env", host)
-        self.assertIn("/usr/bin/python3.14", host)
-        self.assertEqual(
-            adapter.bind_path_for_ownership("/usr/bin/python3", host),
-            "/usr/bin/python3.14",
+        env_path = "/usr/bin/env"
+        self.assertIn(env_path, host)
+        expected = adapter.namespace_uid_for_host(
+            Path("/proc/self/uid_map").read_text(),
+            ownership["hostRootUid"],
+            ownership["overflowUid"],
         )
-        self.assertIsNone(adapter.bind_path_for_ownership("/usr/bin/env", host))
+        adapter.verify_protected_path(env_path, host, expected, ownership["hostRootUid"])
+        host = dict(host)
+        del host[env_path]
         with self.assertRaisesRegex(adapter.PreflightError, "ARBITRARY_OVERFLOW"):
-            adapter.verify_ownership("/usr/bin/env", host, 65534, 0)
-        adapter.verify_nonwritable("/usr/bin/env", Path("/usr/bin/env").lstat().st_uid)
+            adapter.verify_protected_path(env_path, host, expected, ownership["hostRootUid"])
 
     def test_wrapper_path_and_parser_python_are_pinned(self):
         adapter = load_adapter()
         pins = json.loads(PINS_PATH.read_text())
+        path = pins["childEnv"]["PATH"].split(":")
+        for directory in pins["wrapperPathDirs"]:
+            path = adapter.prepend_path_dir(path, directory)
+        self.assertEqual(path[0], pins["wrapperPathDirs"][-1])
+        self.assertEqual(path[len(pins["wrapperPathDirs"]) - 1], pins["wrapperPathDirs"][0])
+        unwrapped = str(Path(next(i["path"] for i in pins["selectedExecutables"] if i["role"] == "krun")).parent.parent / "bin-unwrapped")
+        krun_path = adapter.prepend_path_dir(path, unwrapped)
+        self.assertEqual(krun_path[0], unwrapped)
         adapter.verify_wrapper_and_parser(pins)
         shebang = pins["parserShebang"]
         self.assertEqual(shebang["argument"], "python3")
-        self.assertIn("python3-3.11.9/bin/python3", shebang["resolvedOnWrapperPath"])
+        self.assertEqual(str(adapter.resolve_command(shebang["argument"], krun_path)), shebang["resolvedOnWrapperPath"])
         self.assertEqual(
             hashlib.sha256(Path(shebang["resolvedOnWrapperPath"]).read_bytes()).hexdigest(),
             shebang["sha256"],
         )
+
+    def _kast_shell_interpreter(self, pins):
+        unwrapped = next(x["path"] for x in pins["selectedExecutables"] if x["role"] == "kast-unwrapped")
+        return Path(unwrapped).read_text().splitlines()[0][2:]
+
+    def test_missing_kast_shell_interpreter_pin_rejected(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        interpreter = self._kast_shell_interpreter(pins)
+        pins["selectedExecutables"] = [x for x in pins["selectedExecutables"] if x["path"] != interpreter]
+        with self.assertRaises(adapter.PreflightError):
+            adapter.verify_wrapper_and_parser(pins)
+
+    def test_kast_shell_digest_drift_rejected(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        interpreter = self._kast_shell_interpreter(pins)
+        item = next(x for x in pins["selectedExecutables"] if x["path"] == interpreter)
+        item["sha256"] = "0" * 64
+        with self.assertRaisesRegex(adapter.PreflightError, "PIN_MISMATCH"):
+            adapter.verify_wrapper_and_parser(pins)
+
+    def test_kast_shell_symlink_and_resolved_target_drift_rejected(self):
+        adapter = load_adapter()
+        pins = json.loads(PINS_PATH.read_text())
+        interpreter = self._kast_shell_interpreter(pins)
+        item = next(x for x in pins["selectedExecutables"] if x["path"] == interpreter)
+        item["symlinkTarget"] = "not-the-real-link"
+        with self.assertRaisesRegex(adapter.PreflightError, "SYMLINK_DRIFT"):
+            adapter.verify_wrapper_and_parser(pins)
+        pins = json.loads(PINS_PATH.read_text())
+        interpreter = self._kast_shell_interpreter(pins)
+        item = next(x for x in pins["selectedExecutables"] if x["path"] == interpreter)
+        item["resolvedTarget"] = "/not/the/resolved/target"
+        with self.assertRaisesRegex(adapter.PreflightError, "SYMLINK_DRIFT"):
+            adapter.verify_wrapper_and_parser(pins)
 
     def test_real_preflight_then_injected_exec_does_not_invoke_k(self):
         adapter = load_adapter()
@@ -188,14 +234,17 @@ class ShimContractTests(unittest.TestCase):
         )
         self.assertEqual(len(recorded), 1)
         path, argv, env = recorded[0]
-        self.assertEqual(path, "/usr/bin/strace")
-        self.assertEqual(argv, pins["diagnosticArgv"])
+        self.assertEqual(path, "/usr/bin/bwrap")
+        self.assertEqual(argv[0], "/usr/bin/bwrap")
+        self.assertNotIn("-try", argv)
+        self.assertIn("--", argv)
+        self.assertEqual(argv[argv.index("--") + 1:], pins["diagnosticArgv"])
         self.assertEqual(env["PATH"], "/usr/bin:/bin")
-        self.assertEqual(env["HOME"], os.environ.get("HOME", "/home/charl"))
+        self.assertEqual(env["HOME"], "/home/charl")
         self.assertNotIn("NIX_USER_CONF_FILES", env)
         for name in FORBIDDEN:
             self.assertNotIn(name, env)
-        self.assertNotIn("krun", path)
+        self.assertEqual(recorded[0][2]["HOME"], pins["childEnv"].get("preserveHome") and "/home/charl" or env["HOME"])
 
     def test_query_uses_controlled_env_and_requisite_set(self):
         adapter = load_adapter()

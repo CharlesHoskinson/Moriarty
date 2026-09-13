@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-09-12T21:31:31.304151+00:00",
+  "scope": "Harmless scaled0.4/0.1 scope expiry; TERM-ignoring parent and setsid child only. Tests cgroup cleanup across process sessions; no native K or Java or campaign.",
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--scope",
+    "--unit=moriarty-ll02-scope-descendant-20260912-01",
+    "--property=MemoryMax=8589934592",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=0.4s",
+    "--property=RuntimeRandomizedExtraSec=0",
+    "--property=TimeoutStopSec=0.1s",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "/usr/bin/python3.14",
+    "-I",
+    "-B",
+    "-c",
+    "import signal,time,os,json;signal.signal(signal.SIGTERM,signal.SIG_IGN);pid=os.fork();os.setsid() if pid==0 else None;print(json.dumps({\"pid\":os.getpid(),\"child\":pid==0,\"session\":os.getsid(0)}),flush=True);time.sleep(10)"
+  ],
+  "seconds": 0.8334691029995156,
+  "exit_code": -9,
+  "stdout": "{\"pid\": 222495, \"child\": false, \"session\": 222477}\n{\"pid\": 222497, \"child\": true, \"session\": 222497}\n",
+  "stderr": "Running as unit: moriarty-ll02-scope-descendant-20260912-01.scope; invocation ID: a44fd879051c4286a393de00873334b7\n",
+  "pidChecks": [
+    {
+      "pid": 222495,
+      "child": false,
+      "session": 222477,
+      "postExitState": "absent"
+    },
+    {
+      "pid": 222497,
+      "child": true,
+      "session": 222497,
+      "postExitState": "absent"
+    }
+  ],
+  "postExit": "ActiveState=failed\nSubState=failed\nResult=timeout\n"
+}

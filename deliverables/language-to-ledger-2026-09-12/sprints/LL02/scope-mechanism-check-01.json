@@ -1,0 +1,33 @@
+{
+  "observed_at": "2026-09-12T21:21:57.320290+00:00",
+  "scope": "Harmless Python cgroup read/assertions only; no Java/K/strace/bwrap/canary/financial action or accounting mutation. Transient resource scope checks supported mechanism.",
+  "argv": [
+    "/usr/bin/systemd-run",
+    "--user",
+    "--scope",
+    "--unit=moriarty-ll02-scope-check-20260912-01",
+    "--property=MemoryMax=8589934592",
+    "--property=MemorySwapMax=0",
+    "--property=CPUQuota=200%",
+    "--property=RuntimeMaxSec=55s",
+    "--property=RuntimeRandomizedExtraSec=0",
+    "--property=TimeoutStopSec=5s",
+    "--property=KillMode=control-group",
+    "--property=FinalKillSignal=SIGKILL",
+    "--property=SendSIGKILL=yes",
+    "/usr/bin/python3.14",
+    "-I",
+    "-B",
+    "-c",
+    "import json,os,pathlib\ncg=next(x.split(\":\",2)[2] for x in pathlib.Path(\"/proc/self/cgroup\").read_text().splitlines() if x.startswith(\"0::\"));root=pathlib.Path(\"/sys/fs/cgroup\")/cg.lstrip(\"/\")\nv={n:(root/n).read_text().strip() for n in [\"memory.max\",\"memory.swap.max\",\"cpu.max\"]}\nassert v[\"memory.max\"]==\"8589934592\",v\nassert v[\"memory.swap.max\"]==\"0\",v\nq,p=map(int,v[\"cpu.max\"].split());assert q/p==2,v\nprint(json.dumps({\"uid\":os.getuid(),\"cgroup\":cg,\"limits\":v}))\n"
+  ],
+  "exit_code": 0,
+  "seconds": 0.03974295499938307,
+  "stdout": "{\"uid\": 1000, \"cgroup\": \"/user.slice/user-1000.slice/user@1000.service/app.slice/moriarty-ll02-scope-check-20260912-01.scope\", \"limits\": {\"memory.max\": \"8589934592\", \"memory.swap.max\": \"0\", \"cpu.max\": \"200000 100000\"}}\n",
+  "stderr": "Running as unit: moriarty-ll02-scope-check-20260912-01.scope; invocation ID: f6e27c44099c44859b492e43f4098378\n",
+  "postExitUnit": {
+    "exit_code": 0,
+    "stdout": "ActiveState=inactive\nSubState=dead\nResult=success\n",
+    "stderr": ""
+  }
+}

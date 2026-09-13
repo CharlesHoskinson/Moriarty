@@ -1,10 +1,10 @@
 # Tasks
 
 ## 0. Scope reconciliation and plan
-- [ ] 0.1 Preserve current main and unrelated preimages; record merged PR1–PR4 receipts.
-- [ ] 0.2 Update ROADMAP.md with implemented local scope and retained wider gates.
-- [ ] 0.3 Validate this package with `openspec validate language-to-ledger-lifecycle --strict --no-interactive`.
-- [ ] 0.4 Review the complete design and plan at docs/superpowers/plans/2026-09-12-language-to-ledger.md.
+- [x] 0.1 Preserve current main and unrelated preimages; record merged PR1–PR4 receipts.
+- [x] 0.2 Update ROADMAP.md with implemented local scope and retained wider gates.
+- [x] 0.3 Validate this package with `openspec validate language-to-ledger-lifecycle --strict --no-interactive`.
+- [x] 0.4 Review the complete design and plan at docs/superpowers/plans/2026-09-12-language-to-ledger.md.
 
 ## 1. Financial postconditions
 - [x] 1.1 Add failing source/Core/CLI tests for the six post reads and atomic failure.
@@ -33,7 +33,7 @@
 - [ ] 4.5 Audit actual K results and retain unproved metatheorem/correspondence gates.
 
 ## 5. Authenticated Docker and Preview
-- [ ] 5.1 Freeze and independently review source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.
+- [x] 5.1 Freeze and independently review source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.
 - [ ] 5.1a Bind those reviewed constraints in the actual lowerer/custody/SDK caller.
 - [ ] 5.2 Implement the already specified executor/lifetime boundary and offline fault matrix.
 - [ ] 5.2a Compile the generated lifecycle Compact contract; retain compiler output and artifact bindings to the reviewed source/profile before Docker execution.
@@ -47,7 +47,7 @@
 ## 6. Final reconciliation
 - [ ] 6.1 Verify every requirement has a current result or a precise open blocker.
 - [ ] 6.2 Publish reviewed changes and preserve unrelated user work and historical failures.
-- [ ] 6.3 Close the native goal only when all six requested acceptance outcomes pass.
+- [ ] 6.3 Record completion of the six requested acceptance outcomes only when each passes. Under the September 12 full-branch continuation, close the active loop only after the entire retained roadmap also passes; preserve historical goals.
 
 Exact files, interfaces, test inputs and commands are in the implementation plan. Evidence root: deliverables/language-to-ledger-2026-09-12/.
 
