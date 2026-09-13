@@ -1,3 +1,4 @@
+import {createFinancialExpressionContractV5, FINANCIAL_EXPRESSION_CONTRACT_V5} from './financial-expression-v5.ts';
 /** Source-only entry to local /1 expression evaluation. No financial operation
  * interpreter, authorization, funded preparation, signing or ledger path is called. */
 import { parseFinancialExpressionSource, FINANCIAL_EXPRESSION_SOURCE_PROFILE } from './financial-expression-source-frontend.ts';
@@ -119,7 +120,7 @@ export function lowerAndCheckFinancialAction(
   schema: Schema,
   schemaCanonicalJSON: string,
   options?: {
-    contract?: typeof FINANCIAL_EXPRESSION_CONTRACT_V1 | typeof FINANCIAL_EXPRESSION_CONTRACT_V2 | typeof FINANCIAL_EXPRESSION_CONTRACT_V3 | typeof FINANCIAL_EXPRESSION_CONTRACT_V4;
+    contract?: typeof FINANCIAL_EXPRESSION_CONTRACT_V5 | typeof FINANCIAL_EXPRESSION_CONTRACT_V1 | typeof FINANCIAL_EXPRESSION_CONTRACT_V2 | typeof FINANCIAL_EXPRESSION_CONTRACT_V3 | typeof FINANCIAL_EXPRESSION_CONTRACT_V4;
     extraReserved?: readonly string[];
     financialReads?: boolean;
     financialPostReads?: boolean;
@@ -143,7 +144,7 @@ export function lowerAndCheckFinancialAction(
   const core = { statements, span: sourceSpan(action.span) };
   const contract = options?.contract ?? FINANCIAL_EXPRESSION_CONTRACT_V1;
   const request = canonical({ contract, source, core, Pre: {}, Args: {}, Obs: {}, workInitial: '0' });
-  const checked = (contract === FINANCIAL_EXPRESSION_CONTRACT_V4
+  const checked = (contract === FINANCIAL_EXPRESSION_CONTRACT_V5 ? createFinancialExpressionContractV5(schemaCanonicalJSON) : contract === FINANCIAL_EXPRESSION_CONTRACT_V4
     ? createFinancialExpressionContractV4(schemaCanonicalJSON)
     : contract === FINANCIAL_EXPRESSION_CONTRACT_V3
     ? createFinancialExpressionContractV3(schemaCanonicalJSON)
