@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "moriarty-compiled-lifecycle-binding/1",
+  "task": "5.2a Compile the generated lifecycle Compact contract; retain compiler output and artifact bindings to the reviewed source/profile before Docker execution",
+  "recordedAt": "2026-09-13T04:47:50Z",
+  "toolchain": {
+    "compiler": "0.31.1",
+    "note": "The project pins compiler 0.31.1 with language 0.23.0 and runtime 0.16.0 in compact/generated/materialization.json. 0.34.0 is available and deliberately not used, because the pin is bound into retained artifacts."
+  },
+  "compileCommand": "compact compile --skip-zk loan-lifecycle.compact <out>",
+  "skipZk": true,
+  "inputs": {
+    "contractSource": {
+      "path": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "sha256": "1230586541501ba2038434f4e1dbd92966ba11c0bdf3075f7e8aed358a251315"
+    },
+    "generator": {
+      "path": "experiments/moriarty-midnight-financial/custody/generate-lifecycle.mjs",
+      "sha256": "1610359a4d6b15389c2180133e558c08d966bf9dacc91226dd70ef35d0f63244"
+    },
+    "lifecycleSource": {
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+      "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa"
+    }
+  },
+  "artifacts": {
+    "artifacts/compiler/contract-info.json": {
+      "sha256": "65be282b67bfc6c5d6c33ee487af4c5ad258499b65e3d7fc7639ce20f6455365",
+      "bytes": 6001
+    },
+    "artifacts/zkir/originate.zkir": {
+      "sha256": "7174ee4f03346fca3c5e62f278ec4333b8cb72df26a11372b812b651f3587539",
+      "bytes": 45353
+    },
+    "artifacts/contract/index.d.ts": {
+      "sha256": "98d1df3a5f4bb6993826e722b85515cacc94af1e35873c630c3a9fb001b38dfc",
+      "bytes": 3490
+    },
+    "artifacts/contract/index.js": {
+      "sha256": "e5d4b7594923f505e90559c2fb37b3f8774319f11a14c4f22b583e4185ea01cc",
+      "bytes": 171616
+    },
+    "artifacts/contract/index.js.map": {
+      "sha256": "b64f7ef092fefb0eb0bc496901b552e01c068b9d3c59ac7e3d79219637d56c9a",
+      "bytes": 5031
+    }
+  },
+  "bindsTo": {
+    "reviewedFreeze": "deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json",
+    "freezeVerdict": "APPROVED at review round 2, 121 constraints pinned and 27 open",
+    "auditOf5_1a": "AUDIT-OPUS-5-1A.json, verdict WARNING, no divergence between the source net-goal rule and the circuit"
+  },
+  "whatThisEstablishes": "The generated lifecycle contract compiles under the pinned toolchain and produces real artifacts: TypeScript bindings, a zkir circuit for originate, and compiler metadata. This closes the audit's open question about the conditional assertion, which had no compiled precedent anywhere in the repository and does in fact compile.",
+  "whatThisDoesNotEstablish": "Proof keys were skipped, so this is not a proving build. It does not establish Docker execution, Preview admission, any financial effect, or the payer binding the 5.1a audit left open, where the capability proves the lender knows the secret without making the lender the funder and nothing debits the borrower."
+}
