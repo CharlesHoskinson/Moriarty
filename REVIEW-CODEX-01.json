@@ -1,0 +1,131 @@
+{
+  "reviewer": "Codex GPT-5.6 Sol (high reasoning, read-only sandbox)",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-plan-preview-constraint-freeze",
+  "task": "openspec/changes/language-to-ledger-lifecycle/tasks.md 5.1",
+  "filesReviewed": [
+    "deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json",
+    "deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.md"
+  ],
+  "baseCommit": "056e662254c38936758af9c6f72c019705a1ff09",
+  "hashPairsChecked": 205,
+  "hashPairsUniqueSourcesChecked": 31,
+  "hashMismatches": 0,
+  "verdict": "BLOCKED",
+  "summary": "The hashes and most concrete pins are sound, and every scope family is represented. The freeze is blocked because it incorrectly leaves repository-recorded Preview network/participant identities and the selected lifecycle numeric semantics unresolved, while also overstating revision and principal-slot coverage.",
+  "findings": [
+    {
+      "severity": "low",
+      "dimension": "hash-integrity",
+      "claim": "The recorded path/hash pairs have zero mismatches.",
+      "verdict": "confirmed",
+      "evidence": "A recursive jq traversal of freeze-01.json found 205 embedded {path,sha256} occurrences representing 31 unique pairs, including all 31 entries in sources. sha256sum was independently executed for every occurrence: CHECKED=205, UNIQUE=31, SOURCES=31, MISMATCHES=0."
+    },
+    {
+      "severity": "low",
+      "dimension": "pin-accuracy",
+      "claim": "The profile, Core, program-digest and toolchain pins are real source values.",
+      "verdict": "confirmed",
+      "evidence": "experiments/moriarty-language/src/successor/frontend.ts:10 says `FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE = 'moriarty-financial-agreement-source/5'`; financial-expression-v1.ts:25 says `FINANCIAL_EXPRESSION_CONTRACT_V4 = 'moriarty-financial-expression-contract/4'`. materialization.json records loan programHash `95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2` and `{\"compiler\":\"0.31.1\",\"language\":\"0.23.0\",\"runtime\":\"0.16.0\"}`; custody/bindings.json records nodeVersion `24.18.1` and compactWrapperVersion `0.5.2`. The byte literal at custody/loan.compact:42 independently converts to the same program digest."
+    },
+    {
+      "severity": "low",
+      "dimension": "pin-accuracy",
+      "claim": "The deadline ladder and retained outer margin are accurately pinned.",
+      "verdict": "confirmed",
+      "evidence": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:42-45 states setup `+120`, plan `+1600`, bootstrap `+1606`, collection `+1618`, timer `+1620` with AccuracySec at most 1, cleanup/ack `+1740`, outer timeout 1800, retained margin at least 60 seconds, grace 5, minimum prepaid 1835, and the exact monotonic projection formula."
+    },
+    {
+      "severity": "low",
+      "dimension": "pin-accuracy",
+      "claim": "The fee-inclusive net-goal rule is an actual normative and implemented legacy value.",
+      "verdict": "confirmed",
+      "evidence": "experiments/moriarty-language/spec/semantics.md:350-360 defines Transfer/Fee credits and debits and says exactly `checked(credits) >= checked(debits + minimumLedgerAmount)`. src/evaluate.ts:289-295 implements the same Transfer-or-Fee accumulation and inequality."
+    },
+    {
+      "severity": "medium",
+      "dimension": "pin-accuracy",
+      "claim": "`assert(expectedRevision == revision, \"REVISION_MISMATCH\")` occurs “in every state-changing transition.”",
+      "verdict": "refuted",
+      "evidence": "freeze-01.json records this pinned wording, while custody/loan.compact:57-69 shows exported `initialize` mutating initialized, kernelState, remaining and revision without an expectedRevision argument or REVISION_MISMATCH assertion. Only accrue and settle contain that assertion at lines 74 and 101; the freeze's own note acknowledges the initialize exception. The pin should be narrowed to accrue/settle."
+    },
+    {
+      "severity": "high",
+      "dimension": "open-item-honesty",
+      "claim": "Open items `deployment.networkTag.actual` and `authority.identities.actual` are undeterminable because only synthetic values exist in the tree.",
+      "verdict": "refuted",
+      "evidence": "freeze-01.json:460-468 and 779-783 make those assertions. deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json:1 records networkId `preview`, networkTag `3c096de209e06a1a8c52be7bda109ee8c891a42288c0a9db5495f9616dd13796`, firstAddress `3f5a1fd7b4b6e5ba2520f389a72c14848940ff5e456503fda1609a01cc2d42ee`, and secondAddress `c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e`. public-preflight.json:1 independently records the same Preview genesis; two actual-run stage-deploy.json files repeat the tag and borrower/lender addresses. integrate-preview.mjs:103-105 binds the tag to `chain_getBlockHash([0])` and the first address to wallet identity. Runtime freshness and private role secrets may remain open, but the observed network identity and public participant identities must be pinned separately."
+    },
+    {
+      "severity": "high",
+      "dimension": "open-item-honesty",
+      "claim": "Open item `state.numericUniverse.target` is genuinely undecided between the lifecycle 100/110/80 case and the older 5000000000-unit fixture.",
+      "verdict": "refuted",
+      "evidence": "openspec/changes/language-to-ledger-lifecycle/design.md:52 selects the complete 100→110→80→0 example; line 62 requires replacing the hardcoded older state with source-bound lifecycle state; line 68 requires executing “the exact lifecycle.” Ledger scaling/mapping can remain open, but the selected semantic numeric case is not ambiguous."
+    },
+    {
+      "severity": "medium",
+      "dimension": "open-item-honesty",
+      "claim": "The only contract address in the repository is the historical stale local-loan address.",
+      "verdict": "refuted",
+      "evidence": "freeze-01.json:448-456 gives that reason. Actual Preview stage records contain other addresses—for example preview-loan-exit-01/actual-run/stage-deploy.json:1 records contractAddress `ffedd46ff0fd451e6a93eddbd241afbad1ca292ecada37bd0646992fefa3c30d`. The target lifecycle deployment address is still honestly open, but its stated repository-wide reason is false."
+    },
+    {
+      "severity": "low",
+      "dimension": "open-item-honesty",
+      "claim": "A cross-family sample of the remaining open items is genuinely unresolved.",
+      "verdict": "confirmed",
+      "evidence": "Repository searches sampled more than ten items: lifecycle program/kernel hashes and lifecycle address, runtime head, target usdColor, current admission/block deadline, allowance and replay ledger representation, source-to-ledger field mapping, intervening-action exclusion, authenticated outer start, 300-second/+1600 reconciliation, horizon inheritance, lifecycle rejection vocabulary, DUST cap, indexer units and fee/change finality. materialization.json contains only loan/swap restricted programs; `rg --files` found no lowered lifecycle Compact artifact or current-accounting.json; custody/loan.compact:11-24 lacks allowance/used-ID state; finalized-financial-state.mjs explicitly reports unauthenticated proof and no intervening-action guarantee; financial-comparison.mjs:197-198 marks indexer encoding and native-debit relationship unresolved."
+    },
+    {
+      "severity": "low",
+      "dimension": "scope-completeness",
+      "claim": "Every family in the authoritative scope sentence is represented by a pin or explicit open item.",
+      "verdict": "confirmed",
+      "evidence": "freeze-01.json contains source/Core/profile IDs and digests; deployment/network and head/revision pins/opens; debtor/lender authority pins/opens; balance and allowance records; principal/accrued/outstanding records plus field-mapping open; period and four replay-register records plus ledger-representation open; accepted-read and compiled-constraint records; and separate settlement/native/economic-fee records plus fee-inclusive-net-goal opens. No named family is omitted entirely. The record also has exactly 118 status-pinned entries, 29 open entries, openItems.count 29, and complete=false."
+    },
+    {
+      "severity": "high",
+      "dimension": "reviewer-attention-claim",
+      "claim": "“The lender capability is never asserted by any transition circuit.”",
+      "verdict": "confirmed",
+      "evidence": "experiments/moriarty-midnight-financial/custody/loan.compact:14 and 50 declare and initialize lenderCapability. Initialize, accrue and settle take borrowerSecret and assert BORROWER_CAPABILITY at lines 60, 76 and 103; no exported transition accepts lenderSecret or compares a computed capability with lenderCapability."
+    },
+    {
+      "severity": "high",
+      "dimension": "reviewer-attention-claim",
+      "claim": "“The lifecycle state has nine keys and none is a principal, authority, signature or nonce.”",
+      "verdict": "confirmed",
+      "evidence": "experiments/moriarty-language/src/successor/financial-lifecycle.ts:129-139 and 232-242 define exactly nine top-level keys, none named principal, authority, signature or nonce. However, the stronger freeze wording that there is “no principal slot at all” is inaccurate: LifecycleObligation has `principal` at line 69 and OBLIGATION_KEYS includes it at line 252; the actual missing source slots are authority/signature/nonce."
+    },
+    {
+      "severity": "medium",
+      "dimension": "open-item-honesty",
+      "claim": "Open item `authority.successor.noPrincipalSlot` correctly says none of the nine state fields carries principal.",
+      "verdict": "refuted",
+      "evidence": "freeze-01.json:786-794 says none carries principal. financial-lifecycle.ts:133 makes `obligations` a LifecycleObligation array, and LifecycleObligation includes principal, accrued and outstanding at lines 69-71. The authority/signature/nonce absence remains valid, but principal is nested in state."
+    },
+    {
+      "severity": "high",
+      "dimension": "reviewer-attention-claim",
+      "claim": "“The profile has no fee operation and no outcome-intent authority.”",
+      "verdict": "confirmed",
+      "evidence": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori:51-54 declares exactly Transfer, Repay, Originate and Accrue. financial-lifecycle.ts:127 defines Action as only those four action types. Searches under src/successor and spec/successor found no Fee operation, minimumNetCredits, grossDebitCaps or executable outcome-intent authority; the legacy equivalents appear in src/runtime-types.ts:16-21."
+    },
+    {
+      "severity": "high",
+      "dimension": "reviewer-attention-claim",
+      "claim": "“Allowances and replay registers have no on-ledger counterpart.”",
+      "verdict": "confirmed",
+      "evidence": "The source state contains allowances and four used-ID arrays in financial-lifecycle.ts:129-139 and loan-lifecycle.state.json:1. custody/loan.compact:11-24 exposes no allowance or used-ID ledger field. financial-expectations.json:596-605 maps f0-f8 to notional, principal_due, interest_due, principal_paid, interest_paid, borrower_cash, lender_cash, cursor and episode_closed—none is an allowance or identifier-replay register. Host comparison replay sets at financial-comparison.mjs:186-205 are not lifecycle on-ledger state."
+    },
+    {
+      "severity": "high",
+      "dimension": "fees",
+      "claim": "The profile being lowered has no Fee operation, so it cannot itself express the required fee-inclusive net goal.",
+      "verdict": "confirmed",
+      "evidence": "loan-lifecycle.mori:51-54 and financial-lifecycle.ts:127 contain no Fee operation. The fee-aware rule exists only in the legacy path: runtime-types.ts:16 defines Fee effects, runtime-types.ts:20 defines minimumNetCredits, and evaluate.ts:289-295 evaluates them. Native fees are separately represented as DUST/SPECK and checked against transaction dustFee and a cap in financial-comparison.mjs:192-198, confirming separation from loan settlement but not successor-profile net-goal inclusion."
+    }
+  ],
+  "treeClean": true,
+  "note": "Independently re-verified by the orchestrating agent via direct file reads: (a) loan.compact lenderCapability is declared but never asserted by initialize/accrue/settle; (b) financial-lifecycle.ts LifecycleState has exactly 9 top-level keys (schemaVersion, balances, allowances, obligations, usedTransferIds, usedAllocationIds, usedOriginationIds, usedAccrualIds, work), none named principal/authority/signature/nonce, but principal IS nested inside each LifecycleObligation; (c) loan-lifecycle.mori declares exactly 4 operations (Transfer, Repay, Originate, Accrue), no Fee operation; (d) loan.compact ledger declarations have no allowance or used-id fields even though the source LifecycleState carries allowances and four used-id arrays; (e) deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json records a real Preview networkTag and two participant addresses, contradicting the freeze open item stating no actual value exists; (f) sha256sum of experiments/moriarty-midnight-financial/custody/loan.compact matches the value cited in the freeze."
+}
