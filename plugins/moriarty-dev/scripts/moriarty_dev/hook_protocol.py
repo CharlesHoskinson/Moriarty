@@ -6,7 +6,7 @@ response we emit; Stop uses common output only. No host version guessing.
 import json
 
 EVENTS = frozenset({"SessionStart", "PreToolUse", "PostToolUse", "Stop"})
-INPUT_LIMIT = 8192
+INPUT_LIMIT = 8 * 1024 * 1024
 OUTPUT_LIMIT = 2048
 DIAGNOSTIC = (
     "Moriarty hook input or records unavailable; use guarded CLI status/run. "

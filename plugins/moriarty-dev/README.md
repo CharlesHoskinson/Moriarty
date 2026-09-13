@@ -74,7 +74,7 @@ Delivery and chain status are separate: a later confirmation requires another no
 
 ## Compatibility and upgrades
 
-See [the compatibility contract](COMPATIBILITY.md) for the support matrix, package-only tests, installation diagnostics and cache-retention upgrade procedure. Active sessions keep their versioned cache paths; preserve those packages through upgrades. `doctor --expected-plugin-root PATH --json` checks a known session reference without changing it.
+See [the compatibility contract](COMPATIBILITY.md) for the support matrix and upgrade procedure. New hook registrations embed their bootstrap and pin a runtime retained outside Codex's disposable cache. The source `deployment.py install` command snapshots and restores legacy cache files within the same invocation, before PostToolUse runs. Old sessions still need their exact retained packages. Missing runtime diagnostics report degraded interception; they never establish coverage. `doctor --expected-plugin-root PATH --json` checks a known session reference and reports runtime pins without changing installation or trust.
 
 ## Host adapter
 

@@ -14,6 +14,7 @@ from unittest.mock import patch
 PLUGIN = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PLUGIN / "scripts"))
 from moriarty_dev import cli, hook, records, store
+from moriarty_dev.hook_protocol import INPUT_LIMIT
 
 
 class WireCompatibilityTests(unittest.TestCase):
@@ -28,7 +29,7 @@ class WireCompatibilityTests(unittest.TestCase):
         return json.loads(result.stdout)
 
     def test_invalid_inputs_produce_common_diagnostics(self):
-        for raw in (b"not-json", b"[]", b"null", b"\xff", b'{"x":"' + b"x" * 8192 + b'"}',
+        for raw in (b"not-json", b"[]", b"null", b"\xff", b'{"x":"' + b"x" * INPUT_LIMIT + b'"}',
                     json.dumps({"cwd": 3}).encode(), json.dumps({"cwd": ""}).encode()):
             with self.subTest(raw=raw[:60]):
                 response = self.invoke(raw)
@@ -43,8 +44,9 @@ class WireCompatibilityTests(unittest.TestCase):
                 self.assertNotIn("hookSpecificOutput", response)
 
     def test_input_limit_counts_utf8_bytes(self):
-        raw = json.dumps({"x": "界" * 3000}, ensure_ascii=False).encode()
-        self.assertLess(len(raw.decode()), 8192)
+        raw = b'{"x":"' + "界".encode() * (INPUT_LIMIT // 3) + b'"}'
+        self.assertLess(len(raw.decode()), INPUT_LIMIT)
+        self.assertGreater(len(raw), INPUT_LIMIT)
         self.assertIn("systemMessage", self.invoke(raw))
 
     def test_malformed_input_never_calls_repository_handler(self):
@@ -63,6 +65,26 @@ class WireCompatibilityTests(unittest.TestCase):
             raw = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "pwd"}}).encode()
             self.assertEqual(self.invoke(raw, "Stop"), {})
             self.assertEqual(self.invoke(raw), {"hookSpecificOutput": {"hookEventName": "PreToolUse"}})
+
+    def test_valid_large_post_tool_use_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / ".git").mkdir()
+            raw = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "pwd", "blob": "a" * (64 * 1024)}, "tool_response": "b" * (1024 * 1024)}).encode()
+            self.assertLessEqual(len(raw), INPUT_LIMIT)
+            self.assertEqual(self.invoke(raw, "PostToolUse"), {"hookSpecificOutput": {"hookEventName": "PostToolUse"}})
+
+    def test_valid_large_pre_tool_use_preserves_registered_argv_deny(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".git").mkdir()
+            (root / ".moriarty-dev").mkdir()
+            (root / ".moriarty-dev/actions.json").write_text("[]")
+            (root / "commands.json").write_text(json.dumps({"commands": {"run": {"argv": ["python3", "driver.py"]}}}))
+            payload = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "python3 driver.py", "blob": "x" * (64 * 1024)}})
+            captured = io.StringIO()
+            with patch.object(sys, "stdin", io.StringIO(payload)), patch.object(sys, "argv", ["hook.py", "PreToolUse"]), patch.object(hook, "read_actions", return_value=[{"id": "blocked-action", "commandRef": "commands.json#run"}]), contextlib.redirect_stdout(captured):
+                hook.main()
+            self.assertEqual(json.loads(captured.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
 class DispatchRecognitionTests(unittest.TestCase):

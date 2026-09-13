@@ -1,0 +1,3 @@
+import subprocess,sys,time,pathlib; subprocess.Popen([sys.executable,'-c',"import pathlib,time; pathlib.Path('/tmp/moriarty-runner-consumer-2vyc_h53/ready').write_text('ready'); time.sleep(3); pathlib.Path('/tmp/moriarty-runner-consumer-2vyc_h53/escaped').write_text('survived')",'moriarty-probe-3f3a726746c54436be50017f1f95be45'],start_new_session=True,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); p=pathlib.Path('/tmp/moriarty-runner-consumer-2vyc_h53/ready'); deadline=time.monotonic()+2
+while not p.exists() and time.monotonic()<deadline: time.sleep(.01)
+assert p.exists()

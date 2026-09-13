@@ -1,0 +1,768 @@
+Independent exact-candidate source audit. User authorized fixing Moriarty warning on normal large tool replies. Author Grok4.6; you are a fresh non-author reviewer. Parent loaded Moriarty develop/status. All required files supplied; no tools, file reads, changes, or questions. Scope is bounded hook input correction only, not financial release. Root cause reproduced at 9000 bytes, old cap8192; new finite cap8MiB. 199 baseline tests pass; added regression tests failed on old code; now 201 tests pass. Check full source/consumer, tests, wire invariants: no explicit allow, retained denial for recognized dispatch, invalid UTF8/JSON/oversize diagnosed, deadline .75 sec and output cap2048. Evaluate if new cap causes material real risk or regresses existing behavior. Return JSON {verdict:"APPROVED"|"CHANGES_REQUESTED",candidate_sha256:...,findings:[{severity,location,issue,required_fix}],summary:...}. Do not invent tests run. Candidate SHA256 3287cbeeacf11b1a16c0dc70a14eac007714d842c4537202c56270cdf4ddc67c
+
+FILE plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py
+"""Conservative JSON wire contract shared by supported hook hosts.
+
+The host owns permissions. Absence of a decision is the only permitted-call
+response we emit; Stop uses common output only. No host version guessing.
+"""
+import json
+
+EVENTS = frozenset({"SessionStart", "PreToolUse", "PostToolUse", "Stop"})
+INPUT_LIMIT = 8 * 1024 * 1024
+OUTPUT_LIMIT = 2048
+DIAGNOSTIC = (
+    "Moriarty hook input or records unavailable; use guarded CLI status/run. "
+    "Host coverage remains unverified."
+)
+
+
+def supported_event(value):
+    return isinstance(value, str) and value in EVENTS
+
+
+def output(event, **fields):
+    if event == "Stop" or not supported_event(event):
+        return {}
+    return {"hookSpecificOutput": {"hookEventName": event, **fields}}
+
+
+def diagnostic(event):
+    return {**output(event), "systemMessage": DIAGNOSTIC}
+
+
+def read_payload(stream):
+    """Read at most limit+1 bytes; reject damaged input before repository work."""
+    raw = getattr(stream, "buffer", stream).read(INPUT_LIMIT + 1)
+    if isinstance(raw, str):  # StringIO/in-process callers, not host stdin.
+        raw = raw.encode("utf-8")
+    if len(raw) > INPUT_LIMIT:
+        raise ValueError("hook input exceeds byte limit")
+    text = raw.decode("utf-8")
+    payload = json.loads(text) if text.strip() else {}
+    if not isinstance(payload, dict):
+        raise ValueError("hook input must be an object")
+    if "cwd" in payload:
+        cwd = payload["cwd"]
+        if not isinstance(cwd, str) or not cwd or "\x00" in cwd:
+            raise ValueError("invalid hook cwd")
+        cwd.encode("utf-8")
+    return payload
+
+
+def serialize(response):
+    """Keep denial semantics even when escaped JSON exceeds the byte budget."""
+    response = dict(response)
+    inner = dict(response.get("hookSpecificOutput", {}))
+    if "hookSpecificOutput" in response:
+        response["hookSpecificOutput"] = inner
+    for owner, key, limit in ((inner, "additionalContext", 1300),
+                              (inner, "permissionDecisionReason", 350),
+                              (response, "systemMessage", 180)):
+        if isinstance(owner.get(key), str):
+            owner[key] = owner[key].encode("utf-8", errors="replace")[:limit].decode("utf-8", errors="ignore")
+    # ASCII JSON also works under non-UTF8 host stdout encodings.
+    text = json.dumps(response, ensure_ascii=True, separators=(",", ":"))
+    if len(text.encode("ascii")) + 1 <= OUTPUT_LIMIT:
+        return text
+    if inner.get("permissionDecision") == "deny":
+        response = output("PreToolUse", permissionDecision="deny",
+                          permissionDecisionReason="Moriarty denied this action; use CLI status for details.")
+    else:
+        response = {"systemMessage": "Moriarty hook output exceeded bound; use CLI status."}
+    return json.dumps(response, separators=(",", ":"))
+
+FILE plugins/moriarty-dev/scripts/moriarty_dev/hook.py
+#!/usr/bin/env python3
+"""Read-only lifecycle adapter; the guarded CLI remains the launch gate."""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import signal
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from moriarty_dev.hook_protocol import (
+    diagnostic as _diagnostic,
+    output as _output,
+    read_payload,
+    serialize as _bounded_json,
+    supported_event,
+)
+from moriarty_dev.policy import assess
+from moriarty_dev.records import load_snapshot, read_actions
+from moriarty_dev.store import get_db_path, get_undelivered_txs, make_history_reader
+from moriarty_dev.notifications import notification_line
+
+
+def _last_result(repo):
+    try:
+        data = json.loads((repo / "openspec/moriarty-completion-program.json").read_text(encoding="utf-8"))
+        stages = data.get("reportReconciliation", {}).get("stageAdmission", {}).get("stages", [])
+        done = [row["id"] for row in stages if row.get("status") == "complete"]
+        return "Stages complete: " + (", ".join(done) if done else "none")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return "No readable program stage record"
+
+
+def _pending(repo):
+    rows = get_undelivered_txs(get_db_path(repo), str(repo), timeout=0.05, limit=5)
+    if not rows:
+        return ""
+    text = "Pending public observations: post dedicated notification message, then use deliver.\n"
+    text += "\n".join(notification_line(tx) for tx in rows[:4])
+    if len(rows) > 4:
+        text += "\nMore pending IDs: use report --json."
+    return text
+
+
+def main():
+    event = sys.argv[1] if len(sys.argv) > 1 else ""
+    timer_supported = hasattr(signal, "setitimer")
+    previous_handler = None
+
+    class HookDeadline(BaseException):
+        pass
+
+    def deadline(_signum, _frame):
+        raise HookDeadline()
+
+    try:
+        if timer_supported:
+            previous_handler = signal.signal(signal.SIGALRM, deadline)
+            signal.setitimer(signal.ITIMER_REAL, 0.75)
+        payload = read_payload(sys.stdin)
+        event = event or payload.get("hook_event_name", payload.get("hookEventName", ""))
+        if not supported_event(event):
+            raise ValueError("unsupported hook event")
+        repo = Path(payload.get("cwd", os.getcwd())).resolve()
+        for ancestor in (repo, *repo.parents):
+            if (ancestor / ".moriarty-dev/actions.json").is_file():
+                repo = ancestor
+                break
+            if (ancestor / ".git").exists():
+                break
+        response = handle_event(event, payload, repo)
+    except (HookDeadline, Exception):
+        response = _diagnostic(event)
+    finally:
+        if timer_supported and previous_handler is not None:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+    print(_bounded_json(response))
+
+
+def handle_event(event_name, payload, repo):
+    if not supported_event(event_name):
+        return _diagnostic(event_name)
+    if not (repo / ".moriarty-dev/actions.json").is_file():
+        return _output(event_name)
+    if event_name == "SessionStart":
+        return handle_session_start(repo)
+    if event_name == "PreToolUse":
+        return handle_pre_tool_use(payload, repo)
+    if event_name == "PostToolUse":
+        try:
+            return _output(event_name, additionalContext=_pending(repo))
+        except Exception:
+            return _diagnostic(event_name)
+    return _output(event_name)  # Stop never blocks or invokes another action.
+
+
+def handle_session_start(repo):
+    try:
+        actions = read_actions(str(repo))
+        if not actions:
+            return _output("SessionStart")
+        action = next((row for row in actions if row.get("kind") != "report"), actions[0])
+        snapshot = load_snapshot(str(repo), action["id"], history_reader=make_history_reader(get_db_path(repo), timeout=0.05))
+        lines = [f"Capability: {action.get('requirement')} {action.get('capability')}",
+                 f"Last result: {_last_result(repo)}",
+                 f"Next: {snapshot.get('nextActionId') or action['id']}"]
+        failures = snapshot.get("sameDefectFailures")
+        if isinstance(failures, int) and failures >= 2:
+            lines.append("Blocked: another broad correction; reproduce the unresolved defect.")
+        elif failures is None:
+            lines.append("History unresolved; inspect CLI status before dispatch.")
+        pending = _pending(repo)
+        if pending:
+            lines.append(pending)
+        return _output("SessionStart", additionalContext="\n".join(lines))
+    except Exception:
+        return _diagnostic("SessionStart")
+
+
+def _registered_argv(repo, action):
+    ref = action.get("commandRef", "")
+    if "#" not in ref:
+        return None
+    filename, key = ref.split("#", 1)
+    path = (repo / filename).resolve()
+    if not path.is_relative_to(repo.resolve()):
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        argv = data.get("commands", {}).get(key, {}).get("argv")
+        return argv if isinstance(argv, list) and all(isinstance(value, str) for value in argv) else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def _dispatch_request(tokens):
+    """Recognize simple Python CLI run forms, never arbitrary action mentions.
+
+    Shell composition, wrappers and interpreter code strings are deliberately
+    outside this recognizer. It is a workflow guard, not a shell parser.
+    """
+    if not tokens:
+        return None
+    args = list(tokens)
+    if re.fullmatch(r"python(?:\d+(?:\.\d+)*)?", Path(args[0]).name):
+        args.pop(0)
+        while args and args[0] in ("-B", "-u"):
+            args.pop(0)
+        if args[:2] == ["-m", "moriarty_dev.cli"]:
+            args = args[2:]
+        elif args and Path(args[0]).name == "cli.py":
+            args.pop(0)
+        else:
+            return None
+    elif Path(args[0]).name == "cli.py":
+        args.pop(0)
+    else:
+        return None
+    target_repo = None
+    while args:
+        if args[0] == "--json":
+            args.pop(0)
+        elif args[0] == "--repo" and len(args) > 1:
+            target_repo = args[1]
+            args = args[2:]
+        elif args[0].startswith("--repo="):
+            target_repo = args.pop(0).split("=", 1)[1]
+        else:
+            break
+    if not args or args.pop(0) != "run":
+        return None
+    action_id = None
+    while args:
+        flag = args.pop(0)
+        if flag == "--json":
+            continue
+        if flag == "--action" and args:
+            action_id = args.pop(0)
+        elif flag.startswith("--action="):
+            action_id = flag.split("=", 1)[1]
+        else:
+            return None
+    return (action_id, target_repo) if action_id else None
+
+
+def handle_pre_tool_use(payload, repo):
+    event = "PreToolUse"
+    name = payload.get("tool_name", payload.get("toolName", ""))
+    if not isinstance(name, str):
+        return _diagnostic(event)
+    if name not in ("Bash", "bash", "shell", "exec_command", "execute_command"):
+        return _output(event)
+    try:
+        inp = payload.get("tool_input", payload.get("toolInput", {}))
+        if not isinstance(inp, dict):
+            return _diagnostic(event)
+        value = next((inp[key] for key in ("command", "cmd", "argv") if key in inp), "")
+        tokens = shlex.split(value) if isinstance(value, str) else value
+        if not isinstance(tokens, list) or not all(isinstance(token, str) for token in tokens):
+            return _diagnostic(event)
+        request = _dispatch_request(tokens)
+        if request and request[1] is not None:
+            repo = (Path(payload.get("cwd", repo)) / request[1]).resolve()
+        actions = read_actions(str(repo))
+        for action in actions:
+            argv = _registered_argv(repo, action)
+            if argv and tokens == argv:
+                return _output(event, permissionDecision="deny",
+                               permissionDecisionReason=f"Registered dispatch requires guarded CLI run --action {action['id']}.")
+            if not request or action["id"] != request[0]:
+                continue
+            snapshot = load_snapshot(str(repo), action["id"], history_reader=make_history_reader(get_db_path(repo), timeout=0.05))
+            decision = assess(snapshot, action)
+            if not decision["allow"]:
+                return _output(event, permissionDecision="deny",
+                               permissionDecisionReason=f"Repeated unresolved failure or unavailable admission ({decision.get('reasonCode')}). Run {decision.get('nextActionId') or 'CLI status'}.")
+    except Exception:
+        return _diagnostic(event)
+    return _output(event)
+
+
+if __name__ == "__main__":
+    main()
+
+FILE plugins/moriarty-dev/tests/test_compatibility.py
+"""Package-local contracts: runnable from a copied plugin without repo fixtures."""
+import contextlib
+import io
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+PLUGIN = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PLUGIN / "scripts"))
+from moriarty_dev import cli, hook, records, store
+from moriarty_dev.hook_protocol import INPUT_LIMIT
+
+
+class WireCompatibilityTests(unittest.TestCase):
+    def invoke(self, raw, event="PreToolUse"):
+        args = [sys.executable, str(PLUGIN / "scripts/moriarty_dev/hook.py")]
+        if event is not None:
+            args.append(event)
+        result = subprocess.run(args, input=raw, capture_output=True, timeout=2)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, b"")
+        self.assertLessEqual(len(result.stdout), 2048)
+        return json.loads(result.stdout)
+
+    def test_invalid_inputs_produce_common_diagnostics(self):
+        for raw in (b"not-json", b"[]", b"null", b"\xff", b'{"x":"' + b"x" * INPUT_LIMIT + b'"}',
+                    json.dumps({"cwd": 3}).encode(), json.dumps({"cwd": ""}).encode()):
+            with self.subTest(raw=raw[:60]):
+                response = self.invoke(raw)
+                self.assertIn("systemMessage", response)
+                self.assertNotIn("permissionDecision", response.get("hookSpecificOutput", {}))
+
+    def test_unknown_or_invalid_events_never_leak_into_envelope(self):
+        for event in (None, 1, {}, [], "FutureEvent", ""):
+            with self.subTest(event=event):
+                response = self.invoke(json.dumps({"hook_event_name": event}).encode(), event=None)
+                self.assertIn("systemMessage", response)
+                self.assertNotIn("hookSpecificOutput", response)
+
+    def test_input_limit_counts_utf8_bytes(self):
+        raw = b'{"x":"' + "界".encode() * (INPUT_LIMIT // 3) + b'"}'
+        self.assertLess(len(raw.decode()), INPUT_LIMIT)
+        self.assertGreater(len(raw), INPUT_LIMIT)
+        self.assertIn("systemMessage", self.invoke(raw))
+
+    def test_malformed_input_never_calls_repository_handler(self):
+        captured = io.StringIO()
+        with patch.object(sys, "stdin", io.StringIO("[broken")), patch.object(sys, "argv", ["hook.py", "PreToolUse"]), patch.object(hook, "handle_event") as handler, contextlib.redirect_stdout(captured):
+            hook.main()
+        handler.assert_not_called()
+        self.assertIn("systemMessage", json.loads(captured.getvalue()))
+
+    def test_surrogate_in_payload_does_not_break_stdout_encoding(self):
+        response = self.invoke(b'{"cwd":"\\ud800"}')
+        self.assertIn("systemMessage", response)
+
+    def test_stop_and_permitted_pretool_closed_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            raw = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "pwd"}}).encode()
+            self.assertEqual(self.invoke(raw, "Stop"), {})
+            self.assertEqual(self.invoke(raw), {"hookSpecificOutput": {"hookEventName": "PreToolUse"}})
+
+    def test_valid_large_post_tool_use_is_accepted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / ".git").mkdir()
+            raw = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "pwd", "blob": "a" * (64 * 1024)}, "tool_response": "b" * (1024 * 1024)}).encode()
+            self.assertLessEqual(len(raw), INPUT_LIMIT)
+            self.assertEqual(self.invoke(raw, "PostToolUse"), {"hookSpecificOutput": {"hookEventName": "PostToolUse"}})
+
+    def test_valid_large_pre_tool_use_preserves_registered_argv_deny(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".git").mkdir()
+            (root / ".moriarty-dev").mkdir()
+            (root / ".moriarty-dev/actions.json").write_text("[]")
+            (root / "commands.json").write_text(json.dumps({"commands": {"run": {"argv": ["python3", "driver.py"]}}}))
+            payload = json.dumps({"cwd": directory, "tool_name": "Bash", "tool_input": {"command": "python3 driver.py", "blob": "x" * (64 * 1024)}})
+            captured = io.StringIO()
+            with patch.object(sys, "stdin", io.StringIO(payload)), patch.object(sys, "argv", ["hook.py", "PreToolUse"]), patch.object(hook, "read_actions", return_value=[{"id": "blocked-action", "commandRef": "commands.json#run"}]), contextlib.redirect_stdout(captured):
+                hook.main()
+            self.assertEqual(json.loads(captured.getvalue())["hookSpecificOutput"]["permissionDecision"], "deny")
+
+
+class DispatchRecognitionTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.action = {"id": "blocked-action", "commandRef": "commands.json#run"}
+
+    def output(self, command):
+        with patch.object(hook, "read_actions", return_value=[self.action]), patch.object(hook, "load_snapshot", return_value={}), patch.object(hook, "assess", return_value={"allow": False, "reasonCode": "AUTHORITY_UNAVAILABLE"}):
+            return hook.handle_pre_tool_use({"tool_name": "Bash", "tool_input": {"command": command}}, self.root)
+
+    def test_mentions_and_non_run_commands_are_not_dispatches(self):
+        for command in ('rg blocked-action actions.json', 'printf "%s\\n" blocked-action',
+                        'echo python3 cli.py run --action blocked-action',
+                        'python3 cli.py review --action blocked-action --receipt review.json',
+                        'python3 cli.py --repo blocked-action status'):
+            with self.subTest(command=command):
+                self.assertNotIn("permissionDecision", self.output(command)["hookSpecificOutput"])
+
+    def test_supported_run_forms_retain_denials(self):
+        for command in ('python3 cli.py run --action blocked-action',
+                        'python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action=blocked-action',
+                        'python3 -m moriarty_dev.cli --json run --action blocked-action',
+                        ['python3', 'cli.py', 'run', '--action', 'blocked-action']):
+            with self.subTest(command=command):
+                self.assertEqual(self.output(command)["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_exact_raw_argv_denial_does_not_require_action_id(self):
+        (self.root / "commands.json").write_text(json.dumps({"commands": {"run": {"argv": ["python3", "driver.py"]}}}))
+        self.assertEqual(self.output("python3 driver.py")["hookSpecificOutput"]["permissionDecision"], "deny")
+
+
+class InstallationCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="moriarty compatibility ")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.home = self.root / "codex home"
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        (self.repo / ".git").mkdir()
+
+    def run_cli(self, command, plugin=PLUGIN, before=False, extra=()):
+        args = [sys.executable, str(plugin / "scripts/moriarty_dev/cli.py"), "--repo", str(self.repo)]
+        args += ["--json", command] if before else [command, "--json"]
+        result = subprocess.run(args + list(extra), env={**os.environ, "CODEX_HOME": str(self.home)}, capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def copy_plugin(self, version):
+        dest = self.home / "plugins/cache/personal/moriarty-dev" / version
+        shutil.copytree(PLUGIN, dest, ignore=shutil.ignore_patterns("__pycache__"))
+        return dest
+
+    def test_source_cached_report_and_doctor_agree(self):
+        cached = self.copy_plugin("old-version")
+        source = self.run_cli("doctor")
+        installed = self.run_cli("doctor", cached)
+        report = self.run_cli("report")
+        self.assertTrue(source["hostInstalled"])
+        self.assertEqual(source["hostCoverage"], installed["hostCoverage"])
+        self.assertEqual(source["hostCoverage"], report["hostCoverage"])
+        self.assertNotEqual(source["hostCoverage"], "host-verified")
+        self.assertEqual(source["compatibility"]["activation"], "unknown")
+
+    def test_json_flag_works_before_and_after_subcommand(self):
+        self.assertEqual(self.run_cli("doctor"), self.run_cli("doctor", before=True))
+
+    def test_expected_old_root_is_diagnosed_without_repair(self):
+        missing = self.home / "plugins/cache/personal/moriarty-dev/missing-version"
+        result = self.run_cli("doctor", extra=("--expected-plugin-root", str(missing)))
+        observation = result["compatibility"]["expectedRoots"][0]
+        self.assertEqual(observation["path"], str(missing))
+        self.assertFalse(observation["usable"])
+        self.assertFalse(missing.exists())
+
+    def test_broken_cached_package_is_not_usable(self):
+        cached = self.copy_plugin("broken-version")
+        (cached / "scripts/moriarty_dev/hook.py").unlink()
+        result = self.run_cli("doctor")
+        self.assertFalse(result["hostInstalled"])
+        observation = result["compatibility"]["cachedRoots"][0]
+        self.assertFalse(observation["usable"])
+        self.assertIn("scripts/moriarty_dev/hook.py", observation["missingFiles"])
+
+    def test_coexisting_versions_execute_registered_commands(self):
+        old = self.copy_plugin("old-version")
+        old_bytes = (old / "scripts/moriarty_dev/hook.py").read_bytes()
+        new = self.copy_plugin("new-version")
+        for plugin in (old, new):
+            definition = json.loads((plugin / "hooks/hooks.json").read_text())
+            for event, groups in definition["hooks"].items():
+                command = groups[0]["hooks"][0]["command"]
+                result = subprocess.run(["bash", "-c", command], input=json.dumps({"cwd": str(self.repo)}), env={**os.environ, "PLUGIN_ROOT": str(plugin), "CLAUDE_PLUGIN_ROOT": "/stale"}, capture_output=True, text=True, timeout=2)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                output = json.loads(result.stdout)
+                self.assertEqual(output, {} if event == "Stop" else {"hookSpecificOutput": {"hookEventName": event}})
+        self.assertEqual(old_bytes, (old / "scripts/moriarty_dev/hook.py").read_bytes())
+        result = self.run_cli("doctor")
+        self.assertEqual(len(result["compatibility"]["cachedRoots"]), 2)
+
+
+class StoreHistoryCompatibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name) / "main"
+        (self.root / ".git").mkdir(parents=True)
+        self.linked = Path(self.tmp.name) / "linked"
+        self.linked.mkdir()
+        gitdir = self.root / ".git/worktrees/linked"
+        gitdir.mkdir(parents=True)
+        (gitdir / "commondir").write_text("../..")
+        (self.linked / ".git").write_text("gitdir: " + str(gitdir))
+        self.db = store.get_db_path(self.root)
+
+    def record_failure(self, root, name):
+        store.record_event(self.db, str(root), "SP01", "cap", "a" * 64, "action", "defect_failure", {"findingId": name})
+
+    def history(self, root):
+        return store.make_history_reader(self.db)({"repository": records._repository_identity(root, []), "requirement": "SP01", "capability": "cap"})
+
+    def test_historical_worktree_rows_and_admin_intervals_share_identity(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.linked, "F2")
+        store.record_admin_interval(self.db, str(self.root), 0, 20, "review")
+        store.record_admin_interval(self.db, str(self.linked), 10, 30, "review")
+        for root in (self.root, self.linked):
+            with self.subTest(root=root):
+                history = self.history(root)
+                self.assertIsNotNone(history)
+                self.assertEqual(history["sameDefectFailures"], 2)
+                self.assertEqual(history["adminSeconds"], 30)
+
+    def test_removed_worktree_history_remains_and_other_repo_stays_isolated(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.linked, "F2")
+        (self.linked / ".git").unlink()
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 2)
+        other = Path(self.tmp.name) / "other"
+        (other / ".git").mkdir(parents=True)
+        self.assertIsNone(store.get_history(self.db, str(other), "SP01", "cap"))
+
+    def receipt(self, **extra):
+        return {"requirement": "SP01", "capability": "cap", "candidateHash": "b" * 64,
+                "scope": "reviewed candidate", "author": "author", "reviewer": "independent", "verdict": "APPROVED", **extra}
+
+    def test_approval_without_named_resolutions_cannot_clear_blockers(self):
+        self.record_failure(self.root, "F1")
+        for extra in ({}, {"resolvedFindings": []}):
+            store.record_review(self.db, str(self.root), self.receipt(**extra))
+            self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+
+    def test_explicit_resolutions_clear_only_named_stable_ids(self):
+        self.record_failure(self.root, "F1")
+        self.record_failure(self.root, "F2")
+        store.record_review(self.db, str(self.root), self.receipt(resolvedFindings=["F1"]))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+        store.record_review(self.db, str(self.root), self.receipt(resolved=["F2"]))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 0)
+
+    def test_malformed_resolution_list_rejected_before_state_write(self):
+        self.record_failure(self.root, "F1")
+        for value in ("F1", [None], [""], [" "], [1], {}):
+            with self.subTest(value=value), self.assertRaises(store.StoreError):
+                store.record_review(self.db, str(self.root), self.receipt(resolvedFindings=value))
+        self.assertEqual(store.get_history(self.db, str(self.root), "SP01", "cap")["sameDefectFailures"], 1)
+
+    def test_outbox_survives_removed_worktree_and_duplicate_observation(self):
+        store.enqueue_tx(self.db, str(self.linked), "fixture-removed-worktree", "submitted", {"network": "preview"})
+        (self.linked / ".git").unlink()
+        pending = store.get_undelivered_txs(self.db, str(self.root))
+        self.assertEqual([row["txId"] for row in pending], ["fixture-removed-worktree"])
+        store.enqueue_tx(self.db, str(self.root), "fixture-removed-worktree", "submitted", {"network": "preview"})
+        self.assertEqual(len(store.get_undelivered_txs(self.db, str(self.root))), 1)
+        other = Path(self.tmp.name) / "other"
+        (other / ".git").mkdir(parents=True)
+        self.assertEqual(store.get_undelivered_txs(self.db, str(other)), [])
+        with self.assertRaises(store.StoreError):
+            store.enqueue_tx(self.db, str(other), "fixture-removed-worktree", "submitted", {"network": "preview"})
+
+    def test_outbox_rejects_wrong_database_before_creating_it(self):
+        wrong_db = Path(self.tmp.name) / "other/.git/moriarty-dev/state.sqlite3"
+        with self.assertRaises(store.StoreError):
+            store.enqueue_tx(wrong_db, str(self.root), "fixture-wrong-database", "submitted", {"network": "preview"})
+        self.assertFalse(wrong_db.exists())
+
+
+class SprintCompletionTests(unittest.TestCase):
+    def reports(self, sprints):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "openspec/sprints").mkdir(parents=True)
+            (root / "openspec/sprints/sprints.json").write_text(json.dumps({"sprints": sprints}))
+            (root / "openspec/moriarty-completion-program.json").write_text(json.dumps({"reportReconciliation": {"stageAdmission": {"stages": [{"id": "done", "status": "complete"}]}}}))
+            return {row["sprint"]: row for row in cli._derive_sprint_reports(root)}
+
+    def sprint(self, name, required=(), stages=("done",)):
+        return {"id": name, "title": name, "stages": list(stages), "completionRequires": list(required)}
+
+    def test_dependencies_missing_and_cycles_stay_open(self):
+        for sprints in ([self.sprint("SP05", ["SP01"])],
+                        [self.sprint("SP05", ["SP01"]), self.sprint("SP01", stages=["open"])],
+                        [self.sprint("SP05", ["SP01"]), self.sprint("SP01", ["SP05"])],
+                        [self.sprint("SP05", ["SP05"])],
+                        [self.sprint("SP05", stages=[])]):
+            with self.subTest(sprints=sprints):
+                result = self.reports(sprints)["SP05"]
+                self.assertEqual(result["status"], "open")
+                self.assertFalse(result["demonstrated"])
+
+    def test_completion_propagates_independent_of_list_order(self):
+        result = self.reports([self.sprint("SP05", ["SP02"]), self.sprint("SP02", ["SP01"]), self.sprint("SP01")])
+        self.assertTrue(all(row["demonstrated"] for row in result.values()))
+        self.assertNotIn("completion requirements:", result["SP05"]["predicate"])
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+FILE plugins/moriarty-dev/COMPATIBILITY.md
+# Compatibility and upgrades
+
+The supported deployment is a local Codex plugin running `python3` through a POSIX shell. The guarded CLI is the execution gate. Hook interception and package presence are separate observations.
+
+## Support and evidence
+
+| Surface | Contract | Verification scope |
+| --- | --- | --- |
+| Codex hooks | SessionStart, PreToolUse, PostToolUse, Stop | Linux/WSL host smoke with Codex 0.154.0; retain the event receipt for the exact installed candidate |
+| Hook JSON | Snake-case host fields; legacy camel-case aliases | Package-local subprocess tests |
+| Root variables | Use nonempty `PLUGIN_ROOT`; otherwise `CLAUDE_PLUGIN_ROOT` | Registered POSIX command tests, including spaces in paths |
+| Permitted calls | Omit `permissionDecision`; host permission handling continues | Subprocess and actual Codex event tests |
+| Denied calls | PreToolUse `permissionDecision: "deny"` with reason | Protocol tests; verify actual host denial separately |
+| Stop | Normal output `{}`; failures may add common `systemMessage` only | Regression tests; no continuation or event-specific envelope |
+| Python | 3.11 or newer (`hashlib.file_digest` is used by the runner) | This cycle executed on Python 3.14.4; other versions are not claimed as tested |
+| Operating system | POSIX shell and Python for installed hooks | Linux/WSL tested; macOS not yet host-tested; native Windows command syntax is not supported |
+| Claude-compatible fields | Legacy aliases and `CLAUDE_PLUGIN_ROOT` | Protocol compatibility only; no claim of a tested Claude installation/session |
+| Runner | Linux, existing admitted Foreman launcher, hash-bound inputs and strong containment | Existing runner tests; the launcher path is deployment-specific, not portable configuration |
+| Notifications | Current inspected Codex transcript adapter | Existing notification tests; other host transcript formats unsupported |
+
+The [official hook reference](https://learn.chatgpt.com/docs/hooks) describes the current host schema and both plugin root variables. Host features evolve. This plugin uses the conservative intersection observed in its supported hosts: it never rewrites tool inputs and never emits an explicit allow. Do not enable newer response fields solely because a newer reference documents them.
+
+The adapter accepts at most 8,388,608 UTF-8 input bytes (8 MiB) and emits at most 2,048 bytes including its trailing newline. Malformed, non-object, oversized or invalid UTF-8 input receives a diagnostic before repository access. Normal large PreToolUse and PostToolUse envelopes are accepted within that input limit; responses above 8 MiB still receive a diagnostic, so inspect `status`/`report` for any omitted reminder. POSIX hooks have a 0.75-second adapter deadline inside the host's one-second command timeout. On systems without `setitimer`, only the host timeout bounds the whole command.
+
+Simple Python `cli.py run --action ID` and `python -m moriarty_dev.cli ... run --action ID` forms are recognized, including `--repo`, `--json`, Python `-B`/`-u`, and `--action=ID`. Exact registered raw argv is denied in favor of the guarded CLI. Searches, printing action IDs, and `review --action` are not dispatches. Shell composition, interpreter code strings, wrapper commands, PowerShell syntax, code-mode composition and native delegation are outside recognition guarantees. Use CLI `run` for registered execution regardless of hook coverage.
+
+## Inspect installation without changing it
+
+```bash
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor --json
+python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor --json \
+  --expected-plugin-root /absolute/cache/path/referenced/by/the/session
+```
+
+`--expected-plugin-root` is repeatable. Doctor never restores, deletes, enables, trusts or installs a package. `CODEX_HOME` selects the cache tree. Doctor and report use the same observation helper. JSON additions are additive; `--json` works before or after the subcommand.
+
+`compatibility.executingPlugin` identifies the code running this command. `environmentRoots` checks the two host root variables without changing their precedence. `cachedRoots` lists observed package versions; `expectedRoots` checks explicitly supplied session references, including missing ones. `usable` means required entry files and manifest identity are present, not that imports, host trust or runtime execution have passed. `hostInstalled` retains its legacy name and means at least one structurally present package was observed in the cache. `installed-unverified` never means enabled or active. `activation` and `hookTrust` remain `unknown` until separately observed through the host.
+
+## Upgrade without breaking an active session
+
+An active session may retain the exact versioned path loaded at startup. Reinstalling a newer version does not rewrite that reference. The plugin cannot repair a missing interpreter or script before the host starts it. Keep missing-path errors visible and restore the reviewed package; do not hide them with an automatic permit or silently execute a different package version.
+
+1. Run tests against the source, review the entire candidate, and retain its file hashes. Confirm which local marketplace source actually supplies `moriarty-dev`; a repository copy and `~/plugins/moriarty-dev` may differ.
+2. Record all existing Moriarty cache roots and explicitly known active-session paths with doctor. Preserve complete copies and hashes outside the cache before upgrading. Never delete or overwrite a retained version merely because another version is installed.
+3. Stage the reviewed package in the marketplace's existing local source. Check that the source has not changed since the review. Use the existing plugin-creator cachebuster helper and `codex plugin add moriarty-dev@<validated-marketplace-name>`; do not edit marketplace or trust configuration by hand. A new cachebuster identifies a new candidate; retain its manifest and verify installed bytes.
+4. Immediately check every retained path. If the host updater removed a path, restore its exact preserved package to the same location before the original session resumes. Do not substitute the new implementation for a live session's preserved version.
+5. Run the package-only compatibility tests from the newly installed root. Start a fresh Codex thread to load the new version, then record actual hook events for a permitted command, a denied harmless fixture, and Stop. A direct Python invocation proves protocol behavior only. A changed hook definition may require host review; do not alter trust settings to bypass it.
+6. Keep old roots for existing sessions. Roll back through the supported plugin installation flow using the preserved source; do not delete the newer cache while any session may reference it. Cache retirement is a separate explicit action after all dependent sessions have ended.
+
+Both root variables usually name the same installed package in Codex. If both are set and disagree, a nonempty native `PLUGIN_ROOT` is authoritative, even if missing. Restoring that exact path preserves the version selected by the host; falling through to an unrelated `CLAUDE_PLUGIN_ROOT` would change the code being executed.
+
+## Tests from source and from a cache
+
+Full repository integration suite (requires retained OpenSpec/evidence fixtures):
+
+```bash
+python3 -m unittest discover -s plugins/moriarty-dev/tests -v
+```
+
+Self-contained compatibility suite, from any copied plugin root:
+
+```bash
+python3 -m unittest discover -s /absolute/plugin/root/tests -p test_compatibility.py -v
+```
+
+The package suite checks JSON contracts, CLI diagnostics, dependency reporting, and coexistence of copied versioned packages. It does not simulate Codex's installer or prove uninterrupted upgrades. Running all repository integration tests inside a cache fails because those retained repository fixtures are outside the plugin; do not copy production state into a cache to make that invocation pass.
+
+The [host smoke procedure](tests/host-smoke.md) records runtime evidence. Each receipt must identify host version, installed source/hash, tested tool path, actual hook completion/denial and marker outcome. Unit tests, reviews, and cache scans cannot promote themselves to verified interception.
+
+## Historical operational data
+
+The shared Git common-directory database is the history boundary. Readers accept either checkout or common-directory identity and include historical rows written under main, linked and removed-worktree paths. The same ownership rule retains pending outbox notifications after a worktree is removed and permits idempotent re-observation from another linked checkout. Rows and schemas are not migrated or rewritten. A database from an unrelated repository is not accepted for that history request.
+
+Approval ingestion still accepts receipts without resolution IDs, but they no longer clear blockers. To resolve findings, provide a list of nonempty exact IDs in `resolvedFindings` (legacy alias `resolved`). An explicit current-name field takes precedence over the legacy alias. Missing, empty or malformed historical lists clear nothing; malformed new lists are rejected before writes. A named resolution may refer to a stable finding from an earlier candidate; candidate changes alone never erase findings. Old broad approvals may therefore expose blockers again, requiring a fresh scoped resolution.
+
+FILE plugins/moriarty-dev/hooks/hooks.json
+{
+  "description": "Deterministic repository-scoped development hooks enforcing stop rules and next-action selection.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/moriarty_dev/hook.py\" SessionStart",
+            "timeout": 1
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/moriarty_dev/hook.py\" PreToolUse",
+            "timeout": 1
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/moriarty_dev/hook.py\" PostToolUse",
+            "timeout": 1
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/moriarty_dev/hook.py\" Stop",
+            "timeout": 1
+          }
+        ]
+      }
+    ]
+  }
+}
+
+FILE plugins/moriarty-dev/.codex-plugin/plugin.json
+{
+  "name": "moriarty-dev",
+  "version": "0.1.0+codex.20260912155609",
+  "description": "Development plugin that prevents orchestration displacement and directs Moriarty financial development.",
+  "author": {
+    "name": "Moriarty contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Moriarty Developer",
+    "shortDescription": "Prevents orchestration displacement and directs Moriarty development.",
+    "longDescription": "Moriarty development plugin that enforces stop rules against repeated failures and administrative displacement, selecting useful next actions and providing guarded execution.",
+    "developerName": "Moriarty contributors",
+    "category": "Development",
+    "capabilities": [
+      "Stop rule enforcement",
+      "Next action selection",
+      "Guarded child dispatch",
+      "Shared worktree operational history"
+    ],
+    "defaultPrompt": "Check development status and continue the next eligible action."
+  }
+}

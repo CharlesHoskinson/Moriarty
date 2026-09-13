@@ -1,0 +1,125 @@
+{
+  "status": "patch",
+  "changes": [
+    {
+      "path": ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+      "old": "        \"wrapperPathDirs\", \"parserShebang\", \"selectedExecutables\", \"retained\",\n        \"binding\", \"manifests\",",
+      "new": "        \"wrapperPathDirs\", \"parserShebang\", \"selectedExecutables\", \"retained\",\n        \"binding\", \"manifests\", \"commandSelections\", \"setenvNativeDir\","
+    },
+    {
+      "path": ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+      "old": "def _check_symlink(path_text: str, expected_target: str | None) -> None:\n    if expected_target is None:\n        return\n    path = Path(path_text)\n    if path.is_symlink():\n        actual = os.readlink(path)\n        if actual != expected_target:\n            raise PreflightError(\"SYMLINK_DRIFT\", path_text)",
+      "new": "def _check_symlink(path_text: str, expected_target: str | None) -> None:\n    path = Path(path_text)\n    is_link = path.is_symlink()\n    if expected_target is None:\n        if is_link:\n            raise PreflightError(\"SYMLINK_DRIFT\", path_text)\n        return\n    if not is_link or os.readlink(path) != expected_target:\n        raise PreflightError(\"SYMLINK_DRIFT\", path_text)"
+    },
+    {
+      "path": ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+      "old": "def resolve_on_path(name: str, directories: list[str]) -> Path | None:\n    for directory in directories:\n        candidate = Path(directory) / name\n        if candidate.exists():\n            return candidate\n    return None",
+      "new": "REQUIRED_HELPERS = (\n    \"dirname\", \"basename\", \"mktemp\", \"date\", \"rm\", \"cat\", \"cp\", \"fold\",\n    \"uname\", \"grep\", \"head\", \"cut\", \"sed\",\n)\nSTAGE_COMMANDS = {\n    \"krun\": REQUIRED_HELPERS + (\"java\",),\n    \"kast\": (\"dirname\", \"uname\", \"grep\", \"head\", \"cut\", \"sed\", \"java\"),\n    \"setenv\": (\"uname\", \"dirname\", \"grep\", \"head\", \"cut\", \"sed\", \"java\"),\n}\n\n\ndef prepend_path_dir(path_dirs: list[str], directory: str) -> list[str]:\n    out = []\n    removed = False\n    for item in path_dirs:\n        if not removed and item == directory:\n            removed = True\n            continue\n        out.append(item)\n    return [directory] + out\n\n\ndef resolve_command(name: str, directories: list[str]) -> Path | None:\n    for directory in directories:\n        candidate = Path(directory) / name\n        if candidate.is_dir() or not os.access(candidate, os.X_OK):\n            continue\n        return candidate\n    return None"
+    },
+    {
+      "path": ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+      "old": "        _check_file(item[\"path\"], item[\"sha256\"], item.get(\"role\", item[\"path\"]))\n        _check_symlink(item[\"path\"], item.get(\"symlinkTarget\"))\n        count += 1",
+      "new": "        _check_file(item[\"path\"], item[\"sha256\"], item.get(\"role\", item[\"path\"]))\n        _check_symlink(item[\"path\"], item.get(\"symlinkTarget\"))\n        expected_resolved = item.get(\"resolvedTarget\")\n        if expected_resolved is not None and str(Path(item[\"path\"]).resolve()) != expected_resolved:\n            raise PreflightError(\"SYMLINK_DRIFT\", item[\"path\"])\n        if item.get(\"symlinkTarget\") is not None and expected_resolved is None:\n            raise PreflightError(\"SYMLINK_DRIFT\", item[\"path\"])\n        count += 1"
+    },
+    {
+      "path": ".moriarty-dev/k-macro05-trace106-diagnostic.py",
+      "old": "def verify_wrapper_and_parser(pins: dict) -> None:\n    krun = next(item for item in pins[\"selectedExecutables\"] if item[\"role\"] == \"krun\")\n    text = Path(krun[\"path\"]).read_text()\n    dirs = WRAPPER_PATH_RE.findall(text)\n    if dirs != pins[\"wrapperPathDirs\"]:\n        raise PreflightError(\"WRAPPER_PATH_DRIFT\")\n    missing = set(pins.get(\"wrapperPathDirsMissing\") or [])\n    for directory in dirs:\n        present = Path(directory).is_dir()\n        if directory in missing:\n            if present:\n                raise PreflightError(\"WRAPPER_PATH_UNEXPECTED\", directory)\n        elif not present:\n            raise PreflightError(\"WRAPPER_PATH_MISSING\", directory)\n    parser = next(item for item in pins[\"retained\"] if item[\"role\"] == \"parser\")\n    first = Path(parser[\"path\"]).read_text().splitlines()[0]\n    shebang = pins[\"parserShebang\"]\n    if first != shebang[\"line\"]:\n        raise PreflightError(\"PARSER_SHEBANG\")\n    mutated = list(pins[\"wrapperPathDirs\"]) + pins[\"childEnv\"][\"PATH\"].split(\":\")\n    resolved = resolve_on_path(shebang[\"argument\"], mutated)\n    if resolved is None or str(resolved) != shebang[\"resolvedOnWrapperPath\"]:\n        raise PreflightError(\"PARSER_PYTHON\", str(resolved))\n    if str(resolved.resolve()) != shebang[\"resolvedTarget\"]:\n        raise PreflightError(\"PARSER_PYTHON_TARGET\")\n    if sha256_file(resolved) != shebang[\"sha256\"]:\n        raise PreflightError(\"PIN_MISMATCH\", \"parser-python\")",
+      "new": "def verify_wrapper_and_parser(pins: dict) -> None:\n    krun = next(item for item in pins[\"selectedExecutables\"] if item[\"role\"] == \"krun\")\n    dirs = WRAPPER_PATH_RE.findall(Path(krun[\"path\"]).read_text())\n    if dirs != pins[\"wrapperPathDirs\"]:\n        raise PreflightError(\"WRAPPER_PATH_DRIFT\")\n    missing = set(pins.get(\"wrapperPathDirsMissing\") or [])\n    for directory in dirs:\n        present = Path(directory).is_dir()\n        if directory in missing:\n            if present:\n                raise PreflightError(\"WRAPPER_PATH_UNEXPECTED\", directory)\n        elif not present:\n            raise PreflightError(\"WRAPPER_PATH_MISSING\", directory)\n    by_role = {}\n    for item in pins[\"selectedExecutables\"]:\n        role = item.get(\"role\")\n        if role in by_role:\n            raise PreflightError(\"PINS_SCHEMA\", role)\n        by_role[role] = item\n    for role in REQUIRED_HELPERS + (\"java\", \"llvm\", \"kore\"):\n        if role not in by_role:\n            raise PreflightError(\"PINS_SCHEMA\", role)\n    wrapped = pins[\"childEnv\"][\"PATH\"].split(\":\")\n    for directory in pins[\"wrapperPathDirs\"]:\n        wrapped = prepend_path_dir(wrapped, directory)\n    unwrapped_dir = str(Path(krun[\"path\"]).parent.parent / \"bin-unwrapped\")\n    stages = {\n        \"krun\": prepend_path_dir(wrapped, unwrapped_dir),\n        \"kast\": list(wrapped),\n        \"setenv\": prepend_path_dir(prepend_path_dir(list(wrapped), str(Path(krun[\"path\"]).parent)), pins[\"setenvNativeDir\"]),\n    }\n    selections = pins[\"commandSelections\"]\n    if type(selections) is not dict or set(selections) != set(STAGE_COMMANDS):\n        raise PreflightError(\"PINS_SCHEMA\", \"commandSelections\")\n    for stage, names in STAGE_COMMANDS.items():\n        pinned_stage = selections.get(stage)\n        if type(pinned_stage) is not dict or set(pinned_stage) != set(names):\n            raise PreflightError(\"PINS_SCHEMA\", stage)\n        for name in names:\n            resolved = resolve_command(name, stages[stage])\n            expected = pinned_stage[name]\n            item = by_role.get(name)\n            if resolved is None or str(resolved) != expected or item is None or item[\"path\"] != expected:\n                raise PreflightError(\"COMMAND_SELECTION\", stage + \":\" + name)\n            if sha256_file(resolved) != item[\"sha256\"]:\n                raise PreflightError(\"PIN_MISMATCH\", name)\n    for role, default in ((\"llvm\", \"llvm-krun\"), (\"kore\", \"kore-print\")):\n        item = by_role[role]\n        resolved = resolve_command(item.get(\"command\", default), stages[\"krun\"])\n        if resolved is None or str(resolved) != item[\"path\"] or sha256_file(resolved) != item[\"sha256\"]:\n            raise PreflightError(\"COMMAND_SELECTION\", role)\n    parser = next(item for item in pins[\"retained\"] if item[\"role\"] == \"parser\")\n    shebang = pins[\"parserShebang\"]\n    if Path(parser[\"path\"]).read_text().splitlines()[0] != shebang[\"line\"]:\n        raise PreflightError(\"PARSER_SHEBANG\")\n    resolved = resolve_command(shebang[\"argument\"], stages[\"krun\"])\n    if resolved is None or str(resolved) != shebang[\"resolvedOnWrapperPath\"]:\n        raise PreflightError(\"PARSER_PYTHON\", str(resolved))\n    if str(resolved.resolve()) != shebang[\"resolvedTarget\"]:\n        raise PreflightError(\"PARSER_PYTHON_TARGET\")\n    if sha256_file(resolved) != shebang[\"sha256\"]:\n        raise PreflightError(\"PIN_MISMATCH\", \"parser-python\")"
+    },
+    {
+      "path": ".moriarty-dev/test_k_macro05_trace106_diagnostic.py",
+      "old": "    def test_env_is_not_claimed_host_root(self):\n        adapter = load_adapter()\n        ownership = json.loads((HERE / \"k-macro05-trace106-ownership.json\").read_text())\n        host = adapter.load_host_evidence(ownership)\n        self.assertNotIn(\"/usr/bin/env\", host)\n        self.assertIn(\"/usr/bin/python3.14\", host)\n        self.assertEqual(\n            adapter.bind_path_for_ownership(\"/usr/bin/python3\", host),\n            \"/usr/bin/python3.14\",\n        )\n        self.assertIsNone(adapter.bind_path_for_ownership(\"/usr/bin/env\", host))\n        with self.assertRaisesRegex(adapter.PreflightError, \"ARBITRARY_OVERFLOW\"):\n            adapter.verify_ownership(\"/usr/bin/env\", host, 65534, 0)\n        adapter.verify_nonwritable(\"/usr/bin/env\", Path(\"/usr/bin/env\").lstat().st_uid)",
+      "new": "    def test_env_is_bound_and_missing_host_evidence_fails(self):\n        adapter = load_adapter()\n        ownership = json.loads((HERE / \"k-macro05-trace106-ownership.json\").read_text())\n        host = adapter.load_host_evidence(ownership)\n        env_path = \"/usr/bin/env\"\n        self.assertIn(env_path, host)\n        expected = adapter.namespace_uid_for_host(\n            Path(\"/proc/self/uid_map\").read_text(),\n            ownership[\"hostRootUid\"],\n            ownership[\"overflowUid\"],\n        )\n        adapter.verify_protected_path(env_path, host, expected, ownership[\"hostRootUid\"])\n        host = dict(host)\n        del host[env_path]\n        with self.assertRaisesRegex(adapter.PreflightError, \"ARBITRARY_OVERFLOW\"):\n            adapter.verify_protected_path(env_path, host, expected, ownership[\"hostRootUid\"])"
+    },
+    {
+      "path": ".moriarty-dev/test_k_macro05_trace106_diagnostic.py",
+      "old": "    def test_wrapper_path_and_parser_python_are_pinned(self):\n        adapter = load_adapter()\n        pins = json.loads(PINS_PATH.read_text())\n        adapter.verify_wrapper_and_parser(pins)\n        shebang = pins[\"parserShebang\"]\n        self.assertEqual(shebang[\"argument\"], \"python3\")\n        self.assertIn(\"python3-3.11.9/bin/python3\", shebang[\"resolvedOnWrapperPath\"])\n        self.assertEqual(\n            hashlib.sha256(Path(shebang[\"resolvedOnWrapperPath\"]).read_bytes()).hexdigest(),\n            shebang[\"sha256\"],\n        )",
+      "new": "    def test_wrapper_path_and_parser_python_are_pinned(self):\n        adapter = load_adapter()\n        pins = json.loads(PINS_PATH.read_text())\n        path = pins[\"childEnv\"][\"PATH\"].split(\":\")\n        for directory in pins[\"wrapperPathDirs\"]:\n            path = adapter.prepend_path_dir(path, directory)\n        self.assertEqual(path[0], pins[\"wrapperPathDirs\"][-1])\n        self.assertEqual(path[len(pins[\"wrapperPathDirs\"]) - 1], pins[\"wrapperPathDirs\"][0])\n        unwrapped = str(Path(next(i[\"path\"] for i in pins[\"selectedExecutables\"] if i[\"role\"] == \"krun\")).parent.parent / \"bin-unwrapped\")\n        krun_path = adapter.prepend_path_dir(path, unwrapped)\n        self.assertEqual(krun_path[0], unwrapped)\n        adapter.verify_wrapper_and_parser(pins)\n        shebang = pins[\"parserShebang\"]\n        self.assertEqual(shebang[\"argument\"], \"python3\")\n        self.assertEqual(str(adapter.resolve_command(shebang[\"argument\"], krun_path)), shebang[\"resolvedOnWrapperPath\"])\n        self.assertEqual(\n            hashlib.sha256(Path(shebang[\"resolvedOnWrapperPath\"]).read_bytes()).hexdigest(),\n            shebang[\"sha256\"],\n        )"
+    }
+  ],
+  "pinSchema": {
+    "setenvNativeDir": "string: actual $K_LIB_DIR/native/linux$ARCH directory prepended by setenv",
+    "commandSelections": {
+      "krun": {
+        "dirname": "abs path",
+        "basename": "abs path",
+        "mktemp": "abs path",
+        "date": "abs path",
+        "rm": "abs path",
+        "cat": "abs path",
+        "cp": "abs path",
+        "fold": "abs path",
+        "uname": "abs path",
+        "grep": "abs path",
+        "head": "abs path",
+        "cut": "abs path",
+        "sed": "abs path",
+        "java": "abs path matching role java"
+      },
+      "kast": {
+        "dirname": "abs path",
+        "uname": "abs path",
+        "grep": "abs path",
+        "head": "abs path",
+        "cut": "abs path",
+        "sed": "abs path",
+        "java": "abs path"
+      },
+      "setenv": {
+        "uname": "abs path",
+        "dirname": "abs path",
+        "grep": "abs path",
+        "head": "abs path",
+        "cut": "abs path",
+        "sed": "abs path",
+        "java": "abs path"
+      }
+    },
+    "selectedExecutablesAdditionalRoles": [
+      "dirname",
+      "basename",
+      "mktemp",
+      "date",
+      "rm",
+      "cat",
+      "cp",
+      "fold",
+      "uname",
+      "grep",
+      "head",
+      "cut",
+      "sed",
+      "java",
+      "llvm",
+      "kore"
+    ],
+    "selectedExecutableFields": {
+      "path": "required",
+      "sha256": "required",
+      "role": "required unique",
+      "symlinkTarget": "required iff path is a symlink; omitted means nonlink",
+      "resolvedTarget": "required when symlinkTarget is set; final Path.resolve()",
+      "command": "optional for llvm/kore, defaults llvm-krun and kore-print"
+    },
+    "krunStagedPath": "child PATH, then prepend_path_dir each wrapperPathDirs in source order (first-occurrence removal), then prepend bin-unwrapped",
+    "kastStagedPath": "same wrapper prepends without bin-unwrapped",
+    "setenvStagedPath": "kast/wrapper path then prepend krun parent bin then setenvNativeDir",
+    "preserveOriginalRoles": [
+      "strace",
+      "env",
+      "python3-host",
+      "python3.14",
+      "krun",
+      "krun-unwrapped",
+      "kast",
+      "kast-unwrapped",
+      "bash",
+      "k-util",
+      "nix-query",
+      "parser-python"
+    ]
+  },
+  "remainingFindings": [
+    "E04-1"
+  ]
+}

@@ -4,7 +4,10 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
+import shlex
 import sys
+from moriarty_dev.bootstrap import runtime_digest
 
 PLUGIN_NAME = "moriarty-dev"
 CORE_FILES = (
@@ -33,10 +36,36 @@ def _observe_root(root):
         hook_hash = hashlib.sha256((root / "scripts/moriarty_dev/hook.py").read_bytes()).hexdigest()
     except OSError:
         errors.append("hook script unavailable")
+    pin = None
+    source_matches = False
+    retained_matches = False
+    retained = None
+    try:
+        definition = json.loads((root / "hooks/hooks.json").read_text())
+        pins = set()
+        for groups in definition["hooks"].values():
+            for group in groups:
+                for item in group["hooks"]:
+                    tokens = shlex.split(item["command"])
+                    value = tokens[tokens.index("-c") + 2]
+                    if re.fullmatch(r"[0-9a-f]{64}", value):
+                        pins.add(value)
+        if len(pins) == 1:
+            pin = pins.pop()
+            retained = Path.home() / ".local/share/moriarty-dev/runtimes" / pin
+            source_matches = runtime_digest(root) == pin
+            try:
+                retained_matches = runtime_digest(retained) == pin
+            except (OSError, ValueError):
+                pass
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        pass  # Legacy registrations have no stable runtime pin.
     return {
         "path": str(root), "version": manifest.get("version"),
         "usable": not missing and not errors,
         "missingFiles": missing, "errors": errors, "hookSha256": hook_hash,
+        "runtimePin": pin, "sourceRuntimeMatches": source_matches,
+        "retainedRuntime": {"path": str(retained) if retained else None, "digestMatches": retained_matches},
     }
 
 

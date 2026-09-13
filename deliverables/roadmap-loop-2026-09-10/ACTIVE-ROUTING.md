@@ -1,5 +1,9 @@
 # Active routing override
 
+## September 12 full-branch continuation
+
+The [latest full-branch instruction](../../raw/assignments/moriarty-full-branch-loop-2026-09-12.md) now selects the entire session and branch roadmap. Use `openspec/changes/session-completion-sprints/` for the language-to-ledger sequence and the original OpenSpec requirements for the full MC/SP and wider roadmap. The eight-hour block below is expired history. Preserve its limits and records; do not restart its clock or reduce the new goal to its subset. Existing task-specific K routing and general product routing remain applicable.
+
 ## Current eight-hour AFK block
 
 The September 11 user instruction selects the fixed block in [the eight-hour plan](../../docs/superpowers/plans/2026-09-11-eight-hour-afk-development.md), starting `2026-09-11T06:46:18Z` and ending `2026-09-11T14:46:18Z`. Each item requires OpenSpec requirements and both independent Opus/Astra medium specification approvals before its implementation or execution. Agents approve while the user is AFK. Binding/accounting repair and real loan execution are mandatory; source-only checks do not complete the block. The existing native goal objective was edited through the host API; [activation evidence](afk-activation-2026-09-11/activation.json) preserves the observation and original objective. Read [the current goal instructions](AFK-GOAL-2026-09-11.txt) on continuation. Preserve the remaining full roadmap, but do not resume its earlier work selection during this block.
