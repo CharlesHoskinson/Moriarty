@@ -1,0 +1,1355 @@
+{
+  "schema": "moriarty.independent-source-audit/1",
+  "createdAt": "2026-09-13T22:29:48.066727+00:00",
+  "verdict": "REQUEST_CHANGES",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "high",
+    "role": "fresh independent reviewer"
+  },
+  "author": {
+    "requested": "grok-4.6 high",
+    "observedTerminal": "grok-4.6-build",
+    "inherits": "preserved partial Fable implementation",
+    "metadataDiscrepancy": "outer harness round_done reports stale grok-4.5 default and unavailable usage; provider terminal modelUsage records grok-4.6-build; no substitution inferred"
+  },
+  "scope": "Exact frozen full candidate source and actual caller integration; no diff-only or author self-approval. Source and actual live result approval remain separate. Full accounting producer is a distinct pending capability, not itself the reason for rejection. Findings concern implemented consumers and runtime tail. Critical production paths were reviewed end to end; peripheral/legacy paths were inspected selectively, not exhaustively empirically exercised.",
+  "candidate": {
+    "capturedAt": "2026-09-13T22:12:51.358860+00:00",
+    "worktree": "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor",
+    "base": "f7f40ce5e945fd9d7d2bd7a3c05ee3798331ff8e",
+    "sourceMapSha256": "68f879d2897471f6ee69bc7cbda0528baad8ef9991cafaacd4c5e8375114acda",
+    "files": {
+      "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": "7164ccf41de2bd611203a58f73efea440f7e71526b837d2c328d1b46a3345d2d",
+      "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": "61e3dc84b495285d8d4ca2460744f802b3123326c601d0e4f86ad5ea585e7dff",
+      "experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+      "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md": "429391810e73c3bb40a93253307a0de0ed65f71064049b1744ce8da8070c54dd",
+      "openspec/changes/afk-live-financial-execution/specs/afk-live-bindings/spec.md": "d0f478d511ceebcbe9214ce28cd1e8ba0e31a88a147175b38491594846b6d8e8",
+      "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+      "plugins/moriarty-dev/hooks/hooks.json": "0fc311652db1e14a27336788a1a36875283f2c2c2485f78b6c4c247de8bee2b6",
+      "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": "f39f3bfc8060c098f28f8595d295ee282396a8a3f1c233e2295108e2fc128c06",
+      "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py": "d49f98dade8e322f1a3781e9eb992ff45fb2cb7b9e844e7fb59ab69441915411",
+      "plugins/moriarty-dev/scripts/moriarty_dev/bootstrap.py": "957b5baa57c3a930fcb9620b9e073daa9cb3c7116b5f3904562fc4b004aa6009",
+      "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": "7442f13f7d38c399ab018933d6950b1db371e76b1fa3fe2df312f3a8961eedd4",
+      "plugins/moriarty-dev/scripts/moriarty_dev/compatibility.py": "2e18c10fb78d3e9fbe1f0ab923d81871428c4aedf7fcc86d89b6ddcebdcd81e9",
+      "plugins/moriarty-dev/scripts/moriarty_dev/deployment.py": "ec0a9c2f29951d2c258a81d132333551922f4567f669aa0fb0bf4af6d49f6a9f",
+      "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": "c185d2f0344599784c28aa52864971e9c336ca905bafeb09ba2a2d2db4e38084",
+      "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py": "1cf8edcca04cccfc52ec8dad336b4200b96b7b0dbf5e5b6e7073d476443aaba8",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py": "dba2f29e201aa82fe3e594b092f4ed21694fe2debe8beaf0ec80595ffa6df0bc",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py": "d547298eba9c94d6bf698963fa506978d73698f93ded96fa59062c0de27bef84",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/__init__.py": "5f5e2408b9f3bf8cc4c00963cd779e178e33a0bd6914163c81b238f92c84d51a",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/cli.py": "e2780980962d6c9fe092810ade02c7e6b88ced043f516897c6a72a73f84a4bb8",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py": "f7d6c6676a91f6b1e2f9dad65be0141bc96f3cbecf67e3153cfdccc76c93d54b",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/launch_contract.py": "477dace598365dd530d419289273be2f8caefb8e28106a6c84690012b83b633a",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/loan_exit_operator.py": "61cde6a813c242c1f8bc88fbdfc88448691cd434af9ba9b3e8f0c0e1aa68253b",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/terminal_predicate.py": "b040629fd83ba25f385855da42ab0c457bc065b46d9df93f10199b6397ebeb81",
+      "plugins/moriarty-dev/scripts/moriarty_dev/notifications.py": "ec96e339cc5a29e0b611be8b6c2404c09910fa0712d319980dfc9b55ed608e6c",
+      "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": "88725583618c50684ac00fd7e7219d065a21adc3f8416b1e85f41f10d534c55b",
+      "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": "e873d917c4d5a2de4b257bfdf05ef08b54072828dac63347ee2a3fbf99bf1565",
+      "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": "d0b08d72d5fa8d1d85a4b1d6f6c43e26b07f4615f0ca0e76126407157cf11691",
+      "plugins/moriarty-dev/scripts/moriarty_dev/records.py": "fc16c294a8cee323683e584f7e4edcfc4391747054644afd330d999e8ee0dfce",
+      "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": "d920be70ffcc0220a732001ee2d55fd81843bae468dd25da0512e62df18925c6",
+      "plugins/moriarty-dev/scripts/moriarty_dev/store.py": "834881df85a26d84d578e2e055aaa8f33eef85e2daf9c85ea1f773c022b1fa8e",
+      "plugins/moriarty-dev/tests/loan_executor/fake_services.py": "059059c96e44656b89e310fb9bf0b7c8cf0d4f1a91c5f1eb2245a5219fa96ce7",
+      "plugins/moriarty-dev/tests/loan_executor/harness.py": "5ce36a46467a49239ee38fbde56f8b1642d8e51bb0969bacc8d667c8a2ab3fc6",
+      "plugins/moriarty-dev/tests/loan_executor/test_cli_consumer.py": "52780122b3ab6ed4773803164ab8bd35b3acb8ef075faadc3b8f2c02b468bd82",
+      "plugins/moriarty-dev/tests/loan_executor/test_consumer_exists.py": "e37b928b5ebf74f5db39d628d7f5e80bdd36d3ae7406138f7a28012300b0b195",
+      "plugins/moriarty-dev/tests/loan_executor/test_executor_phases.py": "42ffd55bdbd960277e402190f1bc6e34112450863a7780649d8e1d906fe96866",
+      "plugins/moriarty-dev/tests/loan_executor/test_installed_collector.py": "925f218c0c717a1f0c1fb14b0796d4751a54909f476d4e5d0c056fa7c4f0d3ab",
+      "plugins/moriarty-dev/tests/loan_executor/test_loan_cleanup.py": "2ee92abb1fddda12b5a52030b193a84e7f403f7ea24c353c1afb800ae7e7f2b5",
+      "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py": "6972f233a0f849a2424856e556c73489cb56d4e5f10918df0a5dc86d52f1c82a",
+      "plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py": "12cea91e25478a5d9b4b496e6d3b353f4e6d430ce499722adfaa32fb7676380d",
+      "plugins/moriarty-dev/tests/test_policy.py": "a9b8f1d15502b9c26dc57b2d5b9895637bf0216571408a32b3181be3ed57a912",
+      "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": "0cf96fb4c8407d0a2a5ad8a197548e5ccace4e4a819de0c81fe73990e452f90b",
+      "plugins/moriarty-dev/tests/test_runner.py": "21702e33e7a681a9042966f10015ab39b6c797016290d7383cf64b248af4bac4",
+      "plugins/moriarty-dev/tests/test_store_connections.py": "f8ddd4cbfe798a2688545dcbb95e0c1fd11f5135b95db3e1018d542d155f5396"
+    },
+    "authorTerminal": true,
+    "outerGateTerminal": false,
+    "sourceApproved": false,
+    "changedSinceModelSwitch": [
+      "plugins/moriarty-dev/hooks/hooks.json",
+      "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+      "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+      "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+      "plugins/moriarty-dev/scripts/moriarty_dev/policy.py",
+      "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+      "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+      "plugins/moriarty-dev/tests/loan_executor/harness.py",
+      "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py"
+    ]
+  },
+  "integrity": {
+    "before": {
+      "at": "2026-09-13T22:19:18.390301+00:00",
+      "map": "68f879d2897471f6ee69bc7cbda0528baad8ef9991cafaacd4c5e8375114acda",
+      "checks": {
+        "frozen": {
+          "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-bindings/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": true,
+          "plugins/moriarty-dev/hooks/hooks.json": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/bootstrap.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/compatibility.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/deployment.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/launch_contract.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/loan_exit_operator.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/terminal_predicate.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/notifications.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/records.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/store.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/fake_services.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/harness.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_cli_consumer.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_consumer_exists.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_executor_phases.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_installed_collector.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_loan_cleanup.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py": true,
+          "plugins/moriarty-dev/tests/test_policy.py": true,
+          "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": true,
+          "plugins/moriarty-dev/tests/test_runner.py": true,
+          "plugins/moriarty-dev/tests/test_store_connections.py": true
+        },
+        "worker": {
+          "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-bindings/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": true,
+          "plugins/moriarty-dev/hooks/hooks.json": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/bootstrap.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/compatibility.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/deployment.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/launch_contract.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/loan_exit_operator.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/terminal_predicate.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/notifications.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/records.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/store.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/fake_services.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/harness.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_cli_consumer.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_consumer_exists.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_executor_phases.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_installed_collector.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_loan_cleanup.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py": true,
+          "plugins/moriarty-dev/tests/test_policy.py": true,
+          "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": true,
+          "plugins/moriarty-dev/tests/test_runner.py": true,
+          "plugins/moriarty-dev/tests/test_store_connections.py": true
+        }
+      }
+    },
+    "after": {
+      "at": "2026-09-13T22:26:38.638499+00:00",
+      "sourceMapSha256": "68f879d2897471f6ee69bc7cbda0528baad8ef9991cafaacd4c5e8375114acda",
+      "computedMapSha256": "68f879d2897471f6ee69bc7cbda0528baad8ef9991cafaacd4c5e8375114acda",
+      "checks": {
+        "frozen": {
+          "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-bindings/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": true,
+          "plugins/moriarty-dev/hooks/hooks.json": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/bootstrap.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/compatibility.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/deployment.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/launch_contract.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/loan_exit_operator.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/terminal_predicate.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/notifications.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/records.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/store.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/fake_services.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/harness.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_cli_consumer.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_consumer_exists.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_executor_phases.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_installed_collector.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_loan_cleanup.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py": true,
+          "plugins/moriarty-dev/tests/test_policy.py": true,
+          "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": true,
+          "plugins/moriarty-dev/tests/test_runner.py": true,
+          "plugins/moriarty-dev/tests/test_store_connections.py": true
+        },
+        "worker": {
+          "experiments/moriarty-midnight-financial/ledger/indexed-owner.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/preview-launch.mjs": true,
+          "experiments/moriarty-midnight-financial/ledger/providers.mjs": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-accounting/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-live-bindings/spec.md": true,
+          "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": true,
+          "plugins/moriarty-dev/hooks/hooks.json": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/bootstrap.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/compatibility.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/deployment.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/hook_protocol.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/__init__.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/cli.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/launch_contract.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/loan_exit_operator.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/terminal_predicate.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/notifications.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/policy.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/records.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": true,
+          "plugins/moriarty-dev/scripts/moriarty_dev/store.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/fake_services.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/harness.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_cli_consumer.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_consumer_exists.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_executor_phases.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_installed_collector.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_loan_cleanup.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_r2_findings.py": true,
+          "plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py": true,
+          "plugins/moriarty-dev/tests/test_policy.py": true,
+          "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": true,
+          "plugins/moriarty-dev/tests/test_runner.py": true,
+          "plugins/moriarty-dev/tests/test_store_connections.py": true
+        }
+      }
+    },
+    "runtime": {
+      "runtimeDigest": "15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965",
+      "pythonFiles": {
+        "__init__.py": "f39f3bfc8060c098f28f8595d295ee282396a8a3f1c233e2295108e2fc128c06",
+        "accounting.py": "d49f98dade8e322f1a3781e9eb992ff45fb2cb7b9e844e7fb59ab69441915411",
+        "bootstrap.py": "957b5baa57c3a930fcb9620b9e073daa9cb3c7116b5f3904562fc4b004aa6009",
+        "cli.py": "7442f13f7d38c399ab018933d6950b1db371e76b1fa3fe2df312f3a8961eedd4",
+        "compatibility.py": "2e18c10fb78d3e9fbe1f0ab923d81871428c4aedf7fcc86d89b6ddcebdcd81e9",
+        "deployment.py": "ec0a9c2f29951d2c258a81d132333551922f4567f669aa0fb0bf4af6d49f6a9f",
+        "hook.py": "c185d2f0344599784c28aa52864971e9c336ca905bafeb09ba2a2d2db4e38084",
+        "hook_protocol.py": "1cf8edcca04cccfc52ec8dad336b4200b96b7b0dbf5e5b6e7073d476443aaba8",
+        "loan_cleanup.py": "dba2f29e201aa82fe3e594b092f4ed21694fe2debe8beaf0ec80595ffa6df0bc",
+        "loan_executor.py": "d547298eba9c94d6bf698963fa506978d73698f93ded96fa59062c0de27bef84",
+        "loan_exit_retention/__init__.py": "5f5e2408b9f3bf8cc4c00963cd779e178e33a0bd6914163c81b238f92c84d51a",
+        "loan_exit_retention/cli.py": "e2780980962d6c9fe092810ade02c7e6b88ced043f516897c6a72a73f84a4bb8",
+        "loan_exit_retention/exit_retention.py": "f7d6c6676a91f6b1e2f9dad65be0141bc96f3cbecf67e3153cfdccc76c93d54b",
+        "loan_exit_retention/launch_contract.py": "477dace598365dd530d419289273be2f8caefb8e28106a6c84690012b83b633a",
+        "loan_exit_retention/loan_exit_operator.py": "61cde6a813c242c1f8bc88fbdfc88448691cd434af9ba9b3e8f0c0e1aa68253b",
+        "loan_exit_retention/terminal_predicate.py": "b040629fd83ba25f385855da42ab0c457bc065b46d9df93f10199b6397ebeb81",
+        "notifications.py": "ec96e339cc5a29e0b611be8b6c2404c09910fa0712d319980dfc9b55ed608e6c",
+        "policy.py": "88725583618c50684ac00fd7e7219d065a21adc3f8416b1e85f41f10d534c55b",
+        "records.py": "fc16c294a8cee323683e584f7e4edcfc4391747054644afd330d999e8ee0dfce",
+        "runner.py": "d920be70ffcc0220a732001ee2d55fd81843bae468dd25da0512e62df18925c6",
+        "store.py": "834881df85a26d84d578e2e055aaa8f33eef85e2daf9c85ea1f773c022b1fa8e"
+      },
+      "hookPins": [
+        "15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965",
+        "15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965",
+        "15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965",
+        "15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965"
+      ],
+      "allFourMatch": true,
+      "retainedRuntime": "/home/charl/.local/share/moriarty-dev/runtimes/15c309a7f2654e56d570bd90ee340f0ff617232a253ad5d7d8f0265ab7f67965",
+      "retainedMatch": true
+    }
+  },
+  "findings": [
+    {
+      "id": "G1-01",
+      "severity": "critical",
+      "title": "Parent accepts contradictory completion artifacts",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 392
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 450
+        }
+      ],
+      "predicate": "P09/P11: derive completion from authenticated actual retained observations, not summary labels.",
+      "observed": "Starting with a successful real execute_once fixture and rehashing each changed artifact, the actual result reader accepts six independently inconsistent cases: terminal raw fields say not-found/nonzero and timedOut=true; containment has unit/prover contained=false and commands=[]; startup says not-found/MainPID0/Type=forking; comparison changes wallet.seedFile and has stale runtime digest; timer active=false; explicit-stop returnCode=false. Classification/predicate/complete labels alone carry authority. These are result-reader probes, not six CLI launches.",
+      "expected": "Recompute startup and main classification with installed predicates from parsed actual command observations; require their command success/types and cross-identities. Validate runtime copy against original exact bytes and comparison digest, prover control/config/ownership, timer target/deadline and explicit-stop argv/terminal digest. Derive containment from exact owned-resource observations and authenticated generations; validate all scalar types and closed evidence content. Rerun each one-field negative through reader and operational disposition.",
+      "evidence": [
+        "results.json#result_inconsistent_*"
+      ],
+      "inherited": [
+        "R2-01"
+      ]
+    },
+    {
+      "id": "G1-02",
+      "severity": "high",
+      "title": "Authenticated refusal still infers no resource start from missing progress",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 568
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 587
+        }
+      ],
+      "predicate": "P03/P04/P10/P11: no-start or containment must be established before ownership release.",
+      "observed": "The actual reader accepts an invocation-bound REFUSED result with evidence=[]/containmentComplete=true and no owners. With completed handshake and no progress, _disposition_for returns refused even without acknowledgment. Missing startup/launched messages are treated as independent proof that resources never started. AF_UNIX fragment loss is independently reproduced in G1-10.",
+      "expected": "Require positive parent-owned no-start authorization/protocol state or verified current containment before closing. Missing/unbound/fragmented progress cannot prove no startup. Null-identity reports remain diagnostic. Add actual handshake plus omission/fragment controls and preserve active ownership when no-start is not independently established.",
+      "evidence": [
+        "results.json#authenticated_refusal_without_no_start_evidence"
+      ],
+      "inherited": [
+        "R2-02"
+      ]
+    },
+    {
+      "id": "G1-03",
+      "severity": "critical",
+      "title": "Absolute bootstrap and timer deadlines remain ineffective",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 901
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 807
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+          "line": 180
+        }
+      ],
+      "predicate": "P04/P05/P08: bootstrap hard exit by outer+1606; independent timer at +1620, accuracy at most one second, surviving parent loss.",
+      "observed": "Final formula is floor((bootstrap-now)/1s)-1. For now100.950/cut1606/activation102.050 it schedules1606.050, so a one-second reserve is not a bound. Post-start rejection cannot enforce termination after parent loss or absent ownership. The unit command contains no absolute monotonic bootstrap supervisor. Actual fake-service execution with timerNextElapseOffsetSeconds=4 accepts NextElapse3.130901686s after cutoff and returns PROCESS_SUCCESS/0; validator allows +/-5s and never requests/checks AccuracyUSec.",
+      "expected": "Use a narrow source-bound absolute CLOCK_MONOTONIC supervisor for the financial child, instantiated before financial work, binding the authenticated outer start, boot/time domain and +1606 cutoff. It must refuse late entry, terminate its owned process group by the absolute cutoff even if executor/parent dies before durable startup, and preserve actual main exit semantics. RuntimeMax may remain defense in depth. Test real short-lived local child probes with delayed activation both sides of fractional boundaries, parent loss before/after startup, TERM-resistant child, and exact absolute cutoff; retain PID absence/reaping evidence without global reaping. Anchor timer to actual absolute target and validate target, NextElapse and Accuracy<=1s; do not widen tolerance or subtract another arbitrary margin.",
+      "evidence": [
+        "results.json#timer_four_seconds_late",
+        "/tmp/moriarty-production-grok-r1-freeze/one-second-slack-counterexample.json"
+      ],
+      "inherited": [
+        "R2-08",
+        "TD-02"
+      ]
+    },
+    {
+      "id": "G1-04",
+      "severity": "high",
+      "title": "Persistence and release restart budgets beyond the shared completion cutoff",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 1122
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 1252
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 1411
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+          "line": 456
+        }
+      ],
+      "predicate": "P04/P05/P07/P12: all cleanup/result/ack/ownership transitions share original absolute bounds, retaining outer margin.",
+      "observed": "A real exclusive result write with injected now1741 and cleanup1740 persists successfully because _write_result uses outer1800. Accounting _replace_file grants a fresh25s to write then another25s to rename/fsync, repeated for three handover files and release; BudgetLock gets its own5s without original cutoff. Release occurs after child acknowledgment and has no shared +1740 bound. Detached cleanup main derives a fresh now+bound and then grants another full bound to durable save. Individual worker supervision is improved, but cumulative/late admission remains unbounded against required schedule.",
+      "expected": "Pass the authenticated original deadline through every lock/write/rename/fsync/cleanup/result/release boundary. Compute remaining time immediately before each operation, never a new full budget; refuse/retain unresolved when no time remains. Include writer/fsync stalls reached near cutoff and interrupted rename outcome, and prove no work or acknowledgment is newly granted in the last outer margin.",
+      "evidence": [
+        "results.json#result_write_after_cleanup_cutoff",
+        "source inspection"
+      ],
+      "inherited": [
+        "R2-08",
+        "R2-12"
+      ]
+    },
+    {
+      "id": "G1-05",
+      "severity": "critical",
+      "title": "Funding observer evidence remains a self-asserted summary",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 684
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 724
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 356
+        }
+      ],
+      "predicate": "P02/P12: authenticate complete observer/source/SDK/input/containment/finality/pending-use facts.",
+      "observed": "Deleting the context-committed SDK closure file still passes actual verify_observation. Baseline files={} passes; sdkClosure is only reference-shape checked. Accepted parent evidence has arbitrary seed/snapshot hashes with no input paths/mode/owner metadata or distinct dust/unshielded snapshots, no actual containment observation references, only capability plus childrenStopped=true. Parent record binds strings/digests but does not substantiate those facts. Finality contents are not checked; fixture finality is only block/hash. Pending-use receipt only needs outcome/defectClass/unresolvedCompetingSpend=false and contains no retained allocations, swaps, persistence or finality lineage.",
+      "expected": "Implement deterministic supported evidence-family validators for every required producer fact. Read/hash SDK manifest and files; bind all actual argv/context/file operands; require parent actual process containment and canonical input metadata/digests and separate child-stop evidence. Check finality network/protocol/basis and bounded material-observed pending-use lineage including two loans/intervening swaps. Missing evidence is unavailable; do not demand hypothetical external use or unrelated lifetime accounting.",
+      "evidence": [
+        "results.json#missing_sdk_closure",
+        "results.json#baseline_incomplete_observer_evidence",
+        "normal fixture immutable history/finality/pending-use files"
+      ],
+      "inherited": [
+        "R2-05"
+      ]
+    },
+    {
+      "id": "G1-06",
+      "severity": "high",
+      "title": "Python financial admission diverges from the native consumer and assumes mint semantics",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 246
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 311
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 352
+        }
+      ],
+      "predicate": "P01/P02/P12: use actual unchanged native plan semantics and authenticated asset/stage/domain/units.",
+      "observed": "Python accepts wrong roles.firstAddress, outputDirectory overlapping walletStateDirectory and dustFee=2^128. The real native validatePreviewLaunchPlan accepts the control but rejects those exact variants as PREVIEW_ROLES/PREVIEW_DIRECTORY_OVERLAP/PREVIEW_LIMITS. Selected need is unconditionally0 for kind=loan plus symbolUSD_TEST_ASSET; no build receipt contents/source/program, domain/contract/native-color derivation or stage funding rule is verified, and arbitrary expected token unit is accepted. It therefore does not establish that the selected source actually supplies the fixed mint semantics.",
+      "expected": "Mirror or reuse the actual pure native validator, including indexed owner conversion, original identity and directory/uint128 boundaries. Bind selected source/build/program and stage/domain/native asset/unit evidence before deriving required initial balance. Keep gross ceiling distinct from funding need: the authenticated fixed initialize mint may legitimately require0 selected tokens; absent derivation must be unavailable rather than an invented positive minimum.",
+      "evidence": [
+        "results.json#wrong_first_role",
+        "results.json#overlap_directories",
+        "results.json#uint128_overflow",
+        "supplement-results.json#native_plan_consumer"
+      ],
+      "inherited": [
+        "R2-05"
+      ]
+    },
+    {
+      "id": "G1-07",
+      "severity": "critical",
+      "title": "Current claim verifier omits debit counterparts, preflight charge and substantive history resolution",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 584
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 886
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 935
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/accounting.py",
+          "line": 1341
+        }
+      ],
+      "predicate": "P03/P12: authentic current grant/master/preflight/runtime/history/counterparts must agree before claim and child.",
+      "observed": "Actual validate_executor_context accepts current master containing only financial-runtime debit, no125-second preflight debit, no immutable application marker and no debit-intent counterparts. Grant verifier checks selected arithmetic but not unique new debit IDs/all counterparts/old-envelope preservation, exact source provenance of reserves, or matching observer preflight claim. History verifier checks only listed event lineage plus any listed receipt digest; it does not match event kind/outcome/current canonical resolution against same-defect receipt semantics. Baseline fixture clears two failures via generic result_review although retained history resolvedBy lists remain empty. Runtime tail sets master claimed before complete shared current-grant/counterpart/owned-primary validation. records._remaining_authenticated_mc02 separately repeats weaker arithmetic rather than sharing the complete verifier.",
+      "expected": "Reject absent marker or either debit counterpart/preflight claim, mismatched source provenance/duplicate IDs/altered predecessor or envelope state, and unresolved current generation before any claim. Validate retained history outcomes and exact applicable same-lineage resolutions against canonical events, including material observed use. Share complete current-projection validation in records/accounting. Preserve consumed intent on interruption and own prepaid equality. Full producer can remain pending, but its mandatory consumer evidence cannot be optional.",
+      "evidence": [
+        "results.json#missing_preflight_debit_and_application_marker",
+        "source inspection and retained normal fixture"
+      ],
+      "inherited": [
+        "R2-05",
+        "R2-12"
+      ]
+    },
+    {
+      "id": "G1-08",
+      "severity": "critical",
+      "title": "Actual cmd_run accepts caller-supplied history that bypasses canonical retry denial",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+          "line": 394
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+          "line": 410
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+          "line": 2845
+        }
+      ],
+      "predicate": "P02/P03/P12: live cmd_run authenticates canonical context/db and reconstructs its own history reader.",
+      "observed": "An isolated canonical store with two new failures yields REPRODUCE_BEFORE_RETRY under real load_snapshot/policy. Calling actual cmd_run with a lambda reader returning zero failures instead runs the complete unchanged executor/runner/accounting validators, makes17 fake service calls and returns CLI0/finished/released. Context/accounting history verification does not catch the newly added canonical defects. cmd_run also does not authenticate passed db_path before initial reservation/history operations.",
+      "expected": "For the exact live branch, authenticate context/store identity first, reject alternate db_path or caller reader authority, then construct canonical history internally for all pre/post checks. Validate full current canonical history in child claim path. Retain legacy dependency behavior separately. Regression must show the exact demonstrated call rejects before reservation/child while the valid real canonical fixture completes.",
+      "evidence": [
+        "consumer-results.json#actual_history_policy_control",
+        "consumer-results.json#cli-history-override"
+      ],
+      "inherited": [
+        "R2-13",
+        "R2-05"
+      ]
+    },
+    {
+      "id": "G1-09",
+      "severity": "high",
+      "title": "Parent rejects genuine known-main diagnostics and broadly skips unknown startup authentication",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 406
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 526
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 538
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 1024
+        }
+      ],
+      "predicate": "P06/P07/P11: preserve known raw main outcome independently of operational completion without authenticating invalid startup identity.",
+      "observed": "Actual execute_once with stopReturnCode1 emits PROCESS_UNKNOWN/STOP_FAILED and rawMainExit exit0. Actual reader rejects it as unknown status combination, so CLI loses validated status/failure digest. Known nonzero main with terminal persistence failure likewise creates PROCESS_FAILED but parent requires terminalEvidencePersisted and rejects the whole diagnostic (static path, not independently re-run). The previous unknown startup fix now skips startup checks whenever document.invocationId is null; this is a global authentication exemption for those startup artifacts rather than a valid-observed-identity/timing distinction.",
+      "expected": "Define closed raw-main versus operational-status combinations across producer and consumer. Preserve authenticated actual exit0/nonzero diagnostics when later stop/persistence/containment fails; no release or process success follows. Validate any asserted startup observed identity, exact unit/current invocation and timing evidence even when operational startup fails, keeping unverified diagnostics explicitly untrusted rather than silently accepted or erased. Add full reader/CLI regressions for each failure phase.",
+      "evidence": [
+        "results.json#actual_stop_failure_result_reader",
+        "static source paths for unrerun known-nonzero and null-startup cases"
+      ],
+      "inherited": [
+        "R2-01",
+        "R2-11",
+        "TD-03"
+      ]
+    },
+    {
+      "id": "G1-10",
+      "severity": "high",
+      "title": "AF_UNIX progress framing still drops legitimate fragmented acknowledgment",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py",
+          "line": 812
+        }
+      ],
+      "predicate": "P02/P09/P11: authenticated stream framing preserves complete bounded records across recv calls.",
+      "observed": "Actual real CLI with only transport fragmentation of contained JSON into two writes150ms apart returns CLI4/unresolved despite child0 and valid PROCESS_SUCCESS; ownership remains runtime-held and reservation active. The same complete CLI control returns0. No result validator, policy or accounting predicate is replaced.",
+      "expected": "Buffer bounded bytes across recv boundaries, parse only complete newline records with closed schema/scalars and valid phase order, preserve trailing fragments, and reject malformed/oversized frames explicitly. Test fragments, coalesced lines and UTF-8 splits. Do not substitute stdout or inferred acknowledgment. This mechanism explains lost ack, not historical child3/status-null failures.",
+      "evidence": [
+        "consumer-results.json#cli-control",
+        "consumer-results.json#cli-fragment"
+      ],
+      "inherited": [
+        "TD-04"
+      ]
+    },
+    {
+      "id": "G1-11",
+      "severity": "high",
+      "title": "Malformed startup service output escapes safety cleanup and durable result",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 921
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+          "line": 1188
+        }
+      ],
+      "predicate": "P04/P06/P07: malformed/unavailable post-start observations yield retained unknown and bounded owned cleanup.",
+      "observed": "With actual validators and fake service I/O returning not-a-property for startup show after both starts, execute_once raises uncaught ValueError(MALFORMED_SHOW). No result file or foreground cleanup is produced; retained call log ends after financial unit start. Timer/PID1 defenses remain, but their existence does not satisfy required foreground fault disposition.",
+      "expected": "Convert parser/shape/transport failures at every production observation boundary to named unknown/refused outcomes according to resource-start state. Always reach bounded owned cleanup/result retention when possible; do not guess missing unit ownership. Keep original safety timer when unknown containment remains. Test malformed startup, timer/config output and actual exceptions through main/runner/CLI.",
+      "evidence": [
+        "supplement-results.json#malformed_startup"
+      ],
+      "inherited": [
+        "P04",
+        "P06",
+        "P07"
+      ]
+    },
+    {
+      "id": "G1-12",
+      "severity": "high",
+      "title": "Live admission still accepts historical design-only acceptance",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+          "line": 2102
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+          "line": 2120
+        }
+      ],
+      "predicate": "P02/P12 and afk-live-bindings: exact complete-i2-source-only acceptance on live campaign; historical design cannot confer live source admission.",
+      "observed": "Replacing the live fixture acceptance status with complete-design-subset-only and rehashing its bound records still yields candidateCurrent=true and policy ALLOWED. _apply_acceptance accepts either historical or live status without knowing which campaign branch requires it.",
+      "expected": "Require exact live acceptance status on the live branch and exact historical semantics on the historical branch. Keep direct current owned/input equality for new live source acceptance; do not force publication transformation. Cover cross-status substitutions through load_snapshot and actual cmd_run.",
+      "evidence": [
+        "labels-results.json#live_historical_acceptance"
+      ],
+      "inherited": [
+        "R2-13"
+      ]
+    },
+    {
+      "id": "G1-13",
+      "severity": "critical",
+      "title": "Source-only review ingestion is recorded as actual result and clears runtime failures",
+      "locations": [
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+          "line": 598
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+          "line": 646
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+          "line": 265
+        },
+        {
+          "file": "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+          "line": 537
+        }
+      ],
+      "predicate": "afk-live-bindings: source/spec/resource approval must never become actual-result evidence or erase runtime failure.",
+      "observed": "Actual record_review with exact scope I2 live executor source correctness only, APPROVED and a named runtime finding records event_kind=result_review; get_history then reports zero failures. A source approval is therefore used as the same-defect actual result resolution. cmd_review delegates to this consumer without classifying this exact scope.",
+      "expected": "Classify exact live source reviews as source evidence at ingestion and prevent source/spec/resource scopes from clearing operational findings. Only applicable independently reviewed actual-result receipts may resolve exact named same-lineage defects. Test via real CLI ingestion/history, retaining historical labels/identities and unnamed findings.",
+      "evidence": [
+        "labels-results.json#source_approval_as_result"
+      ],
+      "inherited": [
+        "R2-13"
+      ]
+    }
+  ],
+  "inheritedDispositions": {
+    "R2-01": "PARTIAL; G1-01/G1-09 remain; empty evidence and top-level scalar checks improved.",
+    "R2-02": "PARTIAL; null identities remain unresolved, but authenticated no-start inference G1-02 remains.",
+    "R2-03": "REPAIRED in inspected release-refusal disposition path; no independent release-stall rerun; shared cutoff G1-04 remains.",
+    "R2-04": "REPAIRED in source: comparison and timer write outcomes required before resource starts; no complete syscall fault matrix rerun.",
+    "R2-05": "OPEN: G1-05/G1-06/G1-07/G1-08; required observer/source/preflight/history/native semantics remain incomplete.",
+    "R2-06": "REPAIRED in inspected source: same observation digest and max observedAt/syncTime age plus monotonic setup elapsed rechecked before resource and financial start. Slow validation duration coverage not exhaustively fault-tested.",
+    "R2-07": "PARTIAL: receipt resource/claim checks and requery before stop added; after-kill branch compares InvocationID but not ControlGroup before stop. No new destructive-command race probe performed.",
+    "R2-08": "OPEN: G1-03/G1-04; cleanup commands now recompute remaining cutoff, but hard bootstrap/timer and final/parent persistence bounds remain.",
+    "R2-09": "REPAIRED in inspected reader: O_NOFOLLOW|O_NONBLOCK, regular-file fstat and size cap. No full read-stall matrix rerun.",
+    "R2-10": "REPAIRED inspected full prover expectation Path/Args match and container constraints; static wrapper unchanged and retained. Actual container behavior remains open.",
+    "R2-11": "PARTIAL: loaded timestamp and exact running classifier improved; G1-09/G1-11 cover remaining producer/consumer and malformed-startup gaps.",
+    "R2-12": "PARTIAL: budget lock and fork supervision added; G1-04/G1-07 remain for shared cutoff and authenticated mutation ordering.",
+    "R2-13": "PARTIAL: real exact live control now executes, plus live all-kind policy/reservation checks; G1-08/G1-12/G1-13 remain."
+  },
+  "timingDiagnosisDispositions": {
+    "TD-01": "Current source still uses fake unit existence in author after-startup test. Independent phase-probe uses launched barrier emitted only after successful durable startup and ownership writes: parent SIGKILL -> PROCESS_UNKNOWN/PARENT_LOST, containment true, wallet runtime-held. Earlier-loss barrier remains distinct and is not proven repaired by this control.",
+    "TD-02": "OPEN G1-03; retained one-second formula independently recalculated. Historical failure timing not inferred.",
+    "TD-03": "PARTIAL/OPEN G1-09; previous exact null comparison relaxed but authentication is skipped on null; raw exit/operational status mismatch reproduced.",
+    "TD-04": "OPEN G1-10, reproduced through actual CLI and AF_UNIX.",
+    "TD-05": "Static wait-before-pipe-drain remains. Current default pipe completed32-byte and20000-byte controls; no timeout reproduced. Exact production return values are small. Fork-after-thread warnings remain contextual, not attributed as historical failure cause; no blanket reaper or zombie acceptance used.",
+    "TD-06": "Author fixture cleanup still removes failure artifacts and compact CLI omits runner problem. This audit retains every scratch repository and external fixture, stdout/stderr, evidence and store records. No historical root-cause attribution without decisive evidence."
+  },
+  "acceptanceCoverage": {
+    "P01": "Partial: inert parsing/source closure exists; G1-01/G1-06 expose content/native validation gaps.",
+    "P02": "Normal actual SP05.3/i2/MC02 CLI path independently passes; producer evidence still deficient, G1-05..08.",
+    "P03": "One-shot nonce/store claim/authentication inspected; history/claim/refusal gaps G1-02/G1-07/G1-08 remain. Full attack matrix not rerun.",
+    "P04": "True post-durable-startup loss passes with unresolved ownership retained; G1-03/G1-04/G1-11 remain.",
+    "P05": "Freshness recheck added; absolute bootstrap/timer/result cutoffs fail G1-03/G1-04.",
+    "P06": "Closed classifier inspected; actual stop-failure diagnostics and malformed startup fail G1-09/G1-11.",
+    "P07": "Required setup writes now checked; shared budgets and diagnostics still fail; every syscall boundary not re-faulted.",
+    "P08": "Full prover argv/config and immutable lifetime control inspected; actual systemd/Docker/PID1 namespace behavior not executed; G1-03 remains.",
+    "P09": "Normal CLI0/finished/released passes; contradictory evidence accepted G1-01; fragment falsely blocks G1-10.",
+    "P10": "Contained known failure mapping exists; authenticated refusal no-start inference remains G1-02; pre-spawn LaunchRefused still CLI2 rather than specified distinct post-reservation refusal4 (static).",
+    "P11": "Active unresolved reservation preserved in fragment and parent-loss controls; raw-main diagnostic loss G1-09.",
+    "P12": "Missing consumer evidence/counterparts/native mapping/history remain G1-05..08. Own prepaid arithmetic inspected; no real grant or full producer approval."
+  },
+  "independentProbes": [
+    {
+      "command": "python3 /tmp/moriarty-production-grok-r1-independent-probes/probe.py",
+      "exitCode": 0,
+      "scriptSha256": "f5e3acf61fae2590cc7c1548422f4b78a2b480d08cc9b6e154ddbda2d8bac432",
+      "results": "/tmp/moriarty-production-grok-r1-independent-probes/results.json",
+      "outcomes": [
+        {
+          "name": "normal_control",
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/normal",
+          "external": "/tmp/moriarty-loan-external-qt9n9bng",
+          "status": "PROCESS_SUCCESS",
+          "exit": 0,
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_terminal-observation",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_containment",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_unit-startup",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_runtime-plan-comparison",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_timer-armed",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "result_inconsistent_explicit-stop",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "authenticated_refusal_without_no_start_evidence",
+          "accepted": true,
+          "problem": null,
+          "disposition": "refused"
+        },
+        {
+          "name": "missing_sdk_closure",
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "baseline_incomplete_observer_evidence",
+          "files": {},
+          "parentEvidence": {
+            "allocationId": "sp05-preview-loan-exit-20260910-01",
+            "canonicalInputsAfter": {
+              "seedSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "snapshotSha256": "6666666666666666666666666666666666666666666666666666666666666666"
+            },
+            "canonicalInputsBefore": {
+              "seedSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "snapshotSha256": "6666666666666666666666666666666666666666666666666666666666666666"
+            },
+            "containment": {
+              "capability": "posix_pidns_userns_strong",
+              "childrenStopped": true
+            },
+            "contextSha256": "580636f06f3bee4e4d3c94fc33ee1044f1fffb788bf4f731bc9a72297c4b6cad",
+            "endedAt": "2026-09-13T22:20:00.096752+00:00",
+            "launchSha256": "19df07e846ba945e3329084a6bc5cb7c50dea95c3d1c40012492bd1d8bcfb4ca",
+            "outputSha256": "95742b5ee5ab2216f6cdb801e615feb6b75450194107a56b935062181dd93991",
+            "preflightChargeId": "preflight-charge-01",
+            "processExit": 0,
+            "schema": "moriarty.i2-observer-parent-evidence/1",
+            "sourceSha256": "389d958da3a79f398dc267566ec335825d5c6f2ae53e9573128db197c6ecffac",
+            "startedAt": "2026-09-13T22:19:00.096752+00:00"
+          },
+          "accepted": true,
+          "problem": null
+        },
+        {
+          "name": "missing_preflight_debit_and_application_marker",
+          "masterPurposes": [
+            "financial-runtime"
+          ],
+          "markerExists": false,
+          "accepted": true
+        },
+        {
+          "name": "wrong_first_role",
+          "accepted": true,
+          "result": {
+            "kind": "loan",
+            "dustFee": "2000000000000000",
+            "grossCeiling": "20000000000",
+            "selectedNeed": "0"
+          }
+        },
+        {
+          "name": "overlap_directories",
+          "accepted": true,
+          "result": {
+            "kind": "loan",
+            "dustFee": "2000000000000000",
+            "grossCeiling": "20000000000",
+            "selectedNeed": "0"
+          }
+        },
+        {
+          "name": "uint128_overflow",
+          "accepted": true,
+          "result": {
+            "kind": "loan",
+            "dustFee": "340282366920938463463374607431768211456",
+            "grossCeiling": "20000000000",
+            "selectedNeed": "0"
+          }
+        },
+        {
+          "name": "result_write_after_cleanup_cutoff",
+          "now": 1741,
+          "cleanup": 1740,
+          "persisted": true
+        },
+        {
+          "name": "bounded_worker_result_32",
+          "status": "completed",
+          "elapsed": 0.005675245993188582
+        },
+        {
+          "name": "bounded_worker_result_20000",
+          "status": "completed",
+          "elapsed": 0.00563343999965582
+        },
+        {
+          "name": "timer_four_seconds_late",
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/late-timer",
+          "external": "/tmp/moriarty-loan-external-0f3qv8kk",
+          "status": "PROCESS_SUCCESS",
+          "exit": 0,
+          "timer": {
+            "active": true,
+            "arm": {
+              "argv": [
+                "/usr/bin/timeout",
+                "--signal=KILL",
+                "25s",
+                "/usr/bin/systemd-run",
+                "--user",
+                "--unit=moriarty-loan-fixture-cleanup",
+                "--on-active=1619s",
+                "--timer-property=AccuracySec=1s",
+                "--",
+                "/usr/bin/python3",
+                "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+                "--intent",
+                "/tmp/moriarty-production-grok-r1-independent-probes/late-timer/deliverables/loan-fixture/evidence/cleanup-intent.json",
+                "--sha256",
+                "88e71760a5e49e029cf8d80ad746524ee7ba3ae58937ed21467b2cf54304d8d0"
+              ],
+              "returnCode": 0,
+              "stderr": "Running timer as unit: moriarty-loan-fixture-cleanup.timer\n",
+              "stdout": "",
+              "timedOut": false
+            },
+            "cutoffNs": 99477687928314,
+            "delaySeconds": 1619,
+            "observation": {
+              "argv": [
+                "/usr/bin/timeout",
+                "--signal=KILL",
+                "5s",
+                "/usr/bin/systemctl",
+                "--user",
+                "show",
+                "moriarty-loan-fixture-cleanup.timer",
+                "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+              ],
+              "returnCode": 0,
+              "stderr": "",
+              "stdout": "LoadState=loaded\nActiveState=active\nSubState=waiting\nNextElapseUSecMonotonic=99480818830\nUnit=moriarty-loan-fixture-cleanup.service\n",
+              "timedOut": false
+            },
+            "problems": []
+          }
+        },
+        {
+          "name": "actual_stop_failure_result_reader",
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/stop-failure",
+          "external": "/tmp/moriarty-loan-external-7cwts384",
+          "status": "PROCESS_UNKNOWN",
+          "failureCode": "STOP_FAILED",
+          "rawMainExit": {
+            "kind": "exit",
+            "code": 0
+          },
+          "accepted": false,
+          "problem": "unknown status combination"
+        }
+      ]
+    },
+    {
+      "command": "python3 /tmp/moriarty-production-grok-r1-independent-probes/consumer-probe.py",
+      "exitCode": 0,
+      "scriptSha256": "be13298f9799b5c81a2bb3f2f716ce09ba8acf962d563b2adeba5a7e1dbab890",
+      "results": "/tmp/moriarty-production-grok-r1-independent-probes/consumer-results.json",
+      "outcomes": [
+        {
+          "name": "cli-control",
+          "command": [
+            "/usr/bin/python3.14",
+            "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+            "--repo",
+            "/tmp/moriarty-production-grok-r1-independent-probes/cli-control",
+            "run",
+            "--action",
+            "sp05-loan-execute-once",
+            "--json"
+          ],
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/cli-control",
+          "external": "/tmp/moriarty-loan-external-8wq93l_5",
+          "returncode": 0,
+          "result": {
+            "success": true,
+            "action": "sp05-loan-execute-once",
+            "exitCode": 0,
+            "chargeId": "runtime-charge-01",
+            "reservationId": "ecb4a10b-ed85-4c54-9f83-7634b5f16aff",
+            "disposition": "success",
+            "status": "PROCESS_SUCCESS",
+            "failureCode": null,
+            "resultPath": "deliverables/loan-fixture/evidence/loan-process-result.json",
+            "resultSha256": "c61e25a21ba0ba48c2962c7893f1fa75e2450c342609a4f6de00c4cdddc93218",
+            "invocationSha256": "333e111f2886178950a864d326f24f60f56548d57ed3317a6ebe6f53de84a2f5",
+            "reservationStatus": "finished",
+            "ownershipReleased": true
+          },
+          "serviceCalls": 17
+        },
+        {
+          "name": "cli-fragment",
+          "command": [
+            "/usr/bin/python3.14",
+            "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+            "--repo",
+            "/tmp/moriarty-production-grok-r1-independent-probes/cli-fragment",
+            "run",
+            "--action",
+            "sp05-loan-execute-once",
+            "--json"
+          ],
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/cli-fragment",
+          "external": "/tmp/moriarty-loan-external-monu605y",
+          "returncode": 4,
+          "result": {
+            "success": false,
+            "action": "sp05-loan-execute-once",
+            "exitCode": 0,
+            "chargeId": "runtime-charge-01",
+            "reservationId": "06d44234-b63f-4606-ad04-5ffbfe09448b",
+            "disposition": "unresolved",
+            "status": "PROCESS_SUCCESS",
+            "failureCode": null,
+            "resultPath": "deliverables/loan-fixture/evidence/loan-process-result.json",
+            "resultSha256": "009ac3920c8febbf8ea2fe319b06cf5e73002bd57c81bbb3cc41330dc8afa00e",
+            "invocationSha256": "220843eea8d97f7218383844ec67620349376e8f0364df1b995c2d6d38645774",
+            "reservationStatus": "active",
+            "ownershipReleased": false
+          },
+          "serviceCalls": 17
+        },
+        {
+          "name": "actual_history_policy_control",
+          "decision": {
+            "allow": false,
+            "reasonCode": "REPRODUCE_BEFORE_RETRY",
+            "nextActionId": null,
+            "missingEvidence": [
+              "next-action-none"
+            ]
+          },
+          "sameDefectFailures": 2
+        },
+        {
+          "name": "cli-history-override",
+          "command": [
+            "/usr/bin/python3.14",
+            "/tmp/moriarty-production-grok-r1-independent-probes/cli-history-override/history-driver.py"
+          ],
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/cli-history-override",
+          "external": "/tmp/moriarty-loan-external-e05ldxrr",
+          "returncode": 0,
+          "result": {
+            "success": true,
+            "action": "sp05-loan-execute-once",
+            "exitCode": 0,
+            "chargeId": "runtime-charge-01",
+            "reservationId": "92cb8f63-b9e3-4447-9d79-632d805cb0e3",
+            "disposition": "success",
+            "status": "PROCESS_SUCCESS",
+            "failureCode": null,
+            "resultPath": "deliverables/loan-fixture/evidence/loan-process-result.json",
+            "resultSha256": "f2054320c70dcad188cbf69bca41424bd5fc82904c25cd8d1d4cac2395443088",
+            "invocationSha256": "f2dbb7af4775172cbea8a6382036588198116798aff21e94a14acf934b3f49ed",
+            "reservationStatus": "finished",
+            "ownershipReleased": true
+          },
+          "serviceCalls": 17
+        }
+      ]
+    },
+    {
+      "command": "python3 /tmp/moriarty-production-grok-r1-independent-probes/phase-probe.py",
+      "exitCode": 0,
+      "scriptSha256": "4ab0c96e7b9090aad21e6a5526f6d32c2f2dec51503dad47f8ee82b3cff08070",
+      "results": "/tmp/moriarty-production-grok-r1-independent-probes/phase-results.json",
+      "outcomes": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+          "--repo",
+          "/tmp/moriarty-production-grok-r1-independent-probes/true-after-startup",
+          "run",
+          "--action",
+          "sp05-loan-execute-once",
+          "--json"
+        ],
+        "root": "/tmp/moriarty-production-grok-r1-independent-probes/true-after-startup",
+        "external": "/tmp/moriarty-loan-external-zbgx56u7",
+        "barrier": {
+          "phase": "launched",
+          "detail": {
+            "unit": "moriarty-loan-fixture.service",
+            "invocationId": "ae02b9bb39380174a94857c496b8997b"
+          }
+        },
+        "parentExit": -9,
+        "elapsed": 3.825198757011094,
+        "result": {
+          "actionId": "sp05-loan-execute-once",
+          "allocationId": "sp05-preview-loan-exit-20260910-01",
+          "candidateHash": "cfee6153784862f2150f1fdc2df40f50f8b88bcff4cd779e1ad16c28640a91b3",
+          "chargeId": "runtime-charge-01",
+          "containmentComplete": true,
+          "evidence": [
+            {
+              "kind": "runtime-financial-plan",
+              "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+              "sha256": "3d330c3fb32325aa732d45a85699d15f04cf7d25571ccf7ca135ecc48ca3a43b"
+            },
+            {
+              "kind": "runtime-plan-comparison",
+              "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+              "sha256": "3254816576d32376a6692730ed642850e210ee6716ca36af217827c383f7e50e"
+            },
+            {
+              "kind": "prover-control",
+              "path": "deliverables/loan-fixture/control/prover-control",
+              "sha256": "a7f8566e0658ef2c48c9f0af0d0aee745b09a69d3216bc6f67563ac289c78d79"
+            },
+            {
+              "kind": "prover-prestart-intent",
+              "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+              "sha256": "27ba242eb814cc33cd0b515faadeae096f3dbe3934ab01a019e5195612e890cb"
+            },
+            {
+              "kind": "cleanup-intent",
+              "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+              "sha256": "03adcd56c15c96deaf0292ae49ee6d4b72c79c8f97756f84de51636f92ce825c"
+            },
+            {
+              "kind": "timer-armed",
+              "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+              "sha256": "c398aa4c1a9d055010c9eacbc70e0a7457df8e9f09c1a8b0d70bb1939bf14416"
+            },
+            {
+              "kind": "prover-ownership",
+              "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+              "sha256": "0dc5725a29c3127dcbee33c0ad0d558b10654fbed53d909703e584c2ccb4576d"
+            },
+            {
+              "kind": "unit-startup",
+              "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+              "sha256": "893edfc782edcff3f22351ddc126bbc4f4d9a568da74f55efee6f9a22f38c258"
+            },
+            {
+              "kind": "unit-ownership",
+              "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+              "sha256": "7f0500823ed1759cb73a566aa1d49fb19643166575ebb1c23fdb118c86c2df11"
+            },
+            {
+              "kind": "containment",
+              "path": "deliverables/loan-fixture/evidence/containment-safety-cleanup.json",
+              "sha256": "d9413e98d163943b1b0748f056cdd5c69bfcd8674abb1372580d93bddadd8bab"
+            },
+            {
+              "kind": "timer-cancel",
+              "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+              "sha256": "3bccd04bae1d0c306a75b192acd3ed4741c0e9953dcf35d8bc125868a4f2be5f"
+            }
+          ],
+          "failureCode": "PARENT_LOST",
+          "financialAcceptance": "pending",
+          "invocationId": "ae02b9bb39380174a94857c496b8997b",
+          "invocationSha256": "2d45a7dbaee68deee17927941b3a9933080d73aa265cd45b4f7a74287f09e8d4",
+          "outstandingOwners": [],
+          "rawMainExit": {
+            "code": null,
+            "kind": "unknown"
+          },
+          "reservationId": "5e89b361-9409-4dd9-b23b-42cf3ae67c46",
+          "retryAllowed": false,
+          "runnerDigest": "e34306a8b1202d0a7b5aa25d227270a30f1ff272b1462f525972452398e3f237",
+          "schema": "moriarty.loan-process-result/1",
+          "status": "PROCESS_UNKNOWN",
+          "stopErrorClass": null,
+          "stopReceiptPersisted": false,
+          "stopReturnCode": null,
+          "terminalEvidencePersisted": false,
+          "timerCancelReceiptPersisted": true,
+          "timerCancelReturnCode": 0,
+          "unit": "moriarty-loan-fixture.service"
+        },
+        "ownership": {
+          "allocationId": "sp05-preview-loan-exit-20260910-01",
+          "executionContextSha256": "5504d1e638d8c21fe71428173eb8cb21d316b629f8f508fb93e99da0191b8d73",
+          "ownerPid": 3063001,
+          "ownerStartTicks": 9801583,
+          "preflightChargeId": "preflight-charge-01",
+          "preflightReservationId": "preflight-reservation-01",
+          "projectionSha256": "838568b2741b8613575bd4c2a75ac6de35043a5dd9e163792e711ce11f406857",
+          "runtimeChargeId": "runtime-charge-01",
+          "runtimeReservationId": "5e89b361-9409-4dd9-b23b-42cf3ae67c46",
+          "schema": "moriarty.i2-wallet-ownership/1",
+          "state": "runtime-held",
+          "storeIdentity": "store-token-fixture-0001"
+        }
+      }
+    },
+    {
+      "command": "python3 /tmp/moriarty-production-grok-r1-independent-probes/supplement.py",
+      "exitCode": 0,
+      "scriptSha256": "b5298df2e58a8431b3b1afe438e53f0f90f707d4c0f69a00af66cc024936da76",
+      "results": "/tmp/moriarty-production-grok-r1-independent-probes/supplement-results.json",
+      "outcomes": [
+        {
+          "name": "malformed_startup",
+          "exception": "ValueError",
+          "message": "MALFORMED_SHOW",
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup",
+          "external": "/tmp/moriarty-loan-external-ep8io3v2",
+          "resultExists": false,
+          "serviceCalls": [
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "5s",
+              "/usr/bin/systemctl",
+              "--user",
+              "show",
+              "moriarty-loan-fixture.service",
+              "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "5s",
+              "/usr/bin/systemctl",
+              "--user",
+              "show",
+              "moriarty-loan-fixture-cleanup.timer",
+              "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "5s",
+              "/usr/bin/docker",
+              "inspect",
+              "--format",
+              "{{json .}}",
+              "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "25s",
+              "/usr/bin/systemd-run",
+              "--user",
+              "--unit=moriarty-loan-fixture-cleanup",
+              "--on-active=1619s",
+              "--timer-property=AccuracySec=1s",
+              "--",
+              "/usr/bin/python3",
+              "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+              "--intent",
+              "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup/deliverables/loan-fixture/evidence/cleanup-intent.json",
+              "--sha256",
+              "2fbdbb7e49705f9466e2ac2d4f62118b18428e51ceea2e8af901a71e11805a2a"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "5s",
+              "/usr/bin/systemctl",
+              "--user",
+              "show",
+              "moriarty-loan-fixture-cleanup.timer",
+              "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "25s",
+              "/usr/bin/docker",
+              "start",
+              "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "5s",
+              "/usr/bin/docker",
+              "inspect",
+              "--format",
+              "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+              "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            ],
+            [
+              "/usr/bin/timeout",
+              "--signal=KILL",
+              "25s",
+              "/usr/bin/systemd-run",
+              "--user",
+              "--unit=moriarty-loan-fixture.service",
+              "--service-type=exec",
+              "-p",
+              "RemainAfterExit=yes",
+              "-p",
+              "KillMode=control-group",
+              "-p",
+              "RuntimeMaxSec=1604",
+              "--collect",
+              "--",
+              "/usr/bin/python3.14",
+              "fake-financial.py",
+              "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+            ]
+          ]
+        },
+        {
+          "name": "native_plan_consumer",
+          "command": [
+            "node",
+            "/tmp/moriarty-production-grok-r1-independent-probes/native-probe.mjs"
+          ],
+          "exit": 0,
+          "stdout": "{\"name\":\"normal\",\"accepted\":true}\n{\"name\":\"wrong_first_role\",\"accepted\":false,\"error\":\"PREVIEW_ROLES\"}\n{\"name\":\"overlap_directories\",\"accepted\":false,\"error\":\"PREVIEW_DIRECTORY_OVERLAP\"}\n{\"name\":\"uint128_overflow\",\"accepted\":false,\"error\":\"PREVIEW_LIMITS\"}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "command": "python3 /tmp/moriarty-production-grok-r1-independent-probes/labels-probe.py",
+      "exitCode": 0,
+      "scriptSha256": "b7824e43ded1924d2389411036118f701f5eada68dd243cf2da33686a79634bf",
+      "results": "/tmp/moriarty-production-grok-r1-independent-probes/labels-results.json",
+      "outcomes": [
+        {
+          "name": "live_historical_acceptance",
+          "root": "/tmp/moriarty-production-grok-r1-independent-probes/labels",
+          "external": "/tmp/moriarty-loan-external-2v2u5141",
+          "decision": {
+            "allow": true,
+            "reasonCode": "ALLOWED",
+            "nextActionId": "sp05-loan-execute-once",
+            "missingEvidence": []
+          },
+          "candidateCurrent": true
+        },
+        {
+          "name": "source_approval_as_result",
+          "eventKind": "result_review",
+          "history": {
+            "sameDefectFailures": 0,
+            "adminCycles": null,
+            "adminSeconds": null,
+            "primaryActive": false,
+            "reproducerVerified": false,
+            "approachChanged": false
+          }
+        }
+      ]
+    }
+  ],
+  "authorGate": {
+    "python": "356 passed, 2 deselected, 235 subtests; separate exact2 wrapper tests2 passed",
+    "javascript": "123 passed",
+    "outerGate": "gate_rc0, report_fresh true, queue1664 Success",
+    "verifiedReceipt": "/tmp/moriarty-production-grok-r1-freeze/outer-gate-receipt.json",
+    "notIndependentRerun": true
+  },
+  "limitations": [
+    "No broad gate rerun after focused counterexamples; no assertion that every mandatory empirical matrix was completed.",
+    "No full filesystem stall/fault matrix over all reader/writer/SQLite/rename/fsync boundaries was rerun. Shared cutoff findings combine reproduced late result write with static production call analysis.",
+    "No actual systemd/Docker service, wallet/private data, Preview/network, K/native proof, live funding/accounting or release acceptance executed. Native JavaScript plan check used pure validator and public codec/identity inputs only.",
+    "No source edits, Git integration, installation, global hook activation or retained runtime regeneration. Scratch fixture creation uses isolated Git/SQLite/files only.",
+    "No blanket subreaper or zombie-as-absence relaxation. Static prover wrapper exact2 context fix remains separately recorded; its reported passes are author/outer evidence, not rerun by this audit.",
+    "Independent normal/fragment/history and true post-startup tests use actual local processes/AF_UNIX and explicit fake service transports. Source validators were not replaced; caller-history override is the intentional negative input demonstrating G1-08.",
+    "All scratch repositories, external fixture stores, result/startup/containment evidence and logs remain retained under the paths listed; no failing fixture was cleaned up.",
+    "Historical timing log failures cannot be assigned to current mechanisms without their original per-case artifacts.",
+    "Source hash map is unchanged before/after; full43 frozen and worker files match and four runtime pins plus retained21-file Python runtime match."
+  ],
+  "readiness": {
+    "sourceApproved": false,
+    "liveInstanceApproved": false,
+    "accountingProducerComplete": false,
+    "fundingApproved": false,
+    "financialAccepted": false,
+    "nativeProofAccepted": false,
+    "previewReady": false
+  }
+}

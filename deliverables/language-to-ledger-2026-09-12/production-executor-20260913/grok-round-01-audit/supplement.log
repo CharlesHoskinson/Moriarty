@@ -1,0 +1,117 @@
+[
+  {
+    "name": "malformed_startup",
+    "exception": "ValueError",
+    "message": "MALFORMED_SHOW",
+    "root": "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup",
+    "external": "/tmp/moriarty-loan-external-ep8io3v2",
+    "resultExists": false,
+    "serviceCalls": [
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "2fbdbb7e49705f9466e2ac2d4f62118b18428e51ceea2e8af901a71e11805a2a"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1604",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-production-grok-r1-independent-probes/malformed-startup/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ]
+    ]
+  },
+  {
+    "name": "native_plan_consumer",
+    "command": [
+      "node",
+      "/tmp/moriarty-production-grok-r1-independent-probes/native-probe.mjs"
+    ],
+    "exit": 0,
+    "stdout": "{\"name\":\"normal\",\"accepted\":true}\n{\"name\":\"wrong_first_role\",\"accepted\":false,\"error\":\"PREVIEW_ROLES\"}\n{\"name\":\"overlap_directories\",\"accepted\":false,\"error\":\"PREVIEW_DIRECTORY_OVERLAP\"}\n{\"name\":\"uint128_overflow\",\"accepted\":false,\"error\":\"PREVIEW_LIMITS\"}\n",
+    "stderr": ""
+  }
+]
