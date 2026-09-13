@@ -1,0 +1,217 @@
+FF                                                             [100%]
+=================================== FAILURES ===================================
+_ FaultTable.test_terminal_write_failures_and_preexisting_artifacts (artifact='terminal-observation.json') _
+
+self = <test_executor_phases.FaultTable testMethod=test_terminal_write_failures_and_preexisting_artifacts>
+
+    def test_terminal_write_failures_and_preexisting_artifacts(self):
+        cases = {
+            "terminal-observation.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "explicit-stop.json": ("STOP_RECEIPT_FAILED", 3),
+            "containment-normal-cleanup.json": ("CONTAINMENT_UNRESOLVED", 3),
+            "timer-cancel.json": ("TIMER_CANCEL_FAILED", 3),
+            "prover-control": ("PROVER_CONTROL_INVALID", 2),
+            "prover-prestart-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "cleanup-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "prover-ownership.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "unit-startup.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "runtime-financial-plan.json": ("EVIDENCE_WRITE_FAILED", 2),
+        }
+        for name, (code, exit_code) in cases.items():
+            with self.subTest(artifact=name):
+                fx = LoanFixture().build()
+                self.addCleanup(fx.cleanup)
+                run = ExecutorRun(fx, writer=FaultyWriter(fail=[name]))
+                run.run()
+>               self.assertEqual(run.outcome["exitCode"], exit_code, run.result)
+E               AssertionError: 0 != 3 : {'schema': 'moriarty.loan-process-result/1', 'allocationId': 'loan-fixture-allocation-01', 'actionId': 'sp01-loan-verify', 'candidateHash': '982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f', 'runnerDigest': '932b90042a054c733a8a0234961fe50df1eeab22f7a695225375d935a99ed2ab', 'chargeId': 'runtime-charge-01', 'reservationId': '77c78a82-fe0f-4a77-8445-23d85a0d0b25', 'invocationSha256': '7a393dcc2fab7947586283dc5dc3354e4337c9f93832aaf19d8ded4d85bf81ef', 'unit': 'moriarty-loan-fixture.service', 'invocationId': '3bb75b5c6efeb86cc788c419418350f6', 'status': 'PROCESS_SUCCESS', 'rawMainExit': {'kind': 'exit', 'code': 0}, 'terminalEvidencePersisted': True, 'stopReturnCode': 0, 'stopErrorClass': None, 'stopReceiptPersisted': True, 'containmentComplete': True, 'timerCancelReturnCode': 0, 'timerCancelReceiptPersisted': True, 'failureCode': None, 'evidence': [{'kind': 'runtime-financial-plan', 'path': 'deliverables/loan-fixture/evidence/runtime-financial-plan.json', 'sha256': '68857992bedd7a831c6ddd8ef32e85ad0b7a4c7717c56d1c05df3bf1bb381847'}, {'kind': 'runtime-plan-comparison', 'path': 'deliverables/loan-fixture/evidence/runtime-plan-comparison.json', 'sha256': 'a0ef9582e13ac0725bbad6780186721207b8b1d8b10a338ea3228ff653dceebb'}, {'kind': 'prover-control', 'path': 'deliverables/loan-fixture/control/prover-control', 'sha256': '2ba3b0007c4742470e46c9f4bd5fe8d056d1ce0606670bf232535cbea498c1af'}, {'kind': 'prover-prestart-intent', 'path': 'deliverables/loan-fixture/evidence/prover-prestart-intent.json', 'sha256': '9859044f4c4cf4187aaa6f047b7ebf265821f312c496de6157d225b0f6bf319e'}, {'kind': 'cleanup-intent', 'path': 'deliverables/loan-fixture/evidence/cleanup-intent.json', 'sha256': 'fffbae9f4825e769df96dc2850aee620c9ddbdb2cd87fce55f8e6fe2b0424769'}, {'kind': 'timer-armed', 'path': 'deliverables/loan-fixture/evidence/timer-armed.json', 'sha256': '40e733bff72fb9bde7fc18cbf6f2fceb5cb6717d374e8c5242c3ceacbfbbbb8e'}, {'kind': 'prover-ownership', 'path': 'deliverables/loan-fixture/evidence/prover-ownership.json', 'sha256': '99c1f6cf87791584b1ada15a0ea5e49a332bf4324ebd65873a3d5e996edfa10c'}, {'kind': 'unit-startup', 'path': 'deliverables/loan-fixture/evidence/unit-startup.json', 'sha256': 'ffce7696aaedbd4601a98e0d328c93a4d8fb583cbcbcbb4ddab94878fafc439b'}, {'kind': 'unit-ownership', 'path': 'deliverables/loan-fixture/evidence/unit-ownership.json', 'sha256': '1cb75b130c704a7261bf06fd37d8821be75927f4be91a2f73e8ae2010210244f'}, {'kind': 'terminal-observation', 'path': 'deliverables/loan-fixture/evidence/collector/terminal-observation.json', 'sha256': '49af8a1b3a8873380802d3fe4897f66fb37bb1a1e1dc9b11ed27a5ff04f76082'}, {'kind': 'explicit-stop', 'path': 'deliverables/loan-fixture/evidence/collector/explicit-stop.json', 'sha256': '5dbaf46f0e05b23ac0e88dd56d2a42cec19ffa71175f0a52423bc69c8a96cc0a'}, {'kind': 'containment', 'path': 'deliverables/loan-fixture/evidence/containment-normal-cleanup.json', 'sha256': '42834400281b9a3fd082e22e5ba2f0c8d066f2b3d8328a00ced59c8c0148f34f'}, {'kind': 'timer-cancel', 'path': 'deliverables/loan-fixture/evidence/timer-cancel.json', 'sha256': '0f3e721880d138fa22bd3fa677667007f3fca5c2a5179ac0e555676cc516bb19'}], 'outstandingOwners': [], 'retryAllowed': False, 'financialAcceptance': 'pending'}
+
+tests/loan_executor/test_executor_phases.py:396: AssertionError
+_ FaultTable.test_terminal_write_failures_and_preexisting_artifacts (artifact='explicit-stop.json') _
+
+self = <test_executor_phases.FaultTable testMethod=test_terminal_write_failures_and_preexisting_artifacts>
+
+    def test_terminal_write_failures_and_preexisting_artifacts(self):
+        cases = {
+            "terminal-observation.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "explicit-stop.json": ("STOP_RECEIPT_FAILED", 3),
+            "containment-normal-cleanup.json": ("CONTAINMENT_UNRESOLVED", 3),
+            "timer-cancel.json": ("TIMER_CANCEL_FAILED", 3),
+            "prover-control": ("PROVER_CONTROL_INVALID", 2),
+            "prover-prestart-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "cleanup-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "prover-ownership.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "unit-startup.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "runtime-financial-plan.json": ("EVIDENCE_WRITE_FAILED", 2),
+        }
+        for name, (code, exit_code) in cases.items():
+            with self.subTest(artifact=name):
+                fx = LoanFixture().build()
+                self.addCleanup(fx.cleanup)
+                run = ExecutorRun(fx, writer=FaultyWriter(fail=[name]))
+                run.run()
+>               self.assertEqual(run.outcome["exitCode"], exit_code, run.result)
+E               AssertionError: 0 != 3 : {'schema': 'moriarty.loan-process-result/1', 'allocationId': 'loan-fixture-allocation-01', 'actionId': 'sp01-loan-verify', 'candidateHash': '982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f', 'runnerDigest': '216658ee5db2f2d99a2367ee22a61d3b60e31df381f97e28af4d15e5f401cc59', 'chargeId': 'runtime-charge-01', 'reservationId': '1f0a07ef-2f6a-412b-a42a-7fb14cd9f10d', 'invocationSha256': '350ab72fb04cacfcf7394eddc274eac47ffdc500b7b2059711aa0ef35d50ac6e', 'unit': 'moriarty-loan-fixture.service', 'invocationId': '31287d2e5968578cbe7534b48c0633f1', 'status': 'PROCESS_SUCCESS', 'rawMainExit': {'kind': 'exit', 'code': 0}, 'terminalEvidencePersisted': True, 'stopReturnCode': 0, 'stopErrorClass': None, 'stopReceiptPersisted': True, 'containmentComplete': True, 'timerCancelReturnCode': 0, 'timerCancelReceiptPersisted': True, 'failureCode': None, 'evidence': [{'kind': 'runtime-financial-plan', 'path': 'deliverables/loan-fixture/evidence/runtime-financial-plan.json', 'sha256': 'cb9c37cd091366affbd2f3494f9bb46582c2f1f3b226e746487fdbcf75cbc611'}, {'kind': 'runtime-plan-comparison', 'path': 'deliverables/loan-fixture/evidence/runtime-plan-comparison.json', 'sha256': 'd5144238409445cc7382ee40d1e823b81b8a80af4b400bd9ec0af0b16d74c28c'}, {'kind': 'prover-control', 'path': 'deliverables/loan-fixture/control/prover-control', 'sha256': 'c7e6cd86ca2e0df411a4592064dddf3fd4f4de8be73672bc0d621b36d8cfadb9'}, {'kind': 'prover-prestart-intent', 'path': 'deliverables/loan-fixture/evidence/prover-prestart-intent.json', 'sha256': 'f5d412cc3ba89ab536c2db2f078c39761878e05bd5805509732f24c1d90adbf5'}, {'kind': 'cleanup-intent', 'path': 'deliverables/loan-fixture/evidence/cleanup-intent.json', 'sha256': '80848312da37ea24d197ce5b1c0808922d0fb3d2eae4fd1517e59acf0c274e77'}, {'kind': 'timer-armed', 'path': 'deliverables/loan-fixture/evidence/timer-armed.json', 'sha256': '7de3a5f8e8aa0952c37d424839f512dcbf197803f3732cc1cf673a12245b3a02'}, {'kind': 'prover-ownership', 'path': 'deliverables/loan-fixture/evidence/prover-ownership.json', 'sha256': 'a921d4ecc8eb98b9ad08472e8e996be172ed8be19effef7ffd287d39df64e02e'}, {'kind': 'unit-startup', 'path': 'deliverables/loan-fixture/evidence/unit-startup.json', 'sha256': 'fc6932936a20b854162c7c70c3fc260170854a6c775b5dcde298bbee6210a4fa'}, {'kind': 'unit-ownership', 'path': 'deliverables/loan-fixture/evidence/unit-ownership.json', 'sha256': 'f01402cef8f4dfddf5a485df6dad061f73b2c2c7cf6aeb47abecba09fc6a6c6d'}, {'kind': 'terminal-observation', 'path': 'deliverables/loan-fixture/evidence/collector/terminal-observation.json', 'sha256': '43f131ebb6f30e21664f871798376b8d822d9a444e8d1b7c8da02c20ee4dd383'}, {'kind': 'explicit-stop', 'path': 'deliverables/loan-fixture/evidence/collector/explicit-stop.json', 'sha256': '17ec358a975af0505f9bab1ba1f951648320a96afea553dc95c65b0552a8ad0f'}, {'kind': 'containment', 'path': 'deliverables/loan-fixture/evidence/containment-normal-cleanup.json', 'sha256': '5ec127e7c1b4a3ae70b3d3cbc8499e14b0a517424da2698bd572e26e8ce5a3b5'}, {'kind': 'timer-cancel', 'path': 'deliverables/loan-fixture/evidence/timer-cancel.json', 'sha256': '5af9857189b917ad9779b4790bc3b6cef946e05fed0b8509ba9748c542c166b7'}], 'outstandingOwners': [], 'retryAllowed': False, 'financialAcceptance': 'pending'}
+
+tests/loan_executor/test_executor_phases.py:396: AssertionError
+______ FaultTable.test_terminal_write_failures_and_preexisting_artifacts _______
+
+self = <test_executor_phases.FaultTable testMethod=test_terminal_write_failures_and_preexisting_artifacts>
+
+    def test_terminal_write_failures_and_preexisting_artifacts(self):
+        cases = {
+            "terminal-observation.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "explicit-stop.json": ("STOP_RECEIPT_FAILED", 3),
+            "containment-normal-cleanup.json": ("CONTAINMENT_UNRESOLVED", 3),
+            "timer-cancel.json": ("TIMER_CANCEL_FAILED", 3),
+            "prover-control": ("PROVER_CONTROL_INVALID", 2),
+            "prover-prestart-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "cleanup-intent.json": ("EVIDENCE_WRITE_FAILED", 2),
+            "prover-ownership.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "unit-startup.json": ("EVIDENCE_WRITE_FAILED", 3),
+            "runtime-financial-plan.json": ("EVIDENCE_WRITE_FAILED", 2),
+        }
+        for name, (code, exit_code) in cases.items():
+            with self.subTest(artifact=name):
+                fx = LoanFixture().build()
+                self.addCleanup(fx.cleanup)
+                run = ExecutorRun(fx, writer=FaultyWriter(fail=[name]))
+                run.run()
+                self.assertEqual(run.outcome["exitCode"], exit_code, run.result)
+                self.assertNotEqual(run.result["status"], "PROCESS_SUCCESS")
+                self.assertEqual(run.result["failureCode"], code)
+                if exit_code == 2:
+                    self.assertEqual([r for r in run.calls() if "start" in r], [], "no start after failed prevalidation")
+                    self.assertEqual(run.result["status"], "REFUSED")
+                if name == "terminal-observation.json":
+                    self.assertIsNone(run.result["stopReturnCode"], "no collector stop without durable terminal evidence")
+                    self.assertEqual(len([r for r in run.calls() if "kill" in r]), 2, "immediate safety cleanup")
+                if name == "explicit-stop.json":
+                    self.assertEqual(run.result["stopReturnCode"], 0)
+                    self.assertFalse(run.result["stopReceiptPersisted"])
+                    stops = [r for r in run.calls() if "stop" in r and harness.UNIT in r]
+                    self.assertEqual(len(stops), 1, "stop is not repeated for evidence")
+                if name == "timer-cancel.json":
+                    self.assertTrue(run.result["containmentComplete"])
+                    self.assertTrue(any(o["resource"] == "timer" for o in run.result["outstandingOwners"]))
+        fx = LoanFixture().build()
+        self.addCleanup(fx.cleanup)
+        (fx.evidence_dir / "collector").mkdir()
+        (fx.evidence_dir / "collector" / "explicit-stop.json").write_text("{}")
+>       run = ExecutorRun(fx)
+              ^^^^^^^^^^^^^^^
+
+tests/loan_executor/test_executor_phases.py:417: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/loan_executor/harness.py:521: in __init__
+    self.fx.reserve_and_handover()
+tests/loan_executor/harness.py:424: in reserve_and_handover
+    plan = loan_executor.load_plan(self.root, self.plan_rel, self.plan_sha)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/tmp/moriarty-loan-executor-lffmlbec')
+relative = 'deliverables/loan-fixture/immutable/executor-plan.json'
+expected_sha256 = 'f598f6f76255745e452e79f68d28f64e7448eb9ab2c6e71eea00907755221737'
+
+    def load_plan(root, relative, expected_sha256):
+        """Parse and validate the immutable executor plan; nothing is started."""
+        root = Path(root).resolve()
+        if type(expected_sha256) is not str or not records._hex64(expected_sha256):
+            raise ExecutorRefusal("PLAN_INVALID", "--sha256 must be lowercase SHA-256")
+        path, data = _reference(root, {"path": relative, "sha256": expected_sha256}, "plan")
+        missing = []
+        plan = records._parse_json(data, missing, "plan")
+        if type(plan) is not dict or not records._exact_keys(plan, PLAN_KEYS, missing, "plan"):
+            raise ExecutorRefusal("PLAN_INVALID", "plan fields: " + ", ".join(missing))
+        if plan["schema"] != PLAN_SCHEMA:
+            raise ExecutorRefusal("PLAN_INVALID", "plan schema")
+        for key in ("allocationId", "actionId"):
+            if type(plan[key]) is not str or _IDENT.fullmatch(plan[key]) is None:
+                raise ExecutorRefusal("PLAN_INVALID", "invalid identifier: " + key)
+        if not records._hex64(plan["candidateHash"]):
+            raise ExecutorRefusal("PLAN_INVALID", "candidateHash")
+        fin_path, fin_bytes, financial = _reference(root, plan["financialPlan"], "financialPlan", require_json=True)
+        if financial.get("schema") != FINANCIAL_SCHEMA or type(financial.get("limits")) is not dict \
+                or type(financial["limits"].get("deadlineMs")) is not int:
+            raise ExecutorRefusal("PLAN_INVALID", "financialPlan is not an unchanged preview-financial-launch/1 document")
+        _reference(root, plan["authority"], "authority")
+        command = plan["command"]
+        if type(command) is not list or len(command) < 2 or any(type(x) is not str or x == "" for x in command):
+            raise ExecutorRefusal("PLAN_INVALID", "command argv")
+        if command.count(RUNTIME_PLACEHOLDER) != 1 or command[0] == RUNTIME_PLACEHOLDER:
+            raise ExecutorRefusal("PLAN_INVALID", "command must contain exactly one runtimeFinancialPlan operand")
+        if any(RUNTIME_PLACEHOLDER in x and x != RUNTIME_PLACEHOLDER for x in command):
+            raise ExecutorRefusal("PLAN_INVALID", "placeholder must be a whole operand")
+        closure = plan["closure"]
+        if type(closure) is not dict or not closure:
+            raise ExecutorRefusal("PLAN_INVALID", "closure")
+        for name, digest in closure.items():
+            if type(name) is not str or not records._hex64(digest):
+                raise ExecutorRefusal("PLAN_INVALID", "closure entry")
+            target = Path(name) if name.startswith("/") else root / name
+            if target.is_symlink() or not target.is_file():
+                raise ExecutorRefusal("PLAN_INVALID", "closure file missing: " + name)
+            if _sha(target.read_bytes()) != digest:
+                raise ExecutorRefusal("PLAN_INVALID", "closure file changed: " + name)
+        if command[0] not in closure or not command[0].startswith("/") or not os.access(command[0], os.X_OK):
+            raise ExecutorRefusal("PLAN_INVALID", "command executable must be an absolute hash-bound executable")
+        try:
+            require_unit_name(plan["unit"])
+            loan_cleanup.require_timer_name(plan["timerUnit"])
+        except ValueError as error:
+            raise ExecutorRefusal("PLAN_INVALID", str(error))
+        if plan["timerUnit"] + ".service" == plan["unit"]:
+            raise ExecutorRefusal("PLAN_INVALID", "timer name collides with unit name")
+        prover = plan["prover"]
+        if not records._exact_keys(prover, PROVER_KEYS, missing, "prover"):
+            raise ExecutorRefusal("PLAN_INVALID", "prover fields: " + ", ".join(missing))
+        if not records._hex64(prover["containerId"]):
+            raise ExecutorRefusal("PLAN_INVALID", "prover containerId")
+        image = prover["imageDigest"]
+        if type(image) is not str or not image.startswith("sha256:") or not records._hex64(image[7:]):
+            raise ExecutorRefusal("PLAN_INVALID", "prover imageDigest")
+        if type(prover["memoryLimitBytes"]) is not int or prover["memoryLimitBytes"] <= 0:
+            raise ExecutorRefusal("PLAN_INVALID", "prover memoryLimitBytes")
+        lifetime = prover["lifetime"]
+        if not records._exact_keys(lifetime, LIFETIME_KEYS, missing, "lifetime"):
+            raise ExecutorRefusal("PLAN_INVALID", "lifetime fields: " + ", ".join(missing))
+        wrapper_path, _ = _reference(root, lifetime["wrapper"], "wrapper")
+        if not os.access(wrapper_path, os.X_OK):
+            raise ExecutorRefusal("PLAN_INVALID", "wrapper is not executable")
+        control_dir = _contained_dir(root, lifetime["controlDirectory"], "controlDirectory")
+        if type(lifetime["controlName"]) is not str or _IDENT.fullmatch(lifetime["controlName"]) is None \
+                or "/" in lifetime["controlName"]:
+            raise ExecutorRefusal("PLAN_INVALID", "controlName")
+        if type(lifetime["containerControlPath"]) is not str or not lifetime["containerControlPath"].startswith("/"):
+            raise ExecutorRefusal("PLAN_INVALID", "containerControlPath")
+        evidence = _contained_dir(root, plan["evidenceDirectory"], "evidenceDirectory")
+        for entry in evidence.iterdir():
+            # Only the runner's private channel directory may already exist.
+            details = entry.lstat()
+            if not (entry.name.startswith("runtime-") and stat.S_ISDIR(details.st_mode)
+                    and stat.S_IMODE(details.st_mode) == 0o700 and details.st_uid == os.getuid()):
+>               raise ExecutorRefusal("PLAN_INVALID", "evidenceDirectory is already used: " + entry.name)
+E               moriarty_dev.loan_executor.ExecutorRefusal: PLAN_INVALID: evidenceDirectory is already used: collector
+
+scripts/moriarty_dev/loan_executor.py:237: ExecutorRefusal
+----------------------------- Captured stdout call -----------------------------
+uuuuuuuuuu
+__________ CleanupIdentity.test_unavailable_observation_is_unresolved __________
+
+self = <test_loan_cleanup.CleanupIdentity testMethod=test_unavailable_observation_is_unresolved>
+
+    def test_unavailable_observation_is_unresolved(self):
+        self.services._save("script.json", {"showTimeout": True})
+        facts = loan_cleanup.contain_owned(self.intent, prover_receipt("2026-09-13T20:00:00Z"), unit_receipt("f" * 32),
+                                           self.run, 25)
+>       self.assertFalse(facts["unit"]["contained"])
+E       AssertionError: True is not false
+
+tests/loan_executor/test_loan_cleanup.py:114: AssertionError
+=========================== short test summary info ============================
+SUBFAILED(artifact='terminal-observation.json') tests/loan_executor/test_executor_phases.py::FaultTable::test_terminal_write_failures_and_preexisting_artifacts
+SUBFAILED(artifact='explicit-stop.json') tests/loan_executor/test_executor_phases.py::FaultTable::test_terminal_write_failures_and_preexisting_artifacts
+FAILED tests/loan_executor/test_executor_phases.py::FaultTable::test_terminal_write_failures_and_preexisting_artifacts
+FAILED tests/loan_executor/test_loan_cleanup.py::CleanupIdentity::test_unavailable_observation_is_unresolved
+4 failed, 8 subtests passed in 4.04s

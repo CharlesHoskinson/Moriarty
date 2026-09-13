@@ -1,0 +1,99 @@
+{
+  "schema": "moriarty.bounded-diagnosis/1",
+  "reviewer": "gpt-6-astra",
+  "requestedEffort": "high",
+  "scope": "Frozen round-1 terminal persistence and cleanup-observation first-gate failures only",
+  "sourceApproval": false,
+  "verdict": "DIAGNOSED_TEST_FAULT_SEAM_MISMATCH; actual probed persistence/observation failures fail closed",
+  "completedAt": "2026-09-13T20:15:22.094656+00:00",
+  "baseCommit": "f7f40ce5e945fd9d7d2bd7a3c05ee3798331ff8e",
+  "sourceMapSha256": "b493b7c85ec2d05d887ef58c81d790ae0c4621c641ac4f771050a4cac6b4f83a",
+  "overlay": "/tmp/moriarty-production-persistence-diagnosis-r1-work",
+  "evidence": {
+    "/tmp/moriarty-production-round1-evidence/source-manifest.json": "d07c959e94fb078801351d17329319efeb2f7898f8dc6a8e7dcfc1b09480057a",
+    "/tmp/moriarty-production-round1-evidence/partial-full-gate.log": "b4a5bc79e64ebbbd9ddbeb6fbc46026b76266c901a76277b06fea57afa18c0d0",
+    "/tmp/moriarty-production-persistence-r1-original-tests-3.log": "771296aea981e48fa9f9766afc019f1d848d96d410a1c60cb2d362963766bf5b",
+    "/tmp/moriarty-production-persistence-r1-probes.py": "0d6f7cdc3a26446a0567d85fe17f2615fdd794e3fe37fd455a0bf99f215c7480",
+    "/tmp/moriarty-production-persistence-r1-probes.log": "3667b60b833cf21b176ecae306f7cf7226aae932b8402a479c244650840d2b53",
+    "/tmp/moriarty-production-persistence-r1-probes/results.json": "2e30eebdca08808371f2000e66504ee44400de165bf85d84ba73665ee13ddc51",
+    "/tmp/moriarty-production-persistence-r1-write-probes.py": "a0ecdb32ee5658f0499d18cf2cbda913f4951b55d8dca1134cfacef35a5276c3",
+    "/tmp/moriarty-production-persistence-r1-write-probes.log": "e37e3265aea9ecda5ac60c06e0e3572e3549e69ac878fc0244c61ce8561cbb04",
+    "/tmp/moriarty-production-persistence-r1-probes/write-results.json": "26bf15d0993a481abfc03a9beb530416cce2904607bc9db6391014ce9c71a6c9",
+    "/tmp/moriarty-production-persistence-r1-verify.py": "8bf2be5e3fd1e403c7c1e3c1889e3dc65a2c30e87923da50378e2fc260b46039",
+    "/tmp/moriarty-production-persistence-r1-verification.json": "4ee0b6ffa752b3f7781e7f6d4609e2bb19699f3ddf2d5cd54b4f37fb3c2ee531",
+    "/tmp/moriarty-production-persistence-r1-materialize.py": "3808e467568df36d2ef2545d129d22ed69540447c8413b40b6949eb9c975e759",
+    "/tmp/moriarty-production-persistence-r1-base-inputs.json": "2231f1ace5be5ee70679eadeede9aa22a52c7ffbf8e261017ad28f9afa8f9d8e"
+  },
+  "method": "Git archive unchanged modules/fixtures from the pinned base and overlay all 19 hash-verified frozen files. Drive real execute_once/accounting/collector/cleanup/writer with disposable fixture stores, service transport, and invocation channel. Patch actual collector os.write/os.fsync in fork workers; markers record reached file descriptors and child PIDs. Stall probes shorten only target persistence timeout to 0.2 seconds and block actual fsync for 5 seconds. No live service/network/wallet/master/canonical-store writes; no current author checkout read or modified.",
+  "findings": [
+    {
+      "id": "PERSIST-1",
+      "kind": "experiment observation",
+      "conclusion": "Original terminal/stop writer fault injections miss the collector persistence site.",
+      "cause": "harness.ExecutorRun.dependencies sets only loan_executor write_exclusive. _collect -> retain_loan_main_exit -> retain_exit_evidence -> durable_exclusive_save calls collector _write_exclusive_sync directly. FaultyWriter.calls excludes both target names.",
+      "reproduced": "Both fail and timeout injections for terminal-observation.json and explicit-stop.json yield PROCESS_SUCCESS/0 with no target injection call; baseline agrees.",
+      "locations": [
+        "harness.py:480",
+        "harness.py:542",
+        "loan_executor.py:870",
+        "loan_exit_retention/exit_retention.py:200",
+        "loan_exit_retention/exit_retention.py:486",
+        "loan_exit_retention/exit_retention.py:552"
+      ]
+    },
+    {
+      "id": "PERSIST-2",
+      "kind": "experiment observation",
+      "conclusion": "Actual terminal write and fsync failures are not swallowed on the tested frozen path.",
+      "reproduced": "os.write error; file fsync error/stall; directory fsync error/stall: each PROCESS_UNKNOWN/3 EVIDENCE_WRITE_FAILED, terminalEvidencePersisted=false, stopReceiptPersisted=false, stopReturnCode=null. Exactly two safety kills; the one service stop follows a kill, rather than collector stop. Incomplete files remain for fsync failures but receive no terminal evidence entry.",
+      "supervision": "Each fault reached actual target FD in child; all fault child PIDs no longer exist after completion; stalled cases finish under 3 seconds."
+    },
+    {
+      "id": "PERSIST-3",
+      "kind": "experiment observation",
+      "conclusion": "Actual explicit-stop receipt write and fsync failures are not swallowed on the tested frozen path.",
+      "reproduced": "Same five faults: each PROCESS_UNKNOWN/3 STOP_RECEIPT_FAILED, terminalEvidencePersisted=true, stopReceiptPersisted=false, stopReturnCode=0, rawMainExit=exit/0. Exactly one service stop, no repeat for persistence.",
+      "caveat": "_record_collector includes the explicit-stop file hash in evidence when a partial/non-durable file exists, while stopReceiptPersisted remains false. Evidence-array membership alone must not be interpreted as a durability guarantee. This did not promote success in these probes."
+    },
+    {
+      "id": "CLEANUP-1",
+      "kind": "experiment observation",
+      "conclusion": "The original cleanup timeout flag never times out cleanup identity reads.",
+      "cause": "fake_services._systemctl gates showTimeout on a property request containing Result. contain_owned uses LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID without Result. The original test therefore receives successful identity observations, kills/stops the exact owned service, and confirms containment.",
+      "locations": [
+        "fake_services.py:117",
+        "fake_services.py:120",
+        "loan_cleanup.py:151",
+        "loan_cleanup.py:254",
+        "test_loan_cleanup.py:110"
+      ]
+    },
+    {
+      "id": "CLEANUP-2",
+      "kind": "experiment observation",
+      "conclusion": "Real unavailable identity observations keep ownership unresolved.",
+      "reproduced": "Timeout, nonzero return, and raised TimeoutError at the actual identity-only query each give contained=false, complete=false, observation-unavailable, and an outstanding unit owner. An unavailable post-kill identity observation also yields contained=false and outstanding owner, although disposition remains killed-and-stopped."
+    },
+    {
+      "id": "PREEXISTS",
+      "kind": "experiment observation",
+      "conclusion": "Remaining grouped preexisting-artifact test error is at test construction.",
+      "reproduced": "With populated collector directory, ExecutorRun construction raises PLAN_INVALID from load_plan (evidenceDirectory already used) before run.run. The grouped original test does not catch this refusal; it cannot assert its later expected result. No attempted overwrite was demonstrated."
+    }
+  ],
+  "independentAcceptance": [
+    "Every advertised fault must have an asserted hit count and the target FD/site, including collector-specific persistence; merely returning a mock failure under an unused dependency is inadequate.",
+    "Actual terminal os.write, file fsync, and directory fsync exceptions/timeouts must produce non-success/unknown, false terminal durability, no collector stop before durable terminal evidence, bounded identity-safe cleanup, retained ownership when unresolved, and no automatic retry.",
+    "Actual explicit-stop receipt persistence failure after successful stop must retain raw main exit 0, return non-success/unknown, set stopReceiptPersisted=false, and never repeat stop merely to create evidence.",
+    "Persistence-stall tests must block the real syscall in the supervised worker, enforce a short explicit test bound, prove worker termination, and reject any existing partial file as durable.",
+    "Cleanup transport faults must reach its identity-only request, both before termination and during post-termination observation; no unavailable observation may count as contained or discard its outstanding owner.",
+    "Preexisting-evidence tests must cover the documented plan-load refusal boundary and assert inert service behavior, or deliberately insert the artifact after validated fixture construction when testing later defenses."
+  ],
+  "limitations": [
+    "20 focused cases and original selected test reproduction; not a full source/result audit or release approval.",
+    "Service/process observations are fake transports; no live systemd/docker/financial network execution.",
+    "No proof of all production persistence paths, timeout scheduling races, host containment, or financial acceptance.",
+    "The provided failure log contains the two terminal fail subtests; fsync stall probes were independently added here and are not misrepresented as original failed log rows.",
+    "Initial overlay setup attempts failed on a nonexistent archive path and missing base fixtures; preserved local setup logs are not product failures. All final probe source files match the frozen 19-file hashes."
+  ]
+}
