@@ -1,0 +1,107 @@
+{
+  "artefact": "static prover-lifetime PID 1 wrapper",
+  "task": "moriarty roadmap 5.2",
+  "auditor": "Claude Opus 5 (1M context)",
+  "implementer": "GPT-5.6 Sol via Codex",
+  "crossVendor": true,
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-prover-wrapper",
+  "baseSha": "056e662254c38936758af9c6f72c019705a1ff09",
+  "auditedBytes": {
+    "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c": "d0b08d72d5fa8d1d85a4b1d6f6c43e26b07f4615f0ca0e76126407157cf11691",
+    "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md": "e873d917c4d5a2de4b257bfdf05ef08b54072828dac63347ee2a3fbf99bf1565",
+    "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py": "0cf96fb4c8407d0a2a5ad8a197548e5ccace4e4a819de0c81fe73990e452f90b"
+  },
+  "verdict": "APPROVED",
+  "testCount": 24,
+  "loadBearingTestCount": 23,
+  "testsThatPassAgainstDoNothingBinary": [
+    "test_build_is_static_and_import_free"
+  ],
+  "skipsObserved": 0,
+  "mutantsInjected": 12,
+  "mutantsKilled": 10,
+  "mutantsSurvived": [
+    "PR_SET_CHILD_SUBREAPER disabled (no test binds it)",
+    "child-side setpgid removed (deliberately redundant with the parent-side setpgid; removing both is killed by five tests)"
+  ],
+  "jsFixtureIsVerbatim": true,
+  "jsFixtureSha256": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+  "jsFixtureMatchesCommittedBlob": "cff5f1e3:experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+  "buildDeterministicOnThisHost": true,
+  "overreachFound": false,
+  "productFilesModifiedByAudit": 0,
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "dimension": "report-accuracy",
+      "file": "FOREMAN_REPORT.md",
+      "line": 97,
+      "summary": "The report credits test_forked_grandchild_is_killed_and_reaped with proving a grandchild 'reparented via the subreaper flag'. Setting PR_SET_CHILD_SUBREAPER to 0 (prover_lifetime.c:587) leaves that test and both namespace tests passing, because the grandchild stays in the tracked child's process group and is destroyed by kill(-pgid, SIGKILL). No test binds the subreaper flag.",
+      "whyItMatters": "The mechanism is misattributed, so the architect would carry forward evidence the suite does not supply for reparented-descendant reaping, and a later refactor could drop the flag with the suite still green. The flag itself is correct and harmless: as real PID 1 in a private namespace it is redundant, and outside one it is what keeps reparented grandchildren reachable for waitpid."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "spec-coverage",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c",
+      "line": 25,
+      "summary": "The entry+1500s cap (OWN_RUNTIME_NS) is never the binding term in any test. Every fixture puts the control kill deadline within five seconds of entry, so min(entry+1500s, control.killDeadline) is only ever exercised on its control branch. The 1500s constant and its agreement with the JS model's PROVER_MAX_RUNTIME_SECONDS rest on source inspection alone.",
+      "whyItMatters": "The requirement's headline numeric bound has no executable test. A codec-style self-test hook for the deadline computation would have closed this against the JS computeWrapperKillDeadline on synthetic inputs, without needing a 1500-second test."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "documentation",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md",
+      "line": 18,
+      "summary": "The exit-code table says a normal child exit retains status '0-123 or 125-127' and that the wrapper 'always exits 124' on deadline, implying 124 uniquely signals the deadline. Verified otherwise: a child that exits 124, 64, 125 or 126 on its own is propagated unchanged, so those codes collide with the wrapper's own deadline (124), refusal (64), unknown (125) and execv-failure (126) codes.",
+      "whyItMatters": "A consumer reading the table could treat exit 124 as proof of timeout. The collision is inherent to the spec's requirement that a normal early child exit retain its actual status, and is not load-bearing because the spec makes the durable result document authoritative rather than the wrapper exit code, but the table should state it."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "reproducibility",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md",
+      "line": 6,
+      "summary": "The build document pins the compiler invocation exactly but records no gcc or glibc version and no expected binary digest. Two independent builds on this host are byte-identical (sha256 5b7fd3d1a5e1985bd6432fe80ca86e35622a91a480d3f51a0f398d680a2b426d, BuildID cc1a9c3ed0b677251673a49c3da0494694ce7508, matching the BuildID in the implementer's report) under gcc 15.2.0 and glibc 2.43, so the build is deterministic here, but cross-host byte reproduction is not established.",
+      "whyItMatters": "The same requirement has item 3 inspect and retain the exact wrapper bytes before authorizing the container. Naming the toolchain and the expected digest in the build document is what makes that retention checkable by someone other than the original builder."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "self-test-hooks",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md",
+      "line": 22,
+      "summary": "The document states the hooks are 'never reachable through the real <control-path> -- <executable> PID 1 form'. Dispatch is on argv[1] before any other parsing (prover_lifetime.c:552-557), so a control path spelled exactly --selftest-encode or --selftest-decode does enter the hook. Verified consequence in every real-form shape: exit 2, no child, no marker file; strace shows the encode hook issues no clone, fork, execve, open, stat or clock_gettime beyond its own execve; and at argc==7 the encoder requires argv[2] to be a lowercase UUID, which '--' can never be.",
+      "whyItMatters": "The attack surface is nil, since neither hook can fork, exec, or weaken the lifetime bound, and no successful hook path exists in the real argument form. The claim should nonetheless read 'cannot succeed or start a child' rather than 'never reachable', because a supervisor's security wording is what a later reviewer will rely on instead of re-deriving the dispatch order."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "test-fixture-realism",
+      "file": "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py",
+      "line": 229,
+      "summary": "encode_control defaults produce latest_start = entry+5s and kill_deadline = entry+2s, inverting the spec's relation in which latest-start is outer+120 and the kill deadline is outer+1620. Every happy-path fixture therefore carries a kill deadline earlier than its latest-start.",
+      "whyItMatters": "Harmless to the results, because the wrapper's late-entry and expired-deadline checks are independent of each other, but the suite never drives the happy path on a record with the production field ordering."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "test-coverage",
+      "file": "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py",
+      "line": 349,
+      "summary": "Signal forwarding is tested only for SIGTERM, although handlers are installed for SIGINT, SIGQUIT and SIGHUP; and the 'monotonic absolute timer, not accumulated sleeps' requirement is not tested under interruption. Both properties were verified independently during this audit: the three untested signals forward unchanged (wrapper exits 130, 131, 129), and under a 50 Hz SIGCHLD storm the wrapper terminated at 0.98s against a 1.0s absolute deadline and exited 124, showing no deadline drift.",
+      "whyItMatters": "The implementation is correct on both counts, but the suite would not catch a regression in either, and the absolute-timer property is the one the requirement calls out by name."
+    },
+    {
+      "severity": "LOW",
+      "dimension": "path-resolution",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c",
+      "line": 181,
+      "summary": "O_NOFOLLOW guards only the final path component; an intermediate symlink in the control directory path is still followed. There is no openat2 with RESOLVE_NO_SYMLINKS.",
+      "whyItMatters": "The requirement says to open the exact fixed path with no-follow checks. The gap is mitigated by the same requirement's mandate that the control directory be an allocation-owned read-only mount, so intermediate components are not attacker-writable; it matters only if that mount assumption is ever relaxed."
+    },
+    {
+      "severity": "INFO",
+      "dimension": "disclosed-open-choices",
+      "file": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c",
+      "line": 26,
+      "summary": "Values the specification leaves open, each disclosed in the build document: the 2-second signal-escalation grace (line 26), the 500-millisecond final reap sweep (line 27), the exit codes 2, 64, 124, 125, 126 and 128+N, the '<control> -- <exe>' CLI shape, PR_SET_CHILD_SUBREAPER, and exiting PID 1 after the bounded sweep rather than reaping strictly until no children remain or the fixed deadline forces exit.",
+      "whyItMatters": "All are legitimate, and disclosure is what the requirement's silence asks for. The sweep cap is the only one that narrows the requirement's literal wording, and it is safe: private PID-namespace teardown SIGKILLs every process still in the namespace, which is strictly stronger than reaping, and a bounded PID 1 exit is what the requirement wants overall. Recorded so the architect ratifies these rather than inheriting them unexamined."
+    }
+  ]
+}
