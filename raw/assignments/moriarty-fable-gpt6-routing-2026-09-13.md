@@ -13,7 +13,20 @@ model identities in evidence, never in commit, tag or pull request attribution.
 The user also answered "yes" to the prepared bounded Foreman continuation.
 Its proposal is
 `deliverables/language-to-ledger-2026-09-12/handoff-integration-20260913/continuation-proposal.json`.
-The active contract is `moriarty-handoff-fable-20260913`, digest
+The first continuation contract was `moriarty-handoff-fable-20260913`, digest
 `9844cc43bdcd9e163d690d96118c836264650702801cc077ccb758e5671473a4`.
 The stopped predecessor and its three correction charges remain preserved.
 This continuation grants no financial or K execution authority.
+
+The user subsequently instructed: "Continue working on 1-4 for another round".
+This authorizes one additional correction round under successor
+`moriarty-handoff-fable-20260913-r2`, digest
+`6f9ea8780c02debfd9d8ead6c63dce234656f9dbef502380aa844f25f317633f`.
+The predecessor stopped at its one-round correction limit. Its charge remains
+recorded; the original September 14 17:01:01 UTC deadline is unchanged.
+See `deliverables/language-to-ledger-2026-09-12/handoff-integration-20260913/fable-repair-02/authorization.json`.
+
+The user then authorized autonomous work until the release is complete, including
+more recorded budget increases, while AFK. The Fable medium/GPT-6 high routing
+continues. Preserve historical charges, failures and original acceptance gates.
+See `deliverables/language-to-ledger-2026-09-12/handoff-integration-20260913/afk-release-authorization-20260913.json`.
