@@ -1,5 +1,13 @@
 # Active routing override
 
+## September 13 implementation model change
+
+The [latest user instruction](../../raw/assignments/moriarty-grok-gpt6-routing-2026-09-13.md)
+selects Grok 4.6 implementation, with high effort under repository defaults.
+GPT-6 high continues independent checking. This supersedes the Fable author
+assignment below. Preserve partial work, historical identities and all release
+acceptance and resource gates. Continue the active full-release objective.
+
 ## September 13 handoff execution
 
 The [September 13 user instruction](../../raw/assignments/moriarty-fable-gpt6-routing-2026-09-13.md)

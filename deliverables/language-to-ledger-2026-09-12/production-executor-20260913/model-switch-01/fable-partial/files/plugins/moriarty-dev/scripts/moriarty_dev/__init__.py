@@ -1,0 +1,1 @@
+"""Moriarty development plugin library."""
