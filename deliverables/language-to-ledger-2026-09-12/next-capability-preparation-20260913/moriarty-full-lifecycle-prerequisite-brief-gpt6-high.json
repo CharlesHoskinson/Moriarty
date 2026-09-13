@@ -1,0 +1,956 @@
+{
+  "schema": "moriarty.full-lifecycle-prerequisite-brief/1",
+  "createdUtc": "2026-09-13T21:44:22.109223+00:00",
+  "mode": "sequential prerequisite preparation",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "high"
+  },
+  "authorRouting": {
+    "model": "grok-4.6",
+    "effort": "high"
+  },
+  "sourceApproval": false,
+  "conclusion": "Existing approved full-lifecycle scope requires one connected lowerer/generated-state/four-transition/decoder/loader/driver package. Numeric target and later capability/fee mechanisms are fixed; physical full-state and exact consumer interfaces remain incomplete. The positive-fee continuation failure is an additive example defect, not an undecided baseline target.",
+  "fixedNormativeTarget": {
+    "id": "state.numericUniverse.target",
+    "status": "pinned",
+    "value": {
+      "selectedCase": "the lifecycle source case",
+      "unit": "Cash",
+      "initialBalances": {
+        "Lender": "100",
+        "Borrower": "10"
+      },
+      "originatedPrincipal": "100",
+      "accrualTerms": {
+        "numerator": "1",
+        "denominator": "10",
+        "rounding": "floor",
+        "periodSeconds": "60",
+        "firstPeriodStart": "1000"
+      },
+      "accruedPerPeriod": "10",
+      "nominalLiabilityCap": "110",
+      "allocationRule": "AccrualFirst",
+      "repayment": "30",
+      "computedSettlement": "80",
+      "outstandingSequence": [
+        "0",
+        "100",
+        "110",
+        "80",
+        "0"
+      ],
+      "finalBalances": {
+        "Lender": "110",
+        "Borrower": "0"
+      }
+    },
+    "source": {
+      "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+      "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+      "locator": "line 52: the complete example, and line 68: execute the exact lifecycle"
+    },
+    "corroboration": [
+      {
+        "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+        "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+        "locator": "ensures clauses of originate, accrue, repay and settle (lines 87-177)"
+      },
+      {
+        "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+        "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+        "locator": "balances"
+      }
+    ],
+    "note": "design.md line 52 selects this case outright; line 62 requires replacing the hardcoded older custody state with source-bound lifecycle state; line 68 requires executing \"the exact lifecycle\". The 5000000000 USD_micro fixture pinned at state.ledger.fixtureNumerics is therefore the state being replaced, not a competing target. The selection is of the semantic numeric case only. The ledger asset and unit mapping that carries these amounts onto a ledger denomination remains open at state.fieldMapping.sourceToLedger, and the token color at assets.usdColor.",
+    "repair": "round 1, review finding [high] open-item-honesty: previously recorded open with the claim that design.md does not say which numeric universe the authenticated run must carry. That claim was false, and it had also been reported upward as a risk to compilation; the false alarm is withdrawn. The reviewer was right."
+  },
+  "settledRA5": {
+    "id": "RA-5",
+    "severity": "medium",
+    "issue": "The compiled custody fixture still initializes the 5000000000 USD_micro universe (rate 8/100 over 31/365, settle 533972602) while the selected case is the lifecycle 100/110/80 at rate 1/10 over 60-second periods. design.md line 52 selects the lifecycle case and line 62 requires replacing the hardcoded older state, so the semantic choice is made. What is undecided is the ledger asset and unit mapping that carries 100 Cash onto a ledger denomination and quantum.",
+    "whatToCheck": "Confirm the selected case, then fix the asset and unit mapping before 5.2a compiles anything, so the compiler output binds the intended numbers and scale.",
+    "evidence": [
+      {
+        "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+        "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+        "locator": "lines 52, 62 and 68"
+      },
+      {
+        "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+        "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+        "locator": "action originate"
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/README.md",
+        "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+        "locator": "Loan fixture"
+      }
+    ],
+    "repair": "round 1: reframed. The earlier claim that design.md does not say which universe the authenticated run must carry was false and is withdrawn, along with the compilation risk reported upward from it. Only the unit mapping remains."
+  },
+  "targetDecisionReopened": false,
+  "chronologyReconciliation": [
+    {
+      "source": "sprints/LL04/ledger-contract-draft",
+      "status": "historical unapproved draft; retained interface inventory useful; old pending list is not current authority"
+    },
+    {
+      "source": "preview-constraints/freeze-01.json state.numericUniverse.target and RA-5",
+      "status": "later reviewed freeze expressly fixes no-fee lifecycle numeric target and withdraws false ambiguity"
+    },
+    {
+      "source": "docs/superpowers/plans/2026-09-12-authority-fee-binding.md and financial-agreement-source-v6.md",
+      "status": "additive Source6/Core5/state2, real both-role capability binding, Cash quantum1 and in-asset fee/net semantics; preserve legacy bytes and full-state gap"
+    },
+    {
+      "source": "AUDIT-OPUS-5-1A F1/F13",
+      "status": "capability half closed; native payer counterpart unproved; full obligation/allowance/history/cursor state explicitly absent"
+    },
+    {
+      "source": "compiled-lifecycle/lineage-supplement-20260913.json",
+      "status": "retained originate-only skip-ZK compile correctly linked to fee source; not full lifecycle or proof acceptance"
+    }
+  ],
+  "nextPackage": {
+    "identity": "existing LL04 full-lifecycle prerequisite vertical package",
+    "dependencies": [
+      "fixed Source5/Core4/state1 semantics and freeze121",
+      "exact residual full-state/argument/effect/lowerer interface review",
+      "additive complete generation and decoder",
+      "reviewed lifecycle build/loader source support",
+      "existing actual driver and comparator consume the new interfaces",
+      "separately admitted LL06 compile with LL03/LL04 plan prerequisites",
+      "separate proving assets/native checks before live execution"
+    ],
+    "proposedAbsentFiles": [
+      "experiments/moriarty-language/src/successor/financial-lifecycle-compact-lower.ts",
+      "experiments/moriarty-midnight-financial/custody/generate-full-lifecycle.mjs",
+      "experiments/moriarty-midnight-financial/custody/full-lifecycle.compact"
+    ],
+    "existingConsumers": [
+      "ledger/build-proven.mjs",
+      "ledger/proven-assets.mjs",
+      "ledger/finalized-financial-state.mjs",
+      "ledger/receipt.mjs",
+      "ledger/integrate-local.mjs",
+      "ledger/run-local.mjs",
+      "ledger/lifecycle-sdk-caller.mjs",
+      "ledger/financial-comparison.mjs"
+    ],
+    "semanticStateFields": {
+      "state": [
+        "schemaVersion",
+        "balances",
+        "allowances",
+        "obligations",
+        "usedTransferIds",
+        "usedAllocationIds",
+        "usedOriginationIds",
+        "usedAccrualIds",
+        "work"
+      ],
+      "obligation": [
+        "id",
+        "debtor",
+        "creditor",
+        "denomination",
+        "settlementAsset",
+        "principal",
+        "accrued",
+        "outstanding",
+        "allocationRule",
+        "conversion",
+        "status",
+        "originationId",
+        "originationTransferId",
+        "initialPrincipal",
+        "nominalLiabilityCap",
+        "liabilityIncurred",
+        "accrualTerms",
+        "lastAccruedPeriod",
+        "nextAccrualAt"
+      ],
+      "accrualTerms": [
+        "numerator",
+        "denominator",
+        "rounding",
+        "periodSeconds",
+        "firstPeriodStart"
+      ],
+      "conversion": [
+        "mantissa",
+        "scale",
+        "rounding"
+      ],
+      "originateAction": [
+        "kind",
+        "obligationId",
+        "transferId",
+        "originationId",
+        "debtor",
+        "creditor",
+        "nominalAmount",
+        "denomination",
+        "settlementAsset",
+        "conversion",
+        "allocationRule",
+        "accrualTerms",
+        "nominalLiabilityCap"
+      ],
+      "accrueAction": [
+        "kind",
+        "accrualId",
+        "obligationId",
+        "periodIndex",
+        "observedTime"
+      ],
+      "originationEffect": [
+        "obligationId",
+        "transferId",
+        "originationId",
+        "debtor",
+        "creditor",
+        "nominalAmount",
+        "denomination",
+        "settlementAsset",
+        "conversion",
+        "allocationRule",
+        "accrualTerms",
+        "nominalLiabilityCap",
+        "kind",
+        "settlementAmount",
+        "liabilityIncurred",
+        "lastAccruedPeriod",
+        "nextAccrualAt"
+      ],
+      "accrualEffect": [
+        "kind",
+        "accrualId",
+        "obligationId",
+        "debtor",
+        "creditor",
+        "denomination",
+        "periodIndex",
+        "observedTime",
+        "eligibleAt",
+        "nextAccrualAt",
+        "principalBasis",
+        "numerator",
+        "denominator",
+        "rounding",
+        "interestAmount",
+        "previousAccrued",
+        "accrued",
+        "previousOutstanding",
+        "outstanding",
+        "previousLiabilityIncurred",
+        "liabilityIncurred",
+        "nominalLiabilityCap"
+      ]
+    },
+    "requiredFinancialCircuits": [
+      "originate",
+      "accrue",
+      "repay",
+      "settle"
+    ],
+    "initializationPhysicalInterface": "exact reviewed constructor/setup split required; no new mechanism selected",
+    "immutableHistory": [
+      "all old profiles/source examples",
+      "custody/generate.mjs and old loan/swap",
+      "retained generate-lifecycle/loan-lifecycle sources and skip-ZK artifacts/receipts"
+    ]
+  },
+  "residualDecisionsOnly": [
+    {
+      "id": "full-state-encoding",
+      "question": "Exact Compact representation/ordered history/decoder preserving all fixed fields and bounds.",
+      "currentEvidence": "Later audit F13 and current generated source still lack these fields; old draft mapping was never implemented."
+    },
+    {
+      "id": "full-consumer-abi",
+      "question": "Exact source-derived lowerer output, additive build/loader manifest, initialization and closed driver stage/plan grouping.",
+      "currentEvidence": "Current lowerer wrapper scope is authority-fee-disbursement-only; build/proven loader selects only old loan/swap."
+    },
+    {
+      "id": "full-action-binding",
+      "question": "Bind existing reviewed authority/role semantics to full terms/head and remaining actions, with authentic initial native-funding provenance.",
+      "currentEvidence": "Current generated artifact implements only originate; do not adopt historical unapproved activation or redesign custody."
+    }
+  ],
+  "notNewDesignDecisions": [
+    "fixed no-fee numerical target",
+    "whether Source6/Fee and state2 exist",
+    "whether both capability commitments should be checked at originate",
+    "Cash quantum1 and economic-fee per-asset rule",
+    "whether full obligations/allowances/history/work and actual native caller are required"
+  ],
+  "independentSource5ExpectedTrace": [
+    {
+      "stage": "originate",
+      "sourceWorkUsed": 99,
+      "ordinaryPost": {
+        "phase": "1",
+        "paid": "0"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "413",
+          "spent": "116",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110",
+          "kind": "Origination",
+          "settlementAmount": "100",
+          "liabilityIncurred": "100",
+          "lastAccruedPeriod": "0",
+          "nextAccrualAt": "1060"
+        }
+      ]
+    },
+    {
+      "stage": "accrue",
+      "sourceWorkUsed": 65,
+      "ordinaryPost": {
+        "phase": "2",
+        "paid": "0"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "348",
+          "spent": "181",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Accrual",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "periodIndex": "1",
+          "observedTime": "1060",
+          "eligibleAt": "1060",
+          "nextAccrualAt": "1120",
+          "principalBasis": "100",
+          "numerator": "1",
+          "denominator": "10",
+          "rounding": "floor",
+          "interestAmount": "10",
+          "previousAccrued": "0",
+          "accrued": "10",
+          "previousOutstanding": "100",
+          "outstanding": "110",
+          "previousLiabilityIncurred": "100",
+          "liabilityIncurred": "110",
+          "nominalLiabilityCap": "110"
+        }
+      ]
+    },
+    {
+      "stage": "repay",
+      "sourceWorkUsed": 88,
+      "ordinaryPost": {
+        "phase": "3",
+        "paid": "30"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "260",
+          "spent": "269",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "20",
+          "accruedDischarged": "10",
+          "remainingOutstanding": "80"
+        }
+      ]
+    },
+    {
+      "stage": "settle",
+      "sourceWorkUsed": 86,
+      "ordinaryPost": {
+        "phase": "4",
+        "paid": "110"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Settled",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1",
+          "P2"
+        ],
+        "usedAllocationIds": [
+          "R1",
+          "R2"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "174",
+          "spent": "355",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "80",
+          "settlementAmount": "80",
+          "principalDischarged": "80",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "0"
+        }
+      ]
+    }
+  ],
+  "independentOracleBasis": "Complete financial posts/effects from retained independent Task2 arithmetic oracle, with accepted Source5 expression+kernel costs99/65/88/86 and initial work512/17/reserve16. Local evaluator results corroborate but are not the source of these expected financial values.",
+  "localProbe": {
+    "command": "node /tmp/moriarty-full-lifecycle-prerequisite-probe.mjs > /tmp/moriarty-full-lifecycle-prerequisite-probe.log 2>&1",
+    "nodeVersion": "v24.18.1",
+    "exitCode": 0,
+    "scope": "authorized isolated local source evaluator, synthetic public authority labels; no ledger authentication/compile/proving/artifact execution",
+    "resultsPath": "/tmp/moriarty-full-lifecycle-prerequisite-probe-results.json",
+    "observations": [
+      {
+        "source": "Source5",
+        "fee": null,
+        "acceptedStages": [
+          "originate",
+          "accrue",
+          "repay",
+          "settle"
+        ],
+        "finalWork": {
+          "remaining": "174",
+          "spent": "355",
+          "closureReserve": "16"
+        }
+      },
+      {
+        "source": "Source6",
+        "fee": "0",
+        "acceptedStages": [
+          "originate",
+          "accrue",
+          "repay",
+          "settle"
+        ],
+        "difference": "authority/state2/profile/program plus F1 zero-Fee effect/history and ten extra work units",
+        "finalWork": {
+          "remaining": "164",
+          "spent": "365",
+          "closureReserve": "16"
+        }
+      },
+      {
+        "source": "Source6",
+        "fee": "1",
+        "acceptedStages": [
+          "originate"
+        ],
+        "rejectedStage": "accrue",
+        "code": "ENSURES_FAILED",
+        "workUsed": "47",
+        "span": {
+          "start": "3893",
+          "end": "3949"
+        },
+        "nodePath": [
+          "8"
+        ],
+        "reason": "fee source line115 requires lender balance0 after prior accepted fee1 made it1; accrue has no cash movement",
+        "predecessorUnchanged": true,
+        "noTentativeOutputs": true
+      }
+    ],
+    "notExecutedHypothetical": "Even bypassing stale source ensures, fee1 plus repayment110 needs borrower111 total funds/allowance. Initial10 plus disbursement100 and allowance110 are insufficient. No forced-kernel or modified-source continuation was run."
+  },
+  "feeVariantDisposition": "Preserve baseline; repair or explicitly scope the added positive-fee example without silently making it a new target. Fee0 positive does not prove positive borrower fee payer. Supplemental positive-fee complete example would need independently bound source, funded reserve and allowance oracle; no such change is selected.",
+  "compileAndProvingBoundary": {
+    "beforeAdmission": [
+      "source lowerer/emitter/decoder/loader/driver authoring after residual contract review",
+      "source-level rejection/mapping tests and plain local evaluator fixtures"
+    ],
+    "separateCompile": [
+      "new frozen complete generated source/argv/manifest",
+      "actual pinned compiler with new output path",
+      "real generated all-circuit runtime/ZKIR metadata and negative tests"
+    ],
+    "separateProving": [
+      "genuine per-circuit prover/verifier artifacts",
+      "actual native prove/wellFormed/application checks",
+      "no proof-disabled or synthetic loader acceptance"
+    ],
+    "later": [
+      "Docker full lifecycle and negative readback",
+      "fresh resource/funding/accounting admission",
+      "Preview actual finalized effects and independent audit"
+    ]
+  },
+  "brief": {
+    "path": "/tmp/moriarty-full-lifecycle-prerequisite-brief-gpt6-high.md",
+    "sha256": "468ce22eb5f1b9c8bb232fc011d1a006d94dc27b1cb422c8b77b0cbe9aff3c6b"
+  },
+  "sourceAndEvidenceSha256": {
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-types/dist/index.d.ts": "c6b9fb7c40e4cbe00a9054ad99026912df4358a3a450a90ede912a87929efb30",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/TransactionOps.js": "fa9f2e2b9d2572f7e21342ca5905ee64c7a4fe47d0d9fee7107ccbc0ea76c8af",
+    "/home/charl/Moriarty/AGENTS.md": "5dee5d3597b499d4ed30ef5143d47550cf6e6da0634835e45521e2e4afc271e7",
+    "/home/charl/Moriarty/CODEX-HANDOFF-2026-09-13.xml": "4564c9923826acd1fb85bd9aa874cc9c492f1d0631cecbd899191b212709f053",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.d.ts": "98d1df3a5f4bb6993826e722b85515cacc94af1e35873c630c3a9fb001b38dfc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.js": "e5d4b7594923f505e90559c2fb37b3f8774319f11a14c4f22b583e4185ea01cc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/lineage-supplement-20260913.json": "ac5ac53b1e73952286cec7b083e76d41e4d892d620309948e6759bf749a3da73",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/design-review/lifecycle-root-decisions.json": "188b5ddde013d87a4c61b9891d54d842c4c5bd5677bf87b72a2eb5eae86989f8",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/design-review/origination-accrual-expectations.json": "22589ef0ca5355595cc85beb944f2d8dfa9836a00222d88afb23b9c85939cff1",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/preview-constraints/closure-receipt-5.1.json": "aa9cc9bf45f726ff344600e7e2faa569d648a39ec9cf2b0a01a0a586cfaa67d8",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json": "02464ab18c3592d162b5f3f462561d1a7c06779739abf67fd5c4084ea0e343bc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.md": "e68738021c9b394c2be622aa094f63466e125409cc1f568ec51e5b00b090eb47",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL04/authority-design-proposal.json": "3eb85ac99d00d9492ed495e8b13269b176fe6672fb85e8ea4c8889471c8e889b",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL04/authority-design-proposal.md": "5802a1f8e1c78d26f89a88ca6ef50820e85ea57d2500ce62d97b3abab148f9dc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL04/ledger-contract-draft.json": "f2f5af3aad3363424849dbe4f8af5531470b6ce9228eaf34046f938f4b992649",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/sprints/LL04/ledger-contract-draft.md": "afd4c1de7bbdc3fa4de448921f3e9fbeb39dda7886063b48c7581fa17be4d1e5",
+    "/home/charl/Moriarty/deliverables/roadmap-loop-2026-09-10/ACTIVE-ROUTING.md": "2eb575e15c4b165d309cfa579e484f17e876ebb46a214763eccc2f74b74583a1",
+    "/home/charl/Moriarty/docs/FOOTGUNS.md": "01641c296c1166e3ef12d239a343e7c2b76527ac1eed653ac2c83ad83142e855",
+    "/home/charl/Moriarty/docs/superpowers/plans/2026-09-12-authority-fee-binding.md": "ee1e2d0899c2e520f281100eac4a0daa17d6d146318f277350afb38d99702de6",
+    "/home/charl/Moriarty/docs/superpowers/plans/2026-09-12-language-to-ledger.md": "3e2895245bcf97729e96f57ad4294b725ebc067cec5096f3d25deb7e1cdfdcd1",
+    "/home/charl/Moriarty/experiments/moriarty-language/examples/loan-lifecycle.mjs": "6165fd3b7e3f5cd598e62b115f620f1349b0f1294500376b3cf780a4f7e46bac",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle-fee.mori": "04458fa45eed61d086eae262cc43aa529d0837beb5cf7f669649247b46884622",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json": "23f945287228f2366dd6ba8263954d4297cd6521209a3b0a3a0c13200013542a",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md": "d9711b8263ac26ce57c973986c5f50897eae25087d0093a7a5ea9298443caea5",
+    "/home/charl/Moriarty/experiments/moriarty-language/src/successor/financial-lifecycle-v2.ts": "df6932712e4db1204ef0ab89db600258ceb84f2fd0bbf0e9564468af9468e4a7",
+    "/home/charl/Moriarty/experiments/moriarty-language/src/successor/financial-lifecycle.ts": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+    "/home/charl/Moriarty/experiments/moriarty-language/src/successor/financial-outcome-intent.ts": "da22c665a385c52d504ebf59c051ab582ad12b86fbbd045bfa25fac7fca96b29",
+    "/home/charl/Moriarty/experiments/moriarty-language/tests/authority-fee-binding.test.mjs": "11d18b2facd1689e50f80291ce50f18fe7733414d126e711093c5751e4bd3af4",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/custody/build.mjs": "a8e14954c77588d47360f01cb0604c49d5eec5c004b0d28f7a84f930935b8b95",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/custody/generate-lifecycle.mjs": "1610359a4d6b15389c2180133e558c08d966bf9dacc91226dd70ef35d0f63244",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact": "1230586541501ba2038434f4e1dbd92966ba11c0bdf3075f7e8aed358a251315",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "ede6a8eb95ce75b129563b5b57bcccf27002e65ae81299fcf8903c86db3baddb",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-sdk-caller.mjs": "798bc2dbbacdd00f796e76e6bd41c892e4e1caea93266124452d580bc8175c18",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-source-binding.mjs": "f008b386187dac8103780526838c6de68ddd8e8a36cf9cf268651e371ab3ce58",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-source-pins.json": "84581d5a1d0ad91570222a6cbf70a4dcb4586dfe5759a6dc826922df27c85c89",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/proven-assets.mjs": "80f7f32fdfb8fa9a9374adee1d665a8bdc83e321ce34dcc10a306231759e475e",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/design.md": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/loan-origination-accrual-contract.md": "74299d10cca2874828c4c847f6817677b033090bb85d38bb898dd462fee98383",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/specs/bounded-loan-lifecycle/spec.md": "954c6e2cdd9c33500ecf397f2e9a2c117f54df38e6cc93b0d3c927fdc404f143",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/specs/financial-postconditions/spec.md": "12619b8340e77c682bf2107538d1fda72cdce6cfb9b43388d03e306056e993ec",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/specs/lifecycle-ledger-integration/spec.md": "5e841976f842d53b1c9f6f20680c396fee45a1a26b9a43c8879a700839bfbb96",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/specs/loan-origination-accrual/spec.md": "1dcb927cf7243e31f9ec44d2bd610916d5c9a3b39ca778dbf3d8441046781c52",
+    "/home/charl/Moriarty/openspec/changes/language-to-ledger-lifecycle/tasks.md": "b95571f0728425c64d525f93b132996861f5a97ba518cc5868c88f778dc24725",
+    "/home/charl/Moriarty/openspec/changes/session-completion-sprints/design.md": "6657f1f666e6bdda67bd8fbdf01ef0c130dc41bf55bc5fa830d89c0547f1c24b",
+    "/home/charl/Moriarty/openspec/changes/session-completion-sprints/specs/session-completion-sprints/spec.md": "13eaa3640b2656a29491f18e602bab1200f7ffad90a7907d24c461b2c79757b2",
+    "/home/charl/Moriarty/openspec/changes/session-completion-sprints/tasks.md": "682092561083a878278cce995870686ac678e24205bc3c955fbdb59cae132f8d",
+    "/home/charl/Moriarty/raw/assignments/moriarty-grok-gpt6-routing-2026-09-13.md": "999bfdde5283ba6a4725607b0cd2183a18254cbac4eaf368bfbfc3a526b8ae40",
+    "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-authority-fee-binding/AUDIT-OPUS-5-1A.json": "13bd40d0a69a7864c455dd221f0f46d5439cf2b0394a6ea6b78a970a3d1c03c2",
+    "/tmp/moriarty-full-lifecycle-prerequisite-probe-results.json": "3c20a374b079b9d67c4f581876e36bb6c8b7da2b718134a92b968855c82830d9",
+    "/tmp/moriarty-full-lifecycle-prerequisite-probe.log": "37d9a36c0e605f492b3b76ee1db00b090f017e96cfbdaf41e968bee9e97b3125",
+    "/tmp/moriarty-full-lifecycle-prerequisite-probe.mjs": "9303a66a4f659f6e005d57652eb7471ac158a80e6579d696f8602a05695c0096",
+    "/tmp/moriarty-payer-expectations-gpt6-high-20260913.json": "5585f0f2dd992fb928bac3896ec6e825328a65888893a85ebb13c9125c7e78e6",
+    "/tmp/moriarty-payer-expectations-gpt6-high-20260913.md": "41b1c376acca16873813234930bebc9ca63cba500dbc4eedb2659fb3cbb7e573",
+    "/tmp/moriarty-payer-fable-20260913/prompt.md": "b0544b7e5704d5f2fb4f3cf8a4dbd2d118f3ed849f755ce9ec00a07cfba5d38e"
+  },
+  "limits": [
+    "No source/artifact edits or current executor worktree access.",
+    "No native artifact execution, compiler, proof, Docker, network, wallet or canonical accounting mutation.",
+    "Only explicitly authorized local source evaluator probes were run.",
+    "No actor-owned custody design or new generic compiler/DeFi scope.",
+    "Proposed paths and physical interfaces are not falsely labeled installed or already approved."
+  ]
+}
