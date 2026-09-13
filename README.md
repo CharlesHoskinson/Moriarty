@@ -1,3 +1,5 @@
+![Moriarty — a language for Midnight. Private. Programmable. Provable.](docs/assets/moriarty-banner.png)
+
 # Moriarty
 
 Moriarty is an experimental language and toolchain for **bounded financial contracts on Midnight**. Developers describe financial state, permitted actions, payment obligations and authorization rules. The goal is to compile those descriptions into Compact and require each transaction to carry a proof that its execution and the contract history it extends satisfy the agreement.
