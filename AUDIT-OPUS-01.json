@@ -1,0 +1,177 @@
+{
+  "schema": "moriarty.independent-audit/1",
+  "auditId": "AUDIT-OPUS-01",
+  "auditor": "Claude Opus 5 (1M context)",
+  "date": "2026-09-12",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-scope-reconciliation",
+  "task": "Moriarty roadmap task 5.2 — exit-retaining executor caller, static prover-lifetime helper, offline fault matrix",
+  "specReviewed": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+  "designConstraintReviewed": "openspec/changes/language-to-ledger-lifecycle/design.md",
+  "verdict": "BLOCKED",
+  "blockingFindings": ["F1", "F2"],
+  "loadBearingAssertionCount": 45,
+  "assertionAudit": {
+    "totalTests": 45,
+    "byFile": {
+      "prover-lifetime.test.mjs": 7,
+      "executor-caller.test.mjs": 16,
+      "fault-matrix.test.mjs": 22
+    },
+    "loadBearingTests": 45,
+    "loadBearingAndSpecFaithfulTests": 42,
+    "vacuousAssertions": 1,
+    "vacuousAssertionLocations": ["experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs:91,93"],
+    "testsEncodingSpecDivergentExpectations": [
+      "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs:77-83",
+      "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs:131-134",
+      "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs:136-139"
+    ],
+    "notes": "No test asserts only that a function does not throw. Every test pins an exact value, an exact byte string, an exact error code, or an exact call ordering, so none would pass against a stub. Mocking is confined to the transport boundary the spec requires to be injectable (spawn, monotonicNow, killGroup, writeControlRecord, readDurableResult); field closure, argv validation, byte encoding, diagnostic bounding, ordering and classification are all real code under test. Three tests are load-bearing but pin expectations that contradict the spec (see F1 and F5); one individual assertion is dead code."
+  },
+  "dimensionVerdicts": {
+    "assertionsReal": "PASS",
+    "specFidelity": "PARTIAL — fault matrix met; prover lifetime partially met; runner invocation handoff not met as specified",
+    "fourHardRules": "3 of 4 pass — prover lifetime before startup PASS, receipt loss cannot unbound PASS, zero-exit/stdout non-promotion PASS on the letter but weak in substance, raw-exit-before-cleanup PASS while non-manufacture FAILS",
+    "launcherFrameworkInvented": "NO — reuses launch-local.mjs argv contract and receipt.mjs beforeDeadline; 238 added lines, one added script, zero dependencies",
+    "determinism": "PASS — fault-matrix.mjs has zero imports, no clock, no randomness, no I/O, no module state",
+    "overreach": "NONE — no accounting, budgets, charges, wallets, network, Docker, systemd or retained build artifact; no live containment or financial-acceptance claim"
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "dimension": "four hard interface rules / spec fidelity — safety cleanup must never manufacture evidence",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "73, 49, 82-88 (with fault-matrix.mjs:28-29 and the expectation cemented at executor-caller.test.mjs:77-83)",
+      "summary": "The caller's own outer-timeout SIGKILL of the child process group returns as close signal SIGKILL, is classified by classifyRawExit as {kind:'signal'}, and is then treated by the matrix as a known main failure before the deadlineExceeded branch is reached, so a deadline crossing is reported as PROCESS_FAILED / exit 1 / MAIN_SIGNAL even though deadlineExceeded is true in the same matrix input. There is no provenance tracking distinguishing a retained terminal observation of the unit's main process from a kill the caller itself requested. executor-caller.test.mjs:81 asserts the wrong outcome as correct.",
+      "whyItMatters": "The spec forbids exactly this in four places: line 68 'the kill request/outer exit alone does not' establish a known signal; line 72 'outer signal ... remain PROCESS_UNKNOWN rather than ... a fabricated known main failure'; the line 90 table row requiring DEADLINE_EXCEEDED absent a retained known main failure; and line 132 'Never convert unknown to a terminal failed defect'. Downstream (spec line 132) PROCESS_FAILED maps to CLI 4 with a failed reservation, whereas an unknown must map to runner_unresolved with reservation and ownership retained active. A deadline crossing with possibly live, unresolved resources would be filed as a decided financial failure, and a passing test defends that."
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "dimension": "four hard interface rules / spec fidelity — no invented evidence",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "83-88",
+      "summary": "The matrix input hardcodes stopReturnCode:0, timerCancelReturnCode:0 and timerCancelReceiptPersisted:true, and derives terminalEvidencePersisted and stopReceiptPersisted from 'the exit kind was known and the durable read succeeded'. No stop was issued, no stop receipt exists, no timer was armed or cancelled, and no terminal evidence write was observed. These are the final four gates before PROCESS_SUCCESS in fault-matrix.mjs:30-35, so all four are satisfied by construction.",
+      "whyItMatters": "Spec line 130 requires 'null for unavailable scalar observations, not invented zero'; line 79 requires independently observed containment plus confirmed timer cancellation for PROCESS_SUCCESS; line 98 requires unknown outcomes and unresolved resources to stay explicit. Inventing these facts is the manufacture the scoped scenario 'Safety cleanup does not manufacture evidence' exists to prevent, and it hides the gap instead of surfacing it — the honest wiring would make PROCESS_UNKNOWN the only reachable non-failure outcome until the real observations are wired. FOREMAN_REPORT.md discloses the terminalEvidencePersisted/stopReceiptPersisted conflation but not the invented stopReturnCode:0 or timerCancel* values."
+    },
+    {
+      "id": "F4",
+      "severity": "high",
+      "dimension": "spec fidelity — Concrete one-shot runner invocation handoff",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "63, 97-101",
+      "summary": "None of the requirement's fixed protocol is implemented: no AF_UNIX stream socket in a mode-0700 runtime directory, no mode-0600 socket, no 256-bit nonce, no MORIARTY_INVOCATION_SOCKET/NONCE environment values (no env is passed at all, so the detached child inherits the whole parent environment), no constant-time nonce equality, no authority equality, no peer UID check, no bounded /proc PID ancestry with retained start ticks, no exactly-one-handshake rule, no durable invocation event before answering the handshake, and no EOF-before-setup / EOF-after-startup semantics. The named scenario 'Actual runner-to-script protocol' enumerates seven denial cases (forged nonce, wrong authority/reservation, stale store event, different launcher PID, replay, boot mismatch, parent disappearance); none is exercised. What is delivered is the argv-and-clock corner: fixed argv passed unmutated, stdin DEVNULL, detached child, outer monotonic start sampled immediately before spawn.",
+      "whyItMatters": "Spec line 30 explicitly forbids assuming the transport: 'repair/pin the minimal launcher adapter before source approval rather than assume transport exists'. FOREMAN_REPORT.md discloses the missing socket under 'Deliberately left open' yet still lists the requirement under 'Spec requirements implemented' and maps the seven-case scenario to the single argv test, which overstates coverage. The lane's scope statement must either be amended to the argv-only reinterpretation or this requirement left open; it should not be recorded as met."
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "dimension": "spec fidelity / four hard rules — zero exit must not promote a result",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "54-59, 80",
+      "summary": "containment() accepts any plain object and reads containmentComplete from either the top level or a nested cleanup object, with no schema, digest, identity or status validation. The child's own status field is never read, no exit/disposition mismatch check exists, and the test fixture's document is schema moriarty.local-financial-integration/1 rather than the specified moriarty.loan-process-result/1. PROCESS_SUCCESS therefore rests on one unvalidated boolean authored by the child, plus the invented facts in F2.",
+      "whyItMatters": "Spec line 132 requires the caller to validate schema, digests and current invocation identities and to compare the child's exit with the disposition, and states that child 0 requires a valid PROCESS_SUCCESS plus all success evidence; spec line 79 defines C as independently observed containment. Accepting the child's self-report as containment proof is the weakest possible promotion bar, and the module that emits PROCESS_SUCCESS is where that validation belongs even though the result-document requirement itself sits outside the lane's three."
+    },
+    {
+      "id": "F5",
+      "severity": "medium",
+      "dimension": "spec fidelity — prover lifetime established before daemon startup",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "108, 115-119 (tests at executor-caller.test.mjs:131-139)",
+      "summary": "requireControlRecord defaults to true, but when set false the function spawns with no control record at all, and line 117 swallows a control-write failure and proceeds to spawn. Two tests assert PROCESS_SUCCESS for exactly those runs.",
+      "whyItMatters": "The startup-race table (spec line 115) requires 'No Docker start' and a retained refusal with no proof child when control validation or the pre-start fsync fails, and line 77 permits 'no weaker fallback'. A function named runProverBoundedExecutor should have no mode in which the prover bound is never persisted and the run still reports success, and no test should certify that mode as success."
+    },
+    {
+      "id": "F6",
+      "severity": "medium",
+      "dimension": "correctness / bounded supervision",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "73, 65-94",
+      "summary": "Exactly one killGroup is attempted at the deadline; its error is recorded into killErrorClass and otherwise ignored. The returned promise settles only on the child's close or error event, so if the kill throws or the child is unreapable nothing ever resolves or rejects — no escalation, no second bound, no abandonment. No test covers a child that fails to close after the kill.",
+      "whyItMatters": "Spec line 47 requires bounded subprocess supervision and states that a hang 'cannot be made safe by a clock check alone'. An unbounded await inside the outer runner defeats the whole fixed-deadline schedule and leaves the caller unable to report DEADLINE_EXCEEDED at all."
+    },
+    {
+      "id": "F7",
+      "severity": "medium",
+      "dimension": "spec fidelity / scope — prover lifetime helper",
+      "file": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+      "line": "whole file (spec lines 103 and 123)",
+      "summary": "The spec requires one import-free static PID 1 executable at plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c with reproducible build instructions, and offline tests that compile the actual wrapper and drive children that exit, hang, fork, change process group and ignore signals, exercising parent death, deadline, reap and signal forwarding. No such file exists anywhere in the tree and none of that behaviour is implemented or tested. The delivered module is a pure, correct model of the wrapper's arithmetic and control-record bytes only, so the scoped scenario 'Post-start receipt loss cannot unbound the prover' holds only in the weaker sense that the caller does not recompute or widen its own bounds.",
+      "whyItMatters": "The requirement's entire safety argument is that a process that is PID 1 of a private namespace enforces a finite bound independently of the executor, Foreman, the user-manager timer and any post-start receipt. Arithmetic in the parent cannot establish that. FOREMAN_REPORT.md discloses the omission, so this is a scope shortfall rather than a false claim, but the requirement cannot be recorded as satisfied on this evidence."
+    },
+    {
+      "id": "F8",
+      "severity": "low",
+      "dimension": "spec fidelity — failure-code accuracy",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "85 (with fault-matrix.mjs:30-33)",
+      "summary": "Because terminalEvidencePersisted is terminalKnown && !resultReadFailed, an unknown close yields EVIDENCE_WRITE_FAILED although no write failed; the spec's code for an unobserved exit is MAIN_EXIT_UNAVAILABLE (spec line 66), which the matrix does not define. Separately, stopErrorClass — the spec's field for a failed collector stop — is loaded with the error class of the caller's own killGroup, so a deadline crossing whose kill errored is reported as STOP_FAILED rather than DEADLINE_EXCEEDED.",
+      "whyItMatters": "Both cases are PROCESS_UNKNOWN / 3, so the operational disposition is unaffected, but the retained failure code names the wrong fact and would misdirect the later reconciliation that reads it."
+    },
+    {
+      "id": "F9",
+      "severity": "low",
+      "dimension": "test honesty",
+      "file": "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs",
+      "line": "91, 93",
+      "summary": "The 'safety cleanup does not manufacture evidence' test declares let cleanupCalls=0 and then asserts cleanupCalls===0; nothing in the test can increment it. The same test's source-purity regex and classification assertion are real, so the test is not vacuous overall.",
+      "whyItMatters": "A tautology inside the very test named for the anti-manufacture scenario reads as coverage that does not exist. Replace it with an injected cleanup spy the classifier could in principle call, or delete it."
+    },
+    {
+      "id": "F10",
+      "severity": "low",
+      "dimension": "spec fidelity / containment",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "63",
+      "summary": "spawn is called with {cwd,detached:true,stdio:['ignore','pipe','pipe']} and no env key, so the detached child inherits the entire parent environment. Spec line 30 requires only the two invocation variables to be passed 'as explicitly set child environment values, overwriting any inherited values', and line 36 that no environment value alone grants authority.",
+      "whyItMatters": "Full inheritance into a detached financial launcher is a containment gap. It may be deliberate, since launch-local.mjs consumes MORIARTY_* inputs, but nothing in the source or tests records that decision."
+    },
+    {
+      "id": "F11",
+      "severity": "low",
+      "dimension": "test coverage / robustness",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "74, 76",
+      "summary": "No test covers the child 'error' path, which rejects with the raw error and produces no disposition at all, although a spawn failure before startup is arguably the REFUSED / no-start row (spec line 94). classifyRawExit is also called synchronously inside the close listener outside any try, so a malformed (status,signal) pair from an injected fake throws as an uncaught exception rather than rejecting the promise.",
+      "whyItMatters": "A launch failure and a malformed close are precisely the fault-injection cases the spec's isolated-acceptance requirement asks for, and an uncaught throw from an event listener cannot be handled by the caller at all."
+    },
+    {
+      "id": "F12",
+      "severity": "low",
+      "dimension": "maintainability",
+      "file": "experiments/moriarty-midnight-financial/package.json",
+      "line": "test:executor script",
+      "summary": "The new suite is reachable only through the new test:executor script; neither test (tests/*.test.mjs) nor test:ledger includes the three new files, so it can rot silently. Separately, decodeProverControlRecord, computeWrapperKillDeadline and validateClockIdentity are exported and tested but called by nothing in the changed set — they are the interface for the wrapper that does not exist (F7).",
+      "whyItMatters": "An aggregate gate that does not include a suite gives no regression protection, and tested model code with no production consumer can drift from the eventual wrapper without any test failing."
+    },
+    {
+      "id": "F13",
+      "severity": "low",
+      "dimension": "record keeping",
+      "file": "FOREMAN_REPORT.md",
+      "line": "verification section",
+      "summary": "The audit brief states openspec validate --all --strict reported 13 passed; FOREMAN_REPORT.md and .json report 'Totals: 12 passed, 0 failed (12 items)' and flag the difference as predating the diff. Not re-run here, per instruction.",
+      "whyItMatters": "One of the two records is stale. Nothing in this diff touches openspec/, so the discrepancy should be reconciled before sign-off rather than carried forward in two conflicting records."
+    }
+  ],
+  "strengths": [
+    "fault-matrix.mjs is closed, total, precedence-ordered, import-free, deterministic and tested row by row, including both ordering rules the spec states in prose (identity over apparent exit fields; known main failure over every later cleanup limitation).",
+    "The prover control-record codec is byte-exact to the closed six-line ASCII format and rejects CR, non-ASCII, oversize, wrong framing, non-canonical decimals and uppercase hex with distinct codes.",
+    "Field closure is enforced structurally via Reflect.ownKeys and property descriptors, so getters and non-enumerable properties are rejected rather than read; tests prove the poisoned getter never ran.",
+    "BigInt nanoseconds throughout, with the outer monotonic start sampled once and threaded rather than re-read.",
+    "Raw exit retention is correct and deliberate: the first statement of the close handler, before the settled guard, before the durable read, before classification.",
+    "Diagnostics are bounded at exactly 1048576 bytes with a tested boundary and cannot reach the disposition.",
+    "No launcher framework invented: reuses the documented launch-local.mjs argv contract and receipt.mjs beforeDeadline; one added script, zero dependencies, nothing written outside the package.",
+    "FOREMAN_REPORT.md discloses its own gaps, including the missing socket, the missing C wrapper, the literal matrix defaults, the flag conflation and a verification count that contradicts the expected one."
+  ],
+  "unblockingActions": [
+    "Stop treating a caller-initiated kill as a retained main exit: retain the raw close for evidence but feed the matrix an unknown rawExit (or a provenance-guarded equivalent) when the caller requested the kill, so the DEADLINE_EXCEEDED row is reached; then change the expectation at executor-caller.test.mjs:81 to PROCESS_UNKNOWN / 3 / DEADLINE_EXCEEDED.",
+    "Replace the invented stop and timer facts with null scalars and false receipts for what was not observed, accepting PROCESS_UNKNOWN as this caller's best honest non-failure outcome until real observations are wired.",
+    "Either amend the lane's scope to the argv-only reinterpretation of 'Concrete one-shot runner invocation handoff' or leave that requirement open; do not record it as met with the argv test standing in for the scenario's seven denial cases."
+  ],
+  "filesWritten": [
+    "AUDIT-OPUS-01.md",
+    "AUDIT-OPUS-01.json"
+  ]
+}

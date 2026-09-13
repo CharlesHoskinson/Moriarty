@@ -1,0 +1,223 @@
+{
+ "schema": "moriarty.audit-report/1",
+ "auditId": "AUDIT-OPUS-02",
+ "round": "correction-1 review (round two)",
+ "auditor": "Claude Opus 5 (1M context), independent read-only lane",
+ "date": "2026-09-12",
+ "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-scope-reconciliation",
+ "task": "roadmap task 5.2 \u2014 prover-bounded one-shot executor caller, closed fault disposition matrix, prover lifetime control record",
+ "priorAudit": "AUDIT-OPUS-01.md / AUDIT-OPUS-01.json (verdict BLOCKED; blocking F1, F2)",
+ "implementerRecord": "FOREMAN_REPORT.md / FOREMAN_REPORT.json (correction round)",
+ "verdict": "APPROVED",
+ "blockingFindings": [],
+ "readOnlyRespected": true,
+ "filesWritten": [
+  "AUDIT-OPUS-02.md",
+  "AUDIT-OPUS-02.json"
+ ],
+ "summary": "Both blocking defects are genuinely fixed, not relabelled. Kill provenance is a real, single-point variable whose removal or mis-hoisting is caught by mutation testing and confirmed by live probe; the mapping to PROCESS_UNKNOWN/MAIN_EXIT_UNAVAILABLE is the spec's own row for an outer kill without a retained terminal observation. No invented scalar survives in the matrix input, and PROCESS_SUCCESS is structurally unreachable from a caller that runs no collector, stop or timer \u2014 the spec-correct outcome, with the pure matrix still able to report success on observed facts. All seven added tests are load-bearing: each dies when the fix it guards is reverted. No pre-existing test was weakened; the two corrected expectations move toward the spec. F4 and F7 are de-scoped and honestly recorded, including a retraction of round one's overstatement. The residue is label coarseness inside an already-correct PROCESS_UNKNOWN/3 outcome plus a process-level gap in what abandonment means, all recorded as new low findings.",
+ "priorFindings": [
+  {
+   "id": "F1",
+   "severity": "high",
+   "blocking": true,
+   "disposition": "fixed",
+   "note": "killRequested is set only when the caller's own killGroup returns normally (executor-caller.mjs:105) and gates exactly one substitution (:120); the real rawExit is still frozen first (:115) and returned (:100). Mapping to PROCESS_UNKNOWN/3/MAIN_EXIT_UNAVAILABLE is spec.md line 66 verbatim ('outer kill without a retained terminal observation'). Verified by mutation (collapsing :120 fails the retitled F1 test; hoisting killRequested above the try fails the new denied-kill test), by live probe in both kill-succeeds and kill-throws shapes, and in the coincidence race. Deadline, kill error and true terminal observation are all still retained in the returned record, so no spec-required fact is lost \u2014 only the failureCode label, in the safe direction. See N7 for the over-application to nonzero exits."
+  },
+  {
+   "id": "F2",
+   "severity": "high",
+   "blocking": true,
+   "disposition": "fixed",
+   "note": "Single matrix construction site (executor-caller.mjs:92-97) now carries stopReturnCode:null, timerCancelReturnCode:null, stopErrorClass:null and false for the three persistence booleans; both invented zeros and the derived booleans are gone, and the caller's own kill error moved to diagnostics.killErrorClass. PROCESS_SUCCESS is unreachable by a literal false, which is spec-correct: spec lines 74/79 require stop rc, stop receipt, C and confirmed cancellation, none of which this caller observes. fault-matrix.mjs still reports success on a complete observed input (test at fault-matrix.test.mjs:15, untouched). Not an overshoot: a caller that cannot observe success must not report it. Residues are label-level only \u2014 see N1 and N4 \u2014 and cannot change a status or exit code."
+  },
+  {
+   "id": "F3",
+   "severity": "medium",
+   "disposition": "fixed",
+   "note": "containment() enforces schema === moriarty.loan-process-result/1 and agreement between the document's status and the observed rawExit; both throw distinct codes and are treated as an unresolved read. Removing either check fails the new test. Fixture corrected to the spec schema. See N6: the containment gate this feeds is now unreachable, so the validation affects only diagnostics.resultReadFailed."
+  },
+  {
+   "id": "F4",
+   "severity": "high",
+   "disposition": "descoped",
+   "note": "Not attempted. Honestly recorded, and round one's claim that the requirement was implemented is explicitly retracted, with the seven denial cases named as unexercised. Confirmed absent: no AF_UNIX, MORIARTY_INVOCATION_SOCKET, MORIARTY_INVOCATION_NONCE anywhere in the six files. The new explicit env field gives a future caller a place for the two variables without claiming the protocol."
+  },
+  {
+   "id": "F5",
+   "severity": "medium",
+   "disposition": "fixed",
+   "note": "writeControlRecord is type-checked (:143) and awaited unconditionally (:147) with no try/catch; a throw propagates before runPrepared, so no child, listener or timer exists and nothing can hang or leak. Both rewritten tests assert rejection and an event log that stops at ['clock','write'] \u2014 stronger than what they replaced and consistent with spec lines 77 and 115. Mutating the swallow back fails both. See N5: that await is itself unbounded."
+  },
+  {
+   "id": "F6",
+   "severity": "medium",
+   "disposition": "fixed",
+   "note": "The promise always settles: probed with a successful kill and no close, a throwing kill and no close, a late close after the settle (no double settle, no unhandled rejection) and a close just before the deadline (zero kills). clearTimers() runs on all four settlement paths and clears both timers. The if(settled) check inside the deadline callback sits after the kill, which is the wrong order in principle but unreachable because settle and clearTimers are synchronous with close. See N3 for the process-level residue."
+  },
+  {
+   "id": "F7",
+   "severity": "medium",
+   "disposition": "descoped",
+   "note": "Not attempted; prover-lifetime.mjs and its test are untouched (verified, section 7). Recorded as open with no new coverage claimed. The three consumerless prover exports are the unavoidable tail of this de-scoping (F12)."
+  },
+  {
+   "id": "F8",
+   "severity": "low",
+   "disposition": "fixed",
+   "note": "MAIN_EXIT_UNAVAILABLE row added at fault-matrix.mjs:30 after the known-main-failure branch and before the terminal-evidence gate, so an unobserved exit is no longer reported as a write failure; stopErrorClass no longer carries the caller's own kill error. Deleting the row fails four tests. See N1 (the mislabel reappears for observed zero exits as a consequence of the F2 fix) and N2 (the row absorbs more specific codes for unknown exits)."
+  },
+  {
+   "id": "F9",
+   "severity": "low",
+   "disposition": "fixed",
+   "note": "The dead cleanupCalls declaration and its tautological assertion are gone; the source-purity regex and the unresolved-evidence classification remain (fault-matrix.test.mjs:91-96)."
+  },
+  {
+   "id": "F10",
+   "severity": "low",
+   "disposition": "fixed",
+   "note": "spawn receives env:options.env??{} (:76) with a validated flat string map (stringMap, :31-34), so the detached child no longer inherits the parent environment silently. Dropping the env key fails two tests. The two invocation variables remain F4."
+  },
+  {
+   "id": "F11",
+   "severity": "low",
+   "disposition": "fixed",
+   "note": "New test covers child.once('error') rejecting with the original error object (identity-asserted); the close handler body is wrapped so a malformed (status,signal) pair rejects with EXECUTOR_RAW_EXIT_SIGNAL instead of throwing uncaught. Reverting either fails the corresponding test."
+  },
+  {
+   "id": "F12",
+   "severity": "low",
+   "disposition": "partially_fixed",
+   "note": "Wiring fixed: the three suites are appended to test:ledger (existing 25-file list unchanged and in order) and test:executor is retained; no dependency added, no script weakened. The second half stands: decodeProverControlRecord, computeWrapperKillDeadline and validateClockIdentity still have no production reader, which is tied to descoped F7."
+  },
+  {
+   "id": "F13",
+   "severity": "low",
+   "disposition": "fixed",
+   "note": "Reconciled by measurement: openspec validate --all --strict reports Totals: 12 passed, 0 failed (12 items). The implementer's count was correct and the round-one brief's '13' was stale. Nothing in the diff touches openspec/. Minor: the replacing report no longer states the total at all."
+  }
+ ],
+ "newFindings": [
+  {
+   "id": "N1",
+   "severity": "low-medium",
+   "title": "every clean run reports a terminal write failure that never happened",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:94 with ledger/fault-matrix.mjs:31",
+   "detail": "With terminalEvidencePersisted unconditionally false, EVIDENCE_WRITE_FAILED is the outcome for every run that is not a known main failure or an unknown exit \u2014 including a zero exit with a valid schema-checked durable result \u2014 although no terminal write was attempted. Because :31 precedes :34 it also masks a real deadline crossing (kill denied, child then exits zero yields EVIDENCE_WRITE_FAILED rather than DEADLINE_EXCEEDED; measured). The closed vocabulary has no 'terminal evidence not attempted' code. Status and exit code stay the honest PROCESS_UNKNOWN/3, so this is a labelling defect, not a manufactured outcome.",
+   "blocking": false
+  },
+  {
+   "id": "N2",
+   "severity": "low",
+   "title": "the new matrix row absorbs more specific failure codes for unknown exits",
+   "location": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs:30",
+   "detail": "Exhaustive comparison over 368,640 inputs against a copy with the row removed: 4,608 classifications change, all with rawExit.kind==='unknown'. Two change status, PROCESS_SUCCESS/0 to PROCESS_UNKNOWN/3/MAIN_EXIT_UNAVAILABLE, closing a real hole in which success was reachable with no observed main exit. The other 4,606 keep PROCESS_UNKNOWN/3 but replace EVIDENCE_WRITE_FAILED (2,304), STOP_FAILED (1,920), STOP_RECEIPT_FAILED (192), DEADLINE_EXCEEDED (96), PARENT_LOST (48), CONTAINMENT_UNRESOLVED (24), TIMER_CANCEL_FAILED (20) and RESULT_WRITE_FAILED (2) with the less specific code. No input with exit, signal or null raw exit changed, so the insertion is precedence-safe for existing rows; the report's 'no change to existing ordering' is literally true but reads as a stronger claim than the code supports. No test pins the new row against those competing gates.",
+   "blocking": false
+  },
+  {
+   "id": "N3",
+   "severity": "low-medium",
+   "title": "abandonment settles the promise but does not release the child",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:107-110",
+   "detail": "After the abandonment bound fires, nothing destroys or unrefs child.stdout/child.stderr, no listener is removed, no escalation or second kill is attempted, and the result exposes no pid or process group. Measured with a real spawn: the promise settled at 305 ms while the parent process stayed alive 4,028 ms until the abandoned child exited, with diagnostics still accumulating (1 MiB cap) for no consumer. The bound is therefore on the promise, not on the caller's liveness, and the 'cleanup owner' the spec's deadline row requires retained cannot be read out of the result.",
+   "blocking": false
+  },
+  {
+   "id": "N4",
+   "severity": "low",
+   "title": "asserted-but-unobserved boolean positions remain, and one lost its disclosure",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:93,96",
+   "detail": "startupValid:true, with startupWriteFailed, evidencePreexists, invocationIdMismatch, parentLost and resultWriteFailed at false, are positions this caller never observed \u2014 it starts no transient unit and reads no startup identity. They cannot promote a result or manufacture a terminal failure; their whole influence is on which PROCESS_UNKNOWN code is reported. Round one's report disclosed startupValid; the replacing report, which supersedes it in full, does not. Carry the disclosure forward.",
+   "blocking": false
+  },
+  {
+   "id": "N5",
+   "severity": "low",
+   "title": "the mandatory control-record write is awaited without a bound",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:147",
+   "detail": "The durable read is wrapped in beforeDeadline(+1000 ms) at :89, but the control-record write is awaited with no deadline, and F5's fix puts that unbounded await on the only path to spawn. A hanging persistence worker therefore hangs the executor before any child exists \u2014 the hazard spec line 47 names explicitly. Pre-spawn, so no owned resource is at risk; low.",
+   "blocking": false
+  },
+  {
+   "id": "N6",
+   "severity": "low",
+   "title": "the F3 containment validation no longer gates the disposition",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:62-70,95 with ledger/fault-matrix.mjs:31,35 and ledger/executor-caller.test.mjs:57-60",
+   "detail": "containmentComplete reaches fault-matrix.mjs:35 only past :31, which this caller can never pass, so the new schema and status validation affects only diagnostics.resultReadFailed. The new F3 test asserts that flag and stays load-bearing, but the pre-existing test 'durable completion without independently observed containment remains unknown' now yields the same EVIDENCE_WRITE_FAILED for containment true and false and no longer tests its own title. CONTAINMENT_UNRESOLVED is unreachable from this caller (still reachable and tested in the pure matrix).",
+   "blocking": false
+  },
+  {
+   "id": "N7",
+   "severity": "low",
+   "title": "the provenance downgrade is broader than the spec requires",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:120",
+   "detail": "killRequested suppresses every post-kill observation, including a genuinely retained exit/nonzero that merely coincided with the deadline (measured: exit 3 after a successful kill classifies as MAIN_EXIT_UNAVAILABLE). Spec line 68 constrains the signal row; absorbing a nonzero exit code as well is conservative over-application. The direction is safe \u2014 ownership retained rather than a financial failure decided \u2014 and the real observation survives in result.rawExit.",
+   "blocking": false
+  },
+  {
+   "id": "N8",
+   "severity": "informational",
+   "title": "validated options are re-read at spawn time, after an await boundary",
+   "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:76 with :142-148",
+   "detail": "args and env are read inside runPrepared, after the await on writeControlRecord that follows validation, so an injected writer could mutate either between check and use; env is additionally passed by reference rather than copied. Requires a hostile injected dependency, which is outside the module's trust model, but freezing or copying at validation time would close it. Related nit: the if(settled) guard in the deadline callback sits after killGroup rather than before it; unreachable in practice because settle and clearTimers are synchronous with close, but the safe order is the reverse.",
+   "blocking": false
+  }
+ ],
+ "verification": [
+  {
+   "check": "npm run test:executor",
+   "result": "1..52, pass 52, fail 0, skipped 0, todo 0",
+   "note": "22 executor-caller + 23 fault-matrix + 7 prover-lifetime; no skip/todo/only markers"
+  },
+  {
+   "check": "mutation testing on a scratch copy of ledger/",
+   "result": "10 reversions, each failing exactly the expected added test(s) and no others",
+   "note": "F1 provenance, denied-kill provenance, F2 terminal-evidence, F6 abandon timer, F8 matrix row, F10 env, F11 close guard, F11 error listener, F3 schema, F3 status agreement"
+  },
+  {
+   "check": "live probes of the abandonment and race paths",
+   "result": "settles in all shapes; no double settle; no unhandled rejection; zero kills when the child closes before the deadline",
+   "note": "includes a real spawn measuring 305 ms settle versus 4,028 ms process exit (N3)"
+  },
+  {
+   "check": "exhaustive fault-matrix comparison, new versus row-removed",
+   "result": "368,640 inputs, 9 difference classes, all rawExit.kind==='unknown'",
+   "note": "basis for N2"
+  },
+  {
+   "check": "openspec validate --all --strict",
+   "result": "Totals: 12 passed, 0 failed (12 items)",
+   "note": "reconciles F13"
+  },
+  {
+   "check": "overreach grep across the six files",
+   "result": "2 hits, both benign and pre-existing",
+   "note": "prover-lifetime disclaimer comment; node:fs inside the purity test"
+  },
+  {
+   "check": "production wiring grep",
+   "result": "no importer of the three modules outside their own tests",
+   "note": "no existing caller's behaviour can have changed"
+  },
+  {
+   "check": "git status --porcelain / git log -1",
+   "result": "package.json modified, six untracked new ledger files, HEAD 056e6622 unchanged",
+   "note": "no pre-existing test file touched; nothing committed"
+  },
+  {
+   "check": "prover-lifetime byte-identical claim",
+   "result": "corroborated by mtime==ctime==17:39 on both files, predating the 17:58 round-one audit and every 18:12-18:29 correction write",
+   "note": "files are untracked, so no git baseline exists; evidence is timestamps plus content inspection, not a stored digest"
+  }
+ ],
+ "descopingAssessment": "Honest. F4 and F7 are stated as not attempted, in their own sections and again under explicit open work, and the report retracts round one's claim that the handoff requirement was implemented \u2014 the exact overstatement that made F4 a finding. The seven denial cases are named as unexercised. Absence independently confirmed. The unreachability of PROCESS_SUCCESS is also stated plainly and listed as unresolved future work rather than presented as completeness.",
+ "unblockingActions": [],
+ "recommendedFollowUp": [
+  "Add a matrix code (or a distinct field) for 'terminal evidence never attempted' so a clean run is not reported as EVIDENCE_WRITE_FAILED and a real deadline crossing is not masked (N1).",
+  "Decide the MAIN_EXIT_UNAVAILABLE row's placement deliberately against STOP_FAILED and DEADLINE_EXCEEDED, and pin it with a precedence test (N2).",
+  "Complete abandonment at the process level: destroy or unref the child pipes, remove listeners, and return the pid/process group so the outstanding cleanup owner is retained (N3).",
+  "Carry round one's startupValid disclosure forward into the current implementation record (N4).",
+  "Bound the control-record write the way the durable read is bounded (N5)."
+ ]
+}
