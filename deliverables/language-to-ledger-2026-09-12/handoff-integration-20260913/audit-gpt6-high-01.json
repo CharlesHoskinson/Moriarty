@@ -1,0 +1,310 @@
+{
+  "schema": "moriarty.read-only-source-audit/1",
+  "createdUtc": "2026-09-13T16:59:41.633225+00:00",
+  "requestedReviewer": {
+    "model": "gpt-6",
+    "effort": "high"
+  },
+  "actualReviewer": {
+    "agent": "/root/handoff_check",
+    "hostIdentity": "GPT-6 Codex, inherited parent model/effort; no separate provider receipt available"
+  },
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol",
+  "headAtCompletion": "5107a6ffb45cfc498076c8fedcffe3f0345cfa6b",
+  "candidateState": "Initially four corrected files were uncommitted. Parent committed preserved exact candidate while audit ran; final manifest binds current bytes. Parent confirmed frozen candidate.",
+  "verdict": "CHANGES_REQUIRED_FOR_HELPER_READINESS; TASK_5_2_NOT_COMPLETE",
+  "approval": false,
+  "task5_2ClosureApproved": false,
+  "mergeDisposition": "The three narrowly claimed corrections are substantively present and focused regressions pass. No source-readiness/closure approval for the full helper candidate: H1/H2/H3 remain. Preservation/integration as explicitly incomplete WIP is a parent decision, not source or acceptance approval.",
+  "task5_2Requirements": [
+    {
+      "requirement": "Concrete one-shot runner invocation handoff",
+      "status": "partial-helper-only; not met",
+      "evidence": "Real AF_UNIX model, random nonce, fixed environment and ordered denial; missing real runner/script/current-state/peer consumer (C1)."
+    },
+    {
+      "requirement": "Prover lifetime established before daemon startup",
+      "status": "not met",
+      "evidence": "Pure arithmetic/control bytes exist; actual static PID 1 and integrated pre-start/descendant boundary absent (C2)."
+    },
+    {
+      "requirement": "Identity-safe external containment and deterministic fault disposition",
+      "status": "partial-helper-only; not met",
+      "evidence": "Pure selector and hand-written matrix exist; no full callable identity-safe cleanup, result/history evidence path (C3); null raw observation can succeed (H2)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "H1",
+      "severity": "high",
+      "scope": "helper-source-readiness",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:107",
+      "related_locations": [
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:115",
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:131",
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:175"
+      ],
+      "summary": "Persistence waits can still prevent executor return after its outer and abandonment bounds.",
+      "evidence": "complete() unconditionally awaits handoffSetup; appendInvocationEvent is awaited without a deadline. An injected never-resolving append with outerTimeoutMs=5 and abandonAfterKillMs=5 remained pending after 60ms despite one kill request. Releasing the gate permitted completion. writeControlRecord is also awaited before runPrepared installs any timer. Denial persistence has the same unbounded await.",
+      "spec": "afk-loan-executor lines 42-47 requires bounded persistence workers and retained outer margin.",
+      "minimal_repair": "Bound setup, control/event/denial persistence and completion against the same absolute deadline; cancellation must prevent late response/work after timeout. For real blocking fsync use a separately supervised persistence worker as the spec requires. Add hanging append/control/denial cases; retain unresolved facts."
+    },
+    {
+      "id": "H2",
+      "severity": "high",
+      "scope": "helper-source-readiness",
+      "location": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs:21",
+      "related_locations": [
+        "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs:28",
+        "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs:38",
+        "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs:6"
+      ],
+      "summary": "The pure selector can declare success without any raw main-exit observation.",
+      "evidence": "Read-only call with rawExit:null and otherwise success facts returned {status:PROCESS_SUCCESS,exitCode:0,failureCode:null}. Null passes validation and skips both known-failure and unknown branches. Existing caller does not currently pass null, so this is a latent helper API hole, not an observed live success.",
+      "spec": "afk-loan-executor lines 53-71 and 83 require retained exact zero terminal evidence for success.",
+      "minimal_repair": "Require rawExit.kind=exit and code=0 for the success path; classify unavailable/null observation as unknown. Add a missing raw-exit regression with otherwise successful evidence."
+    },
+    {
+      "id": "C1",
+      "severity": "blocking",
+      "scope": "task-5.2-closure",
+      "location": "plugins/moriarty-dev/scripts/moriarty_dev/runner.py:138",
+      "related_locations": [
+        "plugins/moriarty-dev/scripts/moriarty_dev/cli.py:450",
+        "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs:1",
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:107"
+      ],
+      "summary": "There is no concrete production runner-to-executor handoff or authoritative result consumer.",
+      "evidence": "runner.execute launches generic Popen without env/socket/store-event/result-path logic. cmd_run lines 457-464 still maps ordinary exit zero to finished. Repository source search found no non-test consumer of runExitRetainingExecutor/runProverBoundedExecutor. Required loan_executor.py and installed loan_exit_retention package are absent. JS confirmCurrentState/getPeerUid/getPeerPid are injected; reservation/stale-event tests throw the desired codes directly. Launcher ancestry uses caller-supplied launcherPid/startTicks, not an enforced binding to the actual spawned process. Parent-side boot denial exists, but required child-side boot/digest/deadline/socket/current-state validation does not.",
+      "spec": "afk-loan-executor lines 3-14, 21, 29-40, 129-145.",
+      "minimal_repair": "Implement and integrate the specified loan executor, existing runner/cmd_run/store consumers and actual child exchange. Keep production authentication predicates real, inject only transports. Bind the actual spawned launcher and current store/master/wallet claim. Run isolated actual runner-to-script/fake-launcher/store tests and strong-launcher environment transport test."
+    },
+    {
+      "id": "C2",
+      "severity": "blocking",
+      "scope": "task-5.2-closure",
+      "location": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs:1",
+      "related_locations": [
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:166",
+        "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md:103"
+      ],
+      "summary": "Lifetime arithmetic and control serialization do not implement the required independent static PID 1 lifetime boundary.",
+      "evidence": "Required plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c is absent. JS computes timestamps, invokes a caller writer, checks parent-side entry and spawns the requested command. No static wrapper, actual wrapper entry parser/clock/no-follow validation, pinned argv, descendant supervision/reap, private PID namespace or pre-start Docker configuration validation is implemented by this candidate. The seven prover tests exercise pure arithmetic and strings only; no wrapper is compiled.",
+      "spec": "afk-loan-executor lines 100-127; language-to-ledger plan line 160 explicitly requires static prover lifetime boundary.",
+      "minimal_repair": "Implement the specified small static wrapper and offline controlled-child tests, then connect durable authenticated control and immutable-container validation in the actual executor. Live Docker remains separately gated; no live start is necessary for source tests."
+    },
+    {
+      "id": "C3",
+      "severity": "blocking",
+      "scope": "task-5.2-closure",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:87",
+      "related_locations": [
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:120",
+        "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs:1",
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs:15"
+      ],
+      "summary": "The offline matrix does not execute collector, persistence and identity-safe cleanup; the JS caller cannot produce process success from genuine evidence.",
+      "evidence": "containment() expects PASS/FAIL under a schema whose required values are PROCESS_SUCCESS/PROCESS_FAILED/PROCESS_UNKNOWN/REFUSED. Every caller matrix hardcodes terminalEvidencePersisted=false, stop receipts=false and timer receipts=false. Thus normal zero always becomes EVIDENCE_WRITE_FAILED; parentLost/containment/timer outcomes cannot be reached there. No collector/cleanup/timer/result/history path supplies the missing facts, and no installed loan_cleanup.py exists. Tests assert helper dispositions using hand-written booleans and simulated child exits, not actual installed full-path faults.",
+      "spec": "afk-loan-executor lines 53-98 and 129-145.",
+      "minimal_repair": "Connect actual raw-main collector, exclusive durable writers, identity-safe cleanup observations and final result validator; pass only measured facts into the selector. Run each fault-table row through the installed parser/main/runner path using isolated fixtures and fake external commands."
+    },
+    {
+      "id": "H3",
+      "severity": "medium",
+      "scope": "helper-source-readiness",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:128",
+      "related_locations": [
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:99",
+        "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:140"
+      ],
+      "summary": "Runtime cleanup failures and early setup/spawn errors do not retain their ownership limitations.",
+      "evidence": "Completion swallows every removeRuntime error. Runtime/socket creation occurs before the child promise; failures after allocation or child error reject without guaranteed owned-runtime cleanup. Bounded server close improves the measured race but does not make all failure paths retain/remove their own runtime resources.",
+      "spec": "afk-loan-executor lines 36, 75-98, 130 require owned-only cleanup and retained unresolved ownership.",
+      "minimal_repair": "Use an outer try/finally covering allocation through spawn/completion, preserve original failures, and report unresolved owned socket/directory cleanup explicitly instead of an empty catch."
+    }
+  ],
+  "verifiedCorrections": [
+    {
+      "change": "Immediate connection during delayed append",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs:74",
+      "result": "Queue installed before spawn, pending sockets transferred after append, tracked sockets destroyed and server close bounded 250ms; real-socket regression passes."
+    },
+    {
+      "change": "Boot-mismatch denial",
+      "location": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs:85",
+      "result": "Parent fresh boot read compared and HANDOFF_BOOT_ID_MISMATCH recorded/returned before later checks; regression passes. This does not implement absent child-side validation."
+    },
+    {
+      "change": "Record-before-answer coverage",
+      "location": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs:57",
+      "result": "Test now holds an unresolved recorder gate, observes no reply for 25ms, releases and checks ordering. Code awaits record. Historical claimed mutation runs were not repeated."
+    }
+  ],
+  "verification": {
+    "command": "npm run test:executor --prefix experiments/moriarty-midnight-financial",
+    "exitCode": 0,
+    "tests": 86,
+    "pass": 86,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "durationMs": 924.458656,
+    "node": "v24.18.1",
+    "additionalReadOnlyProbes": [
+      "H1: never-resolving invocation append outlives 5ms outer + 5ms abandonment; still pending at 60ms with one kill request; gate then released to finish.",
+      "H2: rawExit:null plus otherwise green matrix yields PROCESS_SUCCESS.",
+      "Late buildResponse after HANDOFF_SETUP_TIMEOUT still attempts a write to an already destroyed fake socket; no real peer delivery established; not elevated to a finding."
+    ]
+  },
+  "historicalEvidenceReconciliation": {
+    "opusVerdict": "WARNING",
+    "opusCommit": "953895a74d9e65fe695673c955658e19de589000",
+    "opusIsApproval": false,
+    "currentVersusOpusCommit": [
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+        "old_sha256": "ac87dccb3495154ecd426a5a93c592043c92cdf5e3e8fb76dcc67d555fe88ec1",
+        "current_sha256": "b782827e5a69d936750abc837b83cfbaf881d2c5cf5a2767ac601212b25a00bd",
+        "same": false
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs",
+        "old_sha256": "c85f0ff9009b578d4f6fefdaafe99b7c538a78b8b990ef075b740f586cc7c491",
+        "current_sha256": "afb51cdd9307e6272c20bc8034f5b5078104feaba96a82ec9f89b4fdd65714ba",
+        "same": false
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+        "old_sha256": "c977fa0ee96a89c0436d74ce3e6cd9ebe3944fd19637701ba9efd718d9fcf46d",
+        "current_sha256": "2594d799dacb2fc68a75aeec09fda4616ea8024f42fcd26c43809a2dcc78510c",
+        "same": false
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs",
+        "old_sha256": "c25d8c492a3fd199ab30328d9376a5a67ade7ed5041db06640490a0ba2711f32",
+        "current_sha256": "7c7bfed8c3013af39eceadaeae0efb911832e3deece1ce3ca25aa4a9a06be095",
+        "same": false
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+        "old_sha256": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+        "current_sha256": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+        "same": true
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.test.mjs",
+        "old_sha256": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed",
+        "current_sha256": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed",
+        "same": true
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs",
+        "old_sha256": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+        "current_sha256": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+        "same": true
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs",
+        "old_sha256": "19f0c29eb2ebd5d4947f61a648628abd5c131926a14dbde71d824c6d0bf91386",
+        "current_sha256": "19f0c29eb2ebd5d4947f61a648628abd5c131926a14dbde71d824c6d0bf91386",
+        "same": true
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/package.json",
+        "old_sha256": "b2dfd8c336905ff229a0ba6740143f6d56c07db50a62a25c11a5def508232bfa",
+        "current_sha256": "b2dfd8c336905ff229a0ba6740143f6d56c07db50a62a25c11a5def508232bfa",
+        "same": true
+      }
+    ],
+    "correctionProtectedHashChecks": [
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs",
+        "actual": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+        "matchesBefore": true,
+        "matchesAfter": true
+      },
+      {
+        "path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+        "actual": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+        "matchesBefore": true,
+        "matchesAfter": true
+      }
+    ],
+    "correctionReportLimitationsAccurate": [
+      "Reservation mismatch remains pass-through",
+      "Stale store event remains pass-through"
+    ],
+    "correctionReportDoesNotEstablish": [
+      "Full task 5.2 closure",
+      "Current independent approval",
+      "Actual production consumer",
+      "All recorded large-suite results independently reproduced here"
+    ],
+    "findingIdMapping": "FOREMAN F1=race matches Opus F1; FOREMAN F2=boot corresponds to Opus F3, not Opus F2 provenance; FOREMAN F3=ordering corresponds to Opus F5. Do not mark all original findings closed by ID alone."
+  },
+  "manifestSha256": {
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs": "b782827e5a69d936750abc837b83cfbaf881d2c5cf5a2767ac601212b25a00bd",
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs": "afb51cdd9307e6272c20bc8034f5b5078104feaba96a82ec9f89b4fdd65714ba",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs": "2594d799dacb2fc68a75aeec09fda4616ea8024f42fcd26c43809a2dcc78510c",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs": "7c7bfed8c3013af39eceadaeae0efb911832e3deece1ce3ca25aa4a9a06be095",
+    "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+    "experiments/moriarty-midnight-financial/ledger/prover-lifetime.test.mjs": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed",
+    "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+    "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs": "19f0c29eb2ebd5d4947f61a648628abd5c131926a14dbde71d824c6d0bf91386",
+    "experiments/moriarty-midnight-financial/package.json": "b2dfd8c336905ff229a0ba6740143f6d56c07db50a62a25c11a5def508232bfa",
+    "AGENTS.md": "5dee5d3597b499d4ed30ef5143d47550cf6e6da0634835e45521e2e4afc271e7",
+    "SESSION-ROADMAP.md": "7bd3c1b19163bb2d08120f13eeb35bcfd51683173df3b2133bf206c6e29df372",
+    "openspec/changes/language-to-ledger-lifecycle/tasks.md": "e08d279c61de767cf68954e4ede1a36babb230851618563062b9335c66c8b79f",
+    "docs/superpowers/plans/2026-09-12-language-to-ledger.md": "613e1ebc3fca78f24c989c84e16a512aaec7c141053e8e45960ef695834d4af4",
+    "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+    "openspec/changes/afk-live-financial-execution/tasks.md": "3c5ea4aaf9103771fdc143388e2dfc070b29e53574ec3a315b290822a5b3a4a0",
+    "plugins/moriarty-dev/scripts/moriarty_dev/runner.py": "5f90aeba35dd5f0ee1b0083efe0e7f753191e54f430d08d7f7d51e0b9dab045a",
+    "plugins/moriarty-dev/scripts/moriarty_dev/cli.py": "01305ac6242d4df1bf8e98891c94df4c5d212f4f09afcbe833e419e58c664c88",
+    "experiments/moriarty-midnight-financial/ledger/receipt.mjs": "f7d0266f5a798bce4433a4c4e474e68f2fe67d824f40a1afe2bd0856a9673e46",
+    "AUDIT-OPUS-HANDOFF.json": "e4090b243f88140cab1d85ec936314a09b946e91bab6c8a0848605cd793229ea",
+    "AUDIT-OPUS-HANDOFF.md": "a2540735ecb59b3a741b0368856df4cc022296fca1fc43628053dde8c3f7a2ce",
+    "FOREMAN_REPORT.json": "25214c16bc77cddbd5b3510664a4b1c3a672dbdc33612c4d56b2592da80de212",
+    "FOREMAN_REPORT.md": "9e712728709d33c5e9bd4aa33c894329e90cd6f5f127ea0c69a67adcced0aa45",
+    "deliverables/roadmap-loop-2026-09-10/ACTIVE-ROUTING.md": "7e2327ffc31d5fa794c15d11a22cba0575848e37c8bbd875ca58df08f8430e61",
+    "raw/assignments/moriarty-grok-opus-astra-routing-2026-09-10.md": "02f959d0c9f4511aeb79c05bb5a15715c4329754ed436678ccf3a18c3fc7af89",
+    "/home/charl/Moriarty/CODEX-HANDOFF-2026-09-13.xml": "4564c9923826acd1fb85bd9aa874cc9c492f1d0631cecbd899191b212709f053"
+  },
+  "sourceCandidateManifestSha256": "ee3f50444a40db6362d52ba3014dc445479f4bead1e6e3d146fe4e487f7b1b70",
+  "missingRequiredFiles": [
+    "plugins/moriarty-dev/scripts/moriarty_dev/loan_executor.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/",
+    "plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c"
+  ],
+  "limits": [
+    "Read-only source audit; only requested /tmp JSON/Markdown reports written deliberately. Focused tests create/remove disposable local AF_UNIX fixtures.",
+    "No K, Docker, public network, wallet or accounting mutation, dispatch or acceptance asserted.",
+    "No static wrapper could be compiled because it is absent; no live namespace/containment result asserted.",
+    "Full eight module/test files, package.json and complete applicable afk-loan-executor spec inspected. runner.py inspected fully; cli.py inspection limited to cmd_run; receipt.mjs only imported deadline helper locator inspected.",
+    "No graphify-out/graph.json at this checkout; no graph rebuilt under read-only scope.",
+    "Large-suite and mutation output in historical FOREMAN report remains historical, not independently rerun evidence."
+  ],
+  "reproducers": [
+    {
+      "finding": "H1",
+      "cwd": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol",
+      "argv": [
+        "node",
+        "--input-type=module"
+      ],
+      "stdin": "import {EventEmitter} from 'node:events';\nimport {runExitRetainingExecutor} from './experiments/moriarty-midnight-financial/ledger/executor-caller.mjs';\nconst h='a'.repeat(64),boot='01234567-89ab-4def-8123-456789abcdef';\nconst server=new EventEmitter();server.listening=true;\nconst child=new EventEmitter();child.pid=123;child.stdout=new EventEmitter();child.stderr=new EventEmitter();\nlet release,kills=0;const gate=new Promise(r=>release=r);\nconst execution=runExitRetainingExecutor({command:'/synthetic',args:[],cwd:'/tmp',outerTimeoutMs:5,abandonAfterKillMs:5,readDurableResult:async()=>{throw Error('absent');},dependencies:{spawn:()=>child,monotonicNow:()=>1n,killGroup:()=>{kills++;}},handoff:{parentDir:'/tmp',launcherPid:123,launcherStartTicks:1n,allocationId:'a',actionId:'a',candidateHash:h,runnerDigest:h,chargeId:'c',reservationId:'r',storeIdentity:'s',executionContextSha256:h,projectionSha256:h,correspondenceSha256:h,authoritySha256:h,blockDeadlineUtc:9999999999999,blockDeadlineMonotonicNs:null,appendInvocationEvent:()=>gate,confirmCurrentState:()=>{},getPeerUid:()=>process.getuid(),getPeerPid:()=>123,setupTimeoutMs:5,readBootId:()=>boot,readProcStat:pid=>({pid,ppid:1,startTicks:1n}),createRuntimeDirectory:async()=>'/tmp/fake',createInvocationSocket:async()=>({server,socketPath:'/tmp/fake/x'}),generateNonce:()=>Buffer.alloc(32,1),removeRuntime:()=>{},appendDenialEvent:()=>{}}});\nconst state=await Promise.race([execution.then(()=> 'returned'),new Promise(r=>setTimeout(()=>r('still pending after 60ms'),60))]);\nconsole.log(JSON.stringify({state,kills,outerTimeoutMs:5,abandonAfterKillMs:5}));release();await execution;\n",
+      "observedStdout": "{\"state\":\"still pending after 60ms\",\"kills\":1,\"outerTimeoutMs\":5,\"abandonAfterKillMs\":5}",
+      "limit": "Synthetic transports, no process spawned, no filesystem writes. Gate is released after observing failure so probe terminates."
+    },
+    {
+      "finding": "H2",
+      "cwd": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol",
+      "argv": [
+        "node",
+        "--input-type=module"
+      ],
+      "stdin": "import {classifyDisposition} from './experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs';\nconst facts={refused:null,startupValid:true,startupWriteFailed:false,evidencePreexists:false,invocationIdMismatch:false,rawExit:null,terminalEvidencePersisted:true,stopReturnCode:0,stopErrorClass:null,stopReceiptPersisted:true,containmentComplete:true,timerCancelReturnCode:0,timerCancelReceiptPersisted:true,deadlineExceeded:false,parentLost:false,resultWriteFailed:false};\nconsole.log(JSON.stringify(classifyDisposition(facts)));\n",
+      "observedStdout": "{\"status\":\"PROCESS_SUCCESS\",\"exitCode\":0,\"failureCode\":null}"
+    }
+  ]
+}

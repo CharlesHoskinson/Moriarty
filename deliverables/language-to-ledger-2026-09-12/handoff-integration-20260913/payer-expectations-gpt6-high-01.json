@@ -1,0 +1,257 @@
+{
+  "schema": "moriarty.independent-implementation-expectations/1",
+  "createdUtc": "2026-09-13T17:06:00.518794+00:00",
+  "routing": {
+    "author": "Fable 5.1 medium",
+    "checker": "GPT-6 high",
+    "basis": "Latest user routing passed in parent delegation; historical Grok/Opus assignments do not supersede it."
+  },
+  "reviewer": "/root/handoff_check, GPT-6 Codex inherited context; independent expectations, no implementation",
+  "root": "/home/charl/Moriarty",
+  "headObserved": "4c95364353e48540c686219fa5c318313994bda0",
+  "conclusion": "A scoped two-party native transaction signing/verification consumer is technically grounded in pinned ledger APIs. The current Compact receiver cannot enforce payer identity itself. Do not claim full universal on-chain payer correspondence from SDK policy, role secrets or signatures alone.",
+  "recommendedSmallestPath": [
+    "Reuse the pinned native ledger decoder/signature primitives and prepared originate call; require a native transaction/recipe at the post-funding, pre-signing boundary. Bind exact network, source/profile/program, contract, revision, circuit and economic fee from the accepted predecessor and evaluator; no arbitrary payerApproved boolean, address callback or host JSON receipt is sufficient.",
+    "Use existing actor wallets/keys when eventually authorized; for source tests use deterministic ephemeral keys and isolated native UTXO fixtures only. Assemble both actors' Cash inputs in the same fallible intent as the originate call. Require addressFromKey(owner) to match exactly one accepted actor. Do not put economic legs in a guaranteed component that could survive failed origination.",
+    "Build and validate the complete immutable intent before requesting signatures. Preserve exact output multiplicity and expected disbursement/fee recipients, permit only attributed change, and reject unrelated inputs/assets/actions/outputs/segments. Select lender-owned inputs covering 100 and borrower-owned inputs covering fee when fee>0. This is the narrow explicit two-input-owner scope; pre-funding both actors is a limitation for source states that could otherwise pay a fee from the just-received disbursement.",
+    "For actor A, use inputTotal I_A, change C_A and fixed economic credit P_A: require I_L-C_L=100, I_B-C_B=fee, outputsToL=C_L+fee, outputsToB=C_B+100. These equations are justified only after exact call/effect/output and owner binding; do not infer gross attribution from net balances alone. Keep economic gross caps separate from existing native gross-input resource caps; change/refunds must not refund charged input budgets.",
+    "Implement owner-selective signature placement over the exact intent.signatureData(segment); verify every per-input signature against its own key, preserve preexisting valid signatures, and reject duplicates/missing/foreign/stale signatures. Do not reuse the current all-input same-signature signRecipe helper for a mixed-owner offer.",
+    "After any balance, DUST attachment, merge, signature attachment or finalization, re-decode and verify the full native bytes and bindings again at the actual submission consumer; bind network/segment/TTL/actions/outputs and reject mutation. DUST sponsorship is a separate authorized fee plane, not Cash fee funding and not an implicit third Cash payer.",
+    "Keep actual consumed UTXO existence/ownership, canonical successful application and post-state/readback as independent ledger-result predicates. Local valid signatures over a fabricated UTXO do not establish funds or consumption. Neither createUnprovenCall nor a verifier-only helper completes actual payer binding."
+  ],
+  "facts": [
+    {
+      "id": "S1",
+      "classification": "repository-observation",
+      "location": "custody/loan-lifecycle.compact:74-93",
+      "fact": "Role-secret commitments and actor constants authenticate capabilities; the two receiveUnshielded calls accept only cashColor and amounts 100/fee. Payout addresses are ledger fields, but input owners are not contract arguments or transcript requirements."
+    },
+    {
+      "id": "S2",
+      "classification": "pinned-library-observation",
+      "location": "ledger-v8/ledger-v8.d.ts:370-383; compiled contract/index.js:1199-1232",
+      "fact": "Contract effects unshieldedInputs is Map<TokenType,bigint>; claimedUnshieldedSpends is recipient-qualified output requirement Map<[TokenType,PublicAddress],bigint>. The latter is NOT consumed-input ownership. Compiled receive method increments token-keyed input amount only."
+    },
+    {
+      "id": "S3",
+      "classification": "pinned-library-observation",
+      "location": "ledger-v8/ledger-v8.d.ts:1770-1834, 2037-2039, 2072-2089, 420-436",
+      "fact": "Consumed UtxoSpend.owner is a SignatureVerifyingKey; Utxo/UtxoOutput.owner is a UserAddress. Use addressFromKey(input.owner) to bind to accepted borrower/lender addresses, and verifySignature(input.owner,intent.signatureData(segment),offer.signatures[index]) to authenticate each input. Public address equality alone is not proof of authorization or UTXO existence."
+    },
+    {
+      "id": "S4",
+      "classification": "pinned-library-observation",
+      "location": "midnight-js-contracts/dist/index.mjs:875-909,1448-1463",
+      "fact": "createUnprovenCallTx builds required outputs with empty inputs/signatures; funding arrives later. Current prepareLifecycleOriginationCall returns this unproven stage, so payer identity cannot be established by that call alone."
+    },
+    {
+      "id": "S5",
+      "classification": "repository-observation",
+      "location": "ledger/providers.mjs:78-93, 212-214, 236-260",
+      "fact": "Current financial provider is explicitly one-wallet: it rejects any input.owner other than its selected payer, requires added change to addressFromKey(payer), and budgets gross inputs. Relaxing the check to accept arbitrary owners is not a two-party implementation."
+    },
+    {
+      "id": "S6",
+      "classification": "pinned-library-observation",
+      "location": "wallet-sdk-unshielded-wallet/dist/v1/TransactionOps.js:39-72; Transacting.js:236-244",
+      "fact": "Current signRecipe pathway supplies one signature per segment and fills every missing input slot with it, without filtering by input.owner. Calling two wallets sequentially will not produce a correct owner-selective signature vector."
+    },
+    {
+      "id": "S7",
+      "classification": "repository-observation",
+      "location": "ledger/lifecycle-sdk-caller.mjs:38-84",
+      "fact": "acceptedRead authenticity and compiled provenance are delegated. Current SDK call accepts any supplied compiledContract after a truthiness check. Any payer verifier must be bound to actual decoded contract state/current head and exact compiled source/artifacts in the consuming caller."
+    },
+    {
+      "id": "S8",
+      "classification": "artifact-observation",
+      "location": "compiled-lifecycle/binding-01.json",
+      "fact": "All listed input/artifact hashes match current files. Compiler 0.31.1 language 0.23 runtime 0.16 generated originate bindings/zkir with skip-zk; proof keys, proving and settlement are absent. Receipt lifecycleSource names loan-lifecycle.mori (/5 historical source), while generator/source binding consume loan-lifecycle-fee.mori (/6, embedded sourceHash 04458fa45eed61d086eae262cc43aa529d0837beb5cf7f669649247b46884622). Preserve the receipt as historical and add an accurate successor source/profile/program linkage before relying on it for the payer repair."
+    }
+  ],
+  "expectedTests": [
+    {
+      "id": "P1",
+      "kind": "positive",
+      "input": "Lender input 100 Cash, borrower input 1 Cash, fee 1, required outputs borrower100/lender1, valid signatures from each owner over same final fallible intent.",
+      "expected": "Native actor mapping and every signature verify; economic gross debits L=100/B=1; net deltas L=-99/B=+99; full source fixture balances L100/B10 become L1/B109 once an actual ledger transition is later validated. No acceptance claim from unsigned or fabricated funding."
+    },
+    {
+      "id": "P2",
+      "kind": "positive",
+      "input": "Lender input120 with change20; borrower input10 with change9; economic outputs borrower100/lender1.",
+      "expected": "Economic debit and net equations remain 100/1 and -99/+99; native gross input budgets account 120/10 separately. Disallow if those explicit native caps are insufficient; do not subtract change from charged gross inputs."
+    },
+    {
+      "id": "P3",
+      "kind": "positive-boundary",
+      "input": "fee0 and borrower minimum100; no borrower economic input; lender100.",
+      "expected": "No borrower debit is invented. Preserve borrower role authorization. Establish whether exact compiled/native zero output behavior is admissible before acceptance; do not arbitrarily add a positive-fee restriction to the source semantics."
+    },
+    {
+      "id": "N1",
+      "kind": "negative",
+      "input": "Lender pays101, borrower has no owned input, but claims fee1; or third party pays all101.",
+      "expected": "Reject actual transaction for payer/owner mismatch even with both valid role secrets and economically matching output amounts."
+    },
+    {
+      "id": "N2",
+      "kind": "negative",
+      "input": "Swap actor keys; compare raw verifying key to address; use a caller label that claims an unrelated key is Borrower.",
+      "expected": "Only ledger.addressFromKey owner mapping to independently accepted role addresses is accepted; reject same-address roles and unknown owner."
+    },
+    {
+      "id": "N3",
+      "kind": "negative",
+      "input": "Missing borrower signature, duplicated lender signature in borrower slot, wrong signature order after native canonicalization, or current sequential signRecipe output.",
+      "expected": "At least one native verifySignature fails and consumer refuses before submission; assert the precise predicate, not any generic rejection."
+    },
+    {
+      "id": "N4",
+      "kind": "negative",
+      "input": "Re-signless mutation of contract/network/program/head/circuit/fee/output/TTL/segment; balancing or finalization adds unauthorized input/output or action.",
+      "expected": "Full candidate and per-input signature verification fail at the actual consuming boundary, including mutation during await; no alternate unchecked submit path is available for this capability."
+    },
+    {
+      "id": "N5",
+      "kind": "negative",
+      "input": "Duplicate (intentHash,outputNo) across offers/segments, fabricated source UTXO, stale/spent UTXO, wrong asset or insufficient owner input.",
+      "expected": "Duplicate/shape/owner/amount failures reject offline; fabricated/stale existence remains unverified without isolated canonical UTXO-state validation or later real ledger rejection. Never record signature validity as spendability."
+    },
+    {
+      "id": "N6",
+      "kind": "negative",
+      "input": "Economic fee funded in guaranteed offer while originate resides in fallible action, or economic legs split across independently failing intents.",
+      "expected": "Reject atomicity mismatch; failed origination cannot leave the Cash fee/disbursement committed. DUST charged on failed attempts remains a separate native fee obligation."
+    },
+    {
+      "id": "N7",
+      "kind": "negative",
+      "input": "Lender cap99 with disbursement100; borrower cap0 with fee1; borrower minimum99 with fee2; unchecked Uint128 overflow; native input budgets exceeded despite change.",
+      "expected": "Preserve existing gross/net/overflow refusal codes and native resource semantics; no refund/netting loophole."
+    },
+    {
+      "id": "N8",
+      "kind": "negative",
+      "input": "Wrong compiledContract or stale compiled binding/source profile; forged acceptedRead that remaps both owners to attacker addresses.",
+      "expected": "Actual consumer authenticates exact compiled artifact and predecessor; injected arbitrary read/approval cannot establish binding."
+    },
+    {
+      "id": "N9",
+      "kind": "negative",
+      "input": "Direct compiled originate invocation with role secrets and third-party inputs bypasses SDK policy.",
+      "expected": "Record that current circuit cannot reject payer mismatch: its public effect lacks input-owner predicate. This must remain a documented universal-contract enforcement gap unless separately redesigned; do not name SDK refusal an on-chain invariant."
+    },
+    {
+      "id": "N10",
+      "kind": "regression",
+      "input": "Legacy one-wallet provider calls, frozen loan/swap sources, retained artifacts, actor capability substitution, stale revision, wrong settlement color, extra source guard.",
+      "expected": "Existing one-wallet restrictions and pinned artifacts remain intact; no accounting reset or regenerated historical files; existing capability/head/asset/source rejection tests continue."
+    }
+  ],
+  "alternativeIfUniversalCircuitEnforcementRequired": {
+    "status": "design-required, not authorized implementation selected here",
+    "option": "An actor-owned custody/accounting boundary (potentially explicit cross-contract claims) could make each gross debit a ledger-state transition under its actor authorization. It requires authenticated initial funding, account/allowance representation, atomicity, replay and independent source/result review; it is not a one-line receiveUnshielded change. Shielded migration or a different SDK/toolchain is not established or recommended by this audit.",
+    "rejectedShortcuts": [
+      "receiveUnshieldedFrom is not present in inspected APIs.",
+      "Adding payerAddress/payerApproved to host arguments authenticates nothing.",
+      "Capability knowledge does not identify input owner.",
+      "Signed metadata alone does not tie a real consumed input to the circuit.",
+      "Replacing the two gross legs with net payments silently changes gross-cap and per-actor funding scope."
+    ]
+  },
+  "artifactVerification": [
+    {
+      "path": "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/compiler/contract-info.json",
+      "actualSha256": "65be282b67bfc6c5d6c33ee487af4c5ad258499b65e3d7fc7639ce20f6455365",
+      "matchesReceipt": true,
+      "bytes": 6001
+    },
+    {
+      "path": "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/zkir/originate.zkir",
+      "actualSha256": "7174ee4f03346fca3c5e62f278ec4333b8cb72df26a11372b812b651f3587539",
+      "matchesReceipt": true,
+      "bytes": 45353
+    },
+    {
+      "path": "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.d.ts",
+      "actualSha256": "98d1df3a5f4bb6993826e722b85515cacc94af1e35873c630c3a9fb001b38dfc",
+      "matchesReceipt": true,
+      "bytes": 3490
+    },
+    {
+      "path": "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.js",
+      "actualSha256": "e5d4b7594923f505e90559c2fb37b3f8774319f11a14c4f22b583e4185ea01cc",
+      "matchesReceipt": true,
+      "bytes": 171616
+    },
+    {
+      "path": "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.js.map",
+      "actualSha256": "b64f7ef092fefb0eb0bc496901b552e01c068b9d3c59ac7e3d79219637d56c9a",
+      "matchesReceipt": true,
+      "bytes": 5031
+    },
+    {
+      "input": "contractSource",
+      "path": "experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact",
+      "actualSha256": "1230586541501ba2038434f4e1dbd92966ba11c0bdf3075f7e8aed358a251315",
+      "matchesReceipt": true
+    },
+    {
+      "input": "generator",
+      "path": "experiments/moriarty-midnight-financial/custody/generate-lifecycle.mjs",
+      "actualSha256": "1610359a4d6b15389c2180133e558c08d966bf9dacc91226dd70ef35d0f63244",
+      "matchesReceipt": true
+    },
+    {
+      "input": "lifecycleSource",
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+      "actualSha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+      "matchesReceipt": true
+    }
+  ],
+  "manifestSha256": {
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-sdk-caller.mjs": "798bc2dbbacdd00f796e76e6bd41c892e4e1caea93266124452d580bc8175c18",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-source-binding.mjs": "f008b386187dac8103780526838c6de68ddd8e8a36cf9cf268651e371ab3ce58",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/lifecycle-source-pins.json": "84581d5a1d0ad91570222a6cbf70a4dcb4586dfe5759a6dc826922df27c85c89",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/custody/generate-lifecycle.mjs": "1610359a4d6b15389c2180133e558c08d966bf9dacc91226dd70ef35d0f63244",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/custody/loan-lifecycle.compact": "1230586541501ba2038434f4e1dbd92966ba11c0bdf3075f7e8aed358a251315",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/tests/lifecycle-binding.test.mjs": "cfe923890f54c522c266b6ade8c5f0e15f96d3bd801e5b6c7e4f9e344d14b2d4",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/providers.mjs": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+    "/home/charl/Moriarty/experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle-fee.mori": "04458fa45eed61d086eae262cc43aa529d0837beb5cf7f669649247b46884622",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+    "/home/charl/Moriarty/experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+    "/home/charl/Moriarty/experiments/moriarty-language/compact/generated/materialization.json": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json": "02464ab18c3592d162b5f3f462561d1a7c06779739abf67fd5c4084ea0e343bc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/binding-01.json": "5e74d26ab2b8db8d685f37339449db3fcac424f1230a650c8f7274890d2c7a95",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/package.json": "52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/ledger-v8.d.ts": "4a6eaccd531f0bb711dd8a8926d14beedd2ab8345deff378f86068608d67dc36",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_fs.js": "125acbc6327afcf5540e70fe2a42de58af909695fc284a0e663e20a3666d296c",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_bg.js": "0fcb6f30ec4c0f894917d516db627d78de5630377bf7918bac08466b894cb716",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_bg.wasm": "88ff7c7c47c30138ee8f3a0c8bcbf12dbdcdeba591edebfb955c30d732ea7638",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/package.json": "ac4f818510afca0d17758b4c38af613f7b1a489aec96633548d0d361683f124c",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/compact-runtime/dist/index.js": "c55a8ab3e7533b3fa6e27b66ab742c783d912d5a00d6ecc23d9f6142ddb0ecde",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/package.json": "d3b6cc94cb5522a37f64ebc2a080e1db228a5901e2e8dfb7c3d14b01ca496701",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-contracts/dist/index.mjs": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/TransactionOps.js": "fa9f2e2b9d2572f7e21342ca5905ee64c7a4fe47d0d9fee7107ccbc0ea76c8af",
+    "/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/v1/Transacting.js": "299d5a91c3fd65ee21f917574435567f2146d47ef9b83f48b2e44d69a6e4a389",
+    "/home/charl/midnight/minokawa-compact/compiler/standard-library.compact": "166487c61232e4058f0a5cb1a2a154d5b926a574ba5bc24f5def905c2a938e52",
+    "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-authority-fee-binding/AUDIT-OPUS-5-1A.json": "13bd40d0a69a7864c455dd221f0f46d5439cf2b0394a6ea6b78a970a3d1c03c2",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/compiler/contract-info.json": "65be282b67bfc6c5d6c33ee487af4c5ad258499b65e3d7fc7639ce20f6455365",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/zkir/originate.zkir": "7174ee4f03346fca3c5e62f278ec4333b8cb72df26a11372b812b651f3587539",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.d.ts": "98d1df3a5f4bb6993826e722b85515cacc94af1e35873c630c3a9fb001b38dfc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.js": "e5d4b7594923f505e90559c2fb37b3f8774319f11a14c4f22b583e4185ea01cc",
+    "/home/charl/Moriarty/deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/artifacts/contract/index.js.map": "b64f7ef092fefb0eb0bc496901b552e01c068b9d3c59ac7e3d79219637d56c9a"
+  },
+  "limits": [
+    "Read-only source/expectations review; no tests implemented, compilation, proof, Docker, K, network, funding, wallet or accounting operation.",
+    "No retained artifact regenerated or source file modified.",
+    "Local standard-library.compact corroborates semantics but is not proven to be the compiler 0.31.1 source revision; pinned compiled artifact and ledger/SDK bytes are the stronger evidence.",
+    "Runtime transitive closure not fully audited; direct relevant local files are hash-bound.",
+    "UTXO owners/signatures do not establish historical funding, inclusion, finality, complete financial-state correspondence or source-state authenticity.",
+    "Source balances can permit a fee paid from newly received funds; requiring preexisting borrower inputs narrows admissible transaction realization and must be explicit, never silently declared full source completeness.",
+    "Current compiled binding proves compile only (skipZk=true) and incorrectly names the historical /5 source as lifecycleSource instead of actual selected /6 fee source; preserve history and repair via successor evidence."
+  ],
+  "nextAuthorBoundary": "First add independent native two-owner fixtures/rejections and identify the concrete post-funding/signing/submission consumer. Implement only a scoped verifier/signer path that is actually called. Leave closure open if production co-funding, accepted-state authentication or universal contract predicate remains absent."
+}
