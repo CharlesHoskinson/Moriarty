@@ -1,0 +1,3211 @@
+{
+  "schemaVersion": "moriarty-preview-constraint-freeze/1",
+  "freezeId": "freeze-01",
+  "frozenOn": "2026-09-12",
+  "task": "openspec/changes/language-to-ledger-lifecycle/tasks.md 5.1",
+  "taskText": "Freeze and independently review source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.",
+  "governingSentence": "Bind source/Core/profile digest, deployment/network identity, expected head/revision, debtor/lender authority, balances, allowances, outstanding principal/interest and period/replay history. Derive complete state from actual accepted ledger reads and verify transitions through compiled constraints. Fees remain distinct from loan settlement amounts and must enter fee-inclusive net goals.",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-plan-preview-constraint-freeze",
+  "baseCommit": "056e662254c38936758af9c6f72c019705a1ff09",
+  "branch": "foreman/moriarty-ll-loop-20260912/plan/preview-constraint-freeze",
+  "authorship": "authorship plus repair round 1. The independent cross-vendor review named in task 5.1 has run (REVIEW-CODEX-01, Codex GPT-5.6 Sol, read-only) and returned BLOCKED. This record still does not approve itself.",
+  "bindsInto": "task 5.1a: the actual lowerer, custody contract and SDK caller",
+  "hashAlgorithm": "sha256 over exact file bytes as of baseCommit working tree",
+  "complete": false,
+  "scopeExclusions": [
+    "No compilation, deployment, Docker start, network access or funds movement was performed.",
+    "No accounting, budget, charge or resource record was created, reset or read-modified.",
+    "No checkbox in any tasks.md or roadmap file was ticked.",
+    "This record does not approve itself; approval belongs to the independent reviewer.",
+    "Repair round 1 changed only freeze-01.json and freeze-01.md. No review file was edited, nothing was compiled, deployed or committed, and no checkbox was ticked."
+  ],
+  "sourceProfileHead": {
+    "purpose": "Pin the source text, Core contract, profile identity and the expected ledger head/revision the lowerer and caller must assert.",
+    "pinned": [
+      {
+        "id": "source.profile.id",
+        "status": "pinned",
+        "value": "moriarty-financial-agreement-source/5",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/frontend.ts",
+          "sha256": "c41afe66161a8c5f06ecd80bf5d880cea469526aca65fd9c080cdcb2448b2dab",
+          "locator": "export const FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE (line 10)"
+        },
+        "note": "The lifecycle source, not the /4 profile named in design.md; /4 covers postconditions only and /5 added Originate and Accrue."
+      },
+      {
+        "id": "core.contract.id",
+        "status": "pinned",
+        "value": "moriarty-financial-expression-contract/4",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+          "sha256": "a61d873df945f78011997c7c53b935c20ca76c1efcea7d9838ea69e0b8bc42ea",
+          "locator": "export const FINANCIAL_EXPRESSION_CONTRACT_V4 (line 25)"
+        },
+        "note": "design.md names /3; the repository advanced to /4 with the origination and accrual stage."
+      },
+      {
+        "id": "source.api.factory",
+        "status": "pinned",
+        "value": "createFinancialAgreementSourceV5()",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-agreement-source-v5.ts",
+          "sha256": "082b8c96f6707d1d93aa9607907422c31143c769a3d16618e442cca54d315e5e",
+          "locator": "export function createFinancialAgreementSourceV5 (line 56)"
+        }
+      },
+      {
+        "id": "lifecycle.state.schema.id",
+        "status": "pinned",
+        "value": "moriarty-financial-lifecycle-state/1",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "export const LIFECYCLE_STATE_VERSION (line 10)"
+        }
+      },
+      {
+        "id": "source.digest.lifecycleAgreement",
+        "status": "pinned",
+        "value": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "whole file"
+        },
+        "note": "The frozen agreement source text. Its first line declares profile \"moriarty-financial-agreement-source/5\"."
+      },
+      {
+        "id": "source.digest.lifecyclePreState",
+        "status": "pinned",
+        "value": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "whole file"
+        }
+      },
+      {
+        "id": "source.digest.lifecycleSnapshot",
+        "status": "pinned",
+        "value": "23f945287228f2366dd6ba8263954d4297cd6521209a3b0a3a0c13200013542a",
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json",
+          "sha256": "23f945287228f2366dd6ba8263954d4297cd6521209a3b0a3a0c13200013542a",
+          "locator": "whole file"
+        }
+      },
+      {
+        "id": "source.digest.lifecycleDriver",
+        "status": "pinned",
+        "value": "6165fd3b7e3f5cd598e62b115f620f1349b0f1294500376b3cf780a4f7e46bac",
+        "source": {
+          "path": "experiments/moriarty-language/examples/loan-lifecycle.mjs",
+          "sha256": "6165fd3b7e3f5cd598e62b115f620f1349b0f1294500376b3cf780a4f7e46bac",
+          "locator": "whole file"
+        },
+        "note": "runLoanLifecycleDemo is the exact five-call ordering the lowerer must reproduce: originate, accrue, duplicate accrue, repay, settle, failed second settle."
+      },
+      {
+        "id": "compiled.profile.id",
+        "status": "pinned",
+        "value": "moriarty-bounded-atomic/1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "\"profile\""
+        },
+        "note": "The existing compiled custody profile. It is the restricted-kernel profile, not the agreement source profile."
+      },
+      {
+        "id": "compiled.restricted.sourceHash",
+        "status": "pinned",
+        "value": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "programs[0].sourceHash"
+        },
+        "note": "Re-verified: equals sha256 of experiments/moriarty-language/spec/examples/loan.mori = 1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49."
+      },
+      {
+        "id": "compiled.restricted.programHash",
+        "status": "pinned",
+        "value": "95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "programs[0].programHash"
+        },
+        "note": "Also pinned as a literal Bytes<32> in the constructor of experiments/moriarty-midnight-financial/custody/loan.compact and asserted PROGRAM_MISMATCH."
+      },
+      {
+        "id": "compiled.restricted.compactSourceHash",
+        "status": "pinned",
+        "value": "77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "programs[0].compactSourceHash"
+        }
+      },
+      {
+        "id": "compiled.restricted.metadataHash",
+        "status": "pinned",
+        "value": "9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "programs[0].artifacts metadata.json"
+        }
+      },
+      {
+        "id": "compiled.restricted.boundProgramHash",
+        "status": "pinned",
+        "value": "f071ff67770b43527068d9afe1121ba9ed40800bb5cbe321edb9cad228338a44",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "digests.loanBoundProgram"
+        }
+      },
+      {
+        "id": "toolchain.compilerVersion",
+        "status": "pinned",
+        "value": "0.31.1",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "\"compiler\""
+        }
+      },
+      {
+        "id": "toolchain.languageVersion",
+        "status": "pinned",
+        "value": "0.23.0",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "\"language\""
+        },
+        "note": "experiments/moriarty-midnight-financial/custody/loan.compact line 1 pins pragma language_version >= 0.23 && <= 0.23."
+      },
+      {
+        "id": "toolchain.runtimeVersion",
+        "status": "pinned",
+        "value": "0.16.0",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "\"runtime\""
+        }
+      },
+      {
+        "id": "toolchain.nodeVersion",
+        "status": "pinned",
+        "value": "24.18.1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "toolchain.nodeVersion"
+        }
+      },
+      {
+        "id": "toolchain.compactWrapperVersion",
+        "status": "pinned",
+        "value": "0.5.2",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "toolchain.compactWrapperVersion"
+        }
+      },
+      {
+        "id": "network.tag.ascii",
+        "status": "pinned",
+        "value": "moriarty:sp05:runtime:v1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "networkTagAscii"
+        },
+        "note": "Synthetic. bindings.json sets synthetic:true and notActualWalletCustody:true."
+      },
+      {
+        "id": "network.tag.hex",
+        "status": "pinned",
+        "value": "6d6f7269617274793a737030353a72756e74696d653a76310000000000000000",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "networkTag"
+        }
+      },
+      {
+        "id": "network.tag.assertion",
+        "status": "pinned",
+        "value": "assert(expectedNetwork == networkTag, \"NETWORK_MISMATCH\") in initialize, accrue and settle",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "lines 59, 73, 100"
+        }
+      },
+      {
+        "id": "deployment.networkTag.actual",
+        "status": "pinned",
+        "value": "3c096de209e06a1a8c52be7bda109ee8c891a42288c0a9db5495f9616dd13796",
+        "meaning": "The Preview network tag is the Preview genesis block hash. integrate-preview.mjs line 103 asserts chain_getBlockHash([0]) == '0x' + networkTag under PREVIEW_GENESIS_MISMATCH, and line 112 passes the same bytes as the deployment constructor's expectedNetwork argument, which the circuit then asserts against the ledger field networkTag under \"NETWORK_MISMATCH\".",
+        "source": {
+          "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json",
+          "sha256": "b05ce84c19da0c42f2194306689b03cd4a07350d1c0af47465d86c961c78cff4",
+          "locator": "networkTag, with networkConfig.networkId == \"preview\""
+        },
+        "corroboration": [
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/public-preflight.json",
+            "sha256": "5353b8a7dd28d5b51cceda468d083ab2c04acec691635d6e964277bc8c502cd9",
+            "locator": "genesis 0x3c096de209e06a1a8c52be7bda109ee8c891a42288c0a9db5495f9616dd13796, network preview"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/stage-deploy.json",
+            "sha256": "14d0891512a468ac202a8b6127984c627a8e3ec409c229ba09e6db87cd5f6f62",
+            "locator": "publicState.networkTag"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-run/stage-deploy.json",
+            "sha256": "b3c96db4c363896b55ab1ce7a626fb8fe643d7a9c7fae9c9eb8f8d4c4696b9f4",
+            "locator": "publicState.networkTag"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-run/stage-deploy.json",
+            "sha256": "7369a77ab76532a8e166ee53db030d7554337c063a5badef927262c3f8de177a",
+            "locator": "publicState.networkTag"
+          },
+          {
+            "path": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+            "sha256": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+            "locator": "line 103 PREVIEW_GENESIS_MISMATCH; line 112 constructor args"
+          }
+        ],
+        "note": "Recorded by three independent actual Preview runs (preview-loan-exit-01, preview-loan-01, preview-swap-01) and by the public preflight genesis read. The value is a property of the Preview chain, not of a run, so it is a legitimate freeze pin. It is network-specific: the local Docker run recorded a different tag e72f7a21a0397844563b4206f887b779ffa0d937c2d1b2339441faa1f08b9846. The caller must still re-derive it from chain_getBlockHash([0]) at submission time rather than trust this pin; line 103 does exactly that, and this pin is what that check must equal on Preview.",
+        "repair": "round 1, review finding [high] open-item-honesty: previously recorded open with the false reason that only synthetic values exist in the tree. The reviewer was right. The synthetic tag moriarty:sp05:runtime:v1 remains separately pinned at network.tag.ascii / network.tag.hex as the value that must never reach an authenticated run."
+      },
+      {
+        "id": "head.revision.assertion",
+        "status": "pinned",
+        "value": "assert(expectedRevision == revision, \"REVISION_MISMATCH\") in accrue and settle only; initialize takes no expectedRevision argument and carries no such assert",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "accrue line 74, settle line 101; initialize lines 57-69"
+        },
+        "note": "initialize (lines 57-69) has no expectedRevision parameter and no REVISION_MISMATCH assert. It is guarded by assert(!initialized, \"ALREADY_INITIALIZED\") at line 62 and writes revision = 0 at line 66. Repair round 1: the earlier value said \"in every state-changing transition\", which contradicted this note; initialize is state-changing and is the exception.",
+        "repair": "round 1, review finding [medium] pin-accuracy: value narrowed to accrue and settle. The reviewer was right; the pin overstated coverage."
+      },
+      {
+        "id": "head.revision.expectedSequence",
+        "status": "pinned",
+        "value": {
+          "deploy": {
+            "revision": "0",
+            "remaining": "0",
+            "initialized": false
+          },
+          "initialize": {
+            "revision": "0",
+            "remaining": "2",
+            "initialized": true
+          },
+          "accrue": {
+            "revision": "1",
+            "remaining": "1",
+            "initialized": true
+          },
+          "settle": {
+            "revision": "2",
+            "remaining": "0",
+            "initialized": true
+          }
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.stages[*].{revision,remaining,initialized}"
+        },
+        "note": "Revision is written by the transition result, not incremented by the wrapper; remaining is the residual work/lifetime counter."
+      },
+      {
+        "id": "head.lifetime",
+        "status": "pinned",
+        "value": "2",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.lifetime"
+        },
+        "note": "Two state-changing transitions after initialize."
+      },
+      {
+        "id": "head.anchor.procedure",
+        "status": "pinned",
+        "value": [
+          "chain_getFinalizedHead -> 0x + 64 lowercase hex, else FINALIZED_STATE_HEAD",
+          "chain_getHeader(blockHash) -> header.number 0x hex, length <= 18, else FINALIZED_STATE_HEADER",
+          "chain_getBlockHash(blockHeight) must equal blockHash, else FINALIZED_STATE_NONCANONICAL",
+          "midnight_contractState(contractAddress, blockHash) with the second argument mandatory so the RPC cannot fall back to best block",
+          "re-check chain_getBlockHash(blockHeight) after decoding, else FINALIZED_STATE_NONCANONICAL"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "captureFinalizedFinancialState"
+        }
+      },
+      {
+        "id": "head.snapshot.schema",
+        "status": "pinned",
+        "value": "moriarty.finalized-financial-state/1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "returned snapshot schema field"
+        }
+      },
+      {
+        "id": "head.snapshot.honestLimitations",
+        "status": "pinned",
+        "value": {
+          "authenticatedStateProof": false,
+          "noInterveningActionsAfterAnchorEstablished": false
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "returned snapshot fields"
+        },
+        "note": "The node RPC remains trusted. This read is an accepted-ledger observation, not an authenticated state proof."
+      },
+      {
+        "id": "head.readiness.schema",
+        "status": "pinned",
+        "value": "moriarty.local-tip-readiness/1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+          "sha256": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+          "locator": "waitForLocalTip return value"
+        }
+      },
+      {
+        "id": "head.readiness.bounds",
+        "status": "pinned",
+        "value": {
+          "maxSamples": 60,
+          "sampleSpacingMs": 1000,
+          "totalWindowMs": 60000,
+          "perRequestMs": 5000,
+          "maxIndexedVsFinalizedBlockLag": 2,
+          "maxBlockAgeMs": 60000,
+          "maxResponseBytes": 65536,
+          "exactFinalityOptional": true
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+          "sha256": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+          "locator": "waitForLocalTip and indexedBlock"
+        },
+        "note": "Codes TIP_NOT_READY, TIP_LAG, TIP_STALE, TIP_CHAIN_MISMATCH, TIP_EXACT_FINALITY, TIP_BODY_LIMIT."
+      },
+      {
+        "id": "head.localEndpointPolicy",
+        "status": "pinned",
+        "value": "http: scheme, host in {127.0.0.1, [::1]}, no credentials, no fragment, else TIP_LOCAL_ENDPOINT",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+          "sha256": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5",
+          "locator": "function endpoint"
+        }
+      },
+      {
+        "id": "preview.network.identity",
+        "status": "pinned",
+        "value": {
+          "networkId": "preview",
+          "node": [
+            "https://rpc.preview.midnight.network",
+            "https://rpc.preview.midnight.network/"
+          ],
+          "indexer": "https://indexer.preview.midnight.network/api/v4/graphql",
+          "indexerWS": "wss://indexer.preview.midnight.network/api/v4/graphql/ws",
+          "refusalCode": "PREVIEW_NETWORK_CONFIG"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+          "sha256": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+          "locator": "requireThat(... ,'PREVIEW_NETWORK_CONFIG') line 87"
+        }
+      },
+      {
+        "id": "local.executionBinding.rule",
+        "status": "pinned",
+        "value": "observed.network.networkId == target AND observed.sdkNetworkId == target AND observed.payerAddress == payerAddress, else <prefix>_EXECUTION_BINDING_MISMATCH",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+          "sha256": "0b7886c8e3851db0791fa74051a57c3093e7cf0598ca1fb5b03f9c58b34d28ae",
+          "locator": "line 95"
+        }
+      },
+      {
+        "id": "sdk.pins",
+        "status": "pinned",
+        "value": "launch-runtime-pins.json pins exact versions and per-file sha256 for 11 packages, including @midnight-ntwrk/ledger-v8 8.1.0 and midnight-js-protocol 4.1.1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json",
+          "sha256": "4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195",
+          "locator": "whole file"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "compiled.lifecycle.programHash",
+        "status": "open",
+        "value": null,
+        "reason": "No Compact program has been generated from experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori. materialization.json covers only the restricted loan and swap kernels built from spec/examples/{loan,swap}.mori, whose numeric case differs from the lifecycle case.",
+        "blockedBy": "tasks.md 5.2a: compile the generated lifecycle Compact contract and retain compiler output",
+        "source": {
+          "path": "experiments/moriarty-language/compact/generated/materialization.json",
+          "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a",
+          "locator": "programs[] contains only \"loan\" and \"swap\""
+        }
+      },
+      {
+        "id": "compiled.lifecycle.compactSourceHash",
+        "status": "open",
+        "value": null,
+        "reason": "The lowered lifecycle kernel.compact does not exist yet, so there is nothing to hash.",
+        "blockedBy": "tasks.md 5.2a"
+      },
+      {
+        "id": "deployment.contractAddress",
+        "status": "open",
+        "value": null,
+        "reason": "No lifecycle contract has been deployed anywhere, so the target address does not exist and cannot be pinned. The tree does hold several real deployment addresses, all of them the restricted loan program 95b46e39 or the restricted swap program b00a55b8: Preview loan ffedd46ff0fd451e6a93eddbd241afbad1ca292ecada37bd0646992fefa3c30d (preview-loan-exit-01), Preview loan 323d43b96bca8dc7ddf7d0338c444116d1507b6f464d3fcd38022fc25f1a7ca8 (preview-loan-01), Preview swap 87affdd94943d844667cd6978d223f112c1d3e7c17b42f092323d4078e792b86 (preview-swap-01), local Docker loan 36e4a923f23495c9b8bbfcaff5a8963cd6efcd28c1498454880059de76a98449, and the stale local loan ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713 in ledger/stale-loan-plan.mjs. None of them is a lifecycle deployment, and design.md line 62 replaces that semantic seam rather than reusing any of them.",
+        "blockedBy": "tasks.md 5.5 Docker lifecycle, then 5.7 Preview",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/stale-loan-plan.mjs",
+          "sha256": "9cfc0d19a24869311c936050bbaf0838fd719bf388a2a955a214afe1f7418e08",
+          "locator": "export const STALE_LOAN.contractAddress"
+        },
+        "corroboration": [
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/stage-deploy.json",
+            "sha256": "14d0891512a468ac202a8b6127984c627a8e3ec409c229ba09e6db87cd5f6f62",
+            "locator": "contractAddress, publicState.programDigest"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-run/stage-deploy.json",
+            "sha256": "b3c96db4c363896b55ab1ce7a626fb8fe643d7a9c7fae9c9eb8f8d4c4696b9f4",
+            "locator": "contractAddress, publicState.programDigest"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-run/stage-deploy.json",
+            "sha256": "7369a77ab76532a8e166ee53db030d7554337c063a5badef927262c3f8de177a",
+            "locator": "contractAddress, publicState.programDigest"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/actual-run/stage-deploy.json",
+            "sha256": "befcc2e803a4fec05f34c4f88f4cac3177203a9c87107c5091071598c648e14d",
+            "locator": "contractAddress, publicState.networkTag e72f7a21..."
+          },
+          {
+            "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+            "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+            "locator": "line 62"
+          }
+        ],
+        "repair": "round 1, review finding [medium] open-item-honesty: the claim that the stale local loan is the only contract address in the repository was false and is withdrawn. The item itself stays open, because the target lifecycle address genuinely does not exist."
+      },
+      {
+        "id": "head.expectedValue",
+        "status": "open",
+        "value": null,
+        "reason": "A concrete expected head hash and height cannot be frozen: it must be read at submission time from the accepted ledger and re-checked for canonicality. What is frozen is the procedure, not the value.",
+        "blockedBy": "by construction; runtime input"
+      },
+      {
+        "id": "assets.usdColor",
+        "status": "open",
+        "value": null,
+        "reason": "usdColor is bound as tokenType(domainHex, actual case contract address) and is the 32-byte zero value at deploy. It resolves only once a real contract address exists.",
+        "blockedBy": "deployment",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.bindingParameters.assets.USD_TEST_ASSET.colorBinding"
+        }
+      }
+    ]
+  },
+  "authority": {
+    "purpose": "Pin the debtor and lender authority identities and the exact mechanism that authenticates each.",
+    "pinned": [
+      {
+        "id": "authority.mechanism.capabilityHash",
+        "status": "pinned",
+        "value": "persistentHash<Vector<4, Bytes<32>>>([roleDomain, networkTag, programDigest, roleSecret])",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "circuit capabilityHash (line 26)"
+        },
+        "note": "Stored form is disclose(persistentHash(preimage)); the 32-byte role secret is a private witness and is not in the repository."
+      },
+      {
+        "id": "authority.preimage.vector",
+        "status": "pinned",
+        "value": [
+          "roleDomain",
+          "networkTag",
+          "programDigest",
+          "private32ByteRoleSecret"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "capabilityPreimage.vector"
+        }
+      },
+      {
+        "id": "authority.preimage.storedForm",
+        "status": "pinned",
+        "value": "disclose(persistentHash(preimage))",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "capabilityPreimage.storedForm"
+        }
+      },
+      {
+        "id": "authority.secretsNotInRepo",
+        "status": "pinned",
+        "value": true,
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "capabilityPreimage.secretsNotInThisFile"
+        }
+      },
+      {
+        "id": "authority.debtor.ledgerField",
+        "status": "pinned",
+        "value": "borrowerCapability: Bytes<32>",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "export ledger borrowerCapability (line 13)"
+        }
+      },
+      {
+        "id": "authority.debtor.domain.ascii",
+        "status": "pinned",
+        "value": "moriarty:sp05:loan:borrower",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.borrowerDomainAscii"
+        }
+      },
+      {
+        "id": "authority.debtor.domain.hex",
+        "status": "pinned",
+        "value": "6d6f7269617274793a737030353a6c6f616e3a626f72726f7765720000000000",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.borrowerDomain"
+        },
+        "note": "pad(32, \"moriarty:sp05:loan:borrower\") in the contract."
+      },
+      {
+        "id": "authority.debtor.assertion",
+        "status": "pinned",
+        "value": "assert(capabilityHash(pad(32,\"moriarty:sp05:loan:borrower\"), networkTag, programDigest, borrowerSecret) == borrowerCapability, \"BORROWER_CAPABILITY\")",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "lines 60, 76, 103"
+        },
+        "note": "Asserted in initialize, accrue and settle. This is the only authority predicate any transition enforces."
+      },
+      {
+        "id": "authority.debtor.actorMapping",
+        "status": "pinned",
+        "value": "assert(expectedActor == 2, \"ACTOR_MAPPING\"); text id 2 is \"borrower\"",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "lines 61, 77, 104"
+        },
+        "note": "Text ids from financial-expectations.json cases.loan.textIds."
+      },
+      {
+        "id": "authority.lender.ledgerField",
+        "status": "pinned",
+        "value": "lenderCapability: Bytes<32>",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "export ledger lenderCapability (line 14)"
+        }
+      },
+      {
+        "id": "authority.lender.domain.ascii",
+        "status": "pinned",
+        "value": "moriarty:sp05:loan:lender",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.lenderDomainAscii"
+        }
+      },
+      {
+        "id": "authority.lender.domain.hex",
+        "status": "pinned",
+        "value": "6d6f7269617274793a737030353a6c6f616e3a6c656e64657200000000000000",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.lenderDomain"
+        }
+      },
+      {
+        "id": "authority.lender.bindingPoint",
+        "status": "pinned",
+        "value": "constructor only: lenderCapability = disclose(capabilityHash(lenderDomain, expectedNetwork, pinnedProgram, lenderSecret))",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "line 50"
+        },
+        "note": "No circuit ever compares a supplied lender secret against lenderCapability. See openItem authority.lender.transitionAssertion."
+      },
+      {
+        "id": "authority.lender.textId",
+        "status": "pinned",
+        "value": "5",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.textIds[\"lender\"]"
+        }
+      },
+      {
+        "id": "authority.payout.debtorField",
+        "status": "pinned",
+        "value": "borrowerAddress: UserAddress, disclosed from borrowerPayout in the constructor",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "lines 15, 47"
+        }
+      },
+      {
+        "id": "authority.payout.lenderField",
+        "status": "pinned",
+        "value": "lenderAddress: UserAddress, disclosed from lenderPayout in the constructor; settle sends the paid amount to right<ContractAddress,UserAddress>(lenderAddress)",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "lines 16, 48, sendUnshielded in settle"
+        }
+      },
+      {
+        "id": "authority.addresses.synthetic",
+        "status": "pinned",
+        "value": {
+          "borrowerAddress": "b001010101010101010101010101010101010101010101010101010101010101",
+          "lenderAddress": "b002020202020202020202020202020202020202020202020202020202020202",
+          "addressesAreSynthetic": true
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "loan.borrowerAddress, loan.lenderAddress, loan.addressesAreSynthetic"
+        },
+        "note": "These are test placeholders. They must not be carried into any authenticated run."
+      },
+      {
+        "id": "authority.identities.actual",
+        "status": "pinned",
+        "value": {
+          "firstAddress": "3f5a1fd7b4b6e5ba2520f389a72c14848940ff5e456503fda1609a01cc2d42ee",
+          "secondAddress": "c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e",
+          "walletBech32Address": "mn_addr_preview18adpl4a5kmjm5ffq7wy6wtq5sjy5pl67g4js8ldpvzdqrnpdgthqvlhhye",
+          "roleMapping": {
+            "loan": {
+              "firstAddress": "borrowerAddress",
+              "secondAddress": "lenderAddress"
+            },
+            "swap": {
+              "firstAddress": "traderAddress",
+              "secondAddress": "providerAddress"
+            }
+          },
+          "observedLoanCapabilities": {
+            "programDigest": "95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2",
+            "borrowerCapability": "da3113c6922a2ca2ddd1a86f6848ab5fe2a575e967c8fcc6a28821dbbf5bcdb6",
+            "lenderCapability": "395a1c94d68fc0b62fb306bdca19d5abd8c68bc045df2a8b857880d473f6231f"
+          }
+        },
+        "meaning": "These are the public participant identities of the actual Preview runs. integrate-preview.mjs line 112 passes them as the constructor's firstAddress/secondAddress, so firstAddress is the borrower (trader) and secondAddress is the lender (provider). Line 105 binds firstAddress to the wallet under PREVIEW_WALLET_IDENTITY: sdk.getNetworkId() == 'preview', the keystore bech32 address equals the loaded public identity, and both decodePreviewIndexedOwner(identity.address) and ledger.addressFromKey(publicKey) equal firstAddress.",
+        "source": {
+          "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json",
+          "sha256": "b05ce84c19da0c42f2194306689b03cd4a07350d1c0af47465d86c961c78cff4",
+          "locator": "roles.firstAddress, roles.secondAddress, wallet.expectedAddress"
+        },
+        "corroboration": [
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/stage-deploy.json",
+            "sha256": "14d0891512a468ac202a8b6127984c627a8e3ec409c229ba09e6db87cd5f6f62",
+            "locator": "publicState.borrowerAddress.bytes, lenderAddress.bytes, borrowerCapability, lenderCapability"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-run/stage-deploy.json",
+            "sha256": "b3c96db4c363896b55ab1ce7a626fb8fe643d7a9c7fae9c9eb8f8d4c4696b9f4",
+            "locator": "publicState.borrowerAddress.bytes, lenderAddress.bytes"
+          },
+          {
+            "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-run/stage-deploy.json",
+            "sha256": "7369a77ab76532a8e166ee53db030d7554337c063a5badef927262c3f8de177a",
+            "locator": "publicState.traderAddress.bytes, providerAddress.bytes"
+          },
+          {
+            "path": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+            "sha256": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+            "locator": "line 89 ROLE_BINDING_FIELDS, line 92 DISTINCT_PARTICIPANTS_REQUIRED, line 105 PREVIEW_WALLET_IDENTITY, line 112 constructor args"
+          }
+        ],
+        "note": "Public values only. The role secrets are not in the repository and must not be; plan.json records them as an out-of-tree absolute path, and integrate-preview.mjs line 90 requires them as 32-byte Uint8Arrays supplied by the caller. The two observed capability hashes are bound to (roleDomain, networkTag, programDigest, roleSecret), so they will change for the lifecycle program and are recorded as observations of the 95b46e39 deployment, not as lifecycle pins. The synthetic b0010101.../b0020202... addresses stay separately pinned at authority.addresses.synthetic as values that must never reach an authenticated run.",
+        "repair": "round 1, review finding [high] open-item-honesty: previously recorded open with the false reason that real borrower and lender addresses do not exist in the tree. The reviewer was right. What genuinely remains open is narrowed to authority.identities.lifecycleRunReuse."
+      },
+      {
+        "id": "authority.sdk.previewWalletIdentity",
+        "status": "pinned",
+        "value": [
+          "sdk.getNetworkId() == 'preview'",
+          "walletContext.unshieldedKeystore.getBech32Address().toString() == identity.address",
+          "decodePreviewIndexedOwner(identity.address) == roles.firstAddress",
+          "ledger.addressFromKey(walletContext.unshieldedKeystore.getPublicKey()) == roles.firstAddress",
+          "refusal code PREVIEW_WALLET_IDENTITY; re-checked by checkBinding() on every bound step"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+          "sha256": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26",
+          "locator": "line 105"
+        }
+      },
+      {
+        "id": "authority.sourcePlane.boundary",
+        "status": "pinned",
+        "value": "Local terms are input, not proof of debtor authority; ledger acceptance binds signed consent and time later. Local projection validation is not signature, time or ledger authentication.",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Origination and accrual boundary; Global constraints in the plan repeat it"
+        },
+        "note": "Consequence: nothing in the v5 source or lifecycle state carries an authenticated principal."
+      },
+      {
+        "id": "authority.sourcePlane.parties",
+        "status": "pinned",
+        "value": {
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "obligationId": "Loan1"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "action originate, emit Originate"
+        },
+        "note": "Plain identifiers bound by the closed role domain, with no key, signature or address."
+      },
+      {
+        "id": "authority.legacy.signedStatement",
+        "status": "pinned",
+        "value": {
+          "schemaVersion": "moriarty-authority/1",
+          "domains": [
+            "MORIARTY-SIGN-bounded-atomic/1",
+            "MORIARTY-OUTCOME-bounded-atomic/1"
+          ],
+          "modes": [
+            "ExactPlan",
+            "IntentRefinement"
+          ],
+          "attestedBytes": "UTF8(authority.domain) || 0x00 || canonical(authority.statement)"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/typed-schemas.md",
+          "sha256": "6ef3383ad42b7ea2a22822f8116c7e182cbe8b476ef01e9cd3ef899679da4f04",
+          "locator": "Signature bytes attest exactly ... (around line 522)"
+        },
+        "note": "This machinery exists only in the legacy evaluator src/evaluate.ts, not in src/successor/. See openItem authority.successor.noAuthoritySlot."
+      },
+      {
+        "id": "authority.executor.validator",
+        "status": "pinned",
+        "value": {
+          "function": "accounting.validate_executor_context(plan, admission, invocation)",
+          "refusalCodes": [
+            "AUTHORITY_INVALID",
+            "HISTORY_UNRESOLVED",
+            "OBSERVATION_INVALID",
+            "OWNERSHIP_UNRESOLVED",
+            "CLAIM_INVALID"
+          ],
+          "rule": "admission digest must equal plan.authority.sha256; refusal happens before any resource startup"
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Immutable plan and exact current authority boundary"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "authority.lender.transitionAssertion",
+        "status": "open",
+        "value": null,
+        "reason": "lenderCapability is written in the constructor and never checked by initialize, accrue or settle. The lifecycle adds Originate, which is a lender-to-debtor disbursement, so creditor authority becomes load-bearing. Whether the lowered contract must assert lenderCapability for Originate, and whether a two-party transition is permitted at all, is not fixed anywhere in the repository.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "constructor line 50 versus circuits at lines 57, 71, 98"
+        }
+      },
+      {
+        "id": "authority.identities.lifecycleRunReuse",
+        "status": "open",
+        "value": null,
+        "reason": "Whether the lifecycle deployment reuses the two pinned Preview identities, and whether the out-of-tree role secrets, wallet seed and wallet state directory recorded in plan.json are still available and funded, cannot be determined from the repository: those are absolute paths outside the tree, and design.md line 70 records resource state as unavailable and the binding and candidate records as stale. The identities themselves are pinned; their continued usability is not.",
+        "blockedBy": "tasks.md 5.4 funding and binding reconciliation, under current admission",
+        "source": {
+          "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json",
+          "sha256": "b05ce84c19da0c42f2194306689b03cd4a07350d1c0af47465d86c961c78cff4",
+          "locator": "wallet.seedFile, wallet.stateDirectory, roles.secretsFile, privateState.passwordFile"
+        },
+        "corroboration": [
+          {
+            "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+            "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+            "locator": "line 70"
+          }
+        ],
+        "repair": "round 1: this is the narrowed residual of the former authority.identities.actual open item."
+      },
+      {
+        "id": "authority.successor.noAuthoritySlot",
+        "status": "open",
+        "value": null,
+        "reason": "The v5 profile exposes only Transfer, Repay, Originate and Accrue. The lifecycle state has exactly nine top-level keys (schemaVersion, balances, allowances, obligations, usedTransferIds, usedAllocationIds, usedOriginationIds, usedAccrualIds, work), none of which is an authority, signature or nonce slot, and financial-lifecycle.ts contains no occurrence of \"authority\", \"signature\" or \"nonce\" anywhere in the file (zero case-insensitive matches). There is therefore no source-level slot into which 5.1a can bind debtor or lender authority. This gap is about authority, not about principal: principal, accrued and outstanding are real fields of the nested LifecycleObligation type at lines 69-71 and appear in OBLIGATION_KEYS at line 252.",
+        "blockedBy": "task 5.1 reviewer decision: enforce at the SDK caller and in the compiled contract, or add a v6 source field",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const STATE_KEYS lines 232-242, interface LifecycleObligation lines 63-82, const OBLIGATION_KEYS lines 246-265"
+        },
+        "repair": "round 1, review finding [medium] open-item-honesty: previously recorded as authority.successor.noPrincipalSlot with the wording \"none carries a principal, authority, signature or nonce\". That was false about principal. The reviewer was right; the claim is narrowed to the authority, signature and nonce slots, which are genuinely absent."
+      },
+      {
+        "id": "authority.admission.current",
+        "status": "open",
+        "value": null,
+        "reason": "design.md records current plugin gaps as stale binding/candidate, missing current-accounting.json and unavailable resource state, so no current authority record can be cited.",
+        "blockedBy": "tasks.md 5.4 and 5.6; no counter may be reset to create one",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Ledger implementation and trust boundaries"
+        }
+      }
+    ]
+  },
+  "state": {
+    "purpose": "Pin balances, allowances, outstanding principal and interest, period and replay history, and the rule that every value derives from an accepted ledger read.",
+    "derivationRule": {
+      "statement": "Every state value used to build or check a transition derives from an actual accepted ledger read. A host-supplied JSON post-state is never an authenticated transition witness by itself.",
+      "source": {
+        "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+        "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+        "locator": "Ledger implementation and trust boundaries"
+      },
+      "mechanism": {
+        "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+        "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+        "locator": "captureFinalizedFinancialState"
+      },
+      "acceptedReadDefinition": [
+        "anchor at chain_getFinalizedHead and confirm the height maps back to that hash",
+        "read midnight_contractState(contractAddress, blockHash) with the explicit anchor",
+        "require ContractState.deserialize/serialize round-trip byte equality, else FINALIZED_STATE_NATIVE",
+        "decode with the compiled contract's own decodeState, structuredClone it off the decoder's getter view",
+        "confirm decoding did not mutate the native state, else FINALIZED_STATE_DECODE_MUTATED_NATIVE",
+        "re-confirm canonicality after decode",
+        "retain serializedStateHex and stateSha256 over the raw bytes"
+      ],
+      "retainedLimitations": {
+        "authenticatedStateProof": false,
+        "noInterveningActionsAfterAnchorEstablished": false
+      }
+    },
+    "pinned": [
+      {
+        "id": "state.source.closedKeys",
+        "status": "pinned",
+        "value": [
+          "schemaVersion",
+          "balances",
+          "allowances",
+          "obligations",
+          "usedTransferIds",
+          "usedAllocationIds",
+          "usedOriginationIds",
+          "usedAccrualIds",
+          "work"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const STATE_KEYS (lines 232-242)"
+        },
+        "note": "Closed: unknown fields fail."
+      },
+      {
+        "id": "state.source.balanceKeys",
+        "status": "pinned",
+        "value": [
+          "party",
+          "asset",
+          "amount"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const BALANCE_KEYS (line 243)"
+        }
+      },
+      {
+        "id": "state.source.allowanceKeys",
+        "status": "pinned",
+        "value": [
+          "party",
+          "asset",
+          "remaining",
+          "spent"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const ALLOWANCE_KEYS (line 244)"
+        }
+      },
+      {
+        "id": "state.source.workKeys",
+        "status": "pinned",
+        "value": [
+          "remaining",
+          "spent",
+          "closureReserve"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const WORK_KEYS (line 245)"
+        }
+      },
+      {
+        "id": "state.source.obligationKeys",
+        "status": "pinned",
+        "value": [
+          "id",
+          "debtor",
+          "creditor",
+          "denomination",
+          "settlementAsset",
+          "principal",
+          "accrued",
+          "outstanding",
+          "allocationRule",
+          "conversion",
+          "status",
+          "originationId",
+          "originationTransferId",
+          "initialPrincipal",
+          "nominalLiabilityCap",
+          "liabilityIncurred",
+          "accrualTerms",
+          "lastAccruedPeriod",
+          "nextAccrualAt"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const OBLIGATION_KEYS (lines 246-265)"
+        },
+        "note": "principal, accrued and outstanding are the source-plane outstanding principal and interest; lastAccruedPeriod and nextAccrualAt are the period cursor."
+      },
+      {
+        "id": "state.source.accrualTermsKeys",
+        "status": "pinned",
+        "value": [
+          "numerator",
+          "denominator",
+          "rounding",
+          "periodSeconds",
+          "firstPeriodStart"
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "const ACCRUAL_TERMS_KEYS (lines 267-273)"
+        }
+      },
+      {
+        "id": "state.source.bounds",
+        "status": "pinned",
+        "value": {
+          "sourceUtf8Bytes": 65536,
+          "collectionCapacity": 128,
+          "identifierCharacters": 64,
+          "maxScale": 18,
+          "uint128Max": "340282366920938463463374607431768211455",
+          "uint64Max": "18446744073709551615",
+          "signed128Max": "170141183460469231731687303715884105727",
+          "identifierPattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "amountPattern": "^(0|[1-9][0-9]*)$"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "LIFECYCLE_BOUNDS (lines 12-20), IDENTIFIER_BODY and AMOUNT_BODY (lines 228-229)"
+        }
+      },
+      {
+        "id": "state.source.initialBalances",
+        "status": "pinned",
+        "value": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "10"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "balances"
+        }
+      },
+      {
+        "id": "state.source.initialAllowances",
+        "status": "pinned",
+        "value": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "100",
+            "spent": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "allowances"
+        }
+      },
+      {
+        "id": "state.source.initialObligations",
+        "status": "pinned",
+        "value": [],
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "obligations"
+        },
+        "note": "Empty: the loan does not exist until originate runs."
+      },
+      {
+        "id": "state.source.initialReplayRegisters",
+        "status": "pinned",
+        "value": {
+          "usedTransferIds": [],
+          "usedAllocationIds": [],
+          "usedOriginationIds": [],
+          "usedAccrualIds": []
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "used*Ids"
+        },
+        "note": "These four lists are the source-plane replay history."
+      },
+      {
+        "id": "state.source.initialWork",
+        "status": "pinned",
+        "value": {
+          "remaining": "512",
+          "spent": "17",
+          "closureReserve": "16"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "work"
+        },
+        "note": "closureReserve is a separate retained field and is never subtracted twice from spendable work."
+      },
+      {
+        "id": "state.source.initialSnapshot",
+        "status": "pinned",
+        "value": {
+          "Args": {
+            "originationId": "O1",
+            "transferId": "D1"
+          },
+          "Obs": {},
+          "Pre": {
+            "paid": "0",
+            "phase": "0"
+          },
+          "workInitial": "512"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json",
+          "sha256": "23f945287228f2366dd6ba8263954d4297cd6521209a3b0a3a0c13200013542a",
+          "locator": "whole file"
+        },
+        "note": "workInitial is checked against admitted financial work before any snapshot validation; mismatch returns bare Rejected/WORK_MISMATCH."
+      },
+      {
+        "id": "state.source.accrualTerms",
+        "status": "pinned",
+        "value": {
+          "numerator": "1",
+          "denominator": "10",
+          "rounding": "floor",
+          "periodSeconds": "60",
+          "firstPeriodStart": "1000",
+          "allocationRule": "AccrualFirst",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "nominalLiabilityCap": "110"
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "action originate, emit Originate"
+        }
+      },
+      {
+        "id": "state.source.outstandingSequence",
+        "status": "pinned",
+        "value": [
+          "0",
+          "100",
+          "110",
+          "80",
+          "0"
+        ],
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Origination and accrual boundary: Expected debt sequence is 0 -> 100 -> 110 -> 80 -> 0"
+        },
+        "note": "Reproduced exactly by the ensures clauses of loan-lifecycle.mori."
+      },
+      {
+        "id": "state.source.expectedPosts",
+        "status": "pinned",
+        "value": {
+          "originate": {
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "balance": {
+              "Lender": "0",
+              "Borrower": "110"
+            },
+            "allowanceRemaining": {
+              "Lender": "0",
+              "Borrower": "110"
+            },
+            "allowanceSpent": {
+              "Lender": "100",
+              "Borrower": "0"
+            },
+            "phase": "pre.phase + 1",
+            "paid": "pre.paid"
+          },
+          "accrue": {
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "preOutstanding": "100",
+            "balance": {
+              "Lender": "0",
+              "Borrower": "110"
+            },
+            "allowanceRemaining": {
+              "Lender": "0"
+            },
+            "allowanceSpent": {
+              "Lender": "100"
+            },
+            "phase": "pre.phase + 1",
+            "paid": "pre.paid"
+          },
+          "repay": {
+            "argsNominal": "30",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "balance": {
+              "Lender": "30",
+              "Borrower": "80"
+            },
+            "allowanceRemaining": {
+              "Borrower": "80"
+            },
+            "allowanceSpent": {
+              "Borrower": "30"
+            },
+            "phase": "pre.phase + 1",
+            "paid": "pre.paid + payment"
+          },
+          "settle": {
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "balance": {
+              "Lender": "110",
+              "Borrower": "0"
+            },
+            "allowanceRemaining": {
+              "Borrower": "0"
+            },
+            "allowanceSpent": {
+              "Borrower": "110"
+            },
+            "phase": "pre.phase + 1",
+            "paid": "pre.paid + payment"
+          }
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "the ensures clauses of each action"
+        },
+        "note": "Accrual is floor(100 * 1 / 10) = 10 for period 1; repay of 30 clears accrued 10 first (AccrualFirst) then 20 of principal, leaving principal 80; settle pays the remaining 80."
+      },
+      {
+        "id": "state.source.postIntrinsics",
+        "status": "pinned",
+        "value": [
+          "post_outstanding<U>(id)",
+          "post_principal<U>(id)",
+          "post_accrued<U>(id)",
+          "post_balance<A>(party)",
+          "post_allowance_remaining<A>(party)",
+          "post_allowance_spent<A>(party)"
+        ],
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Financial postconditions: public interface"
+        },
+        "note": "First three return Quantity<Units<U,1>,0>; the other three return Amount<A>. They occur only inside ensures; elsewhere TYPE_POST_SCOPE, including dead branches. Unprefixed reads always use financial PRE."
+      },
+      {
+        "id": "state.source.replayRule",
+        "status": "pinned",
+        "value": "A second accrue with the same accrualId and periodIndex must fail; the driver issues it deliberately as duplicateCall between accrue and repay. A failed action returns no tentative output.",
+        "source": {
+          "path": "experiments/moriarty-language/examples/loan-lifecycle.mjs",
+          "sha256": "6165fd3b7e3f5cd598e62b115f620f1349b0f1294500376b3cf780a4f7e46bac",
+          "locator": "runLoanLifecycleDemo duplicateCall"
+        },
+        "note": "design.md: Accrue adds interest once for the next eligible period; the period cursor remains after repayment and settlement; settled debt cannot accrue."
+      },
+      {
+        "id": "state.ledger.kernelFieldNames",
+        "status": "pinned",
+        "value": {
+          "f0": "notional",
+          "f1": "principal_due",
+          "f2": "interest_due",
+          "f3": "principal_paid",
+          "f4": "interest_paid",
+          "f5": "borrower_cash",
+          "f6": "lender_cash",
+          "f7": "cursor",
+          "f8": "episode_closed"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.stateFieldNames"
+        },
+        "note": "f1 and f2 are outstanding principal and interest due; f7 is the on-ledger period cursor; f8 is episode closure."
+      },
+      {
+        "id": "state.ledger.publicFields",
+        "status": "pinned",
+        "value": [
+          "programDigest",
+          "networkTag",
+          "borrowerCapability",
+          "lenderCapability",
+          "borrowerAddress",
+          "lenderAddress",
+          "usdDomain",
+          "usdColor",
+          "initialized",
+          "remaining",
+          "revision",
+          "kernelState",
+          "lastAccrue",
+          "lastSettle"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "export ledger declarations (lines 11-24)"
+        },
+        "note": "The complete public state surface of the existing compiled loan. There is no allowance field and no used-identifier registry."
+      },
+      {
+        "id": "state.ledger.effectFieldNames",
+        "status": "pinned",
+        "value": {
+          "accrue": {
+            "effect0": "DueCreated{due_id,debtor,creditor,denomination,amount}",
+            "effect1": "DueCreated{due_id,debtor,creditor,denomination,amount}"
+          },
+          "settle": {
+            "effect0": "Transfer{asset,from,to,amount}",
+            "effect1": "DueSettled{due_id,debtor,creditor,denomination,amount,asset}",
+            "effect2": "DueSettled{due_id,debtor,creditor,denomination,amount,asset}"
+          }
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.effectFieldNames"
+        }
+      },
+      {
+        "id": "state.ledger.textIds",
+        "status": "pinned",
+        "value": {
+          "USD_TEST_ASSET": "0",
+          "USD_micro": "1",
+          "borrower": "2",
+          "lam01:period1:IP": "3",
+          "lam01:period1:PR": "4",
+          "lender": "5"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.textIds"
+        }
+      },
+      {
+        "id": "state.ledger.compiledEffectAsserts",
+        "status": "pinned",
+        "value": {
+          "accrue": {
+            "DUE_ID_PR": 4,
+            "DUE_PR_DEBTOR": 2,
+            "DUE_PR_CREDITOR": 5,
+            "DUE_PR_DENOMINATION": 1,
+            "DUE_PR_AMOUNT": 500000000,
+            "DUE_ID_IP": 3,
+            "DUE_IP_DEBTOR": 2,
+            "DUE_IP_CREDITOR": 5,
+            "DUE_IP_DENOMINATION": 1,
+            "DUE_IP_AMOUNT": 33972602,
+            "RESIDUAL_NOTIONAL": 4500000000
+          },
+          "settle": {
+            "TRANSFER_ASSET": 0,
+            "TRANSFER_FROM": 2,
+            "TRANSFER_TO": 5,
+            "TRANSFER_AMOUNT": 533972602,
+            "SETTLED_PR_AMOUNT": 500000000,
+            "SETTLED_IP_AMOUNT": 33972602,
+            "RESIDUAL_NOTIONAL": 4500000000
+          }
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "accrue lines 80-90, settle lines 106-125"
+        },
+        "note": "This is the transition verification design.md requires: the wrapper asserts every effect field against a pinned expected value inside the circuit."
+      },
+      {
+        "id": "state.ledger.fixtureNumerics",
+        "status": "pinned",
+        "value": {
+          "initialPrincipal": "5000000000",
+          "rateNumerator": "8",
+          "rateDenominator": "100",
+          "periodNumerator": "31",
+          "periodDenominator": "365",
+          "interest": "33972602",
+          "interestExactRemainderDiscarded": "54/73",
+          "principalInstallment": "500000000",
+          "totalCash": "533972602",
+          "borrowerCashBefore": "20000000000",
+          "lenderCashBefore": "0",
+          "borrowerCashAfter": "19466027398",
+          "lenderCashAfter": "533972602",
+          "residualNotional": "4500000000",
+          "cursor": "2",
+          "episodeClosed": "1",
+          "dueIds": [
+            "lam01:period1:PR",
+            "lam01:period1:IP"
+          ],
+          "asset": "USD_TEST_ASSET",
+          "denomination": "USD_micro",
+          "quantum": "1"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Loan fixture"
+        },
+        "note": "floor(5000000000 * 8 * 31 / (100 * 365)) = 33972602. This is the compiled fixture's numeric universe, not the lifecycle source's."
+      },
+      {
+        "id": "state.numericUniverse.target",
+        "status": "pinned",
+        "value": {
+          "selectedCase": "the lifecycle source case",
+          "unit": "Cash",
+          "initialBalances": {
+            "Lender": "100",
+            "Borrower": "10"
+          },
+          "originatedPrincipal": "100",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "accruedPerPeriod": "10",
+          "nominalLiabilityCap": "110",
+          "allocationRule": "AccrualFirst",
+          "repayment": "30",
+          "computedSettlement": "80",
+          "outstandingSequence": [
+            "0",
+            "100",
+            "110",
+            "80",
+            "0"
+          ],
+          "finalBalances": {
+            "Lender": "110",
+            "Borrower": "0"
+          }
+        },
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "line 52: the complete example, and line 68: execute the exact lifecycle"
+        },
+        "corroboration": [
+          {
+            "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+            "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+            "locator": "ensures clauses of originate, accrue, repay and settle (lines 87-177)"
+          },
+          {
+            "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+            "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+            "locator": "balances"
+          }
+        ],
+        "note": "design.md line 52 selects this case outright; line 62 requires replacing the hardcoded older custody state with source-bound lifecycle state; line 68 requires executing \"the exact lifecycle\". The 5000000000 USD_micro fixture pinned at state.ledger.fixtureNumerics is therefore the state being replaced, not a competing target. The selection is of the semantic numeric case only. The ledger asset and unit mapping that carries these amounts onto a ledger denomination remains open at state.fieldMapping.sourceToLedger, and the token color at assets.usdColor.",
+        "repair": "round 1, review finding [high] open-item-honesty: previously recorded open with the claim that design.md does not say which numeric universe the authenticated run must carry. That claim was false, and it had also been reported upward as a risk to compilation; the false alarm is withdrawn. The reviewer was right."
+      },
+      {
+        "id": "state.comparator.closedSchema",
+        "status": "pinned",
+        "value": "moriarty-financial-record/1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Schema"
+        },
+        "note": "Closed: unknown fields fail, required dimensions must be present, duplicate identities fail, amount 0 does not admit an extra row, transfer ordinals must be unique 0..n-1, asset quantum must be positive."
+      },
+      {
+        "id": "state.comparator.integerPolicy",
+        "status": "pinned",
+        "value": "Unsigned money and counters are canonical decimal strings in 0 .. 2^128-1: 0 or a digit sequence with no leading zero, sign, space, newline or hex prefix. Use BigInt, never IEEE Number arithmetic on money.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Schema"
+        }
+      },
+      {
+        "id": "state.comparator.selfCheckRule",
+        "status": "pinned",
+        "value": "Each input is validated against the admitted closed identity sets before comparison. Two equal self-contradictory objects still fail. A bad expected record cannot launder a bad observed record.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "compareFinancialEffects"
+        },
+        "note": "Enforced in src/differential.mjs (sha256 4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe)."
+      },
+      {
+        "id": "state.comparator.networkClaimRule",
+        "status": "pinned",
+        "value": "compareFinancialEffects always returns networkAcceptance:false and networkEvidence:\"incompleteNetworkEvidence\", even when ok is true; a record that sets networkAcceptance true is rejected with NETWORK_CLAIM_FORBIDDEN.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Network acceptance"
+        }
+      },
+      {
+        "id": "state.setupMintException",
+        "status": "pinned",
+        "value": "The declared setup transfer is the only explicit funding exception. Initial borrower cash is test-setup mint funding and is not evidence of loan origination.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Loan fixture and compareFinancialEffects"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "state.allowances.ledgerRepresentation",
+        "status": "open",
+        "value": null,
+        "reason": "The frozen source state carries allowance remaining and spent per party and asset, and four of the lifecycle ensures assert post allowance values. The compiled contract's public surface has no allowance field and the nine-field kernel state has no allowance slot. How allowance remaining and spent are represented on the ledger, or why they may be omitted, is stated nowhere.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a lowerer",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "export ledger declarations (lines 11-24) versus experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori ensures"
+        }
+      },
+      {
+        "id": "state.replayHistory.ledgerRepresentation",
+        "status": "open",
+        "value": null,
+        "reason": "The source state has four used-identifier registers (transfer, allocation, origination, accrual). The ledger has only revision and the kernel cursor f7. A replayed accrue with a fresh revision and an eligible cursor has no on-ledger identifier register to reject it, and the design's replay-history requirement has no compiled counterpart.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.stateFieldNames has no used-id field"
+        }
+      },
+      {
+        "id": "state.fieldMapping.sourceToLedger",
+        "status": "open",
+        "value": null,
+        "reason": "No document maps the lifecycle obligation fields (principal, accrued, outstanding, initialPrincipal, nominalLiabilityCap, liabilityIncurred, lastAccruedPeriod, nextAccrualAt) onto the ledger kernel fields f0..f8. Without it, 5.1a has no defined lowering for outstanding principal and interest. The same gap covers the asset and unit mapping: the selected source case is Cash at quantum 1 while the existing ledger fixture is USD_TEST_ASSET denominated USD_micro, and no document states the scale that carries source amounts onto ledger units.",
+        "blockedBy": "task 5.1a lowerer design",
+        "source": {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "OBLIGATION_KEYS versus experiments/moriarty-midnight-financial/ledger/financial-expectations.json stateFieldNames"
+        },
+        "repair": "round 1: reason widened to absorb the asset and unit scale question, which is the part of the former state.numericUniverse.target item that is genuinely still open."
+      },
+      {
+        "id": "state.thirdParty.otherToken",
+        "status": "open",
+        "value": null,
+        "reason": "The frozen initial state contains a third party Other holding asset Token with allowance remaining 3 and spent 1. The compiled loan binds exactly one asset domain (usdDomain) and two roles. Whether Other and Token survive lowering, or are dropped as source-only, is undecided.",
+        "blockedBy": "task 5.1 reviewer decision",
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+          "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35",
+          "locator": "balances[2] and allowances[2]"
+        }
+      },
+      {
+        "id": "state.interveningActions",
+        "status": "open",
+        "value": null,
+        "reason": "The accepted read explicitly records noInterveningActionsAfterAnchorEstablished:false. Nothing in the tree establishes that no third-party transition landed between the anchor read and submission, so stale-revision rejection is the only defence and its evidence is not yet produced.",
+        "blockedBy": "tasks.md 5.3 stale-revision cases and 5.5 rejection control",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "returned snapshot field"
+        }
+      }
+    ]
+  },
+  "time": {
+    "purpose": "Pin deadline and period semantics, including the outer margin.",
+    "outerMargin": {
+      "value": "at least 60 seconds retained between the +1740 cleanup/durable-result/acknowledgment cutoff and the 1800-second outer timeout",
+      "source": {
+        "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+        "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+        "locator": "Requirement: Fixed deadlines with a retained outer margin"
+      },
+      "rule": "If the fixed block deadline shortens the outer window, refuse startup unless the complete schedule still fits. The margin is never squeezed out."
+    },
+    "pinned": [
+      {
+        "id": "time.anchor",
+        "status": "pinned",
+        "value": "authenticated actual outer start; never executor entry",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.schedule",
+        "status": "pinned",
+        "value": {
+          "setupStartupBy": "+120",
+          "financialPlanDeadline": "+1600",
+          "bootstrapHardExit": "+1606",
+          "finalBoundedCollection": "+1618",
+          "independentTimer": "+1620",
+          "timerAccuracySecMax": 1,
+          "cleanupResultAckBy": "+1740",
+          "outerTimeout": 1800,
+          "retainedMarginAfterCleanupSec": 60,
+          "outerRunnerGrace": 5,
+          "minimumPrepaidDebitSec": 1835
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.gaps",
+        "status": "pinned",
+        "value": {
+          "operationDeadlineBeforeBootstrapExitSec": 6,
+          "operationDeadlineBeforeIndependentTimerSec": 20
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.monotonicProjection",
+        "status": "pinned",
+        "value": "deadlineMs <= wallNowMs + floor(1000 * (outerStart + 1600 - monotonicNow)); later wall changes may shorten but never extend monotonic enforcement",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.entryRules",
+        "status": "pinned",
+        "value": [
+          "entry at outer+50 keeps the same +1740 cutoff and the 60-second margin, with only 70 setup seconds",
+          "entry at or after outer+120 refuses",
+          "a late activation, retry or poll never resets a cutoff"
+        ],
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin and its scenario"
+        }
+      },
+      {
+        "id": "time.bannedRecipe",
+        "status": "pinned",
+        "value": "the historical 2490/2500/2550-second recipe is incompatible and must not be reused",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.collectorBounds",
+        "status": "pinned",
+        "value": {
+          "showSeconds": "min(5, phaseRemaining), positive required",
+          "stopSeconds": "min(25, cleanupRemaining), positive required",
+          "pollIntervalSec": 1,
+          "rule": "the actual invoked timeout wrapper and exact duration is the argv retained in evidence, not a substituted command reported as the old hardcoded 25 seconds"
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      },
+      {
+        "id": "time.proverLifetime",
+        "status": "pinned",
+        "value": {
+          "wrapperOwnBoundSec": 1500,
+          "effectiveDeadline": "min(entry + 1500, control.killDeadline)",
+          "latestStart": "outerStart + 120",
+          "killDeadline": "outerStart + 1620",
+          "clock": "monotonic absolute timer, not wall-clock timeout or accumulated sleeps",
+          "independentOf": [
+            "executor",
+            "Foreman process",
+            "user-manager timer",
+            "post-start ownership receipt"
+          ]
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Prover lifetime established before daemon startup"
+        }
+      },
+      {
+        "id": "time.proverControlFile",
+        "status": "pinned",
+        "value": {
+          "header": "moriarty.prover-lifetime/1",
+          "lines": 6,
+          "lineOrder": [
+            "header",
+            "canonical boot UUID",
+            "decimal time-namespace inode",
+            "decimal latest-start CLOCK_MONOTONIC nanoseconds",
+            "decimal kill-deadline CLOCK_MONOTONIC nanoseconds",
+            "lowercase 64-hex invocation payload digest"
+          ],
+          "mode": "0400",
+          "readBoundBytes": 512,
+          "extraLinesAccepted": false,
+          "validated": [
+            "/proc/sys/kernel/random/boot_id",
+            "/proc/self/ns/time",
+            "actual monotonic time"
+          ]
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Prover lifetime established before daemon startup"
+        }
+      },
+      {
+        "id": "time.compact.blockWindow",
+        "status": "pinned",
+        "value": {
+          "windowSeconds": 300,
+          "assertions": [
+            "blockTimeGte(publicNow)",
+            "blockTimeLt(publicNow + 300)"
+          ],
+          "maxNow": "18446744073709551315",
+          "maxNowDerivation": "uint64Max 18446744073709551615 minus windowSeconds 300",
+          "horizonAssertion": "publicNow < 2000000000",
+          "codes": [
+            "UINT64_WINDOW_OVERFLOW",
+            "BLOCK_TIME_TOO_EARLY",
+            "BLOCK_TIME_TOO_LATE",
+            "HORIZON_EXPIRED"
+          ]
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "circuit constrainNow (lines 30-38)"
+        }
+      },
+      {
+        "id": "time.custody.bindings",
+        "status": "pinned",
+        "value": {
+          "horizon": "2000000000",
+          "windowSeconds": "300",
+          "uint64Max": "18446744073709551615",
+          "syntheticBlockTime": "1700000000",
+          "syntheticUncertaintySeconds": "0"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "time"
+        },
+        "note": "syntheticBlockTime and syntheticUncertaintySeconds are test values, not a network time source."
+      },
+      {
+        "id": "time.source.periodSemantics",
+        "status": "pinned",
+        "value": {
+          "periodSeconds": "60",
+          "firstPeriodStart": "1000",
+          "observedTimeForPeriod1": "1060",
+          "periodIndexForFirstAccrual": "1",
+          "cursorFields": [
+            "lastAccruedPeriod",
+            "nextAccrualAt"
+          ],
+          "rules": [
+            "one nonnegative simple-interest rational rate per exact period",
+            "Accrue adds floor or ceil(principal * numerator / denominator) once for the next eligible period",
+            "Accrue moves no cash",
+            "the period cursor remains after repayment and settlement",
+            "settled debt cannot accrue",
+            "each obligation owns its accepted period cursor"
+          ]
+        },
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "accrualTerms in emit Originate and the accrue action; rules quoted from openspec/changes/language-to-ledger-lifecycle/design.md Origination and accrual boundary"
+        },
+        "note": "observedTime 1060 = firstPeriodStart 1000 + periodSeconds 60, supplied by experiments/moriarty-language/examples/loan-lifecycle.mjs."
+      },
+      {
+        "id": "time.ledger.readDeadlines",
+        "status": "pinned",
+        "value": {
+          "localTipTotalMs": 60000,
+          "localTipSamples": 60,
+          "localTipSpacingMs": 1000,
+          "localTipPerRequestMs": 5000,
+          "finalizedStateCapMs": "min(deadlineMs, now + 60000)",
+          "codes": [
+            "TIP_REQUEST_DEADLINE",
+            "TIP_NOT_READY",
+            "FINALIZED_STATE_DEADLINE_EXPIRED",
+            "FINALIZED_STATE_OBSERVATION_TIMEOUT_UNKNOWN"
+          ],
+          "lateResolutionRule": "timers cannot interrupt synchronous work, so a resolved RPC is re-checked against the stop time after it returns"
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "captureFinalizedFinancialState; bounds for the tip probe are in experiments/moriarty-midnight-financial/ledger/local-tip.mjs"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "time.outerStart.value",
+        "status": "open",
+        "value": null,
+        "reason": "The authenticated actual outer start is a runtime input from the campaign runner. Only the offsets can be frozen.",
+        "blockedBy": "by construction; runtime input"
+      },
+      {
+        "id": "time.blockDeadline.admitted",
+        "status": "open",
+        "value": null,
+        "reason": "The fixed block deadline that the schedule must fit inside comes from the current admitted amendment. design.md records current-accounting.json as missing and resource state as unavailable, so no admitted bound can be cited.",
+        "blockedBy": "tasks.md 5.4 and 5.6; no counter may be reset to obtain one",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Ledger implementation and trust boundaries"
+        }
+      },
+      {
+        "id": "time.window.reconciliation",
+        "status": "open",
+        "value": null,
+        "reason": "The compiled contract accepts a block time only inside a 300-second window around the disclosed now, while the executor's financial plan deadline sits at outer+1600. Nothing states how a proof produced late in that window keeps its 300-second validity, or whether the caller must re-read the block time and re-prove. This is a plausible live-failure mode with no frozen rule.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a SDK caller",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "circuit constrainNow versus openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md deadline schedule"
+        }
+      },
+      {
+        "id": "time.horizon.expiry",
+        "status": "open",
+        "value": null,
+        "reason": "The contract hard-refuses any disclosed now at or after unix 2000000000 (2033-05-18) with HORIZON_EXPIRED. That is pinned, but whether the lowered lifecycle keeps the same horizon or takes one from terms is undecided.",
+        "blockedBy": "task 5.1a lowerer"
+      },
+      {
+        "id": "time.cldMapping.confirmation",
+        "status": "open",
+        "value": null,
+        "reason": "The spec requires confirming the CLD code mapping against the installed systemd interface during source implementation and retaining that interface evidence. That confirmation has not been performed, so the exit classification table is frozen as written but unverified against the host.",
+        "blockedBy": "tasks.md 5.2 implementation",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Exact loaded-main classification before evidence-driven stop"
+        }
+      }
+    ]
+  },
+  "failure": {
+    "purpose": "Pin the closed set of failure dispositions across the process, contract, comparator and language planes.",
+    "closedSets": {
+      "processStatus": {
+        "values": [
+          "PROCESS_SUCCESS",
+          "PROCESS_FAILED",
+          "PROCESS_UNKNOWN",
+          "REFUSED"
+        ],
+        "exitCodes": {
+          "PROCESS_SUCCESS": 0,
+          "PROCESS_FAILED": 1,
+          "REFUSED": 2,
+          "PROCESS_UNKNOWN": 3
+        },
+        "invariants": {
+          "retryAllowed": false,
+          "financialAcceptance": "pending in all cases"
+        },
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Durable result and consuming CLI semantics"
+        }
+      },
+      "rawMainExit": {
+        "shape": "{kind: exit|signal|unknown, code: integer|null}",
+        "rule": "unknown enum or property combinations are unknown, never implicit zero; use null for an unavailable scalar, not an invented zero",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Exact loaded-main classification before evidence-driven stop"
+        }
+      },
+      "failureCode": {
+        "values": [
+          "MAIN_EXIT_NONZERO",
+          "MAIN_SIGNAL",
+          "MAIN_OBSERVATION_INVALID",
+          "MAIN_OBSERVATION_UNAVAILABLE",
+          "MAIN_EXIT_UNAVAILABLE",
+          "STARTUP_INVALID",
+          "EVIDENCE_WRITE_FAILED",
+          "EVIDENCE_PREEXISTS",
+          "STOP_FAILED",
+          "STOP_RECEIPT_FAILED",
+          "DEADLINE_EXCEEDED",
+          "PARENT_LOST",
+          "CONTAINMENT_UNRESOLVED",
+          "CONTAINMENT_UNSUPPORTED",
+          "TIMER_CANCEL_FAILED",
+          "RESULT_WRITE_FAILED"
+        ],
+        "nonTerminalMarker": "NOT_TERMINAL produces no terminal files and authorizes only bounded polling",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirements: exact loaded-main classification; identity-safe external containment; durable result"
+        }
+      },
+      "refusedValidatorCode": {
+        "values": [
+          "AUTHORITY_INVALID",
+          "HISTORY_UNRESOLVED",
+          "OBSERVATION_INVALID",
+          "OWNERSHIP_UNRESOLVED",
+          "CLAIM_INVALID"
+        ],
+        "rule": "returned before resource startup; CONTAINMENT_UNSUPPORTED also refuses with no resource start and no weaker fallback",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Immutable plan and exact current authority boundary"
+        }
+      },
+      "resultDocument": {
+        "schema": "moriarty.loan-process-result/1",
+        "fields": [
+          "schema",
+          "allocationId",
+          "actionId",
+          "candidateHash",
+          "runnerDigest",
+          "chargeId",
+          "reservationId",
+          "invocationSha256",
+          "unit",
+          "invocationId",
+          "status",
+          "rawMainExit",
+          "terminalEvidencePersisted",
+          "stopReturnCode",
+          "stopErrorClass",
+          "stopReceiptPersisted",
+          "containmentComplete",
+          "timerCancelReturnCode",
+          "timerCancelReceiptPersisted",
+          "failureCode",
+          "evidence",
+          "outstandingOwners",
+          "retryAllowed",
+          "financialAcceptance"
+        ],
+        "evidenceEntryShape": "{kind, path, sha256}",
+        "outstandingOwnerShape": "{owner, resource, reason}",
+        "persistence": "exclusive write with file and directory fsync at the immutable wrapper's resultPath",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Durable result and consuming CLI semantics"
+        }
+      },
+      "compiledContractAssertCode": {
+        "values": [
+          "PROGRAM_MISMATCH",
+          "NETWORK_MISMATCH",
+          "REVISION_MISMATCH",
+          "NOT_INITIALIZED",
+          "ALREADY_INITIALIZED",
+          "BORROWER_CAPABILITY",
+          "ACTOR_MAPPING",
+          "SETTLEMENT_ASSET",
+          "UINT64_WINDOW_OVERFLOW",
+          "BLOCK_TIME_TOO_EARLY",
+          "BLOCK_TIME_TOO_LATE",
+          "HORIZON_EXPIRED",
+          "SETTLE_IN_CALL_DELTA",
+          "DUE_ID_PR",
+          "DUE_PR_DEBTOR",
+          "DUE_PR_CREDITOR",
+          "DUE_PR_DENOMINATION",
+          "DUE_PR_AMOUNT",
+          "DUE_ID_IP",
+          "DUE_IP_DEBTOR",
+          "DUE_IP_CREDITOR",
+          "DUE_IP_DENOMINATION",
+          "DUE_IP_AMOUNT",
+          "RESIDUAL_NOTIONAL",
+          "TRANSFER_ASSET",
+          "TRANSFER_FROM",
+          "TRANSFER_TO",
+          "TRANSFER_AMOUNT",
+          "SETTLED_PR_ID",
+          "SETTLED_PR_DEBTOR",
+          "SETTLED_PR_CREDITOR",
+          "SETTLED_PR_DENOMINATION",
+          "SETTLED_PR_AMOUNT",
+          "SETTLED_PR_ASSET",
+          "SETTLED_IP_ID",
+          "SETTLED_IP_DEBTOR",
+          "SETTLED_IP_CREDITOR",
+          "SETTLED_IP_DENOMINATION",
+          "SETTLED_IP_AMOUNT",
+          "SETTLED_IP_ASSET"
+        ],
+        "rule": "these are the compiled constraints through which transitions are verified; every one is an in-circuit assert, not a host check",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "whole file"
+        }
+      },
+      "comparatorErrorCode": {
+        "values": [
+          "MALFORMED_STRUCTURE",
+          "UNKNOWN_FIELD",
+          "MISSING_FIELD",
+          "NONCANONICAL_INTEGER",
+          "INTEGER_OVERFLOW",
+          "DUPLICATE_IDENTITY",
+          "BALANCE_INCONSISTENT",
+          "GROSS_DEBIT_MISMATCH",
+          "REFUND_MISMATCH",
+          "NET_CREDIT_MISMATCH",
+          "FEE_MISMATCH",
+          "TRANSFER_MISMATCH",
+          "EXTRA_TRANSFER",
+          "OMITTED_TRANSFER",
+          "COLOR_MISMATCH",
+          "QUANTUM_MISMATCH",
+          "DENOMINATION_MISMATCH",
+          "LIABILITY_MISMATCH",
+          "DUE_MISMATCH",
+          "RESIDUAL_DUTY_MISMATCH",
+          "REVISION_MISMATCH",
+          "WORK_MISMATCH",
+          "REMAINING_MISMATCH",
+          "STATUS_MISMATCH",
+          "BINDING_MISMATCH",
+          "VALUE_MISMATCH",
+          "NETWORK_CLAIM_FORBIDDEN"
+        ],
+        "ordering": "deterministic: path ascending, then code ascending, then message ascending",
+        "behaviour": "returns a structured failure result, never throws, never mutates inputs on success or failure",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "compareFinancialEffects"
+        }
+      },
+      "languageRejection": {
+        "envelope": {
+          "status": "Rejected",
+          "code": "<code>",
+          "span": {
+            "kind": "synthetic",
+            "start": "0",
+            "end": "0"
+          },
+          "nodePath": [],
+          "workUsed": "0"
+        },
+        "codes": [
+          "FINANCIAL_CONTEXT_REQUIRED",
+          "TYPE_ACTION_REQUIRED",
+          "TYPE_POST_SCOPE",
+          "WORK_MISMATCH",
+          "EMPTY_BATCH",
+          "INPUT_SCHEMA",
+          "INPUT_BOUND"
+        ],
+        "rules": [
+          "static errors precede missing context",
+          "TYPE_POST_SCOPE reports its original source or Core location, including in dead branches",
+          "primitive transport errors keep bare INPUT_SCHEMA or INPUT_BOUND",
+          "malformed kernel state retains its code and actionIndex:null",
+          "workInitial mismatch returns bare Rejected/WORK_MISMATCH before snapshot validation"
+        ],
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Financial postconditions: public interface"
+        }
+      },
+      "financialComparatorReceiptCode": {
+        "values": [
+          "RECEIPT",
+          "TRANSACTION",
+          "FEES",
+          "NATIVE_FEE",
+          "NATIVE_FEE_UNIT",
+          "NATIVE_FEE_MISMATCH",
+          "NATIVE_FEE_CAP_REQUIRED",
+          "NATIVE_FEE_CAP_EXCEEDED",
+          "INDEXER_FEES",
+          "HISTORICAL_FEE_ALLOCATION"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+          "sha256": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+          "locator": "createFinancialComparator and its receipt validation"
+        }
+      }
+    },
+    "pinned": [
+      {
+        "id": "failure.atomicity.noTentativePublication",
+        "status": "pinned",
+        "value": "No failed preparation publishes tentative state or implies actual on-ledger fee refunds. A failed action returns no tentative output.",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Evaluation and publication; Origination and accrual boundary"
+        }
+      },
+      {
+        "id": "failure.work.attemptedAccounting",
+        "status": "pinned",
+        "value": "Failed suffix reductions report total attempted work including the successful tentative kernel. Work is E_prefix + N_kernel + E_suffix.",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Evaluation and publication"
+        }
+      },
+      {
+        "id": "failure.signalAttribution",
+        "status": "pinned",
+        "value": "A safety kill is a known signal only if an actual matching terminal observation establishes the signal row. The kill request or outer exit alone does not establish it.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Exact loaded-main classification before evidence-driven stop"
+        }
+      },
+      {
+        "id": "failure.evidenceIntegrity",
+        "status": "pinned",
+        "value": "A terminal observation or write failure does not authorize stopping a running service to manufacture a main exit. Safety cleanup is labelled cleanup, never exit proof.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Exact loaded-main classification, and its scenario"
+        }
+      },
+      {
+        "id": "failure.durability",
+        "status": "pinned",
+        "value": "The collector writes exclusive no-follow raw and validated terminal evidence with complete writes, file fsync and directory fsync before any evidence-driven explicit stop. Preexisting evidence or stop receipts are rejected.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Exact loaded-main classification before evidence-driven stop"
+        }
+      },
+      {
+        "id": "failure.containmentDefinition",
+        "status": "pinned",
+        "value": "C means independently observed, durably retained containment of every owned resource. S means immediate identity-checked safety cleanup, not a collector stop. PROCESS_SUCCESS requires C plus confirmed timer cancellation. A known main failure stays PROCESS_FAILED when supplementary cleanup evidence is incomplete; otherwise incomplete evidence yields PROCESS_UNKNOWN.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Identity-safe external containment and deterministic fault disposition"
+        }
+      },
+      {
+        "id": "failure.identitySafety",
+        "status": "pinned",
+        "value": "A reused container name, a same container ID with a changed StartedAt, a changed unit InvocationID, or a missing ownership receipt must not be killed as this invocation. Retain the mismatch and the unresolved ownership.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Identity-safe external containment and deterministic fault disposition"
+        }
+      },
+      {
+        "id": "failure.dispositionTables",
+        "status": "pinned",
+        "value": "Two closed tables are frozen verbatim by reference: the eight-row loaded-main classification table and the twelve-row complete-call-path disposition table. No row may be added or reinterpreted during 5.1a.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirements: exact loaded-main classification; identity-safe external containment"
+        }
+      },
+      {
+        "id": "failure.startupRaceTable",
+        "status": "pinned",
+        "value": "The seven-row prover startup race table is frozen by reference, including: validation or fsync failure means no Docker start; executor death after control write means no proof child; a delayed wrapper entry at or after outer+120 refuses inside PID 1.",
+        "source": {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Prover lifetime established before daemon startup"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "failure.ledgerRejection.codes",
+        "status": "open",
+        "value": null,
+        "reason": "The plan names five failing ledger cases to add (substitution, stale revision, unauthorized debt, replay, fee-inclusive result) but no rejection code names or expected dispositions exist for them yet. The compiled vocabulary above covers the restricted loan, not the lifecycle.",
+        "blockedBy": "tasks.md 5.3 test cases, written against the 5.1a implementation",
+        "source": {
+          "path": "docs/superpowers/plans/2026-09-12-language-to-ledger.md",
+          "sha256": "613e1ebc3fca78f24c989c84e16a512aaec7c141053e8e45960ef695834d4af4",
+          "locator": "Task 5 checklist item 3"
+        }
+      },
+      {
+        "id": "failure.lifecycleAssertVocabulary",
+        "status": "open",
+        "value": null,
+        "reason": "Whether the lowered lifecycle contract keeps the existing assert code vocabulary, or introduces per-effect codes for Originate and Accrue, is undecided. Freezing the restricted vocabulary does not settle it.",
+        "blockedBy": "task 5.1a lowerer"
+      },
+      {
+        "id": "failure.deferredLedgerObligations",
+        "status": "open",
+        "value": null,
+        "reason": "bindings.json lists eight deferred ledger obligations that remain unmet: actual-signed-unshielded-offer, consumed-utxo-ownership, borrower-trader-debit-payer-attribution, third-party-payer-negative, missing-real-funding, transaction-fees-change-finality, real-ledger-rollback and blocked-comparison-utility-not-imported. Each is a failure mode with no current disposition.",
+        "blockedBy": "tasks.md 5.5 and 5.7; MC04/MC05 retain the wider gates",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "deferredLedgerObligations"
+        }
+      }
+    ]
+  },
+  "fees": {
+    "purpose": "Pin the rule that fees stay distinct from loan settlement amounts and still enter fee-inclusive net goals.",
+    "separationRule": {
+      "statement": "Fees remain distinct from loan settlement amounts and must enter fee-inclusive net goals.",
+      "source": {
+        "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+        "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+        "locator": "Ledger implementation and trust boundaries"
+      },
+      "planes": {
+        "loanSettlementAsset": "the agreement's settlement asset: Cash in the lifecycle source; USD_TEST_ASSET denominated USD_micro with quantum 1 in the compiled fixture",
+        "networkFeeAsset": "DUST measured in SPECK, asserted by NATIVE_FEE_UNIT",
+        "economicFee": "an in-asset fee retained inside gross input; the only pinned instance is the swap's 30 ASSET_A"
+      }
+    },
+    "netGoalRule": {
+      "statement": "A net goal passes exactly when checked(credits) >= checked(debits + minimumLedgerAmount).",
+      "source": {
+        "path": "experiments/moriarty-language/spec/semantics.md",
+        "sha256": "d2c62ea1e34a345753b319532d85652d29b1946b2d77d1f60f9518b01c519002",
+        "locator": "lines 350-362"
+      },
+      "alsoSpecifiedIn": {
+        "path": "experiments/moriarty-language/spec/typed-schemas.md",
+        "sha256": "6ef3383ad42b7ea2a22822f8116c7e182cbe8b476ef01e9cd3ef899679da4f04",
+        "locator": "NetGoal and the ExactPlan/IntentRefinement paragraph"
+      },
+      "implementation": {
+        "path": "experiments/moriarty-language/src/evaluate.ts",
+        "sha256": "395041bfedcb30d03bb525df2492c99e9c5f72dcf1784d58db0b9c605efc03f9",
+        "locator": "line 295: INTENT_NET_GOAL"
+      },
+      "summation": [
+        "credits sum Transfer and Fee effects with to == A for that asset",
+        "debits sum Transfer and Fee effects with from == A for that asset",
+        "a self-transfer contributes to both sums",
+        "DueCreated and DueSettled contribute to neither, avoiding double-counting settlement records",
+        "a missing debit or credit sum is zero",
+        "every sum and addition is UInt128 in ledger units after exact quantum conversion"
+      ],
+      "codes": {
+        "INTENT_NET_GOAL": 12,
+        "INTENT_ARITHMETIC_OVERFLOW": 12,
+        "INTENT_DEBIT_CAP": 12,
+        "INTENT_DEBIT_UNCAPPED": 12,
+        "INTENT_RECIPIENT_FORBIDDEN": 12,
+        "INTENT_ACTOR_SCOPE": 12
+      },
+      "grossRule": "Every Transfer or Fee with from == A requires a cap for (A,asset), even for a zero amount, or rejects INTENT_DEBIT_UNCAPPED. Refunds never reduce these gross sums.",
+      "schema": {
+        "outcomeIntent": "moriarty-outcome-intent/1",
+        "netGoalShape": "{actor:TextValue, asset:TextValue, minimumLedgerAmount:UInt128Text}",
+        "grossCapShape": "{actor:TextValue, asset:TextValue, maximumLedgerAmount:UInt128Text}",
+        "sortOrder": "caps and goals sort by (actor UTF-8, asset UTF-8) with no duplicate pair",
+        "source": {
+          "path": "experiments/moriarty-language/src/runtime-types.ts",
+          "sha256": "f6ba49cff1900109ac9c8d2e3fdf3e69b8037dd2a6ce5c539dac2b9a081ae7e0",
+          "locator": "type OutcomeStatement (line 20)"
+        }
+      }
+    },
+    "pinned": [
+      {
+        "id": "fees.record.perActorFields",
+        "status": "pinned",
+        "value": [
+          "grossDebit",
+          "refund",
+          "netCredit",
+          "fee"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/src/differential.mjs",
+          "sha256": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+          "locator": "const EFFECT_KEYS (line 28)"
+        },
+        "note": "Per actor and per asset, alongside id, actor, asset and unit."
+      },
+      {
+        "id": "fees.record.invariants",
+        "status": "pinned",
+        "value": [
+          "Refund does not erase gross debit.",
+          "Fee is not dropped from a net goal.",
+          "Current due is not remaining agreement debt."
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Schema"
+        }
+      },
+      {
+        "id": "fees.record.recomputation",
+        "status": "pinned",
+        "value": "grossDebit must equal outgoing transfers (GROSS_DEBIT_MISMATCH) and netCredit must equal incoming transfers (NET_CREDIT_MISMATCH); missing balances or actor effects do not bypass replay.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/src/differential.mjs",
+          "sha256": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+          "locator": "lines 1174-1185"
+        }
+      },
+      {
+        "id": "fees.loanFixture.feeValues",
+        "status": "pinned",
+        "value": "0 in every loan stage actor effect",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/src/differential.mjs",
+          "sha256": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe",
+          "locator": "lines 1256-1351"
+        },
+        "note": "The loan case carries no in-asset economic fee; its only fee plane is the native DUST debit."
+      },
+      {
+        "id": "fees.swapFixture.economicFee",
+        "status": "pinned",
+        "value": {
+          "amount": "30",
+          "asset": "ASSET_A",
+          "multiplier": "997/1000",
+          "retainedInGrossInput": true
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Swap fixture"
+        },
+        "note": "bindings.json records feeRetainedInGrossInput 30. The fee stays in the pool; it is charged inside the gross input, not added to it."
+      },
+      {
+        "id": "fees.native.receiptShape",
+        "status": "pinned",
+        "value": {
+          "fees": {
+            "nativeDebit": [
+              "asset",
+              "unit",
+              "amount"
+            ],
+            "indexerReported": [
+              "paid",
+              "estimated",
+              "sourceUnitLabel",
+              "encoding",
+              "nativeDebitRelationship"
+            ]
+          }
+        },
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+          "sha256": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+          "locator": "keys(r.fees, ...) line 192"
+        }
+      },
+      {
+        "id": "fees.native.assertions",
+        "status": "pinned",
+        "value": [
+          "fees.nativeDebit.asset == 'DUST' and unit == 'SPECK', else NATIVE_FEE_UNIT",
+          "fees.nativeDebit.amount == transaction.dustFee, else NATIVE_FEE_MISMATCH",
+          "nativeFee <= feeBudget.cap - feeBudget.spent, else NATIVE_FEE_CAP_EXCEEDED",
+          "a cap is mandatory: NATIVE_FEE_CAP_REQUIRED",
+          "each stage debits its own budget; historical allocations carry their own dustFeeCap and stage list"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+          "sha256": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565",
+          "locator": "lines 62-77 and 192-204"
+        }
+      },
+      {
+        "id": "fees.reservation.schema",
+        "status": "pinned",
+        "value": "moriarty.financial-reservations/1",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+          "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+          "locator": "line 162"
+        },
+        "note": "Exact key set: active, binding, identifiers, reservedDustFee, reservedGrossByAsset, reservedSubmissions, schema, stopped."
+      },
+      {
+        "id": "fees.reservation.allowanceRules",
+        "status": "pinned",
+        "value": [
+          "reservedSubmissions <= binding.limits.submissions",
+          "reservedDustFee + dustFee <= limits.dustFee, else 'DUST fee allowance exceeded'",
+          "gross is tracked per asset in reservedGrossByAsset",
+          "the DUST balancing segment must carry the allocation's own network id, else 'DUST balancing network differs from allocation'",
+          "counters are persisted and revalidated; corrupt counters refuse"
+        ],
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+          "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74",
+          "locator": "lines 111-121, 162-181, 223-241, 331-371"
+        }
+      },
+      {
+        "id": "fees.native.separationStatement",
+        "status": "pinned",
+        "value": "Network transaction and proof fees are separate from the swap economic fee of 30 ASSET_A. These fixtures do not invent a Midnight fee asset or unit and do not assume those fees are zero.",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Network acceptance"
+        }
+      },
+      {
+        "id": "fees.sdkDesign.preservedDistinctions",
+        "status": "pinned",
+        "value": "The September 11 SDK design remains specified-only. Preserve its program/profile/head identity, gross debit, net credit, fee and liability distinctions. No multichain implementation is added.",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Inputs and dependencies"
+        }
+      }
+    ],
+    "open": [
+      {
+        "id": "fees.successor.noFeeOperation",
+        "status": "open",
+        "value": null,
+        "reason": "The v5 lifecycle profile's protected operations are exactly Transfer, Repay, Originate and Accrue. There is no Fee operation and no outcome-intent authority in src/successor/. The net-goal rule above lives only in the legacy bounded-atomic evaluator src/evaluate.ts. A fee-inclusive net goal therefore cannot currently be expressed or checked in the source being lowered, which is the largest single gap against the governing sentence.",
+        "blockedBy": "task 5.1 reviewer decision: enforce at the SDK caller, or add Fee and outcome intents to a v6 source",
+        "source": {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "operation declarations: Transfer, Repay, Originate, Accrue"
+        }
+      },
+      {
+        "id": "fees.netGoal.assetMixing",
+        "status": "open",
+        "value": null,
+        "reason": "The net-goal rule sums per asset. The native fee is DUST/SPECK while loan settlement is Cash or USD_micro, so a per-asset goal can never include the native debit. Whether fee-inclusive means only an in-asset fee, or also the DUST debit through some conversion, is ambiguous in design.md and no conversion exists in the tree.",
+        "blockedBy": "task 5.1 reviewer decision",
+        "source": {
+          "path": "experiments/moriarty-language/spec/semantics.md",
+          "sha256": "d2c62ea1e34a345753b319532d85652d29b1946b2d77d1f60f9518b01c519002",
+          "locator": "lines 350-362"
+        }
+      },
+      {
+        "id": "fees.dustFeeCap.value",
+        "status": "open",
+        "value": null,
+        "reason": "The concrete dustFeeCap for the target run comes from the current admitted plan limits. design.md records current-accounting.json as missing and resource state as unavailable, so no cap value may be cited or invented.",
+        "blockedBy": "tasks.md 5.4 and 5.6",
+        "source": {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Ledger implementation and trust boundaries"
+        }
+      },
+      {
+        "id": "fees.indexerUnits",
+        "status": "open",
+        "value": null,
+        "reason": "Network fee accounting is unresolved and indexer units are explicitly recorded as unresolved. indexerReported carries sourceUnitLabel, encoding and nativeDebitRelationship precisely because the unit relationship is not established.",
+        "blockedBy": "MC04/MC05 ledger correspondence; not closed by this package",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Network acceptance"
+        }
+      },
+      {
+        "id": "fees.feeChangeFinality",
+        "status": "open",
+        "value": null,
+        "reason": "bindings.json lists transaction-fees-change-finality among the deferred ledger obligations, so the effect of fees on change outputs and finality has no frozen rule.",
+        "blockedBy": "tasks.md 5.5 and 5.7",
+        "source": {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "deferredLedgerObligations"
+        }
+      }
+    ]
+  },
+  "reviewerAttention": [
+    {
+      "id": "RA-1",
+      "severity": "high",
+      "issue": "design.md names source profile moriarty-financial-agreement-source/4 and Core contract moriarty-financial-expression-contract/3, but the merged tree is at /5 and /4. The design text was written for the postconditions stage and was not revised when origination and accrual landed.",
+      "whatToCheck": "Confirm that /5 and /4 are the correct freeze targets and that no reader of design.md binds the stale /4 and /3 identifiers.",
+      "evidence": [
+        {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "Financial postconditions: public interface"
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/frontend.ts",
+          "sha256": "c41afe66161a8c5f06ecd80bf5d880cea469526aca65fd9c080cdcb2448b2dab",
+          "locator": "line 10"
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+          "sha256": "a61d873df945f78011997c7c53b935c20ca76c1efcea7d9838ea69e0b8bc42ea",
+          "locator": "line 25"
+        }
+      ]
+    },
+    {
+      "id": "RA-2",
+      "severity": "high",
+      "issue": "The governing sentence requires binding debtor and lender authority, but no transition circuit ever checks lender authority, and the successor source has no authority, signature or nonce slot anywhere to bind it into (zero occurrences in financial-lifecycle.ts).",
+      "whatToCheck": "Decide where creditor authority for Originate is enforced, and whether a source-level authority field is required before 5.1a can bind anything.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "constructor line 50 versus circuits at lines 57, 71, 98"
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+          "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d",
+          "locator": "STATE_KEYS lines 232-242; no authority, signature or nonce identifier in the file"
+        }
+      ],
+      "repair": "round 1: narrowed. The earlier wording said the successor source has \"no principal, authority or signature slot at all\", which was inaccurate about principal: it is a nested LifecycleObligation field at line 69. The lender-authority half was independently confirmed by the reviewer and stands unchanged."
+    },
+    {
+      "id": "RA-3",
+      "severity": "high",
+      "issue": "Fee-inclusive net goals have no expression in the successor path. The Fee effect, gross caps and minimumNetCredits exist only in the legacy evaluator.",
+      "whatToCheck": "Decide the enforcement point, and resolve whether the native DUST debit enters a per-asset goal at all.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "operation declarations"
+        },
+        {
+          "path": "experiments/moriarty-language/spec/semantics.md",
+          "sha256": "d2c62ea1e34a345753b319532d85652d29b1946b2d77d1f60f9518b01c519002",
+          "locator": "lines 350-362"
+        },
+        {
+          "path": "experiments/moriarty-language/src/evaluate.ts",
+          "sha256": "395041bfedcb30d03bb525df2492c99e9c5f72dcf1784d58db0b9c605efc03f9",
+          "locator": "line 295"
+        }
+      ]
+    },
+    {
+      "id": "RA-4",
+      "severity": "high",
+      "issue": "Allowances and the four used-identifier replay registers are required by the governing sentence but have no counterpart in the compiled contract's public state or in the nine-field kernel state.",
+      "whatToCheck": "Decide the on-ledger representation, or record explicitly that replay defence rests on revision and cursor alone and accept the consequence.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "export ledger declarations lines 11-24"
+        },
+        {
+          "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+          "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f",
+          "locator": "cases.loan.stateFieldNames"
+        }
+      ]
+    },
+    {
+      "id": "RA-5",
+      "severity": "medium",
+      "issue": "The compiled custody fixture still initializes the 5000000000 USD_micro universe (rate 8/100 over 31/365, settle 533972602) while the selected case is the lifecycle 100/110/80 at rate 1/10 over 60-second periods. design.md line 52 selects the lifecycle case and line 62 requires replacing the hardcoded older state, so the semantic choice is made. What is undecided is the ledger asset and unit mapping that carries 100 Cash onto a ledger denomination and quantum.",
+      "whatToCheck": "Confirm the selected case, then fix the asset and unit mapping before 5.2a compiles anything, so the compiler output binds the intended numbers and scale.",
+      "evidence": [
+        {
+          "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+          "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2",
+          "locator": "lines 52, 62 and 68"
+        },
+        {
+          "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+          "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa",
+          "locator": "action originate"
+        },
+        {
+          "path": "experiments/moriarty-midnight-financial/README.md",
+          "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16",
+          "locator": "Loan fixture"
+        }
+      ],
+      "repair": "round 1: reframed. The earlier claim that design.md does not say which universe the authenticated run must carry was false and is withdrawn, along with the compilation risk reported upward from it. Only the unit mapping remains."
+    },
+    {
+      "id": "RA-6",
+      "severity": "medium",
+      "issue": "The compiled contract admits a block time only inside a 300-second window, while the executor's financial plan deadline is at outer+1600. No rule reconciles a proof produced late in the schedule with that window.",
+      "whatToCheck": "Decide whether the caller must re-read block time and re-prove, and where that retry fits the frozen deadline ladder without consuming the outer margin.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+          "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e",
+          "locator": "circuit constrainNow lines 30-38"
+        },
+        {
+          "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+          "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5",
+          "locator": "Requirement: Fixed deadlines with a retained outer margin"
+        }
+      ]
+    },
+    {
+      "id": "RA-7",
+      "severity": "medium",
+      "issue": "The accepted ledger read is explicit that it is not an authenticated state proof and does not establish the absence of intervening actions. The design's phrase 'actual accepted ledger reads' is satisfied by this mechanism only in that weaker sense.",
+      "whatToCheck": "Confirm the weaker reading is intended for this package, and that stale-revision rejection carries the whole burden.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+          "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077",
+          "locator": "returned snapshot fields authenticatedStateProof and noInterveningActionsAfterAnchorEstablished"
+        }
+      ]
+    },
+    {
+      "id": "RA-8",
+      "severity": "low",
+      "issue": "Every authority value in custody/bindings.json is synthetic: synthetic:true, notActualWalletCustody:true, and the loan addresses are b0010101... and b0020202... Real Preview identities and a real Preview network tag do exist elsewhere in the tree, in the sp05 actual-run records, so the risk is not that no real value exists but that a synthetic one is carried into an authenticated run.",
+      "whatToCheck": "Confirm no synthetic value can reach an authenticated run, and that the binding step that replaces them is gated on current admission.",
+      "evidence": [
+        {
+          "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+          "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1",
+          "locator": "synthetic, notActualWalletCustody, loan.addressesAreSynthetic"
+        },
+        {
+          "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json",
+          "sha256": "b05ce84c19da0c42f2194306689b03cd4a07350d1c0af47465d86c961c78cff4",
+          "locator": "roles.firstAddress, roles.secondAddress, networkTag"
+        }
+      ],
+      "repair": "round 1: corrected. The earlier wording said every authority address, network tag and capability in the tree is synthetic, which the reviewer's finding on the Preview run records refutes."
+    }
+  ],
+  "openItems": {
+    "count": 27,
+    "items": [
+      {
+        "family": "sourceProfileHead",
+        "id": "compiled.lifecycle.programHash",
+        "reason": "No Compact program has been generated from experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori. materialization.json covers only the restricted loan and swap kernels built from spec/examples/{loan,swap}.mori, whose numeric case differs from the lifecycle case.",
+        "blockedBy": "tasks.md 5.2a: compile the generated lifecycle Compact contract and retain compiler output"
+      },
+      {
+        "family": "sourceProfileHead",
+        "id": "compiled.lifecycle.compactSourceHash",
+        "reason": "The lowered lifecycle kernel.compact does not exist yet, so there is nothing to hash.",
+        "blockedBy": "tasks.md 5.2a"
+      },
+      {
+        "family": "sourceProfileHead",
+        "id": "deployment.contractAddress",
+        "reason": "No lifecycle contract has been deployed anywhere, so the target address does not exist and cannot be pinned. The tree does hold several real deployment addresses, all of them the restricted loan program 95b46e39 or the restricted swap program b00a55b8: Preview loan ffedd46ff0fd451e6a93eddbd241afbad1ca292ecada37bd0646992fefa3c30d (preview-loan-exit-01), Preview loan 323d43b96bca8dc7ddf7d0338c444116d1507b6f464d3fcd38022fc25f1a7ca8 (preview-loan-01), Preview swap 87affdd94943d844667cd6978d223f112c1d3e7c17b42f092323d4078e792b86 (preview-swap-01), local Docker loan 36e4a923f23495c9b8bbfcaff5a8963cd6efcd28c1498454880059de76a98449, and the stale local loan ba4c808859fc2e4ee6d3d19fa0d812bb9a9c9eb0527161fb91315213bc24a713 in ledger/stale-loan-plan.mjs. None of them is a lifecycle deployment, and design.md line 62 replaces that semantic seam rather than reusing any of them.",
+        "blockedBy": "tasks.md 5.5 Docker lifecycle, then 5.7 Preview"
+      },
+      {
+        "family": "sourceProfileHead",
+        "id": "head.expectedValue",
+        "reason": "A concrete expected head hash and height cannot be frozen: it must be read at submission time from the accepted ledger and re-checked for canonicality. What is frozen is the procedure, not the value.",
+        "blockedBy": "by construction; runtime input"
+      },
+      {
+        "family": "sourceProfileHead",
+        "id": "assets.usdColor",
+        "reason": "usdColor is bound as tokenType(domainHex, actual case contract address) and is the 32-byte zero value at deploy. It resolves only once a real contract address exists.",
+        "blockedBy": "deployment"
+      },
+      {
+        "family": "authority",
+        "id": "authority.lender.transitionAssertion",
+        "reason": "lenderCapability is written in the constructor and never checked by initialize, accrue or settle. The lifecycle adds Originate, which is a lender-to-debtor disbursement, so creditor authority becomes load-bearing. Whether the lowered contract must assert lenderCapability for Originate, and whether a two-party transition is permitted at all, is not fixed anywhere in the repository.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a"
+      },
+      {
+        "family": "authority",
+        "id": "authority.identities.lifecycleRunReuse",
+        "reason": "Whether the lifecycle deployment reuses the two pinned Preview identities, and whether the out-of-tree role secrets, wallet seed and wallet state directory recorded in plan.json are still available and funded, cannot be determined from the repository: those are absolute paths outside the tree, and design.md line 70 records resource state as unavailable and the binding and candidate records as stale. The identities themselves are pinned; their continued usability is not.",
+        "blockedBy": "tasks.md 5.4 funding and binding reconciliation, under current admission"
+      },
+      {
+        "family": "authority",
+        "id": "authority.successor.noAuthoritySlot",
+        "reason": "The v5 profile exposes only Transfer, Repay, Originate and Accrue. The lifecycle state has exactly nine top-level keys (schemaVersion, balances, allowances, obligations, usedTransferIds, usedAllocationIds, usedOriginationIds, usedAccrualIds, work), none of which is an authority, signature or nonce slot, and financial-lifecycle.ts contains no occurrence of \"authority\", \"signature\" or \"nonce\" anywhere in the file (zero case-insensitive matches). There is therefore no source-level slot into which 5.1a can bind debtor or lender authority. This gap is about authority, not about principal: principal, accrued and outstanding are real fields of the nested LifecycleObligation type at lines 69-71 and appear in OBLIGATION_KEYS at line 252.",
+        "blockedBy": "task 5.1 reviewer decision: enforce at the SDK caller and in the compiled contract, or add a v6 source field"
+      },
+      {
+        "family": "authority",
+        "id": "authority.admission.current",
+        "reason": "design.md records current plugin gaps as stale binding/candidate, missing current-accounting.json and unavailable resource state, so no current authority record can be cited.",
+        "blockedBy": "tasks.md 5.4 and 5.6; no counter may be reset to create one"
+      },
+      {
+        "family": "state",
+        "id": "state.allowances.ledgerRepresentation",
+        "reason": "The frozen source state carries allowance remaining and spent per party and asset, and four of the lifecycle ensures assert post allowance values. The compiled contract's public surface has no allowance field and the nine-field kernel state has no allowance slot. How allowance remaining and spent are represented on the ledger, or why they may be omitted, is stated nowhere.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a lowerer"
+      },
+      {
+        "family": "state",
+        "id": "state.replayHistory.ledgerRepresentation",
+        "reason": "The source state has four used-identifier registers (transfer, allocation, origination, accrual). The ledger has only revision and the kernel cursor f7. A replayed accrue with a fresh revision and an eligible cursor has no on-ledger identifier register to reject it, and the design's replay-history requirement has no compiled counterpart.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a"
+      },
+      {
+        "family": "state",
+        "id": "state.fieldMapping.sourceToLedger",
+        "reason": "No document maps the lifecycle obligation fields (principal, accrued, outstanding, initialPrincipal, nominalLiabilityCap, liabilityIncurred, lastAccruedPeriod, nextAccrualAt) onto the ledger kernel fields f0..f8. Without it, 5.1a has no defined lowering for outstanding principal and interest. The same gap covers the asset and unit mapping: the selected source case is Cash at quantum 1 while the existing ledger fixture is USD_TEST_ASSET denominated USD_micro, and no document states the scale that carries source amounts onto ledger units.",
+        "blockedBy": "task 5.1a lowerer design"
+      },
+      {
+        "family": "state",
+        "id": "state.thirdParty.otherToken",
+        "reason": "The frozen initial state contains a third party Other holding asset Token with allowance remaining 3 and spent 1. The compiled loan binds exactly one asset domain (usdDomain) and two roles. Whether Other and Token survive lowering, or are dropped as source-only, is undecided.",
+        "blockedBy": "task 5.1 reviewer decision"
+      },
+      {
+        "family": "state",
+        "id": "state.interveningActions",
+        "reason": "The accepted read explicitly records noInterveningActionsAfterAnchorEstablished:false. Nothing in the tree establishes that no third-party transition landed between the anchor read and submission, so stale-revision rejection is the only defence and its evidence is not yet produced.",
+        "blockedBy": "tasks.md 5.3 stale-revision cases and 5.5 rejection control"
+      },
+      {
+        "family": "time",
+        "id": "time.outerStart.value",
+        "reason": "The authenticated actual outer start is a runtime input from the campaign runner. Only the offsets can be frozen.",
+        "blockedBy": "by construction; runtime input"
+      },
+      {
+        "family": "time",
+        "id": "time.blockDeadline.admitted",
+        "reason": "The fixed block deadline that the schedule must fit inside comes from the current admitted amendment. design.md records current-accounting.json as missing and resource state as unavailable, so no admitted bound can be cited.",
+        "blockedBy": "tasks.md 5.4 and 5.6; no counter may be reset to obtain one"
+      },
+      {
+        "family": "time",
+        "id": "time.window.reconciliation",
+        "reason": "The compiled contract accepts a block time only inside a 300-second window around the disclosed now, while the executor's financial plan deadline sits at outer+1600. Nothing states how a proof produced late in that window keeps its 300-second validity, or whether the caller must re-read the block time and re-prove. This is a plausible live-failure mode with no frozen rule.",
+        "blockedBy": "task 5.1 reviewer decision, then 5.1a SDK caller"
+      },
+      {
+        "family": "time",
+        "id": "time.horizon.expiry",
+        "reason": "The contract hard-refuses any disclosed now at or after unix 2000000000 (2033-05-18) with HORIZON_EXPIRED. That is pinned, but whether the lowered lifecycle keeps the same horizon or takes one from terms is undecided.",
+        "blockedBy": "task 5.1a lowerer"
+      },
+      {
+        "family": "time",
+        "id": "time.cldMapping.confirmation",
+        "reason": "The spec requires confirming the CLD code mapping against the installed systemd interface during source implementation and retaining that interface evidence. That confirmation has not been performed, so the exit classification table is frozen as written but unverified against the host.",
+        "blockedBy": "tasks.md 5.2 implementation"
+      },
+      {
+        "family": "failure",
+        "id": "failure.ledgerRejection.codes",
+        "reason": "The plan names five failing ledger cases to add (substitution, stale revision, unauthorized debt, replay, fee-inclusive result) but no rejection code names or expected dispositions exist for them yet. The compiled vocabulary above covers the restricted loan, not the lifecycle.",
+        "blockedBy": "tasks.md 5.3 test cases, written against the 5.1a implementation"
+      },
+      {
+        "family": "failure",
+        "id": "failure.lifecycleAssertVocabulary",
+        "reason": "Whether the lowered lifecycle contract keeps the existing assert code vocabulary, or introduces per-effect codes for Originate and Accrue, is undecided. Freezing the restricted vocabulary does not settle it.",
+        "blockedBy": "task 5.1a lowerer"
+      },
+      {
+        "family": "failure",
+        "id": "failure.deferredLedgerObligations",
+        "reason": "bindings.json lists eight deferred ledger obligations that remain unmet: actual-signed-unshielded-offer, consumed-utxo-ownership, borrower-trader-debit-payer-attribution, third-party-payer-negative, missing-real-funding, transaction-fees-change-finality, real-ledger-rollback and blocked-comparison-utility-not-imported. Each is a failure mode with no current disposition.",
+        "blockedBy": "tasks.md 5.5 and 5.7; MC04/MC05 retain the wider gates"
+      },
+      {
+        "family": "fees",
+        "id": "fees.successor.noFeeOperation",
+        "reason": "The v5 lifecycle profile's protected operations are exactly Transfer, Repay, Originate and Accrue. There is no Fee operation and no outcome-intent authority in src/successor/. The net-goal rule above lives only in the legacy bounded-atomic evaluator src/evaluate.ts. A fee-inclusive net goal therefore cannot currently be expressed or checked in the source being lowered, which is the largest single gap against the governing sentence.",
+        "blockedBy": "task 5.1 reviewer decision: enforce at the SDK caller, or add Fee and outcome intents to a v6 source"
+      },
+      {
+        "family": "fees",
+        "id": "fees.netGoal.assetMixing",
+        "reason": "The net-goal rule sums per asset. The native fee is DUST/SPECK while loan settlement is Cash or USD_micro, so a per-asset goal can never include the native debit. Whether fee-inclusive means only an in-asset fee, or also the DUST debit through some conversion, is ambiguous in design.md and no conversion exists in the tree.",
+        "blockedBy": "task 5.1 reviewer decision"
+      },
+      {
+        "family": "fees",
+        "id": "fees.dustFeeCap.value",
+        "reason": "The concrete dustFeeCap for the target run comes from the current admitted plan limits. design.md records current-accounting.json as missing and resource state as unavailable, so no cap value may be cited or invented.",
+        "blockedBy": "tasks.md 5.4 and 5.6"
+      },
+      {
+        "family": "fees",
+        "id": "fees.indexerUnits",
+        "reason": "Network fee accounting is unresolved and indexer units are explicitly recorded as unresolved. indexerReported carries sourceUnitLabel, encoding and nativeDebitRelationship precisely because the unit relationship is not established.",
+        "blockedBy": "MC04/MC05 ledger correspondence; not closed by this package"
+      },
+      {
+        "family": "fees",
+        "id": "fees.feeChangeFinality",
+        "reason": "bindings.json lists transaction-fees-change-finality among the deferred ledger obligations, so the effect of fees on change outputs and finality has no frozen rule.",
+        "blockedBy": "tasks.md 5.5 and 5.7"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/actual-run/stage-deploy.json",
+      "sha256": "befcc2e803a4fec05f34c4f88f4cac3177203a9c87107c5091071598c648e14d"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-01/actual-run/stage-deploy.json",
+      "sha256": "b3c96db4c363896b55ab1ce7a626fb8fe643d7a9c7fae9c9eb8f8d4c4696b9f4"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/plan.json",
+      "sha256": "b05ce84c19da0c42f2194306689b03cd4a07350d1c0af47465d86c961c78cff4"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/public-preflight.json",
+      "sha256": "5353b8a7dd28d5b51cceda468d083ab2c04acec691635d6e964277bc8c502cd9"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-loan-exit-01/actual-run/stage-deploy.json",
+      "sha256": "14d0891512a468ac202a8b6127984c627a8e3ec409c229ba09e6db87cd5f6f62"
+    },
+    {
+      "path": "deliverables/sp05-financial-integration-2026-09-09/preview-swap-01/actual-run/stage-deploy.json",
+      "sha256": "7369a77ab76532a8e166ee53db030d7554337c063a5badef927262c3f8de177a"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-09-12-language-to-ledger.md",
+      "sha256": "613e1ebc3fca78f24c989c84e16a512aaec7c141053e8e45960ef695834d4af4"
+    },
+    {
+      "path": "experiments/moriarty-language/compact/generated/materialization.json",
+      "sha256": "8efa341b2cda5448825ab91e4362abf49b0db7d552e10593cfb844edc1b86f0a"
+    },
+    {
+      "path": "experiments/moriarty-language/examples/loan-lifecycle.mjs",
+      "sha256": "6165fd3b7e3f5cd598e62b115f620f1349b0f1294500376b3cf780a4f7e46bac"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/examples/loan.mori",
+      "sha256": "1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/semantics.md",
+      "sha256": "d2c62ea1e34a345753b319532d85652d29b1946b2d77d1f60f9518b01c519002"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori",
+      "sha256": "a0efd5166fdf27106110c69548d3b3065070e8d759d231296c454d19757bbaaa"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.snapshots.json",
+      "sha256": "23f945287228f2366dd6ba8263954d4297cd6521209a3b0a3a0c13200013542a"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/successor/examples/loan-lifecycle.state.json",
+      "sha256": "bf8652a92f051df17672527f900edc529ab278bed3d0b0b309f292f5cf70ee35"
+    },
+    {
+      "path": "experiments/moriarty-language/spec/typed-schemas.md",
+      "sha256": "6ef3383ad42b7ea2a22822f8116c7e182cbe8b476ef01e9cd3ef899679da4f04"
+    },
+    {
+      "path": "experiments/moriarty-language/src/evaluate.ts",
+      "sha256": "395041bfedcb30d03bb525df2492c99e9c5f72dcf1784d58db0b9c605efc03f9"
+    },
+    {
+      "path": "experiments/moriarty-language/src/runtime-types.ts",
+      "sha256": "f6ba49cff1900109ac9c8d2e3fdf3e69b8037dd2a6ce5c539dac2b9a081ae7e0"
+    },
+    {
+      "path": "experiments/moriarty-language/src/successor/financial-agreement-source-v5.ts",
+      "sha256": "082b8c96f6707d1d93aa9607907422c31143c769a3d16618e442cca54d315e5e"
+    },
+    {
+      "path": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "sha256": "a61d873df945f78011997c7c53b935c20ca76c1efcea7d9838ea69e0b8bc42ea"
+    },
+    {
+      "path": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "sha256": "680f2a1c1f334515307f6da73dbf9397dd31bf614c1f044ef5325435da0e6e6d"
+    },
+    {
+      "path": "experiments/moriarty-language/src/successor/frontend.ts",
+      "sha256": "c41afe66161a8c5f06ecd80bf5d880cea469526aca65fd9c080cdcb2448b2dab"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/README.md",
+      "sha256": "caab17a6b8afb344efcc1fb166a0ac833aebbb33a06e8db7ac6b4c4ea6681b16"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/bindings.json",
+      "sha256": "e40fcf78530d0189d9c14637635fe99bedc312144d78f40bfc07fa5fc669f6e1"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/custody/loan.compact",
+      "sha256": "c1485f2915cedf173b858dfdbfdb9cf135915e109dea18bf00c8d237f302759e"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/finalized-financial-state.mjs",
+      "sha256": "7ef4206f8f69bbf90e27ddf4bf734f23f3dffd87f3ca53dcd9ce85b27a99b077"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/financial-comparison.mjs",
+      "sha256": "96517c6763332bb8231c889affd3c1ca04cd8936f7df77c090a6cdcfe2680565"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/financial-expectations.json",
+      "sha256": "693a8c60972050b6afbece5f2106682ed9966538eb60a21beaa9218b043df35f"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/integrate-preview.mjs",
+      "sha256": "a7ee56f1bd36039970541e3263610d0efce7287b4fe813de255c6733b5aa7b26"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json",
+      "sha256": "4fa41776e0fce393bf7c6ee19acd824bec0b9459ed4a93616cef35904e548195"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/local-tip.mjs",
+      "sha256": "53c5ff671065348e0d91edf92bca5c1cc62237ad0a3a64d1ca61a21c868a08e5"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "sha256": "40c0a894f8176855ae832837c3447c4d71aa357e6159532c0387a35986017c74"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/run-local.mjs",
+      "sha256": "0b7886c8e3851db0791fa74051a57c3093e7cf0598ca1fb5b03f9c58b34d28ae"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/stale-loan-plan.mjs",
+      "sha256": "9cfc0d19a24869311c936050bbaf0838fd719bf388a2a955a214afe1f7418e08"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/src/differential.mjs",
+      "sha256": "4a99290b40d89a28b363fa1c58ee43c6922ed73e86d5079e43ec27fdcb2c53fe"
+    },
+    {
+      "path": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md",
+      "sha256": "f99bae8e639e7955fdb84a6fbf791b71fb5be3914a2df6f9a02da3cc1b2792f5"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/design.md",
+      "sha256": "59e5db6f8bffa963e71593421ffb5cb15d01fe75f19e9781c493ea73c15192e2"
+    },
+    {
+      "path": "openspec/changes/language-to-ledger-lifecycle/tasks.md",
+      "sha256": "e08d279c61de767cf68954e4ede1a36babb230851618563062b9335c66c8b79f"
+    }
+  ],
+  "verification": {
+    "jsonParse": "python3 -m json.tool deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json",
+    "hashRecheck": "python3 - <<'EOF' ... or: for each sources[] entry, sha256sum <path> and compare",
+    "openspecBaseline": {
+      "command": "openspec validate --all --strict --no-interactive",
+      "observedInThisWorktree": "Totals: 12 passed, 0 failed (12 items)",
+      "note": "This worktree holds 12 change directories. The task brief expected 13; the main checkout has a 13th, session-completion-sprints, which is not present on this branch. This freeze adds no OpenSpec change, so the correct invariant here is 12 passed, 0 failed."
+    }
+  },
+  "counts": {
+    "pinned": 121,
+    "open": 27
+  },
+  "repair": {
+    "round": 1,
+    "review": [
+      "REVIEW-CODEX-01.md",
+      "REVIEW-CODEX-01.json"
+    ],
+    "reviewVerdict": "BLOCKED",
+    "reviewerHashResult": "205 embedded path-and-hash occurrences over 31 unique files, 0 mismatches",
+    "countsBefore": {
+      "pinned": 118,
+      "open": 29
+    },
+    "countsAfter": {
+      "pinned": 121,
+      "open": 27
+    },
+    "fixed": [
+      {
+        "finding": "[high] open-item-honesty: deployment.networkTag.actual and authority.identities.actual",
+        "action": "both pinned from the actual Preview run records; the false \"only synthetic values exist\" reason withdrawn; one narrowed open item authority.identities.lifecycleRunReuse added",
+        "disposition": "accepted"
+      },
+      {
+        "finding": "[high] open-item-honesty: state.numericUniverse.target",
+        "action": "pinned to the design.md line 52 lifecycle case; the ambiguity claim and the compilation risk reported upward from it withdrawn; residual unit mapping folded into state.fieldMapping.sourceToLedger and RA-5",
+        "disposition": "accepted"
+      },
+      {
+        "finding": "[medium] open-item-honesty: deployment.contractAddress",
+        "action": "reason corrected to name the four other real deployment addresses; the item stays open because the target lifecycle address does not exist",
+        "disposition": "accepted"
+      },
+      {
+        "finding": "[medium] pin-accuracy: head.revision.assertion",
+        "action": "pinned value narrowed to accrue and settle, matching the note's initialize exception",
+        "disposition": "accepted"
+      },
+      {
+        "finding": "[medium] open-item-honesty: authority.successor.noPrincipalSlot",
+        "action": "renamed authority.successor.noAuthoritySlot and narrowed to the absent authority, signature and nonce slots; principal acknowledged as a nested LifecycleObligation field",
+        "disposition": "accepted"
+      }
+    ],
+    "alsoCorrectedUnprompted": [
+      "RA-2 wording (\"no principal, authority or signature slot at all\") narrowed for the same reason as finding 5.",
+      "RA-5 reframed from a false ambiguity to the open unit mapping.",
+      "RA-8 corrected: real Preview identities and a real Preview network tag do exist in the tree."
+    ],
+    "retained": [
+      "RA-1",
+      "RA-2",
+      "RA-3",
+      "RA-4",
+      "RA-6",
+      "RA-7",
+      "authority.lender.transitionAssertion",
+      "state.allowances.ledgerRepresentation",
+      "state.replayHistory.ledgerRepresentation",
+      "fees.successor.noFeeOperation"
+    ],
+    "notRetracted": "the four high-severity reviewerAttention claims the reviewer independently confirmed: the unasserted lender capability, the nine-key state without an authority slot, the absent Fee operation, and allowances and replay registers having no on-ledger counterpart"
+  }
+}

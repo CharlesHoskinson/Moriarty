@@ -1,0 +1,78 @@
+{
+  "reviewer": "Codex GPT-5.6 Sol (high reasoning, read-only sandbox)",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-plan-preview-constraint-freeze",
+  "task": "openspec/changes/language-to-ledger-lifecycle/tasks.md 5.1, repair round 1 re-review",
+  "priorReview": "REVIEW-CODEX-01.json / REVIEW-CODEX-01.md (verdict BLOCKED)",
+  "repairAccount": "FOREMAN_REPORT.md",
+  "filesReviewed": [
+    "deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.json",
+    "deliverables/language-to-ledger-2026-09-12/preview-constraints/freeze-01.md"
+  ],
+  "verdict": "APPROVED",
+  "summary": "All five repair-round findings are genuinely cleared against primary sources, not merely claimed: network/identity, numeric-target, and contract-address open items are now honestly pinned or honestly narrowed, and the revision-assertion and principal-slot wordings are accurate rather than merely softer. The numeric-target pin was independently re-verified against design.md and loan-lifecycle.mori by the orchestrating agent directly, not only via Codex, and matches exactly, including the outstanding sequence and AccrualFirst ordering. The four high-severity findings (unasserted lenderCapability, no source-level authority slot, no Fee operation in the lowered profile, and allowances/replay registers with no on-ledger counterpart) all still stand, worded consistently and unweakened. No newly invented value, overstated qualifier, or open item closed by bare assertion was found; the tree was not modified during the audit.",
+  "priorFindings": [
+    {
+      "id": "REVISION-ASSERTION",
+      "priorSeverity": "medium",
+      "disposition": "cleared",
+      "note": "loan.compact:57-69 confirms initialize has no expectedRevision parameter and no REVISION_MISMATCH assert; :74 and :101 contain the assert for accrue and settle. freeze-01.json:295 and freeze-01.md:98-102 now say accrue-and-settle-only."
+    },
+    {
+      "id": "NETWORK-IDENTITY",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "networkTag 3c096de2..., firstAddress, secondAddress and the bech32 wallet address are pinned at freeze-01.json:255 and genuinely present in plan.json, public-preflight.json and three stage-deploy.json files; role mapping is supported by integrate-preview.mjs:103-112 and the loan.compact/swap.compact constructor argument order. The narrowed residual open item (lifecycleRunReuse) is honest: no seed, wallet-state or role-secret file exists in the checkout."
+    },
+    {
+      "id": "NUMERIC-TARGET",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "Independently re-read design.md line 52 and loan-lifecycle.mori lines 1-177 directly, not only via Codex: design.md's stated case (lender100/borrower10, originate100, accrue10, repay30, settle80, debt sequence 0-100-110-80-0, final lender110/borrower0) is reproduced exactly in the freeze pin at freeze-01.json:1523-1556, and the corroborating concrete fields (unit Cash, numerator 1/denominator 10, periodSeconds 60, firstPeriodStart 1000, allocationRule AccrualFirst, nominalLiabilityCap 110) are exactly what loan-lifecycle.mori lines 1-85 declare and its ensures clauses at lines 91,109,112,140,142,170,172 confirm. The residual scale question is genuinely folded into state.fieldMapping.sourceToLedger at freeze-01.json:1656-1666 (Cash quantum 1 vs USD_TEST_ASSET/USD_micro)."
+    },
+    {
+      "id": "CONTRACT-ADDRESS",
+      "priorSeverity": "medium",
+      "disposition": "cleared",
+      "note": "The corrected reason at freeze-01.json:490 names real Preview and local addresses (ffedd46f..., 323d43b9..., 87affdd9..., 36e4a923..., and the stale ba4c8088... in stale-loan-plan.mjs), each genuinely present in the cited stage-deploy.json records, while the target lifecycle deployment address stays open because no lifecycle contract is deployed anywhere in the tree."
+    },
+    {
+      "id": "PRINCIPAL-SLOT",
+      "priorSeverity": "medium",
+      "disposition": "cleared",
+      "note": "financial-lifecycle.ts confirms LifecycleObligation.principal, accrued and outstanding are real nested fields and OBLIGATION_KEYS lists them, while the nine top-level STATE_KEYS contain no authority, signature or nonce field (zero case-insensitive occurrences of those three words in the whole file). The open item is renamed and narrowed accordingly and no longer claims no principal slot at all."
+    },
+    {
+      "id": "HIGH-LENDER-CAP",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "loan.compact:14,41,50 declares and initializes lenderCapability; exported initialize/accrue/settle at :57,:71,:98 accept only borrowerSecret; no exported transition accepts lenderSecret. This open item stands unweakened."
+    },
+    {
+      "id": "HIGH-NO-AUTHORITY-SLOT",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "financial-lifecycle.ts nine top-level fields contain no authority, signature or nonce slot. This narrower version of the claim, excluding the refuted no-principal-at-all sub-claim, stands unweakened and is the version now carried in freeze-01.json and reviewerAttention RA-2."
+    },
+    {
+      "id": "HIGH-NO-FEE-OP",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "loan-lifecycle.mori:51-54 declares only Transfer, Repay, Originate, Accrue; no Fee operation exists in the successor profile being lowered, so the fee-inclusive net-goal rule cannot be expressed by it. Stands unweakened."
+    },
+    {
+      "id": "HIGH-ALLOWANCE-REPLAY",
+      "priorSeverity": "high",
+      "disposition": "cleared",
+      "note": "financial-lifecycle.ts carries allowances and four used-identifier registers with no on-ledger counterpart in loan.compact. Both open items, state.allowances.ledgerRepresentation and state.replayHistory.ledgerRepresentation, remain present and unweakened."
+    }
+  ],
+  "newFindings": [],
+  "verification": {
+    "treeMutationCheck": "find -newer FOREMAN_REPORT.md over the whole worktree returned only FOREMAN_REPORT.json, which predates this audit run (18:41 vs 18:40, both before the audit started); the read-only Codex sandbox and this agent's own inspection created no new or modified files",
+    "codexModel": "gpt-5.6-sol",
+    "codexReasoningEffort": "high",
+    "codexSandbox": "read-only, ephemeral, skip-git-repo-check, cd into the worktree",
+    "orchestratorIndependentSpotCheck": "Re-read openspec/changes/language-to-ledger-lifecycle/design.md lines 40-68 and experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori lines 1-178 directly, not via Codex, to confirm the numeric-target pin, the highest-risk item per the architect's framing, matches the design document's selected case and the .mori file's concrete terms and ensures clauses exactly."
+  },
+  "treeClean": true
+}
