@@ -1,0 +1,55 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-ll-loop-20260912",
+  "role": "implement",
+  "slug": "prover-wrapper",
+  "branch": "foreman/moriarty-ll-loop-20260912/implement/prover-wrapper",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-prover-wrapper",
+  "base_sha": "056e662254c38936758af9c6f72c019705a1ff09",
+  "status": "complete",
+  "summary": "Implemented the static PID 1 prover-lifetime wrapper required by the afk-loan-executor spec's 'Prover lifetime established before daemon startup' requirement: plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c, its prover_lifetime.build.md, and plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py (24 new tests, all real-process-driven). Codex (gpt-5.6-sol) wrote it from a five-part spec embedding the verbatim governing requirement text and the verbatim prover-lifetime.mjs arithmetic/codec model. Independently re-verified: 223 passed/105 subtests passed (baseline was 199/105, 24 new tests all green, zero failures, zero skips), static/import-free build confirmed via file/ldd/readelf, byte-agreement with the JS codec confirmed via a shared-input C/JS comparison test, HEAD unchanged, no unauthorized git activity, no file touched outside the three named files.",
+  "findings": [
+    "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs does not exist in this worktree's branch history; it exists only on the sibling, unmerged branch foreman/moriarty-ll-loop-20260912/implement/scope-reconciliation (commit cff5f1e3). Read it there read-only; embedded its verbatim source as a test fixture in test_prover_lifetime_wrapper.py instead of depending on the sibling worktree at test time or copying it into this worktree's tracked tree. Architect should reconcile the two branches and confirm byte-identity of the merged file against the embedded fixture.",
+    "No .py file under plugins/moriarty-dev/scripts/moriarty_dev/ was touched; the hook-registration digest gate is unaffected.",
+    "The unprivileged combined user+PID namespace technique (unshare --user --map-root-user --pid --fork --mount-proc; plain --pid alone is EPERM in this sandbox) was available and used for both PID-namespace-dependent tests (process-group-escape teardown, abrupt PID 1 death teardown), so neither test needed to fall back to a narrower skipped boundary.",
+    "Exit-code table (0-127 child passthrough incl. 126 for exec failure, 124 for the wrapper's own deadline unconditionally, 128+N for signal-caused or wrapper-forwarded-signal-caused termination, 64 for pre-fork refusal, 2 for CLI usage) is fixed by this implementation and documented in prover_lifetime.build.md since the governing spec text pins the control-record format and timing bounds but not exact wrapper exit integers."
+  ],
+  "evidence": [
+    {
+      "kind": "diff-scope",
+      "path": "git status --porcelain",
+      "detail": "adds exactly plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c, plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.build.md, plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py, plus adapter artifact .foreman-last.txt; no other file changed"
+    },
+    {
+      "kind": "test-run",
+      "path": "plugins/moriarty-dev (cd there, then: python3 -m pytest tests/ -q)",
+      "detail": "223 passed, 105 subtests passed in 18.25s; baseline before this task was 199 passed, 105 subtests passed"
+    },
+    {
+      "kind": "build",
+      "path": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c",
+      "detail": "gcc -std=c11 -Wall -Wextra -Werror -O2 -static -o prover_lifetime prover_lifetime.c; exit 0, zero warnings"
+    },
+    {
+      "kind": "static-check",
+      "path": "prover_lifetime (built binary)",
+      "detail": "file: 'statically linked'; ldd: 'not a dynamic executable'; readelf -d: 'There is no dynamic section in this file.'"
+    },
+    {
+      "kind": "byte-agreement",
+      "path": "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py::test_c_codec_bytes_and_decode_agree_with_verbatim_js",
+      "detail": "encodes a fixed sample control record through both the embedded verbatim JS module (run via real node v24.18.1) and the C wrapper's --selftest-encode hook; asserts identical bytes; also decodes JS-encoded bytes through --selftest-decode and confirms every field matches; test passes"
+    },
+    {
+      "kind": "git-evidence",
+      "path": "worktree root",
+      "detail": "head_before=056e662254c38936758af9c6f72c019705a1ff09 head_after=056e662254c38936758af9c6f72c019705a1ff09 status_digest_before=ca6f679ef50a955b50ee8ae851416319147513fbc34c9ac59b74bc77219513e5 status_digest_after=9e81df604a7e3c6f6b54c515a69a21a4504a66c733f86d788e0787b43abe2dbe unauthorized_git_activity=false"
+    },
+    {
+      "kind": "source-availability-gap",
+      "path": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-scope-reconciliation/experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+      "detail": "authoritative codec/arithmetic model only exists on sibling unmerged branch scope-reconciliation (commit cff5f1e3); read read-only, not copied or modified there or here"
+    }
+  ],
+  "open_questions": []
+}
