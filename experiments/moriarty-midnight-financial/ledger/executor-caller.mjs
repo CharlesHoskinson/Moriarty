@@ -2,18 +2,24 @@
  * and stderr are bounded diagnostics only; durable validated facts decide success.
  */
 import {spawn as nodeSpawn} from 'node:child_process';
+import {readFileSync} from 'node:fs';
+import {unlink,rmdir} from 'node:fs/promises';
 import {constants as osConstants} from 'node:os';
 import {isAbsolute,resolve} from 'node:path';
 import {beforeDeadline} from './receipt.mjs';
 import {classifyDisposition} from './fault-matrix.mjs';
 import {computeProverLifetimeBounds,encodeProverControlRecord,validateWrapperEntry} from './prover-lifetime.mjs';
+import {HANDOFF_ANCESTRY_MAX_DEPTH,HANDOFF_OUTER_SECONDS,buildInvocationEnv,buildInvocationEventPayload,classifyEofAfterStartup,createInvocationSocket,createRuntimeDirectory,generateNonce,invocationPayloadSha256,nonceHex,nonceSha256Hex,readProcStatReal,runHandoffServer} from './invocation-handoff.mjs';
 
 const DIAGNOSTIC_MAX_BYTES=1048576;
 const RESULT_READ_GRACE_MS=1000;
 const ABANDON_AFTER_KILL_MS=1000;
+const HANDOFF_SERVER_CLOSE_GRACE_MS=250;
 const RUN_FIELDS=['command','args','cwd','outerTimeoutMs','readDurableResult'];
-const RUN_OPTIONAL_FIELDS=['dependencies','env','abandonAfterKillMs'];
+const RUN_OPTIONAL_FIELDS=['dependencies','env','abandonAfterKillMs','handoff'];
 const DEPENDENCY_FIELDS=['spawn','monotonicNow','killGroup'];
+const HANDOFF_FIELDS=['parentDir','launcherPid','launcherStartTicks','allocationId','actionId','candidateHash','runnerDigest','chargeId','reservationId','storeIdentity','executionContextSha256','projectionSha256','correspondenceSha256','authoritySha256','blockDeadlineUtc','blockDeadlineMonotonicNs','appendInvocationEvent','confirmCurrentState','getPeerUid','getPeerPid','setupTimeoutMs'];
+const HANDOFF_OPTIONAL_FIELDS=['readBootId','readProcStat','createRuntimeDirectory','createInvocationSocket','generateNonce','removeRuntime','wait','appendDenialEvent'];
 const BOUNDED_FIELDS=[...RUN_FIELDS,...RUN_OPTIONAL_FIELDS,'requireControlRecord','writeControlRecord','bootId','timeNamespaceInode','invocationDigest'];
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const plain=value=>value!==null&&typeof value==='object'&&Object.getPrototypeOf(value)===Object.prototype;
@@ -38,6 +44,17 @@ function dependencies(value){
  for(const key of actual)check(typeof value[key]==='function','EXECUTOR_DEPENDENCIES');
  return {spawn:value.spawn??nodeSpawn,monotonicNow:value.monotonicNow??process.hrtime.bigint,killGroup:value.killGroup??((pid,signal)=>process.kill(-pid,signal))};
 }
+function validateHandoff(value){
+ exactKeys(value,HANDOFF_FIELDS,HANDOFF_OPTIONAL_FIELDS,'EXECUTOR_HANDOFF_FIELDS');
+ check(typeof value.parentDir==='string'&&isAbsolute(value.parentDir)&&resolve(value.parentDir)===value.parentDir&&!value.parentDir.includes('\0'),'EXECUTOR_HANDOFF_PARENT_DIR');
+ check(Number.isSafeInteger(value.launcherPid)&&value.launcherPid>0&&typeof value.launcherStartTicks==='bigint'&&value.launcherStartTicks>=0n,'EXECUTOR_HANDOFF_LAUNCHER');
+ for(const key of ['allocationId','actionId','chargeId','reservationId','storeIdentity'])check(typeof value[key]==='string'&&value[key].length>0&&!value[key].includes('\0')&&!value[key].includes('\n'),'EXECUTOR_HANDOFF_IDENTITY');
+ for(const key of ['candidateHash','runnerDigest','executionContextSha256','projectionSha256','correspondenceSha256','authoritySha256'])check(typeof value[key]==='string'&&/^[0-9a-f]{64}$/.test(value[key]),'EXECUTOR_HANDOFF_DIGEST');
+ check(Number.isSafeInteger(value.blockDeadlineUtc)&&value.blockDeadlineUtc>=0,'EXECUTOR_HANDOFF_BLOCK_DEADLINE');check(value.blockDeadlineMonotonicNs===null||typeof value.blockDeadlineMonotonicNs==='bigint'&&value.blockDeadlineMonotonicNs>=0n,'EXECUTOR_HANDOFF_BLOCK_DEADLINE');
+ for(const key of ['appendInvocationEvent','confirmCurrentState','getPeerUid','getPeerPid'])check(typeof value[key]==='function','EXECUTOR_HANDOFF_DEPENDENCY');
+ for(const key of HANDOFF_OPTIONAL_FIELDS)if(value[key]!==undefined)check(typeof value[key]==='function','EXECUTOR_HANDOFF_DEPENDENCY');
+ check(Number.isSafeInteger(value.setupTimeoutMs)&&value.setupTimeoutMs>0,'EXECUTOR_HANDOFF_TIMEOUT');return value;
+}
 function validateRunOptions(value){
  exactKeys(value,RUN_FIELDS,RUN_OPTIONAL_FIELDS,'EXECUTOR_FIELDS');
  check(typeof value.command==='string'&&value.command.length>0&&!value.command.includes('\0'),'EXECUTOR_COMMAND');
@@ -46,9 +63,17 @@ function validateRunOptions(value){
  check(Number.isSafeInteger(value.outerTimeoutMs)&&value.outerTimeoutMs>0,'EXECUTOR_TIMEOUT');
  check(typeof value.readDurableResult==='function','EXECUTOR_RESULT_READER');
  if(value.env!==undefined)stringMap(value.env);
+ if(value.handoff!==undefined){check(value.env===undefined,'EXECUTOR_HANDOFF_ENV_CONFLICT');validateHandoff(value.handoff);}
  if(value.abandonAfterKillMs!==undefined)check(Number.isSafeInteger(value.abandonAfterKillMs)&&value.abandonAfterKillMs>0,'EXECUTOR_ABANDON_TIMEOUT');
  dependencies(value.dependencies);return value;
 }
+
+const realBootId=()=>readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();
+const realWait=ms=>new Promise(resolveWait=>setTimeout(resolveWait,ms));
+async function parentStat(handoff,pid){const readProcStat=handoff.readProcStat??readProcStatReal;for(let attempt=0;attempt<5;attempt++){const stat=await readProcStat(pid);if(stat!==null){check(plain(stat)&&stat.pid===pid&&Number.isSafeInteger(stat.ppid)&&stat.ppid>=0&&typeof stat.startTicks==='bigint'&&stat.startTicks>=0n,'EXECUTOR_HANDOFF_PARENT_STAT');return stat;}if(attempt<4)await (handoff.wait??realWait)(10);}throw Error('HANDOFF_ANCESTRY_PID_GONE');}
+async function removeHandoffRuntime(context){context.server.removeListener('connection',context.queueConnection);context.server.removeListener('connection',context.trackConnection);for(const socket of context.sockets)if(!socket.destroyed)socket.destroy();await new Promise(resolveClose=>{if(!context.server.listening){resolveClose();return;}let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(closeTimer);resolveClose();},closeTimer=setTimeout(()=>{try{context.server.closeAllConnections?.();}catch{}finish();},HANDOFF_SERVER_CLOSE_GRACE_MS);try{context.server.close(finish);}catch{finish();}});try{await unlink(context.socketPath);}catch(error){if(error?.code!=='ENOENT')throw error;}await rmdir(context.runtimeDir);}
+function queueHandoffConnections(server){const sockets=new Set(),pending=[];const forget=socket=>sockets.delete(socket),queueConnection=socket=>{sockets.add(socket);socket.once('close',()=>forget(socket));socket.pause();pending.push(socket);},trackConnection=socket=>{sockets.add(socket);socket.once('close',()=>forget(socket));};server.addListener('connection',queueConnection);return {sockets,pending,queueConnection,trackConnection};}
+function activateHandoffServer(context,options){context.server.removeListener('connection',context.queueConnection);const result=runHandoffServer(options);context.server.addListener('connection',context.trackConnection);for(const socket of context.pending.splice(0)){if(socket.destroyed)continue;socket.resume();context.server.emit('connection',socket);}return result;}
 
 export function classifyRawExit(value){
  exactKeys(value,['status','signal'],[],'EXECUTOR_RAW_EXIT_FIELDS');
@@ -70,13 +95,16 @@ function containment(result,rawExit){
 }
 
 async function runPrepared(options,outerStartMonotonicNs,preSpawn){
- const deps=dependencies(options.dependencies);if(preSpawn)preSpawn();
- // Pass a closed environment, never implicit parent inheritance. The caller may
- // populate the out-of-scope invocation handoff variables through this field.
- const child=deps.spawn(options.command,[...options.args],{cwd:options.cwd,detached:true,stdio:['ignore','pipe','pipe'],env:options.env??{}});
+ const deps=dependencies(options.dependencies);let handoffContext=null,childEnv=options.env??{};
+ if(options.handoff){const makeDirectory=options.handoff.createRuntimeDirectory??createRuntimeDirectory,makeSocket=options.handoff.createInvocationSocket??createInvocationSocket,makeNonce=options.handoff.generateNonce??generateNonce;const runtimeDir=await makeDirectory({parentDir:options.handoff.parentDir}),created=await makeSocket({runtimeDir}),nonce=makeNonce(),connectionQueue=queueHandoffConnections(created.server);handoffContext={runtimeDir,server:created.server,socketPath:created.socketPath,nonce,...connectionQueue};childEnv=buildInvocationEnv({socketPath:created.socketPath,nonceHex:nonceHex(nonce)});}
+ if(preSpawn)preSpawn();const bootId=options.handoff?await (options.handoff.readBootId??realBootId)():null;
+ // The legacy path remains a caller-supplied closed environment. A configured
+ // handoff replaces it with exactly the socket path and raw nonce variables.
+ const child=deps.spawn(options.command,[...options.args],{cwd:options.cwd,detached:true,stdio:['ignore','pipe','pipe'],env:childEnv});
  check(child&&Number.isSafeInteger(child.pid)&&child.pid>0&&typeof child.once==='function'&&typeof child.stdout?.on==='function'&&typeof child.stderr?.on==='function','EXECUTOR_CHILD');
  return new Promise((resolveResult,reject)=>{
-  const chunks={stdout:[],stderr:[]};let diagnosticBytes=0,diagnosticsFull=false,deadlineExceeded=false,killRequested=false,killErrorClass=null,settled=false,timer,abandonTimer;
+  const chunks={stdout:[],stderr:[]};let diagnosticBytes=0,diagnosticsFull=false,deadlineExceeded=false,killRequested=false,killErrorClass=null,settled=false,timer,abandonTimer,startupValid=true,startupWriteFailed=false,parentLost=false,knownMainFailure=false;
+  const handoffSetup=options.handoff?(async()=>{try{const stat=await parentStat(options.handoff,child.pid),uncapped=outerStartMonotonicNs+BigInt(HANDOFF_OUTER_SECONDS)*1000000000n,outerDeadlineMonotonic=options.handoff.blockDeadlineMonotonicNs===null?uncapped:options.handoff.blockDeadlineMonotonicNs<uncapped?options.handoff.blockDeadlineMonotonicNs:uncapped,payload=buildInvocationEventPayload({allocationId:options.handoff.allocationId,actionId:options.handoff.actionId,candidateHash:options.handoff.candidateHash,runnerDigest:options.handoff.runnerDigest,chargeId:options.handoff.chargeId,reservationId:options.handoff.reservationId,storeIdentity:options.handoff.storeIdentity,executionContextSha256:options.handoff.executionContextSha256,projectionSha256:options.handoff.projectionSha256,correspondenceSha256:options.handoff.correspondenceSha256,authoritySha256:options.handoff.authoritySha256,bootId,outerStartMonotonic:outerStartMonotonicNs,outerDeadlineMonotonic,blockDeadlineUtc:options.handoff.blockDeadlineUtc,parentPid:child.pid,parentStartTicks:stat.startTicks,launcherPid:options.handoff.launcherPid,launcherStartTicks:options.handoff.launcherStartTicks,nonceSha256:nonceSha256Hex(handoffContext.nonce)}),payloadSha256=invocationPayloadSha256(payload);await options.handoff.appendInvocationEvent(Object.freeze({payload,payloadSha256}));const result=await activateHandoffServer(handoffContext,{server:handoffContext.server,timeoutMs:options.handoff.setupTimeoutMs,expectedNonce:handoffContext.nonce,expectedAuthoritySha256:options.handoff.authoritySha256,expectedBootId:bootId,expectedUid:process.getuid(),invocationPayloadSha256:payloadSha256,ancestry:{launcherPid:options.handoff.launcherPid,launcherStartTicks:options.handoff.launcherStartTicks,readProcStat:options.handoff.readProcStat??readProcStatReal,maxDepth:HANDOFF_ANCESTRY_MAX_DEPTH},readBootId:options.handoff.readBootId??realBootId,getPeerUid:options.handoff.getPeerUid,getPeerPid:options.handoff.getPeerPid,confirmCurrentState:options.handoff.confirmCurrentState,buildResponse:()=>Object.freeze({payload,payloadSha256}),recordDenialEvent:options.handoff.appendDenialEvent??options.handoff.appendInvocationEvent});if(result.status==='HANDSHAKE_DENIED')startupValid=false;else{let classified=false;const eof=()=>{if(classified)return;classified=true;parentLost=classifyEofAfterStartup({retainedKnownMainFailure:knownMainFailure}).parentLost;};result.socket.once('end',eof);result.socket.once('close',eof);}return result;}catch{startupValid=false;startupWriteFailed=true;return null;}})():Promise.resolve(null);
   const append=(which,data)=>{
    if(diagnosticsFull)return;const bytes=Buffer.isBuffer(data)?data:Buffer.from(data),remaining=DIAGNOSTIC_MAX_BYTES-diagnosticBytes;
    if(bytes.length>=remaining){if(remaining>0)chunks[which].push(bytes.subarray(0,remaining));diagnosticBytes=DIAGNOSTIC_MAX_BYTES;diagnosticsFull=true;return;}
@@ -84,20 +112,20 @@ async function runPrepared(options,outerStartMonotonicNs,preSpawn){
   };
   const clearTimers=()=>{clearTimeout(timer);clearTimeout(abandonTimer);};
   const complete=async(rawExit,matrixRawExit,readResult=true)=>{
-   let durable,resultReadFailed=false,contained=false;
+   await handoffSetup;knownMainFailure=rawExit.kind==='exit'&&rawExit.code!==0||rawExit.kind==='signal';let durable,resultReadFailed=false,contained=false;
    if(readResult){
     try{durable=await beforeDeadline(options.readDurableResult,Date.now()+RESULT_READ_GRACE_MS);contained=containment(durable,rawExit);}
     catch{resultReadFailed=true;}
    }
    const matrix={
-    refused:null,startupValid:true,startupWriteFailed:false,evidencePreexists:false,invocationIdMismatch:false,rawExit:matrixRawExit,
+    refused:null,startupValid,startupWriteFailed,evidencePreexists:false,invocationIdMismatch:false,rawExit:matrixRawExit,
     terminalEvidencePersisted:false,stopReturnCode:null,stopErrorClass:null,stopReceiptPersisted:false,
     containmentComplete:contained,timerCancelReturnCode:null,timerCancelReceiptPersisted:false,
-    deadlineExceeded,parentLost:false,resultWriteFailed:false
+    deadlineExceeded,parentLost,resultWriteFailed:false
    };
    const disposition=Object.freeze(classifyDisposition(matrix));
    const diagnostics=Object.freeze({stdout:Buffer.concat(chunks.stdout).toString(),stderr:Buffer.concat(chunks.stderr).toString(),deadlineExceeded,resultReadFailed,killErrorClass});
-   return Object.freeze({outerStartMonotonicNs,rawExit,disposition,diagnostics});
+   const result=Object.freeze({outerStartMonotonicNs,rawExit,disposition,diagnostics});if(handoffContext){try{await (options.handoff.removeRuntime??removeHandoffRuntime)(handoffContext);}catch{}}return result;
   };
   child.stdout.on('data',data=>append('stdout',data));child.stderr.on('data',data=>append('stderr',data));
   timer=setTimeout(()=>{
@@ -113,6 +141,7 @@ async function runPrepared(options,outerStartMonotonicNs,preSpawn){
   child.once('close',(status,signal)=>{
    try{
     const rawExit=Object.freeze(classifyRawExit({status,signal}));
+    knownMainFailure=rawExit.kind==='exit'&&rawExit.code!==0||rawExit.kind==='signal';
     if(settled)return;settled=true;clearTimers();
     // Once this caller requested SIGKILL, a later close cannot establish whether
     // the reported terminal state was natural or self-inflicted. Keep the real
