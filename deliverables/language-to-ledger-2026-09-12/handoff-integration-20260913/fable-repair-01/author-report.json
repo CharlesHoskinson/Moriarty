@@ -1,0 +1,91 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-ll-successor-20260913b",
+  "role": "implement",
+  "slug": "handoff-fable-repair",
+  "branch": "foreman/moriarty-ll-successor-20260913b/implement/handoff-fable-repair",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-successor-20260913b-implement-handoff-fable-repair",
+  "base_sha": "4c95364353e48540c686219fa5c318313994bda0",
+  "status": "completed",
+  "implementer": {"model": "claude-fable-5-1", "effort": "medium", "delegation": "none"},
+  "checker_routing": {"model": "gpt-6", "effort": "high", "run_in_this_lane": false},
+  "audit_input": ["/tmp/moriarty-handoff-gpt6-high-20260913.md", "/tmp/moriarty-handoff-gpt6-high-20260913.json"],
+  "summary": "GPT-6 high H1 (unbounded setup/persistence waits) and H2 (null raw exit reaching PROCESS_SUCCESS) are repaired, with H3 (swallowed cleanup errors, leaked early failures) handled. Exact audit reproducers now return bounded unknown dispositions. Executor suite 86 -> 101 passing; all financial and language suites pass. C1/C2/C3 task 5.2 blockers remain untouched. No commit, tag, push, dependency, artifact rebuild, accounting or resource change.",
+  "changed_files": [
+    {"path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs", "sha256_after": "1d6b52248b8b1748e554395cfd22ee0075141de261e082edd5063a7fda4619dc", "sha256_before": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs", "sha256_after": "3a2fc296104a0928095e5e413e6329353be0fb5a99d6eff00688fb278ef857b6", "sha256_before": "19f0c29eb2ebd5d4947f61a648628abd5c131926a14dbde71d824c6d0bf91386"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs", "sha256_after": "110e57cff180d08c1c601eed54a93e3e24554c648cd182f1fa4cac017c2029df", "sha256_before": "b782827e5a69d936750abc837b83cfbaf881d2c5cf5a2767ac601212b25a00bd"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs", "sha256_after": "a06651eda8d488e3478fef3dba22be103a30a32095f4f5e2809b672a06a48c59", "sha256_before": "afb51cdd9307e6272c20bc8034f5b5078104feaba96a82ec9f89b4fdd65714ba"}
+  ],
+  "unchanged_files": [
+    {"path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs", "sha256": "2594d799dacb2fc68a75aeec09fda4616ea8024f42fcd26c43809a2dcc78510c"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs", "sha256": "7c7bfed8c3013af39eceadaeae0efb911832e3deece1ce3ca25aa4a9a06be095"}
+  ],
+  "findings": [
+    {
+      "id": "H2",
+      "severity": "high",
+      "location": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs",
+      "before": "classifyDisposition with rawExit:null and all other success facts returned PROCESS_SUCCESS/0/null",
+      "repair": "null observation now returns PROCESS_UNKNOWN/3/MAIN_EXIT_UNAVAILABLE after REFUSED, startup and evidence/identity gates; success path explicitly requires kind=exit and code=0; REFUSED and known-failure precedence retained",
+      "after": "{\"status\":\"PROCESS_UNKNOWN\",\"exitCode\":3,\"failureCode\":\"MAIN_EXIT_UNAVAILABLE\"}",
+      "tests": ["row: absent raw main-exit observation is unknown even when every other fact says success", "row: only a retained exact zero exit reaches success", "row: absent raw observation keeps refusal, startup and evidence precedence"]
+    },
+    {
+      "id": "H1",
+      "severity": "high",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "before": "complete() awaited handoffSetup unbounded; appendInvocationEvent, writeControlRecord, createRuntimeDirectory, createInvocationSocket, readBootId and runHandoffServer (confirmCurrentState / denial append) could stall the return indefinitely; audit probe stayed pending after 60ms with outer 5ms and abandon 5ms",
+      "repair": "one absolute schedule per run (outerMs, finalMs = outerMs + abandonAfterKillMs); pre-spawn phases bounded and reject EXECUTOR_SETUP_TIMEOUT with phase and outstanding=true before any spawn; complete() waits for setup only until finalMs then cancels for this run, sets startupValid=false (startupWriteFailed only for a stalled append) and reports setup pending/phase/outstandingWork; late append cannot activate runHandoffServer or resume queued sockets; runHandoffServer timeout clamped to min(setupTimeoutMs, remaining) so stalled confirmCurrentState and stalled denial append both settle by the bound; durable append still precedes handshake activation; prior race/boot/ordering repairs preserved",
+      "after": "audit H1 probe returns in 13ms: PROCESS_UNKNOWN/3/EVIDENCE_WRITE_FAILED, handoff.setup=pending, phase=append, outstandingWork=true, runtimeCleanup.status=removed, kills=1; standalone process exits 0 with no active resources",
+      "tests": ["H1 reproducer: a never-resolving invocation append cannot hold the executor past its outer and abandonment bounds", "H1 prover path: a never-resolving invocation append returns by the same bound with the established prover bounds retained", "a child that exits while the invocation append is still stalled returns at the bound without inventing persisted evidence", "stalled current-state confirmation returns STARTUP_INVALID by the bound and never answers the closed socket", "stalled denial append after a reservation mismatch returns STARTUP_INVALID by the bound and never answers the closed socket", "stalled pre-spawn runtime-directory/invocation-socket/boot-id rejects at the bound without a spawn and removes any owned runtime", "stalled prover control write rejects at the bound before any spawn"]
+    },
+    {
+      "id": "H3",
+      "severity": "medium",
+      "location": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "before": "removeRuntime errors swallowed by an empty catch; spawn throw or child error after runtime allocation rejected without removing owned socket/server/directory",
+      "repair": "outer try/catch from allocation through completion; on rejection the executor detaches listeners, destroys sockets, runs the bounded remover and attaches error.runtimeCleanup (non-enumerable) to the original error; on completion diagnostics.handoff.runtimeCleanup reports removed/failed(errorClass,errorMessage)/unresolved with runtimeDir and socketPath; listener detachment moved into executor-owned cleanup; ENOENT tolerated, other removal errors reported",
+      "tests": ["H3: spawn failure and child error after runtime allocation preserve the original error and remove the owned runtime", "H3: a failed or stalled runtime removal is reported in the result instead of being swallowed", "H3: a spawn failure whose runtime removal also fails keeps the original error and reports the cleanup failure"]
+    }
+  ],
+  "api_change": "result.diagnostics.handoff added: null without handoff, else frozen {setup, phase, appendConfirmed, handshake, denialCode, errorClass, errorMessage, outstandingWork, runtimeCleanup}",
+  "evidence": [
+    {"check": "guarded CLI status", "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json", "result": "dependent loan-swap dispatch blocked on stale sprint inputs and missing current accounting; unrelated to this authorized source repair"},
+    {"check": "H1 reproducer before", "source": "HEAD 4c953643", "stdout": "{\"state\":\"still pending after 60ms\",\"kills\":1,\"outerTimeoutMs\":5,\"abandonAfterKillMs\":5}"},
+    {"check": "H1 reproducer after", "stdout": "{\"state\":{\"returned\":true,\"disposition\":{\"status\":\"PROCESS_UNKNOWN\",\"exitCode\":3,\"failureCode\":\"EVIDENCE_WRITE_FAILED\"},\"handoff\":{\"setup\":\"pending\",\"phase\":\"append\",\"appendConfirmed\":false,\"handshake\":null,\"denialCode\":null,\"errorClass\":null,\"errorMessage\":null,\"outstandingWork\":true,\"runtimeCleanup\":{\"status\":\"removed\",\"errorClass\":null,\"errorMessage\":null,\"runtimeDir\":\"/tmp/fake\",\"socketPath\":\"/tmp/fake/x\"}}},\"kills\":1,\"outerTimeoutMs\":5,\"abandonAfterKillMs\":5}"},
+    {"check": "H1 leak check", "script": "/tmp/h1-exit-check.mjs", "stdout": "{\"returnedAfterMs\":13,\"kills\":1,\"disposition\":{\"status\":\"PROCESS_UNKNOWN\",\"exitCode\":3,\"failureCode\":\"EVIDENCE_WRITE_FAILED\"},\"activeResources\":[]}", "exit": 0, "wall_ms": 206},
+    {"check": "H2 reproducer before", "source": "HEAD 4c953643", "stdout": "{\"status\":\"PROCESS_SUCCESS\",\"exitCode\":0,\"failureCode\":null}"},
+    {"check": "H2 reproducer after", "stdout": "{\"status\":\"PROCESS_UNKNOWN\",\"exitCode\":3,\"failureCode\":\"MAIN_EXIT_UNAVAILABLE\"}"},
+    {"check": "new tests against pre-repair sources", "method": "ledger dir copied to /tmp/moriarty-prerepair-ledger with HEAD executor-caller.mjs and fault-matrix.mjs; node --test fault-matrix.test.mjs executor-caller.test.mjs", "tests": 65, "pass": 48, "fail": 17, "note": "17 = 12 new executor tests + 3 new fault-matrix rows + 2 existing tests extended to assert the new diagnostics.handoff field"},
+    {"check": "executor suite baseline", "command": "npm --prefix experiments/moriarty-midnight-financial run test:executor", "source": "HEAD 4c953643", "tests": 86, "pass": 86, "fail": 0},
+    {"check": "executor suite after", "command": "npm --prefix experiments/moriarty-midnight-financial run test:executor", "tests": 101, "pass": 101, "fail": 0, "cancelled": 0, "skipped": 0, "duration_ms": 2198, "node": "v24.18.1"},
+    {"check": "financial test", "command": "npm --prefix experiments/moriarty-midnight-financial test", "tests": 63, "pass": 63, "fail": 0},
+    {"check": "financial test:ledger", "tests": 625, "pass": 625, "fail": 0},
+    {"check": "financial test:compiled", "tests": 3, "pass": 3, "fail": 0},
+    {"check": "financial test:compiled-rejection", "tests": 11, "pass": 11, "fail": 0},
+    {"check": "financial test:finalized-state", "tests": 27, "pass": 27, "fail": 0},
+    {"check": "financial test:preview", "tests": 89, "pass": 89, "fail": 0},
+    {"check": "language test", "command": "npm --prefix experiments/moriarty-language test", "tests": 906, "pass": 906, "fail": 0},
+    {"check": "language typecheck", "command": "npm --prefix experiments/moriarty-language run typecheck", "result": "tsc exit 0"},
+    {"check": "retained pointers", "env": {"MORIARTY_SWAP_BUILD_RECEIPT": "/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json", "MORIARTY_CUSTODY_ARTIFACTS": "/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/binding-completion/20260908T084719Z"}, "rebuilt": false, "installed": false},
+    {"check": "attribution grep", "command": "git log --all --grep='Co-Authored-By' --grep='Claude-Session' --grep='Claude Code'", "matches": 0},
+    {"check": "git state", "commits": 0, "tags": 0, "pushes": 0, "working_tree": "4 ledger files modified, FOREMAN_REPORT.md/json rewritten, .harness/ untracked pre-existing"}
+  ],
+  "test_design": {"bounds": "20ms outer, 20ms abandonment", "watchdog_ms": 2000, "late_settle_ms": 40, "gates": "explicit promises released by the test after return", "transports": "synthetic EventEmitter server/sockets and one real AF_UNIX socket test retained"},
+  "limitations": [
+    "I/O promises are never cancelled; stalled append, control write, directory/socket creation, boot-id read or remover keeps running after the bounded return and is reported as outstanding, not resolved",
+    "a runtime directory whose creation resolves after a runtime-directory timeout is not removed by this run",
+    "unresolved remover wait is max(finalMs, now+1000ms), so a stalled remover can extend the return by up to 1s past outer+abandonment",
+    "under a stalled confirmCurrentState or denial append the setup may read pending/handshake/cancelled or settled/denied/HANDOFF_SETUP_TIMEOUT depending on timer order; both yield STARTUP_INVALID and tests accept either",
+    "runHandoffServer gained no cancellation signal; a late confirmCurrentState resolution can resolve HANDSHAKE_OK internally but the executor has destroyed the socket and detached the server so no bytes reach a peer",
+    "deadlines use Date.now for timer scheduling while the payload outer start remains the injected monotonic sample",
+    "no separately supervised persistence worker for blocking fsync as the spec requires; only the caller's own waits are bounded",
+    "C1 unchanged: no Python loan executor or runner/cmd_run consumer of these helpers",
+    "C2 unchanged: no static PID 1 prover wrapper",
+    "C3 unchanged: caller still hardcodes terminal evidence, stop and timer facts to false; PROCESS_SUCCESS cannot be produced from genuine evidence",
+    "no K, Java, Docker, network, wallet or live financial action; source-only offline tests"
+  ],
+  "open_questions": [],
+  "next": "GPT-6 high independent check of these exact bytes under the current user routing"
+}
