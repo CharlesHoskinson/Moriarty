@@ -36,7 +36,7 @@
 - [x] 5.1 Freeze and independently review source/profile/head, authenticated state/authority/time and failure/fee constraints before implementation.
 - [ ] 5.1a Bind those reviewed constraints in the actual lowerer/custody/SDK caller.
 - [ ] 5.2 Implement the already specified executor/lifetime boundary and offline fault matrix.
-- [ ] 5.2a Compile the generated lifecycle Compact contract; retain compiler output and artifact bindings to the reviewed source/profile before Docker execution.
+- [x] 5.2a Compile the generated lifecycle Compact contract; retain compiler output and artifact bindings to the reviewed source/profile before Docker execution.
 - [ ] 5.3 Run test:ledger, test:compiled, test:finalized-state and test:preview; audit exact source.
 - [ ] 5.4 Reconcile real accounting, binding, funding and bounded reviewed admission evidence.
 - [ ] 5.5 Run complete Docker lifecycle with native readback, rejection control, raw exit and containment.
@@ -51,4 +51,6 @@
 
 Exact files, interfaces, test inputs and commands are in the implementation plan. Evidence root: deliverables/language-to-ledger-2026-09-12/.
 
-Completed source stages are bound to merged PR5 (`1e8bf39`), PR6 (`a3ada9d`) and PR7 (`81bed86`), with exact candidate audits and merge receipts in `deliverables/language-to-ledger-2026-09-12/{postconditions,origination,lifecycle}/`. These checkmarks establish local source/Core/evaluator behavior only; K, Compact compilation, Docker and Preview tasks remain open.
+Completed source stages are bound to merged PR5 (`1e8bf39`), PR6 (`a3ada9d`) and PR7 (`81bed86`), with exact candidate audits and merge receipts in `deliverables/language-to-ledger-2026-09-12/{postconditions,origination,lifecycle}/`. These checkmarks establish local source/Core/evaluator behavior only.
+
+Task 5.2a is bound to `deliverables/language-to-ledger-2026-09-12/compiled-lifecycle/binding-01.json`, its `lineage-supplement-20260913.json`, and the independent `lineage-audit-gpt6-high-20260913.json`. This closes retained compilation of the originate authority/fee circuit only. Proof keys were skipped. Full lifecycle circuits, payer enforcement, K, Docker and Preview acceptance remain open.

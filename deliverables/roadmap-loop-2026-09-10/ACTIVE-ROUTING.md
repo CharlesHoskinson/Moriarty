@@ -1,5 +1,12 @@
 # Active routing override
 
+## September 13 handoff execution
+
+The [September 13 user instruction](../../raw/assignments/moriarty-fable-gpt6-routing-2026-09-13.md)
+selects Fable 5.1 medium implementation and GPT-6 high independent checking for
+`CODEX-HANDOFF-2026-09-13.xml`. It supersedes the historical routing below for
+this handoff. Preserve all earlier verdicts, charges and acceptance gates.
+
 ## September 12 full-branch continuation
 
 The [latest full-branch instruction](../../raw/assignments/moriarty-full-branch-loop-2026-09-12.md) now selects the entire session and branch roadmap. Use `openspec/changes/session-completion-sprints/` for the language-to-ledger sequence and the original OpenSpec requirements for the full MC/SP and wider roadmap. The eight-hour block below is expired history. Preserve its limits and records; do not restart its clock or reduce the new goal to its subset. Existing task-specific K routing and general product routing remain applicable.
