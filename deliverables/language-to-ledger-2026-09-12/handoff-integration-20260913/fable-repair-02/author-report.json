@@ -1,0 +1,98 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-ll-successor-20260913b",
+  "role": "implement",
+  "slug": "handoff-fable-repair",
+  "branch": "foreman/moriarty-ll-successor-20260913b/implement/handoff-fable-repair",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-successor-20260913b-implement-handoff-fable-repair",
+  "base_sha": "4c95364353e48540c686219fa5c318313994bda0",
+  "status": "completed",
+  "round": 2,
+  "implementer": {"model": "claude-fable-5-1", "effort": "medium", "delegation": "none"},
+  "checker_routing": {"model": "gpt-6", "effort": "high", "run_in_this_lane": false},
+  "audit_inputs": [
+    "/tmp/moriarty-handoff-gpt6-high-20260913.md", "/tmp/moriarty-handoff-gpt6-high-20260913.json",
+    "/tmp/moriarty-handoff-fable-audit-gpt6-high-20260913.md", "/tmp/moriarty-handoff-fable-audit-gpt6-high-20260913.json",
+    "/tmp/moriarty-handoff-fable-audit-probes.mjs"
+  ],
+  "interruption": "first attempt at round 2 killed externally (queue 1655, 18:26:44 UTC) after the invocation-handoff.mjs abort edit reached disk; round resumed from those bytes",
+  "summary": "Second-audit findings H1a (wall-clock schedule), H1b (fresh read/cleanup grace), H1c (spawn after outer deadline), H1d (protocol timer starts late denial), H3a (nonce failure before ownership), H3b (late allocation leak) and L1 (latest-start check before boot-id) are repaired in the JS helpers. All seven audit probes give the required outcomes on the final bytes. H2 fix preserved at its approved hashes. Executor suite 101 -> 115 passing, stable over repeated runs; all financial and language suites pass. Previous report claims about wall-clock immunity, no late work and an absent C wrapper are corrected. C1/C3 remain open; C2 integration outside scope.",
+  "changed_files": [
+    {"path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs", "sha256": "1d6b52248b8b1748e554395cfd22ee0075141de261e082edd5063a7fda4619dc", "note": "unchanged since H2 approval"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs", "sha256": "3a2fc296104a0928095e5e413e6329353be0fb5a99d6eff00688fb278ef857b6", "note": "unchanged since H2 approval"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs", "sha256": "a4b54aad06d74f6b286f3c1463d359fb0bda40626c277ef91f9784c912c9f1dc", "sha256_audited_round1": "110e57cff180d08c1c601eed54a93e3e24554c648cd182f1fa4cac017c2029df"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs", "sha256": "019723faffdf41e2d6be8c74c2c8806f113378fe8a11f6cbb9c069be40319223", "sha256_audited_round1": "a06651eda8d488e3478fef3dba22be103a30a32095f4f5e2809b672a06a48c59"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs", "sha256": "b47797546c5982a6f8f1b5b05d5e320fd9f410ab83148a2d1130bd42ff205519", "sha256_audited_round1": "2594d799dacb2fc68a75aeec09fda4616ea8024f42fcd26c43809a2dcc78510c"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs", "sha256": "70f2b1cd1eabe05d18331d36420415d45c56700305a305bcc89dd623da338f5f", "sha256_audited_round1": "7c7bfed8c3013af39eceadaeae0efb911832e3deece1ce3ca25aa4a9a06be095"}
+  ],
+  "unchanged_files": [
+    {"path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs", "sha256": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb"},
+    {"path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.test.mjs", "sha256": "693f88c809668f0daf513f8b5ed12826d4facfea72a66a9eda160ac373d5e6ed"},
+    {"path": "plugins/moriarty-dev/scripts/moriarty_dev/prover_lifetime.c", "note": "tracked, 604 lines, commit 31b59ce9; not modified"},
+    {"path": "plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py", "note": "not modified"}
+  ],
+  "findings": [
+    {"id": "H1a", "severity": "high", "status": "repaired", "repair": "one performance.now() schedule per run (outerMs, settleMs = finalMs - reserve, finalMs); all timers and remaining-time calculations use it; Date.now and the wall-clock beforeDeadline helper removed from enforcement", "probe": "clock-rollback", "before": {"elapsedMs": 344, "configuredTotalMs": 40}, "after": {"elapsedMs": 32, "kills": 1}, "tests": ["H1a: a wall-clock rollback during setup does not extend the monotonic schedule"]},
+    {"id": "H1b", "severity": "high", "status": "repaired", "repair": "setup wait ends at settleMs; durable read gets min(1000ms, remaining to settleMs) and is skipped (resultReadSkipped) under 2ms; cleanup ends at finalMs with reserve min(250ms, floor(abandon/2)); abandonment fires at settleMs; remover past the bound reported unresolved", "probe": "fresh-completion-bounds", "before": {"elapsedMs": 2043}, "after": {"elapsedMs": 41, "resultReadFailed": true, "cleanup": "unresolved"}, "tests": ["H1b: a stalled durable read and a stalled remover share the one final bound and are reported unresolved", "H1b: a slow durable read that outlives its budget is unresolved but leaves the reserved cleanup margin intact"]},
+    {"id": "H1c", "severity": "high", "status": "repaired", "repair": "pre-spawn phases bounded to outerMs; outer deadline rechecked immediately before spawn after all awaits (EXECUTOR_LATE_START, phase spawn); prover latest-start check moved directly before spawn; post-spawn setup stops advancing at outerMs and handshake timeout clamped to outerMs", "probe": "startup-after-outer", "before": {"spawnAfterMs": 66, "outerMs": 20}, "after": {"rejected": "EXECUTOR_SETUP_TIMEOUT", "phase": "boot-id", "elapsedMs": 20, "spawns": 0}, "tests": ["H1c: a slow boot-id read that crosses the outer deadline rejects without any spawn", "H1c: the outer deadline is rechecked immediately before spawn after a blocking final phase"]},
+    {"id": "H1d", "severity": "medium", "status": "repaired", "repair": "runHandoffServer accepts an optional validated AbortSignal; abort sets settled/aborted, clears setup and replay timers, detaches connection and abort listeners, destroys the active socket, resolves HANDSHAKE_ABORTED if unsettled, and starts no new denial record or response; in-flight recorder calls stay outstanding; executor aborts first in every cleanup", "probe": "late-denial-after-error", "before": {"listenersAtReturn": 1, "denialsLater": 1}, "after": {"listenersAtReturn": 0, "denialsLater": 0}, "tests": ["H1d: a child error after handshake activation disposes the protocol so no later denial record starts", "abort before any connection settles as HANDSHAKE_ABORTED, clears the setup timer and detaches the connection listener without a denial record", "abort during a pending replay clears the replay timer and records no late denial", "abort while state confirmation is outstanding starts no denial record and never answers", "an already-aborted signal settles immediately and a malformed signal is rejected"]},
+    {"id": "H3a", "severity": "medium", "status": "repaired", "repair": "runtime context created when the directory exists; acquired server and socketPath assigned to it immediately after the socket phase, before queue installation and nonce generation", "probe": "nonce-exception-loses-socket", "before": {"cleanup": "failed", "cleanupError": "ENOTEMPTY", "socketListening": true}, "after": {"cleanup": "removed", "socketListening": false, "socketExists": false}, "tests": ["H3a: a nonce failure after a real socket is acquired closes the server and removes the owned paths"]},
+    {"id": "H3b", "severity": "medium", "status": "repaired", "repair": "boundedPhase attaches a late-fulfilment handler for directory and socket phases that wraps the resource in its own context and removes it with the run's remover without advancing setup; rejection carries lateAllocation {phase, settled} whose promise resolves to the late cleanup outcome only if the allocation ever fulfils", "probe": "late-directory", "before": {"lateDirectoryExists": true, "reportedCleanup": null}, "after": {"lateAllocation": "removed", "lateDirectoryExists": false}, "tests": ["H3b: a runtime directory created after the outer bound is owned and removed without advancing setup", "H3b: a socket created after the outer bound is closed and unlinked without advancing setup"]},
+    {"id": "L1", "severity": "medium", "status": "repaired", "repair": "preSpawn (validateWrapperEntry) now runs after the awaited boot-id and the outer recheck, immediately before spawn", "probe": "latest-start-check-before-boot", "before": {"spawnedAtLateBoundary": true}, "after": {"rejected": "PROVER_LIFETIME_LATE_ENTRY", "spawns": 0}, "tests": ["L1: the prover latest-start check runs after the awaited boot-id, immediately before spawn"]},
+    {"id": "H2", "severity": "high", "status": "fixed and approved in second audit; preserved unchanged"},
+    {"id": "C1", "severity": "blocking", "status": "open, outside helper repair", "detail": "no Python loan executor, no runner/cmd_run consumer of these helpers, no authenticated production handoff"},
+    {"id": "C2", "severity": "blocking", "status": "source present, integration not established", "detail": "tracked prover_lifetime.c (604 lines, commit 31b59ce9) and test_prover_lifetime_wrapper.py exist in the base; production wrapper integration, namespace and live lifetime acceptance not established by this lane; the earlier report's absence claim was stale"},
+    {"id": "C3", "severity": "blocking", "status": "open, outside helper repair", "detail": "caller still hardcodes terminal evidence, stop and timer facts to false; PROCESS_SUCCESS cannot be produced from genuine evidence; no supervised persistence worker"}
+  ],
+  "corrected_previous_claims": [
+    "wall-clock jumps cannot extend the bound (false; 344ms observed) -> fixed by H1a",
+    "no late listener registration / no bytes reach a peer (incomplete; protocol timer started a new denial append after return) -> fixed by H1d",
+    "no static PID 1 prover wrapper (stale; prover_lifetime.c is tracked in the base)",
+    "shared final deadline (contradicted by 1000ms result grace and max(finalMs, now+1000) cleanup wait) -> fixed by H1b"
+  ],
+  "api_change": {"diagnostics": "resultReadSkipped added; handoff record {setup, phase, appendConfirmed, handshake, denialCode, errorClass, errorMessage, outstandingWork, runtimeCleanup}", "errors": "runtimeCleanup (non-enumerable) on rejections after allocation; phase/outstanding on setup timeouts; lateAllocation {phase, settled} on allocation-phase timeouts; EXECUTOR_LATE_START on outer expiry before spawn", "protocol": "runHandoffServer optional signal; HANDSHAKE_ABORTED/HANDOFF_ABORTED status"},
+  "evidence": [
+    {"check": "audit probes before this round (unmodified file, audited bytes)", "result": "all seven observations reproduced: 346ms, spawn at 66ms, 2046ms, ENOTEMPTY with socket listening, late directory present, 1 listener and 1 late denial, spawn at +120 boundary"},
+    {"check": "audit probes after (unmodified file)", "command": "node /tmp/moriarty-handoff-fable-audit-probes.mjs", "result": "probe 1 elapsed 32ms; exits 1 at probe 2 because the probe does not catch the now-required EXECUTOR_SETUP_TIMEOUT rejection"},
+    {"check": "audit probes after (wrapped copy: try/catch around probes 2, 5, 7, otherwise identical)", "command": "node /tmp/moriarty-handoff-fable-audit-probes-wrapped.mjs", "exit": 0, "stdout": [
+      "{\"probe\":\"clock-rollback\",\"elapsedMs\":33,\"configuredTotalMs\":40,\"kills\":1,\"status\":\"PROCESS_UNKNOWN\"}",
+      "{\"probe\":\"startup-after-outer\",\"rejected\":\"EXECUTOR_SETUP_TIMEOUT\",\"phase\":\"boot-id\",\"elapsedMs\":20,\"spawns\":0,\"kills\":0}",
+      "{\"probe\":\"fresh-completion-bounds\",\"elapsedMs\":41,\"configuredTotalMs\":40,\"resultReadFailed\":true,\"cleanup\":\"unresolved\"}",
+      "{\"probe\":\"nonce-exception-loses-socket\",\"error\":\"nonce source unavailable\",\"reportedCleanup\":{\"status\":\"removed\"},\"socketListening\":false,\"socketExists\":false}",
+      "{\"probe\":\"late-directory\",\"error\":\"EXECUTOR_SETUP_TIMEOUT\",\"phase\":\"runtime-directory\",\"outstanding\":true,\"reportedCleanup\":null,\"lateAllocation\":{\"status\":\"removed\"},\"lateDirectoryExists\":false,\"spawns\":0}",
+      "{\"probe\":\"late-denial-after-error\",\"error\":\"child-error\",\"cleanup\":\"removed\",\"listenersAtReturn\":0,\"denialsAtReturn\":0,\"denialsLater\":0}",
+      "{\"probe\":\"latest-start-check-before-boot\",\"rejected\":\"PROVER_LIFETIME_LATE_ENTRY\",\"spawns\":0}"
+    ]},
+    {"check": "new tests against base sources", "method": "ledger copied to /tmp/moriarty-prerepair-ledger with executor-caller.mjs and invocation-handoff.mjs at HEAD 4c953643; node --test --test-timeout=3000", "tests": 82, "pass": 54, "fail": 17, "cancelled": 11, "note": "every new H1/H3/L1/abort test fails or hangs on base; two existing tests fail there only on the added diagnostics fields"},
+    {"check": "executor suite", "command": "npm --prefix experiments/moriarty-midnight-financial run test:executor", "tests": 115, "pass": 115, "fail": 0, "repeats": 4, "node": "v24.18.1"},
+    {"check": "financial test", "tests": 63, "pass": 63, "fail": 0},
+    {"check": "financial test:ledger", "tests": 639, "pass": 639, "fail": 0},
+    {"check": "financial test:compiled", "tests": 3, "pass": 3, "fail": 0},
+    {"check": "financial test:compiled-rejection", "tests": 11, "pass": 11, "fail": 0},
+    {"check": "financial test:finalized-state", "tests": 27, "pass": 27, "fail": 0},
+    {"check": "financial test:preview", "tests": 89, "pass": 89, "fail": 0},
+    {"check": "language test", "tests": 906, "pass": 906, "fail": 0},
+    {"check": "language typecheck", "result": "tsc exit 0"},
+    {"check": "leak check (first-audit H1 scenario, gate never released)", "stdout": "{\"returnedAfterMs\":10,\"kills\":1,\"disposition\":{\"status\":\"PROCESS_UNKNOWN\",\"exitCode\":3,\"failureCode\":\"EVIDENCE_WRITE_FAILED\"},\"activeResources\":[]}", "exit": 0, "wall_ms": 105},
+    {"check": "C wrapper test (untouched plugin code)", "command": "python3 -m pytest -q plugins/moriarty-dev/tests/test_prover_lifetime_wrapper.py", "passed": 22, "failed": 2, "failures": ["test_control_deadline_kills_hanging_child_and_is_independent: assert_pid_gone, /proc/<pid> remains", "test_dead_external_launcher_cannot_disable_wrapper_deadline: assert_pid_gone, /proc/<pid> remains"], "note": "not modified or diagnosed by this lane; reported as observed on this host"},
+    {"check": "git diff --check", "exit": 0},
+    {"check": "attribution grep", "command": "git log --all --grep='Co-Authored-By' --grep='Claude-Session' --grep='Claude Code'", "matches": 0},
+    {"check": "git state", "commits": 0, "tags": 0, "stashes": 0, "pushes": 0, "working_tree": "6 ledger files modified, FOREMAN_REPORT.md/json rewritten, .harness/ untracked pre-existing"},
+    {"check": "retained pointers", "env": {"MORIARTY_SWAP_BUILD_RECEIPT": "/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/swap-output/build/build-receipt.json", "MORIARTY_CUSTODY_ARTIFACTS": "/home/charl/.local/state/moriarty/sp05-kernel-custody-20260908/build/binding-completion/20260908T084719Z"}, "rebuilt": false, "installed": false}
+  ],
+  "test_design": {"bounds_ms": {"outer": 40, "abandon": 40, "total": 80}, "scheduling_allowance_ms": 50, "allowance_justification": "libuv timers have 1ms granularity; observed slip on this host is single-digit ms; 50ms is an order of magnitude above the slip and below every configured bound it guards", "late_settle_window_ms": 40, "clock": "performance.now()", "watchdogs": "removed"},
+  "limitations": [
+    "I/O promises are never cancelled; stalled work keeps running after the bounded return and is reported outstanding, skipped or unresolved; synchronous blocking fsync is not made preemptible; no supervised persistence worker",
+    "late allocation cleanup is post-return ownership via lateAllocation.settled and cannot settle if the allocation never fulfils",
+    "under stalled confirmCurrentState or denial append the setup record may be pending/cancelled, settled/denied or settled/cancelled depending on timer order; all yield STARTUP_INVALID",
+    "cleanup reserve capped at 250ms and half the abandonment budget; a longer remover is reported unresolved",
+    "schedule is per process (performance.now()) and not shared with the child or the payload's outer start",
+    "durable read skipped when under 2ms of budget remains (timer granularity)",
+    "C1 open: no Python loan executor or runner consumer",
+    "C2: C wrapper source present but production integration/acceptance not established; two of its own tests fail on this host (pid remains under /proc), not diagnosed here",
+    "C3 open: PROCESS_SUCCESS cannot be produced from genuine evidence",
+    "no K, Java, Docker, network, wallet or live financial action; large-suite results are this lane's evidence only"
+  ],
+  "open_questions": [],
+  "next": "GPT-6 high independent check of these exact bytes under the current user routing"
+}
