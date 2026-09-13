@@ -27,7 +27,10 @@ export function classifyDisposition(value){
  if(value.evidencePreexists||value.invocationIdMismatch)return result('PROCESS_UNKNOWN',3,value.invocationIdMismatch?'MAIN_OBSERVATION_INVALID':'EVIDENCE_PREEXISTS');
  const knownMainFailure=value.rawExit!==null&&((value.rawExit.kind==='exit'&&value.rawExit.code!==0)||value.rawExit.kind==='signal');
  if(knownMainFailure)return result('PROCESS_FAILED',1,value.rawExit.kind==='signal'?'MAIN_SIGNAL':'MAIN_EXIT_NONZERO');
- if(value.rawExit!==null&&value.rawExit.kind==='unknown')return result('PROCESS_UNKNOWN',3,'MAIN_EXIT_UNAVAILABLE');
+ // A null observation means no raw main exit was collected at all. It is never
+ // an implicit zero: only a retained {kind:'exit',code:0} can reach success.
+ if(value.rawExit===null||value.rawExit.kind==='unknown')return result('PROCESS_UNKNOWN',3,'MAIN_EXIT_UNAVAILABLE');
+ check(value.rawExit.kind==='exit'&&value.rawExit.code===0,'FAULT_MATRIX_RAW_EXIT');
  if(!value.terminalEvidencePersisted)return result('PROCESS_UNKNOWN',3,'EVIDENCE_WRITE_FAILED');
  if(value.stopReturnCode!==0||value.stopErrorClass!==null)return result('PROCESS_UNKNOWN',3,'STOP_FAILED');
  if(!value.stopReceiptPersisted)return result('PROCESS_UNKNOWN',3,'STOP_RECEIPT_FAILED');

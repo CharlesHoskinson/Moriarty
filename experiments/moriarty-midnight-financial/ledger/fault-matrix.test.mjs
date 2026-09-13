@@ -36,6 +36,23 @@ test('row: retained main signal is failed',()=>{
 test('row: unavailable main exit is unknown before evidence gates',()=>{
  assert.deepEqual(classify(x=>x.rawExit={kind:'unknown',code:null}),expected('PROCESS_UNKNOWN',3,'MAIN_EXIT_UNAVAILABLE'));
 });
+test('row: absent raw main-exit observation is unknown even when every other fact says success',()=>{
+ // GPT-6 H2 reproducer: rawExit:null with otherwise complete success evidence.
+ assert.deepEqual(classify(x=>x.rawExit=null),expected('PROCESS_UNKNOWN',3,'MAIN_EXIT_UNAVAILABLE'));
+});
+test('row: only a retained exact zero exit reaches success',()=>{
+ for(const rawExit of [null,{kind:'unknown',code:null}])assert.equal(classify(x=>x.rawExit=rawExit).status,'PROCESS_UNKNOWN');
+ for(const rawExit of [{kind:'exit',code:1},{kind:'exit',code:-1},{kind:'signal',code:9},{kind:'signal',code:null}])assert.equal(classify(x=>x.rawExit=rawExit).status,'PROCESS_FAILED');
+ assert.deepEqual(classify(x=>x.rawExit={kind:'exit',code:0}),expected('PROCESS_SUCCESS',0,null));
+});
+test('row: absent raw observation keeps refusal, startup and evidence precedence',()=>{
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.refused={code:'CONTAINMENT_UNSUPPORTED'};}),expected('REFUSED',2,'CONTAINMENT_UNSUPPORTED'));
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.startupValid=false;}),expected('PROCESS_UNKNOWN',3,'STARTUP_INVALID'));
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.startupValid=false;x.startupWriteFailed=true;}),expected('PROCESS_UNKNOWN',3,'EVIDENCE_WRITE_FAILED'));
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.evidencePreexists=true;}),expected('PROCESS_UNKNOWN',3,'EVIDENCE_PREEXISTS'));
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.invocationIdMismatch=true;}),expected('PROCESS_UNKNOWN',3,'MAIN_OBSERVATION_INVALID'));
+ assert.deepEqual(classify(x=>{x.rawExit=null;x.deadlineExceeded=true;x.parentLost=true;x.terminalEvidencePersisted=false;}),expected('PROCESS_UNKNOWN',3,'MAIN_EXIT_UNAVAILABLE'));
+});
 test('row: known main failure stays failed despite every later cleanup limitation',()=>{
  assert.deepEqual(classify(x=>{x.rawExit={kind:'exit',code:1};x.terminalEvidencePersisted=false;x.stopReturnCode=null;x.stopErrorClass='TIMEOUT';x.stopReceiptPersisted=false;x.deadlineExceeded=true;x.parentLost=true;x.containmentComplete=false;x.timerCancelReturnCode=null;x.timerCancelReceiptPersisted=false;x.resultWriteFailed=true;}),expected('PROCESS_FAILED',1,'MAIN_EXIT_NONZERO'));
 });
