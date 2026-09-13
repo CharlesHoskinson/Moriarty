@@ -30,3 +30,10 @@ The user then authorized autonomous work until the release is complete, includin
 more recorded budget increases, while AFK. The Fable medium/GPT-6 high routing
 continues. Preserve historical charges, failures and original acceptance gates.
 See `deliverables/language-to-ledger-2026-09-12/handoff-integration-20260913/afk-release-authorization-20260913.json`.
+
+The recorded AFK budget increase activates `moriarty-release-afk-20260913`,
+digest `2267714fd49a2dbbfb7d7f4c538bc859f15517cdd77a099312f39ef84c73be0a`.
+It carries 23 unused source-work actions and adds 57, with an explicit 24-hour
+deadline extension to September 15 17:01:01 UTC. Prior correction and recovery
+charges remain preserved. Concrete live resource grants and admission remain
+separate. See `deliverables/language-to-ledger-2026-09-12/handoff-integration-20260913/afk-budget-increase-01.json`.
