@@ -1,0 +1,776 @@
+foreman-launch: capability=posix_pidns_userns_strong unshare=/usr/bin/unshare flags=--user --map-current-user --pid --mount-proc --fork --kill-child host_pid=2822311
+foreman-launch: capability=posix_pidns_userns_strong already_inner host_pid=2822311
+................................................................................................................................ [ 38%]
+.................................................. [ 53%]
+............................................................. [ 71%]
+........................................................................ [ 92%]
+........................                                             [100%]
+=============================== warnings summary ===============================
+plugins/moriarty-dev/tests/loan_executor/test_runner_handoff.py::Handoff::test_sibling_process_outside_the_launcher_is_denied
+  /home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_exit_retention/exit_retention.py:93: DeprecationWarning: This process (pid=11) is multi-threaded, use of fork() may lead to deadlocks in the child.
+    pid = os.fork()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+335 passed, 2 deselected, 1 warning, 197 subtests passed in 72.69s (0:01:12)
+CONTEXT {"self": {"pid": 1546, "comm": "python3", "state": "R", "ppid": 1545, "startTicks": "9081405", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1546"]}, "parent": {"pid": 1545, "comm": "python3", "state": "S", "ppid": 9, "startTicks": "9081403", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1545"]}, "init": {"pid": 1, "comm": "MainThread", "state": "S", "ppid": 0, "startTicks": "9074096", "pidNamespace": "pid:[4026532501]", "nsPid": ["NSpid:\t1"]}, "procSelf": "1546"}
+REAP {"pid": 1558, "testProcess": false, "exit": -9}
+PID_GONE {"pid": 1558}
+.REAP {"pid": 1560, "testProcess": false, "exit": 124}
+REAP {"pid": 1561, "testProcess": false, "exit": -9}
+PID_GONE {"pid": 1561}
+PID_GONE {"pid": 1560}
+.
+2 passed in 1.54s
+REAP {"pid": 1546, "testProcess": true, "exit": 0}
+
+> test:executor
+> node --test --test-reporter=tap ledger/prover-lifetime.test.mjs ledger/executor-caller.test.mjs ledger/fault-matrix.test.mjs ledger/invocation-handoff.test.mjs
+
+TAP version 13
+# Subtest: raw close classification gives signals precedence and preserves unknown
+ok 1 - raw close classification gives signals precedence and preserves unknown
+  ---
+  duration_ms: 3.935467
+  type: 'test'
+  ...
+# Subtest: actual argv protocol is handed to exactly one detached piped child without mutation
+ok 2 - actual argv protocol is handed to exactly one detached piped child without mutation
+  ---
+  duration_ms: 3.948319
+  type: 'test'
+  ...
+# Subtest: explicit child environment is passed verbatim without parent-environment merging
+ok 3 - explicit child environment is passed verbatim without parent-environment merging
+  ---
+  duration_ms: 0.801619
+  type: 'test'
+  ...
+# Subtest: child zero and success-looking stdout never replace missing durable evidence
+ok 4 - child zero and success-looking stdout never replace missing durable evidence
+  ---
+  duration_ms: 0.568236
+  type: 'test'
+  ...
+# Subtest: durable completion without independently observed containment remains unknown
+ok 5 - durable completion without independently observed containment remains unknown
+  ---
+  duration_ms: 0.352471
+  type: 'test'
+  ...
+# Subtest: schema-invalid or exit-inconsistent durable results cannot establish containment
+ok 6 - schema-invalid or exit-inconsistent durable results cannot establish containment
+  ---
+  duration_ms: 1.253692
+  type: 'test'
+  ...
+# Subtest: retained nonzero and signal exits remain failed even when durable result reading fails
+ok 7 - retained nonzero and signal exits remain failed even when durable result reading fails
+  ---
+  duration_ms: 0.571291
+  type: 'test'
+  ...
+# Subtest: unknown close observation is never promoted by a valid-looking durable result
+ok 8 - unknown close observation is never promoted by a valid-looking durable result
+  ---
+  duration_ms: 0.321438
+  type: 'test'
+  ...
+# Subtest: combined diagnostics stop at exactly 1048576 bytes without changing disposition
+ok 9 - combined diagnostics stop at exactly 1048576 bytes without changing disposition
+  ---
+  duration_ms: 3.464977
+  type: 'test'
+  ...
+# Subtest: outer timeout retains its close signal but classifies the caller kill as unknown
+ok 10 - outer timeout retains its close signal but classifies the caller kill as unknown
+  ---
+  duration_ms: 32.253425
+  type: 'test'
+  ...
+# Subtest: a child that never closes after a failed deadline kill settles at the abandonment bound
+ok 11 - a child that never closes after a failed deadline kill settles at the abandonment bound
+  ---
+  duration_ms: 13.749713
+  type: 'test'
+  ...
+# Subtest: a failed kill request does not hide a later retained natural main failure
+ok 12 - a failed kill request does not hide a later retained natural main failure
+  ---
+  duration_ms: 9.73818
+  type: 'test'
+  ...
+# Subtest: child error rejects with the original spawn error
+ok 13 - child error rejects with the original spawn error
+  ---
+  duration_ms: 0.518791
+  type: 'test'
+  ...
+# Subtest: malformed close payload rejects instead of escaping the promise
+ok 14 - malformed close payload rejects instead of escaping the promise
+  ---
+  duration_ms: 0.163313
+  type: 'test'
+  ...
+# Subtest: closed invalid options refuse before monotonic sampling or spawn
+ok 15 - closed invalid options refuse before monotonic sampling or spawn
+  ---
+  duration_ms: 0.481511
+  type: 'test'
+  ...
+# Subtest: argv accessors and hidden array fields reject without invoking attacker code
+ok 16 - argv accessors and hidden array fields reject without invoking attacker code
+  ---
+  duration_ms: 0.223427
+  type: 'test'
+  ...
+# Subtest: prover control bytes are durably written before spawn and bounds use the one outer start
+ok 17 - prover control bytes are durably written before spawn and bounds use the one outer start
+  ---
+  duration_ms: 0.938708
+  type: 'test'
+  ...
+# Subtest: post-start durable-result loss cannot recompute or widen the established prover bounds
+ok 18 - post-start durable-result loss cannot recompute or widen the established prover bounds
+  ---
+  duration_ms: 0.492363
+  type: 'test'
+  ...
+# Subtest: required control persistence failure prevents every child spawn
+ok 19 - required control persistence failure prevents every child spawn
+  ---
+  duration_ms: 0.206234
+  type: 'test'
+  ...
+# Subtest: legacy optional-control flag cannot permit spawn without a writer
+ok 20 - legacy optional-control flag cannot permit spawn without a writer
+  ---
+  duration_ms: 0.128146
+  type: 'test'
+  ...
+# Subtest: legacy optional-control flag cannot swallow a failed control write or spawn
+ok 21 - legacy optional-control flag cannot swallow a failed control write or spawn
+  ---
+  duration_ms: 0.161969
+  type: 'test'
+  ...
+# Subtest: entry at the inclusive latest-start boundary refuses after control persistence and before spawn
+ok 22 - entry at the inclusive latest-start boundary refuses after control persistence and before spawn
+  ---
+  duration_ms: 0.208352
+  type: 'test'
+  ...
+# Subtest: configured handoff passes exactly its two-entry environment and appends before answering
+ok 23 - configured handoff passes exactly its two-entry environment and appends before answering
+  ---
+  duration_ms: 19.679356
+  type: 'test'
+  ...
+# Subtest: immediate child connection survives a slow invocation append and the executor returns
+ok 24 - immediate child connection survives a slow invocation append and the executor returns
+  ---
+  duration_ms: 61.925799
+  type: 'test'
+  ...
+# Subtest: handoff server close has a bounded fallback when close never calls back
+ok 25 - handoff server close has a bounded fallback when close never calls back
+  ---
+  duration_ms: 261.33452
+  type: 'test'
+  ...
+# Subtest: failed invocation append yields existing evidence-write failure and attaches no handshake listener
+ok 26 - failed invocation append yields existing evidence-write failure and attaches no handshake listener
+  ---
+  duration_ms: 0.777781
+  type: 'test'
+  ...
+# Subtest: explicit environment conflicts with handoff before monotonic sampling or spawn
+ok 27 - explicit environment conflicts with handoff before monotonic sampling or spawn
+  ---
+  duration_ms: 0.157166
+  type: 'test'
+  ...
+# Subtest: H1 reproducer: a never-resolving invocation append returns within the configured outer plus abandonment bound
+ok 28 - H1 reproducer: a never-resolving invocation append returns within the configured outer plus abandonment bound
+  ---
+  duration_ms: 102.238878
+  type: 'test'
+  ...
+# Subtest: H1 prover path: a never-resolving invocation append returns within the same bound with the established prover bounds retained
+ok 29 - H1 prover path: a never-resolving invocation append returns within the same bound with the established prover bounds retained
+  ---
+  duration_ms: 102.347901
+  type: 'test'
+  ...
+# Subtest: H1a: a wall-clock rollback during setup does not extend the monotonic schedule
+ok 30 - H1a: a wall-clock rollback during setup does not extend the monotonic schedule
+  ---
+  duration_ms: 61.355887
+  type: 'test'
+  ...
+# Subtest: H1b: a stalled durable read and a stalled remover share the one final bound and are reported unresolved
+ok 31 - H1b: a stalled durable read and a stalled remover share the one final bound and are reported unresolved
+  ---
+  duration_ms: 80.143599
+  type: 'test'
+  ...
+# Subtest: H1b: a slow durable read that outlives its budget is unresolved but leaves the reserved cleanup margin intact
+ok 32 - H1b: a slow durable read that outlives its budget is unresolved but leaves the reserved cleanup margin intact
+  ---
+  duration_ms: 60.954164
+  type: 'test'
+  ...
+# Subtest: H1c: a slow boot-id read that crosses the outer deadline rejects without any spawn
+ok 33 - H1c: a slow boot-id read that crosses the outer deadline rejects without any spawn
+  ---
+  duration_ms: 100.021763
+  type: 'test'
+  ...
+# Subtest: H1c: the outer deadline is rechecked immediately before spawn after a blocking final phase
+ok 34 - H1c: the outer deadline is rechecked immediately before spawn after a blocking final phase
+  ---
+  duration_ms: 45.932079
+  type: 'test'
+  ...
+# Subtest: L1: the prover latest-start check runs after the awaited boot-id, immediately before spawn
+ok 35 - L1: the prover latest-start check runs after the awaited boot-id, immediately before spawn
+  ---
+  duration_ms: 0.609997
+  type: 'test'
+  ...
+# Subtest: a child that exits while the invocation append is still stalled returns within the bound without inventing persisted evidence
+ok 36 - a child that exits while the invocation append is still stalled returns within the bound without inventing persisted evidence
+  ---
+  duration_ms: 60.196762
+  type: 'test'
+  ...
+# Subtest: stalled current-state confirmation returns STARTUP_INVALID within the bound and never answers the closed socket
+ok 37 - stalled current-state confirmation returns STARTUP_INVALID within the bound and never answers the closed socket
+  ---
+  duration_ms: 101.08572
+  type: 'test'
+  ...
+# Subtest: stalled denial append after a reservation mismatch returns STARTUP_INVALID within the bound and never answers the closed socket
+ok 38 - stalled denial append after a reservation mismatch returns STARTUP_INVALID within the bound and never answers the closed socket
+  ---
+  duration_ms: 101.577184
+  type: 'test'
+  ...
+# Subtest: H1d: a child error after handshake activation disposes the protocol so no later denial record starts
+ok 39 - H1d: a child error after handshake activation disposes the protocol so no later denial record starts
+  ---
+  duration_ms: 137.086481
+  type: 'test'
+  ...
+# Subtest: stalled pre-spawn runtime-directory rejects at the outer bound without a spawn and removes any owned runtime
+ok 40 - stalled pre-spawn runtime-directory rejects at the outer bound without a spawn and removes any owned runtime
+  ---
+  duration_ms: 40.134038
+  type: 'test'
+  ...
+# Subtest: stalled pre-spawn invocation-socket rejects at the outer bound without a spawn and removes any owned runtime
+ok 41 - stalled pre-spawn invocation-socket rejects at the outer bound without a spawn and removes any owned runtime
+  ---
+  duration_ms: 40.133624
+  type: 'test'
+  ...
+# Subtest: stalled pre-spawn boot-id rejects at the outer bound without a spawn and removes any owned runtime
+ok 42 - stalled pre-spawn boot-id rejects at the outer bound without a spawn and removes any owned runtime
+  ---
+  duration_ms: 39.907546
+  type: 'test'
+  ...
+# Subtest: stalled prover control write rejects at the outer bound before any spawn
+ok 43 - stalled prover control write rejects at the outer bound before any spawn
+  ---
+  duration_ms: 40.065558
+  type: 'test'
+  ...
+# Subtest: H3b: a runtime directory created after the outer bound is owned and removed without advancing setup
+ok 44 - H3b: a runtime directory created after the outer bound is owned and removed without advancing setup
+  ---
+  duration_ms: 81.108297
+  type: 'test'
+  ...
+# Subtest: H3b: a socket created after the outer bound is closed and unlinked without advancing setup
+ok 45 - H3b: a socket created after the outer bound is closed and unlinked without advancing setup
+  ---
+  duration_ms: 81.59664
+  type: 'test'
+  ...
+# Subtest: H3a: a nonce failure after a real socket is acquired closes the server and removes the owned paths
+ok 46 - H3a: a nonce failure after a real socket is acquired closes the server and removes the owned paths
+  ---
+  duration_ms: 2.059592
+  type: 'test'
+  ...
+# Subtest: H3: spawn failure and child error after runtime allocation preserve the original error and remove the owned runtime
+ok 47 - H3: spawn failure and child error after runtime allocation preserve the original error and remove the owned runtime
+  ---
+  duration_ms: 0.587404
+  type: 'test'
+  ...
+# Subtest: H3: a failed runtime removal is reported in the result instead of being swallowed
+ok 48 - H3: a failed runtime removal is reported in the result instead of being swallowed
+  ---
+  duration_ms: 6.066299
+  type: 'test'
+  ...
+# Subtest: H3: a spawn failure whose runtime removal also fails keeps the original error and reports the cleanup failure
+ok 49 - H3: a spawn failure whose runtime removal also fails keeps the original error and reports the cleanup failure
+  ---
+  duration_ms: 0.374495
+  type: 'test'
+  ...
+# Subtest: R2: a replay denial record still in flight after a successful handshake is reported outstanding at return and never written after release
+ok 50 - R2: a replay denial record still in flight after a successful handshake is reported outstanding at return and never written after release
+  ---
+  duration_ms: 47.197866
+  type: 'test'
+  ...
+# Subtest: R2: a child error while a denial record is in flight reports that record outstanding on the rejection and writes nothing after release
+ok 51 - R2: a child error while a denial record is in flight reports that record outstanding on the rejection and writes nothing after release
+  ---
+  duration_ms: 46.837457
+  type: 'test'
+  ...
+# Subtest: R2: a completed handshake with no in-flight protocol work reports zero pending work
+ok 52 - R2: a completed handshake with no in-flight protocol work reports zero pending work
+  ---
+  duration_ms: 8.594345
+  type: 'test'
+  ...
+# Subtest: row: complete zero terminal evidence and containment succeeds
+ok 53 - row: complete zero terminal evidence and containment succeeds
+  ---
+  duration_ms: 1.305086
+  type: 'test'
+  ...
+# Subtest: row: malformed startup is unknown
+ok 54 - row: malformed startup is unknown
+  ---
+  duration_ms: 0.133507
+  type: 'test'
+  ...
+# Subtest: row: unpersisted startup reports the specific write failure
+ok 55 - row: unpersisted startup reports the specific write failure
+  ---
+  duration_ms: 0.105441
+  type: 'test'
+  ...
+# Subtest: row: invocation identity mismatch precedes an apparent main failure
+ok 56 - row: invocation identity mismatch precedes an apparent main failure
+  ---
+  duration_ms: 0.124099
+  type: 'test'
+  ...
+# Subtest: row: preexisting evidence is unknown and not reused
+ok 57 - row: preexisting evidence is unknown and not reused
+  ---
+  duration_ms: 0.113658
+  type: 'test'
+  ...
+# Subtest: row: retained nonzero main exit is failed
+ok 58 - row: retained nonzero main exit is failed
+  ---
+  duration_ms: 0.116528
+  type: 'test'
+  ...
+# Subtest: row: retained main signal is failed
+ok 59 - row: retained main signal is failed
+  ---
+  duration_ms: 0.118831
+  type: 'test'
+  ...
+# Subtest: row: unavailable main exit is unknown before evidence gates
+ok 60 - row: unavailable main exit is unknown before evidence gates
+  ---
+  duration_ms: 0.085832
+  type: 'test'
+  ...
+# Subtest: row: absent raw main-exit observation is unknown even when every other fact says success
+ok 61 - row: absent raw main-exit observation is unknown even when every other fact says success
+  ---
+  duration_ms: 0.110425
+  type: 'test'
+  ...
+# Subtest: row: only a retained exact zero exit reaches success
+ok 62 - row: only a retained exact zero exit reaches success
+  ---
+  duration_ms: 4.690788
+  type: 'test'
+  ...
+# Subtest: row: absent raw observation keeps refusal, startup and evidence precedence
+ok 63 - row: absent raw observation keeps refusal, startup and evidence precedence
+  ---
+  duration_ms: 0.377465
+  type: 'test'
+  ...
+# Subtest: row: known main failure stays failed despite every later cleanup limitation
+ok 64 - row: known main failure stays failed despite every later cleanup limitation
+  ---
+  duration_ms: 0.134191
+  type: 'test'
+  ...
+# Subtest: row: terminal evidence write or fsync failure is unknown
+ok 65 - row: terminal evidence write or fsync failure is unknown
+  ---
+  duration_ms: 0.099758
+  type: 'test'
+  ...
+# Subtest: row: stop nonzero is unknown
+ok 66 - row: stop nonzero is unknown
+  ---
+  duration_ms: 0.08123
+  type: 'test'
+  ...
+# Subtest: row: stop exception or timeout is unknown
+ok 67 - row: stop exception or timeout is unknown
+  ---
+  duration_ms: 0.054986
+  type: 'test'
+  ...
+# Subtest: row: successful stop with missing receipt is unknown
+ok 68 - row: successful stop with missing receipt is unknown
+  ---
+  duration_ms: 5.19785
+  type: 'test'
+  ...
+# Subtest: row: deadline crossing is unknown
+ok 69 - row: deadline crossing is unknown
+  ---
+  duration_ms: 0.104509
+  type: 'test'
+  ...
+# Subtest: row: parent loss is unknown
+ok 70 - row: parent loss is unknown
+  ---
+  duration_ms: 0.095135
+  type: 'test'
+  ...
+# Subtest: row: incomplete containment is unknown
+ok 71 - row: incomplete containment is unknown
+  ---
+  duration_ms: 0.073995
+  type: 'test'
+  ...
+# Subtest: row: timer cancellation nonzero is unknown
+ok 72 - row: timer cancellation nonzero is unknown
+  ---
+  duration_ms: 0.058021
+  type: 'test'
+  ...
+# Subtest: row: missing timer cancellation receipt is unknown
+ok 73 - row: missing timer cancellation receipt is unknown
+  ---
+  duration_ms: 0.05678
+  type: 'test'
+  ...
+# Subtest: row: final result write or fsync failure is unknown
+ok 74 - row: final result write or fsync failure is unknown
+  ---
+  duration_ms: 0.047375
+  type: 'test'
+  ...
+# Subtest: row: pre-start refusal preserves the validator code
+ok 75 - row: pre-start refusal preserves the validator code
+  ---
+  duration_ms: 0.053847
+  type: 'test'
+  ...
+# Subtest: precedence follows the closed table from top to bottom
+ok 76 - precedence follows the closed table from top to bottom
+  ---
+  duration_ms: 0.07184
+  type: 'test'
+  ...
+# Subtest: malformed or open inputs are rejected instead of defaulted
+ok 77 - malformed or open inputs are rejected instead of defaulted
+  ---
+  duration_ms: 0.408609
+  type: 'test'
+  ...
+# Subtest: safety cleanup is outside the pure classifier and cannot manufacture success evidence
+ok 78 - safety cleanup is outside the pure classifier and cannot manufacture success evidence
+  ---
+  duration_ms: 0.359839
+  type: 'test'
+  ...
+# Subtest: literal handoff protocol constants and fixed event field order
+ok 79 - literal handoff protocol constants and fixed event field order
+  ---
+  duration_ms: 1.428341
+  type: 'test'
+  ...
+# Subtest: real nonce generation returns distinct 256-bit Buffers
+ok 80 - real nonce generation returns distinct 256-bit Buffers
+  ---
+  duration_ms: 0.964629
+  type: 'test'
+  ...
+# Subtest: raw nonce hex and its SHA-256 digest are distinct lowercase hex
+ok 81 - raw nonce hex and its SHA-256 digest are distinct lowercase hex
+  ---
+  duration_ms: 0.996183
+  type: 'test'
+  ...
+# Subtest: constant-time comparison handles fixed and mismatched lengths and rejects types
+ok 82 - constant-time comparison handles fixed and mismatched lengths and rejects types
+  ---
+  duration_ms: 0.209821
+  type: 'test'
+  ...
+# Subtest: closed handoff environment contains only the two authority-neutral transport values
+ok 83 - closed handoff environment contains only the two authority-neutral transport values
+  ---
+  duration_ms: 1.357049
+  type: 'test'
+  ...
+# Subtest: real runtime directory is forced to mode 0700 under a permissive umask
+ok 84 - real runtime directory is forced to mode 0700 under a permissive umask
+  ---
+  duration_ms: 9.56503
+  type: 'test'
+  ...
+# Subtest: real invocation socket is mode 0600 and exchanges bytes over AF_UNIX
+ok 85 - real invocation socket is mode 0600 and exchanges bytes over AF_UNIX
+  ---
+  duration_ms: 3.411684
+  type: 'test'
+  ...
+# Subtest: real proc stat parser reports this process parent and positive start ticks
+ok 86 - real proc stat parser reports this process parent and positive start ticks
+  ---
+  duration_ms: 0.430158
+  type: 'test'
+  ...
+# Subtest: bounded ancestry accepts descendants and rejects PID reuse, siblings, excess depth and vanished PIDs
+ok 87 - bounded ancestry accepts descendants and rejects PID reuse, siblings, excess depth and vanished PIDs
+  ---
+  duration_ms: 0.322121
+  type: 'test'
+  ...
+# Subtest: peer UID and boot ID comparisons validate types and compare exactly
+ok 88 - peer UID and boot ID comparisons validate types and compare exactly
+  ---
+  duration_ms: 0.306037
+  type: 'test'
+  ...
+# Subtest: missing Node SO_PEERCRED boundary fails loudly
+ok 89 - missing Node SO_PEERCRED boundary fails loudly
+  ---
+  duration_ms: 0.360844
+  type: 'test'
+  ...
+# Subtest: EOF classifiers return exact frozen outcomes without overwriting retained failure
+ok 90 - EOF classifiers return exact frozen outcomes without overwriting retained failure
+  ---
+  duration_ms: 0.178244
+  type: 'test'
+  ...
+# Subtest: invocation payload is closed, frozen, canonical and sensitive to every field
+ok 91 - invocation payload is closed, frozen, canonical and sensitive to every field
+  ---
+  duration_ms: 4.207416
+  type: 'test'
+  ...
+# Subtest: boot mismatch child check rejects a different real UUID and accepts the payload UUID
+ok 92 - boot mismatch child check rejects a different real UUID and accepts the payload UUID
+  ---
+  duration_ms: 0.100797
+  type: 'test'
+  ...
+# Subtest: denial force-closes a server socket that does not close after its final write
+ok 93 - denial force-closes a server socket that does not close after its final write
+  ---
+  duration_ms: 251.340258
+  type: 'test'
+  ...
+# Subtest: handoff happy path returns real peer observations and exact response
+ok 94 - handoff happy path returns real peer observations and exact response
+  ---
+  duration_ms: 1.742654
+  type: 'test'
+  ...
+# Subtest: handoff denies forged nonce in order
+ok 95 - handoff denies forged nonce in order
+  ---
+  duration_ms: 2.258857
+  type: 'test'
+  ...
+# Subtest: handoff denies wrong authority in order
+ok 96 - handoff denies wrong authority in order
+  ---
+  duration_ms: 1.160303
+  type: 'test'
+  ...
+# Subtest: handoff denies wrong reservation in order
+ok 97 - handoff denies wrong reservation in order
+  ---
+  duration_ms: 1.334765
+  type: 'test'
+  ...
+# Subtest: handoff denies stale store event in order
+ok 98 - handoff denies stale store event in order
+  ---
+  duration_ms: 1.553154
+  type: 'test'
+  ...
+# Subtest: different launcher PID ancestry denial precedes state confirmation and response
+ok 99 - different launcher PID ancestry denial precedes state confirmation and response
+  ---
+  duration_ms: 0.881788
+  type: 'test'
+  ...
+# Subtest: peer UID mismatch stops before PID ancestry and state checks
+ok 100 - peer UID mismatch stops before PID ancestry and state checks
+  ---
+  duration_ms: 0.987024
+  type: 'test'
+  ...
+# Subtest: boot mismatch records and returns its distinct denial before state confirmation
+ok 101 - boot mismatch records and returns its distinct denial before state confirmation
+  ---
+  duration_ms: 0.988116
+  type: 'test'
+  ...
+# Subtest: successful handshake is one-shot and a replay never answers before its denial record completes
+ok 102 - successful handshake is one-shot and a replay never answers before its denial record completes
+  ---
+  duration_ms: 28.335167
+  type: 'test'
+  ...
+# Subtest: EOF before setup refuses startup
+ok 103 - EOF before setup refuses startup
+  ---
+  duration_ms: 0.965947
+  type: 'test'
+  ...
+# Subtest: setup timeout without a connection resolves denial
+ok 104 - setup timeout without a connection resolves denial
+  ---
+  duration_ms: 15.958662
+  type: 'test'
+  ...
+# Subtest: malformed handshake JSON and missing fields deny without state work
+ok 105 - malformed handshake JSON and missing fields deny without state work
+  ---
+  duration_ms: 2.047001
+  type: 'test'
+  ...
+# Subtest: parent disappearance after startup classifies real channel EOF for retained and unknown outcomes
+ok 106 - parent disappearance after startup classifies real channel EOF for retained and unknown outcomes
+  ---
+  duration_ms: 1.458888
+  type: 'test'
+  ...
+# Subtest: server options are closed and require explicit peer credential retrieval
+ok 107 - server options are closed and require explicit peer credential retrieval
+  ---
+  duration_ms: 0.642972
+  type: 'test'
+  ...
+# Subtest: abort before any connection settles as HANDSHAKE_ABORTED, clears the setup timer and detaches the connection listener without a denial record
+ok 108 - abort before any connection settles as HANDSHAKE_ABORTED, clears the setup timer and detaches the connection listener without a denial record
+  ---
+  duration_ms: 60.739421
+  type: 'test'
+  ...
+# Subtest: abort during a pending replay clears the replay timer and records no late denial
+ok 109 - abort during a pending replay clears the replay timer and records no late denial
+  ---
+  duration_ms: 87.627737
+  type: 'test'
+  ...
+# Subtest: abort while state confirmation is outstanding starts no denial record and never answers
+ok 110 - abort while state confirmation is outstanding starts no denial record and never answers
+  ---
+  duration_ms: 15.504448
+  type: 'test'
+  ...
+# Subtest: an already-aborted signal settles immediately and a malformed signal is rejected
+ok 111 - an already-aborted signal settles immediately and a malformed signal is rejected
+  ---
+  duration_ms: 0.362042
+  type: 'test'
+  ...
+# Subtest: abort during an asynchronous response build returns HANDSHAKE_ABORTED and the late response is never written
+ok 112 - abort during an asynchronous response build returns HANDSHAKE_ABORTED and the late response is never written
+  ---
+  duration_ms: 11.913042
+  type: 'test'
+  ...
+# Subtest: setup timeout during an asynchronous response build denies and the late response is never written
+ok 113 - setup timeout during an asynchronous response build denies and the late response is never written
+  ---
+  duration_ms: 31.667707
+  type: 'test'
+  ...
+# Subtest: persistence bookkeeping counts a successful response write and a replay denial through record and write
+ok 114 - persistence bookkeeping counts a successful response write and a replay denial through record and write
+  ---
+  duration_ms: 22.773837
+  type: 'test'
+  ...
+# Subtest: abort with a replay denial record in flight leaves that record outstanding, then settles it without a denial write
+ok 115 - abort with a replay denial record in flight leaves that record outstanding, then settles it without a denial write
+  ---
+  duration_ms: 11.321462
+  type: 'test'
+  ...
+# Subtest: malformed persistence bookkeeping is rejected
+ok 116 - malformed persistence bookkeeping is rejected
+  ---
+  duration_ms: 0.326049
+  type: 'test'
+  ...
+# Subtest: literal prover lifetime constants and BigInt bounds remain anchored to outer start
+ok 117 - literal prover lifetime constants and BigInt bounds remain anchored to outer start
+  ---
+  duration_ms: 1.14517
+  type: 'test'
+  ...
+# Subtest: wrapper entry accepts only times strictly before the absolute latest start
+ok 118 - wrapper entry accepts only times strictly before the absolute latest start
+  ---
+  duration_ms: 0.148391
+  type: 'test'
+  ...
+# Subtest: wrapper deadline is the earlier of entry plus 1500 seconds and the control deadline
+ok 119 - wrapper deadline is the earlier of entry plus 1500 seconds and the control deadline
+  ---
+  duration_ms: 0.232949
+  type: 'test'
+  ...
+# Subtest: control record encoding is the exact six-line ASCII format and round trips canonically
+ok 120 - control record encoding is the exact six-line ASCII format and round trips canonically
+  ---
+  duration_ms: 1.163678
+  type: 'test'
+  ...
+# Subtest: control record encoder rejects every malformed field and unknown fields
+ok 121 - control record encoder rejects every malformed field and unknown fields
+  ---
+  duration_ms: 0.689781
+  type: 'test'
+  ...
+# Subtest: control record decoder rejects size, CR, framing, schema and malformed fields distinctly
+ok 122 - control record decoder rejects size, CR, framing, schema and malformed fields distinctly
+  ---
+  duration_ms: 0.570146
+  type: 'test'
+  ...
+# Subtest: clock identity compares boot ID and normalized namespace inode without I/O
+ok 123 - clock identity compares boot ID and normalized namespace inode without I/O
+  ---
+  duration_ms: 0.180817
+  type: 'test'
+  ...
+1..123
+# tests 123
+# suites 0
+# pass 123
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1872.78985

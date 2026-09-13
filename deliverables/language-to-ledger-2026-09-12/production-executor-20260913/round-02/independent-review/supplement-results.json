@@ -1,0 +1,2516 @@
+[
+  {
+    "name": "running_contradiction_Type",
+    "status": "NOT_TERMINAL",
+    "classification": {
+      "rawMainExit": {
+        "kind": "unknown",
+        "code": null
+      },
+      "status": "PROCESS_UNKNOWN",
+      "failureCode": "MAIN_OBSERVATION_INVALID"
+    },
+    "files": []
+  },
+  {
+    "name": "running_contradiction_RemainAfterExit",
+    "status": "NOT_TERMINAL",
+    "classification": {
+      "rawMainExit": {
+        "kind": "unknown",
+        "code": null
+      },
+      "status": "PROCESS_UNKNOWN",
+      "failureCode": "MAIN_OBSERVATION_INVALID"
+    },
+    "files": []
+  },
+  {
+    "name": "running_contradiction_Transient",
+    "status": "NOT_TERMINAL",
+    "classification": {
+      "rawMainExit": {
+        "kind": "unknown",
+        "code": null
+      },
+      "status": "PROCESS_UNKNOWN",
+      "failureCode": "MAIN_OBSERVATION_INVALID"
+    },
+    "files": []
+  },
+  {
+    "name": "running_contradiction_ExecMainCode",
+    "status": "NOT_TERMINAL",
+    "classification": {
+      "rawMainExit": {
+        "kind": "unknown",
+        "code": null
+      },
+      "status": "pending",
+      "failureCode": null
+    },
+    "files": []
+  },
+  {
+    "name": "unit_replaced_between_kill_and_stop",
+    "complete": true,
+    "elapsedSimulated": 6.300000000000001,
+    "commandTimes": [
+      {
+        "start": 0.0,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 0.9,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "kill",
+          "--signal=SIGKILL",
+          "--kill-whom=all",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 1.8,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "stop",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 2.7,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 3.6,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 4.5,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "kill",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 5.4,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      }
+    ],
+    "facts": {
+      "purpose": "safety-cleanup",
+      "observedAtUtc": "2026-09-13T20:32:11.568236+00:00",
+      "unit": {
+        "before": {
+          "LoadState": "loaded",
+          "ActiveState": "active",
+          "SubState": "running",
+          "MainPID": "4242",
+          "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service",
+          "InvocationID": "ffffffffffffffffffffffffffffffff"
+        },
+        "expectedInvocationId": "ffffffffffffffffffffffffffffffff",
+        "after": {
+          "LoadState": "not-found",
+          "ActiveState": "inactive",
+          "SubState": "dead",
+          "MainPID": "0",
+          "ControlGroup": "",
+          "InvocationID": ""
+        },
+        "disposition": "killed-and-stopped",
+        "contained": true
+      },
+      "prover": {
+        "before": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": true,
+          "Status": "running"
+        },
+        "expectedStartedAt": "2026-09-13T20:00:00Z",
+        "after": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": false,
+          "Status": "exited"
+        },
+        "disposition": "killed",
+        "contained": true
+      },
+      "commands": [
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=loaded\nActiveState=active\nSubState=running\nMainPID=4242\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service\nInvocationID=ffffffffffffffffffffffffffffffff\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGKILL",
+            "--kill-whom=all",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "stop",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=not-found\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlGroup=\nInvocationID=\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|true|running\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "kill",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|false|exited\n",
+          "stderr": "",
+          "timedOut": false
+        }
+      ],
+      "outstandingOwners": [],
+      "complete": true
+    }
+  },
+  {
+    "name": "different_container_receipt_id",
+    "complete": true,
+    "elapsedSimulated": 6.300000000000001,
+    "commandTimes": [
+      {
+        "start": 0.0,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 0.9,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "kill",
+          "--signal=SIGKILL",
+          "--kill-whom=all",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 1.8,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "stop",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 2.7,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 3.6,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 4.5,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "kill",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 5.4,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      }
+    ],
+    "facts": {
+      "purpose": "safety-cleanup",
+      "observedAtUtc": "2026-09-13T20:32:11.569822+00:00",
+      "unit": {
+        "before": {
+          "LoadState": "loaded",
+          "ActiveState": "active",
+          "SubState": "running",
+          "MainPID": "4242",
+          "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service",
+          "InvocationID": "ffffffffffffffffffffffffffffffff"
+        },
+        "expectedInvocationId": "ffffffffffffffffffffffffffffffff",
+        "after": {
+          "LoadState": "not-found",
+          "ActiveState": "inactive",
+          "SubState": "dead",
+          "MainPID": "0",
+          "ControlGroup": "",
+          "InvocationID": ""
+        },
+        "disposition": "killed-and-stopped",
+        "contained": true
+      },
+      "prover": {
+        "before": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": true,
+          "Status": "running"
+        },
+        "expectedStartedAt": "2026-09-13T20:00:00Z",
+        "after": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": false,
+          "Status": "exited"
+        },
+        "disposition": "killed",
+        "contained": true
+      },
+      "commands": [
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=loaded\nActiveState=active\nSubState=running\nMainPID=4242\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service\nInvocationID=ffffffffffffffffffffffffffffffff\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGKILL",
+            "--kill-whom=all",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "stop",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=not-found\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlGroup=\nInvocationID=\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|true|running\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "kill",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|false|exited\n",
+          "stderr": "",
+          "timedOut": false
+        }
+      ],
+      "outstandingOwners": [],
+      "complete": true
+    }
+  },
+  {
+    "name": "different_unit_receipt_name",
+    "complete": true,
+    "elapsedSimulated": 6.300000000000001,
+    "commandTimes": [
+      {
+        "start": 0.0,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 0.9,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "kill",
+          "--signal=SIGKILL",
+          "--kill-whom=all",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 1.8,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "stop",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 2.7,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 3.6,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 4.5,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "kill",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 5.4,
+        "seconds": 25,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "25s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      }
+    ],
+    "facts": {
+      "purpose": "safety-cleanup",
+      "observedAtUtc": "2026-09-13T20:32:11.570841+00:00",
+      "unit": {
+        "before": {
+          "LoadState": "loaded",
+          "ActiveState": "active",
+          "SubState": "running",
+          "MainPID": "4242",
+          "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service",
+          "InvocationID": "ffffffffffffffffffffffffffffffff"
+        },
+        "expectedInvocationId": "ffffffffffffffffffffffffffffffff",
+        "after": {
+          "LoadState": "not-found",
+          "ActiveState": "inactive",
+          "SubState": "dead",
+          "MainPID": "0",
+          "ControlGroup": "",
+          "InvocationID": ""
+        },
+        "disposition": "killed-and-stopped",
+        "contained": true
+      },
+      "prover": {
+        "before": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": true,
+          "Status": "running"
+        },
+        "expectedStartedAt": "2026-09-13T20:00:00Z",
+        "after": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": false,
+          "Status": "exited"
+        },
+        "disposition": "killed",
+        "contained": true
+      },
+      "commands": [
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=loaded\nActiveState=active\nSubState=running\nMainPID=4242\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service\nInvocationID=ffffffffffffffffffffffffffffffff\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGKILL",
+            "--kill-whom=all",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "stop",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=not-found\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlGroup=\nInvocationID=\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|true|running\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "kill",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "25s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|false|exited\n",
+          "stderr": "",
+          "timedOut": false
+        }
+      ],
+      "outstandingOwners": [],
+      "complete": true
+    }
+  },
+  {
+    "name": "elapsed_budget",
+    "complete": true,
+    "elapsedSimulated": 6.300000000000001,
+    "commandTimes": [
+      {
+        "start": 0.0,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 0.9,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/systemctl",
+          "--user",
+          "kill",
+          "--signal=SIGKILL",
+          "--kill-whom=all",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 1.8,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/systemctl",
+          "--user",
+          "stop",
+          "fixture.service"
+        ]
+      },
+      {
+        "start": 2.7,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/systemctl",
+          "--user",
+          "show",
+          "fixture.service",
+          "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+        ]
+      },
+      {
+        "start": 3.6,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 4.5,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/docker",
+          "kill",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      },
+      {
+        "start": 5.4,
+        "seconds": 1,
+        "argv": [
+          "/usr/bin/timeout",
+          "--signal=KILL",
+          "1s",
+          "/usr/bin/docker",
+          "inspect",
+          "--format",
+          "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ]
+      }
+    ],
+    "facts": {
+      "purpose": "safety-cleanup",
+      "observedAtUtc": "2026-09-13T20:32:11.571738+00:00",
+      "unit": {
+        "before": {
+          "LoadState": "loaded",
+          "ActiveState": "active",
+          "SubState": "running",
+          "MainPID": "4242",
+          "ControlGroup": "/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service",
+          "InvocationID": "ffffffffffffffffffffffffffffffff"
+        },
+        "expectedInvocationId": "ffffffffffffffffffffffffffffffff",
+        "after": {
+          "LoadState": "not-found",
+          "ActiveState": "inactive",
+          "SubState": "dead",
+          "MainPID": "0",
+          "ControlGroup": "",
+          "InvocationID": ""
+        },
+        "disposition": "killed-and-stopped",
+        "contained": true
+      },
+      "prover": {
+        "before": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": true,
+          "Status": "running"
+        },
+        "expectedStartedAt": "2026-09-13T20:00:00Z",
+        "after": {
+          "Id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "StartedAt": "2026-09-13T20:00:00Z",
+          "Running": false,
+          "Status": "exited"
+        },
+        "disposition": "killed",
+        "contained": true
+      },
+      "commands": [
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=loaded\nActiveState=active\nSubState=running\nMainPID=4242\nControlGroup=/user.slice/user-1000.slice/user@1000.service/app.slice/fixture.service\nInvocationID=ffffffffffffffffffffffffffffffff\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/systemctl",
+            "--user",
+            "kill",
+            "--signal=SIGKILL",
+            "--kill-whom=all",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/systemctl",
+            "--user",
+            "stop",
+            "fixture.service"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/systemctl",
+            "--user",
+            "show",
+            "fixture.service",
+            "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "LoadState=not-found\nActiveState=inactive\nSubState=dead\nMainPID=0\nControlGroup=\nInvocationID=\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|true|running\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/docker",
+            "kill",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\n",
+          "stderr": "",
+          "timedOut": false
+        },
+        {
+          "argv": [
+            "/usr/bin/timeout",
+            "--signal=KILL",
+            "1s",
+            "/usr/bin/docker",
+            "inspect",
+            "--format",
+            "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+            "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          ],
+          "returnCode": 0,
+          "errorClass": null,
+          "stdout": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd|2026-09-13T20:00:00Z|false|exited\n",
+          "stderr": "",
+          "timedOut": false
+        }
+      ],
+      "outstandingOwners": [],
+      "complete": true
+    }
+  },
+  {
+    "name": "arbitrary_prover_argv",
+    "exitCode": 0,
+    "status": "PROCESS_SUCCESS",
+    "virtualOffsetSeconds": 0.0,
+    "result": {
+      "schema": "moriarty.loan-process-result/1",
+      "allocationId": "loan-fixture-allocation-01",
+      "actionId": "sp01-loan-verify",
+      "candidateHash": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "runnerDigest": "04c3a0fc5d0f0559e390c626a3bddb7c07842e6b58c406191ee74b1548004384",
+      "chargeId": "runtime-charge-01",
+      "reservationId": "82fef095-921a-4529-9bad-7d6a2154b90c",
+      "invocationSha256": "1d352599962bbd55a152ca91828f54675acc3ce0fb148a4b4d8f5ddf48af0723",
+      "unit": "moriarty-loan-fixture.service",
+      "invocationId": "7280b16a4c1a81bcd24c9af9cc102f95",
+      "status": "PROCESS_SUCCESS",
+      "rawMainExit": {
+        "kind": "exit",
+        "code": 0
+      },
+      "terminalEvidencePersisted": true,
+      "stopReturnCode": 0,
+      "stopErrorClass": null,
+      "stopReceiptPersisted": true,
+      "containmentComplete": true,
+      "timerCancelReturnCode": 0,
+      "timerCancelReceiptPersisted": true,
+      "failureCode": null,
+      "evidence": [
+        {
+          "kind": "runtime-financial-plan",
+          "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+          "sha256": "09735a01032fc8845192d7a502030691dba82a63f1097bcfddc91a7cf4eae61e"
+        },
+        {
+          "kind": "runtime-plan-comparison",
+          "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+          "sha256": "08cbcea70f3138af13581b4413bf0a8afd4f67d667b69320152bab950931bf09"
+        },
+        {
+          "kind": "prover-control",
+          "path": "deliverables/loan-fixture/control/prover-control",
+          "sha256": "463c96910135e387a509f49601f85cab1d23edab737c5367499ba60b9a9c534a"
+        },
+        {
+          "kind": "prover-prestart-intent",
+          "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+          "sha256": "9c632f1027b64d38ff0f3d97fc126034d74744cfefae8c5611139811afbde55b"
+        },
+        {
+          "kind": "cleanup-intent",
+          "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+          "sha256": "271e35f15ef2a7dd138b2c1e8dba2132c864efc67273dfb3ae25def264c963c6"
+        },
+        {
+          "kind": "timer-armed",
+          "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+          "sha256": "724eccbae63285430686ee8e4a55264cd14532a8ad634199216344016b54ec8e"
+        },
+        {
+          "kind": "prover-ownership",
+          "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+          "sha256": "d60b1f77e6e8fa222e98451825e18b558c2b942281f394e789c722b15095812b"
+        },
+        {
+          "kind": "unit-startup",
+          "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+          "sha256": "090b581dfbb51f490f2b74a0a090b3a4f30188d340ec399fc5fbdf5e853139cb"
+        },
+        {
+          "kind": "unit-ownership",
+          "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+          "sha256": "b3a15d514158e11cfd1350c0af6709ff744bdd7e3f6217c3bd8a91b3a21eb5b4"
+        },
+        {
+          "kind": "terminal-observation",
+          "path": "deliverables/loan-fixture/evidence/collector/terminal-observation.json",
+          "sha256": "631dfee2d730dfb8b5ac610073c96b928996823d2341a9ba76ef637e859f11fa"
+        },
+        {
+          "kind": "explicit-stop",
+          "path": "deliverables/loan-fixture/evidence/collector/explicit-stop.json",
+          "sha256": "85366a19068f8871f8a3409db59020103bce64acd56007a1f05e0e2ff09ca2c1"
+        },
+        {
+          "kind": "containment",
+          "path": "deliverables/loan-fixture/evidence/containment-normal-cleanup.json",
+          "sha256": "2eceffa21522681709cab9692665ec55cc8a29cedb2d1add6f13adc0d1c33baa"
+        },
+        {
+          "kind": "timer-cancel",
+          "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+          "sha256": "d277284b0eba1d515daab641f5684582d78d693a8e0df9f4c3226ee20707b817"
+        }
+      ],
+      "outstandingOwners": [],
+      "retryAllowed": false,
+      "financialAcceptance": "pending"
+    },
+    "commands": [
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-loan-executor-2k06m8vz/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "271e35f15ef2a7dd138b2c1e8dba2132c864efc67273dfb3ae25def264c963c6"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1605",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-loan-executor-2k06m8vz/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,ActiveEnterTimestampMonotonic,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "kill",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture-cleanup.timer"
+      ]
+    ]
+  },
+  {
+    "name": "missing_start_timestamp",
+    "exitCode": 0,
+    "status": "PROCESS_SUCCESS",
+    "virtualOffsetSeconds": 0.0,
+    "result": {
+      "schema": "moriarty.loan-process-result/1",
+      "allocationId": "loan-fixture-allocation-01",
+      "actionId": "sp01-loan-verify",
+      "candidateHash": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "runnerDigest": "84a11343c55f3a94b8cf43744482901d23f9e89eef0b052eeb70bc6d4e78a29b",
+      "chargeId": "runtime-charge-01",
+      "reservationId": "10988247-8378-4acf-a56c-96668a14119a",
+      "invocationSha256": "c885ff8cbf7d8603bc04087438118f7ada0c9f7c49a2d94099e6e09ca0ed89a8",
+      "unit": "moriarty-loan-fixture.service",
+      "invocationId": "59df3b98d22b30024f74d457c6c56b51",
+      "status": "PROCESS_SUCCESS",
+      "rawMainExit": {
+        "kind": "exit",
+        "code": 0
+      },
+      "terminalEvidencePersisted": true,
+      "stopReturnCode": 0,
+      "stopErrorClass": null,
+      "stopReceiptPersisted": true,
+      "containmentComplete": true,
+      "timerCancelReturnCode": 0,
+      "timerCancelReceiptPersisted": true,
+      "failureCode": null,
+      "evidence": [
+        {
+          "kind": "runtime-financial-plan",
+          "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+          "sha256": "8f7a9bbe2b5392d7c8205d02546b5137a7a8ded619bf099429964a8b4c56fb60"
+        },
+        {
+          "kind": "runtime-plan-comparison",
+          "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+          "sha256": "537915c08c59b5c311605c39b8f58ebf9a30db1d04043020bf216f61790d261b"
+        },
+        {
+          "kind": "prover-control",
+          "path": "deliverables/loan-fixture/control/prover-control",
+          "sha256": "b97ec691467964258ea93502e7f7fd644e0479c56cc2b374eddb81ab56324967"
+        },
+        {
+          "kind": "prover-prestart-intent",
+          "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+          "sha256": "08c66ffb2d485df79f6ed27e3a82a6445eebec2d82c4ab526e989dc91d34d120"
+        },
+        {
+          "kind": "cleanup-intent",
+          "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+          "sha256": "5f8a524f312832aa8625bcfa17568d313950104eee31f9750dd7c4e724f2a555"
+        },
+        {
+          "kind": "timer-armed",
+          "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+          "sha256": "a8623a6f2767f77a4b71b7291adc096524a29e68b061e8d83bdd4faa01af92c1"
+        },
+        {
+          "kind": "prover-ownership",
+          "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+          "sha256": "bfce53167eeeeac68dfb70f9ef94423ebbd8bfd0e91a0ba8c3c448376d79d0bd"
+        },
+        {
+          "kind": "unit-startup",
+          "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+          "sha256": "c6bd19223e8c352e80a03bd319b0eb9576d9f470560831b1abdaf228dc2c1ee6"
+        },
+        {
+          "kind": "unit-ownership",
+          "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+          "sha256": "7b310bcef9af51035a364ba69808292d0e5dd8c159777fbd5faf7c6248f2f288"
+        },
+        {
+          "kind": "terminal-observation",
+          "path": "deliverables/loan-fixture/evidence/collector/terminal-observation.json",
+          "sha256": "0e9355ae79f9f3effdf354995ac1a74d6b5e848e5095aef44763141f39c92c64"
+        },
+        {
+          "kind": "explicit-stop",
+          "path": "deliverables/loan-fixture/evidence/collector/explicit-stop.json",
+          "sha256": "a399a43cf01510712e3a6fec187eb150a2b8480d295a959e942adf22145ec9e8"
+        },
+        {
+          "kind": "containment",
+          "path": "deliverables/loan-fixture/evidence/containment-normal-cleanup.json",
+          "sha256": "f54c305a32dad59cdb30462539634aa81408d4532d99fcf6b9da0003d884e74f"
+        },
+        {
+          "kind": "timer-cancel",
+          "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+          "sha256": "c073ee8aeaa801535f3ca88cbae403c285777875256cff0d1e79d6211c95b904"
+        }
+      ],
+      "outstandingOwners": [],
+      "retryAllowed": false,
+      "financialAcceptance": "pending"
+    },
+    "commands": [
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-loan-executor-jzhug0rh/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "5f8a524f312832aa8625bcfa17568d313950104eee31f9750dd7c4e724f2a555"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1605",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-loan-executor-jzhug0rh/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,ActiveEnterTimestampMonotonic,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "kill",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture-cleanup.timer"
+      ]
+    ]
+  },
+  {
+    "name": "timer_next_elapse_mismatch",
+    "exitCode": 0,
+    "status": "PROCESS_SUCCESS",
+    "virtualOffsetSeconds": 0.0,
+    "result": {
+      "schema": "moriarty.loan-process-result/1",
+      "allocationId": "loan-fixture-allocation-01",
+      "actionId": "sp01-loan-verify",
+      "candidateHash": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "runnerDigest": "27b6516c6f8619de72bd45e791248dd2952c1de4ce1af5beb317a99c633d9bee",
+      "chargeId": "runtime-charge-01",
+      "reservationId": "36cfb5c1-c319-4a71-8fd5-b3aff01e6cc8",
+      "invocationSha256": "8713b328b9c07b6a235d896d61a2aee54e6fb332bf443945b90b3381c415a478",
+      "unit": "moriarty-loan-fixture.service",
+      "invocationId": "a169799ca25980a7849c738f215f82ab",
+      "status": "PROCESS_SUCCESS",
+      "rawMainExit": {
+        "kind": "exit",
+        "code": 0
+      },
+      "terminalEvidencePersisted": true,
+      "stopReturnCode": 0,
+      "stopErrorClass": null,
+      "stopReceiptPersisted": true,
+      "containmentComplete": true,
+      "timerCancelReturnCode": 0,
+      "timerCancelReceiptPersisted": true,
+      "failureCode": null,
+      "evidence": [
+        {
+          "kind": "runtime-financial-plan",
+          "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+          "sha256": "216ed221ecb85b22790385825bb3ea346f1fe255202bd50d17f08aa7dca52db8"
+        },
+        {
+          "kind": "runtime-plan-comparison",
+          "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+          "sha256": "ec9c9a6b075802a4edd3d0709935d34fc8cc7ce234c3a22b75b01c454110a27c"
+        },
+        {
+          "kind": "prover-control",
+          "path": "deliverables/loan-fixture/control/prover-control",
+          "sha256": "fa0162f408c2c593d5d26984f1e2195190c706b196c83e83afc38cdf7c46cf30"
+        },
+        {
+          "kind": "prover-prestart-intent",
+          "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+          "sha256": "a6cf6f05dbfc67523cf621fd4599b3c193aa78c79ec0dca12320010fe48d97ea"
+        },
+        {
+          "kind": "cleanup-intent",
+          "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+          "sha256": "56c70ac48683ce92a2a5f52246d7d533ec88c4325e3fd63c3a26dd9422e8bd39"
+        },
+        {
+          "kind": "timer-armed",
+          "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+          "sha256": "9c1c1b4626b082122bbfb80b8e01492b3a7ddd908f2eb594508474555b671ba0"
+        },
+        {
+          "kind": "prover-ownership",
+          "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+          "sha256": "13cecd17904a214a6d1fe108831f2883db8dd2bd2bb9b152a5dc29525e3cf904"
+        },
+        {
+          "kind": "unit-startup",
+          "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+          "sha256": "b91887693e5dee46c357d0eebebd6126df2691529981a7efadc0a94956b8cb4b"
+        },
+        {
+          "kind": "unit-ownership",
+          "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+          "sha256": "eea9ddd32b57f9932dd3992bd509a5759938b99d604bae13211506e90f80755b"
+        },
+        {
+          "kind": "terminal-observation",
+          "path": "deliverables/loan-fixture/evidence/collector/terminal-observation.json",
+          "sha256": "1b849a009859bbff8c4eb6516f9eab42f7f6c2969ec0cf90178aa3f4cfde9b30"
+        },
+        {
+          "kind": "explicit-stop",
+          "path": "deliverables/loan-fixture/evidence/collector/explicit-stop.json",
+          "sha256": "7e9a43962ad60cdd19995ad4a8a756d693d1ad2fc15df3119c30f6e4a0344abc"
+        },
+        {
+          "kind": "containment",
+          "path": "deliverables/loan-fixture/evidence/containment-normal-cleanup.json",
+          "sha256": "3e5f64212254c73612a94a3df2dc12ad6efb6108e72639efd54f06a8ef7120de"
+        },
+        {
+          "kind": "timer-cancel",
+          "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+          "sha256": "9a03d7b6401be9a4c5ccb4c2b0c70cb00411a194904ad27ac0bf094ed7706ae2"
+        }
+      ],
+      "outstandingOwners": [],
+      "retryAllowed": false,
+      "financialAcceptance": "pending"
+    },
+    "commands": [
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-loan-executor-e6_b3w_l/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "56c70ac48683ce92a2a5f52246d7d533ec88c4325e3fd63c3a26dd9422e8bd39"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1605",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-loan-executor-e6_b3w_l/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,ActiveEnterTimestampMonotonic,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "kill",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture-cleanup.timer"
+      ]
+    ]
+  },
+  {
+    "name": "late_result_success",
+    "exitCode": 3,
+    "status": "PROCESS_UNKNOWN",
+    "virtualOffsetSeconds": 1746.0,
+    "result": {
+      "schema": "moriarty.loan-process-result/1",
+      "allocationId": "loan-fixture-allocation-01",
+      "actionId": "sp01-loan-verify",
+      "candidateHash": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "runnerDigest": "25d55176869028a34bbc3279ef2c336917d37d5131e525fc9fd4c0b6a8f48e16",
+      "chargeId": "runtime-charge-01",
+      "reservationId": "dddee5bf-7db7-44ca-bd26-c2d4450667f8",
+      "invocationSha256": "d1fa63972f9c308ec4986076b219796902630ce5bcee47eda3be57e5f878a34e",
+      "unit": "moriarty-loan-fixture.service",
+      "invocationId": "4273e36e5ac00dbc366697c72fb6d689",
+      "status": "PROCESS_UNKNOWN",
+      "rawMainExit": {
+        "kind": "unknown",
+        "code": null
+      },
+      "terminalEvidencePersisted": false,
+      "stopReturnCode": null,
+      "stopErrorClass": null,
+      "stopReceiptPersisted": false,
+      "containmentComplete": true,
+      "timerCancelReturnCode": 0,
+      "timerCancelReceiptPersisted": true,
+      "failureCode": "MAIN_EXIT_UNAVAILABLE",
+      "evidence": [
+        {
+          "kind": "runtime-financial-plan",
+          "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+          "sha256": "b774b114834109f07432053a6dd80056461e64c8a02f5d9813df186de00dd23b"
+        },
+        {
+          "kind": "runtime-plan-comparison",
+          "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+          "sha256": "badbd1e2f55b8a5e0aa3c02b5b8d815368718189fc0a798d0746131e7c1839de"
+        },
+        {
+          "kind": "prover-control",
+          "path": "deliverables/loan-fixture/control/prover-control",
+          "sha256": "0f0772eb311b44e2567e4b11ef755a8de59abe5b5ba26bf16b4d713f334675a8"
+        },
+        {
+          "kind": "prover-prestart-intent",
+          "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+          "sha256": "1fa094864ff4c333f61cfc9dfbb50730ac1042df21fea8c041bbe8b0a8cf249b"
+        },
+        {
+          "kind": "cleanup-intent",
+          "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+          "sha256": "aba1a7278e247ac9b87a12fbf464a61e7fde2836ba7ca0c438902864db6154c0"
+        },
+        {
+          "kind": "timer-armed",
+          "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+          "sha256": "daf2af0566eceac76a86340d5647d8a5d18a611c4bb37be92aacb425ff549020"
+        },
+        {
+          "kind": "prover-ownership",
+          "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+          "sha256": "957fdb74226695ca4ad713ab1061bc2f35c2f386607cc589930970ae3e40f10a"
+        },
+        {
+          "kind": "unit-startup",
+          "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+          "sha256": "8a7137a8d93e7466ad0a4bc5b9c3de4402287ee9d121c5edebc9f9b589bc6d05"
+        },
+        {
+          "kind": "unit-ownership",
+          "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+          "sha256": "075b68877b089209772636fc7221c8cbeba7cbb14d87a629bf739d76e6f867aa"
+        },
+        {
+          "kind": "containment",
+          "path": "deliverables/loan-fixture/evidence/containment-safety-cleanup.json",
+          "sha256": "b185b03a8953a1b550a064d1e703990c5a8056baf97053811739db3e540be805"
+        },
+        {
+          "kind": "timer-cancel",
+          "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+          "sha256": "a652c3cc7ac4554700d5a3f977fdbb441b3e6b8116ac109d4ca0d4cd0ae9fdc5"
+        }
+      ],
+      "outstandingOwners": [],
+      "retryAllowed": false,
+      "financialAcceptance": "pending"
+    },
+    "commands": [
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-loan-executor-z1jh6cxt/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "aba1a7278e247ac9b87a12fbf464a61e7fde2836ba7ca0c438902864db6154c0"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "25s",
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1605",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-loan-executor-z1jh6cxt/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,ActiveEnterTimestampMonotonic,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "5s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/systemctl",
+        "--user",
+        "kill",
+        "--signal=SIGKILL",
+        "--kill-whom=all",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/docker",
+        "kill",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/timeout",
+        "--signal=KILL",
+        "1s",
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture-cleanup.timer"
+      ]
+    ]
+  },
+  {
+    "name": "master_lock_held_during_handover",
+    "returncode": 0,
+    "stdout": "{\"success\": true, \"action\": \"sp01-loan-verify\", \"exitCode\": 0, \"chargeId\": \"runtime-charge-01\", \"reservationId\": \"801ec65d-c8ae-43bb-a0c9-382efce73a6b\", \"disposition\": \"success\", \"status\": \"PROCESS_SUCCESS\", \"failureCode\": null, \"resultPath\": \"deliverables/loan-fixture/evidence/loan-process-result.json\", \"resultSha256\": \"07d19c05758f6f7a390d3a086fa75a9c739e59d3e969cb2faa8fbd02632b6a4c\", \"invocationSha256\": \"e56f34e2f59c7420043ac53933aa7d20aa5bc3c34add13429644b1594c3d5b17\", \"reservationStatus\": \"finished\"}\n",
+    "stderr": "",
+    "reservations": [
+      [
+        "finished"
+      ]
+    ],
+    "ownership": "released",
+    "commands": [
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{json .}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture-cleanup",
+        "--on-active=1619s",
+        "--timer-property=AccuracySec=1s",
+        "--",
+        "/usr/bin/python3.14",
+        "/home/charl/Moriarty-wt-moriarty-release-afk-20260913-implement-production-executor/plugins/moriarty-dev/scripts/moriarty_dev/loan_cleanup.py",
+        "--intent",
+        "/tmp/moriarty-loan-executor-i_vt4vez/deliverables/loan-fixture/evidence/cleanup-intent.json",
+        "--sha256",
+        "bc7fcc0ae0ea3033189f2828699c1c097fa0127a44e9197a59161c8f62c68cd4"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture-cleanup.timer",
+        "--property=LoadState,ActiveState,SubState,NextElapseUSecMonotonic,Unit"
+      ],
+      [
+        "/usr/bin/docker",
+        "start",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/systemd-run",
+        "--user",
+        "--unit=moriarty-loan-fixture.service",
+        "--service-type=exec",
+        "-p",
+        "RemainAfterExit=yes",
+        "-p",
+        "KillMode=control-group",
+        "-p",
+        "RuntimeMaxSec=1605",
+        "--collect",
+        "--",
+        "/usr/bin/python3.14",
+        "fake-financial.py",
+        "/tmp/moriarty-loan-executor-i_vt4vez/deliverables/loan-fixture/evidence/runtime-financial-plan.json"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,ActiveEnterTimestampMonotonic,InvocationID"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,Result,ExecMainCode,ExecMainStatus,MainPID,ControlGroup,InvocationID,Type,RemainAfterExit,Transient"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture.service"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "show",
+        "moriarty-loan-fixture.service",
+        "--property=LoadState,ActiveState,SubState,MainPID,ControlGroup,InvocationID"
+      ],
+      [
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/docker",
+        "kill",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/docker",
+        "inspect",
+        "--format",
+        "{{.Id}}|{{.State.StartedAt}}|{{.State.Running}}|{{.State.Status}}",
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      ],
+      [
+        "/usr/bin/systemctl",
+        "--user",
+        "stop",
+        "moriarty-loan-fixture-cleanup.timer"
+      ]
+    ],
+    "result": {
+      "actionId": "sp01-loan-verify",
+      "allocationId": "loan-fixture-allocation-01",
+      "candidateHash": "982062069f2146b98598e5a17ef214c4a0745b7adef4d00c0470575bd2fd748f",
+      "chargeId": "runtime-charge-01",
+      "containmentComplete": true,
+      "evidence": [
+        {
+          "kind": "runtime-financial-plan",
+          "path": "deliverables/loan-fixture/evidence/runtime-financial-plan.json",
+          "sha256": "58de07df8461b11af3e353373008e66f7700e15f85d91281ec4ed7606f28ae61"
+        },
+        {
+          "kind": "runtime-plan-comparison",
+          "path": "deliverables/loan-fixture/evidence/runtime-plan-comparison.json",
+          "sha256": "bc2c3f25bd2c8eba8b96de021051b0f691ebe49dd3c472da3779ed36c3488c4f"
+        },
+        {
+          "kind": "prover-control",
+          "path": "deliverables/loan-fixture/control/prover-control",
+          "sha256": "7ee916a91ad7dffbb00dbb089fab65194ad23d144531716cd85f88c4991753de"
+        },
+        {
+          "kind": "prover-prestart-intent",
+          "path": "deliverables/loan-fixture/evidence/prover-prestart-intent.json",
+          "sha256": "294a283562cb7328a9ba21c10a41076fb66c54a98254c1e84b5ca529b15bf9e9"
+        },
+        {
+          "kind": "cleanup-intent",
+          "path": "deliverables/loan-fixture/evidence/cleanup-intent.json",
+          "sha256": "bc7fcc0ae0ea3033189f2828699c1c097fa0127a44e9197a59161c8f62c68cd4"
+        },
+        {
+          "kind": "timer-armed",
+          "path": "deliverables/loan-fixture/evidence/timer-armed.json",
+          "sha256": "b002f01f18f0813f67d206f1751d631448052ca7e53d5ade5b645d76bfbeda04"
+        },
+        {
+          "kind": "prover-ownership",
+          "path": "deliverables/loan-fixture/evidence/prover-ownership.json",
+          "sha256": "a73842982b2881b0ee3b737e758cfb285a14babdbe3a46e4b60a59b2b084da13"
+        },
+        {
+          "kind": "unit-startup",
+          "path": "deliverables/loan-fixture/evidence/unit-startup.json",
+          "sha256": "acd0eedc6840cf50c391cd968711f180b2699cfd4eb14b36f0f92ac923549ec5"
+        },
+        {
+          "kind": "unit-ownership",
+          "path": "deliverables/loan-fixture/evidence/unit-ownership.json",
+          "sha256": "d855c9a6352533fba3bd22589a14049b363e6c08c73f21b7fd7c52b827c169d6"
+        },
+        {
+          "kind": "terminal-observation",
+          "path": "deliverables/loan-fixture/evidence/collector/terminal-observation.json",
+          "sha256": "2f57914d2cb238a78491abda24d2901636e58fa61cc149bae79ce819bca8a2e4"
+        },
+        {
+          "kind": "explicit-stop",
+          "path": "deliverables/loan-fixture/evidence/collector/explicit-stop.json",
+          "sha256": "83c32138d11aaa44dbfc416a475201e42ed7148ec04299b1ea3d1ed9c7da7942"
+        },
+        {
+          "kind": "containment",
+          "path": "deliverables/loan-fixture/evidence/containment-normal-cleanup.json",
+          "sha256": "4b9ccd7fd3071f7c60a54ea2d61180e75baebb0ef1a45c7de9a131acaf891d31"
+        },
+        {
+          "kind": "timer-cancel",
+          "path": "deliverables/loan-fixture/evidence/timer-cancel.json",
+          "sha256": "45e4d3a0761ba75ed30f316a971318d24b5409db44036ea591db2fef65f2efc8"
+        }
+      ],
+      "failureCode": null,
+      "financialAcceptance": "pending",
+      "invocationId": "d3ad4fe1150f93e20102347b501baa42",
+      "invocationSha256": "e56f34e2f59c7420043ac53933aa7d20aa5bc3c34add13429644b1594c3d5b17",
+      "outstandingOwners": [],
+      "rawMainExit": {
+        "code": 0,
+        "kind": "exit"
+      },
+      "reservationId": "801ec65d-c8ae-43bb-a0c9-382efce73a6b",
+      "retryAllowed": false,
+      "runnerDigest": "8b770c30dda9aa702efcecddbb20d8c775fc7a9b48c1b1e843c87c4bc6f1c6ee",
+      "schema": "moriarty.loan-process-result/1",
+      "status": "PROCESS_SUCCESS",
+      "stopErrorClass": null,
+      "stopReceiptPersisted": true,
+      "stopReturnCode": 0,
+      "terminalEvidencePersisted": true,
+      "timerCancelReceiptPersisted": true,
+      "timerCancelReturnCode": 0,
+      "unit": "moriarty-loan-fixture.service"
+    },
+    "events": [
+      "defect_failure",
+      "defect_failure",
+      "result_review",
+      "action_start",
+      "loan_invocation",
+      "loan_process_success",
+      "action_end"
+    ]
+  },
+  {
+    "name": "fifo_result_blocks_actual_cli",
+    "timedOut": true,
+    "waitChannel": "wait_for_partner",
+    "returnCode": -9
+  },
+  {
+    "name": "exact_live_binding_status",
+    "accepted": false,
+    "missing": [
+      "binding-status-unsupported:admitted-i2-source-only"
+    ]
+  }
+]
