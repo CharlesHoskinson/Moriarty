@@ -1,6 +1,6 @@
 # September 17 fixed loan payment on Preview
 
-The existing fixed LAM loan finalized all four stages and paid **533,972,602 test-asset units** to the lender. The [actual integration result](actual-run/integration-result.json) reports `FINANCIAL_COMPLETE` and `financialComparison.status=PASS`; [the process exited 0](service-terminal.txt). **Independent actual-result reviews: PENDING** for both Astra and Grok. Their [source](../recovery-review01/astra-review02.json) [approvals](../recovery-review01/grok-review02.json) preceded the [admitted continuation](admission.json).
+The existing fixed LAM loan finalized all four stages and paid **533,972,602 test-asset units** to the lender. The [actual integration result](actual-run/integration-result.json) reports `FINANCIAL_COMPLETE` and `financialComparison.status=PASS`; [the process exited 0](service-terminal.txt). **Independent actual-result reviews: APPROVED** by [Astra](astra-result-review01.json) and [Grok](grok-result-review01.json), each independently checking native effects, canonical finality and contract state. Their [source](../recovery-review01/astra-review02.json) [approvals](../recovery-review01/grok-review02.json) preceded the [admitted continuation](admission.json).
 
 Contract: `8034dffa6ce124cf34135799969d34831da5ce44fd287a3bead2fa3ce293a341`.
 
