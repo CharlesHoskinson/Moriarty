@@ -209,7 +209,7 @@ The [combined report review and interactive graph](deliverables/moriarty-report-
 
 ## September 12 language delivery reconciliation
 
-The following capabilities are implemented, tested and merged into main through `dc9d516eabb5757591e6ef73a7544639cbe55134`. Their status is S4 local implementation. They do not close full SP02, SP03, authenticated authority, K correspondence, proofs or Preview acceptance.
+The following capabilities are implemented, tested and merged into main through `81bed862c60b184e7f5fdb27577157c2bcf39530`. Their status is S4 local implementation. They do not close full SP02, SP03, authenticated authority, K correspondence, proofs or Preview acceptance.
 
 | Capability | Merged change | Current scoped evidence |
 | --- | --- | --- |
@@ -217,5 +217,14 @@ The following capabilities are implemented, tested and merged into main through 
 | Source-defined repayment schemas | PR2, `ea40ab488d1d056c7192cc4dfd7ae250d44e3d49` | [Result](deliverables/source-defined-repayment-2026-09-11/RESULT.md), [final audit](deliverables/source-defined-repayment-2026-09-11/audit-02/review.json) |
 | Multiple named actions with explicit selection | PR3, `96860344978e176236a6f152cd694433263c8d5f` | [Result](deliverables/multiple-named-actions-2026-09-11/RESULT.md), [final audit](deliverables/multiple-named-actions-2026-09-11/audit-01/review.json) |
 | Typed financial PRE reads and computed remaining repayment | PR4, `98f6d59f11e163325256766a08d2d3f119d102ed` | [Result](deliverables/financial-state-reads-2026-09-12/RESULT.md), [final audit](deliverables/financial-state-reads-2026-09-12/audit-01/review.json) |
+| Financial postconditions with atomic rejection | [PR5](https://github.com/CharlesHoskinson/Moriarty/pull/5), `1e8bf397546ae1a5f373cb50492f9d10b6e5f8f5` | [Independent audit](deliverables/language-to-ledger-2026-09-12/postconditions/audit-postconditions-01.md) |
+| Funded origination and bounded interest accrual | [PR6](https://github.com/CharlesHoskinson/Moriarty/pull/6), `a3ada9d9f4c7b6bf41b5503a2eb1d308ba55cbdd` | [Independent audit](deliverables/language-to-ledger-2026-09-12/origination/audit-origination-01.md) |
+| Complete source loan lifecycle, debt 0 → 100 → 110 → 80 → 0 | [PR7](https://github.com/CharlesHoskinson/Moriarty/pull/7), `81bed862c60b184e7f5fdb27577157c2bcf39530` | [Independent audit](deliverables/language-to-ledger-2026-09-12/lifecycle/audit-lifecycle-01.md) |
 
-The user-approved [language-to-ledger plan](docs/superpowers/plans/2026-09-12-language-to-ledger.md) and [OpenSpec package](openspec/changes/language-to-ledger-lifecycle/README.md) now order financial postconditions, origination/accrual, a complete lifecycle, scoped K agreement and authenticated Docker/Preview execution. These new behaviors are S2, specified-only until their independent result evidence is recorded. Existing wider MC/SP acceptance and resource gates remain unchanged.
+The user-approved [language-to-ledger plan](docs/superpowers/plans/2026-09-12-language-to-ledger.md) and [OpenSpec package](openspec/changes/language-to-ledger-lifecycle/README.md) now have local implementation evidence for tasks 1–3. Scoped K agreement and authenticated Docker/Preview lifecycle execution remain open. Existing wider MC/SP acceptance and resource gates remain unchanged.
+
+## September 17 delivery continuation
+
+The [offline lifecycle corpus](deliverables/lifecycle-corpus-2026-09-17/RESULT.md) implements the complete-state Source/Core/oracle comparison prerequisite for task 4: four positive stages, nine rejection cases and eight valid retry controls. Source and Core carry their own predecessors, compare all financial effects and retained history, and fail the command on incomplete or mismatched observations. Offline comparison does not execute K or close task 4. The retained trace106 compiled artifacts and pinned K runtime are absent from this fresh checkout; the historical native crash remains unresolved.
+
+All retired branch tips, including unfinished K and ledger work, are preserved in the [September 17 recovery map](deliverables/branch-cleanup-2026-09-17/README.md). Recover useful work from those exact tags and review it before adoption.
