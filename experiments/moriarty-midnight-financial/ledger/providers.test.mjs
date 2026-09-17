@@ -3,8 +3,9 @@ import {mkdtempSync, rmSync, readFileSync, writeFileSync, unlinkSync, existsSync
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
-import * as ledger from '/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_fs.js';
-import {createFinancialProviders, loadFinancialSdk, initializeFinancialReservations} from './providers.mjs';
+import {pathToFileURL} from 'node:url';
+import {createFinancialProviders, loadFinancialSdk, initializeFinancialReservations, PINNED_NM} from './providers.mjs';
+const ledger = await import(pathToFileURL(join(PINNED_NM, '@midnight-ntwrk/ledger-v8/midnight_ledger_wasm_fs.js')).href);
 
 // Native ledger data; all wallet, prover, indexer and submission transports below are inert.
 // Proof-free fixture conversion uses native .prove with callbacks that throw if any actual proof is requested.

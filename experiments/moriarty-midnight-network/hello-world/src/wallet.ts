@@ -27,6 +27,7 @@ import {
 } from '@midnight-ntwrk/wallet-sdk';
 
 import type { NetworkConfig, NetworkId } from './network';
+import { previewSubmissionFactory } from './preview-http-submission';
 import {
   CHILD_KINDS,
   loadWalletState,
@@ -74,6 +75,8 @@ export interface CreateWalletOptions {
    * Defaults to true. Pass false to force a from-seed sync (used by tests).
    */
   restore?: boolean;
+  /** Defaults to MIDNIGHT_SUBMISSION_TRANSPORT; unset preserves the SDK service. */
+  submissionTransport?: 'default' | 'preview-http';
   cwd?: string;
 }
 
@@ -118,6 +121,7 @@ export async function createWallet(opts: CreateWalletOptions): Promise<WalletCon
 
   const wallet = await WalletFacade.init({
     configuration: walletConfig,
+    submissionService: previewSubmissionFactory(opts.networkConfig, opts.submissionTransport),
     shielded: async (config) => {
       const cls = ShieldedWallet(config);
       if (saved.shielded !== undefined) {

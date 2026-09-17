@@ -27,6 +27,19 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def build_environment(environ=None):
+    """Forward only explicit tool locations, never the caller's whole environment."""
+    env = os.environ if environ is None else environ
+    selected = {'MORIARTY_NODE_BIN': env.get('MORIARTY_NODE_BIN', NODE)}
+    for key in ('MORIARTY_COMPACT_BIN', 'MORIARTY_MIDNIGHT_NODE_MODULES', 'COMPACT_DIRECTORY'):
+        if key in env:
+            selected[key] = env[key]
+    for key, value in selected.items():
+        require(isinstance(value, str) and os.path.isabs(value) and os.path.normpath(value) == value
+                and not any(c in value for c in ('\0', '\n', '\r')), 'normalized absolute tool path required: ' + key)
+    return selected
+
+
 def safe_path(value, missing=False):
     p = Path(value)
     require(p.is_absolute() and str(p) == os.path.normpath(value), 'normalized absolute path required')
@@ -259,12 +272,13 @@ def main():
     parser.add_argument('--inner', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     request, parent = validate(args.request, args.request_sha256, args.result)
+    environment = build_environment()
     mirror = parent.with_name(parent.name + '.sp05-mirror')
     safe_path(str(mirror), missing=True)
     require(not mirror.exists(), 'mirror already exists')
     if args.inner:
         verify_cgroup()
-        return quota_run(parent, mirror, [NODE, str(BUILDER), '--request', args.request])
+        return quota_run(parent, mirror, [environment['MORIARTY_NODE_BIN'], str(BUILDER), '--request', args.request])
     marker = safe_path(args.request + '.bounded-launch.json', missing=True)
     require(not marker.is_relative_to(parent), 'launch marker inside quota')
     exclusive(marker, {'schema': 'moriarty.sp05-build-launch/1', 'requestSha256': args.request_sha256,
@@ -274,6 +288,7 @@ def main():
                '--property=MemoryMax=' + str(MEMORY), '--property=MemorySwapMax=0',
                '--property=RuntimeMaxSec=330', '--property=KillMode=control-group',
                '--property=TimeoutStopSec=0', '--property=SendSIGKILL=yes',
+               *['--setenv=' + key + '=' + value for key, value in environment.items()],
                'unshare', '--user', '--map-root-user', '--mount', '--fork',
                sys.executable, str(Path(__file__).resolve()), '--inner', '--request', args.request,
                '--request-sha256', args.request_sha256, '--result', args.result]

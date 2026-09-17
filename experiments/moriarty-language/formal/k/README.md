@@ -1,5 +1,30 @@
 # Bounded funded financial semantics in K
 
+## September 17 native execution
+
+The restored expression definition and the new Core `/4` lifecycle definition
+execute with the pinned WSL K toolchain. The current runs matched **125 expression
+cases** (the original 113 plus 12 Unicode controls), **104 lifecycle cases**
+(100 financial controls plus four Unicode boundaries), and **six direct Unicode
+counter probes**. The lifecycle runner feeds each accepted K result into the next
+action and compares complete state, effects, work and rejection envelopes.
+
+The 38 acceptance criteria use 36 lifecycle fixture groups, expression metadata
+controls and offline comparator-corruption controls. They are not 38 native
+lifecycle tests. See the [execution record](../../../../deliverables/k-lifecycle-execution-2026-09-17/RESULT.md)
+for provenance, failures and limitations. Fresh Astra and Grok audits approved
+the recorded native conformance results; Grok's terminal usage reports
+`grok-4.6-build`. These finite runs do not
+prove correspondence or establish Preview settlement.
+
+`run.py --suite expression-v1` owns the expression compiler and trace commands.
+`run.py --suite lifecycle-v1 traces --fixture PATH --attempt NAME` executes an
+already compiled, source-bound lifecycle definition. Native dispatch requires the
+recorded resource allocation, which requires 64 MiB soft and hard stack limits.
+The final lifecycle run lacks a retained service-properties capture; its complete
+native outputs and zero exits are retained. The
+current compiled directories are local build products, not portable artifacts.
+
 ## Offline lifecycle corpus prerequisite
 
 From the repository root, run:
@@ -39,12 +64,13 @@ effects and array order. Mutation tests exercise the comparator and the CLI.
 This is a Task4 prerequisite with `kExecuted: false` and
 `kStatus: "not-executed"` on every report. It does not invoke or admit K, reproduce
 the retained backend failure, implement a Core-to-K loader, cover the full planned
-failure matrix, or establish correspondence, proof or ledger acceptance. The K
-work and admission requirements below remain open for this lifecycle.
+failure matrix, or establish correspondence, proof or ledger acceptance. This
+offline report remains a separate prerequisite; the native results above supply
+the subsequent execution evidence.
 
 ## Existing bounded K definition
 
-The current definition supports one Transfer, optionally followed by one Repay,
+The earlier numeric definition supports one Transfer, optionally followed by one Repay,
 with AccrualFirst, PrincipalFirst or ProRata allocation and explicit none/floor/ceil
 conversion rounding. [Numeric execution evidence](../../../../deliverables/numeric-k-2026-09-09/README.md)
 records the current candidate's execution and review status. This remains a

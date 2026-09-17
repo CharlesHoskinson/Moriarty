@@ -18,6 +18,14 @@ const VERSIONS = {compiler:'0.31.1',language:'0.23.0',runtime:'0.16.0',compactWr
 const HEX = /^[a-f0-9]{64}$/;
 
 function requireThat(value, message) { if (!value) throw new Error(message); }
+/** Machine paths may change; compiler/runtime versions and all source pins do not. */
+export function resolveFinancialBuildToolchain(bindings, env=process.env) {
+  const compact=env.MORIARTY_COMPACT_BIN ?? bindings.toolchain.compact;
+  const runtimeNodeModules=env.MORIARTY_MIDNIGHT_NODE_MODULES ?? bindings.toolchain.runtimeNodeModules;
+  for(const [name,path] of Object.entries({compact,runtimeNodeModules}))
+    requireThat(typeof path==='string' && isAbsolute(path) && resolve(path)===path,`normalized absolute ${name} path required`);
+  return {compact,runtimeNodeModules};
+}
 function positive(value) { return Number.isSafeInteger(value) && value > 0; }
 function noSymlinks(path, {missingLeaf=false}={}) {
   const absolute=resolve(path); let current=absolute;
@@ -133,7 +141,8 @@ export async function buildProven(options={}) {
   requireThat(commandAdapter===undefined || typeof commandAdapter==='function','invalid commandAdapter');
   const bindings=JSON.parse(checkedFile(join(ROOT,CUSTODY,'bindings.json')));
   for(const [key,name] of [['compilerVersion','compiler'],['languageVersion','language'],['compactRuntimeVersion','runtime'],['compactWrapperVersion','compactWrapper']])requireThat(bindings.toolchain[key]===VERSIONS[name],`toolchain ${key} mismatch`);
-  const runtime=JSON.parse(readFileSync(join(bindings.toolchain.runtimeNodeModules,'@midnight-ntwrk/compact-runtime/package.json'),'utf8'));
+  const toolchain=resolveFinancialBuildToolchain(bindings);
+  const runtime=JSON.parse(readFileSync(join(toolchain.runtimeNodeModules,'@midnight-ntwrk/compact-runtime/package.json'),'utf8'));
   requireThat(runtime.version===VERSIONS.runtime,'runtime package version mismatch');
   const pinned=validatePinnedInputs({worktree:ROOT,bindings,readFileSync});
   const generated=generateWrappers({worktree:ROOT,bindings,readFileSync,pinned});
@@ -158,7 +167,7 @@ export async function buildProven(options={}) {
   try {
     resourceCounters.attempts=1;
     mkdirSync(outputDir,{mode:0o700});
-    const compact=bindings.toolchain.compact;
+    const compact=toolchain.compact;
     for(const [args,key,expected] of [[['--version'],'compactWrapper','compact '+VERSIONS.compactWrapper],[['compile','--version'],'compiler',VERSIONS.compiler],[['compile','--language-version'],'language',VERSIONS.language],[['compile','--runtime-version'],'runtime',VERSIONS.runtime]]) {
       const actual=await run([compact,...args]);requireThat(actual===expected,`${key} version mismatch`);receipt.versions[key]=actual;
     }

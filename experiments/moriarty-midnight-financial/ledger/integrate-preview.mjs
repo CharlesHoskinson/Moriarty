@@ -1,3 +1,4 @@
+import {loadPreviewPublicIdentity} from './preview-launch.mjs';
 /** Fixed Preview composition. Existing wallet handles transfer cleanup ownership.
  * No wallet creation, recovery, CLI or admission. Source adapters never establish acceptance.
  */
@@ -55,11 +56,7 @@ async function loadNativeRuntime(){
   const runtime=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/compact-runtime/dist/index.js')).href);
   return {ledger,runtime};
 }
-function loadPublicIdentity(){
- const raw=readFileSync(new URL('../../../evidence/midnight-preview-2026-09-07/wallet-public.json',import.meta.url));
- requireThat(hash(raw)==='01a31bab9f9920f1385f3fef92fee7638b477f77875390613ebb19e1a786fc98','PREVIEW_PUBLIC_IDENTITY_PIN');
- const value=JSON.parse(raw);requireThat(value.network==='preview','PREVIEW_WALLET_IDENTITY');return {address:value.address};
-}
+function loadPublicIdentity(binding){return loadPreviewPublicIdentity(binding);}
 const realDependencies={loadAssets:loadProvenFinancialContract,loadContractsSdk:loadFinancialContractsSdk,loadProviderSdk:loadFinancialSdk,loadNativeRuntime,loadPublicIdentity,prepareDeployment:prepareFinancialDeployment,initializeReservations:initializeFinancialReservations,createProviders:createFinancialProviders,createComparator:createFinancialComparator,observe:observeFinalizedStage,driver:runPreviewFinancialCase,fetch:globalThis.fetch};
 const previewFailureCodes=new Set(['PREVIEW_NETWORK_CONFIG','PREVIEW_PUBLIC_IDENTITY_PIN','PREVIEW_WALLET_IDENTITY','PREVIEW_GENESIS_MISMATCH','PREVIEW_RECOVERY_FORBIDDEN','PREVIEW_INTEGRATION_INCOMPLETE','PREVIEW_INTEGRATION_FAILURE','INTEGRATION_DEADLINE']);
 function integrationFailureCode(error){const code=Object.getOwnPropertyDescriptor(error,'message')?.value;if(previewFailureCodes.has(code))return code;try{return validatePublicIntegrationFailureCode(code);}catch{return 'UNCLASSIFIED_INTEGRATION_FAILURE';}}
@@ -99,10 +96,10 @@ export async function integratePreviewFinancialCase(options){
    try{const value=await Promise.race([op,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('INTEGRATION_DEADLINE_'+label)),Math.min(limits.deadlineMs-Date.now(),2147483647));})]);validDeadline(limits.deadlineMs);return value;}finally{clearTimeout(timer);}
   }
   const rpc=(method,params,requestDeadline=limits.deadlineMs)=>{validDeadline(requestDeadline);return createPreviewRpc({node:network.node,deadlineMs:Math.min(limits.deadlineMs,requestDeadline),fetchImpl:deps.fetch})(method,params);};
-  phase='public-identity';const identity=await within('identity',()=>deps.loadPublicIdentity());
+  phase='public-identity';const identity=await within('identity',()=>deps.loadPublicIdentity(options.publicIdentity));
   requireThat(await within('genesis',()=>rpc('chain_getBlockHash',[0]))==='0x'+networkTag,'PREVIEW_GENESIS_MISMATCH');
   const sdk=await within('runtime',()=>deps.loadProviderSdk()),{ledger,runtime}=await within('native',()=>deps.loadNativeRuntime());
-  const checkBinding=()=>{validDeadline(limits.deadlineMs);requireThat(sdk.getNetworkId()==='preview'&&options.walletContext.unshieldedKeystore.getBech32Address().toString()===identity.address&&decodePreviewIndexedOwner(identity.address)===roles.firstAddress&&ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey())===roles.firstAddress,'PREVIEW_WALLET_IDENTITY');};checkBinding();
+  const checkBinding=()=>{validDeadline(limits.deadlineMs);if(!sourceTestOnly)requireThat(deps.loadPublicIdentity(options.publicIdentity).address===identity.address,'PREVIEW_WALLET_IDENTITY');requireThat(sdk.getNetworkId()==='preview'&&options.walletContext.unshieldedKeystore.getBech32Address().toString()===identity.address&&decodePreviewIndexedOwner(identity.address)===roles.firstAddress&&ledger.addressFromKey(options.walletContext.unshieldedKeystore.getPublicKey())===roles.firstAddress,'PREVIEW_WALLET_IDENTITY');};checkBinding();
   phase='load-assets';loaded=await within('assets',async()=>{const a=await deps.loadAssets({case:kind,...buildBinding});if(Date.now()>=limits.deadlineMs){await a.cleanup();throw Error('INTEGRATION_LATE_ASSETS');}return a;});
   const assertFresh=()=>{checkBinding();loaded.assertFresh();};assertFresh();
   const sourceBindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url)))[kind],program=bytes(sourceBindings.programDigest);
