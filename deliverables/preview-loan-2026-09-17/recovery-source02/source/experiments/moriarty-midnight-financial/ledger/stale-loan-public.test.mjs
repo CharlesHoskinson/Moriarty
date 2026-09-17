@@ -1,0 +1,25 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {pathToFileURL} from 'node:url';
+import {STALE_LOAN as fixed,readStaleLoanInputs} from './stale-loan-plan.mjs';import {PINNED_NM} from './providers.mjs';
+const realProviders=await import('./providers.mjs'),realReceipt=await import('./receipt.mjs');
+const sdk=await realProviders.loadFinancialSdk(),ledger=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/ledger.mjs').href),runtime=await import(pathToFileURL(PINNED_NM+'/@midnight-ntwrk/midnight-js-protocol/dist/compact-runtime.mjs').href);
+const observed=JSON.parse(readFileSync(new URL('../../../deliverables/sp05-financial-integration-2026-09-09/local-finalized-state-02/probe-result.json',import.meta.url))).snapshots[0];
+function plan(){return {schema:'moriarty.local-financial-launch/1',kind:'loan',
+ build:{receiptPath:'/home/charl/.local/state/moriarty/sp05-full-build-20260909-01/loan-output/build/build-receipt.json',receiptSha256:fixed.buildReceiptSha256,sourceManifestHash:'a29775a104dde9dbc38fdcbfdbc25a31db63beec84e09440f73441a27e9422e6'},
+ networkConfig:{networkId:'undeployed',node:'http://127.0.0.1:19944',indexer:'http://127.0.0.1:18088/api/v4/graphql',indexerWS:'ws://127.0.0.1:18088/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},
+ wallet:{seedFile:'/home/charl/.local/share/moriarty/test-wallets/local-undeployed.seed',stateDirectory:'/home/charl/.local/share/moriarty/test-wallets/hello-world-dedicated-v2',expectedAddress:'mn_addr_undeployed1n2w7v4y79630m5u40rpm6tn0qvnm83vptu9vqcwzqppam7pfrr9sa6q9r9'},
+ roles:{firstAddress:'9a9de6549e2ea2fdd39578c3bd2e6f0327b3c5815f0ac061c20043ddf82918cb',secondAddress:'c1d1141a7f08931d16f3fe4cec1c57d66ab2d11d04e4ab7abb61121ecad5e61e',secretsFile:'/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03/roles.json'},
+ privateState:{directory:fixed.privateStateDirectory,passwordFile:'/home/charl/.local/state/moriarty/sp05-local-loan-recovery-20260910-03/password'},networkTag:fixed.networkTag,expectedProtocolVersion:1000000,
+ limits:{allocationId:'sp05-stale-loan-source-test-01',submissions:1,deadlineMs:Date.now()+60000,dustFee:'1000000000000000',grossByLogicalAsset:{USD_TEST_ASSET:'0'}},outputDirectory:'/synthetic-stale-loan/run',
+ existingStaleLoan:{...structuredClone(fixed),snapshotDirectory:'/synthetic-stale-loan/snapshot',inspectionDirectory:'/synthetic-stale-loan/inspection'}};}
+
+for(const mode of ['valid','wrong-history','wrong-current'])test('real public preflight '+mode+' uses bounded RPC/native snapshot and exact retained histories',async t=>{
+ const p=plan(),inputs=readStaleLoanInputs(p.existingStaleLoan,ledger),seen=[],rpcCalls=[];let stateHex=observed.serializedStateHex;
+ if(mode==='wrong-current'){const state=runtime.ContractState.deserialize(Buffer.from(stateHex,'hex'));state.balance=new Map();stateHex=Buffer.from(state.serialize()).toString('hex');state.free();}
+ t.mock.method(globalThis,'fetch',async(url,options)=>{assert.equal(url,'http://127.0.0.1:19944/');assert.equal(options.redirect,'error');const b=JSON.parse(options.body);rpcCalls.push(b);const result=b.method==='chain_getFinalizedHead'?observed.blockHash:b.method==='chain_getHeader'?{number:'0x'+observed.blockHeight.toString(16)}:b.method==='chain_getBlockHash'?(b.params[0]===0?'0x'+fixed.networkTag:observed.blockHash):stateHex;return Response.json({jsonrpc:'2.0',id:b.id,result});});
+ t.mock.module(new URL('./providers.mjs',import.meta.url).href,{namedExports:{...realProviders,loadFinancialSdk:async()=>({...sdk,indexerPublicDataProvider:()=>({controlled:true})})}});
+ t.mock.module(new URL('./local-tip.mjs',import.meta.url).href,{namedExports:{waitForLocalTip:async()=>({status:'READY',timestampMs:Date.now(),height:observed.blockHeight,hash:observed.blockHash.slice(2),finalizedHeight:observed.blockHeight,finalizedHash:observed.blockHash})}});
+ t.mock.module(new URL('./receipt.mjs',import.meta.url).href,{namedExports:{...realReceipt,observeFinalizedStage:async options=>{const row=inputs.history.find(x=>x.stage===options.circuitId);assert.equal(options.txId,row.txId);assert.equal(options.contractAddress,fixed.contractAddress);seen.push(row.stage);return {receipt:{transaction:{...row.transaction,rawSha256:mode==='wrong-history'?'00'.repeat(32):row.transaction.rawSha256}},state:{publicFixture:true}};}}});
+ const {preflightLocalStaleLoan}=await import('./integrate-local.mjs?public-'+mode);
+ if(mode==='valid'){const result=await preflightLocalStaleLoan(p);assert.equal(result.status,'SETTLED_LOAN_PUBLIC_VERIFIED');assert.deepEqual(seen,['deploy','initialize','accrue','settle']);assert.equal(result.current.stateSha256,fixed.settledStateSha256);assert.ok(result.binding.oldDustNullifiers.length>=4);assert.ok(result.binding.spentUnshieldedInputs.length>0);assert.equal(rpcCalls.filter(x=>x.method==='midnight_contractState').length,1);}
+ else await assert.rejects(preflightLocalStaleLoan(p),e=>e.message===(mode==='wrong-history'?'STALE_PUBLIC_HISTORY':'STALE_PUBLIC_CURRENT'));
+});

@@ -1,0 +1,103 @@
+agreement ConstantProductEpoch profile "moriarty-bounded-atomic/1" {
+  lifetime 8;
+  horizon 2000000000;
+  unit AssetA_quantum;
+  unit AssetB_quantum;
+  const pool: Text = text("pool");
+  const trader: Text = text("trader");
+  const provider: Text = text("provider");
+  const fee_numerator: UInt128 = uint(997);
+  const fee_denominator: UInt128 = uint(1000);
+  const expected_output: Amount<AssetB_quantum> = amount(19743, AssetB_quantum);
+  const expected_reserve_a: Amount<AssetA_quantum> = amount(1010000, AssetA_quantum);
+  const expected_reserve_b: Amount<AssetB_quantum> = amount(1980257, AssetB_quantum);
+  state reserve_a: Amount<AssetA_quantum> = amount(1000000, AssetA_quantum);
+  state reserve_b: Amount<AssetB_quantum> = amount(2000000, AssetB_quantum);
+  state trader_a: Amount<AssetA_quantum> = amount(100000, AssetA_quantum);
+  state trader_b: Amount<AssetB_quantum> = amount(0, AssetB_quantum);
+  state provider_a: Amount<AssetA_quantum> = amount(0, AssetA_quantum);
+  state provider_b: Amount<AssetB_quantum> = amount(0, AssetB_quantum);
+  state epoch_closed: UInt128 = uint(0);
+  observation now: UInt128;
+  settlement asset_a_binding asset text("ASSET_A") quantum amount(1, AssetA_quantum);
+  settlement asset_b_binding asset text("ASSET_B") quantum amount(1, AssetB_quantum);
+  status episode closed_when epoch_closed == uint(1);
+  status agreement no_remaining_notional;
+  reserve swap for close;
+  policy swap_output targets write(swap, reserve_b), write(swap, trader_b), effect(swap, 1, amount) {
+    unit AssetB_quantum;
+    derivation "floor((amount_in*997)*reserve_b/(reserve_a*1000+amount_in*997))";
+    rounding floor(swap, output_calculated);
+    remainder "unpaid output remains in reserve_b";
+    comparison "exact integer output and reserves";
+    proof "constant_product_exact_input_floor_v1";
+  }
+  policy swap_input targets write(swap, trader_a), write(swap, reserve_a), effect(swap, 0, amount) {
+    unit AssetA_quantum;
+    derivation "exact input debit, reserve credit, and transfer";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_input_exact_v1";
+  }
+  policy close_asset_a targets write(close, provider_a), write(close, reserve_a), effect(close, 0, amount) {
+    unit AssetA_quantum;
+    derivation "exact reserve transfer and zeroing";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_close_a_exact_v1";
+  }
+  policy close_asset_b targets write(close, provider_b), write(close, reserve_b), effect(close, 1, amount) {
+    unit AssetB_quantum;
+    derivation "exact reserve transfer and zeroing";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "constant_product_close_b_exact_v1";
+  }
+  effect Transfer {
+    asset: Text;
+    from: Text;
+    to: Text;
+    amount: Amount;
+  }
+  action swap(actor: Text, recipient: Text, asset_in: Text, asset_out: Text, amount_in: Amount<AssetA_quantum>, min_out: Amount<AssetB_quantum>) {
+    guard obs.now < uint(2000000000), "horizon expired";
+    guard remaining > uint(1), "final allowance is reserved for closure";
+    guard arg.actor == const.trader, "trader authority required";
+    guard arg.recipient == const.trader, "recipient must be trader";
+    guard arg.asset_in == text("ASSET_A"), "asset_in mismatch";
+    guard arg.asset_out == text("ASSET_B"), "asset_out mismatch";
+    guard state.epoch_closed == uint(0), "epoch is closed";
+    guard arg.amount_in > amount(0, AssetA_quantum), "input must be positive";
+    guard arg.amount_in <= state.trader_a, "insufficient synthetic balance";
+    let effective_input = arg.amount_in * const.fee_numerator;
+    let numerator = effective_input * state.reserve_b;
+    let denominator = state.reserve_a * const.fee_denominator + effective_input;
+    let output_calculated = floor_div(numerator, denominator);
+    guard output_calculated == const.expected_output, "independent output value mismatch";
+    guard arg.min_out <= output_calculated, "minimum output not met";
+    guard output_calculated < state.reserve_b, "output would empty reserve";
+    set trader_a = state.trader_a - arg.amount_in;
+    set reserve_a = state.reserve_a + arg.amount_in;
+    set reserve_b = state.reserve_b - output_calculated;
+    set trader_b = state.trader_b + output_calculated;
+    guard state.reserve_a == const.expected_reserve_a, "reserve_a mismatch";
+    guard state.reserve_b == const.expected_reserve_b, "reserve_b mismatch";
+    emit Transfer { asset: arg.asset_in, from: const.trader, to: const.pool, amount: arg.amount_in };
+    emit Transfer { asset: arg.asset_out, from: const.pool, to: arg.recipient, amount: output_calculated };
+  }
+  action close(actor: Text) {
+    guard obs.now < uint(2000000000), "horizon expired";
+    guard arg.actor == const.provider, "provider authority required";
+    guard state.epoch_closed == uint(0), "epoch is closed";
+    set provider_a = state.provider_a + state.reserve_a;
+    set provider_b = state.provider_b + state.reserve_b;
+    emit Transfer { asset: text("ASSET_A"), from: const.pool, to: const.provider, amount: state.reserve_a };
+    emit Transfer { asset: text("ASSET_B"), from: const.pool, to: const.provider, amount: state.reserve_b };
+    set reserve_a = amount(0, AssetA_quantum);
+    set reserve_b = amount(0, AssetB_quantum);
+    set epoch_closed = uint(1);
+  }
+}
