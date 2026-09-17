@@ -116,3 +116,13 @@ test('Preview actual observer/comparator composition rejects cumulative fees abo
  assert.deepEqual(f.compared,stages.slice(0,3));assert.equal(f.state().closed,true);
  const exact=fixture();exact.options.limits.dustFee=total;assert.equal((await run(exact)).financialComparison.status,'PASS');
 });
+
+test('integration consumes the explicit receipt binding and rejects substituting a different wallet',async()=>{
+ const f=fixture(),path=new URL('../../../evidence/midnight-preview-setup-2026-09-17/wallet-public.json',import.meta.url).pathname;
+ const {createHash}=await import('node:crypto');const {loadPreviewPublicIdentity}=await import('./preview-launch.mjs');
+ f.options.publicIdentity={path,sha256:createHash('sha256').update(readFileSync(path)).digest('hex')};
+ f.options.adapters.loadPublicIdentity=binding=>{assert.deepEqual(binding,f.options.publicIdentity);return loadPreviewPublicIdentity(binding);};
+ await assert.rejects(run(f),{message:'PREVIEW_WALLET_IDENTITY'});assert.deepEqual(f.calls,[]);assert.equal(f.state().closed,true);
+ f.options.publicIdentity.sha256='00'.repeat(32);
+ await assert.rejects(run(f),{message:'PREVIEW_PUBLIC_IDENTITY_PIN'});assert.deepEqual(f.calls,[]);
+});

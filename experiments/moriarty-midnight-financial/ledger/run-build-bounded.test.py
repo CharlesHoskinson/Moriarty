@@ -34,6 +34,40 @@ class LauncherTests(unittest.TestCase):
         path = root/'request.json'; path.write_text(json.dumps(request))
         return path, root/'result.json', parent, request
 
+    def test_explicit_tool_environment_preserves_defaults_and_rejects_invalid_paths(self):
+        self.assertEqual(bounded.build_environment({}), {'MORIARTY_NODE_BIN': '/usr/local/bin/node'})
+        env = {'MORIARTY_NODE_BIN': '/current/node', 'MORIARTY_COMPACT_BIN': '/current/compact',
+               'MORIARTY_MIDNIGHT_NODE_MODULES': '/current/modules', 'COMPACT_DIRECTORY': '/current/artifacts'}
+        self.assertEqual(bounded.build_environment({**env, 'UNRELATED_SECRET': 'never-forward'}), env)
+        for key in env:
+            for value in ('relative', '', '/current/../other', '/current/with\nnewline'):
+                with self.assertRaises(ValueError): bounded.build_environment({key: value})
+
+    def test_outer_launcher_forwards_selected_paths_with_all_resource_controls(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            path, result, _, _ = self.fixture(Path(tmp))
+            env = {'MORIARTY_NODE_BIN': '/current/node', 'MORIARTY_COMPACT_BIN': '/current/compact',
+                   'MORIARTY_MIDNIGHT_NODE_MODULES': '/current/modules', 'COMPACT_DIRECTORY': '/current/artifacts'}
+            args = ['run-build-bounded.py', '--request', str(path), '--request-sha256', bounded.digest(path), '--result', str(result)]
+            with patch.object(sys, 'argv', args), patch.dict(os.environ, env, clear=True), patch.object(bounded.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0)) as run:
+                self.assertEqual(bounded.main(), 0)
+            command = run.call_args.args[0]
+            for key, value in env.items(): self.assertIn('--setenv=' + key + '=' + value, command)
+            for control in ('--property=MemoryMax=4294967296', '--property=MemorySwapMax=0', '--property=RuntimeMaxSec=330', '--property=KillMode=control-group'):
+                self.assertIn(control, command)
+            self.assertEqual(command[0], 'systemd-run')
+
+    def test_inner_launcher_uses_selected_node_inside_verified_cgroup(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            path, result, _, _ = self.fixture(Path(tmp))
+            args = ['run-build-bounded.py', '--inner', '--request', str(path), '--request-sha256', bounded.digest(path), '--result', str(result)]
+            with patch.object(sys, 'argv', args), patch.dict(os.environ, {'MORIARTY_NODE_BIN': '/current/node'}, clear=True), patch.object(bounded, 'verify_cgroup') as verify, patch.object(bounded, 'quota_run', return_value=0) as run:
+                self.assertEqual(bounded.main(), 0)
+                verify.assert_called_once()
+                self.assertEqual(run.call_args.args[2], ['/current/node', str(bounded.BUILDER), '--request', str(path)])
+
     def test_valid_request_and_durable_exclusion(self):
         with tempfile.TemporaryDirectory() as tmp:
             path, result, parent, _ = self.fixture(Path(tmp))

@@ -16,17 +16,24 @@ function fields(o){check(o&&Object.getPrototypeOf(o)===Object.prototype,'PREVIEW
 function exact(o,keys){check(fields(o).sort().join(',')===keys.split(',').sort().join(','),'PREVIEW_FIELDS');}
 const absolute=x=>check(typeof x==='string'&&isAbsolute(x)&&resolve(x)===x&&!x.includes('\0'),'PREVIEW_PATH');
 const inside=(a,b)=>a===b||a.startsWith(b+'/');
-function identity(){const raw=readFileSync(new URL('../../../evidence/midnight-preview-2026-09-07/wallet-public.json',import.meta.url));check(createHash('sha256').update(raw).digest('hex')==='01a31bab9f9920f1385f3fef92fee7638b477f77875390613ebb19e1a786fc98','PREVIEW_PUBLIC_IDENTITY_PIN');return JSON.parse(raw);}
+export function loadPreviewPublicIdentity(binding){
+ let path=new URL('../../../evidence/midnight-preview-2026-09-07/wallet-public.json',import.meta.url),sha256='01a31bab9f9920f1385f3fef92fee7638b477f77875390613ebb19e1a786fc98';
+ if(binding!==undefined){exact(binding,'path,sha256');absolute(binding.path);check(hash(binding.sha256),'PREVIEW_PUBLIC_IDENTITY_PIN');path=binding.path;sha256=binding.sha256;}
+ const raw=readFileSync(path);check(createHash('sha256').update(raw).digest('hex')===sha256,'PREVIEW_PUBLIC_IDENTITY_PIN');
+ const value=JSON.parse(raw);check(value.network==='preview'&&typeof value.address==='string','PREVIEW_WALLET_IDENTITY');absolute(value.seedFile);decodePreviewIndexedOwner(value.address);
+ if(binding!==undefined){absolute(value.stateDirectory);check(value.configuration?.networkId==='preview'&&value.configuration?.walletNetworkId==='preview','PREVIEW_WALLET_IDENTITY');}
+ return value;
+}
 export function validatePreviewLaunchPlan(p){
- exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory');check(p.schema==='moriarty.preview-financial-launch/1'&&['loan','swap'].includes(p.kind),'PREVIEW_PLAN_SCHEMA');
+ exact(p,'schema,kind,build,networkConfig,wallet,roles,privateState,networkTag,expectedProtocolVersion,limits,outputDirectory'+(Object.hasOwn(p,'submissionTransport')?',submissionTransport':''));check(p.submissionTransport===undefined||['default','preview-http'].includes(p.submissionTransport),'PREVIEW_SUBMISSION_TRANSPORT');check(p.schema==='moriarty.preview-financial-launch/1'&&['loan','swap'].includes(p.kind),'PREVIEW_PLAN_SCHEMA');
  exact(p.build,'receiptPath,receiptSha256,sourceManifestHash');absolute(p.build.receiptPath);check(hash(p.build.receiptSha256)&&hash(p.build.sourceManifestHash),'PREVIEW_BUILD_HASH');
  exact(p.networkConfig,'networkId,node,indexer,indexerWS,proofServer');const n=p.networkConfig;check(n.networkId==='preview'&&['https://rpc.preview.midnight.network','https://rpc.preview.midnight.network/'].includes(n.node)&&n.indexer==='https://indexer.preview.midnight.network/api/v4/graphql'&&n.indexerWS==='wss://indexer.preview.midnight.network/api/v4/graphql/ws','PREVIEW_NETWORK');
  check(typeof n.proofServer==='string','PREVIEW_PROOF_ENDPOINT');const proof=new URL(n.proofServer);check(proof.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(proof.hostname)&&!proof.username&&!proof.password&&!proof.hash&&!proof.search&&proof.pathname==='/','PREVIEW_PROOF_ENDPOINT');
- exact(p.wallet,'seedFile,stateDirectory,expectedAddress');absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);const original=identity();check(p.wallet.seedFile===original.seedFile&&p.wallet.expectedAddress===original.address,'PREVIEW_ORIGINAL_WALLET');
+ exact(p.wallet,'seedFile,stateDirectory,expectedAddress'+(Object.hasOwn(p.wallet,'publicIdentity')?',publicIdentity':''));absolute(p.wallet.seedFile);absolute(p.wallet.stateDirectory);const original=loadPreviewPublicIdentity(p.wallet.publicIdentity);check(p.wallet.publicIdentity===undefined||p.wallet.stateDirectory===original.stateDirectory,'PREVIEW_WALLET_STATE_IDENTITY');check(p.wallet.seedFile===original.seedFile&&p.wallet.expectedAddress===original.address,'PREVIEW_ORIGINAL_WALLET');
  exact(p.roles,'firstAddress,secondAddress,secretsFile');absolute(p.roles.secretsFile);check(hash(p.roles.firstAddress)&&hash(p.roles.secondAddress)&&p.roles.firstAddress===decodePreviewIndexedOwner(original.address)&&p.roles.firstAddress!==p.roles.secondAddress,'PREVIEW_ROLES');
  exact(p.privateState,'directory,passwordFile');absolute(p.privateState.directory);absolute(p.privateState.passwordFile);absolute(p.outputDirectory);
  const dirs=[p.outputDirectory,p.privateState.directory,p.wallet.stateDirectory];check(dirs.every((a,i)=>dirs.every((b,j)=>i===j||!inside(a,b))),'PREVIEW_DIRECTORY_OVERLAP');
- for(const f of [p.wallet.seedFile,p.roles.secretsFile,p.privateState.passwordFile,p.build.receiptPath])check(!inside(f,p.outputDirectory)&&!inside(f,p.privateState.directory),'PREVIEW_INPUT_OUTPUT_OVERLAP');
+ for(const f of [p.wallet.seedFile,p.roles.secretsFile,p.privateState.passwordFile,p.build.receiptPath,...(p.wallet.publicIdentity?[p.wallet.publicIdentity.path]:[])])check(!inside(f,p.outputDirectory)&&!inside(f,p.privateState.directory),'PREVIEW_INPUT_OUTPUT_OVERLAP');
  check(hash(p.networkTag)&&Number.isSafeInteger(p.expectedProtocolVersion)&&p.expectedProtocolVersion>=0,'PREVIEW_BINDINGS');
  exact(p.limits,'allocationId,deadlineMs,submissions,dustFee,grossByLogicalAsset');const l=p.limits,now=Date.now();check(typeof l.allocationId==='string'&&/^sp05-preview-[a-zA-Z0-9_-]{1,64}$/.test(l.allocationId),'PREVIEW_ALLOCATION');check(Number.isSafeInteger(l.deadlineMs)&&l.deadlineMs>now&&l.deadlineMs<=now+3600000&&l.submissions===4&&decimal(l.dustFee),'PREVIEW_LIMITS');exact(l.grossByLogicalAsset,p.kind==='loan'?'USD_TEST_ASSET':'ASSET_A,ASSET_B');check(Object.values(l.grossByLogicalAsset).every(decimal),'PREVIEW_ASSET_LIMITS');return structuredClone(p);
 }

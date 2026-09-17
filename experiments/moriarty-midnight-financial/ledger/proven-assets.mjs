@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {dirname, resolve, join, relative, isAbsolute, sep} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {registerHooks} from 'node:module';
-import {inspectBuildSources, sourceManifestHash as hashSources} from './build-proven.mjs';
+import {inspectBuildSources, resolveFinancialBuildToolchain, sourceManifestHash as hashSources} from './build-proven.mjs';
 import {PINNED_NM} from './providers.mjs';
 
 const CIRCUITS = {loan:['initialize','accrue','settle'],swap:['initialize','swap','close']};
@@ -102,7 +102,8 @@ function checkGeneratedImports(ts, path, bytes) {
   visit(source);
 }
 function checkCommands(receipt, outputDir) {
-  const compact = '/home/charl/.local/bin/compact', stage = join(outputDir,'stage');
+  const bindings=JSON.parse(readFileSync(new URL('../custody/bindings.json',import.meta.url)));
+  const {compact}=resolveFinancialBuildToolchain(bindings), stage = join(outputDir,'stage');
   const expected = [[compact,'--version'],[compact,'compile','--version'],[compact,'compile','--language-version'],[compact,'compile','--runtime-version'],[compact,'compile','--compact-path',stage,join(stage,receipt.case+'.compact'),receipt.assetsPath]];
   const versions = ['compact 0.5.2','0.31.1','0.23.0','0.16.0'];
   requireThat(Array.isArray(receipt.commands) && receipt.commands.length === expected.length, 'complete compiler commands required');

@@ -1,0 +1,1 @@
+Root and independentAstra medium k_acceptance_review approve zero compiles,atmost4krun20sec,120secaggregate,64MiBstack8GiBmemoryswap0tasks25664MiBoutput. Frozenfourcase subset,exclusiveattempt,boundcompiledsources/artifacts,failfirsterror/full-resultmismatch. ActualKpredecessors required. No38case waiver/finalacceptance.
