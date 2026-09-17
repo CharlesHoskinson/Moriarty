@@ -1,0 +1,143 @@
+// Generated restricted Moriarty Core kernel; no ledger effects or accepted PCD.
+// sourceHash 1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49
+// programHash 95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2
+include "arithmetic";
+export struct DivisionHint { q: Uint<128>; r: Uint<128>; product: MulHint; }
+export struct KernelState { f0: Uint<128>; f1: Uint<128>; f2: Uint<128>; f3: Uint<128>; f4: Uint<128>; f5: Uint<128>; f6: Uint<128>; f7: Uint<128>; f8: Uint<128>; }
+export struct KernelObservations { o0: Uint<128>; }
+export struct Arguments0 { a0: Uint<32>; }
+export struct Hints0 { h0: MulHint; h1: MulHint; h2: MulHint; h3: DivisionHint; }
+export struct Effect0_0 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<32>; v4: Uint<128>; }
+export struct Effect0_1 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<32>; v4: Uint<128>; }
+export struct Result0 { after: KernelState; remaining: Uint<128>; revision: Uint<128>; effect0: Effect0_0; effect1: Effect0_1; }
+export pure circuit transition0(before: KernelState, args: Arguments0, observations: KernelObservations, remaining: Uint<128>, revision: Uint<128>, hints: Hints0): Result0 {
+  assert(checkedAdd(revision, remaining) == 2, "LIFETIME_INVARIANT");
+  assert(remaining > 0, "LIFETIME_EXHAUSTED");
+  assert(observations.o0 < 2000000000, "HORIZON_EXPIRED");
+  const e0: Uint<128> = observations.o0;
+  const e1: Uint<128> = 2000000000;
+  const e2: Boolean = e0 < e1;
+  assert(e2, "horizon expired");
+  const e3: Uint<32> = args.a0;
+  const e4: Uint<32> = 2;
+  const e5: Boolean = e3 == e4;
+  assert(e5, "borrower authority required");
+  const e6: Uint<128> = before.f7;
+  const e7: Uint<128> = 0;
+  const e8: Boolean = e6 == e7;
+  assert(e8, "period already accrued");
+  const e9: Uint<128> = before.f0;
+  const e10: Uint<128> = 8;
+  const e11: Uint<128> = checkedMul(e9, e10, hints.h0);
+  const e12: Uint<128> = 31;
+  const e13: Uint<128> = checkedMul(e11, e12, hints.h1);
+  const e14: Uint<128> = 100;
+  const e15: Uint<128> = 365;
+  const e16: Uint<128> = checkedMul(e14, e15, hints.h2);
+  const e17: Uint<128> = e13;
+  const e18: Uint<128> = e16;
+  const e19: Uint<128> = checkedDiv(e17, e18, hints.h3.q, hints.h3.r, hints.h3.product);
+  const e20: Uint<128> = e19;
+  const e21: Uint<128> = 33972602;
+  const e22: Boolean = e20 == e21;
+  assert(e22, "independent interest value mismatch");
+  const e23: Uint<128> = 500000000;
+  const e24: Uint<128> = e19;
+  const e25: Uint<128> = before.f0;
+  const e26: Uint<128> = 500000000;
+  const e27: Uint<128> = checkedSub(e25, e26);
+  const e28: Uint<128> = e27;
+  const e29: Uint<128> = 4500000000;
+  const e30: Boolean = e28 == e29;
+  assert(e30, "outstanding notional mismatch");
+  const e31: Uint<128> = 1;
+  const e32: Uint<32> = 4;
+  const e33: Uint<32> = 2;
+  const e34: Uint<32> = 5;
+  const e35: Uint<32> = 1;
+  const e36: Uint<128> = e23;
+  const e37: Uint<32> = 3;
+  const e38: Uint<32> = 2;
+  const e39: Uint<32> = 5;
+  const e40: Uint<32> = 1;
+  const e41: Uint<128> = e24;
+  return Result0 { after: KernelState { f0: e27, f1: e23, f2: e24, f3: before.f3, f4: before.f4, f5: before.f5, f6: before.f6, f7: e31, f8: before.f8 }, remaining: checkedSub(remaining, 1), revision: checkedAdd(revision, 1), effect0: Effect0_0 { v0: e32, v1: e33, v2: e34, v3: e35, v4: e36 }, effect1: Effect0_1 { v0: e37, v1: e38, v2: e39, v3: e40, v4: e41 } };
+}
+export struct Arguments1 { a0: Uint<32>; a1: Uint<32>; a2: Uint<128>; }
+export struct Hints1 { unused: Uint<1>; }
+export struct Effect1_0 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<128>; }
+export struct Effect1_1 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<32>; v4: Uint<128>; v5: Uint<32>; }
+export struct Effect1_2 { v0: Uint<32>; v1: Uint<32>; v2: Uint<32>; v3: Uint<32>; v4: Uint<128>; v5: Uint<32>; }
+export struct Result1 { after: KernelState; remaining: Uint<128>; revision: Uint<128>; effect0: Effect1_0; effect1: Effect1_1; effect2: Effect1_2; }
+export pure circuit transition1(before: KernelState, args: Arguments1, observations: KernelObservations, remaining: Uint<128>, revision: Uint<128>, hints: Hints1): Result1 {
+  assert(checkedAdd(revision, remaining) == 2, "LIFETIME_INVARIANT");
+  assert(remaining > 0, "LIFETIME_EXHAUSTED");
+  assert(observations.o0 < 2000000000, "HORIZON_EXPIRED");
+  const e0: Uint<128> = observations.o0;
+  const e1: Uint<128> = 2000000000;
+  const e2: Boolean = e0 < e1;
+  assert(e2, "horizon expired");
+  const e3: Uint<32> = args.a0;
+  const e4: Uint<32> = 2;
+  const e5: Boolean = e3 == e4;
+  assert(e5, "borrower authority required");
+  const e6: Uint<128> = before.f7;
+  const e7: Uint<128> = 1;
+  const e8: Boolean = e6 == e7;
+  assert(e8, "dues are not ready");
+  const e9: Uint<32> = args.a1;
+  const e10: Uint<32> = 0;
+  const e11: Boolean = e9 == e10;
+  assert(e11, "settlement asset mismatch");
+  const e12: Uint<128> = args.a2;
+  const e13: Uint<128> = before.f1;
+  const e14: Uint<128> = before.f2;
+  const e15: Uint<128> = checkedAdd(e13, e14);
+  const e16: Boolean = e12 == e15;
+  assert(e16, "settlement amount mismatch");
+  const e17: Uint<128> = args.a2;
+  const e18: Uint<128> = 533972602;
+  const e19: Boolean = e17 == e18;
+  assert(e19, "independent total value mismatch");
+  const e20: Uint<128> = before.f5;
+  const e21: Uint<128> = args.a2;
+  const e22: Boolean = e20 >= e21;
+  assert(e22, "insufficient synthetic balance");
+  const e23: Uint<128> = before.f5;
+  const e24: Uint<128> = args.a2;
+  const e25: Uint<128> = checkedSub(e23, e24);
+  const e26: Uint<128> = before.f6;
+  const e27: Uint<128> = args.a2;
+  const e28: Uint<128> = checkedAdd(e26, e27);
+  const e29: Uint<128> = before.f3;
+  const e30: Uint<128> = before.f1;
+  const e31: Uint<128> = checkedAdd(e29, e30);
+  const e32: Uint<128> = before.f4;
+  const e33: Uint<128> = before.f2;
+  const e34: Uint<128> = checkedAdd(e32, e33);
+  const e35: Uint<32> = args.a1;
+  const e36: Uint<32> = 2;
+  const e37: Uint<32> = 5;
+  const e38: Uint<128> = args.a2;
+  const e39: Uint<32> = 4;
+  const e40: Uint<32> = 2;
+  const e41: Uint<32> = 5;
+  const e42: Uint<32> = 1;
+  const e43: Uint<128> = before.f1;
+  const e44: Uint<32> = args.a1;
+  const e45: Uint<32> = 3;
+  const e46: Uint<32> = 2;
+  const e47: Uint<32> = 5;
+  const e48: Uint<32> = 1;
+  const e49: Uint<128> = before.f2;
+  const e50: Uint<32> = args.a1;
+  const e51: Uint<128> = 0;
+  const e52: Uint<128> = 0;
+  const e53: Uint<128> = 2;
+  const e54: Uint<128> = 1;
+  const e55: Uint<128> = before.f0;
+  const e56: Uint<128> = 4500000000;
+  const e57: Boolean = e55 == e56;
+  assert(e57, "episode closure cannot discharge remaining notional");
+  return Result1 { after: KernelState { f0: before.f0, f1: e51, f2: e52, f3: e31, f4: e34, f5: e25, f6: e28, f7: e53, f8: e54 }, remaining: checkedSub(remaining, 1), revision: checkedAdd(revision, 1), effect0: Effect1_0 { v0: e35, v1: e36, v2: e37, v3: e38 }, effect1: Effect1_1 { v0: e39, v1: e40, v2: e41, v3: e42, v4: e43, v5: e44 }, effect2: Effect1_2 { v0: e45, v1: e46, v2: e47, v3: e48, v4: e49, v5: e50 } };
+}
