@@ -1,6 +1,7 @@
 import {EXISTING_SWAP,INITIALIZED_SWAP,inspectExistingSwapBytes,inspectInitializedSwapBytes,assertInitializedSwapState} from './continue-initialized-swap.mjs';
-/** Verified recovery predicates for the fixed retained local loan and swap histories.
- * These helpers authorize no services, wallet, storage writes or submissions.
+/** Recovery predicates for retained local histories and one Preview deployment.
+ * Public checks authorize no dispatch; explicit private restoration requires a
+ * constructor-verified result and never constructs or submits a deployment.
  */
 import {createHash} from 'node:crypto';
 import {readFileSync,openSync,closeSync,fstatSync,lstatSync,constants} from 'node:fs';
@@ -71,20 +72,21 @@ function assertHistoryWallet({synced,binding,timestampMs,dustCap}){
  const balance=d.balance(new Date(timestampMs));check(typeof balance==='bigint'&&balance>=dustCap,'RECOVERY_WALLET_DUST_CAP');return true;
 }
 /** Re-execute only the unchanged constructor. No deployment object or transaction is made. */
-export async function reconstructExistingLoan({compiledContract,zkConfigProvider,coinPublicKey,signingKey,args,ledger}){
+export async function reconstructExistingLoan(options){return reconstructLoan(options,EXISTING_LOAN);}
+async function reconstructLoan({compiledContract,zkConfigProvider,coinPublicKey,signingKey,args,ledger},binding){
  check(Array.isArray(args)&&args.length===6&&typeof signingKey==='string'&&signingKey.length>0,'RECOVERY_CONSTRUCTOR_INPUTS');
  const pins=[['@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs','7c34e5ac44b1406080f1cbf9f514c1d887b7bc947327a3f83031d9794caa85b7'],['@midnight-ntwrk/midnight-js-types/dist/index.mjs','465600b3e07a1779ec1f418c550ecf7535d5ad32afe4e145452e3fc2b08ca94d']];
  for(const [file,digest] of pins)check(sha(readFileSync(join(PINNED_NM,file)))===digest,'RECOVERY_CONSTRUCTOR_SDK_PIN');
  const {ContractExecutable}=await import(pathToFileURL(join(PINNED_NM,pins[0][0])).href),{makeContractExecutableRuntime,exitResultOrError}=await import(pathToFileURL(join(PINNED_NM,pins[1][0])).href);
  const runtime=makeContractExecutableRuntime(zkConfigProvider,{coinPublicKey,signingKey});
  const result=exitResultOrError(await runtime.runPromiseExit(ContractExecutable.make(compiledContract).initialize({},...args)));
- assertExistingLoanState(result.public.contractState,ledger);
+ assertBoundLoanState(result.public.contractState,ledger,binding);
  const p=result.private,z=p.zswapLocalState;
  check(isDeepStrictEqual(p.privateState,{})&&p.signingKey===signingKey,'RECOVERY_CONSTRUCTOR_PRIVATE_RESULT');
  check(z&&Reflect.ownKeys(z).length===4&&Object.keys(z).sort().join(',')==='coinPublicKey,currentIndex,inputs,outputs'&&Array.isArray(z.inputs)&&z.inputs.length===0&&Array.isArray(z.outputs)&&z.outputs.length===0&&z.currentIndex===0n&&z.coinPublicKey===coinPublicKey,'RECOVERY_CONSTRUCTOR_ZSWAP');
  const state=ledger.ContractState.deserialize(result.public.contractState.serialize()),a=state.maintenanceAuthority;
  check(a.threshold===1&&a.counter===0n&&a.committee.length===1&&a.committee[0]===ledger.signatureVerifyingKey(signingKey),'RECOVERY_CONSTRUCTOR_AUTHORITY');
- const verified=Object.freeze({privateState:p.privateState,signingKey:p.signingKey});verifiedPrivateResults.add(verified);return verified;
+ const verified=Object.freeze({privateState:p.privateState,signingKey:p.signingKey});verifiedPrivateResults.add(verified);privateBindings.set(verified,binding);return verified;
 }
 
 function checkPublicRecoveryTip(tip,readCurrentTip){
@@ -208,21 +210,24 @@ export async function verifyInitializedSwapPublic({raw,rawInitialize,ledger,prov
  return Object.freeze({status:'INITIALIZED_PUBLIC_STATE_VERIFIED',dispatchAuthorized:false,deploymentObservation,initializeObservation,initializeContractState,binding,tip:Object.freeze({...tip}),stateBlock,snapshotSamples,scope:'Read-only exact deploy/initialize history and unchanged initialized state in a stable indexed/finalized snapshot; no private access or dispatch authorization'});
 }
 
-const verifiedPrivateResults=new WeakSet(),consumedPrivateResults=new WeakSet();
+const verifiedPrivateResults=new WeakSet(),consumedPrivateResults=new WeakSet(),privateBindings=new WeakMap();
 /** Only a constructor-verified, single-use result can reach private persistence. */
 export async function restoreExistingLoanPrivate(provider,result){
+ check(!verifiedPrivateResults.has(result)||privateBindings.get(result)===EXISTING_LOAN,'RECOVERY_RESTORE_BINDING');return restoreLoanPrivate(provider,result);
+}
+async function restoreLoanPrivate(provider,result){
  check(result&&verifiedPrivateResults.has(result)&&!consumedPrivateResults.has(result)&&isDeepStrictEqual(result.privateState,{}),'RECOVERY_RESTORE_UNVERIFIED');
  for(const name of ['setContractAddress','set','setSigningKey','get','getSigningKey'])check(typeof provider?.[name]==='function','RECOVERY_RESTORE_PROVIDER');
- consumedPrivateResults.add(result);
- provider.setContractAddress(EXISTING_LOAN.contractAddress);
+ consumedPrivateResults.add(result);const binding=privateBindings.get(result);
+ provider.setContractAddress(binding.contractAddress);
  await provider.set('sp05-loan',result.privateState);
- await provider.setSigningKey(EXISTING_LOAN.contractAddress,result.signingKey);
+ await provider.setSigningKey(binding.contractAddress,result.signingKey);
  // The pinned provider opens a distinct Level handle per operation. Serialize
  // readbacks so both sublevels never contend for the same database lock.
  const state=await provider.get('sp05-loan');
- const key=await provider.getSigningKey(EXISTING_LOAN.contractAddress);
+ const key=await provider.getSigningKey(binding.contractAddress);
  check(isDeepStrictEqual(state,result.privateState)&&key===result.signingKey,'RECOVERY_RESTORE_ROUNDTRIP');
- return Object.freeze({status:'RESTORED',contractAddress:EXISTING_LOAN.contractAddress,txId:EXISTING_LOAN.txId});
+ return Object.freeze({status:'RESTORED',contractAddress:binding.contractAddress,txId:binding.txId});
 }
 
 const ORIGINAL_PRIVATE_BASE='/home/charl/.local/state/moriarty/sp05-local-loan-20260910-03';
@@ -253,3 +258,88 @@ export function readExistingLoanInputs(recovery,ledger){
  const old=JSON.parse(result);check(old.allocationId===EXISTING_LOAN.allocationId&&old.transactionHash===binding.transactionHash&&old.contractAddress===binding.contractAddress&&old.reservedSubmissions===1&&old.reservedDustFee==='300000000000001'&&old.financialStagesCompleted===0,'RECOVERY_SOURCE_ALLOCATION');
  return {raw,binding};
 }
+
+// One retained Preview deployment only. Public native bytes remain bound even
+// though the original submission result was ambiguous. This is not a general
+// recovery cursor and cannot resume an initialized/modified contract.
+export const PREVIEW_LOAN_RECOVERY=Object.freeze({
+ transactionHash:'ecd8468a01cf85896b2bc53f08c6621029659d31f127b6dc50c7f9eb71b9d400',
+ txId:'0074727c89072a920c3fe28bc0be689b0da73a7027fbf0ae734b6a62f743bb293a',
+ identifiers:Object.freeze(['0001ec58451698a6d3816ef48038be1c5aae635f8e148eb2eed75a2e2f632f1f4c','0074727c89072a920c3fe28bc0be689b0da73a7027fbf0ae734b6a62f743bb293a']),
+ originalDirectory:'/home/charl/.local/state/moriarty/preview-loan-20260917-01',
+ contractAddress:'8034dffa6ce124cf34135799969d34831da5ce44fd287a3bead2fa3ce293a341',initialStateSha256:'a7c4b42737a5d6090e5767f5e59e06912c70f75b5f99536903310bf2ce0a1189',
+ blockHeight:908628,blockHash:'e3f51b9a3d1518980506e9cb5efbbb8487c8acc9989590628cfb5b7330a4f8a4',
+ historicalDustFee:'300000000000001',conservativeReservedDustFee:'600000000000002',remainingDustFee:'1399999999999998',
+});
+const previewBindings=new WeakSet(),previewCapabilities=new WeakSet();
+function assertBoundLoanState(state,ledger,binding){
+ check(state&&typeof state.serialize==='function','RECOVERY_STATE_TYPE');
+ const raw=Buffer.from(state.serialize());
+ check(raw.length<=16*1024*1024&&sha(raw)===binding.initialStateSha256,'RECOVERY_STATE_MISMATCH');
+ check(Buffer.from(ledger.ContractState.deserialize(raw).serialize()).equals(raw),'RECOVERY_STATE_CANONICAL');return true;
+}
+export function inspectPreviewLoanBytes(raw,ledger){
+ const fixed=PREVIEW_LOAN_RECOVERY;
+ check(raw instanceof Uint8Array&&raw.length>0&&raw.length<=16*1024*1024&&sha(raw)===fixed.transactionHash,'RECOVERY_NATIVE_HASH');
+ const decoded=decodeNativeFinancialTransaction(raw,ledger),tx=ledger.Transaction.deserialize('signature','proof','binding',raw);
+ check(decoded.transactionHash===fixed.transactionHash&&isDeepStrictEqual(decoded.identifiers,fixed.identifiers),'RECOVERY_NATIVE_IDENTIFIERS');
+ check(decoded.actions.length===1&&decoded.actions[0].kind==='deploy'&&decoded.actions[0].segment===1,'RECOVERY_NATIVE_ACTION');
+ check(decoded.dustFee===fixed.historicalDustFee&&decoded.inputs.length===0&&decoded.outputs.length===0,'PREVIEW_RECOVERY_FEE');
+ const action=[...tx.intents.values()].flatMap(i=>i.actions)[0];check(action instanceof ledger.ContractDeploy,'RECOVERY_NATIVE_DEPLOY');
+ const oldDustNullifiers=[...tx.intents.values()].flatMap(i=>i.dustActions?.spends??[]).map(s=>s.oldNullifier);
+ check(oldDustNullifiers.length>0&&oldDustNullifiers.every(n=>typeof n==='bigint'),'RECOVERY_DUST_INPUTS');
+ const binding=Object.freeze({transactionHash:fixed.transactionHash,txId:fixed.txId,identifiers:fixed.identifiers,contractAddress:action.address,initialStateSha256:sha(action.initialState.serialize()),oldDustNullifiers:Object.freeze(oldDustNullifiers),spentUnshieldedInputs:Object.freeze([])});
+ check(binding.contractAddress===fixed.contractAddress&&binding.initialStateSha256===fixed.initialStateSha256,'PREVIEW_RECOVERY_NATIVE_STATE');assertBoundLoanState(action.initialState,ledger,binding);previewBindings.add(binding);return binding;
+}
+function originalPreviewPlan(){
+ const raw=boundedPublicFile(new URL('../../../deliverables/preview-loan-2026-09-17/actual-run01/plan.json',import.meta.url).pathname,128*1024);
+ check(sha(raw)==='c74f1ff8768833181c704ec968c04d7c750cada9756c7a0da9707b2246427ec4','PREVIEW_RECOVERY_SOURCE_PLAN');return JSON.parse(raw);
+}
+export function validatePreviewRecoveryPlan(d,p){
+ const fields=['schema','transactionFile','inspectionDirectory'];
+ check(d&&Object.getPrototypeOf(d)===Object.prototype&&Reflect.ownKeys(d).length===fields.length&&Object.keys(d).sort().join(',')===fields.sort().join(',')&&Object.values(Object.getOwnPropertyDescriptors(d)).every(x=>Object.hasOwn(x,'value')),'PREVIEW_RECOVERY_FIELDS');
+ check(d.schema==='moriarty.preview-deployment-recovery/1'&&p.kind==='loan'&&p.limits.submissions===3,'PREVIEW_RECOVERY_MODE');
+ check(p.submissionTransport==='preview-ws','PREVIEW_RECOVERY_TRANSPORT');
+ const original=originalPreviewPlan(),fixed=PREVIEW_LOAN_RECOVERY;
+ for(const key of ['kind','build','networkConfig','wallet','roles','networkTag','expectedProtocolVersion'])check(isDeepStrictEqual(p[key],original[key]),'PREVIEW_RECOVERY_BINDING');
+ check(d.transactionFile===join(fixed.originalDirectory,'run/public-transactions',fixed.transactionHash+'.bin'),'PREVIEW_RECOVERY_NATIVE_PATH');
+ check(p.privateState.passwordFile===original.privateState.passwordFile,'PREVIEW_RECOVERY_PASSWORD');
+ check(p.limits.allocationId!==original.limits.allocationId&&p.limits.dustFee===fixed.remainingDustFee&&isDeepStrictEqual(p.limits.grossByLogicalAsset,original.limits.grossByLogicalAsset),'PREVIEW_RECOVERY_BUDGET');
+ const destinations=[p.outputDirectory,p.privateState.directory,d.inspectionDirectory];
+ for(const path of destinations)check(typeof path==='string'&&isAbsolute(path)&&resolve(path)===path&&path!=='/','PREVIEW_RECOVERY_PATH');
+ const overlaps=(a,b)=>a===b||a.startsWith(b+'/')||b.startsWith(a+'/');
+ for(let i=0;i<destinations.length;i++){
+  for(let j=i+1;j<destinations.length;j++)check(!overlaps(destinations[i],destinations[j]),'PREVIEW_RECOVERY_OVERLAP');
+  for(const source of [fixed.originalDirectory,original.wallet.stateDirectory,dirname(original.wallet.seedFile)])check(!overlaps(destinations[i],source),'PREVIEW_RECOVERY_PRESERVE');
+ }
+ return structuredClone(d);
+}
+export function readPreviewRecoveryInputs(d,p,ledger){
+ validatePreviewRecoveryPlan(d,p);const fixed=PREVIEW_LOAN_RECOVERY;
+ // Inspect both immutable public receipts and the original live stop record.
+ for(const [path,digest] of [
+  [new URL('../../../deliverables/preview-loan-2026-09-17/actual-run01/reservations.json',import.meta.url).pathname,'3f499953f87bed0a76c5f683e23b52cd94b33c622c55086dad0c6e7c69b79143'],
+  [join(fixed.originalDirectory,'run/reservations.json'),'3f499953f87bed0a76c5f683e23b52cd94b33c622c55086dad0c6e7c69b79143'],
+  [new URL('../../../deliverables/preview-loan-2026-09-17/actual-run01/integration-result.json',import.meta.url).pathname,'05456d0bc0ffe9e2e99c637904d407f6ae315e500698a091bda9434b9ba3f25b'],
+ ])check(sha(boundedPublicFile(path,128*1024))===digest,'PREVIEW_RECOVERY_HISTORY');
+ const raw=boundedPublicFile(d.transactionFile,16*1024*1024);return {raw,binding:inspectPreviewLoanBytes(raw,ledger)};
+}
+export async function verifyPreviewLoanPublic({binding,ledger,provider,rpc,decodeState,deadlineMs,expectedProtocolVersion,networkTag,tip,readCurrentTip}){
+ check(previewBindings.has(binding),'PREVIEW_RECOVERY_BINDING');
+ check(expectedProtocolVersion===1000000&&networkTag===originalPreviewPlan().networkTag,'PREVIEW_RECOVERY_NETWORK');
+ const {observeFinalizedStage,beforeDeadline}=await import('./receipt.mjs');
+ check(await beforeDeadline(()=>rpc('chain_getBlockHash',[0]),deadlineMs)==='0x'+networkTag,'PREVIEW_GENESIS_MISMATCH');
+ checkPublicRecoveryTip(tip,readCurrentTip);
+ const observation=await observeFinalizedStage({provider,rpc,ledger,txId:binding.txId,contractAddress:binding.contractAddress,circuitId:'deploy',decodeState,deadlineMs,expectedProtocolVersion,network:'preview'});
+ const r=observation.receipt;
+ check(r.transaction.transactionHash===binding.transactionHash&&r.transaction.rawSha256===binding.transactionHash&&r.transaction.dustFee===PREVIEW_LOAN_RECOVERY.historicalDustFee&&r.blockHeight===PREVIEW_LOAN_RECOVERY.blockHeight&&r.blockHash===PREVIEW_LOAN_RECOVERY.blockHash,'PREVIEW_RECOVERY_RECEIPT');
+ const {stateBlock,snapshotSamples}=await stableLoanSnapshot({rpc,deadlineMs,tip,readCurrentTip,finalityHeight:r.finalizedHeight,historyHeight:r.blockHeight,checkStates:async wait=>{
+  const historical=await wait(()=>provider.queryContractState(binding.contractAddress,{type:'blockHash',blockHash:r.blockHash}));assertBoundLoanState(historical,ledger,binding);
+  const current=await wait(()=>provider.queryContractState(binding.contractAddress));assertBoundLoanState(current,ledger,binding);
+ }});
+ return Object.freeze({binding,observation,tip:Object.freeze({...tip}),stateBlock,snapshotSamples});
+}
+export function assertPreviewRecoveryWallet(options){check(previewBindings.has(options.binding),'PREVIEW_RECOVERY_BINDING');check(options.synced?.unshielded?.pendingCoins?.length===0,'RECOVERY_WALLET_PENDING');return assertHistoryWallet(options);}
+export async function reconstructPreviewLoan(options,binding){check(previewBindings.has(binding),'PREVIEW_RECOVERY_BINDING');return reconstructLoan(options,binding);}
+export async function restorePreviewLoanPrivate(provider,result){check(previewBindings.has(privateBindings.get(result)),'PREVIEW_RECOVERY_BINDING');const restored=await restoreLoanPrivate(provider,result);const capability=Object.freeze({contractAddress:restored.contractAddress,txId:restored.txId,identifiers:PREVIEW_LOAN_RECOVERY.identifiers});previewCapabilities.add(capability);return capability;}
+export function assertPreviewRecoveryCapability(value){check(previewCapabilities.has(value),'PREVIEW_RECOVERY_CAPABILITY');previewCapabilities.delete(value);return value;}

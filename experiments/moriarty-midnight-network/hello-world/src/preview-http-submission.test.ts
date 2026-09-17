@@ -32,6 +32,17 @@ test('finality lag polls observations without resubmitting', async () => {
   assert.equal((await f.service().submitTransaction(f.tx, 'Finalized'))._tag, 'Finalized');
   assert.equal(reads, 2); assert.equal(f.calls.filter(x => x === 'submit').length, 1);
 });
+test('multi-intent finality requires every native identifier', async () => {
+  const other = '00' + '34'.repeat(32);
+  const f = fixture();
+  f.tx.identifiers = () => [id, other];
+  f.row.identifiers = [id, other];
+  assert.equal((await f.service().submitTransaction(f.tx, 'Finalized'))._tag, 'Finalized');
+  assert.equal(f.calls.filter(x => x === 'submit').length, 1);
+  const missing = fixture();
+  missing.tx.identifiers = () => [id, other];
+  await assert.rejects(missing.service().submitTransaction(missing.tx, 'Finalized'), /IDENTITY/);
+});
 for (const status of ['FAILURE', 'PARTIAL_SUCCESS', 'unknown']) test(`rejects indexed ${status}`, async () => {
   const f = fixture(); f.row.transactionResult.status = status;
   await assert.rejects(f.service().submitTransaction(f.tx, 'Finalized'), /LEDGER_REJECTED/);

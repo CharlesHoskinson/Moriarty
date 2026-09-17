@@ -76,7 +76,7 @@ export interface CreateWalletOptions {
    */
   restore?: boolean;
   /** Defaults to MIDNIGHT_SUBMISSION_TRANSPORT; unset preserves the SDK service. */
-  submissionTransport?: 'default' | 'preview-http';
+  submissionTransport?: 'default' | 'preview-http' | 'preview-ws';
   cwd?: string;
 }
 

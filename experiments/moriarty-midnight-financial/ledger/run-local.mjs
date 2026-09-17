@@ -1,3 +1,4 @@
+import {assertPreviewRecoveryCapability,PREVIEW_LOAN_RECOVERY} from './recover-deployment.mjs';
 import {EXISTING_SWAP,INITIALIZED_SWAP} from './continue-initialized-swap.mjs';
 import {CONTRACT_BALANCE_FAILURE_CODES} from './contract-balances.mjs';
 import {readFileSync} from 'node:fs';
@@ -50,9 +51,9 @@ export function runLocalFinancialCase(options){return runFinancialCase(options,'
  * Controlled callbacks can test sequencing, never establish Preview acceptance.
  */
 export function runPreviewFinancialCase(options){return runFinancialCase(options,'preview');}
-async function runFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap},target) {
+async function runFinancialCase({kind,network,providers,compiledContract,roles,networkTag,now,observe,verifyStage,sdk,existingDeployment,initializedLoan,initializedSwap,previewDeploymentRecovery},target) {
   if(!providers||typeof providers.cleanup!=='function')throw Error('OWNED_PROVIDER_CLEANUP_REQUIRED');
-  const stages=[],transactionIds=new Set();let address,failure,cleanup,diagnosticPhase='preflight',diagnosticStage=null;
+  const stages=[],transactionIds=new Set();let address,failure,cleanup,recoveredPreview=false,diagnosticPhase='preflight',diagnosticStage=null;
   try {
     if(network!==target)throw Error(target==='undeployed'?'LOCAL_DRIVER_REQUIRES_UNDEPLOYED_NETWORK':'PREVIEW_DRIVER_REQUIRES_PREVIEW_NETWORK');
     if(target==='preview'&&(existingDeployment!==undefined||initializedLoan!==undefined||initializedSwap!==undefined))throw Error('PREVIEW_LOCAL_RECOVERY_FORBIDDEN');
@@ -62,6 +63,11 @@ async function runFinancialCase({kind,network,providers,compiledContract,roles,n
     // Integration supplies this identity only after public verification and private
     // restore round trips. These shape checks do not establish those predicates.
     let recovery,continuation;
+    if(previewDeploymentRecovery!==undefined){
+      if(target!=='preview'||kind!=='loan'||existingDeployment!==undefined||initializedLoan!==undefined||initializedSwap!==undefined)throw Error('PREVIEW_RECOVERY_MODE');
+      recovery=assertPreviewRecoveryCapability(previewDeploymentRecovery);recoveredPreview=true;
+      for(const id of recovery.identifiers)transactionIds.add(id);
+    }
     if(initializedSwap!==undefined){
       if(kind!=='swap'||existingDeployment!==undefined||initializedLoan!==undefined||!initializedSwap||Object.getPrototypeOf(initializedSwap)!==Object.prototype)throw Error('INVALID_INITIALIZED_SWAP');
       const f=Object.getOwnPropertyDescriptors(initializedSwap);if(Reflect.ownKeys(f).length!==3||!['contractAddress','deployTxId','initializeTxId'].every(k=>Object.hasOwn(f,k)&&Object.hasOwn(f[k],'value'))||f.contractAddress.value!==INITIALIZED_SWAP.contractAddress||f.deployTxId.value!==EXISTING_SWAP.txId||f.initializeTxId.value!==INITIALIZED_SWAP.txId)throw Error('INVALID_INITIALIZED_SWAP');
@@ -164,7 +170,7 @@ async function runFinancialCase({kind,network,providers,compiledContract,roles,n
   // Fresh command completion does not attest to external process containment.
   // Existing-deployment and continuation local modes retain their prior cleanup gate.
   const previewComplete=(target==='preview'||(!existingDeployment&&!initializedLoan&&!initializedSwap))&&stages.length===4&&cleanup.walletStopped&&cleanup.pendingOperations===0;
-  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':previewComplete?'FINANCIAL_COMPLETE':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
+  const publicResult={schema:target==='undeployed'?'moriarty.local-financial-run/1':'moriarty.preview-financial-run/1',status:failure?'FAILED':contained?'PASS':previewComplete?'FINANCIAL_COMPLETE':'INCOMPLETE',kind,contractAddress:address,stages,transactionIds:[...transactionIds],cleanup,operationalState,...(recoveredPreview?{deploymentRecovery:{transactionHash:PREVIEW_LOAN_RECOVERY.transactionHash,reservedSubmissions:2,reservedDustFee:PREVIEW_LOAN_RECOVERY.conservativeReservedDustFee}}:{}),...(failure?{failure:publicFailure(failure,diagnosticPhase,diagnosticStage)}:{}),scope:'Fixed I2 execution and supplied financial comparison; not mandatory PCD acceptance'};
   if(failure||(!contained&&!previewComplete)) {
     const error=failure??Error('DRIVER_CLEANUP_INCOMPLETE');
     error.publicResult=publicResult;throw error;

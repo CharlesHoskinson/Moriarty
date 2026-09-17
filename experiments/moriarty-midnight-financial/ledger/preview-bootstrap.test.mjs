@@ -9,9 +9,10 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';import {pathToFile
 import {PINNED_NM} from './providers.mjs';
 const originalHelpers=await import('./launch-local.mjs');
 const pins=JSON.parse(readFileSync(new URL('./launch-runtime-pins.json',import.meta.url)));
-async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false,skipStop=false,stopFailure=false,persistenceFailure=false,http=false}={}){
+async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesisWrong=false,skipStop=false,stopFailure=false,persistenceFailure=false,http=false,recovery=false,recoveryFailure=false}={}){
  const dir=mkdtempSync(join(tmpdir(),'moriarty-preview-bootstrap-')),events=[];t.after(()=>rmSync(dir,{recursive:true,force:true}));mkdirSync(join(dir,'wallet'),{mode:0o700});
  const p={schema:'moriarty.preview-financial-launch/1',kind:'loan',build:{receiptPath:'/public-fixture',receiptSha256:'ab'.repeat(32),sourceManifestHash:'cd'.repeat(32)},networkConfig:{networkId:'preview',node:'https://rpc.preview.midnight.network',indexer:'https://indexer.preview.midnight.network/api/v4/graphql',indexerWS:'wss://indexer.preview.midnight.network/api/v4/graphql/ws',proofServer:'http://127.0.0.1:16300'},wallet:{stateDirectory:join(dir,'wallet'),seedFile:join(dir,'seed'),expectedAddress:'CONTROLLED_PREVIEW_ADDRESS'},roles:{secretsFile:join(dir,'roles'),firstAddress:'01'.repeat(32),secondAddress:'02'.repeat(32)},privateState:{directory:join(dir,'contract'),passwordFile:join(dir,'password')},networkTag:'03'.repeat(32),expectedProtocolVersion:1000000,limits:{allocationId:'fixture',submissions:4,deadlineMs:Date.now()+10000,dustFee:'1000',grossByLogicalAsset:{USD_TEST_ASSET:'20000000000'}},outputDirectory:join(dir,'run')};
+ if(recovery){p.deploymentRecovery={schema:'CONTROLLED_RECOVERY'};p.limits.submissions=3;}
  if(http){p.submissionTransport='preview-http';p.wallet.publicIdentity={path:'/public/new-wallet.json',sha256:'12'.repeat(32)};t.mock.module(new URL('../../moriarty-midnight-network/hello-world/src/preview-http-submission.ts',import.meta.url).href,{namedExports:{previewSubmissionFactory:(network,selection)=>{assert.equal(selection,'preview-http');assert.equal(network.networkId,'preview');assert.deepEqual(network.composeServices,[]);return ()=>({testOnly:true});}}});}
  if(reuse)mkdirSync(p.outputDirectory,{mode:0o700});
  const childDir=join(p.wallet.stateDirectory,'.midnight-wallet-state/preview');mkdirSync(childDir,{recursive:true,mode:0o700});for(const kind of ['shielded','unshielded','dust'])writeFileSync(join(childDir,kind+'.json'),JSON.stringify({version:1,state:'persisted-'+kind}),{mode:0o600});
@@ -36,7 +37,7 @@ async function fixture(t,{missing,invalid,wrongRestore=false,reuse=false,genesis
  for(const [key,kind] of [['ShieldedWallet','shielded'],['UnshieldedWallet','unshielded'],['DustWallet','dust']])sdk[key]=()=>({restore:async state=>{events.push('restore:'+kind);assert.equal(state,'persisted-'+kind);return {stop:async()=>{stopped++;}};}});
  const modules={'@midnight-ntwrk/wallet-sdk':sdk,'@midnight-ntwrk/midnight-js-protocol':{ZswapSecretKeys:{fromSeed:()=>({})},DustSecretKey:{fromSeed:()=>({})},signingKeyFromBip340:()=> 'controlled-key',signatureVerifyingKey:()=> 'public-key'},'@midnight-ntwrk/midnight-js-network-id':{setNetworkId:n=>{assert.equal(n,'preview');events.push('network');}},rxjs:{firstValueFrom:async()=>({state:{networkId:wrongRestore?'undeployed':'preview',publicKey:{publicKey:'public-key',addressHex:p.roles.firstAddress,address:p.wallet.expectedAddress}}})},ws:{WebSocket:class{}}};
  for(const [name,exports] of Object.entries(modules))t.mock.module(pathToFileURL(join(PINNED_NM,name,pins[name].entry)).href,{namedExports:exports});
- t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{integratePreviewFinancialCase:async o=>{events.push('integration');assert.deepEqual(o.publicIdentity,p.wallet.publicIdentity);assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');if(!skipStop)await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
+ t.mock.module(new URL('./integrate-preview.mjs',import.meta.url).href,{namedExports:{preflightPreviewRecovery:async input=>{assert.deepEqual(input,p);events.push('public-recovery');if(recoveryFailure)throw Error('CONTROLLED_RECOVERY_PUBLIC_FAILURE');},integratePreviewFinancialCase:async o=>{events.push('integration');if(recovery){assert.deepEqual(o.deploymentRecoveryPlan,p);assert.equal(o.limits.submissions,3);}assert.deepEqual(o.publicIdentity,p.wallet.publicIdentity);assert.equal(o.networkConfig.networkId,'preview');assert.equal(o.limits.dustFee,1000n);assert.equal(o.roles.firstSecret.length,32);assert.equal(typeof o.walletContext.wallet.submitTransaction,'function');if(!skipStop)await o.walletContext.wallet.stop();return {status:'PASS',networkAcceptance:false,proofAcceptance:false,financialAcceptance:false};}}});
  const subject=await import('./preview-bootstrap.mjs?fixture='+Math.random());return {p,events,subject,stops:()=>stopped};
 }
 test('existing Preview children restore before guarded integration and durable result',async t=>{
@@ -116,3 +117,12 @@ test('financial bootstrap selects the supported HTTP submission hook explicitly'
 });
 
 test('bootstrap passes selected HTTP hook and identity binding to their actual consumers',async t=>{const f=await fixture(t,{http:true});await f.subject.launchPreviewFinancialCase(f.p);assert.ok(f.events.includes('http-selected'));assert.ok(f.events.includes('integration'));});
+
+test('Preview recovery public gate precedes every private wallet read and forwards the closed plan',async t=>{
+ const f=await fixture(t,{recovery:true});await f.subject.launchPreviewFinancialCase(f.p);
+ assert.ok(f.events.indexOf('public-recovery')<f.events.findIndex(x=>x.startsWith('private:')));assert.ok(f.events.includes('integration'));
+});
+test('failed Preview recovery public gate creates no output, wallet or contract store',async t=>{
+ const f=await fixture(t,{recovery:true,recoveryFailure:true});await assert.rejects(f.subject.launchPreviewFinancialCase(f.p));
+ assert.equal(existsSync(f.p.outputDirectory),false);assert.equal(existsSync(f.p.privateState.directory),false);assert.ok(!f.events.some(x=>x.startsWith('private:')));assert.ok(!f.events.includes('facade-init'));
+});

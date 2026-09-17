@@ -129,3 +129,18 @@ async function preserveInitializedStore({sourceDirectory,snapshotDirectory,inspe
  }
  if(failure)throw failure;return result;
 }
+
+/** Preview submission can fail before the private provider creates any records.
+ * Preserve an empty source by inspection only, or delegate the exact metadata
+ * predicate to the existing copied-store checker. Never open the original DB.
+ */
+export async function inspectUnwrittenLoanStore(options){
+ const {sourceDirectory,inspectionDirectory}=options;directory(sourceDirectory,true);
+ const names=fs.readdirSync(sourceDirectory);
+ if(names.length!==0)return inspectFailedLoanStore(options);
+ check(typeof inspectionDirectory==='string'&&isAbsolute(inspectionDirectory)&&resolve(inspectionDirectory)===inspectionDirectory,'ABSOLUTE_PATH');
+ check(sourceDirectory!==inspectionDirectory&&!inspectionDirectory.startsWith(sourceDirectory+sep)&&!sourceDirectory.startsWith(inspectionDirectory+sep),'OVERLAP');directory(dirname(inspectionDirectory),true);
+ fs.mkdirSync(inspectionDirectory,{mode:0o700});syncDirectory(dirname(inspectionDirectory));
+ check(fs.readdirSync(sourceDirectory).length===0,'SOURCE_CHANGED');
+ return Object.freeze({status:'EMPTY',sourceManifestSha256:sha(Buffer.from('[]')),copyManifestSha256:sha(Buffer.from('[]'))});
+}

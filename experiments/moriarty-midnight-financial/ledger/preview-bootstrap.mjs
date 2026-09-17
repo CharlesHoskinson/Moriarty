@@ -28,10 +28,11 @@ export async function preflightPreviewLaunch(plan){
  await within(deadline,inspectLocalLaunchRuntime);
  const genesis=await within(deadline,()=>createPreviewRpc({node:p.networkConfig.node,deadlineMs:Math.min(deadline,Date.now()+15000)})('chain_getBlockHash',[0]));
  check(genesis==='0x'+p.networkTag,'PREVIEW_GENESIS_MISMATCH');
+ if(p.deploymentRecovery){await within(deadline,runtime);await within(deadline,async()=>{const {preflightPreviewRecovery}=await import('./integrate-preview.mjs');return preflightPreviewRecovery(p);});}
  return {status:'PUBLIC_PREFLIGHT_CHECKED',genesis,network:'preview',walletStarted:false,networkAcceptance:false};
 }
 export async function previewFinancialSubmissionFactory(networkConfig,selection='default'){
- check(['default','preview-http'].includes(selection),'PREVIEW_SUBMISSION_TRANSPORT');
+ check(['default','preview-http','preview-ws'].includes(selection),'PREVIEW_SUBMISSION_TRANSPORT');
  if(selection==='default')return undefined;
  const {previewSubmissionFactory}=await import('../../moriarty-midnight-network/hello-world/src/preview-http-submission.ts');
  return previewSubmissionFactory({...networkConfig,faucet:null,composeServices:[]},selection);
@@ -99,6 +100,7 @@ export async function launchPreviewFinancialCase(plan){
   let stopping,persisted=false,walletStopped=false;const persistentWallet=new Proxy(wallet,{get(target,key){if(key==='stop')return()=>stopping??=(async()=>{try{append(await persistPreviewWalletState({wallet,stateDirectory:p.wallet.stateDirectory,allocationId:p.limits.allocationId,original,deadlineMs:Math.min(deadline+5000,Date.now()+5000)}));persisted=true;}finally{await target.stop();walletStopped=true;}})();const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
   const retainedWallet=retainPublicSubmissions({wallet:persistentWallet,ledger,directory:submissionDirectory});
   const options={kind:p.kind,build:p.build,publicIdentity:p.wallet.publicIdentity,walletContext:{wallet:retainedWallet,shieldedSecretKeys,dustSecretKey,unshieldedKeystore},deploymentSigningKey,networkConfig:p.networkConfig,roles:{firstAddress:p.roles.firstAddress,secondAddress:p.roles.secondAddress,firstSecret:Uint8Array.from(Buffer.from(roleData.firstSecret,'hex')),secondSecret:Uint8Array.from(Buffer.from(roleData.secondSecret,'hex'))},networkTag:p.networkTag,expectedProtocolVersion:p.expectedProtocolVersion,privateStateConfig:{midnightDbName:p.privateState.directory,privateStateStoreName:'sp05-'+p.kind,privateStoragePasswordProvider:()=>password},limits:{...p.limits,dustFee:BigInt(p.limits.dustFee),grossByLogicalAsset:Object.fromEntries(Object.entries(p.limits.grossByLogicalAsset).map(([k,v])=>[k,BigInt(v)])),reservationStatePath:join(p.outputDirectory,'reservations.json')},now:()=>BigInt(Math.floor(Date.now()/1000)),onEvent:e=>append(publicPreviewLaunchEvent(e)),onStage:s=>retainPreviewStage(p.outputDirectory,s)};
+  if(p.deploymentRecovery)options.deploymentRecoveryPlan=p;
   phase='integration';ownershipTransferred=true;let result;
   try{result=await integratePreviewFinancialCase(options);}catch(error){if(error.publicIntegrationResult!==undefined)retainPreviewIntegrationResult(p.outputDirectory,error.publicIntegrationResult);throw Error('PREVIEW_FINANCIAL_RUN_INCOMPLETE');}
   check(persisted&&walletStopped,'PREVIEW_COMPLETION_PERSISTENCE');validatePreviewFinancialCompletion(result);

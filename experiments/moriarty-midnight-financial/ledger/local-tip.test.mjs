@@ -94,3 +94,10 @@ test('recovery exact-finality readiness waits for matching head while ordinary r
  f.block.height=12;assert.equal((await api.waitForLocalTip({...f.options,exactFinality:true})).height,12);
  await assert.rejects(api.waitForLocalTip({...f.options,exactFinality:'true'}),/TIP_DEADLINE/);
 });
+
+test('Preview readiness uses the supported public endpoints and exact indexed finality',async()=>{
+ const f=fixture(),options={...f.options,node:'https://rpc.preview.midnight.network/',indexer:'https://indexer.preview.midnight.network/api/v4/graphql'};
+ const r=await api.waitForPreviewTip(options);assert.equal(r.schema,'moriarty.preview-tip-readiness/1');assert.equal(r.finalizedHash,'0x'+h);assert.equal(r.height,r.finalizedHeight);
+ for(const override of [{node:'http://127.0.0.1:9944'},{indexer:'https://evil.test/graphql'}])await assert.rejects(api.waitForPreviewTip({...options,...override}),/TIP_PREVIEW_ENDPOINT/);
+ f.block.height=11;await assert.rejects(api.waitForPreviewTip({...options,deadlineMs:Date.now()+40}),/TIP_NOT_READY/);
+});

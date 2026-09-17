@@ -1,6 +1,11 @@
+import {isDeepStrictEqual} from 'node:util';
+import {PREVIEW_LOAN_RECOVERY,validatePreviewRecoveryPlan,readPreviewRecoveryInputs,verifyPreviewLoanPublic,assertPreviewRecoveryWallet,reconstructPreviewLoan,restorePreviewLoanPrivate} from './recover-deployment.mjs';
+import {inspectUnwrittenLoanStore,assertEmptyRecoveryStore} from './recover-store.mjs';
+import {waitForPreviewTip} from './local-tip.mjs';
 import {loadPreviewPublicIdentity} from './preview-launch.mjs';
 /** Fixed Preview composition. Existing wallet handles transfer cleanup ownership.
- * No wallet creation, recovery, CLI or admission. Source adapters never establish acceptance.
+ * Accepts only the separately bound retained deployment recovery; no wallet
+ * creation, CLI or admission. Source adapters never establish acceptance.
  */
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -65,6 +70,27 @@ async function stopWallet(wallet){
   let timer;try{await Promise.race([Promise.resolve().then(()=>wallet.stop()),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('WALLET_CLEANUP_TIMEOUT')),5000);})]);return {walletStopped:true,pendingOperations:0,containmentComplete:false};}
   catch{return {walletStopped:false,pendingOperations:null,containmentComplete:false};}finally{clearTimeout(timer);}
 }
+
+const recoveryDependencies={readInputs:readPreviewRecoveryInputs,verifyPublic:verifyPreviewLoanPublic,readTip:waitForPreviewTip,checkWallet:assertPreviewRecoveryWallet,reconstruct:reconstructPreviewLoan,inspectStore:inspectUnwrittenLoanStore,checkDestination:assertEmptyRecoveryStore,restore:restorePreviewLoanPrivate};
+async function checkedRecovery(plan,{loaded,sdk,ledger,rpc,deps=recoveryDependencies}){
+ const {binding}=deps.readInputs(plan.deploymentRecovery,plan,ledger);
+ const provider=sdk.indexerPublicDataProvider(plan.networkConfig.indexer,plan.networkConfig.indexerWS);
+ const readCurrentTip=(deadlineMs=plan.limits.deadlineMs)=>deps.readTip({node:plan.networkConfig.node,indexer:plan.networkConfig.indexer,deadlineMs});
+ const tip=await readCurrentTip();
+ return deps.verifyPublic({binding,ledger,provider,rpc,decodeState:loaded.decodeState,deadlineMs:plan.limits.deadlineMs,expectedProtocolVersion:plan.expectedProtocolVersion,networkTag:plan.networkTag,tip,readCurrentTip});
+}
+/** Public-only history/state gate before bootstrap reads the retained wallet. */
+export async function preflightPreviewRecovery(plan){
+ validatePreviewRecoveryPlan(plan.deploymentRecovery,plan);let loaded;
+ try{
+  const sdk=await loadFinancialSdk(),{ledger}=await loadNativeRuntime();sdk.setNetworkId('preview');
+  loaded=await loadProvenFinancialContract({case:'loan',...plan.build});
+  const rpc=(method,params,deadlineMs=plan.limits.deadlineMs)=>createPreviewRpc({node:plan.networkConfig.node,deadlineMs})(method,params);
+  const checked=await checkedRecovery(plan,{loaded,sdk,ledger,rpc});loaded.assertFresh();
+  return {status:'PUBLIC_STATE_VERIFIED',contractAddress:checked.binding.contractAddress,txId:checked.binding.txId,transactionHash:checked.binding.transactionHash};
+ }finally{if(loaded)await loaded.cleanup();}
+}
+
 export async function integratePreviewFinancialCase(options){
  let loaded,providers,driverStarted=false,driverResult,financialComparison,failure,cleanup,phase='preflight',limits,assetBindings,buildBinding;
  const summaries=[],pending=new Set(),wallet=options?.walletContext?.wallet;let sourceTestOnly=false;
@@ -74,6 +100,12 @@ export async function integratePreviewFinancialCase(options){
   requireThat(options.adapters===undefined||sourceTestOnly,'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST');
   const deps=sourceTestOnly?options.adapters:realDependencies;
   for(const key of Object.keys(realDependencies))requireThat(typeof deps?.[key]==='function','COMPLETE_INERT_ADAPTERS_REQUIRED');
+  const recoveryPlan=options.deploymentRecoveryPlan===undefined?undefined:structuredClone(options.deploymentRecoveryPlan);
+  if(recoveryPlan!==undefined)validatePreviewRecoveryPlan(recoveryPlan?.deploymentRecovery,recoveryPlan);
+  requireThat(options.recoveryAdapters===undefined||sourceTestOnly,'INTEGRATION_ADAPTERS_REQUIRE_SOURCE_TEST');
+  requireThat(options.recoveryAdapters===undefined||recoveryPlan,'PREVIEW_RECOVERY_MODE');
+  const recoveryDeps=sourceTestOnly&&options.recoveryAdapters?options.recoveryAdapters:recoveryDependencies;
+  if(recoveryPlan)for(const key of Object.keys(recoveryDependencies))requireThat(typeof recoveryDeps[key]==='function','COMPLETE_INERT_RECOVERY_ADAPTERS_REQUIRED');
   for(const key of ['recoveryPlan','continuationPlan','existingDeployment','initializedLoan','initializedSwap'])requireThat(options[key]===undefined,'PREVIEW_RECOVERY_FORBIDDEN');
   const {kind}=options;requireThat(kind==='loan'||kind==='swap','INTEGRATION_KIND');
   requireThat(options.build&&Object.keys(options.build).sort().join(',')==='receiptPath,receiptSha256,sourceManifestHash','BUILD_RECEIPT_BINDING_REQUIRED');
@@ -88,12 +120,18 @@ export async function integratePreviewFinancialCase(options){
   const roles={...options.roles,firstSecret:Uint8Array.from(options.roles.firstSecret),secondSecret:Uint8Array.from(options.roles.secondSecret)};
   requireThat(roles.firstSecret.length===32&&roles.secondSecret.length===32,'ROLE_SECRETS_REQUIRED');bytes(roles.firstAddress);bytes(roles.secondAddress);requireThat(roles.firstAddress!==roles.secondAddress,'DISTINCT_PARTICIPANTS_REQUIRED');
   const networkTag=options.networkTag;bytes(networkTag);requireThat(options.deploymentSigningKey!==undefined,'EXISTING_DEPLOYMENT_SIGNING_KEY_REQUIRED');
-  limits={...options.limits};validDeadline(limits.deadlineMs);requireThat(limits.submissions===4&&typeof limits.dustFee==='bigint'&&limits.dustFee>=0n,'FINANCIAL_LIMITS');
+  limits={...options.limits};validDeadline(limits.deadlineMs);requireThat(limits.submissions===(recoveryPlan?3:4)&&typeof limits.dustFee==='bigint'&&limits.dustFee>=0n,'FINANCIAL_LIMITS');
   const logical={...limits.grossByLogicalAsset},names=kind==='loan'?['USD_TEST_ASSET']:['ASSET_A','ASSET_B'];
   requireThat(Object.keys(logical).sort().join('|')===names.sort().join('|'),'LOGICAL_ASSET_LIMITS');for(const cap of Object.values(logical))requireThat(typeof cap==='bigint'&&cap>=0n,'LOGICAL_ASSET_CAP');requireThat(!Object.hasOwn(limits,'grossByAsset'),'ALREADY_BOUND_ASSET_LIMITS_FORBIDDEN');
   async function within(label,fn){
    validDeadline(limits.deadlineMs);let timer;const op=Promise.resolve().then(()=>{validDeadline(limits.deadlineMs);return fn();});pending.add(op);op.then(()=>pending.delete(op),()=>pending.delete(op));
    try{const value=await Promise.race([op,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('INTEGRATION_DEADLINE_'+label)),Math.min(limits.deadlineMs-Date.now(),2147483647));})]);validDeadline(limits.deadlineMs);return value;}finally{clearTimeout(timer);}
+  }
+  if(recoveryPlan){
+   for(const key of ['kind','build','networkConfig','networkTag','expectedProtocolVersion'])requireThat(isDeepStrictEqual(options[key],recoveryPlan[key]),'PREVIEW_RECOVERY_BINDING');
+   requireThat(roles.firstAddress===recoveryPlan.roles.firstAddress&&roles.secondAddress===recoveryPlan.roles.secondAddress&&isDeepStrictEqual(options.publicIdentity,recoveryPlan.wallet.publicIdentity),'PREVIEW_RECOVERY_BINDING');
+   requireThat(options.privateStateConfig?.midnightDbName===recoveryPlan.privateState.directory&&options.privateStateConfig.privateStateStoreName==='sp05-loan','PREVIEW_RECOVERY_BINDING');
+   requireThat(limits.allocationId===recoveryPlan.limits.allocationId&&limits.deadlineMs===recoveryPlan.limits.deadlineMs&&limits.dustFee===BigInt(recoveryPlan.limits.dustFee)&&limits.reservationStatePath===join(recoveryPlan.outputDirectory,'reservations.json')&&logical.USD_TEST_ASSET===BigInt(recoveryPlan.limits.grossByLogicalAsset.USD_TEST_ASSET),'PREVIEW_RECOVERY_BUDGET');
   }
   const rpc=(method,params,requestDeadline=limits.deadlineMs)=>{validDeadline(requestDeadline);return createPreviewRpc({node:network.node,deadlineMs:Math.min(limits.deadlineMs,requestDeadline),fetchImpl:deps.fetch})(method,params);};
   phase='public-identity';const identity=await within('identity',()=>deps.loadPublicIdentity(options.publicIdentity));
@@ -106,19 +144,31 @@ export async function integratePreviewFinancialCase(options){
   const FreshZkProvider=class extends sdk.NodeZkConfigProvider{constructor(path){super(path);return new Proxy(this,{get(target,key){const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;return(...args)=>{assertFresh();const result=value.apply(target,args);return result?.then?result.then(value=>{assertFresh();return value;}):result;};}});}};
   const publicWalletProvider={getCoinPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.coinPublicKey;},getEncryptionPublicKey(){assertFresh();return options.walletContext.shieldedSecretKeys.encryptionPublicKey;}};
   const contractsSdk=await within('contracts-sdk',()=>deps.loadContractsSdk());
-  phase='prepare-deployment';const prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)]},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
-  const contractAddress=prepared.public.contractAddress;bytes(contractAddress);assertFresh();
+  let prepared,checked,verifiedPrivate,previewDeploymentRecovery;
+  const constructorArgs=[roles.firstSecret,roles.secondSecret,{bytes:bytes(roles.firstAddress)},{bytes:bytes(roles.secondAddress)},program,bytes(networkTag)];
+  if(recoveryPlan){
+   checked=await within('recovery-public',()=>checkedRecovery(recoveryPlan,{loaded,sdk,ledger,rpc,deps:recoveryDeps}));
+   const synced=await within('recovery-wallet',()=>wallet.waitForSyncedState());
+   recoveryDeps.checkWallet({synced,binding:checked.binding,timestampMs:checked.tip.timestampMs,dustCap:limits.dustFee});
+   verifiedPrivate=await within('recovery-constructor',()=>recoveryDeps.reconstruct({compiledContract:loaded.compiledContract,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),coinPublicKey:publicWalletProvider.getCoinPublicKey(),signingKey:options.deploymentSigningKey,args:constructorArgs,ledger},checked.binding));
+   await within('recovery-store',()=>recoveryDeps.inspectStore({sourceDirectory:join(PREVIEW_LOAN_RECOVERY.originalDirectory,'contract-state'),inspectionDirectory:recoveryPlan.deploymentRecovery.inspectionDirectory,accountId:identity.address}));
+   recoveryDeps.checkDestination(recoveryPlan.privateState.directory);assertFresh();
+  }else{
+   phase='prepare-deployment';prepared=await within('prepare',()=>deps.prepareDeployment({deploymentOptions:{compiledContract:loaded.compiledContract,privateStateId:`sp05-${kind}`,initialPrivateState:{},args:constructorArgs},publicWalletProvider,zkConfigProvider:new FreshZkProvider(loaded.zkConfigPath),signingKey:options.deploymentSigningKey,ledger,sdk:contractsSdk}));
+  }
+  const contractAddress=checked?checked.binding.contractAddress:prepared.public.contractAddress;bytes(contractAddress);assertFresh();
   const domains=kind==='loan'?{USD_TEST_ASSET:sourceBindings.usdDomain}:{ASSET_A:sourceBindings.assetADomain,ASSET_B:sourceBindings.assetBDomain},grossByAsset={};assetBindings={};
   for(const [name,domain] of Object.entries(domains)){const color=runtime.rawTokenType(bytes(domain),contractAddress);bytes(color);requireThat(!Object.hasOwn(grossByAsset,color),'ASSET_COLOR_COLLISION');grossByAsset[color]=logical[name];assetBindings[name]=color;}
   delete limits.grossByLogicalAsset;limits=Object.freeze({...limits,grossByAsset:Object.freeze(grossByAsset)});
   const providerOptions={walletContext:options.walletContext,networkConfig:network,zkConfigPath:loaded.zkConfigPath,privateStateConfig:options.privateStateConfig,limits,ledger,sdk:{...sdk,NodeZkConfigProvider:FreshZkProvider},onEvent};
   phase='allocate';await within('allocate',()=>deps.initializeReservations(providerOptions));
   phase='providers';providers=await within('providers',async()=>{const p=await deps.createProviders(providerOptions);if(Date.now()>=limits.deadlineMs){await p.cleanup();throw Error('INTEGRATION_LATE_PROVIDER');}return p;});
-  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee}));
-  const freshSdk={deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
+  if(recoveryPlan){previewDeploymentRecovery=await within('recovery-restore',()=>recoveryDeps.restore(providers.privateStateProvider,verifiedPrivate));assertFresh();}
+  const comparator=await within('comparator',()=>deps.createComparator({kind,roles,networkTag,expectedProtocolVersion,dustFeeCap:limits.dustFee,...(recoveryPlan?{historicalFeeAllocations:[{stages:['deploy'],dustFeeCap:BigInt(PREVIEW_LOAN_RECOVERY.historicalDustFee)}]}:{})}));
+  const freshSdk=recoveryPlan?{submitCallTx(...args){assertFresh();return contractsSdk.submitCallTx(...args);}}:{deployContract(...args){assertFresh();return prepared.driverSdk.deployContract(...args);},submitCallTx(...args){assertFresh();return prepared.driverSdk.submitCallTx(...args);}};
   phase='driver';driverStarted=true;let driverFailure;
-  try{driverResult=await deps.driver({kind,network:'preview',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshSdk,
-   observe:({circuitId,txId,contractAddress:observedAddress,network:ownerNetwork})=>{assertFresh();requireThat(observedAddress===contractAddress&&ownerNetwork==='preview','PREPARED_OBSERVED_ADDRESS_MISMATCH');return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress,network:'preview',decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
+  try{driverResult=await deps.driver({kind,network:'preview',providers,compiledContract:loaded.compiledContract,roles,networkTag,now,sdk:freshSdk,...(recoveryPlan?{previewDeploymentRecovery}:{}),
+   observe:({circuitId,txId,contractAddress:observedAddress,network:ownerNetwork})=>{assertFresh();requireThat(observedAddress===contractAddress&&ownerNetwork==='preview','PREPARED_OBSERVED_ADDRESS_MISMATCH');if(recoveryPlan&&circuitId==='deploy')return within('recovery-current',async()=>{const fresh=await checkedRecovery(recoveryPlan,{loaded,sdk,ledger,rpc,deps:recoveryDeps});assertFresh();return fresh.observation;});return deps.observe({provider:providers.publicDataProvider,rpc,ledger,circuitId,txId,contractAddress,network:'preview',decodeState:loaded.decodeState,deadlineMs:limits.deadlineMs,expectedProtocolVersion});},
    verifyStage:async(stage,observation)=>{const summary=comparator.verifyStage(stage,observation);requireThat(summary?.status==='PASS','FINANCIAL_COMPARISON_REQUIRED_PASS');const stored=await onStage(structuredClone(summary));requireThat(stored?.status==='RECORDED'&&stored.stage===stage&&stored.txId===summary.txId,'STAGE_RETENTION_REQUIRED');summaries.push(structuredClone(summary));
     if(kind==='swap'&&stage==='initialize'){const synced=await within('swap-sync',()=>wallet.waitForSyncedState());assertSwapInitializedWallet({receipt:observation.receipt,roles,assetBindings,synced,network:'preview'});validDeadline(limits.deadlineMs);}return summary;}
   });}catch(error){driverFailure=error;driverResult=error.publicResult;throw error;}

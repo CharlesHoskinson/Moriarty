@@ -1,0 +1,135 @@
+pragma language_version >= 0.23 && <= 0.23;
+import CompactStandardLibrary;
+include "kernel";
+// generated custody wrapper kind=loan
+// profile=moriarty-bounded-atomic/1
+// sourceHash=1e1e61158ef80d44aa326399731440971fe50de7147ae5fb04e3fb36c48fef49
+// programHash=95b46e39a9039e19063bb3d618128aec6cbd9ee656b6e635b3587e7f3f5235b2
+// compactSourceHash=77e44b28b191b6c7ca904f92356f0da006a13839ff241393e0cf6088959cf363
+// metadataHash=9e13a2677797e6328ad6b7b8d1a34a447d34a9ed9828e1c80867618040648ab5
+
+export ledger programDigest: Bytes<32>;
+export ledger networkTag: Bytes<32>;
+export ledger borrowerCapability: Bytes<32>;
+export ledger lenderCapability: Bytes<32>;
+export ledger borrowerAddress: UserAddress;
+export ledger lenderAddress: UserAddress;
+export ledger usdDomain: Bytes<32>;
+export ledger usdColor: Bytes<32>;
+export ledger initialized: Boolean;
+export ledger remaining: Uint<128>;
+export ledger revision: Uint<128>;
+export ledger kernelState: KernelState;
+export ledger lastAccrue: Result0;
+export ledger lastSettle: Result1;
+
+circuit capabilityHash(domain: Bytes<32>, network: Bytes<32>, program: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([domain, network, program, secret]);
+}
+
+circuit constrainNow(now: Uint<64>): Uint<128> {
+  const publicNow: Uint<64> = disclose(now);
+  const maxNow: Uint<64> = 18446744073709551315;
+  assert(publicNow <= maxNow, "UINT64_WINDOW_OVERFLOW");
+  const windowEnd: Uint<64> = ((publicNow as Uint<128>) + 300) as Uint<64>;
+  assert(blockTimeGte(publicNow), "BLOCK_TIME_TOO_EARLY");
+  assert(blockTimeLt(windowEnd), "BLOCK_TIME_TOO_LATE");
+  assert(publicNow < 2000000000, "HORIZON_EXPIRED");
+  return publicNow as Uint<128>;
+}
+
+constructor(borrowerSecret: Bytes<32>, lenderSecret: Bytes<32>, borrowerPayout: UserAddress, lenderPayout: UserAddress, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>) {
+  const pinnedProgram: Bytes<32> = Bytes[149, 180, 110, 57, 169, 3, 158, 25, 6, 59, 179, 214, 24, 18, 138, 236, 108, 189, 158, 230, 86, 182, 230, 53, 179, 88, 126, 127, 63, 82, 53, 178];
+  const publicProgram: Bytes<32> = disclose(expectedProgram);
+  assert(publicProgram == pinnedProgram, "PROGRAM_MISMATCH");
+  programDigest = pinnedProgram;
+  networkTag = disclose(expectedNetwork);
+  borrowerAddress = disclose(borrowerPayout);
+  lenderAddress = disclose(lenderPayout);
+  borrowerCapability = disclose(capabilityHash(pad(32, "moriarty:sp05:loan:borrower"), expectedNetwork, pinnedProgram, borrowerSecret));
+  lenderCapability = disclose(capabilityHash(pad(32, "moriarty:sp05:loan:lender"), expectedNetwork, pinnedProgram, lenderSecret));
+  usdDomain = pad(32, "moriarty:sp05:usd:v1");
+  initialized = false;
+  remaining = 0;
+  revision = 0;
+}
+
+export circuit initialize(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedActor: Uint<32>, now: Uint<64>): [] {
+  assert(expectedProgram == programDigest, "PROGRAM_MISMATCH");
+  assert(expectedNetwork == networkTag, "NETWORK_MISMATCH");
+  assert(capabilityHash(pad(32, "moriarty:sp05:loan:borrower"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == 2, "ACTOR_MAPPING");
+  assert(!initialized, "ALREADY_INITIALIZED");
+  constrainNow(now);
+  kernelState = KernelState { f0: 5000000000, f1: 0, f2: 0, f3: 0, f4: 0, f5: 20000000000, f6: 0, f7: 0, f8: 0 };
+  remaining = 2;
+  revision = 0;
+  usdColor = mintUnshieldedToken(usdDomain, 20000000000, right<ContractAddress, UserAddress>(borrowerAddress));
+  initialized = true;
+}
+
+export circuit accrue(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, now: Uint<64>, hints: Hints0): Result0 {
+  assert(expectedProgram == programDigest, "PROGRAM_MISMATCH");
+  assert(expectedNetwork == networkTag, "NETWORK_MISMATCH");
+  assert(expectedRevision == revision, "REVISION_MISMATCH");
+  assert(initialized, "NOT_INITIALIZED");
+  assert(capabilityHash(pad(32, "moriarty:sp05:loan:borrower"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == 2, "ACTOR_MAPPING");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result0 = disclose(transition0(kernelState, Arguments0 { a0: expectedActor }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == 4, "DUE_ID_PR");
+  assert(result.effect0.v1 == 2, "DUE_PR_DEBTOR");
+  assert(result.effect0.v2 == 5, "DUE_PR_CREDITOR");
+  assert(result.effect0.v3 == 1, "DUE_PR_DENOMINATION");
+  assert(result.effect0.v4 == 500000000, "DUE_PR_AMOUNT");
+  assert(result.effect1.v0 == 3, "DUE_ID_IP");
+  assert(result.effect1.v1 == 2, "DUE_IP_DEBTOR");
+  assert(result.effect1.v2 == 5, "DUE_IP_CREDITOR");
+  assert(result.effect1.v3 == 1, "DUE_IP_DENOMINATION");
+  assert(result.effect1.v4 == 33972602, "DUE_IP_AMOUNT");
+  assert(result.after.f0 == 4500000000, "RESIDUAL_NOTIONAL");
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastAccrue = result;
+  return result;
+}
+
+export circuit settle(borrowerSecret: Bytes<32>, expectedProgram: Bytes<32>, expectedNetwork: Bytes<32>, expectedRevision: Uint<128>, expectedActor: Uint<32>, settlementAsset: Uint<32>, amountDue: Uint<128>, now: Uint<64>, hints: Hints1): Result1 {
+  assert(expectedProgram == programDigest, "PROGRAM_MISMATCH");
+  assert(expectedNetwork == networkTag, "NETWORK_MISMATCH");
+  assert(expectedRevision == revision, "REVISION_MISMATCH");
+  assert(initialized, "NOT_INITIALIZED");
+  assert(capabilityHash(pad(32, "moriarty:sp05:loan:borrower"), networkTag, programDigest, borrowerSecret) == borrowerCapability, "BORROWER_CAPABILITY");
+  assert(expectedActor == 2, "ACTOR_MAPPING");
+  assert(settlementAsset == 0, "SETTLEMENT_ASSET");
+  const t: Uint<128> = constrainNow(now);
+  const result: Result1 = disclose(transition1(kernelState, Arguments1 { a0: expectedActor, a1: settlementAsset, a2: amountDue }, KernelObservations { o0: t }, remaining, revision, hints));
+  assert(result.effect0.v0 == 0, "TRANSFER_ASSET");
+  assert(result.effect0.v1 == 2, "TRANSFER_FROM");
+  assert(result.effect0.v2 == 5, "TRANSFER_TO");
+  assert(result.effect0.v3 == 533972602, "TRANSFER_AMOUNT");
+  assert(result.effect1.v0 == 4, "SETTLED_PR_ID");
+  assert(result.effect1.v1 == 2, "SETTLED_PR_DEBTOR");
+  assert(result.effect1.v2 == 5, "SETTLED_PR_CREDITOR");
+  assert(result.effect1.v3 == 1, "SETTLED_PR_DENOMINATION");
+  assert(result.effect1.v4 == 500000000, "SETTLED_PR_AMOUNT");
+  assert(result.effect1.v5 == 0, "SETTLED_PR_ASSET");
+  assert(result.effect2.v0 == 3, "SETTLED_IP_ID");
+  assert(result.effect2.v1 == 2, "SETTLED_IP_DEBTOR");
+  assert(result.effect2.v2 == 5, "SETTLED_IP_CREDITOR");
+  assert(result.effect2.v3 == 1, "SETTLED_IP_DENOMINATION");
+  assert(result.effect2.v4 == 33972602, "SETTLED_IP_AMOUNT");
+  assert(result.effect2.v5 == 0, "SETTLED_IP_ASSET");
+  assert(result.after.f0 == 4500000000, "RESIDUAL_NOTIONAL");
+  const entry: Uint<128> = unshieldedBalance(usdColor);
+  const paid: Uint<128> = result.effect0.v3;
+  assert(checkedAdd(entry, paid) >= paid, "SETTLE_IN_CALL_DELTA");
+  receiveUnshielded(usdColor, paid);
+  sendUnshielded(usdColor, paid, right<ContractAddress, UserAddress>(lenderAddress));
+  kernelState = result.after;
+  remaining = result.remaining;
+  revision = result.revision;
+  lastSettle = result;
+  return result;
+}
