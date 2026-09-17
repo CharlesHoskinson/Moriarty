@@ -1,7 +1,7 @@
 /** Local startup/balance readiness. These conservative age/lag limits are local
  * policy, not consensus guarantees. No wallet construction or submission retry.
  */
-import {createLocalRpc} from './integrate-local.mjs';
+import {createLocalRpc,createPreviewRpc} from './financial-rpc.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 const hash=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 function endpoint(value){const u=new URL(value);check(u.protocol==='http:'&&['127.0.0.1','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&!u.hash,'TIP_LOCAL_ENDPOINT');return u.href;}
@@ -20,8 +20,10 @@ async function indexedBlock(indexer,deadlineMs,fetchImpl){
 /** At most 60 read-only samples, one-second spacing, 60 seconds total and no
  * extension of the caller's existing wall deadline. A hung request is aborted.
  */
-export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalThis.fetch,exactFinality=false}){
- node=endpoint(node);indexer=endpoint(indexer);
+export function waitForLocalTip(options){return waitForTip(options,false);}
+export function waitForPreviewTip(options){return waitForTip({...options,exactFinality:true},true);}
+async function waitForTip({node,indexer,deadlineMs,fetchImpl=globalThis.fetch,exactFinality=false},preview){
+ if(preview){check(['https://rpc.preview.midnight.network','https://rpc.preview.midnight.network/'].includes(node)&&indexer==='https://indexer.preview.midnight.network/api/v4/graphql','TIP_PREVIEW_ENDPOINT');}else{node=endpoint(node);indexer=endpoint(indexer);}
  check(Number.isSafeInteger(deadlineMs)&&deadlineMs>Date.now()&&typeof fetchImpl==='function'&&typeof exactFinality==='boolean','TIP_DEADLINE');
  const stop=Math.min(deadlineMs,Date.now()+60000);
  for(let attempt=0;attempt<60&&Date.now()<stop;attempt++){
@@ -33,7 +35,7 @@ export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalT
    check(typeof block.timestamp==='number'||typeof block.timestamp==='string','TIP_TIMESTAMP');
    const timestampMs=new Date(block.timestamp).getTime();
    check(Number.isSafeInteger(timestampMs)&&timestampMs<=Date.now()&&Date.now()-timestampMs<=60000,'TIP_STALE');
-   const rpc=createLocalRpc({node,deadlineMs:requestDeadline,fetchImpl});
+   const rpc=(preview?createPreviewRpc:createLocalRpc)({node,deadlineMs:requestDeadline,fetchImpl});
    const finalizedHash=await rpc('chain_getFinalizedHead',[]);
    check(typeof finalizedHash==='string'&&/^0x[a-f0-9]{64}$/.test(finalizedHash),'TIP_FINALIZED_HASH');
    const header=await rpc('chain_getHeader',[finalizedHash]);
@@ -43,7 +45,7 @@ export async function waitForLocalTip({node,indexer,deadlineMs,fetchImpl=globalT
    check(await rpc('chain_getBlockHash',[block.height])==='0x'+block.hash,'TIP_CHAIN_MISMATCH');
    if(exactFinality)check(block.height===finalizedHeight&&'0x'+block.hash===finalizedHash,'TIP_EXACT_FINALITY');
    const checkedAt=Date.now();check(checkedAt<stop&&timestampMs<=checkedAt&&checkedAt-timestampMs<=60000,'TIP_STALE');
-   return {schema:'moriarty.local-tip-readiness/1',height:block.height,hash:block.hash,timestampMs,finalizedHeight,finalizedHash,checkedAt,status:'READY',scope:'Recent indexed canonical block near finalized head; not transaction finality or consensus validity'};
+   return {schema:preview?'moriarty.preview-tip-readiness/1':'moriarty.local-tip-readiness/1',height:block.height,hash:block.hash,timestampMs,finalizedHeight,finalizedHash,checkedAt,status:'READY',scope:'Recent indexed canonical block near finalized head; not transaction finality or consensus validity'};
   }catch{/* Only read-only readiness probes repeat; wallet operations never retry. */}
   if(Date.now()<stop)await new Promise(resolve=>setTimeout(resolve,Math.min(1000,stop-Date.now())));
  }

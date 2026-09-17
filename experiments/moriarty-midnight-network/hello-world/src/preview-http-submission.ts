@@ -1,4 +1,4 @@
-import { ApiPromise, HttpProvider } from '@polkadot/api';
+import { ApiPromise, HttpProvider, WsProvider } from '@polkadot/api';
 import type { FinalizedTransaction } from '@midnight-ntwrk/midnight-js-protocol/ledger';
 import type { SubmissionService, SubmissionEvent, SubmitTransactionMethod } from '@midnight-ntwrk/wallet-sdk/capabilities/submission';
 import type { NetworkConfig } from './network';
@@ -18,17 +18,22 @@ export interface PreviewHttpTransport {
   close(): Promise<void>;
 }
 
-function transport(): PreviewHttpTransport {
-  const provider = new HttpProvider(NODE);
+function transport(mode: 'http' | 'ws' = 'http'): PreviewHttpTransport {
+  const provider = mode === 'ws' ? new WsProvider('wss://rpc.preview.midnight.network/', false) : new HttpProvider(NODE);
+  // Keep one WS connection for metadata and submission; never reconnect or replay.
+  const connected = provider instanceof WsProvider ? provider.connect().then(() => provider.isReady) : Promise.resolve();
+  void connected.catch(() => {});
   let api: ApiPromise | undefined;
   return {
     async submit(bytes, signal) {
+      await connected;
+      signal.throwIfAborted();
       api = new ApiPromise({ provider });
       await api.isReadyOrError;
       signal.throwIfAborted();
       return (await api.tx.midnight.sendMnTransaction('0x' + Buffer.from(bytes).toString('hex')).send()).toHex();
     },
-    rpc: (method, params) => provider.send(method, params),
+    rpc: async (method, params) => { await connected; return provider.send(method, params); },
     async query(identifier, signal) {
       const response = await fetch(INDEXER, {
         method: 'POST', redirect: 'error', signal,
@@ -47,13 +52,14 @@ function transport(): PreviewHttpTransport {
 /** Opt-in repair for Preview HTTP submission. Pool acceptance alone is never finality. */
 export function previewHttpSubmissionService(
   config: NetworkConfig,
-  options: { timeoutMs?: number; pollMs?: number; transport?: () => PreviewHttpTransport } = {},
+  options: { timeoutMs?: number; pollMs?: number; transport?: () => PreviewHttpTransport; mode?: 'http' | 'ws' } = {},
 ): SubmissionService<FinalizedTransaction> {
   if (config.networkId !== 'preview' || config.node.replace(/\/$/, '') !== NODE || config.indexer !== INDEXER) {
     throw Error('PREVIEW_HTTP_NETWORK');
   }
   const timeoutMs = options.timeoutMs ?? 180_000;
   const pollMs = options.pollMs ?? 2_000;
+  if (options.mode !== undefined && !['http', 'ws'].includes(options.mode)) throw Error('PREVIEW_HTTP_TRANSPORT');
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 600_000 ||
       !Number.isSafeInteger(pollMs) || pollMs < 1 || pollMs > 10_000) throw Error('PREVIEW_HTTP_BOUNDS');
   const active = new Set<AbortController>();
@@ -74,7 +80,7 @@ export function previewHttpSubmissionService(
       if (!identifiers.length || !identifiers.every(id => /^(?:[0-9a-f]{64}|[0-9a-f]{66})$/.test(id))) throw Error('PREVIEW_HTTP_IDENTITY');
       const transactionHash = hash(transaction.transactionHash());
       const tx = transaction.serialize() as SubmissionEvent['tx'];
-      channel = (options.transport ?? transport)();
+      channel = options.transport ? options.transport() : transport(options.mode);
       if (await within(channel.rpc('system_chain', [])) !== 'Midnight Preview') throw Error('PREVIEW_HTTP_NETWORK');
       const txHash = '0x' + hash(await within(channel.submit(tx, controller.signal)));
       if (waitFor === 'Submitted') return { _tag: 'Submitted', tx, txHash };
@@ -122,6 +128,6 @@ export function previewHttpSubmissionService(
 
 export function previewSubmissionFactory(config: NetworkConfig, selection = process.env.MIDNIGHT_SUBMISSION_TRANSPORT) {
   if (selection === undefined || selection === '' || selection === 'default') return undefined;
-  if (selection !== 'preview-http') throw Error('Unsupported MIDNIGHT_SUBMISSION_TRANSPORT');
-  return () => previewHttpSubmissionService(config);
+  if (!['preview-http', 'preview-ws'].includes(selection)) throw Error('Unsupported MIDNIGHT_SUBMISSION_TRANSPORT');
+  return () => previewHttpSubmissionService(config, { mode: selection === 'preview-ws' ? 'ws' : 'http' });
 }
