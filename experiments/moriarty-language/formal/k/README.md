@@ -12,13 +12,17 @@ action and compares complete state, effects, work and rejection envelopes.
 The 38 acceptance criteria use 36 lifecycle fixture groups, expression metadata
 controls and offline comparator-corruption controls. They are not 38 native
 lifecycle tests. See the [execution record](../../../../deliverables/k-lifecycle-execution-2026-09-17/RESULT.md)
-for provenance, failures, review status and limitations. These finite runs do not
+for provenance, failures and limitations. Fresh Astra and Grok audits approved
+the recorded native conformance results; Grok's terminal usage reports
+`grok-4.6-build`. These finite runs do not
 prove correspondence or establish Preview settlement.
 
 `run.py --suite expression-v1` owns the expression compiler and trace commands.
 `run.py --suite lifecycle-v1 traces --fixture PATH --attempt NAME` executes an
 already compiled, source-bound lifecycle definition. Native dispatch requires the
-recorded resource allocation; both soft and hard stack limits are 64 MiB. The
+recorded resource allocation, which requires 64 MiB soft and hard stack limits.
+The final lifecycle run lacks a retained service-properties capture; its complete
+native outputs and zero exits are retained. The
 current compiled directories are local build products, not portable artifacts.
 
 ## Offline lifecycle corpus prerequisite

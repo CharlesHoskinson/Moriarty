@@ -12,9 +12,12 @@ The 38 required acceptance criteria comprise 36 criteria represented by lifecycl
 - [Lifecycle completion log](lifecycle104-02.stdout): 104 matches.
 - [Direct Unicode counter results](unicode-counter-result04.json): six matches, exit zero, including accented text, three-byte characters, astral scalars, escapes and the maximum scalar.
 - [Independent Astra audit](astra-final-audit01.json): all 229 raw case outputs independently decoded, inputs reconstructed with actual predecessor results, 436 installed toolchain file hashes and 1,142 compiled artifact hashes checked. No blocking findings within native conformance scope.
+- [Independent Grok audit](grok-final-review02/review.json): approved the same native conformance scope with no findings. The [terminal receipt](grok-final-review02/receipt.json) records `end_turn` and the returned usage identity `grok-4.6-build`; the reviewer described itself as `grok-4.6`.
 - `native-captures/` retains compressed original commands, inputs, outputs, results and bindings, with an original-path digest manifest. Compiled binaries remain local; their recorded hashes do not imply portability to another host.
 
-The first independent Grok final audit reached its 1,200-second caller limit without a final verdict; its [attempt record](grok-final-attempt01.json) preserves that failure and unknown usage. The existing review session is being continued with streaming observation and bounded output, without replaying native cases. Native observations above are completed results; final joint review remains separate until its verdict is retained.
+The first independent Grok final audit reached its 1,200-second caller limit without a final verdict; its [attempt record](grok-final-attempt01.json) preserves that failure and unknown usage. Continuing that review session with streaming observation produced the retained approval without replaying native cases. Both independent audits now approve the finite native conformance results. Published review material contains only public text and whitelisted terminal metadata.
+
+Grok did not rerun the reported 910 language tests or find their TAP capture in this result directory. It also found no service-properties capture for the final 104-case lifecycle run: that run's zero exits and outputs are retained, while the 64 MiB stack setting is recorded in the allocation and separately captured for expression execution and diagnosis. These limits remain distinct from the verified native results.
 
 ## Preserved failures and repairs
 
