@@ -1,0 +1,29 @@
+{
+  "text": "I'll audit the branch-cleanup plan as a read-only reviewer: first the repo guidance and the plan itself, then local git refs, ancestry, and race/collision checks without changing anything.Next I\u2019ll take a read-only snapshot: guarded CLI status, live refs, tag collisions, ancestry, and the untracked corpus file.CLI status is in. I\u2019ll inspect live refs, tags, ancestry, and the untracked corpus next\u2014no private files, no writes.Local refs match the retain list so far. Next I\u2019ll verify live remote tips, ancestry, tag collisions, and open PRs without fetching or writing.```json\n{\n  \"verdict\": \"APPROVED\",\n  \"model\": \"grok-4.6\",\n  \"effort\": \"high\",\n  \"role\": \"auditor\",\n  \"product_acceptance\": false,\n  \"candidate\": \"/tmp/moriarty-branch-cleanup-20260917/plan.json\",\n  \"plan_observed_at\": \"2026-09-17T14:30:37.069269+00:00\",\n  \"findings\": [\n    {\n      \"id\": \"F1\",\n      \"severity\": \"pass\",\n      \"summary\": \"Live origin still matches the freeze: 29 heads (28 retire + main), exact SHAs, no extras, no planned archive tags present.\"\n    },\n    {\n      \"id\": \"F2\",\n      \"severity\": \"pass\",\n      \"summary\": \"All 28 plan tips exist locally as commits; 17 are ancestors of main; 11 are not. merged_into_main matches ancestry. Unique SHAs, unique tag names, no tag prefix collisions with each other or archive/pre-cleanup-2026-09-07.\"\n    },\n    {\n      \"id\": \"F3\",\n      \"severity\": \"pass\",\n      \"summary\": \"Retain set is correct and disjoint from deletes. HEAD is feat/lifecycle-corpus-delivery at main 26074698c89fdc183b6b12e819d043cc6da96696. Delivery branch is local-only (not on origin). Untracked experiments/moriarty-language/formal/k/lifecycle-corpus.mjs is present and would be untouched by tag/push/delete.\"\n    },\n    {\n      \"id\": \"F4\",\n      \"severity\": \"pass\",\n      \"summary\": \"No open PRs, no GitHub rulesets, main unprotected but is the default branch and is not in the delete set. No extra worktrees, stashes, hooks, or non head/tag refs.\"\n    },\n    {\n      \"id\": \"F5\",\n      \"severity\": \"info\",\n      \"summary\": \"11 unmerged tips contain 33 commits not reachable from main. Archive-tag push and SHA verify must complete before any delete; that is already the stated order.\"\n    },\n    {\n      \"id\": \"F6\",\n      \"severity\": \"info\",\n      \"summary\": \"Required execution controls already implied by the policy, not plan defects: re-ls-remote immediately before each mutating push; create only leaf tags archive/2026-09-17/<full-branch-name> (never parent tag archive/2026-09-17); no --force, no +refspec; explicit --force-with-lease=refs/heads/<name>:<full-sha> on every delete; --atomic for tag push and for the frozen-delete set; if any lease fails, stop and re-snapshot; later cleanup-record commit must not add lifecycle-corpus.mjs and must not checkout -f / git clean.\"\n    }\n  ],\n  \"scope\": {\n    \"repository\": \"CharlesHoskinson/Moriarty\",\n    \"checkout\": \"/home/charl/Moriarty\",\n    \"remote\": \"https://github.com/CharlesHoskinson/Moriarty.git\",\n    \"main_sha\": \"26074698c89fdc183b6b12e819d043cc6da96696\",\n    \"retain\": [\"main\", \"feat/lifecycle-corpus-delivery\"],\n    \"retire_count\": 28,\n    \"unmerged_count\": 11,\n    \"open_prs\": [],\n    \"pending_transactions\": [],\n    \"cli_status\": {\n      \"capability\": \"SP01.6 loan-swap-subset\",\n      \"nextAction\": \"sp01-loan-report\",\n      \"blockedAction\": \"implementation/repair of loan-swap-subset\"\n    },\n    \"reviewed\": \"Branch-ref archive/delete plan only. No implementation, no git mutation, no campaign dispatch.\",\n    \"method\": [\n      \"Read AGENTS.md and plugins/moriarty-dev/skills/develop/SKILL.md\",\n      \"python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json\",\n      \"Read plan.json\",\n      \"Read-only git show-ref, worktree, merge-base, cat-file, check-ref-format, ls-remote, gh pr/ruleset/protection\"\n    ]\n  },\n  \"limitations\": [\n    \"Read-only audit; no fetch, checkout, tag, push, delete, or credential access. Live heads/tags from git ls-remote and gh, not a refreshed remote-tracking pack.\",\n    \"Did not read /tmp/moriarty-branch-cleanup-20260917/grok-private.json or other private session logs.\",\n    \"GitHub atomic advertisement was not probed with a receive-pack handshake; git push --atomic is fail-closed if the server refuses it.\",\n    \"force-with-lease still has a TOCTOU window after ls-remote; explicit SHA leases reject moved tips rather than lock them.\",\n    \"No product, proof, or financial acceptance is implied. This is not authorization to resume delivery work.\"\n  ]\n}\n```",
+  "stopReason": "end_turn",
+  "sessionId": "01a0afc7-4d71-7250-b19c-4e72dec09f50",
+  "requestId": "d2837686-f488-40b2-b23c-aad4e5b93ad8",
+  "usage": {
+    "input_tokens": 122297,
+    "cache_read_input_tokens": 155520,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 21991,
+    "reasoning_tokens": 16793,
+    "total_tokens": 299808
+  },
+  "num_turns": 7,
+  "total_cost_usd": 0.154462,
+  "modelUsage": {
+    "grok-4.6-build": {
+      "inputTokens": 122297,
+      "outputTokens": 21991,
+      "cacheReadInputTokens": 155520,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 7,
+      "costUSD": 0.154462
+    }
+  },
+  "requested_model": "grok-4.6",
+  "requested_effort": "high",
+  "plan_sha256": "e59d3c825f5a3d1d08f4593c6546c5cfa8d38429e6d055ea1278349598782a7f"
+}

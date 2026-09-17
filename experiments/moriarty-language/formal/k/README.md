@@ -1,5 +1,49 @@
 # Bounded funded financial semantics in K
 
+## Offline lifecycle corpus prerequisite
+
+From the repository root, run:
+
+```sh
+npm --prefix experiments/moriarty-language run lifecycle-corpus
+node --test experiments/moriarty-language/tests/lifecycle-k-corpus.test.mjs
+```
+
+`lifecycle-corpus.mjs` checks and elaborates the frozen `loan-lifecycle.mori`,
+then executes its four actions through Source `/5` and Core `/4`. Each evaluator
+consumes its own previous ordinary state, financial state and remaining work.
+Complete results are compared with the independent
+[financial templates](../../../../deliverables/language-to-ledger-2026-09-12/design-review/lifecycle-source-expectations.json)
+and [source-specific work counts](../../../../deliverables/language-to-ledger-2026-09-12/lifecycle/root-work-expectations.json)
+in the current checkout. Both files are required. The source hash must match
+the work oracle. Costs are 99/65/88/86, leaving 413/348/260/174 work from seed 512;
+spent work is 116/181/269/355 and the closure reserve stays 16.
+
+The bounded negative subset covers duplicate accrual, a repeated period with a
+fresh identity, time 1059 before the 1060 boundary, an incurred liability cap after
+partial repayment, insufficient repayment funding, the settled-source guard,
+a false final Ensure, a malformed unrelated allowance, and mismatched work.
+Every rejection compares complete Source/Core envelopes with independently
+specified diagnostics, checks that no state/effects are published, checks unchanged
+inputs and repeats the rejected call. Eight cases also repeat a valid continuation
+from the accepted predecessor. The settled-source guard has no valid continuation
+in this source. The early-period and funding cases reuse their failed identities;
+the final Ensure failure uses 86 diagnostic work and commits no debit.
+
+The JSON report retains complete inputs, results, independent expectations and
+comparison failures. A failed check, elaboration, incomplete run, missing evidence
+or mismatch exits nonzero. The structural comparator detects missing/extra own
+keys (including `undefined`), types, debt-component changes, allowances, work,
+effects and array order. Mutation tests exercise the comparator and the CLI.
+
+This is a Task4 prerequisite with `kExecuted: false` and
+`kStatus: "not-executed"` on every report. It does not invoke or admit K, reproduce
+the retained backend failure, implement a Core-to-K loader, cover the full planned
+failure matrix, or establish correspondence, proof or ledger acceptance. The K
+work and admission requirements below remain open for this lifecycle.
+
+## Existing bounded K definition
+
 The current definition supports one Transfer, optionally followed by one Repay,
 with AccrualFirst, PrincipalFirst or ProRata allocation and explicit none/floor/ceil
 conversion rounding. [Numeric execution evidence](../../../../deliverables/numeric-k-2026-09-09/README.md)
