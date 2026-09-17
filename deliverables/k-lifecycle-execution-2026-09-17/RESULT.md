@@ -14,7 +14,7 @@ The 38 required acceptance criteria comprise 36 criteria represented by lifecycl
 - [Independent Astra audit](astra-final-audit01.json): all 229 raw case outputs independently decoded, inputs reconstructed with actual predecessor results, 436 installed toolchain file hashes and 1,142 compiled artifact hashes checked. No blocking findings within native conformance scope.
 - `native-captures/` retains compressed original commands, inputs, outputs, results and bindings, with an original-path digest manifest. Compiled binaries remain local; their recorded hashes do not imply portability to another host.
 
-The independent Grok final audit is still running. Native observations above are completed results; final joint review remains separate until its verdict is retained.
+The first independent Grok final audit reached its 1,200-second caller limit without a final verdict; its [attempt record](grok-final-attempt01.json) preserves that failure and unknown usage. The existing review session is being continued with streaming observation and bounded output, without replaying native cases. Native observations above are completed results; final joint review remains separate until its verdict is retained.
 
 ## Preserved failures and repairs
 
