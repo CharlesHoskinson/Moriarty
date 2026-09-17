@@ -1,0 +1,103 @@
+{
+  "source_commit": "55011b8f8f8d69ca5ba78dc65e87baab5ee72c1c",
+  "scope": "byte-identical historical expression source restoration; offline transport check only",
+  "files": [
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-json.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-json.k",
+      "sha256": "c5fdff903f8a1a77bba3dd3efd0cf2237946fc2fdd5c9ac6a71064fa0124603d",
+      "bytes": 4341
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-wire.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-wire.k",
+      "sha256": "185edc656aa1274a294b1ae43a5e0bbf1b2e6bfb4c7f2ed008f80b97bdf329a4",
+      "bytes": 5427
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-types.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-types.k",
+      "sha256": "4605ac6d1a61577fa87afe5960cf94ca3355ea356a149bfb3f1c8efef63ce0f8",
+      "bytes": 6115
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-schema.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-schema.k",
+      "sha256": "90d20d8d68553143d8b176eded6f495d0332c02cd54561444bdb49ae2edbd7e7",
+      "bytes": 9918
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-values.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-values.k",
+      "sha256": "000b3cfff2be4dff5022afd90124a8588f6fa385a79682a36c84f319bd656324",
+      "bytes": 6284
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-shape.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-shape.k",
+      "sha256": "c674849782225098b72dd854c29df1150b21095aa2bfec6851c71d6b6ae6fd2d",
+      "bytes": 13919
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-infer.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-infer.k",
+      "sha256": "7d0540650704292bf4b1b36e3f065fb08815a35e69fdc9d446978f7de50f687c",
+      "bytes": 16212
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-v1.k",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-v1.k",
+      "sha256": "3fe9fc182bd718f82f94851d7333fe3b5a365783f7b9271ebf6cd525c4440d28",
+      "bytes": 19640
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression_codec.py",
+      "historical_path": "experiments/moriarty-language/formal/k/expression_codec.py",
+      "sha256": "9d8f32cfa778e246900873aa5c015b45ab1ae8bec067fb26709f4a2e2996590d",
+      "bytes": 12177
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-parser.py",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-parser.py",
+      "sha256": "8420d151ea9e510b96fc941e73f496b27d53e1e1913e3d270b8ce4f4c0701f1f",
+      "bytes": 561
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/fixtures/expression-v1.json",
+      "historical_path": "experiments/moriarty-language/formal/k/fixtures/expression-v1.json",
+      "sha256": "f0a81ffffe56b8f757a58b18c3a711c9706ba4d107f46c5707b00d61e0ef4cba",
+      "bytes": 367487
+    },
+    {
+      "path": "experiments/moriarty-language/formal/k/expression-toolchain.historical.lock.json",
+      "historical_path": "experiments/moriarty-language/formal/k/expression-toolchain.lock.json",
+      "sha256": "c0c842ce548d6d5e44c41913660edf400757cf28bedc030379d66ffb1409a2f7",
+      "bytes": 1014
+    }
+  ],
+  "input_check": {
+    "case": "metadata-depth-5947",
+    "fixture_case_index": 105,
+    "fixture_case_count": 113,
+    "bytes": 3278570,
+    "sha256": "6c29dc49a828956f5056605b672b519a515129383c7dd46b0dc34bba174c3c1b",
+    "matches_recovered_input": true,
+    "codec_encode_decode_roundtrip": true,
+    "core_bytes": 65536,
+    "core_json_depth": 5951,
+    "core_json_nodes": 11903
+  },
+  "limitations": [
+    "Native K was not run or compiled.",
+    "No crash reproduction or fix is established.",
+    "Original compiled artifact is unavailable.",
+    "expression-toolchain.lock.json is absent; restored parser references it. Historical lock retained separately.",
+    "Existing run.py has no expression suite."
+  ],
+  "source_findings": [
+    "Python codec parsing, encoding, serialization and result tree decoding already use explicit stacks.",
+    "KAST representation remains deeply nested, and parser execs kast JSON-to-KORE.",
+    "exJValid/exJListValid and exJsonBytes/exListBytes recursively traverse deep metadata before execution; exTypeShape and exResolve recursively traverse Option type metadata."
+  ],
+  "transport_proposal": "After localizing the native crash, consider an iterative closed-vocabulary KAST-to-KORE serializer at the parser boundary to remove Java recursive JSON/tree conversion without host semantic decisions. Preserve all original metadata and exact result binding. This alone does not establish stack safety of LLVM KORE loading, K functions, or output serialization. A general fix requires explicit-stack traversal at the failing native boundary and continuation-based K metadata validation/byte counting if those are implicated; do not narrow metadata bounds or claim an unexecuted fix."
+}

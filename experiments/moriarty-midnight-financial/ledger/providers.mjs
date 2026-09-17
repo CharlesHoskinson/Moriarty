@@ -3,7 +3,10 @@ import {createHash, randomUUID} from 'node:crypto';
 import {join, isAbsolute, dirname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
-export const PINNED_NM = '/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
+// Configure installations without the historical worktree; the same SDK byte
+// and version checks below still apply to the selected directory.
+export const PINNED_NM = process.env.MORIARTY_MIDNIGHT_NODE_MODULES ?? '/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules';
+if (!isAbsolute(PINNED_NM)) throw Error('financial SDK directory must be absolute');
 // Direct provider entry bytes are pinned; this is not a transitive supply-chain attestation.
 const PINS = {
   "midnight-js-network-id": {"version": "4.1.1", "entry": "dist/index.mjs", "sha256": "c4c035dc49196098de80ec81b42a27632901da60f3e2a0bafa1876847f2db503"},

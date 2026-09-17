@@ -1,0 +1,1084 @@
+[
+  {
+    "id": "chain-originate",
+    "requirementIds": [],
+    "packet": {
+      "schema": "{\"args\":{\"originationId\":[\"Text\"],\"transferId\":[\"Text\"]},\"assets\":[\"Cash\"],\"enumTypes\":{},\"fields\":{\"paid\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"},\"phase\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"}},\"observations\":{},\"operations\":{\"Accrue\":\"AccrueFields\",\"Originate\":\"OriginateFields\",\"Repay\":\"RepayFields\",\"Transfer\":\"TransferFields\"},\"parties\":[],\"recordTypes\":{\"AccrualTermsFields\":{\"denominator\":[\"UInt128\"],\"firstPeriodStart\":[\"UInt64\"],\"numerator\":[\"UInt128\"],\"periodSeconds\":[\"UInt64\"],\"rounding\":[\"Text\"]},\"AccrueFields\":{\"accrualId\":[\"Text\"],\"obligationId\":[\"Text\"],\"observedTime\":[\"UInt64\"],\"periodIndex\":[\"UInt64\"]},\"ConversionFields\":{\"mantissa\":[\"UInt128\"],\"rounding\":[\"Text\"],\"scale\":[\"UInt128\"]},\"OriginateFields\":{\"accrualTerms\":[\"Record\",\"AccrualTermsFields\"],\"allocationRule\":[\"Text\"],\"conversion\":[\"Record\",\"ConversionFields\"],\"creditor\":[\"Text\"],\"debtor\":[\"Text\"],\"denomination\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"nominalLiabilityCap\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"originationId\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"transferId\":[\"Text\"]},\"RepayFields\":{\"allocationId\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"payer\":[\"Text\"],\"transferId\":[\"Text\"]},\"TransferFields\":{\"from\":[\"Text\"],\"id\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"to\":[\"Text\"],\"transferAmount\":[\"Amount\",\"Cash\"]}},\"units\":[\"Cash\"],\"variantTypes\":{},\"vaults\":[]}",
+      "request": "{\"Args\":{\"originationId\":\"O1\",\"transferId\":\"D1\"},\"Obs\":{},\"Pre\":{\"paid\":\"0\",\"phase\":\"0\"},\"contract\":\"moriarty-financial-expression-contract/4\",\"core\":{\"span\":{\"end\":\"3056\",\"kind\":\"source\",\"start\":\"1380\"},\"statements\":[{\"constructor\":\"Let\",\"operands\":{\"name\":\"nominal\",\"value\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"100\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"1486\",\"kind\":\"source\",\"start\":\"1456\"}}},\"span\":{\"end\":\"1487\",\"kind\":\"source\",\"start\":\"1442\"}},{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"phase\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"1514\",\"kind\":\"source\",\"start\":\"1505\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"1518\",\"kind\":\"source\",\"start\":\"1517\"}}},\"span\":{\"end\":\"1518\",\"kind\":\"source\",\"start\":\"1505\"}}},\"span\":{\"end\":\"1519\",\"kind\":\"source\",\"start\":\"1492\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"id\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"1560\",\"kind\":\"source\",\"start\":\"1550\"}}},{\"name\":\"from\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"1582\",\"kind\":\"source\",\"start\":\"1574\"}}},{\"name\":\"to\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"1604\",\"kind\":\"source\",\"start\":\"1594\"}}},{\"name\":\"settlementAsset\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Cash\"},\"span\":{\"end\":\"1635\",\"kind\":\"source\",\"start\":\"1629\"}}},{\"name\":\"transferAmount\",\"value\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"100\",\"width\":\"128\"},\"span\":{\"end\":\"1675\",\"kind\":\"source\",\"start\":\"1672\"}}},\"span\":{\"end\":\"1676\",\"kind\":\"source\",\"start\":\"1659\"}}}],\"recordType\":\"TransferFields\"},\"span\":{\"end\":\"1683\",\"kind\":\"source\",\"start\":\"1524\"}},\"operation\":\"Transfer\"},\"span\":{\"end\":\"1683\",\"kind\":\"source\",\"start\":\"1524\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"obligationId\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"1732\",\"kind\":\"source\",\"start\":\"1725\"}}},{\"name\":\"transferId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"1762\",\"kind\":\"source\",\"start\":\"1752\"}}},{\"name\":\"originationId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"originationId\"},\"span\":{\"end\":\"1798\",\"kind\":\"source\",\"start\":\"1785\"}}},{\"name\":\"debtor\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"1824\",\"kind\":\"source\",\"start\":\"1814\"}}},{\"name\":\"creditor\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"1850\",\"kind\":\"source\",\"start\":\"1842\"}}},{\"name\":\"nominalAmount\",\"value\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"nominal\"},\"span\":{\"end\":\"1880\",\"kind\":\"source\",\"start\":\"1873\"}}},{\"name\":\"denomination\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Cash\"},\"span\":{\"end\":\"1908\",\"kind\":\"source\",\"start\":\"1902\"}}},{\"name\":\"settlementAsset\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Cash\"},\"span\":{\"end\":\"1939\",\"kind\":\"source\",\"start\":\"1933\"}}},{\"name\":\"conversion\",\"value\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"mantissa\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"1996\",\"kind\":\"source\",\"start\":\"1995\"}}},{\"name\":\"scale\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"2006\",\"kind\":\"source\",\"start\":\"2005\"}}},{\"name\":\"rounding\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"none\"},\"span\":{\"end\":\"2024\",\"kind\":\"source\",\"start\":\"2018\"}}}],\"recordType\":\"ConversionFields\"},\"span\":{\"end\":\"2026\",\"kind\":\"source\",\"start\":\"1959\"}}},{\"name\":\"allocationRule\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"AccrualFirst\"},\"span\":{\"end\":\"2064\",\"kind\":\"source\",\"start\":\"2050\"}}},{\"name\":\"accrualTerms\",\"value\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"numerator\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"2134\",\"kind\":\"source\",\"start\":\"2133\"}}},{\"name\":\"denominator\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"10\",\"width\":\"128\"},\"span\":{\"end\":\"2159\",\"kind\":\"source\",\"start\":\"2157\"}}},{\"name\":\"rounding\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"floor\"},\"span\":{\"end\":\"2186\",\"kind\":\"source\",\"start\":\"2179\"}}},{\"name\":\"periodSeconds\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"60\",\"width\":\"64\"},\"span\":{\"end\":\"2218\",\"kind\":\"source\",\"start\":\"2211\"}}},{\"name\":\"firstPeriodStart\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1000\",\"width\":\"64\"},\"span\":{\"end\":\"2255\",\"kind\":\"source\",\"start\":\"2246\"}}}],\"recordType\":\"AccrualTermsFields\"},\"span\":{\"end\":\"2263\",\"kind\":\"source\",\"start\":\"2086\"}}},{\"name\":\"nominalLiabilityCap\",\"value\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"110\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"2322\",\"kind\":\"source\",\"start\":\"2292\"}}}],\"recordType\":\"OriginateFields\"},\"span\":{\"end\":\"2329\",\"kind\":\"source\",\"start\":\"1688\"}},\"operation\":\"Originate\"},\"span\":{\"end\":\"2329\",\"kind\":\"source\",\"start\":\"1688\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"post\"},\"span\":{\"end\":\"2352\",\"kind\":\"source\",\"start\":\"2342\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"2365\",\"kind\":\"source\",\"start\":\"2356\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"2369\",\"kind\":\"source\",\"start\":\"2368\"}}},\"span\":{\"end\":\"2369\",\"kind\":\"source\",\"start\":\"2356\"}}},\"span\":{\"end\":\"2369\",\"kind\":\"source\",\"start\":\"2342\"}}},\"span\":{\"end\":\"2370\",\"kind\":\"source\",\"start\":\"2334\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"post\"},\"span\":{\"end\":\"2392\",\"kind\":\"source\",\"start\":\"2383\"}},\"right\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"2404\",\"kind\":\"source\",\"start\":\"2396\"}}},\"span\":{\"end\":\"2404\",\"kind\":\"source\",\"start\":\"2383\"}}},\"span\":{\"end\":\"2405\",\"kind\":\"source\",\"start\":\"2375\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostPrincipal\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"2446\",\"kind\":\"source\",\"start\":\"2439\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"2447\",\"kind\":\"source\",\"start\":\"2418\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"100\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"2481\",\"kind\":\"source\",\"start\":\"2451\"}}},\"span\":{\"end\":\"2481\",\"kind\":\"source\",\"start\":\"2418\"}}},\"span\":{\"end\":\"2482\",\"kind\":\"source\",\"start\":\"2410\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAccrued\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"2521\",\"kind\":\"source\",\"start\":\"2514\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"2522\",\"kind\":\"source\",\"start\":\"2495\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"0\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"2554\",\"kind\":\"source\",\"start\":\"2526\"}}},\"span\":{\"end\":\"2554\",\"kind\":\"source\",\"start\":\"2495\"}}},\"span\":{\"end\":\"2555\",\"kind\":\"source\",\"start\":\"2487\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"2598\",\"kind\":\"source\",\"start\":\"2591\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"2599\",\"kind\":\"source\",\"start\":\"2568\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"100\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"2633\",\"kind\":\"source\",\"start\":\"2603\"}}},\"span\":{\"end\":\"2633\",\"kind\":\"source\",\"start\":\"2568\"}}},\"span\":{\"end\":\"2634\",\"kind\":\"source\",\"start\":\"2560\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"2674\",\"kind\":\"source\",\"start\":\"2666\"}}},\"span\":{\"end\":\"2675\",\"kind\":\"source\",\"start\":\"2647\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"2693\",\"kind\":\"source\",\"start\":\"2692\"}}},\"span\":{\"end\":\"2694\",\"kind\":\"source\",\"start\":\"2679\"}}},\"span\":{\"end\":\"2694\",\"kind\":\"source\",\"start\":\"2647\"}}},\"span\":{\"end\":\"2695\",\"kind\":\"source\",\"start\":\"2639\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"2737\",\"kind\":\"source\",\"start\":\"2727\"}}},\"span\":{\"end\":\"2738\",\"kind\":\"source\",\"start\":\"2708\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"110\",\"width\":\"128\"},\"span\":{\"end\":\"2758\",\"kind\":\"source\",\"start\":\"2755\"}}},\"span\":{\"end\":\"2759\",\"kind\":\"source\",\"start\":\"2742\"}}},\"span\":{\"end\":\"2759\",\"kind\":\"source\",\"start\":\"2708\"}}},\"span\":{\"end\":\"2760\",\"kind\":\"source\",\"start\":\"2700\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceRemaining\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"2812\",\"kind\":\"source\",\"start\":\"2804\"}}},\"span\":{\"end\":\"2813\",\"kind\":\"source\",\"start\":\"2773\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"2831\",\"kind\":\"source\",\"start\":\"2830\"}}},\"span\":{\"end\":\"2832\",\"kind\":\"source\",\"start\":\"2817\"}}},\"span\":{\"end\":\"2832\",\"kind\":\"source\",\"start\":\"2773\"}}},\"span\":{\"end\":\"2833\",\"kind\":\"source\",\"start\":\"2765\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceSpent\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"2881\",\"kind\":\"source\",\"start\":\"2873\"}}},\"span\":{\"end\":\"2882\",\"kind\":\"source\",\"start\":\"2846\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"100\",\"width\":\"128\"},\"span\":{\"end\":\"2902\",\"kind\":\"source\",\"start\":\"2899\"}}},\"span\":{\"end\":\"2903\",\"kind\":\"source\",\"start\":\"2886\"}}},\"span\":{\"end\":\"2903\",\"kind\":\"source\",\"start\":\"2846\"}}},\"span\":{\"end\":\"2904\",\"kind\":\"source\",\"start\":\"2838\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceRemaining\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"2958\",\"kind\":\"source\",\"start\":\"2948\"}}},\"span\":{\"end\":\"2959\",\"kind\":\"source\",\"start\":\"2917\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"110\",\"width\":\"128\"},\"span\":{\"end\":\"2979\",\"kind\":\"source\",\"start\":\"2976\"}}},\"span\":{\"end\":\"2980\",\"kind\":\"source\",\"start\":\"2963\"}}},\"span\":{\"end\":\"2980\",\"kind\":\"source\",\"start\":\"2917\"}}},\"span\":{\"end\":\"2981\",\"kind\":\"source\",\"start\":\"2909\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceSpent\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"3031\",\"kind\":\"source\",\"start\":\"3021\"}}},\"span\":{\"end\":\"3032\",\"kind\":\"source\",\"start\":\"2994\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"3050\",\"kind\":\"source\",\"start\":\"3049\"}}},\"span\":{\"end\":\"3051\",\"kind\":\"source\",\"start\":\"3036\"}}},\"span\":{\"end\":\"3051\",\"kind\":\"source\",\"start\":\"2994\"}}},\"span\":{\"end\":\"3052\",\"kind\":\"source\",\"start\":\"2986\"}}]},\"source\":\"profile \\\"moriarty-financial-agreement-source/5\\\";\\nagreement LifecycleLoan {\\n  unit Cash;\\n  asset Cash: Asset;\\n  record TransferFields {\\n    id: Text;\\n    from: Text;\\n    to: Text;\\n    settlementAsset: Text;\\n    transferAmount: Amount<Cash>;\\n  }\\n  record RepayFields {\\n    allocationId: Text;\\n    transferId: Text;\\n    obligationId: Text;\\n    payer: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n  }\\n  record ConversionFields {\\n    mantissa: UInt128;\\n    scale: UInt128;\\n    rounding: Text;\\n  }\\n  record AccrualTermsFields {\\n    numerator: UInt128;\\n    denominator: UInt128;\\n    rounding: Text;\\n    periodSeconds: UInt64;\\n    firstPeriodStart: UInt64;\\n  }\\n  record OriginateFields {\\n    obligationId: Text;\\n    transferId: Text;\\n    originationId: Text;\\n    debtor: Text;\\n    creditor: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n    denomination: Text;\\n    settlementAsset: Text;\\n    conversion: Record<ConversionFields>;\\n    allocationRule: Text;\\n    accrualTerms: Record<AccrualTermsFields>;\\n    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;\\n  }\\n  record AccrueFields {\\n    accrualId: Text;\\n    obligationId: Text;\\n    periodIndex: UInt64;\\n    observedTime: UInt64;\\n  }\\n  operation Transfer: TransferFields;\\n  operation Repay: RepayFields;\\n  operation Originate: OriginateFields;\\n  operation Accrue: AccrueFields;\\n  state phase: UInt128;\\n  state paid: UInt128;\\n  action originate(transferId: Text, originationId: Text) {\\n    let nominal = quantity<Units<Cash,1>,0>(100);\\n    next.phase = pre.phase + 1;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Lender\\\",\\n      to: \\\"Borrower\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(100)\\n    };\\n    emit Originate {\\n      obligationId: \\\"Loan1\\\",\\n      transferId: transferId,\\n      originationId: originationId,\\n      debtor: \\\"Borrower\\\",\\n      creditor: \\\"Lender\\\",\\n      nominalAmount: nominal,\\n      denomination: \\\"Cash\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: \\\"none\\\" },\\n      allocationRule: \\\"AccrualFirst\\\",\\n      accrualTerms: record<AccrualTermsFields>{\\n        numerator: 1,\\n        denominator: 10,\\n        rounding: \\\"floor\\\",\\n        periodSeconds: u64(60),\\n        firstPeriodStart: u64(1000)\\n      },\\n      nominalLiabilityCap: quantity<Units<Cash,1>,0>(110)\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n  }\\n  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {\\n    next.phase = pre.phase + 1;\\n    emit Accrue {\\n      accrualId: accrualId,\\n      obligationId: \\\"Loan1\\\",\\n      periodIndex: periodIndex,\\n      observedTime: observedTime\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(10);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n  }\\n  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {\\n    requires is_negative(nominal) == false;\\n    let payment = magnitude(nominal);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: nominal\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(30);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(30);\\n  }\\n  action settle(transferId: Text, allocationId: Text) {\\n    let debt = outstanding<Cash>(\\\"Loan1\\\");\\n    let payment = magnitude(debt);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: debt\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(110);\\n  }\\n}\\n\",\"workInitial\":\"512\"}",
+      "financialPreState": "{\"schemaVersion\":\"moriarty-financial-lifecycle-state/1\",\"balances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"100\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"amount\":\"10\"},{\"party\":\"Other\",\"asset\":\"Token\",\"amount\":\"7\"}],\"allowances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"remaining\":\"100\",\"spent\":\"0\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"remaining\":\"110\",\"spent\":\"0\"},{\"party\":\"Other\",\"asset\":\"Token\",\"remaining\":\"3\",\"spent\":\"1\"}],\"obligations\":[],\"usedTransferIds\":[],\"usedAllocationIds\":[],\"usedOriginationIds\":[],\"usedAccrualIds\":[],\"work\":{\"remaining\":\"512\",\"spent\":\"17\",\"closureReserve\":\"16\"}}"
+    },
+    "expected": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "phase": "1",
+        "paid": "0"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "413",
+          "spent": "116",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110",
+          "kind": "Origination",
+          "settlementAmount": "100",
+          "liabilityIncurred": "100",
+          "lastAccruedPeriod": "0",
+          "nextAccrualAt": "1060"
+        }
+      ],
+      "workRemaining": "413"
+    },
+    "derivation": "Frozen independent complete lifecycle template and hand-counted work [99,65,88,86].",
+    "observedCore": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "paid": "0",
+        "phase": "1"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "0",
+            "outstanding": "100",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "100",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "0",
+            "nextAccrualAt": "1060"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [],
+        "work": {
+          "remaining": "413",
+          "spent": "116",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "D1",
+          "from": "Lender",
+          "to": "Borrower",
+          "asset": "Cash",
+          "amount": "100"
+        },
+        {
+          "obligationId": "Loan1",
+          "transferId": "D1",
+          "originationId": "O1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "nominalAmount": "100",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "conversion": {
+            "mantissa": "1",
+            "scale": "0",
+            "rounding": "none"
+          },
+          "allocationRule": "AccrualFirst",
+          "accrualTerms": {
+            "numerator": "1",
+            "denominator": "10",
+            "rounding": "floor",
+            "periodSeconds": "60",
+            "firstPeriodStart": "1000"
+          },
+          "nominalLiabilityCap": "110",
+          "kind": "Origination",
+          "settlementAmount": "100",
+          "liabilityIncurred": "100",
+          "lastAccruedPeriod": "0",
+          "nextAccrualAt": "1060"
+        }
+      ],
+      "workRemaining": "413"
+    },
+    "expectedMatchesCore": true,
+    "differences": [],
+    "chain": {
+      "id": "loan-lifecycle",
+      "step": 0,
+      "previous": null
+    },
+    "action": "originate"
+  },
+  {
+    "id": "chain-accrue",
+    "requirementIds": [],
+    "packet": {
+      "schema": "{\"args\":{\"accrualId\":[\"Text\"],\"observedTime\":[\"UInt64\"],\"periodIndex\":[\"UInt64\"]},\"assets\":[\"Cash\"],\"enumTypes\":{},\"fields\":{\"paid\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"},\"phase\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"}},\"observations\":{},\"operations\":{\"Accrue\":\"AccrueFields\",\"Originate\":\"OriginateFields\",\"Repay\":\"RepayFields\",\"Transfer\":\"TransferFields\"},\"parties\":[],\"recordTypes\":{\"AccrualTermsFields\":{\"denominator\":[\"UInt128\"],\"firstPeriodStart\":[\"UInt64\"],\"numerator\":[\"UInt128\"],\"periodSeconds\":[\"UInt64\"],\"rounding\":[\"Text\"]},\"AccrueFields\":{\"accrualId\":[\"Text\"],\"obligationId\":[\"Text\"],\"observedTime\":[\"UInt64\"],\"periodIndex\":[\"UInt64\"]},\"ConversionFields\":{\"mantissa\":[\"UInt128\"],\"rounding\":[\"Text\"],\"scale\":[\"UInt128\"]},\"OriginateFields\":{\"accrualTerms\":[\"Record\",\"AccrualTermsFields\"],\"allocationRule\":[\"Text\"],\"conversion\":[\"Record\",\"ConversionFields\"],\"creditor\":[\"Text\"],\"debtor\":[\"Text\"],\"denomination\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"nominalLiabilityCap\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"originationId\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"transferId\":[\"Text\"]},\"RepayFields\":{\"allocationId\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"payer\":[\"Text\"],\"transferId\":[\"Text\"]},\"TransferFields\":{\"from\":[\"Text\"],\"id\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"to\":[\"Text\"],\"transferAmount\":[\"Amount\",\"Cash\"]}},\"units\":[\"Cash\"],\"variantTypes\":{},\"vaults\":[]}",
+      "request": "{\"Args\":{\"accrualId\":\"A1\",\"observedTime\":\"1060\",\"periodIndex\":\"1\"},\"Obs\":{},\"Pre\":{\"paid\":\"0\",\"phase\":\"1\"},\"contract\":\"moriarty-financial-expression-contract/4\",\"core\":{\"span\":{\"end\":\"3967\",\"kind\":\"source\",\"start\":\"3059\"},\"statements\":[{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"phase\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"3161\",\"kind\":\"source\",\"start\":\"3152\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"3165\",\"kind\":\"source\",\"start\":\"3164\"}}},\"span\":{\"end\":\"3165\",\"kind\":\"source\",\"start\":\"3152\"}}},\"span\":{\"end\":\"3166\",\"kind\":\"source\",\"start\":\"3139\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"accrualId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"accrualId\"},\"span\":{\"end\":\"3211\",\"kind\":\"source\",\"start\":\"3202\"}}},{\"name\":\"obligationId\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"3240\",\"kind\":\"source\",\"start\":\"3233\"}}},{\"name\":\"periodIndex\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"periodIndex\"},\"span\":{\"end\":\"3272\",\"kind\":\"source\",\"start\":\"3261\"}}},{\"name\":\"observedTime\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"observedTime\"},\"span\":{\"end\":\"3306\",\"kind\":\"source\",\"start\":\"3294\"}}}],\"recordType\":\"AccrueFields\"},\"span\":{\"end\":\"3313\",\"kind\":\"source\",\"start\":\"3171\"}},\"operation\":\"Accrue\"},\"span\":{\"end\":\"3313\",\"kind\":\"source\",\"start\":\"3171\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"post\"},\"span\":{\"end\":\"3336\",\"kind\":\"source\",\"start\":\"3326\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"3349\",\"kind\":\"source\",\"start\":\"3340\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"3353\",\"kind\":\"source\",\"start\":\"3352\"}}},\"span\":{\"end\":\"3353\",\"kind\":\"source\",\"start\":\"3340\"}}},\"span\":{\"end\":\"3353\",\"kind\":\"source\",\"start\":\"3326\"}}},\"span\":{\"end\":\"3354\",\"kind\":\"source\",\"start\":\"3318\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"post\"},\"span\":{\"end\":\"3376\",\"kind\":\"source\",\"start\":\"3367\"}},\"right\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"3388\",\"kind\":\"source\",\"start\":\"3380\"}}},\"span\":{\"end\":\"3388\",\"kind\":\"source\",\"start\":\"3367\"}}},\"span\":{\"end\":\"3389\",\"kind\":\"source\",\"start\":\"3359\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"3427\",\"kind\":\"source\",\"start\":\"3420\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"3428\",\"kind\":\"source\",\"start\":\"3402\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"100\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"3462\",\"kind\":\"source\",\"start\":\"3432\"}}},\"span\":{\"end\":\"3462\",\"kind\":\"source\",\"start\":\"3402\"}}},\"span\":{\"end\":\"3463\",\"kind\":\"source\",\"start\":\"3394\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostPrincipal\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"3504\",\"kind\":\"source\",\"start\":\"3497\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"3505\",\"kind\":\"source\",\"start\":\"3476\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"100\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"3539\",\"kind\":\"source\",\"start\":\"3509\"}}},\"span\":{\"end\":\"3539\",\"kind\":\"source\",\"start\":\"3476\"}}},\"span\":{\"end\":\"3540\",\"kind\":\"source\",\"start\":\"3468\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAccrued\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"3579\",\"kind\":\"source\",\"start\":\"3572\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"3580\",\"kind\":\"source\",\"start\":\"3553\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"10\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"3613\",\"kind\":\"source\",\"start\":\"3584\"}}},\"span\":{\"end\":\"3613\",\"kind\":\"source\",\"start\":\"3553\"}}},\"span\":{\"end\":\"3614\",\"kind\":\"source\",\"start\":\"3545\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"3657\",\"kind\":\"source\",\"start\":\"3650\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"3658\",\"kind\":\"source\",\"start\":\"3627\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"110\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"3692\",\"kind\":\"source\",\"start\":\"3662\"}}},\"span\":{\"end\":\"3692\",\"kind\":\"source\",\"start\":\"3627\"}}},\"span\":{\"end\":\"3693\",\"kind\":\"source\",\"start\":\"3619\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"3733\",\"kind\":\"source\",\"start\":\"3725\"}}},\"span\":{\"end\":\"3734\",\"kind\":\"source\",\"start\":\"3706\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"3752\",\"kind\":\"source\",\"start\":\"3751\"}}},\"span\":{\"end\":\"3753\",\"kind\":\"source\",\"start\":\"3738\"}}},\"span\":{\"end\":\"3753\",\"kind\":\"source\",\"start\":\"3706\"}}},\"span\":{\"end\":\"3754\",\"kind\":\"source\",\"start\":\"3698\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"3796\",\"kind\":\"source\",\"start\":\"3786\"}}},\"span\":{\"end\":\"3797\",\"kind\":\"source\",\"start\":\"3767\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"110\",\"width\":\"128\"},\"span\":{\"end\":\"3817\",\"kind\":\"source\",\"start\":\"3814\"}}},\"span\":{\"end\":\"3818\",\"kind\":\"source\",\"start\":\"3801\"}}},\"span\":{\"end\":\"3818\",\"kind\":\"source\",\"start\":\"3767\"}}},\"span\":{\"end\":\"3819\",\"kind\":\"source\",\"start\":\"3759\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceRemaining\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"3871\",\"kind\":\"source\",\"start\":\"3863\"}}},\"span\":{\"end\":\"3872\",\"kind\":\"source\",\"start\":\"3832\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"3890\",\"kind\":\"source\",\"start\":\"3889\"}}},\"span\":{\"end\":\"3891\",\"kind\":\"source\",\"start\":\"3876\"}}},\"span\":{\"end\":\"3891\",\"kind\":\"source\",\"start\":\"3832\"}}},\"span\":{\"end\":\"3892\",\"kind\":\"source\",\"start\":\"3824\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceSpent\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"3940\",\"kind\":\"source\",\"start\":\"3932\"}}},\"span\":{\"end\":\"3941\",\"kind\":\"source\",\"start\":\"3905\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"100\",\"width\":\"128\"},\"span\":{\"end\":\"3961\",\"kind\":\"source\",\"start\":\"3958\"}}},\"span\":{\"end\":\"3962\",\"kind\":\"source\",\"start\":\"3945\"}}},\"span\":{\"end\":\"3962\",\"kind\":\"source\",\"start\":\"3905\"}}},\"span\":{\"end\":\"3963\",\"kind\":\"source\",\"start\":\"3897\"}}]},\"source\":\"profile \\\"moriarty-financial-agreement-source/5\\\";\\nagreement LifecycleLoan {\\n  unit Cash;\\n  asset Cash: Asset;\\n  record TransferFields {\\n    id: Text;\\n    from: Text;\\n    to: Text;\\n    settlementAsset: Text;\\n    transferAmount: Amount<Cash>;\\n  }\\n  record RepayFields {\\n    allocationId: Text;\\n    transferId: Text;\\n    obligationId: Text;\\n    payer: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n  }\\n  record ConversionFields {\\n    mantissa: UInt128;\\n    scale: UInt128;\\n    rounding: Text;\\n  }\\n  record AccrualTermsFields {\\n    numerator: UInt128;\\n    denominator: UInt128;\\n    rounding: Text;\\n    periodSeconds: UInt64;\\n    firstPeriodStart: UInt64;\\n  }\\n  record OriginateFields {\\n    obligationId: Text;\\n    transferId: Text;\\n    originationId: Text;\\n    debtor: Text;\\n    creditor: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n    denomination: Text;\\n    settlementAsset: Text;\\n    conversion: Record<ConversionFields>;\\n    allocationRule: Text;\\n    accrualTerms: Record<AccrualTermsFields>;\\n    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;\\n  }\\n  record AccrueFields {\\n    accrualId: Text;\\n    obligationId: Text;\\n    periodIndex: UInt64;\\n    observedTime: UInt64;\\n  }\\n  operation Transfer: TransferFields;\\n  operation Repay: RepayFields;\\n  operation Originate: OriginateFields;\\n  operation Accrue: AccrueFields;\\n  state phase: UInt128;\\n  state paid: UInt128;\\n  action originate(transferId: Text, originationId: Text) {\\n    let nominal = quantity<Units<Cash,1>,0>(100);\\n    next.phase = pre.phase + 1;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Lender\\\",\\n      to: \\\"Borrower\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(100)\\n    };\\n    emit Originate {\\n      obligationId: \\\"Loan1\\\",\\n      transferId: transferId,\\n      originationId: originationId,\\n      debtor: \\\"Borrower\\\",\\n      creditor: \\\"Lender\\\",\\n      nominalAmount: nominal,\\n      denomination: \\\"Cash\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: \\\"none\\\" },\\n      allocationRule: \\\"AccrualFirst\\\",\\n      accrualTerms: record<AccrualTermsFields>{\\n        numerator: 1,\\n        denominator: 10,\\n        rounding: \\\"floor\\\",\\n        periodSeconds: u64(60),\\n        firstPeriodStart: u64(1000)\\n      },\\n      nominalLiabilityCap: quantity<Units<Cash,1>,0>(110)\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n  }\\n  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {\\n    next.phase = pre.phase + 1;\\n    emit Accrue {\\n      accrualId: accrualId,\\n      obligationId: \\\"Loan1\\\",\\n      periodIndex: periodIndex,\\n      observedTime: observedTime\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(10);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n  }\\n  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {\\n    requires is_negative(nominal) == false;\\n    let payment = magnitude(nominal);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: nominal\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(30);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(30);\\n  }\\n  action settle(transferId: Text, allocationId: Text) {\\n    let debt = outstanding<Cash>(\\\"Loan1\\\");\\n    let payment = magnitude(debt);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: debt\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(110);\\n  }\\n}\\n\",\"workInitial\":\"413\"}",
+      "financialPreState": "{\"schemaVersion\":\"moriarty-financial-lifecycle-state/1\",\"balances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"amount\":\"110\"},{\"party\":\"Other\",\"asset\":\"Token\",\"amount\":\"7\"}],\"allowances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"remaining\":\"0\",\"spent\":\"100\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"remaining\":\"110\",\"spent\":\"0\"},{\"party\":\"Other\",\"asset\":\"Token\",\"remaining\":\"3\",\"spent\":\"1\"}],\"obligations\":[{\"id\":\"Loan1\",\"debtor\":\"Borrower\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"100\",\"accrued\":\"0\",\"outstanding\":\"100\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\",\"originationId\":\"O1\",\"originationTransferId\":\"D1\",\"initialPrincipal\":\"100\",\"nominalLiabilityCap\":\"110\",\"liabilityIncurred\":\"100\",\"accrualTerms\":{\"numerator\":\"1\",\"denominator\":\"10\",\"rounding\":\"floor\",\"periodSeconds\":\"60\",\"firstPeriodStart\":\"1000\"},\"lastAccruedPeriod\":\"0\",\"nextAccrualAt\":\"1060\"}],\"usedTransferIds\":[\"D1\"],\"usedAllocationIds\":[],\"usedOriginationIds\":[\"O1\"],\"usedAccrualIds\":[],\"work\":{\"remaining\":\"413\",\"spent\":\"116\",\"closureReserve\":\"16\"}}"
+    },
+    "expected": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "phase": "2",
+        "paid": "0"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "348",
+          "spent": "181",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Accrual",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "periodIndex": "1",
+          "observedTime": "1060",
+          "eligibleAt": "1060",
+          "nextAccrualAt": "1120",
+          "principalBasis": "100",
+          "numerator": "1",
+          "denominator": "10",
+          "rounding": "floor",
+          "interestAmount": "10",
+          "previousAccrued": "0",
+          "accrued": "10",
+          "previousOutstanding": "100",
+          "outstanding": "110",
+          "previousLiabilityIncurred": "100",
+          "liabilityIncurred": "110",
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "workRemaining": "348"
+    },
+    "derivation": "Frozen independent complete lifecycle template and hand-counted work [99,65,88,86].",
+    "observedCore": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "paid": "0",
+        "phase": "2"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "110",
+            "spent": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "100",
+            "accrued": "10",
+            "outstanding": "110",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1"
+        ],
+        "usedAllocationIds": [],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "348",
+          "spent": "181",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Accrual",
+          "accrualId": "A1",
+          "obligationId": "Loan1",
+          "debtor": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "periodIndex": "1",
+          "observedTime": "1060",
+          "eligibleAt": "1060",
+          "nextAccrualAt": "1120",
+          "principalBasis": "100",
+          "numerator": "1",
+          "denominator": "10",
+          "rounding": "floor",
+          "interestAmount": "10",
+          "previousAccrued": "0",
+          "accrued": "10",
+          "previousOutstanding": "100",
+          "outstanding": "110",
+          "previousLiabilityIncurred": "100",
+          "liabilityIncurred": "110",
+          "nominalLiabilityCap": "110"
+        }
+      ],
+      "workRemaining": "348"
+    },
+    "expectedMatchesCore": true,
+    "differences": [],
+    "chain": {
+      "id": "loan-lifecycle",
+      "step": 1,
+      "previous": "chain-originate"
+    },
+    "action": "accrue"
+  },
+  {
+    "id": "chain-repay",
+    "requirementIds": [],
+    "packet": {
+      "schema": "{\"args\":{\"allocationId\":[\"Text\"],\"nominal\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"transferId\":[\"Text\"]},\"assets\":[\"Cash\"],\"enumTypes\":{},\"fields\":{\"paid\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"},\"phase\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"}},\"observations\":{},\"operations\":{\"Accrue\":\"AccrueFields\",\"Originate\":\"OriginateFields\",\"Repay\":\"RepayFields\",\"Transfer\":\"TransferFields\"},\"parties\":[],\"recordTypes\":{\"AccrualTermsFields\":{\"denominator\":[\"UInt128\"],\"firstPeriodStart\":[\"UInt64\"],\"numerator\":[\"UInt128\"],\"periodSeconds\":[\"UInt64\"],\"rounding\":[\"Text\"]},\"AccrueFields\":{\"accrualId\":[\"Text\"],\"obligationId\":[\"Text\"],\"observedTime\":[\"UInt64\"],\"periodIndex\":[\"UInt64\"]},\"ConversionFields\":{\"mantissa\":[\"UInt128\"],\"rounding\":[\"Text\"],\"scale\":[\"UInt128\"]},\"OriginateFields\":{\"accrualTerms\":[\"Record\",\"AccrualTermsFields\"],\"allocationRule\":[\"Text\"],\"conversion\":[\"Record\",\"ConversionFields\"],\"creditor\":[\"Text\"],\"debtor\":[\"Text\"],\"denomination\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"nominalLiabilityCap\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"originationId\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"transferId\":[\"Text\"]},\"RepayFields\":{\"allocationId\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"payer\":[\"Text\"],\"transferId\":[\"Text\"]},\"TransferFields\":{\"from\":[\"Text\"],\"id\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"to\":[\"Text\"],\"transferAmount\":[\"Amount\",\"Cash\"]}},\"units\":[\"Cash\"],\"variantTypes\":{},\"vaults\":[]}",
+      "request": "{\"Args\":{\"allocationId\":\"R1\",\"nominal\":\"30\",\"transferId\":\"P1\"},\"Obs\":{},\"Pre\":{\"paid\":\"0\",\"phase\":\"2\"},\"contract\":\"moriarty-financial-expression-contract/4\",\"core\":{\"span\":{\"end\":\"5164\",\"kind\":\"source\",\"start\":\"3970\"},\"statements\":[{\"constructor\":\"Require\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ScalarValue\",\"operands\":{\"component\":\"negative\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"nominal\"},\"span\":{\"end\":\"4091\",\"kind\":\"source\",\"start\":\"4084\"}}},\"span\":{\"end\":\"4092\",\"kind\":\"source\",\"start\":\"4072\"}},\"right\":{\"constructor\":\"LitBool\",\"operands\":{\"value\":false},\"span\":{\"end\":\"4101\",\"kind\":\"source\",\"start\":\"4096\"}}},\"span\":{\"end\":\"4101\",\"kind\":\"source\",\"start\":\"4072\"}}},\"span\":{\"end\":\"4102\",\"kind\":\"source\",\"start\":\"4063\"}},{\"constructor\":\"Let\",\"operands\":{\"name\":\"payment\",\"value\":{\"constructor\":\"ScalarValue\",\"operands\":{\"component\":\"magnitude\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"nominal\"},\"span\":{\"end\":\"4138\",\"kind\":\"source\",\"start\":\"4131\"}}},\"span\":{\"end\":\"4139\",\"kind\":\"source\",\"start\":\"4121\"}}},\"span\":{\"end\":\"4140\",\"kind\":\"source\",\"start\":\"4107\"}},{\"constructor\":\"Require\",\"operands\":{\"condition\":{\"constructor\":\"Gt\",\"operands\":{\"left\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"4161\",\"kind\":\"source\",\"start\":\"4154\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"4165\",\"kind\":\"source\",\"start\":\"4164\"}}},\"span\":{\"end\":\"4165\",\"kind\":\"source\",\"start\":\"4154\"}}},\"span\":{\"end\":\"4166\",\"kind\":\"source\",\"start\":\"4145\"}},{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"phase\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"4193\",\"kind\":\"source\",\"start\":\"4184\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"4197\",\"kind\":\"source\",\"start\":\"4196\"}}},\"span\":{\"end\":\"4197\",\"kind\":\"source\",\"start\":\"4184\"}}},\"span\":{\"end\":\"4198\",\"kind\":\"source\",\"start\":\"4171\"}},{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"paid\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"4223\",\"kind\":\"source\",\"start\":\"4215\"}},\"right\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"4233\",\"kind\":\"source\",\"start\":\"4226\"}}},\"span\":{\"end\":\"4233\",\"kind\":\"source\",\"start\":\"4215\"}}},\"span\":{\"end\":\"4234\",\"kind\":\"source\",\"start\":\"4203\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"id\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"4275\",\"kind\":\"source\",\"start\":\"4265\"}}},{\"name\":\"from\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"4299\",\"kind\":\"source\",\"start\":\"4289\"}}},{\"name\":\"to\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"4319\",\"kind\":\"source\",\"start\":\"4311\"}}},{\"name\":\"settlementAsset\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Cash\"},\"span\":{\"end\":\"4350\",\"kind\":\"source\",\"start\":\"4344\"}}},{\"name\":\"transferAmount\",\"value\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"4394\",\"kind\":\"source\",\"start\":\"4387\"}}},\"span\":{\"end\":\"4395\",\"kind\":\"source\",\"start\":\"4374\"}}}],\"recordType\":\"TransferFields\"},\"span\":{\"end\":\"4402\",\"kind\":\"source\",\"start\":\"4239\"}},\"operation\":\"Transfer\"},\"span\":{\"end\":\"4402\",\"kind\":\"source\",\"start\":\"4239\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"allocationId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"allocationId\"},\"span\":{\"end\":\"4452\",\"kind\":\"source\",\"start\":\"4440\"}}},{\"name\":\"transferId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"4482\",\"kind\":\"source\",\"start\":\"4472\"}}},{\"name\":\"obligationId\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"4511\",\"kind\":\"source\",\"start\":\"4504\"}}},{\"name\":\"payer\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"4536\",\"kind\":\"source\",\"start\":\"4526\"}}},{\"name\":\"nominalAmount\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"nominal\"},\"span\":{\"end\":\"4566\",\"kind\":\"source\",\"start\":\"4559\"}}}],\"recordType\":\"RepayFields\"},\"span\":{\"end\":\"4573\",\"kind\":\"source\",\"start\":\"4407\"}},\"operation\":\"Repay\"},\"span\":{\"end\":\"4573\",\"kind\":\"source\",\"start\":\"4407\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"post\"},\"span\":{\"end\":\"4596\",\"kind\":\"source\",\"start\":\"4586\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"4609\",\"kind\":\"source\",\"start\":\"4600\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"4613\",\"kind\":\"source\",\"start\":\"4612\"}}},\"span\":{\"end\":\"4613\",\"kind\":\"source\",\"start\":\"4600\"}}},\"span\":{\"end\":\"4613\",\"kind\":\"source\",\"start\":\"4586\"}}},\"span\":{\"end\":\"4614\",\"kind\":\"source\",\"start\":\"4578\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"post\"},\"span\":{\"end\":\"4636\",\"kind\":\"source\",\"start\":\"4627\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"4648\",\"kind\":\"source\",\"start\":\"4640\"}},\"right\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"4658\",\"kind\":\"source\",\"start\":\"4651\"}}},\"span\":{\"end\":\"4658\",\"kind\":\"source\",\"start\":\"4640\"}}},\"span\":{\"end\":\"4658\",\"kind\":\"source\",\"start\":\"4627\"}}},\"span\":{\"end\":\"4659\",\"kind\":\"source\",\"start\":\"4619\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostPrincipal\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"4700\",\"kind\":\"source\",\"start\":\"4693\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"4701\",\"kind\":\"source\",\"start\":\"4672\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"80\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"4734\",\"kind\":\"source\",\"start\":\"4705\"}}},\"span\":{\"end\":\"4734\",\"kind\":\"source\",\"start\":\"4672\"}}},\"span\":{\"end\":\"4735\",\"kind\":\"source\",\"start\":\"4664\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAccrued\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"4774\",\"kind\":\"source\",\"start\":\"4767\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"4775\",\"kind\":\"source\",\"start\":\"4748\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"0\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"4807\",\"kind\":\"source\",\"start\":\"4779\"}}},\"span\":{\"end\":\"4807\",\"kind\":\"source\",\"start\":\"4748\"}}},\"span\":{\"end\":\"4808\",\"kind\":\"source\",\"start\":\"4740\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"4851\",\"kind\":\"source\",\"start\":\"4844\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"4852\",\"kind\":\"source\",\"start\":\"4821\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"80\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"4885\",\"kind\":\"source\",\"start\":\"4856\"}}},\"span\":{\"end\":\"4885\",\"kind\":\"source\",\"start\":\"4821\"}}},\"span\":{\"end\":\"4886\",\"kind\":\"source\",\"start\":\"4813\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"4926\",\"kind\":\"source\",\"start\":\"4918\"}}},\"span\":{\"end\":\"4927\",\"kind\":\"source\",\"start\":\"4899\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"30\",\"width\":\"128\"},\"span\":{\"end\":\"4946\",\"kind\":\"source\",\"start\":\"4944\"}}},\"span\":{\"end\":\"4947\",\"kind\":\"source\",\"start\":\"4931\"}}},\"span\":{\"end\":\"4947\",\"kind\":\"source\",\"start\":\"4899\"}}},\"span\":{\"end\":\"4948\",\"kind\":\"source\",\"start\":\"4891\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"4990\",\"kind\":\"source\",\"start\":\"4980\"}}},\"span\":{\"end\":\"4991\",\"kind\":\"source\",\"start\":\"4961\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"80\",\"width\":\"128\"},\"span\":{\"end\":\"5010\",\"kind\":\"source\",\"start\":\"5008\"}}},\"span\":{\"end\":\"5011\",\"kind\":\"source\",\"start\":\"4995\"}}},\"span\":{\"end\":\"5011\",\"kind\":\"source\",\"start\":\"4961\"}}},\"span\":{\"end\":\"5012\",\"kind\":\"source\",\"start\":\"4953\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceRemaining\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"5066\",\"kind\":\"source\",\"start\":\"5056\"}}},\"span\":{\"end\":\"5067\",\"kind\":\"source\",\"start\":\"5025\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"80\",\"width\":\"128\"},\"span\":{\"end\":\"5086\",\"kind\":\"source\",\"start\":\"5084\"}}},\"span\":{\"end\":\"5087\",\"kind\":\"source\",\"start\":\"5071\"}}},\"span\":{\"end\":\"5087\",\"kind\":\"source\",\"start\":\"5025\"}}},\"span\":{\"end\":\"5088\",\"kind\":\"source\",\"start\":\"5017\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceSpent\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"5138\",\"kind\":\"source\",\"start\":\"5128\"}}},\"span\":{\"end\":\"5139\",\"kind\":\"source\",\"start\":\"5101\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"30\",\"width\":\"128\"},\"span\":{\"end\":\"5158\",\"kind\":\"source\",\"start\":\"5156\"}}},\"span\":{\"end\":\"5159\",\"kind\":\"source\",\"start\":\"5143\"}}},\"span\":{\"end\":\"5159\",\"kind\":\"source\",\"start\":\"5101\"}}},\"span\":{\"end\":\"5160\",\"kind\":\"source\",\"start\":\"5093\"}}]},\"source\":\"profile \\\"moriarty-financial-agreement-source/5\\\";\\nagreement LifecycleLoan {\\n  unit Cash;\\n  asset Cash: Asset;\\n  record TransferFields {\\n    id: Text;\\n    from: Text;\\n    to: Text;\\n    settlementAsset: Text;\\n    transferAmount: Amount<Cash>;\\n  }\\n  record RepayFields {\\n    allocationId: Text;\\n    transferId: Text;\\n    obligationId: Text;\\n    payer: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n  }\\n  record ConversionFields {\\n    mantissa: UInt128;\\n    scale: UInt128;\\n    rounding: Text;\\n  }\\n  record AccrualTermsFields {\\n    numerator: UInt128;\\n    denominator: UInt128;\\n    rounding: Text;\\n    periodSeconds: UInt64;\\n    firstPeriodStart: UInt64;\\n  }\\n  record OriginateFields {\\n    obligationId: Text;\\n    transferId: Text;\\n    originationId: Text;\\n    debtor: Text;\\n    creditor: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n    denomination: Text;\\n    settlementAsset: Text;\\n    conversion: Record<ConversionFields>;\\n    allocationRule: Text;\\n    accrualTerms: Record<AccrualTermsFields>;\\n    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;\\n  }\\n  record AccrueFields {\\n    accrualId: Text;\\n    obligationId: Text;\\n    periodIndex: UInt64;\\n    observedTime: UInt64;\\n  }\\n  operation Transfer: TransferFields;\\n  operation Repay: RepayFields;\\n  operation Originate: OriginateFields;\\n  operation Accrue: AccrueFields;\\n  state phase: UInt128;\\n  state paid: UInt128;\\n  action originate(transferId: Text, originationId: Text) {\\n    let nominal = quantity<Units<Cash,1>,0>(100);\\n    next.phase = pre.phase + 1;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Lender\\\",\\n      to: \\\"Borrower\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(100)\\n    };\\n    emit Originate {\\n      obligationId: \\\"Loan1\\\",\\n      transferId: transferId,\\n      originationId: originationId,\\n      debtor: \\\"Borrower\\\",\\n      creditor: \\\"Lender\\\",\\n      nominalAmount: nominal,\\n      denomination: \\\"Cash\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: \\\"none\\\" },\\n      allocationRule: \\\"AccrualFirst\\\",\\n      accrualTerms: record<AccrualTermsFields>{\\n        numerator: 1,\\n        denominator: 10,\\n        rounding: \\\"floor\\\",\\n        periodSeconds: u64(60),\\n        firstPeriodStart: u64(1000)\\n      },\\n      nominalLiabilityCap: quantity<Units<Cash,1>,0>(110)\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n  }\\n  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {\\n    next.phase = pre.phase + 1;\\n    emit Accrue {\\n      accrualId: accrualId,\\n      obligationId: \\\"Loan1\\\",\\n      periodIndex: periodIndex,\\n      observedTime: observedTime\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(10);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n  }\\n  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {\\n    requires is_negative(nominal) == false;\\n    let payment = magnitude(nominal);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: nominal\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(30);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(30);\\n  }\\n  action settle(transferId: Text, allocationId: Text) {\\n    let debt = outstanding<Cash>(\\\"Loan1\\\");\\n    let payment = magnitude(debt);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: debt\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(110);\\n  }\\n}\\n\",\"workInitial\":\"348\"}",
+      "financialPreState": "{\"schemaVersion\":\"moriarty-financial-lifecycle-state/1\",\"balances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"0\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"amount\":\"110\"},{\"party\":\"Other\",\"asset\":\"Token\",\"amount\":\"7\"}],\"allowances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"remaining\":\"0\",\"spent\":\"100\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"remaining\":\"110\",\"spent\":\"0\"},{\"party\":\"Other\",\"asset\":\"Token\",\"remaining\":\"3\",\"spent\":\"1\"}],\"obligations\":[{\"id\":\"Loan1\",\"debtor\":\"Borrower\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"100\",\"accrued\":\"10\",\"outstanding\":\"110\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\",\"originationId\":\"O1\",\"originationTransferId\":\"D1\",\"initialPrincipal\":\"100\",\"nominalLiabilityCap\":\"110\",\"liabilityIncurred\":\"110\",\"accrualTerms\":{\"numerator\":\"1\",\"denominator\":\"10\",\"rounding\":\"floor\",\"periodSeconds\":\"60\",\"firstPeriodStart\":\"1000\"},\"lastAccruedPeriod\":\"1\",\"nextAccrualAt\":\"1120\"}],\"usedTransferIds\":[\"D1\"],\"usedAllocationIds\":[],\"usedOriginationIds\":[\"O1\"],\"usedAccrualIds\":[\"A1\"],\"work\":{\"remaining\":\"348\",\"spent\":\"181\",\"closureReserve\":\"16\"}}"
+    },
+    "expected": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "phase": "3",
+        "paid": "30"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "260",
+          "spent": "269",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "20",
+          "accruedDischarged": "10",
+          "remainingOutstanding": "80"
+        }
+      ],
+      "workRemaining": "260"
+    },
+    "derivation": "Frozen independent complete lifecycle template and hand-counted work [99,65,88,86].",
+    "observedCore": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "paid": "30",
+        "phase": "3"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "30"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "80"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "80",
+            "spent": "30"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "80",
+            "accrued": "0",
+            "outstanding": "80",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Outstanding",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1"
+        ],
+        "usedAllocationIds": [
+          "R1"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "260",
+          "spent": "269",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P1",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "30"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R1",
+          "transferId": "P1",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "30",
+          "settlementAmount": "30",
+          "principalDischarged": "20",
+          "accruedDischarged": "10",
+          "remainingOutstanding": "80"
+        }
+      ],
+      "workRemaining": "260"
+    },
+    "expectedMatchesCore": true,
+    "differences": [],
+    "chain": {
+      "id": "loan-lifecycle",
+      "step": 2,
+      "previous": "chain-accrue"
+    },
+    "action": "repay"
+  },
+  {
+    "id": "chain-settle",
+    "requirementIds": [],
+    "packet": {
+      "schema": "{\"args\":{\"allocationId\":[\"Text\"],\"transferId\":[\"Text\"]},\"assets\":[\"Cash\"],\"enumTypes\":{},\"fields\":{\"paid\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"},\"phase\":{\"type\":[\"UInt128\"],\"writeClass\":\"ordinary\"}},\"observations\":{},\"operations\":{\"Accrue\":\"AccrueFields\",\"Originate\":\"OriginateFields\",\"Repay\":\"RepayFields\",\"Transfer\":\"TransferFields\"},\"parties\":[],\"recordTypes\":{\"AccrualTermsFields\":{\"denominator\":[\"UInt128\"],\"firstPeriodStart\":[\"UInt64\"],\"numerator\":[\"UInt128\"],\"periodSeconds\":[\"UInt64\"],\"rounding\":[\"Text\"]},\"AccrueFields\":{\"accrualId\":[\"Text\"],\"obligationId\":[\"Text\"],\"observedTime\":[\"UInt64\"],\"periodIndex\":[\"UInt64\"]},\"ConversionFields\":{\"mantissa\":[\"UInt128\"],\"rounding\":[\"Text\"],\"scale\":[\"UInt128\"]},\"OriginateFields\":{\"accrualTerms\":[\"Record\",\"AccrualTermsFields\"],\"allocationRule\":[\"Text\"],\"conversion\":[\"Record\",\"ConversionFields\"],\"creditor\":[\"Text\"],\"debtor\":[\"Text\"],\"denomination\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"nominalLiabilityCap\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"originationId\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"transferId\":[\"Text\"]},\"RepayFields\":{\"allocationId\":[\"Text\"],\"nominalAmount\":[\"Quantity\",[[\"Cash\",\"1\"]],\"0\"],\"obligationId\":[\"Text\"],\"payer\":[\"Text\"],\"transferId\":[\"Text\"]},\"TransferFields\":{\"from\":[\"Text\"],\"id\":[\"Text\"],\"settlementAsset\":[\"Text\"],\"to\":[\"Text\"],\"transferAmount\":[\"Amount\",\"Cash\"]}},\"units\":[\"Cash\"],\"variantTypes\":{},\"vaults\":[]}",
+      "request": "{\"Args\":{\"allocationId\":\"R2\",\"transferId\":\"P2\"},\"Obs\":{},\"Pre\":{\"paid\":\"30\",\"phase\":\"3\"},\"contract\":\"moriarty-financial-expression-contract/4\",\"core\":{\"span\":{\"end\":\"6317\",\"kind\":\"source\",\"start\":\"5167\"},\"statements\":[{\"constructor\":\"Let\",\"operands\":{\"name\":\"debt\",\"value\":{\"constructor\":\"ReadOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"5261\",\"kind\":\"source\",\"start\":\"5254\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"5262\",\"kind\":\"source\",\"start\":\"5236\"}}},\"span\":{\"end\":\"5263\",\"kind\":\"source\",\"start\":\"5225\"}},{\"constructor\":\"Let\",\"operands\":{\"name\":\"payment\",\"value\":{\"constructor\":\"ScalarValue\",\"operands\":{\"component\":\"magnitude\",\"value\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"debt\"},\"span\":{\"end\":\"5296\",\"kind\":\"source\",\"start\":\"5292\"}}},\"span\":{\"end\":\"5297\",\"kind\":\"source\",\"start\":\"5282\"}}},\"span\":{\"end\":\"5298\",\"kind\":\"source\",\"start\":\"5268\"}},{\"constructor\":\"Require\",\"operands\":{\"condition\":{\"constructor\":\"Gt\",\"operands\":{\"left\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"5319\",\"kind\":\"source\",\"start\":\"5312\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"5323\",\"kind\":\"source\",\"start\":\"5322\"}}},\"span\":{\"end\":\"5323\",\"kind\":\"source\",\"start\":\"5312\"}}},\"span\":{\"end\":\"5324\",\"kind\":\"source\",\"start\":\"5303\"}},{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"phase\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"5351\",\"kind\":\"source\",\"start\":\"5342\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"5355\",\"kind\":\"source\",\"start\":\"5354\"}}},\"span\":{\"end\":\"5355\",\"kind\":\"source\",\"start\":\"5342\"}}},\"span\":{\"end\":\"5356\",\"kind\":\"source\",\"start\":\"5329\"}},{\"constructor\":\"NextWrite\",\"operands\":{\"field\":\"paid\",\"value\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"5381\",\"kind\":\"source\",\"start\":\"5373\"}},\"right\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"5391\",\"kind\":\"source\",\"start\":\"5384\"}}},\"span\":{\"end\":\"5391\",\"kind\":\"source\",\"start\":\"5373\"}}},\"span\":{\"end\":\"5392\",\"kind\":\"source\",\"start\":\"5361\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"id\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"5433\",\"kind\":\"source\",\"start\":\"5423\"}}},{\"name\":\"from\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"5457\",\"kind\":\"source\",\"start\":\"5447\"}}},{\"name\":\"to\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"5477\",\"kind\":\"source\",\"start\":\"5469\"}}},{\"name\":\"settlementAsset\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Cash\"},\"span\":{\"end\":\"5508\",\"kind\":\"source\",\"start\":\"5502\"}}},{\"name\":\"transferAmount\",\"value\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"5552\",\"kind\":\"source\",\"start\":\"5545\"}}},\"span\":{\"end\":\"5553\",\"kind\":\"source\",\"start\":\"5532\"}}}],\"recordType\":\"TransferFields\"},\"span\":{\"end\":\"5560\",\"kind\":\"source\",\"start\":\"5397\"}},\"operation\":\"Transfer\"},\"span\":{\"end\":\"5560\",\"kind\":\"source\",\"start\":\"5397\"}},{\"constructor\":\"Emit\",\"operands\":{\"fields\":{\"constructor\":\"ConstructRecord\",\"operands\":{\"fields\":[{\"name\":\"allocationId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"allocationId\"},\"span\":{\"end\":\"5610\",\"kind\":\"source\",\"start\":\"5598\"}}},{\"name\":\"transferId\",\"value\":{\"constructor\":\"ReadArg\",\"operands\":{\"name\":\"transferId\"},\"span\":{\"end\":\"5640\",\"kind\":\"source\",\"start\":\"5630\"}}},{\"name\":\"obligationId\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"5669\",\"kind\":\"source\",\"start\":\"5662\"}}},{\"name\":\"payer\",\"value\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"5694\",\"kind\":\"source\",\"start\":\"5684\"}}},{\"name\":\"nominalAmount\",\"value\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"debt\"},\"span\":{\"end\":\"5721\",\"kind\":\"source\",\"start\":\"5717\"}}}],\"recordType\":\"RepayFields\"},\"span\":{\"end\":\"5728\",\"kind\":\"source\",\"start\":\"5565\"}},\"operation\":\"Repay\"},\"span\":{\"end\":\"5728\",\"kind\":\"source\",\"start\":\"5565\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"post\"},\"span\":{\"end\":\"5751\",\"kind\":\"source\",\"start\":\"5741\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"phase\",\"view\":\"pre\"},\"span\":{\"end\":\"5764\",\"kind\":\"source\",\"start\":\"5755\"}},\"right\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"1\",\"width\":\"128\"},\"span\":{\"end\":\"5768\",\"kind\":\"source\",\"start\":\"5767\"}}},\"span\":{\"end\":\"5768\",\"kind\":\"source\",\"start\":\"5755\"}}},\"span\":{\"end\":\"5768\",\"kind\":\"source\",\"start\":\"5741\"}}},\"span\":{\"end\":\"5769\",\"kind\":\"source\",\"start\":\"5733\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"post\"},\"span\":{\"end\":\"5791\",\"kind\":\"source\",\"start\":\"5782\"}},\"right\":{\"constructor\":\"Add\",\"operands\":{\"left\":{\"constructor\":\"ReadPre\",\"operands\":{\"field\":\"paid\",\"view\":\"pre\"},\"span\":{\"end\":\"5803\",\"kind\":\"source\",\"start\":\"5795\"}},\"right\":{\"constructor\":\"ReadLocal\",\"operands\":{\"name\":\"payment\"},\"span\":{\"end\":\"5813\",\"kind\":\"source\",\"start\":\"5806\"}}},\"span\":{\"end\":\"5813\",\"kind\":\"source\",\"start\":\"5795\"}}},\"span\":{\"end\":\"5813\",\"kind\":\"source\",\"start\":\"5782\"}}},\"span\":{\"end\":\"5814\",\"kind\":\"source\",\"start\":\"5774\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostPrincipal\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"5855\",\"kind\":\"source\",\"start\":\"5848\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"5856\",\"kind\":\"source\",\"start\":\"5827\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"0\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"5888\",\"kind\":\"source\",\"start\":\"5860\"}}},\"span\":{\"end\":\"5888\",\"kind\":\"source\",\"start\":\"5827\"}}},\"span\":{\"end\":\"5889\",\"kind\":\"source\",\"start\":\"5819\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAccrued\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"5928\",\"kind\":\"source\",\"start\":\"5921\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"5929\",\"kind\":\"source\",\"start\":\"5902\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"0\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"5961\",\"kind\":\"source\",\"start\":\"5933\"}}},\"span\":{\"end\":\"5961\",\"kind\":\"source\",\"start\":\"5902\"}}},\"span\":{\"end\":\"5962\",\"kind\":\"source\",\"start\":\"5894\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostOutstanding\",\"operands\":{\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Loan1\"},\"span\":{\"end\":\"6005\",\"kind\":\"source\",\"start\":\"5998\"}},\"unit\":\"Cash\"},\"span\":{\"end\":\"6006\",\"kind\":\"source\",\"start\":\"5975\"}},\"right\":{\"constructor\":\"LitQuantity\",\"operands\":{\"mantissa\":\"0\",\"scale\":\"0\",\"units\":[[\"Cash\",\"1\"]]},\"span\":{\"end\":\"6038\",\"kind\":\"source\",\"start\":\"6010\"}}},\"span\":{\"end\":\"6038\",\"kind\":\"source\",\"start\":\"5975\"}}},\"span\":{\"end\":\"6039\",\"kind\":\"source\",\"start\":\"5967\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"6081\",\"kind\":\"source\",\"start\":\"6071\"}}},\"span\":{\"end\":\"6082\",\"kind\":\"source\",\"start\":\"6052\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"6100\",\"kind\":\"source\",\"start\":\"6099\"}}},\"span\":{\"end\":\"6101\",\"kind\":\"source\",\"start\":\"6086\"}}},\"span\":{\"end\":\"6101\",\"kind\":\"source\",\"start\":\"6052\"}}},\"span\":{\"end\":\"6102\",\"kind\":\"source\",\"start\":\"6044\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceRemaining\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"6156\",\"kind\":\"source\",\"start\":\"6146\"}}},\"span\":{\"end\":\"6157\",\"kind\":\"source\",\"start\":\"6115\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"0\",\"width\":\"128\"},\"span\":{\"end\":\"6175\",\"kind\":\"source\",\"start\":\"6174\"}}},\"span\":{\"end\":\"6176\",\"kind\":\"source\",\"start\":\"6161\"}}},\"span\":{\"end\":\"6176\",\"kind\":\"source\",\"start\":\"6115\"}}},\"span\":{\"end\":\"6177\",\"kind\":\"source\",\"start\":\"6107\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostAllowanceSpent\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Borrower\"},\"span\":{\"end\":\"6227\",\"kind\":\"source\",\"start\":\"6217\"}}},\"span\":{\"end\":\"6228\",\"kind\":\"source\",\"start\":\"6190\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"110\",\"width\":\"128\"},\"span\":{\"end\":\"6248\",\"kind\":\"source\",\"start\":\"6245\"}}},\"span\":{\"end\":\"6249\",\"kind\":\"source\",\"start\":\"6232\"}}},\"span\":{\"end\":\"6249\",\"kind\":\"source\",\"start\":\"6190\"}}},\"span\":{\"end\":\"6250\",\"kind\":\"source\",\"start\":\"6182\"}},{\"constructor\":\"Ensure\",\"operands\":{\"condition\":{\"constructor\":\"Eq\",\"operands\":{\"left\":{\"constructor\":\"ReadPostBalance\",\"operands\":{\"asset\":\"Cash\",\"identity\":{\"constructor\":\"LitText\",\"operands\":{\"value\":\"Lender\"},\"span\":{\"end\":\"6290\",\"kind\":\"source\",\"start\":\"6282\"}}},\"span\":{\"end\":\"6291\",\"kind\":\"source\",\"start\":\"6263\"}},\"right\":{\"constructor\":\"ConstructAmount\",\"operands\":{\"asset\":\"Cash\",\"value\":{\"constructor\":\"LitUInt\",\"operands\":{\"value\":\"110\",\"width\":\"128\"},\"span\":{\"end\":\"6311\",\"kind\":\"source\",\"start\":\"6308\"}}},\"span\":{\"end\":\"6312\",\"kind\":\"source\",\"start\":\"6295\"}}},\"span\":{\"end\":\"6312\",\"kind\":\"source\",\"start\":\"6263\"}}},\"span\":{\"end\":\"6313\",\"kind\":\"source\",\"start\":\"6255\"}}]},\"source\":\"profile \\\"moriarty-financial-agreement-source/5\\\";\\nagreement LifecycleLoan {\\n  unit Cash;\\n  asset Cash: Asset;\\n  record TransferFields {\\n    id: Text;\\n    from: Text;\\n    to: Text;\\n    settlementAsset: Text;\\n    transferAmount: Amount<Cash>;\\n  }\\n  record RepayFields {\\n    allocationId: Text;\\n    transferId: Text;\\n    obligationId: Text;\\n    payer: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n  }\\n  record ConversionFields {\\n    mantissa: UInt128;\\n    scale: UInt128;\\n    rounding: Text;\\n  }\\n  record AccrualTermsFields {\\n    numerator: UInt128;\\n    denominator: UInt128;\\n    rounding: Text;\\n    periodSeconds: UInt64;\\n    firstPeriodStart: UInt64;\\n  }\\n  record OriginateFields {\\n    obligationId: Text;\\n    transferId: Text;\\n    originationId: Text;\\n    debtor: Text;\\n    creditor: Text;\\n    nominalAmount: Quantity<Units<Cash,1>,0>;\\n    denomination: Text;\\n    settlementAsset: Text;\\n    conversion: Record<ConversionFields>;\\n    allocationRule: Text;\\n    accrualTerms: Record<AccrualTermsFields>;\\n    nominalLiabilityCap: Quantity<Units<Cash,1>,0>;\\n  }\\n  record AccrueFields {\\n    accrualId: Text;\\n    obligationId: Text;\\n    periodIndex: UInt64;\\n    observedTime: UInt64;\\n  }\\n  operation Transfer: TransferFields;\\n  operation Repay: RepayFields;\\n  operation Originate: OriginateFields;\\n  operation Accrue: AccrueFields;\\n  state phase: UInt128;\\n  state paid: UInt128;\\n  action originate(transferId: Text, originationId: Text) {\\n    let nominal = quantity<Units<Cash,1>,0>(100);\\n    next.phase = pre.phase + 1;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Lender\\\",\\n      to: \\\"Borrower\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(100)\\n    };\\n    emit Originate {\\n      obligationId: \\\"Loan1\\\",\\n      transferId: transferId,\\n      originationId: originationId,\\n      debtor: \\\"Borrower\\\",\\n      creditor: \\\"Lender\\\",\\n      nominalAmount: nominal,\\n      denomination: \\\"Cash\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      conversion: record<ConversionFields>{ mantissa: 1, scale: 0, rounding: \\\"none\\\" },\\n      allocationRule: \\\"AccrualFirst\\\",\\n      accrualTerms: record<AccrualTermsFields>{\\n        numerator: 1,\\n        denominator: 10,\\n        rounding: \\\"floor\\\",\\n        periodSeconds: u64(60),\\n        firstPeriodStart: u64(1000)\\n      },\\n      nominalLiabilityCap: quantity<Units<Cash,1>,0>(110)\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n  }\\n  action accrue(accrualId: Text, periodIndex: UInt64, observedTime: UInt64) {\\n    next.phase = pre.phase + 1;\\n    emit Accrue {\\n      accrualId: accrualId,\\n      obligationId: \\\"Loan1\\\",\\n      periodIndex: periodIndex,\\n      observedTime: observedTime\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid;\\n    ensures outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(100);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(10);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_allowance_remaining<Cash>(\\\"Lender\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Lender\\\") == amount<Cash>(100);\\n  }\\n  action repay(nominal: Quantity<Units<Cash,1>,0>, transferId: Text, allocationId: Text) {\\n    requires is_negative(nominal) == false;\\n    let payment = magnitude(nominal);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: nominal\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(80);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(30);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(80);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(30);\\n  }\\n  action settle(transferId: Text, allocationId: Text) {\\n    let debt = outstanding<Cash>(\\\"Loan1\\\");\\n    let payment = magnitude(debt);\\n    requires payment > 0;\\n    next.phase = pre.phase + 1;\\n    next.paid = pre.paid + payment;\\n    emit Transfer {\\n      id: transferId,\\n      from: \\\"Borrower\\\",\\n      to: \\\"Lender\\\",\\n      settlementAsset: \\\"Cash\\\",\\n      transferAmount: amount<Cash>(payment)\\n    };\\n    emit Repay {\\n      allocationId: allocationId,\\n      transferId: transferId,\\n      obligationId: \\\"Loan1\\\",\\n      payer: \\\"Borrower\\\",\\n      nominalAmount: debt\\n    };\\n    ensures post.phase == pre.phase + 1;\\n    ensures post.paid == pre.paid + payment;\\n    ensures post_principal<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_accrued<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_outstanding<Cash>(\\\"Loan1\\\") == quantity<Units<Cash,1>,0>(0);\\n    ensures post_balance<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_remaining<Cash>(\\\"Borrower\\\") == amount<Cash>(0);\\n    ensures post_allowance_spent<Cash>(\\\"Borrower\\\") == amount<Cash>(110);\\n    ensures post_balance<Cash>(\\\"Lender\\\") == amount<Cash>(110);\\n  }\\n}\\n\",\"workInitial\":\"260\"}",
+      "financialPreState": "{\"schemaVersion\":\"moriarty-financial-lifecycle-state/1\",\"balances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"amount\":\"30\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"amount\":\"80\"},{\"party\":\"Other\",\"asset\":\"Token\",\"amount\":\"7\"}],\"allowances\":[{\"party\":\"Lender\",\"asset\":\"Cash\",\"remaining\":\"0\",\"spent\":\"100\"},{\"party\":\"Borrower\",\"asset\":\"Cash\",\"remaining\":\"80\",\"spent\":\"30\"},{\"party\":\"Other\",\"asset\":\"Token\",\"remaining\":\"3\",\"spent\":\"1\"}],\"obligations\":[{\"id\":\"Loan1\",\"debtor\":\"Borrower\",\"creditor\":\"Lender\",\"denomination\":\"Cash\",\"settlementAsset\":\"Cash\",\"principal\":\"80\",\"accrued\":\"0\",\"outstanding\":\"80\",\"allocationRule\":\"AccrualFirst\",\"conversion\":{\"mantissa\":\"1\",\"scale\":\"0\",\"rounding\":\"none\"},\"status\":\"Outstanding\",\"originationId\":\"O1\",\"originationTransferId\":\"D1\",\"initialPrincipal\":\"100\",\"nominalLiabilityCap\":\"110\",\"liabilityIncurred\":\"110\",\"accrualTerms\":{\"numerator\":\"1\",\"denominator\":\"10\",\"rounding\":\"floor\",\"periodSeconds\":\"60\",\"firstPeriodStart\":\"1000\"},\"lastAccruedPeriod\":\"1\",\"nextAccrualAt\":\"1120\"}],\"usedTransferIds\":[\"D1\",\"P1\"],\"usedAllocationIds\":[\"R1\"],\"usedOriginationIds\":[\"O1\"],\"usedAccrualIds\":[\"A1\"],\"work\":{\"remaining\":\"260\",\"spent\":\"269\",\"closureReserve\":\"16\"}}"
+    },
+    "expected": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "phase": "4",
+        "paid": "110"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Settled",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1",
+          "P2"
+        ],
+        "usedAllocationIds": [
+          "R1",
+          "R2"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "174",
+          "spent": "355",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "80",
+          "settlementAmount": "80",
+          "principalDischarged": "80",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "0"
+        }
+      ],
+      "workRemaining": "174"
+    },
+    "derivation": "Frozen independent complete lifecycle template and hand-counted work [99,65,88,86].",
+    "observedCore": {
+      "status": "FundedExpressionPrepared",
+      "post": {
+        "paid": "110",
+        "phase": "4"
+      },
+      "financialPost": {
+        "schemaVersion": "moriarty-financial-lifecycle-state/1",
+        "balances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "amount": "110"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "amount": "0"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "amount": "7"
+          }
+        ],
+        "allowances": [
+          {
+            "party": "Lender",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "100"
+          },
+          {
+            "party": "Borrower",
+            "asset": "Cash",
+            "remaining": "0",
+            "spent": "110"
+          },
+          {
+            "party": "Other",
+            "asset": "Token",
+            "remaining": "3",
+            "spent": "1"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Borrower",
+            "creditor": "Lender",
+            "denomination": "Cash",
+            "settlementAsset": "Cash",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "allocationRule": "AccrualFirst",
+            "conversion": {
+              "mantissa": "1",
+              "scale": "0",
+              "rounding": "none"
+            },
+            "status": "Settled",
+            "originationId": "O1",
+            "originationTransferId": "D1",
+            "initialPrincipal": "100",
+            "nominalLiabilityCap": "110",
+            "liabilityIncurred": "110",
+            "accrualTerms": {
+              "numerator": "1",
+              "denominator": "10",
+              "rounding": "floor",
+              "periodSeconds": "60",
+              "firstPeriodStart": "1000"
+            },
+            "lastAccruedPeriod": "1",
+            "nextAccrualAt": "1120"
+          }
+        ],
+        "usedTransferIds": [
+          "D1",
+          "P1",
+          "P2"
+        ],
+        "usedAllocationIds": [
+          "R1",
+          "R2"
+        ],
+        "usedOriginationIds": [
+          "O1"
+        ],
+        "usedAccrualIds": [
+          "A1"
+        ],
+        "work": {
+          "remaining": "174",
+          "spent": "355",
+          "closureReserve": "16"
+        }
+      },
+      "effects": [
+        {
+          "kind": "Transfer",
+          "id": "P2",
+          "from": "Borrower",
+          "to": "Lender",
+          "asset": "Cash",
+          "amount": "80"
+        },
+        {
+          "kind": "Repayment",
+          "allocationId": "R2",
+          "transferId": "P2",
+          "obligationId": "Loan1",
+          "payer": "Borrower",
+          "creditor": "Lender",
+          "denomination": "Cash",
+          "settlementAsset": "Cash",
+          "nominalAmount": "80",
+          "settlementAmount": "80",
+          "principalDischarged": "80",
+          "accruedDischarged": "0",
+          "remainingOutstanding": "0"
+        }
+      ],
+      "workRemaining": "174"
+    },
+    "expectedMatchesCore": true,
+    "differences": [],
+    "chain": {
+      "id": "loan-lifecycle",
+      "step": 3,
+      "previous": "chain-repay"
+    },
+    "action": "settle"
+  }
+]

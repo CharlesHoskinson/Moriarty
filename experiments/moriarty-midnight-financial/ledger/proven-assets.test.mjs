@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, lstatSync, rmSync, symlinkSync} from 'node:fs';
 import {join, relative} from 'node:path';
 import {tmpdir} from 'node:os';
+import {pathToFileURL} from 'node:url';
+import {PINNED_NM} from './providers.mjs';
 import {createHash} from 'node:crypto';
 import {inspectBuildSources, sourceManifestHash} from './build-proven.mjs';
 import {inspectFinancialBuild, loadProvenFinancialContract} from './proven-assets.mjs';
@@ -18,7 +20,7 @@ function fixture(t, kind = 'loan') {
   const resourceRecord = {path: join(dir,'resource.json'), sha256:hash('{}')};writeFileSync(resourceRecord.path,'{}');
   const attemptFile=join(dir,'attempt.json');
   writeFileSync(attemptFile, JSON.stringify({schema:'moriarty.financial-build-attempt/1',resourceId:'inert-resource',admissionId:'inert-admission',sourceCandidateSha:sourceHash,case:kind,outputDir:dir,attempts:1,synthetic:true}));
-  const compact='/home/charl/.local/bin/compact', stage=join(dir,'stage');
+  const compact=process.env.MORIARTY_COMPACT_BIN??'/home/charl/.local/bin/compact', stage=join(dir,'stage');
   const commands = [['--version'],['compile','--version'],['compile','--language-version'],['compile','--runtime-version'],['compile','--compact-path',stage,join(stage,kind+'.compact'),assets]].map((args,index)=>{
     const stdout=['compact 0.5.2','0.31.1','0.23.0','0.16.0','inert compiler output'][index];
     return {argv:[compact,...args],timeoutMs:1000,exit:0,signal:null,error:null,stdout,stderr:'',stdoutSha256:hash(stdout),stderrSha256:hash('')};
@@ -67,16 +69,25 @@ for(const [label,change] of [
 });
 test('source adapter exercises actual pinned protocol CompiledContract constructors without executable result',async t=>{
   const f=fixture(t);
-  const {CompiledContract}=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs');
+  const {CompiledContract}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs')).href);
   const report=await inspectFinancialBuild({...f.options,sourceTestOnly:true,moduleAdapter:async()=>({CompiledContract,generatedModule:{Contract:class InertContract{},ledger:state=>state}})});
   assert.equal(report.executable,false);assert.equal(report.artifactCount,14);
   assert.equal('compiledContract' in report,false);
 });
 test('module adapter mutation is caught by complete post-composition reinspection',async t=>{
   const f=fixture(t);
-  const {CompiledContract}=await import('/home/charl/Moriarty/.worktrees/r3-native/experiments/moriarty-midnight-network/hello-world/node_modules/@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs');
+  const {CompiledContract}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs')).href);
   await assert.rejects(inspectFinancialBuild({...f.options,sourceTestOnly:true,moduleAdapter:async()=>{
     writeFileSync(join(f.assets,'zkir/settle.bzkir'),'mutated-after-check');
     return {CompiledContract,generatedModule:{Contract:class InertContract{},ledger:state=>state}};
   }}),/asset bytes/);
+});
+
+test('asset inspection binds all compiler commands to the explicitly selected installation',async t=>{
+ const before=process.env.MORIARTY_COMPACT_BIN;process.env.MORIARTY_COMPACT_BIN='/current/compact';t.after(()=>{if(before===undefined)delete process.env.MORIARTY_COMPACT_BIN;else process.env.MORIARTY_COMPACT_BIN=before;});
+ const f=fixture(t);const {CompiledContract}=await import(pathToFileURL(join(PINNED_NM,'@midnight-ntwrk/midnight-js-protocol/dist/compact-js.mjs')).href);
+ const options={...f.options,sourceTestOnly:true,moduleAdapter:async()=>({CompiledContract,generatedModule:{Contract:class{},ledger:s=>s}})};
+ assert.equal((await inspectFinancialBuild(options)).executable,false);
+ f.receipt.commands.at(-1).argv[0]='/different/compact';f.save();options.receiptSha256=f.options.receiptSha256;
+ await assert.rejects(inspectFinancialBuild(options),/unexpected compiler command/);
 });

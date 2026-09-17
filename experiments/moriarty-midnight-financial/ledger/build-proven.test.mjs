@@ -5,7 +5,7 @@ import {mkdtemp, mkdir, writeFile, readFile, symlink, rm} from 'node:fs/promises
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {writeFileSync} from 'node:fs';
-import {buildProven, inspectBuildSources, sourceManifestHash} from './build-proven.mjs';
+import {buildProven, inspectBuildSources, sourceManifestHash, resolveFinancialBuildToolchain} from './build-proven.mjs';
 
 async function fixture(t, kind = 'loan') {
   const dir = await mkdtemp(join(tmpdir(), 'moriarty-build-source-test-'));
@@ -161,4 +161,24 @@ test('receipt write failure preserves the original compiler failure and outside 
  const receipt=JSON.parse(await readFile(join(dir,'resource-attempt.json.failure.json')));
  assert.equal(receipt.status,'failed');assert.match(receipt.error,/original compiler failure/);
  assert.match(receipt.receiptWriteError,/EEXIST/);
+});
+
+function setEnvironment(t,key,value){const previous=process.env[key];if(value===undefined)delete process.env[key];else process.env[key]=value;t.after(()=>{if(previous===undefined)delete process.env[key];else process.env[key]=previous;});}
+test('explicit toolchain paths preserve historical defaults and reject relative or ambiguous paths',()=>{
+ const bindings={toolchain:{compact:'/historical/compact',runtimeNodeModules:'/historical/node_modules'}};
+ assert.deepEqual(resolveFinancialBuildToolchain(bindings,{}),bindings.toolchain);
+ assert.deepEqual(resolveFinancialBuildToolchain(bindings,{MORIARTY_COMPACT_BIN:'/current/compact',MORIARTY_MIDNIGHT_NODE_MODULES:'/current/node_modules'}),{compact:'/current/compact',runtimeNodeModules:'/current/node_modules'});
+ for(const [key,value] of [['MORIARTY_COMPACT_BIN','compact'],['MORIARTY_COMPACT_BIN','/current/../compact'],['MORIARTY_MIDNIGHT_NODE_MODULES',''],['MORIARTY_MIDNIGHT_NODE_MODULES','relative']])assert.throws(()=>resolveFinancialBuildToolchain(bindings,{[key]:value}),/normalized absolute/);
+});
+test('selected compiler is actually invoked and a relocated runtime still requires the exact version',async t=>{
+ const {options,calls,dir}=await fixture(t);const modules=join(dir,'modules');await mkdir(join(modules,'@midnight-ntwrk/compact-runtime'),{recursive:true});
+ const pkg=join(modules,'@midnight-ntwrk/compact-runtime/package.json');await writeFile(pkg,JSON.stringify({version:'0.16.0'}));
+ setEnvironment(t,'MORIARTY_COMPACT_BIN','/current/compact');setEnvironment(t,'MORIARTY_MIDNIGHT_NODE_MODULES',modules);
+ await buildProven(options);assert.equal(calls.length,5);assert.ok(calls.every(c=>c.argv[0]==='/current/compact'));
+ const next=await fixture(t);await writeFile(pkg,JSON.stringify({version:'0.17.0'}));await assert.rejects(buildProven(next.options),/runtime package version mismatch/);assert.equal(next.calls.length,0);assert.equal(next.options.resourceCounters.attempts,0);
+});
+test('relocated compiler cannot bypass version verification and its failed attempt remains charged',async t=>{
+ const {options,calls}=await fixture(t);setEnvironment(t,'MORIARTY_COMPACT_BIN','/current/compact');const adapter=options.commandAdapter;
+ options.commandAdapter=async(argv,context)=>{const r=await adapter(argv,context);if(argv.slice(1).join(' ')==='compile --version')r.stdout='0.32.0';return r;};
+ await assert.rejects(buildProven(options),/compiler version mismatch/);assert.equal(options.resourceCounters.attempts,1);assert.equal(calls.length,2);assert.ok(calls.every(c=>c.argv[0]==='/current/compact'));
 });
