@@ -35,7 +35,7 @@ Moriarty source files use the **`.mori`** extension. The specification separates
 | Lexical structure | Separate token rules and regular expressions | Identifiers, literals, whitespace, comments and source locations |
 | Syntax | EBNF using the ISO/IEC 14977 notation for the provisional successor profile | Valid combinations of declarations, actions and expressions |
 | Static semantics | Typing and scoping judgments, illustrated by $\Gamma \vdash e : \tau$ | Name resolution, asset units, resource use and admissible bounds |
-| Dynamic semantics | Executable TypeScript operational semantics, plus a bounded K subset for Transfer/Repay | State transitions, financial effects, obligations and rejection. K does not implement Core `/2` or `/3` reads. |
+| Dynamic semantics | Executable TypeScript operational semantics and bounded native K expression/lifecycle definitions | State transitions, financial effects, obligations and rejection, including the scoped Core `/4` lifecycle. General correspondence remains open. |
 | Correctness claims | Explicit properties over those semantics | What must be established about an agreement, execution and history |
 
 [EBNF](https://www.iso.org/standard/26153.html) extends BNF with notation for repetition and optionality. It describes the grammar; it does not decide whether the source resembles Lisp or a language with braces. [ABNF, RFC 5234](https://datatracker.ietf.org/doc/html/rfc5234), is another BNF-family notation used for protocol specifications. Moriarty selects EBNF for its source grammar.
@@ -52,7 +52,9 @@ The separate [executable expression runtime](deliverables/sp02-expression-runtim
 
 The [financial expression runtime](deliverables/sp02-financial-pure-expression-2026-09-10/RESULT.md) adds eight pure constructors in a separate versioned API, with independent GPT-6 and Grok approval. It supports shares, tagged variants, explicit numeric conversion, conditional values, UInt256 and dimensional arithmetic. The original expression profile remains unchanged. Its vault conversion cases exercise deposit, mint, withdrawal and redemption arithmetic; they do not execute those financial actions or establish their ledger acceptance.
 
-The successor semantic freeze and full SP02/SP03 acceptance remain open. A K definition also needs correspondence arguments connecting it to the evaluator, Compact compiler, proof relation and Midnight ledger acceptance. Archived ZKIR K work does not establish Moriarty semantics.
+The [September 17 native K execution](deliverables/k-lifecycle-execution-2026-09-17/RESULT.md) matched 125 expression cases, 104 lifecycle cases and six Unicode counter probes. Fresh Astra and Grok audits approved these finite native conformance results. This includes the original 113 expression cases and the four-step lifecycle with each K output supplying its successor state. The acceptance mapping distinguishes native lifecycle cases, expression metadata cases and offline comparator controls. Full SP02/SP03 acceptance remains open: these finite runs do not discharge correspondence, termination or other semantic theorems, and do not establish Compact or ledger acceptance.
+
+The [current Preview loan delivery](deliverables/preview-loan-2026-09-17/STATUS.md) uses the existing fixed loan example. Its funded wallet has finalized DUST registration and usable DUST. Loan deployment and settlement have separate transaction and review requirements; wallet registration is not a loan transaction.
 
 ### Successor source grammar (EBNF)
 
@@ -442,7 +444,7 @@ $B$ is finite under the simultaneous source and Core bounds and conservatively b
 
 A `next` view rejects `TYPE_NEXT_READ` and a `post` view outside Ensure rejects `TYPE_POST_SCOPE`. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects `ARITH_RANGE` when the result does not fit $T$; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in [static-semantics.md](experiments/moriarty-language/spec/successor/static-semantics.md), mirrored machine-readably in [expression-signatures.json](experiments/moriarty-language/spec/successor/expression-signatures.json).
 
-**Funded composition (TypeScript).** S-FINISH still ends at $\mathsf{ExpressionPrepared}$. The later funded adapter maps emitted `Transfer` and `Repay` descriptors onto the retained repayment kernel, charges expression work E plus kernel action count N, and publishes ordinary `post` with complete `financialPost` and effects only after that kernel call succeeds. Ordinary `ensures` see ordinary post-state. The `/3` financial reads see the same validated financial pre-state throughout the action, including after `emit`; descriptors do not mutate that projection. This is executable TypeScript semantics. The bounded K kernel above implements Transfer/Repay on a limited projection and does not implement the new read constructors. A candidate mapping is also recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it does not replace the adapter.
+**Funded composition (TypeScript).** S-FINISH still ends at $\mathsf{ExpressionPrepared}$. The later funded adapter maps emitted `Transfer` and `Repay` descriptors onto the retained repayment kernel, charges expression work E plus kernel action count N, and publishes ordinary `post` with complete `financialPost` and effects only after that kernel call succeeds. Ordinary `ensures` see ordinary post-state. The `/3` financial reads see the same validated financial pre-state throughout the action, including after `emit`; descriptors do not mutate that projection. This is executable TypeScript semantics. The earlier bounded K kernel above implements Transfer/Repay on a limited projection. The separate September 17 Core `/4` K lifecycle definition adds the scoped financial read constructors. A candidate mapping is also recorded in the unregistered [composition proposal](experiments/moriarty-language/spec/successor/composition-proposal.md); it does not replace the adapter.
 
 **Typed financial reads.** Agreement source `/3` elaborates six generic reads to Core `/2` constructors. Each constructor has one declared unit or asset operand and one `Text` identity expression. Extra generic arguments parse; static checking requires exactly one simple declared symbol (`SOURCE_ARITY` / `SOURCE_TYPE_SHAPE`).
 
@@ -465,7 +467,7 @@ $U$ is a declared unit and $A$ a declared asset. $\mathit{id}$ is the reduced `T
 \frac{A \in \Sigma.\mathit{assets} \qquad \Sigma;\Gamma;\phi \vdash e : \mathsf{Text}}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadBalance}(A,e) : \mathsf{Amount}(A)}\ \text{(READ-BAL)}
 ```
 
-Principal and accrued use the outstanding rule with their fields. Allowance remaining and spent use the balance rule with the matching allowance metric. Evaluation admits complete kernel state before any expression reduction. Reduction evaluates the identity once, looks up $\sigma_F$, and leaves $\sigma_F$ unchanged. It rejects `INVALID_IDENTIFIER` for a non-kernel identifier, `MISSING_OBLIGATION` / `MISSING_BALANCE` / `MISSING_ALLOWANCE` rather than defaulting to zero, `NOMINAL_UNIT` when an obligation denomination differs from $U$, and `ARITH_RANGE` when a Quantity exceeds signed128. Short-circuit `and` / `or` / `?` skips unselected runtime lookups; static checking still visits every branch and action. One read costs one reduction plus its identity child's actual reductions. Successful debit is E + N. These rules are TypeScript executable semantics. The bounded K kernel does not implement the new constructors.
+Principal and accrued use the outstanding rule with their fields. Allowance remaining and spent use the balance rule with the matching allowance metric. Evaluation admits complete kernel state before any expression reduction. Reduction evaluates the identity once, looks up $\sigma_F$, and leaves $\sigma_F$ unchanged. It rejects `INVALID_IDENTIFIER` for a non-kernel identifier, `MISSING_OBLIGATION` / `MISSING_BALANCE` / `MISSING_ALLOWANCE` rather than defaulting to zero, `NOMINAL_UNIT` when an obligation denomination differs from $U$, and `ARITH_RANGE` when a Quantity exceeds signed128. Short-circuit `and` / `or` / `?` skips unselected runtime lookups; static checking still visits every branch and action. One read costs one reduction plus its identity child's actual reductions. Successful debit is E + N. These rules are TypeScript executable semantics. The September 17 K lifecycle definition now executes the corresponding scoped reads; general correspondence remains open.
 
 ## What a developer writes
 
@@ -690,8 +692,8 @@ spent 100. Successful work is prefix 41 + kernel 2 + ordinary ensure 6 +
 three Quantity ensures at 5 + three Amount ensures at 6 = 82. Spendable 82
 succeeds with remaining 0 and reserve 16. A suffix rejection publishes no
 financial effect. This is local preparation, not a K execution, proof, or
-ledger settlement. The bounded K kernel does not implement the post-read
-constructors.
+ledger settlement. The separate September 17 native lifecycle corpus exercises
+post-read constructors; this CLI example itself invokes only TypeScript.
 
 ### Check, format and simulate loan origination and accrual
 

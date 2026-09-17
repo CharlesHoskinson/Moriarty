@@ -1,0 +1,154 @@
+August 13 2026
+ The developer experience of building on Midnight
+Midnight
+Developers
+Developer resources
+Sign up now so you never miss an update
+subscribe
+contributors
+Midnight
+Jay Albert
+DevRel Engineer
+Emmanuel Ameh
+Technical Writer
+Midnight lets developers build privacy-preserving DApps using Compact, a TypeScript-based smart contract language, so both Web2 and Web3 engineers can implement zero-knowledge privacy without deep cryptography expertise. A full tool suite, step-by-step documentation, and hands-on tutorials cover the path from install to deployed contract.
+
+What building on Midnight looks like
+You write a smart contract in Compact, declare which state is private and which is public, and the toolchain compiles it into circuits. Zero-knowledge proofs are generated client-side, so private data never leaves the device that owns it. You deploy to the network and interact through the Midnight.js libraries and the CLI, in a TypeScript workflow throughout.
+Midnight frames its developer value in three words:
+Accessible
+: zero-knowledge privacy with common languages like TypeScript, no advanced cryptography required.
+Programmable
+: selective disclosure lets applications meet compliance and business needs, revealing exactly what a use case requires and nothing more.
+Secure
+: data stays with its owner; the network verifies proofs about the data instead of the data itself.
+The language: Compact
+Compact is a statically typed, TypeScript-based domain-specific language for writing privacy-preserving smart contracts. The syntax is familiar to anyone who has written TypeScript, which lowers the barrier for Web2 and Web3 developers alike: you express what is private and what is public, and the compiler turns the program into zero-knowledge circuits.
+Private and public state are explicit in the language. Public state lives in ledger declarations that anyone can read on-chain. Private data enters through witness functions, stays on the developer's or user's device, and reaches the chain only as proofs and commitments. Disclosure of private data is explicit: the compiler rejects programs that leak witness data into public state unless the developer declares the disclosure.
+Read the 
+Compact language reference
+.
+The tooling
+The Compact CLI
+: installs and manages the toolchain, compiles contracts, and keeps compiler versions current (compact update).
+The VS Code extension
+: syntax highlighting, diagnostics, and editor support for Compact.
+The Fix-up tool
+: updates Compact source to newer language versions. 
+Midnight.js
+: the TypeScript client libraries for deploying contracts, calling circuits, and reading chain state (
+github.com/midnightntwrk/midnight-js
+).
+The SDKs
+: wallet and DApp connector SDKs for building applications and wallet integrations (
+docs.midnight.network/sdks
+).
+The API reference
+: generated reference for every published package (
+docs.midnight.network/api-reference
+).
+Quickstart: from install to first contract
+The full path, each step linked to the documentation it comes from:
+Install the Compact toolchain
+ with the one-line installer. (
+Installation
+)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+Verify
+ with compact --version.
+Run the proof server locally
+ with Docker: docker run -p 6300:6300 midnightntwrk/proof-server:8.1.0 midnight-proof-server -v. Proofs are generated here, on your machine. (
+Installation: set up the proof server
+)
+Install the Compact VS Code extension
+ for editor support. (
+Installation: VS Code extension
+)
+Get test tokens
+: request tNIGHT from the faucet for your test network, then register it for DUST generation. DUST is the resource that pays for transactions, and holding tNIGHT alone generates nothing until you register it. This is a common blocker; do it before your first deploy. (
+Acquire and register tokens
+)
+Write and compile a contract
+: follow the Bulletin board tutorial to create a Compact contract and compile it with the CLI. (
+Bulletin board: smart contract
+)
+Deploy and interact
+ through Midnight.js and the tutorial's API layer and CLI. (
+Bulletin board: CLI
+)
+Here is real Compact, taken verbatim from the Bulletin board tutorial (the contract's public state declaration):
+pragma language_version 0.23;
+import CompactStandardLibrary;
+export enum State {
+VACANT,
+OCCUPIED
+}
+export ledger state: State;
+export ledger message: Maybe<Opaque<'string'>>;
+export ledger sequence: Counter;
+export ledger owner: Bytes<32>;
+Source: 
+Bulletin board tutorial, smart contract
+.
+Tutorials and examples
+The tutorials are a real path, not toy snippets. Each one builds a working application:
+Bulletin board
+: a privacy-preserving message board with ZK proofs for identity verification, a reusable API layer, and a CLI.
+Private Party
+: a contract that demonstrates the privacy boundary, unshielded NIGHT tokens, and access control in Compact.
+Battleship
+: a game contract that mixes public and private state as a state machine, verified with Midnight.js tests.
+Leaderboard
+: a full-stack DApp with privacy modes, Lace wallet integration, a React frontend, and deployment.
+ZK Loan
+: a lending DApp where the credit attestation stays in private state and only the loan outcome reaches the ledger.
+Learning and support
+Midnight Developer Academy
+ (
+academy.midnight.network
+): structured courses from essential concepts to advanced privacy engineering, covering consensus, cryptography, and the NIGHT/DUST model.
+Midnight Expert 
+(https://docs.midnight.network/ai-integration/midnight-expert
+): an AI development toolkit for the Midnight Network.
+The Aliit technical fellowship
+: a cohort-based program for developers going deep on the ecosystem.
+The developer forum and Discord
+: where technical questions get answered.
+Dev Diaries
+: engineering walkthroughs from the team building Midnight.
+Open-source repositories
+: Midnight.js, midnight-zk, awesome-dapps, and more on the 
+midnightntwrk GitHub organization
+, plus dev bounties.
+Hackathons
+: regular events with hands-on support and prizes.
+Frequently asked questions
+What language do I use to build on Midnight?
+ Compact, a statically typed, TypeScript-based domain-specific language for privacy. Because the syntax is familiar to TypeScript developers, both Web2 and Web3 engineers can write private smart contracts without advanced cryptography knowledge. Compact is supported by a VS Code extension and a CLI toolchain.
+Do I need to understand zero-knowledge cryptography to build on Midnight?
+ No. Midnight abstracts the complexity of ZK proofs so you work with high-level primitives in Compact. You declare which data is private and which is public, and the toolchain handles proof generation. Deeper cryptography is available to learn through the Midnight Developer Academy if you want it.
+How do I start building on Midnight?
+ Begin with the quickstart in the documentation: install the tooling, request tNIGHT test tokens from the faucet and register them for DUST generation, then follow a tutorial such as the Bulletin board to write, deploy, and interact with your first Compact contract.
+What tools and SDKs does Midnight provide?
+ A full developer suite: a VS Code extension, the Compact CLI, the Midnight.js libraries, wallet and DApp connector SDKs, and an API reference. Open-source repositories (including Midnight.js, midnight-zk, and awesome-dapps) and dev bounties are available on the midnightntwrk GitHub organization.
+How do I get test tokens to build and test?
+Request tNIGHT
+ from the Midnight faucet for your test network. tNIGHT must then be registered for DUST generation, because DUST is the resource that pays for transactions on the network. This lets you deploy and test without real funds.
+Where can I get help while building?
+ Use the Midnight developer forum and Discord for technical questions, the Dev Diaries for walkthroughs, and the Aliit fellowship community for deeper ecosystem knowledge. Regular hackathons offer hands-on support and prizes.
+Can Web2 developers build on Midnight?
+ Yes. Compact is TypeScript-based, and the whole workflow (contracts, client libraries, tests) runs in a TypeScript toolchain, so Web2 developers can build without prior blockchain or cryptography experience. The Developer Academy covers the blockchain concepts as needed.
+Is Midnight open source?
+ The developer stack is public on the 
+midnightntwrk GitHub organization
+, including Midnight.js, the midnight-zk cryptography library, the node, the indexer, and the awesome-dapps community list.
+Developers
+Developer resources
+Share
+twitter
+linkedin
+Copy link
+Previous Post
+The mechanics of DUST generation and decay 
+Next Post
+ Put your project on the map as Midnight developer activity surges 
