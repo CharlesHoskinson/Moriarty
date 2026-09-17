@@ -1,5 +1,7 @@
 # Tasks
 
+Tasks 1–3 below reflect the merged PR5–PR7 local implementations and their [independent audits](../../../deliverables/language-to-ledger-2026-09-12/). This reconciliation does not close K, ledger or proof requirements.
+
 ## 0. Scope reconciliation and plan
 - [ ] 0.1 Preserve current main and unrelated preimages; record merged PR1–PR4 receipts.
 - [ ] 0.2 Update ROADMAP.md with implemented local scope and retained wider gates.
@@ -7,25 +9,27 @@
 - [ ] 0.4 Review the complete design and plan at docs/superpowers/plans/2026-09-12-language-to-ledger.md.
 
 ## 1. Financial postconditions
-- [ ] 1.1 Add failing source/Core/CLI tests for the six post reads and atomic failure.
-- [ ] 1.2 Implement source/4, Core/3 and private body/kernel/ensures staging.
-- [ ] 1.3 Add runnable example and update README syntax, semantics and commands.
-- [ ] 1.4 Run package test/typecheck and independent exact-work/rollback/legacy probes.
-- [ ] 1.5 Obtain fresh exact-candidate Astra audit; repair, publish and integrate scoped files.
+- [x] 1.1 Add failing source/Core/CLI tests for the six post reads and atomic failure.
+- [x] 1.2 Implement source/4, Core/3 and private body/kernel/ensures staging.
+- [x] 1.3 Add runnable example and update README syntax, semantics and commands.
+- [x] 1.4 Run package test/typecheck and independent exact-work/rollback/legacy probes.
+- [x] 1.5 Obtain fresh exact-candidate Astra audit; repair, publish and integrate scoped files.
 
 ## 2. Origination and accrual
-- [ ] 2.1 Freeze versioned closed schemas, terms, authority boundary and independent numeric expectations.
-- [ ] 2.2 Add failing funded origination, floor/ceil, duplicate-period and overflow tests.
-- [ ] 2.3 Implement protected operations, complete effects, source/CLI consumer and cursor retention.
-- [ ] 2.4 Run actual API/CLI and legacy checks; obtain fresh audit, repair and integrate.
+- [x] 2.1 Freeze versioned closed schemas, terms, authority boundary and independent numeric expectations.
+- [x] 2.2 Add failing funded origination, floor/ceil, duplicate-period and overflow tests.
+- [x] 2.3 Implement protected operations, complete effects, source/CLI consumer and cursor retention.
+- [x] 2.4 Run actual API/CLI and legacy checks; obtain fresh audit, repair and integrate.
 
 ## 3. Complete lifecycle
-- [ ] 3.1 Add source and independent complete states for debt0→100→110→80→0.
-- [ ] 3.2 Implement examples/loan-lifecycle.mjs and npm loan-lifecycle-demo.
-- [ ] 3.3 Check conservation, cumulative work, IDs, failed continuation and documented commands.
-- [ ] 3.4 Audit complete outputs and publish the scoped result.
+- [x] 3.1 Add source and independent complete states for debt0→100→110→80→0.
+- [x] 3.2 Implement examples/loan-lifecycle.mjs and npm loan-lifecycle-demo.
+- [x] 3.3 Check conservation, cumulative work, IDs, failed continuation and documented commands.
+- [x] 3.4 Audit complete outputs and publish the scoped result.
 
 ## 4. K agreement
+
+The September 17 offline Source/Core/oracle corpus is preparatory work. Every checkbox below still requires actual K evidence. The historical trace106 compiled artifacts and pinned runtime must be recovered before the specified reproduction can run.
 - [ ] 4.1 Pin retained failing case and compiled artifact; admit one bounded reproduction.
 - [ ] 4.2 Resolve the reproduced backend defect without narrowing the accepted language.
 - [ ] 4.3 Implement supported lifecycle rules, loader and complete observations in formal/k/.
