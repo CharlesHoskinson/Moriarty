@@ -31,7 +31,7 @@ export function EvidenceInspector() {
         <div className="k-insp-panel" aria-live="polite">
           <p className="k-insp-label">Establishes</p>
           <p className="k-insp-claim">{m.claim}</p>
-          <p className="k-insp-label">Under these named assumptions</p>
+          <p className="k-insp-label">Under these assumptions</p>
           <ul className="k-insp-list">
             {m.assumptions.map((a) => <li key={a}>{a}</li>)}
           </ul>
