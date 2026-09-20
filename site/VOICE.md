@@ -1,161 +1,119 @@
 # Voice
 
-The site is written in one register. This file is the law for every line of
-copy, every heading, every caption and every label.
+The site is written in one register. This file governs every line of copy,
+every heading, every caption and every control label, and it governs them by
+purpose rather than by measurement.
 
-## Register
+## Write for the reader’s purpose
 
-Narration. Short declarative sentences that carry a subject and a finite verb,
-with long sentences built by coordination rather than subordination. The
-measured habits behind this register:
+Each page serves one of the four Diátaxis needs, and the prose has to fit
+that need. Explanation deepens understanding: it says why things are as they
+are, connects them to their consequences, weighs alternatives and can be read
+away from the tool. Reference states facts and rules exactly, in the order
+the reader will look them up, and adds no argument. How-to material tells a
+reader with a goal what to do next. Tutorials teach by doing. Decide which
+need a page or a passage serves before writing it, and keep the others out:
+an explanation that drifts into a rulebook stops explaining, and a reference
+page that starts arguing stops being reliable.
 
-The measured figures, so nothing here has to be approximated:
+On this site, `kernel.html` and the home page are explanation. The generated
+`docs/requirements.html` and `docs/language.html` pages are reference. Link
+from explanation to reference wherever exact wording, syntax or an obligation
+number matters, rather than restating the rule in looser words.
 
-- Median sentence length is 11 words and the mean is 15. A quarter of sentences
-  run to 7 words or fewer, a quarter run past 19, and a tenth run past 30. The
-  longest in the corpus is 150. A passage with no long sentence in it is not in
-  the register, and no long sentence is ever cut to improve a distribution.
-- Long sentences are built with `and`, at 0.675 per sentence overall. The
-  correlation between length and `and` count is 0.732, and 61.3% of all `and`
-  tokens sit in sentences past 20 words. The coordination belongs in the longest
-  sentences. Sprinkling it through short ones satisfies the rate and produces
-  the wrong prose.
-- Long sentences arrive in company. They cluster in twos and threes. Following
-  every long sentence with a short one is the imitator's reflex, and in the
-  corpus only 12.1% of long sentences sit isolated between two short ones.
-- Qualification stays. Subordinators run 21.6 per 1,000 words, which is higher
-  than the technical brief this tool was once asked to rewrite. `if`, `when`,
-  `although`, `while`, `where` and `because` all belong here. The writer who
-  never subordinates is a folk model, and acting on it drove one output 23%
-  below the real rate.
-- Short does not mean clipped. About 95% of sentences of six words or fewer
-  carry a subject and a finite verb, and verbless fragments run near 0.7%. "The
-  guard fails." is the register. "Fails. Every time." is advertising copy. Two
-  fragments never run together; the corpus holds a single run of three.
-- Em dashes run 0.86 per 1,000 words and semicolons 1.4. Contractions run 8.56
-  and question marks 0.89, because those are habits of dialogue and this site is
-  exposition. Commas run 35.31 and carry the weight instead.
+## Explanation is connected prose
 
-## When the score is off, add short sentences
+Explanatory prose is made of paragraphs, and a paragraph is a unit of
+reasoning rather than a container for assertions. Its opening sentence states
+what the paragraph is about. The sentences that follow develop that one point,
+supply the reason or the consequence, and hand off to the next paragraph. A
+reader should be able to say what each paragraph argued and why it came where
+it did.
 
-A measured gap has two remedies and only one of them is honest.
+Sentence length follows meaning. A qualification belongs in the sentence it
+qualifies, joined by `if`, `when`, `because`, `where`, `although` or `so`,
+rather than parked as a separate fragment afterwards. A short sentence is
+right when the point is short. A run of short sentences that each carry one
+assertion, with the connective tissue left out, reads as a slogan sequence,
+and a reader has to reconstruct the argument that the writer declined to
+make. Do not set targets for sentence length, sentence count or any other
+statistic, and do not lengthen or shorten a sentence to hit one.
 
-The briefs run a median near 20 words against the register's 11, with a tenth
-of the target's share of short sentences and twice its share of long ones. Read
-carelessly, that says cut the long sentences. Cutting them is the documented
-failure of this whole approach: six lanes once read the summary statistics,
-shortened everything, and produced prose four blind readers called pastiche,
-measuring four times further from the author than the untouched original while
-the scorer reported its best number of the session.
+Use lists and tables for what they are good at: parallel items, comparisons,
+account values, terms of an agreement. Do not use them to avoid writing the
+paragraph that would connect the items. A diagram stays a diagram, and its
+lane labels stay compact; the explanation that the diagram supports goes in
+prose beside it.
 
-The deficit is short sentences, not excess long ones. The register wants two
-sentences in five under ten words, and the briefs carry one in seven. So the
-remedy is additive. Write the short declarative that states the fact, and let
-the long coordinated sentence that follows do the work it was already doing.
-No long sentence is ever deleted to improve a distribution.
+## Say what a thing is before what it is not
 
-## The counting rule
+Establish the subject, what it does and why it is useful before drawing its
+limits. Security boundaries matter because they define the guarantees, but a page built out of negations never tells the reader what
+the thing is for. State the capability, then the boundary, in the same
+passage and usually in the same paragraph. Reach for the “not X but Y”
+construction only where the contrast is the point; used as a reflex it
+flattens every sentence into the same shape.
 
-Cut the tallies. This is the strongest single instruction in this file, and it
-overrides any storyboard that disagrees.
+## Headings
 
-Prose does not announce how many things it is about to describe. A heading that
-reads "Eight tabs. Twenty-four action targets. Nothing elided." fails twice
-over: it counts, and it counts in fragments. Write what the thing is and let the
-page show its own extent.
+A heading names what its section is about, so that a reader scanning the
+page can find the passage they need. It does not count the section’s
+contents, summarise its conclusion as a slogan, or advertise. “What
+acceptance has to establish” is a heading. “Four judgments, kept apart” is a
+tally with a punchline. Sentence case, no trailing full stop.
 
-What this forbids:
+## Prose does not count
 
-- Headings and sentences built out of numbers of sections, families, facets,
-  targets, layers, properties, threats, operators, claims or sprints.
-- Running counters and progress readouts. A tally of what a reader has opened is
-  the same habit moved into the interface.
-- Labels of the form "3 action targets", "six blocks", "1 of 7", "obligation 2
-  of 6" wherever the surrounding design already shows position.
-- Restating a set's size after listing it.
+A heading or sentence built out of the number of sections, facets, targets,
+layers, properties, mechanisms or claims is a tally, and tallies are cut.
+Prose does not announce how many things it is about to describe, does not
+keep a running score of what the reader has opened, and does not restate a
+set’s size after listing it. The page shows its own extent.
 
-What this permits, because these are facts rather than tallies:
+Financial quantities are always exact and always present: 11 A, 1 A, 20 B,
+5.5 A, 19,743 B. Named identifiers that contain digits stay as they are. A
+count that is itself the point, stated once, is content rather than tally.
+Acceptance criteria, test names and data comments may state required counts,
+because there they are constraints on the work rather than sentences on a
+page.
 
-- Financial quantities, always exact. 19,743 B. 997/1000. 162,290,000.
-- The measured composition result and its rates.
-- Named identifiers that happen to contain digits: DA06, F2, SP03, ERC-4626,
-  UInt128, `moriarty-successor-syntax/0`.
-- A count that is itself the point of the sentence, used once. The four proof
-  claims are mandatory and none is optional, so saying so is content.
+## Describe the design directly
 
-Coverage still matters, and the site still has to be complete. The reader should
-see completeness in the surface rather than read it off a counter. A grid whose
-cells are all filled says more than a line reporting that all of them are.
+Explain what the kernel does, how its parts work together and why the design
+uses them. Use direct declarative prose for architectural responsibilities.
+Keep implementation progress in a dedicated status section. Do not interrupt
+the explanation with repeated claims that a feature is proposed, unproven,
+not demonstrated or not yet built, and do not instruct readers how to judge
+the project's honesty.
 
-The rule governs what a reader sees. It does not govern the build. An
-acceptance criterion, a test name or a data comment may state a required count,
-because there it is a constraint on the work rather than a sentence on a page.
-`CATEGORY-TABS.md` may say that every action target must appear. The page built
-from it may not say so.
-
-## No hedging
-
-Assert or stay silent. A sentence that softens its own claim wastes the reader's
-attention and buys nothing back.
-
-Cut these on sight: `arguably`, `somewhat`, `relatively`, `fairly`, `roughly`,
-`approximately`, `generally`, `typically`, `usually`, `often`, `tends to`,
-`perhaps`, `possibly`, `probably`, `potentially`, `essentially`, `basically`,
-`effectively`, `largely`, `mostly`, `broadly`, `seems`, `appears to`, `suggests
-that`, `it is worth noting`, `it should be noted`, `in some sense`, `to some
-extent`, `a little`. Cut the aspiration verbs with them: nothing here `aims to`,
-`seeks to`, `is designed to`, `attempts to` or `helps to`. It does the thing or
-it does not.
-
-Where a number is known, give the number. `roughly one in ten` is a hedge when
-the measurement exists.
-
-**A scope statement is not a hedge.** This distinction is the whole of it, and
-getting it backwards would destroy the one thing that separates this project
-from the systems it criticises.
-
-- "The source can still lie." That is an assertion about a limit.
-- "Integrity does not create availability." That is an assertion.
-- "K is selected. It is not implemented." That is two assertions.
-- "A valid oracle signature does not establish economic truth." An assertion.
-
-Each states a boundary flatly and takes a position that can be checked and
-argued with. None of them softens a claim. Naming the limit beside the claim is
-the strongest move on the page, and it survives this rule untouched.
-
-This rule departs from the measured register, and the departure is deliberate.
-The profile records hedges at 7.81 per 1,000 words, so the author this register
-comes from hedges more than the prose here ever will. The site overrides that on
-instruction. Subordination is kept at its measured rate because subordination
-carries meaning; hedging is dropped below the measured rate because it does not.
-Read any conformance score with that divergence in mind rather than treating the
-gap as a defect to close.
-
-The modal verbs survive too where they carry permission, prohibition or a
-modelled possibility. `Anyone may submit the timeout.` `No target may cover
-something that does not exist.` `The delivery may be delayed or duplicated.`
-Those are the language of a specification. A modal is a hedge only when it
-softens a claim the writer could simply make.
+Security conditions belong beside the guarantees they define. An unknown
+external result leaves authority reserved; a threshold signature depends on
+its corruption model; a proof establishes its encoded relation. These are
+properties of the design, not apologies for its implementation status.
+Preserve exact amounts, authorization conditions and financial meaning during
+an edit. Moving status information to its own section preserves its meaning
+without making every paragraph a progress report.
 
 ## Diction
 
-Concrete nouns and plain verbs. A guard fails. A payment discharges a debt. A
-proof is refused. Cut adverbs that prop up weak verbs, and cut adjectives that
-carry no fact. Never reach for `comprehensive`, `robust`, `seamless`,
-`powerful`, `cutting-edge`, `leverage`, `unlock`, `delve`, `landscape`,
-`tapestry`, `testament` or `journey`.
+Concrete nouns and plain verbs, in the vocabulary the requirements use. A
+guard fails. A payment discharges a debt. A proof is refused. Use the same
+term for the same thing throughout; do not vary for elegance. Cut adverbs
+that prop up weak verbs and adjectives that carry no fact. Do not use
+`comprehensive`, `robust`, `seamless`, `powerful`, `leverage`, `unlock`,
+`delve`, `landscape`, `tapestry`, `testament` or `journey`. Do not invent
+metaphors, and do not perform a personality; the site is exposition and the
+reader is a developer who wants to understand a design.
 
-Say the thing once. Do not write the sentence that says what the next paragraph
-will do, and do not write the sentence that summarises what the last one did.
+Say each thing once, in the place where the reader needs it. Do not write
+the sentence that announces what the next paragraph will do or the sentence
+that summarises what the last one did. Do not end a section with a recap or
+a send-off; end on the last thing that needed saying.
 
-## Attribution of this register
+## Interactive material
 
-The register is measured from published short fiction, and the profile that
-measures it carries `status: draft` because part of its corpus is material the
-author did not write. It was selected by explicit instruction rather than by
-automatic activation.
-
-VOICE-PROFILE: DRAFT OVERRIDE — the register was requested by name.
-
-The output is therefore held to the rules above. It is not to be described as
-conformant to a measured profile.
+An interactive illustration is embedded in explanation and does not replace
+it. Establish what the reader is looking at and why it matters before the
+first control, keep the instructions for a control short and next to that
+control, and keep button labels compact. The page must read as a complete
+explanation with scripts disabled.

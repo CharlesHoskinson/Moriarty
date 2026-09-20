@@ -314,8 +314,9 @@ with sync_playwright() as pw:
     check("correlation statement is narrow, not collapsing", "share a failure" in page.inner_text(".k-insp-fine") and "are one assumption" not in page.inner_text(".k-insp-fine"))
     check("threshold claim does not imply a threshold of honest signers", "not a threshold of honest signers" in thr and "t − f honest shares" in thr, thr)
     check("static threshold row makes the same t − f qualification", "t − f honest shares" in static_ev)
-    evidence_lede = page.inner_text("#evidence .lede")
-    check("evidence lede treats shared operators as correlated, never counting once", "count once" not in evidence_lede and "correlated dependencies" in evidence_lede and "necessary, not sufficient" in evidence_lede, evidence_lede)
+    evidence_explanation = " ".join(page.locator("#evidence .k-prose").all_inner_texts())
+    check("evidence explanation treats shared operators as correlated and binding alone as insufficient",
+          "count once" not in evidence_explanation and "correlated dependencies" in evidence_explanation and "common statement is not enough" in evidence_explanation, evidence_explanation)
     click(page, "[data-mech=zk]")
     zk_list = page.inner_text(".k-insp-list")
     check("zero-knowledge is qualified relative to the public statement", "relative to the public statement" in zk_list and "metadata" in zk_list, zk_list[:200])
@@ -323,7 +324,8 @@ with sync_playwright() as pw:
     # --- four acceptance judgments (audit R7) ----------------------------------------------
     j = page.inner_text(".k-judgments")
     check("four acceptance judgments are explained on the page", all(k in j for k in ("Contract properties", "Intent refinement", "Transition validity", "History compliance")), j[:120])
-    check("judgment prose disclaims native proof obligations", "none of the native proof obligations" in j)
+    check("implementation section identifies the browser model and its proof boundary",
+          "browser model" in page.inner_text("#status") and "no native proof or ledger settlement" in page.inner_text("#status"))
     check("explorer checks reference the four judgments", "contract properties" in page.inner_text(".k-hint-judgments") and "history compliance" in page.inner_text(".k-hint-judgments"))
     check("fixture names concrete asset identities", "fixture-issuer-a" in page.inner_text(".k-fixture-note") and "foreign-illustration" in page.inner_text(".k-fixture-note"))
 
