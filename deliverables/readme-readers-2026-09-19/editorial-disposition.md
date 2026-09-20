@@ -1,0 +1,9 @@
+# Inkwell and Humanizer application
+
+Applied Gottlieb structural findings before the Le Guin cadence review. Applied Le Guin's duplicated-adverb cut, two use-case opener changes, removal of the redundant Compact coda and a varied authority/history sentence. Split the authority/liability triad while preserving unused authority rather than inventing lapse.
+
+Rejected suggested sentence "No release commitment supports it": the known fact is that the date is a user-supplied project planning assumption, not that no commitment exists anywhere. Kept the precise verified-status qualification. Rejected "unused spending authority may simply lapse": the agreement may grant indefinite scoped authority, so lapse cannot be added as an editorial fact. Rejected "Completeness is the point" as less precise than the existing private-completeness claim. Necessary status-bearing remain/must language is retained; diagnostic cadence rates are not quotas.
+
+Humanizer file-mode draft/audit/final pass: replaced broken dash-derived bullet punctuation with colons, removed unnecessary adverbs, simplified unexplained labels, varied repeated paragraph structures through specific attacks, and retained necessary distinctions rather than treating technical negations as disposable tells. Final audit found no unsupported new facts introduced by stylistic changes, no em/en dashes, no curly quotation marks, no stock promotional conclusions, no conversational residue. Code blocks and link targets were preserved during the style pass. The added example and quickstart were separately sourced and executed, not invented for style.
+
+Active Inkwell voice remains original English adapted using its live diagnostic Grothendieck profile: motivate the agreement, define the terms, explain consequences, and distinguish proposed obligations from evidence. No historical-author attribution or calibrated conformance is claimed.
