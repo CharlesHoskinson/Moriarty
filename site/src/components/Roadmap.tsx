@@ -12,11 +12,12 @@ export function Roadmap() {
       <p className="eyebrow">Delivery</p>
       <h2>What would have to be true.</h2>
       <p className="lede">
-        Each sprint carries the evidence that would decide it. None of these is
-        a status label, and none is satisfied by agreement.
+        The <a href="docs/requirements.html#delivery">consolidated U0–U7 roadmap</a> is the current delivery sequence.
+        The twelve sprint contracts below retain their acceptance obligations
+        within that sequence; they are not a separate execution queue.
       </p>
 
-      <h3>Reached</h3>
+      <h3>Recorded foundations</h3>
       <div className="milestones">
         {MILESTONES.map((m) => (
           <article key={m.title}>
@@ -36,7 +37,7 @@ export function Roadmap() {
         ))}
       </div>
 
-      <h3 className="tracks-head">Running in parallel</h3>
+      <h3 className="tracks-head">Earlier workstream decomposition</h3>
       <div className="tracks">
         {TRACKS.map((t) => (
           <div key={t.name} className="track">
@@ -50,8 +51,8 @@ export function Roadmap() {
         ))}
       </div>
       <p className="tracks-note">
-        The tracks are parallel because their blocking questions are
-        independent. One asks whether the successor specification can be
+        These historical tracks identify separate evidence questions. Current
+        sequencing and dependencies are defined by U0–U7. One asks whether the successor specification can be
         completed and executed in K. The native track asks whether the
         recursive proof backend can verify a history at all, which is open
         after the first experiment ran out of rows at k17. The third asks

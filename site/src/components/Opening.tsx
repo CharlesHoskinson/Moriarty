@@ -40,9 +40,10 @@ export function Opening() {
           <h3>What it is</h3>
           <p>
             Developers describe financial state, permitted actions, payment
-            obligations and authorization rules. Those descriptions compile to
-            Compact, and every transaction carries a proof that its execution
-            and the contract history it extends satisfy the agreement.
+            obligations and authorization rules. The target is permissionless native
+            ZKIRv3 compilation, with proof-carrying execution and history. Local
+            source profiles and fixed Compact examples exist; the complete
+            language-to-ledger correspondence remains work to deliver.
           </p>
           <p>
             Moriarty is a new bounded financial-agreement language. It is not a
