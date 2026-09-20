@@ -71,6 +71,20 @@ jobs:
           CHROME= SHOTS="${RUNNER_TEMP}/shots" python3 test/site.spec.py
           CHROME= DOCS_SHOT="${RUNNER_TEMP}/shots/semantics.png" python3 test/docs.spec.py
 
+      # The kernel page is also driven under the project subpath it will be
+      # published at, so a direct refresh of /Moriarty/kernel.html and its
+      # relative assets are checked rather than assumed from the origin root.
+      - name: Serve the build under the project subpath and drive the kernel page
+        run: |
+          mkdir -p "${RUNNER_TEMP}/pages"
+          ln -sfn "$PWD/dist" "${RUNNER_TEMP}/pages/Moriarty"
+          python3 -m http.server 8892 --directory "${RUNNER_TEMP}/pages" &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:8892/Moriarty/kernel.html && break
+            sleep 1
+          done
+          CHROME= SHOTS="${RUNNER_TEMP}/shots" URL=http://localhost:8892/Moriarty/ python3 test/kernel.spec.py
+
       - name: Keep the captures
         if: always()
         uses: actions/upload-artifact@v4
