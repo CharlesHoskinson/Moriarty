@@ -1,0 +1,151 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Expiry
+Copy page
+Copy page
+Documentation for Splice.Expiry
+Copy page
+Copy page
+Functions for computing amulet and lock expiry times and conditions.
+​
+Data Types
+data
+BoundedSet a
+A symbolic representation of a set of values of type
+a
+useful for computing upper-bounds.
+Singleton a
+Singleton x
+represents the singleton set
+{x}
+AfterMaxBound
+AfterMaxBound
+represents the set of all values larger than the maximal value that can be represented by type
+a
+instance
+Functor
+BoundedSet
+instance
+Eq
+a =>
+Eq
+(BoundedSet a)
+instance
+Show
+a =>
+Show
+(BoundedSet a)
+data
+TimeLock
+A lock held by multiple parties until its expiry.
+TimeLock
+Field
+Type
+Description
+holders
+[
+Party
+]
+expiresAt
+Time
+optContext
+Optional
+Text
+Short, human-readable description of the context in which the amulet is locked. Intended for wallets to inform the user about the reason for the lock. Consider what details to share about the context, as that might be private and the string here will be public information.
+instance
+FromAnyValue TimeLock
+instance
+ToAnyValue TimeLock
+instance
+Eq
+TimeLock
+instance
+Ord
+TimeLock
+instance
+Show
+TimeLock
+instance
+GetField “expiresAt” TimeLock
+Time
+instance
+GetField “holders” TimeLock [
+Party
+]
+instance
+GetField “lock” LockedAmulet TimeLock
+instance
+GetField “lock” PreprocessedTransferOutput (
+Optional
+TimeLock)
+instance
+GetField “lock” TransferOutput (
+Optional
+TimeLock)
+instance
+GetField “optContext” TimeLock (
+Optional
+Text
+)
+instance
+SetField “expiresAt” TimeLock
+Time
+instance
+SetField “holders” TimeLock [
+Party
+]
+instance
+SetField “lock” LockedAmulet TimeLock
+instance
+SetField “lock” PreprocessedTransferOutput (
+Optional
+TimeLock)
+instance
+SetField “lock” TransferOutput (
+Optional
+TimeLock)
+instance
+SetField “optContext” TimeLock (
+Optional
+Text
+)
+​
+Functions
+maxInt
+:
+Int
+maxDecimalDiv10
+:
+Decimal
+minTime
+:
+Time
+The smallest time point that can be represented by the
+Time
+type.
+maxTime
+:
+Time
+The largest time point that can be represented by the
+Time
+type.
+amountExpiresAt
+: ExpiringAmount -> BoundedSet Round
+Compute the round where the amulet expires. i.e. the amulet is fully expired.
+isAmuletExpired
+: Round -> ExpiringAmount ->
+Bool
+isAmuletExpired openRound amuletAmount
+computes whether the expiring
+amuletAmount
+is definitely expired in case the
+openRound
+is open.
+Suggest edits
+Raise issue
+Splice.DecentralizedSynchronizer
+Splice.ExternalPartyAmuletRules

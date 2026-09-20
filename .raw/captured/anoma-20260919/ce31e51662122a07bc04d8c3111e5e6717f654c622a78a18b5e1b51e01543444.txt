@@ -1,0 +1,216 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+State Architecture
+Resource Machine
+Resource Machine
+Primitive interfaces
+Primitive interfaces
+Set
+Map
+Fixed size type
+Fixed size type
+Interface
+Arithmetic
+Hash
+Delta hash
+Proving system
+Commitment accumulator
+Nullifier set
+Data structures
+Execution flow
+Notes
+Shielded resource machine
+Integrations
+Integrations
+Protocol Adapters
+Tutorials
+Tutorials
+Contributor guidelines
+Home
+System architecture
+State Architecture
+Resource Machine
+Primitive interfaces
+Fixed size type
+module
+arch.system.state.resource_machine.primitive_interfaces.fixed_size_type.delta_hash
+;
+import
+prelude
+open
+;
+Delta hash
+¶
+Delta hash is an interface that implements both
+Hash
+type and
+Arithmetic
+type. It is also required to be additively homomorphic and kind-distinct:
+For resources of the same kind
+\(kind\)
+,
+\(h_{\Delta}\)
+should be
+additively homomorphic
+:
+\(\Delta_1 + \Delta_2 = h_{\Delta}(kind, q_1) + h_{\Delta}(kind, q_2) =
+h_{\Delta}(kind, q_1 + q_2)\)
+---
+A trait describing additive homomorphicity.
+trait
+type
+AdditivelyHomomorphic
+T
+:=
+mkAdditivelyHomomorphic
+@
+{
+---
+Adds two types implementing the
+;
+AdditivelyHomomorphic
+;
+trait.
+add
+:
+(
+v1
+v2
+:
+T
+)
+->
+T
+;
+}
+;
+---
+Implements the trait
+;
+Eq
+;
+for
+;
+AdditivelyHomomorphic
+;
+types.
+Property-AdditivelyHomomorphic
+{
+T
+}
+{{
+Eq
+T
+}}
+{{
+AdditivelyHomomorphic
+T
+}}
+(
+f
+:
+T
+->
+T
+)
+(
+v1
+v2
+:
+T
+)
+:
+Bool
+:=
+f
+(
+AdditivelyHomomorphic
+.
+add
+v1
+v2
+)
+==
+AdditivelyHomomorphic
+.
+add
+(
+f
+v1
+)
+(
+f
+v2
+)
+;
+For resources of different kinds,
+\(h_\Delta\)
+has to be computationally
+kind-distinct
+: if there exists
+\(kind\)
+and
+\(q\)
+s.t.
+\(h_\Delta(kind_1, q_1) +
+h_\Delta(kind_2, q_2) = h_\Delta(kind, q)\)
+, it is computationally infeasible to
+compute
+\(kind\)
+and
+\(q\)
+.
+---
+A trait describing kind distinctness.
+trait
+type
+KindDistinct
+T
+:=
+mkKindDistinct
+@
+{
+---
+Adds two types implementing the
+;
+KindDistinct
+;
+trait.
+add
+:
+(
+v1
+v2
+:
+T
+)
+->
+T
+;
+}
+;
+Note
+An example of a function that satisfies these properties is the
+Pedersen commitment scheme
+: it is additively homomorphic, and its kind-distinctness property comes from the discrete logarithm assumption.
+Used in
+¶
+Resource delta
+Compliance unit delta
+Action delta
+Transaction delta
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

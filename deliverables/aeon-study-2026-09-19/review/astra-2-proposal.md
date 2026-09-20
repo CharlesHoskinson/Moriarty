@@ -1,0 +1,66 @@
+# Adviser A2 — synthesis, compiler architecture and developer experience
+
+Independent advisory proposal based only on the supplied evidence packet. No implementation, current-source verification, release approval or Council receipt is claimed.
+
+## Recommendation and challenge
+
+Borrow Aeon's separation of a hole, its local context, a candidate producer and validation. Do **not** make synthesis the first deliverable. First establish a small, versioned static contract checker that benefits hand-written Moriarty programs. Otherwise a synthesizer risks becoming an expensive way to produce terms whose financial meaning the system cannot independently establish.
+
+The initial preference for Moriarty-native authoring is plausible, but understates two costs: reproducing exact arithmetic semantics in an SMT encoding, and maintaining that encoding as profiles change. “Outside the compiler” is an execution boundary, not a soundness argument. A sidecar verifier that shares a faulty arithmetic lowering with the compiler can agree perfectly and still be wrong. Keep candidate generation outside the kernel, use the existing checked Core as the semantic input, and separately qualify the Core-to-VC relation. A tiny arithmetic completion service is worthwhile only if it beats deterministic parameter solving or ordinary authoring on representative tasks.
+
+## What exists and what is missing
+
+The evidence already reports a real frontend, formatter, checks, local simulation, 48 expression constructors including UInt256 and dimensional arithmetic, computed funded repayment, source schemas, named actions, PRE reads, atomic postcondition rejection, origination, accrual and a complete local loan lifecycle. They are reuse points, not new Aeon deliverables. Bounded execution, protected funding consumption and persistent liabilities also already have implementations within scoped profiles.
+
+Native K results cover finite expression and lifecycle corpora, including counter probes. They do not discharge a metatheorem. Fixed loan and swap Preview financial evidence exists; the September 17 loan records actual exit zero. Historical missing exits and aggregate acceptance gaps remain separately recorded. Neither “no settlement exists” nor “the language-to-ledger lifecycle is complete” follows.
+
+Missing capabilities supported by this packet are a reviewed pure-expression VC translation, explicit solver outcome diagnostics, a useful assumption manifest, and a typed draft-completion interface. It does not establish general source-to-ledger correspondence, authenticated newer lifecycle acceptance, mandatory PCD, or complete ACTUS/DeFi coverage.
+
+## Feature decisions
+
+| Feature | Decision and exact scope | Prerequisite and falsifiable acceptance; non-goal |
+|---|---|---|
+| Refinements/VCs | **NOW:** bounded pure numeric/Boolean expressions over one pinned existing profile. Use contract metadata first, without new executable syntax. | Document widths, units, intermediate overflow, rounding, branch evaluation and rejection. Arithmetic and error mutations must fail; prove only over explicit admitted inputs. No automatic claim about transfers or ledger acceptance. |
+| Typed holes/restricted synthesis | **NEXT:** external draft holes in pure expressions, typed local variables and a small allowlisted grammar. Produce ordinary closed `.mori` source. | Depends on qualified VC checker; reparse and recheck the whole emitted program, then reverify the bound artifact. Reject surviving holes and disallowed constructors. Compare with deterministic completion and manual baselines on held-out tasks. No effectful synthesis. |
+| Trust reports | **NOW:** action/artifact-level obligation and assumption manifest with evidence references. | Inventory arithmetic model, compiler/profile, solver, schema, snapshot authenticity/currentness, oracle, kernel and downstream correspondence. Deliberately remove a dependency to test incomplete-report detection. No “all trusted code discovered” claim from a call graph. |
+| Counterexamples/IDE | **NOW** in CLI; **NEXT** editor integration. Show obligation ID, span, typed inputs and result status. | Replay a solver assignment in the ordinary evaluator before calling it a concrete counterexample. Preserve symbolic witnesses that cannot replay as encoding diagnostics. No fabricated model on unknown or timeout; no initial LSP platform project. |
+| Linear capabilities/typestate | **NEXT:** source diagnostics for already specified capability consumption and lifecycle transitions. | Derive judgments from existing kernel operation contracts. Branch-sensitive duplicate use and invalid transitions must be rejected; legitimate paths remain accepted. Distributed replay and unique ledger consumption stay runtime/ledger obligations. |
+| Totality/work bounds | **NOW:** preserve and expose existing limits; add work accounting for authoring search. | Distinguish source/evaluation bounds, search effort, runtime work ledger, lifetime and closure reserve. A candidate that meets its refinement but exceeds existing work limits must fail admission. No Aeon optional termination policy or general recursion. |
+| Qualifier inference | **DEFER:** eventually mine only a fixed documented vocabulary for author suggestions. | Reconsider after explicit annotations are demonstrably the bottleneck; inferred obligations must pass the same independent validation. No inferred authority or weakening of user constraints. |
+| Optimization | **NEXT:** deterministic ranking of already admissible candidates by AST size and established static work bounds. | Report objective and ties; preserve validity under ranking changes. Fees, recipient outcomes, liabilities and signed gross limits remain hard constraints. No fee/prover-cost prediction without a qualified target cost model. |
+| General ADTs/polymorphism | **DEFER:** retain existing domain types and bounded data support. | Require a concrete unmet ACTUS/DeFi case and corresponding semantics/lowering/work extension. Reject demand based only on Aeon's feature list. No language redesign for synthesis convenience. |
+| FFI | **REJECT** arbitrary runtime/native FFI in the financial kernel. Host-only tools may remain outside execution. | Existing explicit integration interfaces retain their own trust and correspondence obligations. No refined annotation can certify a foreign implementation. |
+| GP/LLM proposals | **DEFER:** optional untrusted producers behind the identical completion interface. | Tiny grammar baseline must first show a useful unsolved corpus; every proposal receives identical checks and resource limits. No generated explanation, sampling score or provider approval becomes evidence of correctness. |
+| Backend adoption | **REJECT** Aeon as financial runtime/compiler substrate; **DEFER** external Aeon producer experiment. | Reconsider an external producer only on demonstrated coverage improvement after translation and validation costs. Preserve Moriarty/Compact/Midnight lineage. No new financial backend target. |
+
+## Ordered OpenSpec roadmap
+
+1. **Contract and evidence slice — NOW.** Propose one narrowly scoped OpenSpec change cross-linked to SP02/SP03 and MC01, with downstream MC04/MC05 obligations explicitly open. Freeze the existing profile, semantic fragment, negative controls and assumption schema. Reconcile stale task checkboxes against retained K records without rewriting historical evidence. Deliver a useful CLI report for hand-written expressions first.
+2. **VC qualification — NOW.** Implement supported-fragment checking and structured diagnostic outcomes. A theorem-shaped claim requires a separately stated encoding argument; initial executable qualification can honestly remain finite conformance. Include satisfiable-precondition checks or explicit conditional/vacuous labeling: an impossible input condition must not be advertised as useful correctness. Unsupported operations stop proof claims, not ordinary existing runtime functionality.
+3. **Completion experiment — NEXT.** Add draft-side holes and bounded enumeration, after slice 2 acceptance. Freeze a small independent financial-expression corpus and a holdout before tuning. Report success, elapsed search, user editing effort and rejection classes, including unsatisfiable tasks. Continue only with useful improvement over deterministic completion. Effect-level promises such as residual debt, allocation order, fee-inclusive outcome and transfer consumption remain checked by their existing authorities.
+4. **Selective authoring improvements — NEXT.** Add editor presentation, static-work ranking and capability diagnostics only where earlier results justify them. Leave qualifier inference, broader language features and more sophisticated producers deferred. Run this track alongside eligible ledger and PCD delivery; do not make authoring convenience a new prerequisite for unchanged admitted financial campaigns.
+
+## Proposed EARS requirements
+
+- **AEON-AUTH-001:** Where static verification is enabled, the tool shall bind every result to the source hash, elaborated Core hash, semantic profile, compiler version, obligation set, encoding version and solver configuration.
+- **AEON-AUTH-002:** When a verification obligation is evaluated, the tool shall report exactly one of proved, refuted, unknown, timeout, unsupported or tool-error, and shall identify the admitted input domain and assumptions.
+- **AEON-AUTH-003:** If the precondition is infeasible or feasibility is not established, the tool shall label that status and shall not report an unqualified useful completion.
+- **AEON-AUTH-004:** When a draft hole is completed, the tool shall emit closed ordinary source and shall reparse, typecheck and validate the full emitted candidate against unchanged required constraints before marking the completion validated.
+- **AEON-AUTH-005:** When a concrete counterexample is displayed, the tool shall retain its obligation binding and evaluator replay result; if replay disagrees, the tool shall report a verification defect.
+- **AEON-AUTH-006:** While searching or ranking candidates, the tool shall enforce registered authoring resource limits and shall preserve all financial, execution-work and authority constraints as hard acceptance conditions.
+- **AEON-AUTH-007:** When presenting verification or completion results, the tool shall distinguish compile-time claims, runtime enforcement, finite conformance and ledger receipts, and shall list unresolved downstream obligations.
+- **AEON-AUTH-008:** If an authoring result lacks independently accepted proof or Preview evidence, the delivery register shall retain the corresponding MC/SP gates as open.
+
+## Foreman Pel delivery controls
+
+For each slice, freeze the approved OpenSpec artifact and immutable base in an isolated candidate worktree. Bind permitted write paths, exact provider profiles and credential references. Verify transport qualification before paid work; never silently substitute a model. Register the complete verification command and environment as `candidate-full`.
+
+Use Pel's implement → host verify → independent review sequence. Require arithmetic-boundary, artifact-mismatch, whole-program substitution and misleading-evidence mutation controls relevant to that slice. Retain immutable candidate, verification and review references; changed candidates require current checks and review. Pel check/plan success establishes neither implementation nor financial approval. Invalid admission and unresolved-action exits remain failures to deliver. Bounded repairs need explicit limits; unknown external outcomes require reconciliation. Publication and any native/Preview campaign retain separate existing authority, RP03 admission, current accounting, resource ceilings and stop conditions. This advisory does not dispatch them.
+
+## Risks, counter-position and endorsement
+
+The three highest risks are: **semantic mismatch** between bit-width/error-sensitive evaluation and the VC encoding; **vacuous or incomplete specifications** that permit trivial “correct” solutions; and **delivery diversion**, where attractive authoring work absorbs capacity from mandatory PCD and actual source-to-ledger acceptance.
+
+The strongest counter-position is to postpone all synthesis and static VC implementation, delivering only honest diagnostics while closing ledger correspondence. I would support it if even the small verifier requires substantial new semantic machinery or no representative task improves over ordinary deterministic tooling. Conversely, independently established exact encoding, a valuable held-out corpus result and a stable resource budget would justify moving restricted synthesis forward. An external Aeon producer could win on those same measurements; architectural taste alone should not exclude it.
+
+I can endorse a shared plan that starts with reusable contract checking and truthful evidence labels, bounds synthesis to pure closed-source proposals, names every assumption, preserves all financial and mandatory-PCD/Preview gates, and contains an explicit stop-or-defer decision after the baseline experiment. Consensus must retain any dissent about opportunity cost and encoding assurance; reviewer count cannot resolve either issue.

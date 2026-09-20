@@ -28,6 +28,15 @@ sources:
 
 # Moriarty language wiki index
 
+## Governing design — 2026-09-19 consolidation
+
+[One vision, language/kernel boundary and U0–U7 roadmap](research/consolidated-design/index.md) · [Mina recursion requirements study](research/mina/index.md) · [Next ZKIR/recursion contract](../docs/MORIARTY-BACKEND-REQUIREMENTS.md). Older sections below preserve dated research and evidence; they do not override current scope or select competing queues.
+
+## Aeon integration study — 2026-09-19
+
+[[wiki/sessions/aeon-integration-2026-09-19|Initial research and six-member PL deliberation]]. Provisional findings and planning work. No new feature acceptance.
+
+
 [[wiki/overview|Vault overview]] · [[wiki/workflow|Research workflow]] · [[wiki/canvases/moriarty|Language map]] · [[wiki/meta/provenance|Provenance mapping]]
 
 Read this page before searching externally. Merge new evidence into the existing
@@ -35,19 +44,13 @@ topic pages and preserve their source and claim identifiers.
 
 ## Midnight-native PCD architecture — 2026-09-11
 
-[[wiki/decisions/pcd-midnight-native-architecture|PCD architecture decision]] · [decision report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md) · [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) · [reproduced measurements](../evidence/pcd-midnight-native-2026-09-11/README.md).
+[[wiki/decisions/pcd-midnight-native-architecture|PCD architecture decision]] · [decision report](attachments/historical-evidence/deliverables/pcd-midnight-native-2026-09-11/REPORT.md) · [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md) · [reproduced measurements](attachments/historical-evidence/evidence/pcd-midnight-native-2026-09-11/README.md).
 
 Sources: SRC-0111 (Midnight implementation and network collection), SRC-0112 (literature) and SRC-0113 (local measurements). CLM-0946–CLM-0960 are maintained in the decision page, with summaries in [[wiki/formal-assurance|formal assurance]], [[wiki/moriarty-architecture|architecture]], [[wiki/benchmarks|benchmarks]], [[wiki/open-questions|open questions]] and [[wiki/contradictions|contradictions]].
 
-**Recommended direction.** Ledger-anchored certified state with bounded native certificates, instead of per-transaction recursive history.
+**Historical recommendation.** The September11 ledger-induction-first scope is preserved as dated evidence. Its blanket rejection of recursive/DAG history is superseded by the current full-recursion target. The old transcript/fee/guard observations are tied to their original pins and require reinspection before current support claims.
 
-**Why.**
-
-- Contract proofs cannot be recursively verified on Midnight.
-- The ledger already enforces verifier selection, stale-read rejection and effect binding.
-- Midnight recursion (`ledger-10`, pull request 738) arrives with unpriced pairings and guard hazards.
-
-The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) adopted the roadmap into OpenSpec planning as specified-only work and re-rooted atomic F3 on the Stage 0 seam.
+The [PCD integration amendment](attachments/historical-evidence/openspec/PCD-INTEGRATION-2026-09-11.md) adopted the roadmap into OpenSpec planning as specified-only work and re-rooted atomic F3 on the Stage 0 seam.
 
 ## Protocol graph for the DeFi kernel — 2026-09-12
 
@@ -61,9 +64,9 @@ Thirteen repositories at pinned commits, a 695-file topic corpus, and an 8,389-n
 
 A four-layer specification whose public part names no chain: you state an outcome, and which chains and assets serve it is a routing decision. Five guarantees, five surfaces, and capability classes replacing admission tiers. Four earlier guarantees were found false and restated. Tron now outranks Hyperliquid on network binding, and NEAR delegate actions are refused outright for value.
 
-## Completion sprint schedule
+## Retained completion sprint acceptance
 
-[OpenSpec delivery plans](../openspec/sprints/README.md) assign the remaining language, K, native PCD, financial and developer work to twelve sprints. [Requirement coverage](../openspec/sprints/coverage.json) and [dependencies](../openspec/sprints/sprints.json) preserve the existing MC/RP gates. This is specified-only planning, not new implementation acceptance.
+[OpenSpec delivery plans](../openspec/sprints/README.md) preserve twelve-sprint acceptance lineage under the single current U0–U7 roadmap. [Requirement coverage](../openspec/sprints/coverage.json) and [dependencies](../openspec/sprints/sprints.json) preserve the existing MC/RP gates. This is specified-only planning, not new implementation acceptance.
 
 ## DeFi actions and source specification
 
@@ -272,3 +275,27 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 [Report, interactive graph and design analysis](../deliverables/security-token-transformations-2026-09-09/README.md), SRC-0110, adds asset/claim/encumbrance distinctions and eight proposed transformation cases. CLM-0943–CLM-0945 are maintained in [[wiki/moriarty-architecture|architecture]] and [[wiki/security|security]]. Full report read; 100 graph nodes, 239 directed edges and seven communities. External citations remain unverified. Proposed SP01–SP12 refinements preserve current MC/RP acceptance gates.
 
 [[wiki/midnight-readiness-lessons|Local Midnight readiness lessons]]: stale indexed time, native DUST checks, mutation deadlines, installed password policy, recovery identity, actual-provider locking and exact-block versus latest-state queries, stable snapshot sampling, indexed/finalized distinctions and native output namespaces. Local observations and source reviews remain distinct from Preview acceptance.
+
+- [CAKE APSS literature bank](research/apss/index.md): Diátaxis collections, primary evidence and Moriarty relationships.
+
+- [Certified Moriarty basis and jets](research/apss/certified-basis/index.md).
+
+- [APSS evidence navigation](research/apss/index.md): PDFs and reading records linked from each collection.
+
+- [Certified basis source reference](research/apss/certified-basis/reference.md).
+
+- [MPLR theory log](research/mplr/index.md): stable language requirements and future PL research.
+
+- [NEAR teardown](research/near/index.md): six-expert source study and transaction semantics.
+
+- [Daml initial research bank and direction](research/daml/index.md): initial capture, MPLR-019, full study open.
+
+- [Simplicity study and MPLRs](research/simplicity/index.md): certified primitives, bounds, commitments and mandatory conditions.
+
+- [OWS and x402 AI solver research](research/ows-x402/index.md)
+
+- [Moriarty market and prior-art study](research/market-landscape/index.md)
+
+- [Anoma research bank](research/anoma/index.md)
+
+- [Whole-language design review and integration gaps](research/language-design-review/index.md)

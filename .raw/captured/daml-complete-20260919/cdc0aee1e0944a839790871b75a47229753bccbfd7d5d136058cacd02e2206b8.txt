@@ -1,0 +1,186 @@
+On this page
+Templates
+Functions
+Splice APIs
+Splice Daml Packages
+splice-token-test-trading-app
+Splice.Testing.Apps.TradingApp
+Copy page
+Copy page
+Documentation for Splice.Testing.Apps.TradingApp
+Copy page
+Copy page
+An example of how to build an OTC trading app for multi-leg standard token trades.
+Used as part of the testing infrastructure to test the DvP workflows based on the token standard.
+​
+Templates
+template
+OTCTrade
+Signatory: venue, tradingParties transferLegs
+Field
+Type
+Description
+venue
+Party
+transferLegs
+TextMap
+TransferLeg
+tradeCid
+ContractId
+OTCTradeProposal
+createdAt
+Time
+prepareUntil
+Time
+settleBefore
+Time
+Choice
+Archive
+Controller: venue, tradingParties transferLegs
+Returns: ()
+(no fields)
+Choice
+OTCTrade_Cancel
+Controller: venue
+Returns:
+TextMap
+(
+Optional
+Allocation_CancelResult)
+Field
+Type
+Description
+allocationsWithContext
+TextMap
+(
+ContractId
+Allocation, ExtraArgs)
+Choice
+OTCTrade_Settle
+Controller: venue
+Returns:
+TextMap
+Allocation_ExecuteTransferResult
+Field
+Type
+Description
+allocationsWithContext
+TextMap
+(
+ContractId
+Allocation, ExtraArgs)
+interface instance
+AllocationRequest
+for
+OTCTrade
+template
+OTCTradeProposal
+Signatory: approvers
+Field
+Type
+Description
+venue
+Party
+tradeCid
+Optional
+(
+ContractId
+OTCTradeProposal)
+transferLegs
+TextMap
+TransferLeg
+approvers
+[
+Party
+]
+Parties that have approved the proposal
+Choice
+Archive
+Controller: approvers
+Returns: ()
+(no fields)
+Choice
+OTCTradeProposal_Accept
+Controller: approver
+Returns:
+ContractId
+OTCTradeProposal
+Field
+Type
+Description
+approver
+Party
+Choice
+OTCTradeProposal_InitiateSettlement
+Controller: venue
+Returns:
+ContractId
+OTCTrade
+Field
+Type
+Description
+prepareUntil
+Time
+settleBefore
+Time
+Choice
+OTCTradeProposal_Reject
+Controller: trader
+Returns: ()
+Field
+Type
+Description
+trader
+Party
+​
+Functions
+tradeAllocations
+: SettlementInfo ->
+TextMap
+TransferLeg ->
+TextMap
+AllocationSpecification
+tradingParties
+:
+TextMap
+TransferLeg -> Set
+Party
+require
+:
+CanAssert
+m =>
+Text
+->
+Bool
+-> m ()
+Check whether a required condition is true. If it’s not, abort the transaction with a message saying that the requirement was not met.
+makeTradeRef
+:
+ContractId
+OTCTradeProposal -> Reference
+zipTextMaps
+:
+TextMap
+a ->
+TextMap
+b ->
+TextMap
+(
+Optional
+a,
+Optional
+b)
+forTextMapWithKey
+:
+Applicative
+f =>
+TextMap
+a -> (
+Text
+-> a -> f b) -> f (
+TextMap
+b)
+Suggest edits
+Raise issue
+splice-test-trading-app docs
+splice-util docs

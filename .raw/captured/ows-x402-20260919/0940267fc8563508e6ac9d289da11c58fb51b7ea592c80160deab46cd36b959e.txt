@@ -1,0 +1,776 @@
+On this page
+Understanding x402
+Cost and money movement
+Compliance and trust
+Getting started
+Language and framework support
+Pricing and payment schemes
+Buyers and agents
+Discovery and the Bazaar
+Going to production
+Protocol details
+Still stuck?
+Support
+FAQ
+Copy page
+Copy page
+Copy page
+Copy page
+Short answers to common x402 questions, with links to the guide that owns each topic.
+​
+Understanding x402
+What is x402?
+x402 is an open payment protocol that lets a server charge for a resource through the same
+request used to fetch it. Instead of redirecting to a checkout page, the server returns its
+price, the client retries with a signed payment, and the request completes.
+How x402 works
+walks through the full flow.
+Is x402 a Coinbase product?
+No. x402 was incubated at Coinbase and contributed to the
+x402 Foundation
+, which launched under the Linux Foundation in
+April 2026 with forty member organizations. CDP is one implementation of the protocol and one
+facilitator among several, so an integration built on x402 is not tied to Coinbase.
+Why not use API keys or a checkout page?
+Both assume a human doing setup work: creating an account, entering a card, copying a key into
+a config file. x402 moves that into the request itself, so software can pay for a resource the
+first time it calls one. Payments settle in about a second, and the cost per payment is small
+enough to price a single API call.
+Do my customers need to know anything about crypto?
+They need a funded USDC balance, and that is the honest limit of it. Buyers using an
+Agentic Account
+or the CDP SDK never handle a private key,
+a seed phrase, or a gas token.
+Is x402 ready for production?
+Yes. The CDP Facilitator settles on Base, Polygon, Arbitrum, World, and Solana mainnets, runs
+compliance screening on every payment, and has processed more than 100 million transactions.
+See
+Why use the CDP Facilitator
+.
+Can I run x402 alongside my existing billing?
+Yes. x402 executes a payment; it does not replace metering, plans, or prepaid credits. Pricing
+is configured per route, so you can put a price on one endpoint without changing how anything
+else is billed.
+​
+Cost and money movement
+What does x402 cost me end to end?
+The first 1,000 facilitator transactions each month are free, and each one after that costs
+$0.001. There are no processor fees or chargeback fees, and neither you nor the buyer submits
+an onchain transaction in the common path. See
+CDP Facilitator pricing
+.
+What counts as one billable facilitator transaction?
+One successful settlement. A settle call that returns a 2xx status counts as one transaction
+against your monthly total, and nothing else does: verification is free, and so is a settle
+call that fails with a 4xx or 5xx, including a payment declined by compliance screening.
+Queries against the supported endpoint and the discovery APIs are not billed. See
+CDP Facilitator pricing
+.
+Who pays network gas?
+The facilitator submits the settlement transaction and pays the gas, which is what the
+per-transaction price covers. Buyers paying with EIP-3009 tokens such as USDC and EURC sign an
+authorization rather than a transaction, so they never need a gas token.
+There is one exception. Tokens that settle through Permit2 need a one-time approval, and the
+CDP Facilitator sponsors that approval only for tokens implementing EIP-2612. For any other
+ERC-20, the buyer submits that first approval themselves and pays gas for it once. Every
+payment after it is gasless.
+Where do payments land, and how do I get to USD?
+Payments settle directly to the
+payTo
+address configured on the route. CDP never holds your
+revenue, so converting to fiat is a separate step: see
+Offramp
+for withdrawing to a bank account, or
+Coinbase for Agents
+for converting USDC to USD inside a
+Coinbase account.
+How do refunds work? What about disputes and chargebacks?
+Payments made with
+exact
+or
+upto
+are irreversible once settled, so there are no
+chargebacks. That protects sellers from fraud reversals and puts the burden on buyers to
+choose who they pay, which is why spend limits matter on the buyer side. To refund, send a
+transfer back to the payer address from the settlement record.
+How do I handle receipts and accounting?
+Every settlement is an onchain transfer, and the
+PAYMENT-RESPONSE
+header on the successful
+response carries the transaction reference for that payment. The cleanest place to record it is
+a lifecycle hook:
+onAfterSettle
+on a server, or the client’s post-payment hook. There is no
+invoicing or reconciliation product in CDP today.
+For signed, auditable records rather than log lines, the protocol’s
+offer-receipt
+extension
+has the server sign the offer and the receipt. It works with the CDP Facilitator, because it is
+negotiated between client and server and does not involve the facilitator, but you register it
+yourself: the CDP SDK does not enable it by default.
+​
+Compliance and trust
+What screening does the CDP Facilitator run?
+Every payment is screened against OFAC sanctions lists and Know Your Transaction (KYT) risk
+signals before it settles. A declined payment fails with
+kyt_risk_detected
+, so the buyer never
+loses funds and the seller never delivers the resource. Screening runs at both verification and
+settlement, and checks the payer and the recipient. See
+A payment was declined by screening
+.
+Can a facilitator alter or redirect my payment?
+No. The buyer signs the payment authorization including its amount, recipient, network, and
+expiry. Changing any of those invalidates the signature, and the resulting settlement is
+verifiable onchain against what was signed.
+Do I have to hold or expose a private key?
+No, on either side. Buyers sign through a CDP-managed wallet, so no key material reaches your
+application. Sellers never see the buyer’s key at all: a seller verifies a signature and
+receives funds at an address. See the
+buyer quickstart
+.
+​
+Getting started
+Which path should I use?
+Pick by what you are building, not by language.
+You are building
+Use
+An app or backend that calls paid APIs
+Buyer quickstart
+An agent that should discover and pay for services on its own
+Agentic Wallet
+An agent that already speaks MCP
+Pay over MCP
+An API you want to charge for
+Seller quickstart
+A payable link, with no server of your own
+Business Checkouts
+Coinbase for Agents
+is for trading and portfolio
+management and does not support x402 payments yet.
+Do I need to run a server to sell something?
+No. The Business Checkouts API returns an
+x402_url
+that an agent or x402 client can pay
+directly, with no server, wallet, or facilitator setup on your side. See
+Accept x402 payments
+.
+What credentials does a seller need?
+CDP_API_KEY_ID
+and
+CDP_API_KEY_SECRET
+authenticate your application to the CDP Facilitator
+for verification and settlement. That is enough to run a seller if payments go to an address
+you already control: set
+payToConfig
+to
+address
+(TypeScript) or
+pay_to
+(Python).
+CDP_WALLET_SECRET
+is only required when the SDK should provision and sign with an
+API Key Wallet
+. Buyers who pay with
+CdpX402Client
+still need a wallet secret, because they are signing spend. See
+Pay-to address
+.
+Where do I get test funds?
+Use the
+Faucets quickstart
+to fund a wallet with test USDC
+on Base Sepolia, either from the CDP Portal or through
+requestFaucet
+in the SDK. Use the CDP
+faucet rather than a third-party one: it funds the same wallets the CDP Facilitator settles
+against. One faucet request covers a long testing session, since a typical test route costs a
+cent or less per call.
+What is eip155:8453? (CAIP-2 network IDs)
+CAIP-2 is a chain-agnostic format for naming a blockchain network, and x402 v2 uses it
+everywhere a network appears. EVM networks are
+eip155:{chainId}
+, so Base is
+eip155:8453
+and Base Sepolia is
+eip155:84532
+. Solana networks are
+solana:{genesisHash}
+. The discovery
+APIs also accept the older plain names such as
+base
+and normalize them. The full list of
+networks CDP supports is in
+the facilitator’s advanced section
+.
+Do I use the CDP SDK or the @x402 packages?
+Both, and the quickstart install lines show both. The CDP SDK owns facilitator
+authentication and, optionally, an API Key Wallet; the
+@x402
+packages own the protocol
+mechanics and the framework adapters. On TypeScript,
+CdpX402Client
+and
+createX402Server
+wrap the two together, so most integrations never touch the
+@x402
+packages directly. Reach
+for them yourself when you are fitting CDP into code you already have:
+buyer
+,
+seller
+.
+Does x402 work with POST requests and request bodies?
+Yes. The client retries the same method and body with a signed payment after the
+402
+response. If you want agents to find and call a POST route through the Bazaar, describe the
+body with an explicit schema so they can construct a valid request. See
+Add richer discovery metadata
+.
+​
+Language and framework support
+Which languages and frameworks are supported?
+The protocol layer is available in TypeScript, Python, and Go. The CDP convenience layer that
+the quickstarts use is TypeScript-first:
+CDP SDK feature
+TypeScript
+Python
+Go
+CdpX402Client
+Yes
+No
+No
+createX402Server
+Yes
+No
+No
+CDP Facilitator client
+Yes
+Yes
+No
+Signer adapters for CDP accounts
+Yes
+No
+No
+signX402Payment
+on CDP accounts
+Yes
+No
+No
+Spend controls
+Yes
+No
+No
+Runnable x402 examples
+Yes
+Yes
+No
+On Python you assemble the client or server from the
+x402
+packages and pass a CDP-managed
+wallet and
+create_facilitator_config()
+into it, which is what the Python tabs in both
+quickstarts show. Go can use the x402 Go SDK against the CDP Facilitator, but the CDP SDK has
+no x402 helpers and no Go examples, which is why the quickstarts have no Go tab.
+Framework support comes from the x402 packages: Express, Hono, Next.js, and Fastify on
+TypeScript; FastAPI and Flask on Python; Gin, Echo, and
+net/http
+on Go. Clients cover Fetch
+and Axios on TypeScript, httpx and requests on Python, and
+net/http
+on Go.
+Why does the Python client use EthAccountSigner?
+ExactEvmScheme
+expects an x402 signer interface, and an
+eth_account
+object declares
+sign_typed_data
+differently.
+EthAccountSigner
+adapts one to the other. The scheme applies
+the same wrap for you if you pass an
+eth_account
+object directly, so writing it out is a
+matter of making the adaptation visible rather than a requirement. See
+step 2 of the buyer quickstart
+.
+Can I implement x402 in another language?
+Yes. x402 is an open specification and nothing in it is language-specific. Start from the
+protocol specification
+, and open an issue
+on the Foundation repository if you want help or want the implementation listed.
+​
+Pricing and payment schemes
+How should I price my endpoint?
+Most sellers start with a flat price per call, then split routes into tiers once usage shows
+which calls are expensive. Price above your own cost per call: the facilitator charges
+0.001
+p
+e
+r
+t
+r
+a
+n
+s
+a
+c
+t
+i
+o
+n
+a
+f
+t
+e
+r
+t
+h
+e
+f
+i
+r
+s
+t
+1
+,
+000
+e
+a
+c
+h
+m
+o
+n
+t
+h
+,
+s
+o
+a
+0.001
+        per transaction after the first 1,000 each month, so a
+0.001
+p
+er
+t
+r
+an
+s
+a
+c
+t
+i
+o
+na
+f
+t
+er
+t
+h
+e
+f
+i
+rs
+t
+1
+,
+000
+e
+a
+c
+hm
+o
+n
+t
+h
+,
+so
+a
+0.001 endpoint nets nothing. If the
+cost of serving a request varies with the work done, price it with
+upto
+instead of guessing
+an average.
+Should I use exact, upto, or batch-settlement?
+Use
+exact
+when you know the price before the request runs, which covers most endpoints. Use
+upto
+when cost depends on the work done, such as tokens generated or compute time: the buyer
+authorizes a ceiling and you settle the actual amount.
+batch-settlement
+is for workloads
+where per-request settlement is itself too expensive, and it costs you a payment channel to
+operate, so reach for it only when volume justifies that.
+createX402Server
+does not register
+batch-settlement
+today. Server support was withdrawn
+because the scheme registered without running the channel settle lifecycle, which could accept
+a buyer’s payment without paying the receiver. Buyer-side support is unaffected. Configuration
+for the other two is in
+Choose a payment scheme
+.
+Which schemes work on which networks?
+The CDP Facilitator supports
+exact
+and
+upto
+on its listed EVM and Solana networks.
+batch-settlement
+remains EVM-only. The current matrix is in
+the facilitator’s advanced section
+.
+Will every buyer be able to pay my route?
+Not automatically, and this is worth checking before you pick a network.
+CdpX402Client
+registers Base
+exact
+, EVM
+upto
+, and EVM-only
+auth-capture
+by default, or their Base Sepolia
+equivalents in development. Buyers add other EVM networks, Solana (
+exact
+and
+upto
+), and EVM
+batch-settlement
+through
+networkSchemes
+. If you accept payment on more than one network, the
+buyer picks from what your route advertises and what their client registered. See
+payment schemes
+.
+Which tokens can I accept?
+Any ERC-20 on the supported EVM networks, and SPL or Token-2022 tokens on Solana. Tokens
+implementing EIP-3009, including USDC and EURC, settle without the buyer holding a gas token.
+Other ERC-20s settle through Permit2, which adds a one-time approval the buyer pays gas for
+unless the token implements EIP-2612. See
+Accept other tokens
+.
+Can I mix free and paid routes on one server?
+Yes. Only the routes you list in
+routes
+require payment, and every other path on the server
+is untouched. Route keys are method and path pairs such as
+GET /reports
+, so you can charge
+for one method on a path and leave another free.
+Can I do subscriptions, invoicing, or holds?
+Not as protocol features. x402 prices a request, so recurring billing, invoices, and
+authorization holds stay in your own billing system. The closest patterns are
+upto
+for
+variable charges within a ceiling, and issuing prepaid credits in your system that an x402
+payment tops up.
+​
+Buyers and agents
+Do agents need wallets?
+An agent needs an account that can authorize payments. Give it an
+Agentic Wallet
+if you want a funded, limit-controlled
+wallet without writing payment code, or build a client on a CDP-managed wallet with the
+buyer quickstart
+.
+How do spend limits work?
+CdpX402Client
+accepts spend controls that cap a single payment (
+maxAmountPerPayment
+) and
+total spend over a rolling window (
+maxCumulativeSpend
+with
+maxCumulativeSpendWindow
+), and
+that restrict which networks, assets, and payees the agent may pay. Spend is reserved before
+the payment goes out and confirmed or released once settlement is known. If the outcome is
+unclear, the reservation stands, so the guardrail errs toward the agent spending less than its
+limit rather than more.
+A blocked payment throws
+SpendControlError
+with a
+code
+of
+per_payment_cap
+,
+cumulative_cap
+,
+network_not_allowed
+,
+asset_not_allowed
+,
+payee_not_allowed
+,
+amount_unparseable
+,
+already_applied
+,
+configuration_invalid
+, or
+ledger_capacity_exceeded
+. Spend controls are TypeScript only; there is no Python equivalent.
+See
+Set spend limits
+.
+How do I know a Bazaar listing is safe to pay?
+Treat the Bazaar as a catalog, not an endorsement. It indexes endpoints that have settled a
+payment; it makes no claim about uptime, correctness, or what the response contains. Call
+validate_endpoint
+before paying an unfamiliar resource, and set spend limits so a bad listing
+costs a bounded amount rather than a wallet balance. See
+Discover with the Bazaar MCP server
+and
+Set spend limits
+.
+Should my agent pay over HTTP or MCP?
+Use whichever your agent already speaks. It is the same payment loop in a different envelope:
+HTTP carries it in the
+PAYMENT-REQUIRED
+and
+PAYMENT-SIGNATURE
+headers, while MCP returns a
+tool result with
+isError: true
+and carries the payment in
+_meta["x402/payment"]
+. Nothing
+about pricing, schemes, or settlement changes between the two.
+Can I sign a payment without making an HTTP request?
+Yes. CDP EVM and Solana accounts expose
+signX402Payment(paymentRequired, acceptedIndex)
+,
+which returns a signed payload you can send over any transport. Smart accounts support
+exact
+only and cannot sign Permit2 payloads. There is no runnable example for this path yet, so the
+SDK reference
+is the best source.
+What can Coinbase for Agents do today?
+It gives an agent a scoped connection to a Coinbase account for inspecting a portfolio,
+previewing and placing trades, and converting between USDC and USD. It does not support x402
+payments yet. Use an
+Agentic Wallet
+for paying x402
+services in the meantime.
+​
+Discovery and the Bazaar
+How do I get my endpoint listed?
+There is no registration form.
+createX402Server
+declares Bazaar metadata for your routes
+automatically; deploy the endpoint on public HTTPS, validate it, and complete one successful
+paid call through the CDP Facilitator. See the
+Get discovered checklist
+.
+Does my endpoint need discovery metadata?
+A route that takes no input can rely on the metadata the SDK generates. A route with query
+parameters, path parameters, or a request body needs explicit schemas and examples, or agents
+have no way to construct a valid call. See
+Add richer discovery metadata
+.
+How long until my endpoint appears? Are testnet endpoints indexed?
+A successful payment is what triggers indexing, so the paid call in the checklist is required
+rather than recommended. Indexing completes within 10 to 15 minutes of that payment. Testnet and
+mainnet resources are both indexed, so you can find your own Base Sepolia endpoint before you
+go to production.
+Can MCP tools be discovered in the Bazaar?
+Yes. MCP tools are catalogued alongside HTTP routes, keyed by server URL and tool name, and a
+resource listing can filter on
+type
+to return one or the other. Indexing works the same way it
+does for HTTP: a settled payment triggers it, and the facilitator opens a session against your
+server to read the payment requirements.
+createX402Server
+only declares Bazaar metadata
+automatically for HTTP routes, so an MCP server declares its own. See
+Charging for tool calls
+.
+How do I update or remove my listing?
+Change the metadata your endpoint returns with its
+402
+. The next successful payment indexes the
+resource again with the new metadata, so there is nothing to submit and no cache to clear by hand.
+There is no delisting mechanism. An endpoint that stops receiving traffic ranks lower over time
+and eventually stops appearing in search results, and an endpoint that stops responding to the
+facilitator’s periodic checks is marked inactive.
+Should I discover services with the SDK, the REST API, or MCP?
+Use the CDP SDK when you are writing application code in TypeScript, the REST API when you are
+in another language or querying from somewhere without an SDK, and the Bazaar MCP server when
+an agent should search and call services on its own. All three read the same catalog and none
+require authentication. See
+Choose a discovery interface
+.
+​
+Going to production
+What changes between development and production?
+Set
+environment
+to
+"production"
+, which moves the server to Base and Solana mainnet and the
+client to Base mainnet. Note that
+"production"
+is the default: omitting the option entirely
+means real funds, not testnet. Then confirm the receiving address can accept the asset on
+mainnet, serve over public HTTPS, move
+your API key (and wallet secret, only if you provision an API Key Wallet) into real secret storage, and revalidate the endpoint so the
+Bazaar indexes the mainnet resource. On Python there is no
+environment
+switch, so update the
+CAIP-2 network IDs on each registration by hand. See
+Choose your environment
+.
+Where should payments land?
+Anywhere that can receive the asset on the route’s network. Common destinations include a
+Coinbase Business
+account, a
+Coinbase Prime
+deposit address, a
+CDP entity or linked
+account, a Coinbase retail
+deposit address, or a self-custody wallet. Those all use
+payToConfig
+address
+(or
+Python
+pay_to
+) and do
+not
+need
+CDP_WALLET_SECRET
+.
+payToConfig
+also has two CDP-provisioned forms:
+eoa
+(default) creates an API Key Wallet
+whose keys stay in CDP’s TEE, and
+smart
+creates a Smart Contract Wallet with owner
+rotation and policy controls. Both of those need a wallet secret. EVM and Solana are
+separate addresses in every case. See
+Configure who receives payment
+.
+How do I know a payment settled?
+A successful response carries a
+PAYMENT-RESPONSE
+header with the settlement result, including
+the transaction reference and, for
+upto
+, the amount actually charged. For server-side
+logging and alerting, the hooks that matter are
+onAfterSettle
+and
+onSettleFailure
+; add
+onVerifyFailure
+if you want to see rejected payments. See
+Lifecycle hooks
+.
+settlement_pending
+means the transaction was broadcast but did not confirm within the
+synchronous settlement window. It is not a failed payment. Reconcile the returned transaction
+before requesting another payment. See
+Settlement Pending and Reconciliation
+.
+Can a retry charge the buyer twice?
+Reusing the same payment authorization is protected against replay, but creating a new payment
+while the first transaction is still pending can charge the buyer twice. If settlement returns
+settlement_pending
+, reconcile the returned transaction instead of blindly retrying or asking
+the buyer to authorize another payment. Canonical x402 resource servers retry the same settle
+request once without creating a new payment. See
+Settlement Pending and Reconciliation
+.
+If you want request-level idempotency on top of that, so that a repeated call returns the
+original response rather than an error, the protocol’s
+payment-identifier
+extension gives the
+client an idempotency key to send. It works with the CDP Facilitator, because it is negotiated
+between client and server, but you register it yourself: the CDP SDK does not enable it by
+default.
+Are there rate limits or an SLA on verify and settle?
+The facilitator publishes availability and latency targets on the
+CDP service level objectives page
+: 99.9%
+availability, with P95 verification at 60ms on Base and 275ms on Solana, and P95 settlement at
+900ms on Base and 1500ms on Solana. Settlement latency is dominated by waiting for the network,
+which is why the two chains differ.
+Requests are subject to standard CDP API rate limiting and are rejected with
+429
+if you exceed
+it, but ordinary payment traffic does not approach the limit. If you expect a burst large enough
+to worry about, talk to us in
+Discord
+.
+​
+Protocol details
+What headers does x402 use?
+Three, each carrying base64-encoded JSON.
+Header
+Direction
+Contents
+PAYMENT-REQUIRED
+Server to client
+Payment requirements, sent with the
+402
+response
+PAYMENT-SIGNATURE
+Client to server
+The signed payment payload
+PAYMENT-RESPONSE
+Server to client
+The settlement result
+Version 1 of the protocol used
+X-PAYMENT
+and
+X-PAYMENT-RESPONSE
+and put requirements in the
+response body. Seeing those names in an error usually means a version mismatch between client
+and server.
+What are extensions, and which does CDP support?
+Extensions are optional capabilities layered onto a payment, negotiated between the client,
+server, and facilitator. The CDP Facilitator supports Bazaar discovery, EIP-2612 gas sponsorship,
+and Base Builder Codes for onchain attribution, and
+createX402Server
+registers them by default,
+so most sellers get discovery without configuring anything.
+Extensions that only involve the client and the server work with the CDP Facilitator too, since
+the facilitator never sees them. That includes
+sign-in-with-x
+,
+payment-identifier
+, and
+offer-receipt
+, all implemented in the x402 SDKs. You register those yourself.
+Can I use a different facilitator, or run my own?
+Yes. x402 is permissionless and anyone can operate a facilitator. These docs assume the CDP
+Facilitator throughout, so if you run your own, follow the facilitator specification in the
+protocol repository
+rather than these
+guides.
+Where is the specification?
+The specification, the payment scheme definitions, and the extension definitions all live in
+the
+x402 Foundation repository
+, alongside
+the
+whitepaper
+.
+​
+Still stuck?
+For a specific error message or a payment that will not go through, see
+Troubleshooting
+. For anything else, the CDP Discord and the two
+issue trackers are listed under
+Community and developer resources
+.
+Was this page helpful?
+Yes
+No
+Community and Developer Resources
+Previous
+Troubleshooting
+Next

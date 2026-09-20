@@ -186,4 +186,4 @@ The [[wiki/decisions/pcd-midnight-native-architecture|PCD architecture decision]
 - **Contract properties.** The universal contract property stays a deploy-time certificate bound by program digest.
 - **Recursion.** Midnight recursion (CLM-0953) is reserved for off-ledger segments, attestations and imports.
 
-The SRC-0045 recursion pins cited in CLM-0193 predate pull request 738 and the published crates; SRC-0111 supersedes them for interface facts. S2 decision; no Moriarty proof or ledger acceptance established; the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) is specified-only.
+The SRC-0045 recursion pins cited in CLM-0193 predate pull request 738 and the published crates; SRC-0111 supersedes them for interface facts. S2 decision; no Moriarty proof or ledger acceptance established; the [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md) is specified-only.

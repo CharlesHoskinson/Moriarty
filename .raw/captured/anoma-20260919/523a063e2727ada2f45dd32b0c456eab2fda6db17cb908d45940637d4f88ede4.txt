@@ -1,0 +1,175 @@
+Getting Started
+Copy page
+Getting Started
+Requirements
+Requirement
+Minimum version
+Node.js
+>= 22
+npm
+bundled with Node.js
+Install the package
+npm
+install
+@anomaorg/anoma-app-sdk
+For React applications using wagmi for wallet interactions, also install:
+npm
+install
+wagmi
+viem
+WebAssembly initialization
+The SDK’s cryptographic layer is compiled from Rust to WebAssembly. Call
+initWasm()
+once before using any cryptographic operations. The best place for this is at application startup, before rendering your UI.
+import
+{ initWasm }
+from
+"@anomaorg/anoma-app-sdk"
+;
+await
+initWasm
+();
+In browser environments the WASM module is loaded automatically from the bundle. In Node.js (e.g. tests or scripts) it works out of the box on Node.js 22+.
+Call initWasm() exactly once per application lifecycle. Calling it multiple times is harmless but wasteful. Failing to call it before using cryptographic functions will throw a runtime error.
+Quick start
+The three operations below cover the most common startup path.
+1. Generate a keyring
+A
+keyring
+holds the four cryptographic key pairs that identify a user on the Anoma Pay protocol. Generate a fresh random one with:
+import
+{ createUserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+For deterministic derivation from a 32-byte seed (e.g. derived from a wallet signature):
+import
+{ createUserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+seed
+:
+Uint8Array
+=
+/* 32 bytes from your entropy source */
+;
+const
+keyring
+=
+createUserKeyring
+(seed);
+2. Produce a Pay Address
+A
+Pay Address
+encodes a user’s public keys into a single shareable string. Others send tokens to this address.
+import
+{
+createUserKeyring,
+encodePayAddress,
+extractUserPublicKeys,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+const
+publicKeys
+=
+extractUserPublicKeys
+(keyring);
+const
+payAddress
+=
+encodePayAddress
+(publicKeys);
+console.
+log
+(payAddress);
+// Base64URL-encoded, 180 characters
+3. Validate a received Pay Address
+Before sending tokens, validate that an address is well-formed:
+import
+{ isValidPayAddress, decodePayAddress }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+raw
+=
+"..."
+;
+if
+(
+isValidPayAddress
+(raw)) {
+const
+receiverKeys
+=
+decodePayAddress
+(raw);
+// receiverKeys.authorityPublicKey, .discoveryPublicKey, etc.
+}
+4. Persist and restore a keyring
+Serialize the keyring to a JSON string for storage:
+import
+{
+serializeUserKeyring,
+deserializeUserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+// Save
+const
+json
+=
+serializeUserKeyring
+(keyring);
+sessionStorage.
+setItem
+(
+"keyring"
+, json);
+// Restore
+const
+stored
+=
+sessionStorage.
+getItem
+(
+"keyring"
+);
+if
+(stored) {
+const
+restored
+=
+deserializeUserKeyring
+(stored);
+}
+The serialized keyring contains private key material. Store it only in secure, user-controlled storage (e.g. sessionStorage, an encrypted vault) and never transmit it over the network.
+Next steps
+Read
+Key Management
+for a full explanation of the key hierarchy.
+Read
+Transfers
+to understand mint, transfer, and burn operations.
+Follow the
+Build a Simple App
+guide for an end-to-end React integration.
+Last updated on
+April 2, 2026
+Overview
+Key Management

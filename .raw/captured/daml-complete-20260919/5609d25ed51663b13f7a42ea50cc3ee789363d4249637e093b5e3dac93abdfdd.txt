@@ -1,0 +1,404 @@
+Language Bindings
+Ledger Client Standard
+Copy page
+Copy page
+Capability standard for Canton Ledger Client Libraries, including existing and upcoming functionality.
+Copy page
+Copy page
+This page captures the Ledger Client Standard functionality that should be provided by fully conformant library implementations.
+The
+Existing functionality
+column marks capabilities expected today.
+The
+Upcoming functionality
+column marks capabilities expected for upcoming iterations once the Ledger API provides the underlying functionality.
+Domain
+Additional info
+Existing functionality
+Upcoming functionality
+Codegen and bindings
+Daml representation
+Implementation contains a code-generating tool that is able to convert Daml types into the native representation in the target language.
+It must support
+- all serializable Daml types
+- interfaces
+- contract keys
+- dependencies
+Yes
+JSON Codec
+The tool extends the code-generated objects in the native language with methods to serialize and deserialize to JSON format required in the Ledger API Json requests and responses
+Yes
+gRPC Codec
+The tool extends the code-generated objects in the native language with methods to serialize and deserialize to proto format required in the Ledger API gRPC requests and responses
+Yes
+JSON Bindings
+The library provides utility wrappers in the host languages that facilitate construction and bridge the interaction between the classes generated from Ledger API OpenAPI definitions and the classes code-generated from Daml
+Yes
+gRPC Bindings
+The library provides utility wrappers in the host languages that facilitate construction and bridge the interaction between the classes generated from Ledger API proto definitions and the classes code-generated from Daml
+Yes
+PQS bindings
+The library provides mechanisms that bridge the interaction between the tables in PQS and the classes code-generated from Daml
+Yes
+Basic infrastructure
+TLS
+The library utilizes secure HTTP and gRPC connections using TLS.
+It supports mutual and server-side TLS.
+Yes
+Authorization
+The library supports client credential workflow to obtain and refresh oauth tokens.
+It has the capability to inject the JWT tokens into the call context
+Yes
+Error parsing and handling
+The library has the ability to parse and process all types of errors returned by Ledger API.
+It supports
+- classification of errors into retriable and non-retriable
+- JSON and gRPC errors
+- extraction of the error code, message, request info, error info and other structured details such as contract ids, packages, party names etc.
+Yes
+Tracing
+The library handles tracing according to the Open Telemetry standard and OTLP servers.
+It supports
+- creation and injection of trace ids into the headers of the requests
+- extraction of trace ids from the response
+- support JSON and gRPC requests
+- report the spans to the OpenTelemetry compatible OTLP server
+Yes
+Retry logic
+The library handles seamlessly the retry logic for Ledger API calls.
+It supports
+- retries on retriable errors only
+- timeouts
+- maximum number of retries
+Yes
+Logging
+The library is able to log using a standard library adequate for the host language.
+It supports
+- logging requests and responses
+- utilizes trace-ids
+- verbose logging of Ledger API errors
+- configurable log level sensitivity
+- configurable log destination
+- configurable log format
+Yes
+Metrics
+The library handles metrics according to OpenTelemetry standard
+It supports
+- sending metrics to the OTLP server
+- reporting vitals of the communication: number of requests and responses
+- breakdown by error and success
+- breakdown by endpoint
+Yes
+Signing
+The library supports signing algorithms that are needed in the externally signed Ledger API endpoints.
+It supports
+- KMS systems
+- keys provided in a file
+- all algorithms supported by canton
+Yes
+Node Health
+The library supports monitoring node’s health letting the client applications respond to the intermittent and permanent failure situations.
+Yes
+Commands
+JSON
+The library facilitates construction and submission of Daml commands over the Ledger API JSON endpoint.
+It supports
+- create commands
+- exercise commands
+Yes
+gRPC
+The library facilitates construction and submission of Daml commands over the Ledger API gRPC endpoint.
+It supports
+- create commands
+- exercise commands
+Yes
+Internal commands
+The library uses the internal command submission endpoints.
+It supports
+- submit method
+- submitAndWait in all its forms
+Yes
+External commands
+The library uses externally signed command submission endpoints
+It supports
+- prepare method
+- execute method
+- executeAndWait in all its forms
+Yes
+Deduplication
+The library contains logic that allows client applications to send commands in a reliable fashion utilizing the built-in deduplicating provisions of the Ledger API.
+It supports
+- error handling
+- retries
+Yes
+Command recovery
+The library is capable of recovering pending command state after the crash utilizing command completion endpoint.
+It supports
+- recovery from participant crash
+- recovery from client crash
+- recovery from lost connection
+- recovery from a timeout
+Yes
+Batching
+The library is capable of creating batched Ledger API commands.
+Yes
+Contract keys
+The library uses Ledger API command submission provisions for contract keys.
+It supports
+- exercising choices by contract keys
+- prefetching of contract keys for accelerated execution
+Yes
+Explicit disclosure
+The library uses explicit disclosure to augment the submitted commands with additional contracts that the submitting party is not privy to.
+Yes
+Pending set
+The library keeps track of the contracts that are being operated on in a pending data set.
+It supports
+- keeping track of consuming exercises
+- keeping track of creates
+- keeping track of non-consuming exercises
+Yes
+Package selection
+The library allows selecting a particular package version preference for command submission in the package_id_selection_preference field.
+Yes
+HA
+The library supports command deduplication across multiple participants that host the same submitting parties.
+Yes
+Streams
+JSON
+The library facilitates query construction and subscription to ACS and Update streams over the Ledger API JSON endpoint.
+Yes
+gRPC
+The library facilitates query construction and subscription to ACS and Update streams over the Ledger API gRPC endpoint.
+Yes
+ACS streaming
+The library uses streaming endpoints to retrieve the ACS for given parties and templates. It utilizes streaming endpoints in gRPC and websocket endpoints in JSON.
+Yes
+ACS paging
+The library uses paging endpoints to retrieve the ACS for given parties and templates. It utilizes paging in gRPC and JSON.
+Yes
+Updates streaming
+The library uses streaming endpoints to retrieve the updates for given parties and templates. It utilizes streaming endpoints in gRPC and websocket endpoints in JSON.
+Yes
+Updates paging
+The library uses paging endpoints to retrieve the updates for given parties and templates. It utilizes paging in gRPC and JSON.
+Yes
+Reverse order
+The library can serve data in reverse order utilizing appropriate Ledger API provisions.
+Yes
+Interfaces
+The library subscribes to and processes interface views
+Yes
+Topology events
+The library subscribes to and processes topology events
+Yes
+In memory ACS
+The library contains a component that keeps an in-memory copy of the Active Contract Set.
+It supports
+- parameterization by set of parties and templates
+- filters to limit the ACS to contracts with specific attributes
+- initiates from an ACS query and keeps current view by subscribing to update stream
+- interface views
+Yes
+Resilient streams
+The library can recover a stream after an interrupt from the last known location.
+It supports
+- recovery from the last offset
+- recovery from the last record time vector
+- recovery from the continuation token
+Yes
+HA
+The library can recover a stream transmission after a switch-over to a secondary participant.
+It supports
+- record time vectors
+- paging restarts
+Yes
+Parties
+JSON
+The library utilizes party management functionality of the Ledger API using JSON endpoints.
+Yes
+gRPC
+The library utilizes party management functionality of the Ledger API using gRPC endpoints.
+Yes
+List parties
+The library supports listing parties on the node using various filtering criteria.
+Yes
+Local parties creation
+The library can create parties local to the participant node. It takes advantage of self administration mode where party is automatically assigned to the requesting user.
+Yes
+External parties creation
+The library can create external parties. It supports
+- generate method
+- signing
+- allocate method
+- self administration mode
+Yes
+Local parties modification
+The library can change aspects of the party topology definition. In particular it supports
+- changing mapping of parties to participants
+- changing participant permission levels
+Yes
+External parties modification
+The library can change aspects of the party topology definition. In particular it supports
+- changing mapping of parties to participants
+- changing participant permission levels
+- changing keys responsible for transaction signing
+- change the signature threshold
+Yes
+Decentralized party creation
+The library can manage decentralized parties. In particular it supports
+- create a decentralized namespace
+- modify a decentralized namespace
+- changing participant permission levels
+- changing keys responsible for transaction signing
+- change the signature threshold
+Yes
+Packages
+JSON
+The library utilizes package management functionality of the Ledger API using JSON endpoints.
+Yes
+gRPC
+The library utilizes package management functionality of the Ledger API using gRPC endpoints.
+Yes
+Upload
+The library facilitates the upload of the DAR packages to the participant using the Ledger API endpoints
+Yes
+Validation
+The library facilitates the validation of the DAR packages to the participant using the Ledger API endpoints
+Yes
+Vetting
+The library facilitates vetting of the required packages on the target participants and synchronizers. It is capable of computing the required vetting action from the current vetting state and the desired outcome.
+Yes
+Listing
+The library facilitates listing the packages on the participant using various criteria such as package names, ids, participants and synchronizers
+Yes
+Package preference
+Library facilitates the selection of the preferred packages for a command submission. It makes sure the preference conforms with the existing vetting state.
+Yes
+Description
+The library uses the daml description service to request the descriptors of the daml package and types from the participants
+Yes
+Topology
+List mappings
+The library enables the retrieval and inspection of current topology mappings. Users can apply precise list parameters to restrict search results based on specific mapping types or attributes.
+Yes
+Mapping presentation
+The library supports rendering of the topology mapping in a format idiomatic to the target programming language.
+Yes
+Mapping construction
+The library facilitates creation of new topology mappings by abstracting the underlying complexity of calculating state modifications relative to prior values.
+Yes
+Mapping signing
+The library supports signing of topology transactions,
+Yes
+Mapping submission
+The library facilitates submission of the signed topology transactions. It supports
+synchronous and asynchronous semantics.
+Yes
+Namespace delegations
+The library supports managing namespace delegations of all shapes
+Yes
+Decentralized namespaces
+The library supports managing decentralized namespace delegations of all shapes
+Yes
+Owner to key mapping
+The library supports managing owner to key mappings of all shapes
+Yes
+Party to participant
+The library supports managing party to participant mappings  of all shapes
+Yes
+Party to key mapping
+The library supports managing party to key mappings  of all shapes
+Yes
+Vetted packages
+The library supports managing vetted package mappings  of all shapes
+Yes
+Admin API
+The library supports topology functionality exposed through the Admin API
+Yes
+Ledger API
+The library supports topology functionality exposed through the Ledger API
+Yes
+User
+Self-inspect
+The library allows the users to pull own record to check permissions and other settings.
+Yes
+Self-admin
+The library allows the users to manage add and modify the parties attached to the user account.
+Yes
+Traffic computation
+The library processes the traffic cost estimations produced by the prepare transactions. It facilitates setting limits on transaction cost. can convert the traffic cost expressed in the synchronizer units to local units of the validator
+Yes
+Traffic account listing and inspecting
+The library supports listing traffic accounts available to the user and inspecting the account balance
+Yes
+Traffic account selection
+The library facilitates selecting a traffic account to be debited during the command submission
+Yes
+Traffic top-up
+The library facilitates the top up operation replenishing the traffic accounts with fresh credits
+Yes
+Multi-synchronizer
+Listing
+The library lists connected synchronizers for the participant in general and for a party in particular
+Yes
+Parties
+The library allows managing party allocations and changing topology configurations across multiple synchronizers.
+Yes
+Packages
+The library allows users to maintain package vetting where the set of package versions vetted on each synchronizer is separately tailored for the needs of the application workflows.
+Yes
+Commands
+The library allows the clients to select the the target synchronizer. It keeps track of it during command retries and in the completion processing.
+Yes
+Streams
+The library keeps track of the current synchronizer of the contract. It handles the out of order assign and unassign events putting them back in order distilling the most up to date contract state.
+Yes
+Token Standard
+One step transfers
+The library supports workflows with one step transfers
+Yes
+Pre-approvals
+The library supports pre-approvals
+Yes
+Allocate
+The library supports trade allocations
+Yes
+Transfer
+The library supports asset transfers
+Yes
+Instrument inspection
+The library supports instrument inspection
+Yes
+V1
+The library supports interactions with interfaces and templates written according to TS standard V1
+Yes
+V2
+The library supports interactions with interfaces and templates written according to TS standard V2
+Yes
+Documentation
+User manual
+The library is shipped with the comprehensive user manual that covers all functionality offered by the library. It must explain how to do X in language Y for each of the rows covered in this standard.
+Yes
+Tutorials
+The library is shipped with tutorials that demonstrate key interactions:
+- building applications
+- configuration
+- connecting to ledger
+- creating and managing users, parties
+- uploading and vetting packages
+- submitting commands using internal and external signing
+- maintaining acs
+- interacting with pqs
+- managing traffic credits
+Yes
+Examples
+The library is shipped with example application(s) that showcases the capabilities and can be used as a blueprint for developers
+Yes
+Reference
+The library is shipped with a complete reference material where each class, method and function is explained.
+Yes
+Suggest edits
+Raise issue
+Java LAPI Bindings
+JavaScript Codegen

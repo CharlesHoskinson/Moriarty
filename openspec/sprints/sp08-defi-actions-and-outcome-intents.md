@@ -10,6 +10,8 @@
 
 ## Global constraints
 
+This is an internal maintainer implementation plan. Task admission, reviewer selection, resource reservations and RP03 apply only to project-operated development campaigns using project resources or credentials. They are not permissions to author, compile, prove or deploy a Moriarty program. External developers use objective language/proof rules, contract and participant authorization, and target ledger validity. The separation is a specified requirement, not a claim of completed deployment support.
+
 Status: S2, specified-only. [Program rules](README.md) apply to every task.
 
 Full-completion dependencies (not individual task entry gates): SP03. Stage scope: defi-semantics. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
@@ -33,7 +35,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 ## SP08.1: Close action source gaps
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP08.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
-- [ ] Crosswalk DA01 through DA24 with all 72 original DeFi rows. Pin required product/version lifecycle sources. Start with lending shares, partial liquidation and ERC-4626/7540 share/request behavior. Preserve multi-label taxonomy and external assumptions.
+- [ ] Crosswalk DA01 through DA24 with all 72 original DeFi rows. These are required qualification libraries and regression targets, not an exhaustive allowlist of programs that developers may deploy. Pin required product/version lifecycle sources. Start with lending shares, partial liquidation and ERC-4626/7540 share/request behavior. Preserve multi-label taxonomy and external assumptions.
 - [ ] Verify: Each required action has a feasible positive trace and distinguishing invalid behavior. Protocol names and category counts do not certify implementation.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP08` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
@@ -89,7 +91,7 @@ npm --prefix experiments/moriarty-language test
 python3 experiments/moriarty-language/formal/k/run.py traces --all
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Project-operated proof or public-network campaigns using project resources or credentials additionally require live RP03 admission. Public compiler, prover and SDK use with developer-owned resources SHALL NOT require RP03, project reviewer receipts or Foreman/Pel records.
 
 ## Report-informed acceptance refinement
 

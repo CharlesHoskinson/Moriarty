@@ -1,0 +1,697 @@
+                                           Optimal Routing for Constant Function Market Makers
+                                               Guillermo Angeris                 Tarun Chitra                      Alex Evans
+                                               angeris@stanford.edu         tarun@gauntlet.network           aevans@baincapital.com
+
+
+
+
+arXiv:2204.05238v1 [math.OC] 11 Apr 2022
+                                                                                  Stephen Boyd
+                                                                                boyd@stanford.edu
+
+                                                                                 December 2021
+
+                                                                                     Abstract
+                                                    We consider the problem of optimally executing an order involving multiple crypto-
+                                                assets, sometimes called tokens, on a network of multiple constant function market
+                                                makers (CFMMs). When we ignore the fixed cost associated with executing an or-
+                                                der on a CFMM, this optimal routing problem can be cast as a convex optimization
+                                                problem, which is computationally tractable. When we include the fixed costs, the
+                                                optimal routing problem is a mixed-integer convex problem, which can be solved using
+                                                (sometimes slow) global optimization methods, or approximately solved using various
+                                                heuristics based on convex optimization. The optimal routing problem includes as a
+                                                special case the problem of identifying an arbitrage present in a network of CFMMs,
+                                                or certifying that none exists.
+
+
+                                           Introduction
+                                           Decentralized exchanges (DEXs) are a popular application of public blockchains that allow
+                                           users to trade assets without the need for a trusted intermediary to facilitate the exchange.
+                                           DEXs are typically implemented as constant function market makers (CFMMs) [AC20]. In
+                                           CFMMs, liquidity providers contribute reserves of assets. Users can then trade against these
+                                           reserves by tendering baskets of assets in exchange for other baskets. CFMMs use a simple
+                                           rule for accepting trades: a trade is only valid if the value of a given function at the post-
+                                           trade reserves (with a small adjustment to account for fees collected) is equal to the value at
+                                           the pre-trade reserves. This function is called the trading function and gives CFMMs their
+                                           name. A common example of a trading function is the constant product popularized by
+                                           Uniswap [ZCP18], wherein a trade is only accepted if it preserves the product of the reserve
+                                           amounts.
+                                               CFMMs have quickly become one of the most popular applications of public blockchains,
+                                           facilitating several billion dollars of trading volume per day. As DEXs have grown in pop-
+                                           ularity, so have the number of CFMMs and assets offered, creating complexity for traders
+
+                                                                                          1
+who simply want to maximize their utility for trading one basket of assets for another. As a
+result, several “DEX aggregators” have emerged to route orders across multiple CFMMs on
+behalf of users. These aggregators currently execute several billion dollars per month across
+all DEXs on Ethereum [blo21]. At the same time, CFMM platforms such as Uniswap offer
+software for routing orders across the subset of CFMMs they support [Lab21].
+    While the properties of individual CFMMs have been studied extensively (see, e.g.,
+[AC20, AAE+ 21]) it is more common for users to want to access liquidity on multiple CFMMs
+to minimize their total trading costs. In this paper, we study the optimal routing problem
+for CFMMs. We consider a user who can trade with multiple CFMMs in order to exchange
+one basket of assets for another and ask how one should perform such trades optimally. We
+show that, in the absence of fixed costs, the optimal routing problem can be formulated as
+a convex optimization problem, which is efficiently solvable. As an (important) sub-case, we
+demonstrate how to use this problem to identify arbitrage opportunies on a set of CFMMs.
+Our framework encompasses the routing problems considered in prior work [DKP21, EH21]
+and offers solutions in the more general case where users seek to trade any basket of assets
+for any other basket across any set of CFMMs whose trading functions are concave and not
+necessarily differentiable. When including transaction costs, we show that the optimal rout-
+ing problem is a mixed-integer convex problem, which permits (potentially computationally
+intensive) global solutions as well as approximate solutions using heuristics based on convex
+optimization.
+
+Outline. We describe the optimal routing problem in §1, ignoring the fixed transaction
+costs. In §2 we give the optimality conditions for the optimal routing problem, and give
+conditions under which the optimal action is to not trade at all. We give some examples
+of the optimal routing problem in §3, including as a special case the detection of arbitrage
+in the network. We give a simple numerical example in §4. In §5 we show how to add
+fixed transaction costs to the optimal routing problem, and briefly describe some exact and
+approximate solution approaches.
+
+
+1    Optimal routing problem
+Network of CFMMs. We consider a set of m CFMMs, denoted i = 1, . . . , m, each of
+which trades multiple tokens from among a universe of n tokens, labeled j = 1 . . . , n. We
+let ni denote the number of tokens that CFMM i trades, with 2 ≤ ni ≤ n. We can think
+of the m CFMMs as the vertices of a network or hypergraph, with n hyper-edges, each
+corresponding to one of the n assets, adjacent to those CFMMs that trade it. Alternatively
+we can represent this as a bipartite graph, with one group of m vertices the CFMMs, and
+the other group of n vertices the tokens, with an edge between a CFMM and a token if the
+CFMM trades the token.
+    A simple example is illustrated as a bipartite graph in figure 1. In this network there are
+m = 5 CFMMs, which trade subsets of n = 3 tokens. CFMM 1 trades all three tokens, so
+n1 = 3; the remaining 4 CFMMs each trade pairs of tokens, so n2 = · · · = n5 = 2.
+
+                                              2
+                                CFMMs
+
+
+                                                        Tokens
+                                1
+
+                                2                              1
+
+                                3                              2
+
+                                4                              3
+
+                                5
+
+
+          Figure 1: Example CFMM network with m = 5 CFMMs and n = 3 tokens.
+
+
+Global and local token indices. We use multiple indices to label the tokens. The global
+index uses the token labels 1, . . . , n. CFMM i, which trades a subset of ni of the n tokens,
+has its local token index, j = 1, . . . , ni . To link the global and local indexes, we introduce
+matrices Ai ∈ Rn×ni , i = 1 . . . , m, where (Ai )jk = 1 if token k in the CFMM i’s local index
+corresponds to global token index j, while (Ai )jk = 0 otherwise.
+   As an example, consider the simple network shown in figure 1. CFMM 1 trades all three
+tokens, with its local indexing identical to the global indexing, so A1 is the 3 × 3 identity
+matrix. As a more interesting example, consider CFMM 4, which trades two tokens, labeled
+1 and 2 in the local indexing, but 1 and 3 in the global indexing, so
+                                                       
+                                                    1 0
+                                            A4 = 0 0 .
+                                                    0 1
+
+CFMM tendered and received baskets. For CFMM i we denote the tendered and
+received baskets as ∆i , Λi ∈ Rn+i . These are quantities of tokens (in the local indexing) that
+we give to, and receive from, CFMM i in a proposed trade.
+
+CFMM trading semantics. The proposed trade (∆i , Λi ) is valid and accepted by CFMM
+i provided
+                        ϕi (Ri + γ∆i − Λi ) = ϕi (Ri ),
+where ϕ : Rn+i → R is the trading function, Ri ∈ Rn+i are the current reserves, and γi ∈ (0, 1]
+is the trading fee for CFMM i. We will assume that the trading functions ϕi are concave
+
+                                               3
+and increasing functions. (For much more detail, see [AAE+ 21].)
+   Examples of trading functions are the sum function, with
+
+                                   ϕi (R) = R1 + · · · + Rni ,
+
+the product or geometric mean function
+
+                                  ϕi (R) = (R1 · · · Rni )1/ni ,
+
+and a generalization, the weighted geometric mean function
+                                                          wn
+                                    ϕi (R) = R1w1 · · · Rni i ,
+
+with weights w > 0, 1T w = 1, where 1 is the vector with all components one.
+
+Network trade vector. The CFMM tendered and received baskets ∆i and Λi can be
+mapped to the global indices as the n-vectors Ai ∆i and Ai Λi , which give the numbers of
+tokens tendered to and received from CFMM i, using the global indices for the tokens.
+Summing the difference of received and tendered tokens over all CFMMs we obtain the
+network trade vector                   m
+                                      X
+                                  Ψ=      Ai (Λi − ∆i ).
+                                          i=1
+
+This is an n-vector, which gives the total net number of tokens tendered to the CFMMs in
+the network. We interpret Ψ as the net network trade vector. If Ψk ≥ 0, it means that we
+do not need to tender any of token k to the network. This does not mean we that do not
+trade token k; it only means that in our trading with the CFMMs, we receive at least as
+much as token k as we tender.
+
+Network trade utility. We introduce a utility function U : Rn → R ∪ {−∞} that
+gives the utility of a trade Ψ to a trader as U (Ψ). We will assume that U is concave and
+increasing. Infinite values of U are used to impose constraints; we consider a proposed
+trade with U (Ψ) = −∞ as unacceptable. As an important example, consider the constraint
+Ψ + h ≥ 0, where h ∈ Rn+ is the vector of a user’s current holdings of tokens. This constraint
+specifies that the post-trade holdings Ψ + h should be nonnegative, i.e., we cannot enter into
+a trade that requires more of any token than we currently have on hand. To express this in
+the utility function, we define U (z) to be −∞ when z + g 6≥ 0. (This modified utility is also
+concave and increasing.)
+    There are many possible choices for U . Perhaps the simplest is the linear utility function
+U (z) = π T z, with π ∈ R++ , where we interpret πi as the trader’s internal or private value
+or price of token i. Several other choices are discussed in [AAE+ 21, §5.2].
+
+
+
+
+                                                4
+Optimal routing problem. We wish to find a set of valid trades that maximizes the
+trader’s utility. This optimal routing problem can be expressed as
+
+                   maximize   U (Ψ)
+                   subject to Ψ = m
+                                  P
+                                    i=1 Ai (Λi − ∆i )
+                                                                                                (1)
+                                ϕi (Ri + γi ∆i − Λi ) = ϕi (Ri ),    i = 1, . . . , m
+                                ∆i ≥ 0,    Λi ≥ 0,    i = 1, . . . , m.
+
+The variables here are Ψ ∈ Rn , Λi ∈ Rn+i , ∆i ∈ Rn+i , i = 1, . . . , m. The data are the utility
+function U , the global-local matrices Ai , and those associated with the CFMMs, the trading
+functions ϕi , the trading fees γi , and the reserve amounts Ri ∈ Rn+i .
+
+Convex optimal routing problem. Unless the trading functions are affine, the optimal
+routing problem (1) is not a convex optimization problem. We can, however, form an equiv-
+alent problem that is convex. To do this we replace the equality constraints with inequality
+constraints:
+                 maximize U (Ψ)
+                 subject to Ψ = m
+                                   P
+                                      i=1 Ai (Λi − ∆i )
+                                                                                         (2)
+                              ϕi (Ri + γi ∆i − Λi ) ≥ ϕi (Ri ), i = 1, . . . , m
+                                ∆i ≥ 0,    Λi ≥ 0,    i = 1, . . . , m.
+This problem is evidently convex [BV04, §5.2.1] and can be readily solved.
+    We will show that any solution of (2) is also a solution of (1). This the same as showing
+that for any solution of (2), the inequality constraints hold with equality. Suppose that ∆?i
+and Λ?i are feasible for (2), but ϕk (Rk + γk ∆?k − Λ?k ) > ϕk (Rk ) for some k. This means we
+can find Λ̃ > Λ?k which satisfies ϕk (Rk + γk ∆?k − Λ̃) ≥ ϕk (Rk ). The associated trade vector
+Ψ̃ = Ψ? + Ak Λk satisfies Ψ̃ ≥ Ψ? , Ψ̃ 6= Ψ? , i.e., at least one component of Ψ̃ is larger that the
+corresponding component of Ψ? . It follows that U (Ψ̃) > U (Ψ? ), so Ψ? is not optimal and
+therefore cannot be a solution. We conclude that any solution of (2) satisfies the inequality
+constraints as equality, and so is optimal for (1).
+    A similar statement holds in the case when U is only nondecreasing, and not (strictly)
+increasing. In this case we can say that there is a solution of (2) that is optimal for (1). One
+simple method to find such a solution is to solve (2) with objective U (Ψ) + 1T Ψ, where 
+is small and positive. The objective for this problem is increasing. In principle we can let 
+go to zero to recover a solution of the original problem; in practice choosing a single small
+value of  works.
+
+Consequences of convexity. Since the problem (2) is convex, it can be reliably and
+quickly solved, even for large problem instances [BV04, §1]. Domain specific languages
+for convex optimiztion such as CVXPY [DB16, AVDB18] or JuMP [DHL17] can be used to
+specify the optimal routing problem in just a few lines of code; solvers such as ECOS [DCB13],
+SCS [OCPB16], or Mosek [ApS19] can be used to solve the problem.
+
+                                                 5
+Implementation. The solution to (2) provides the optimal values (∆i , Λi ) that one must
+trade with each CFMM i. Note that we do not explicitly consider the ideal execution of these
+trades, as these will depend on the semantics of the underlying blockchain that the user is
+interacting with. For example, users may wish to execute trades in a particular sequence,
+starting with an initial portfolio of assets and updating their asset composition after each
+transaction until the final basket is obtained. Users may alternatively use flashloans [Aav20]
+to atomically perform all trades in a single transaction, netting out all trades before repaying
+the loan at the end of the transaction.
+
+
+2     Optimality conditions
+Assuming that U is differentiable (which it need not be), the optimality conditions of prob-
+lem (2) are feasibility, and the dual conditions
+
+                                           ∇U (Ψ) = ν,                                              (3)
+
+and
+         γi λi ∇ϕi (Ri + γi ∆i − Λi ) ≤ ATi ν ≤ λi ∇ϕi (Ri + γi ∆i − Λi ),      i = 1, . . . , m,   (4)
+where ν ∈ Rn , λi ∈ R+ , i = 1, . . . , m are the Lagrange multipliers. (We derive these
+conditions in appendix A.)
+    The first condition (3) has a very simple interpretation: ν is the vector of marginal utilities
+of the tokens. The second set of conditions (4) has a simple interpretation that is very similar
+to the one given in [AAE+ 21, §5.1] for a single CFMM. The term ∇ϕi (Ri + γi ∆i − Λi ), which
+we will write as Pi ∈ Rn+i , can be interpreted as the unscaled prices of the tokens that CFMM
+i trades [AAE+ 21, §2.5], in the local indexing. Plugging (3) into (4),we get
+
+                          γi λi Pi ≤ ATi ∇U (Ψ) ≤ λi Pi ,   i = 1, . . . , m.                       (5)
+
+The middle term is the vector of marginal utilities of the tokens that CFMM i trades, in the
+local indexing. These marginal utilities must lie between a multiple of the discounted prices,
+scaled, and the same prices, adjusted by γi .
+    We can also recognize the conditions (4) as those for the problem of finding an opti-
+mal trade for CFMM i alone, with the linear utility Ui (z) = πiT z, where πi = ATi ∇U (Ψ).
+(See [AAE+ 21, §5.2].) This is very appealing: it states that the optimal trades for the net-
+work of CFMMs are also optimal for each CFMM separately, when they use a linear utility,
+with prices equal to the marginal utility of the overall trade.
+
+Non-differentiable utility. When U is not differentiable, the optimality conditions are
+the same, but in (3) we substitute a supergradient g ∈ −∂(−U )(Ψ) for the gradient ∇U (Ψ),
+where ∂ denotes the subdifferential. When U is not differentiable at Ψ, there are multiple
+such g’s, which we can consider to be multiple marginal utilities. The optimality condition
+is that (5) hold, with ∇U (Ψ) replaced with g, for any g ∈ −∂(−U )(Ψ).
+
+
+                                                 6
+No-trade condition. From the optimality conditions we can derive conditions under
+which the optimal trades are zero, i.e., we should not trade. We will assume that U (0) > −∞,
+i.e., Ψ = 0 is feasible; if this is not the case, then evidently Ψ = 0 is not optimal. The zero
+trade
+                             Ψ = 0,       ∆i = Λi = 0, i = 1, . . . , m,
+is feasible for (5), so the optimality condition is
+
+                          γi λi Pi ≤ ATi ∇U (0) ≤ λi Pi ,   i = 1, . . . , m,                  (6)
+
+where Pi = ∇ϕi (Ri ) is the unscaled price of CFMM i at the current reserves Ri . This
+condition is a generalization of the no-trade condition given in [AAE+ 21, §5.1] for one CFMM,
+to the case where there are multiple CFMMs. When U is not differentiable, we replace ∇U (0)
+with a supergradient g ∈ −∂(−U )(0).
+
+
+3     Examples
+Linear utility. Consider the linear utility U (z) = π T z, with π > 0. In this case the
+optimal routing problem is separable across the CFMMs, since the objective is a sum of
+functions of Λi − ∆i , and constraints are also only on (Λi , ∆i ). It follows that we can solve
+the optimal routing problem (2) by solving m single CFMM problems independently, using
+linear utilities with prices given by π.
+
+Liquidating a basket of tokens. Suppose we start with an initial holding (basket) of
+tokens hinit ∈ Rn+ and wish to convert them all to token k. We use the utility function
+
+                                                hinit + z ≥ 0
+                                       
+                                          zk
+                               U (z) =
+                                          −∞ otherwise.
+
+(This utility is nondecreasing but not increasing.)
+   A special case of this problem is converting one token into another, i.e., when
+
+                                            hinit = tej ,
+
+where t ≥ 0 and ej ∈ Rn is the jth unit vector. In this special case, we can write the
+optimal value of the optimization problem, which we will call u(t), as a function of t. It is
+not hard to show that u is nonnegative and increasing. This function is also concave as it
+is the partial maximization of a concave function (over all variables except t). We show an
+example instance of this problem, along with an associated function u, in §3.
+
+Purchasing a basket of tokens. This is the opposite of liquidating a basket of tokens.
+Here too we start with initial token holdings hinit ∈ Rn+ , and end up with the holdings
+hinit + Ψ. Let hdes ∈ Rn+ be our target basket; we wish to end up with the largest possible
+multiple of this basket. Let K ⊆ {1, . . . , n} denote the set of indices for which hdes
+                                                                                     i   > 0, i.e.,
+
+                                                 7
+the indexes associated with tokens in the desired basket. We seek to maximize the value of
+α for which hinit + ψ ≥ αhdes . To do this we use the utility function
+
+                                 mini∈K (hinit + Ψi )/hdes hinit + z ≥ 0
+                               
+                                          i            i
+                      U (z) =
+                                 −∞                        otherwise.
+
+Arbitrage detection. An arbitrage is a collection of valid CFMM trades with Ψ ≥ 0 and
+Ψ 6= 0, i.e., a set of trades for the CFMMs in which we tender no tokens, but receive a
+positive amount of at least one token. The optimal routing problem can be used to find an
+arbitrage, or certify that no arbitrage exists.
+   Consider any U that is increasing, with domain {Ψ | U (Ψ) > −∞} = Rn+ . Evidently
+there is an arbitrage if and only if there is a nonzero solution of the routing problem, which is
+the same as U (Ψ? ) > U (0), where Ψ? is optimal. So by solving this optimal routing problem,
+we can find an arbitrage, if one exists.
+
+No-arbitrage condition. Using the version of (6) for nondifferentiable U we can derive
+conditions under which there is no arbitrage. We consider the specific utility function
+                                         T
+                                          1 Ψ Ψ≥0
+                               U (Ψ) =
+                                          −∞ otherwise,
+
+where 1 denotes the vector with all entries one. This utility is the total number of tokens
+received, when they are nonnegative. Its supergradient at 0 is
+
+                             −∂(−U )(0) = [1, ∞)n = {g | g ≥ 1}.
+
+The condition (6) becomes: There exists g ≥ 1, and λi ≥ 0, for which
+
+                             γi λi Pi ≤ ATi g ≤ λi Pi ,   i = 1, . . . , m.
+
+By absorbing a scaling of g into the λi , we can say that g > 0 is enough.
+    This makes sense: it states that there is no arbitrage if we can assign a set of positive
+prices (given by g) to the tokens, for which no CFMM would trade. In the (unrealistic) case
+when γi = 1, i.e., there is no trading cost, the no arbitrage condition is that there exists a
+global set of prices for the tokens, g, consistent with the local prices of tokens given by λi Pi .
+
+
+4     Numerical example
+The Python code for the numerical example we present here is available at
+
+                    https://github.com/angeris/cfmm-routing-code.
+
+The optimization problems are formulated and solved using CVXPY [AVDB18]. A listing
+of the core of the code is given in appendix B.
+
+                                                  8
+       CFMM        Trading function ϕi                Fee parameter γi        Reserves Ri
+       1           Geometric mean, w = (3, 2, 1)      0.98                    (3, .2, 1)
+       2           Product                            0.99                    (10, 1)
+       3           Product                            0.96                    (1, 10)
+       4           Product                            0.97                    (20, 50)
+       5           Sum                                0.99                    (10, 10)
+                                   Table 1: CFMM attributes.
+
+
+Network. We consider the network of 5 CFMMs and 3 tokens shown in figure 1. The
+trading functions, Fee parameters, and reserves are listed in table 1.
+
+Problem and utility. We wish to trade an amount t ≥ 0 of token 1 for the maximum
+possible amount of token 3. This is a special case of the problem of liquidating a basket of
+tokens, as described in §3, with initial holdings hinit = te1 . The utility function is U (z) = z3 ,
+provided z + hinit ≥ 0, and U (z) = −∞ otherwise. We let u(t) denote the maximum amount
+of token 3 we can obtain from the network when we tender token 1 in the amount t.
+
+Results. We solve the optimal routing problem for many values of t, from t = 0 to t = 50.
+The amount of token 3 we obtain in shown in figure 2. We see that u(0) > 0, which means
+there is an arbitrage in this network; indeed, there is a set of trades that requires giving zero
+net tokens to the network, but we receive an amount around 7 of token 3.
+   The associated optimal trades are shown in figure 3. We can see many interesting phe-
+nomena here. At t = 0 we see the arbitrage trades, indeed, the arbitrage trades that yield
+the largest amount of token 3. Several asset flows reverse sign as t varies. For example, for
+t < 11, we receive token 1 from CFMM 1, whereas for t > 11, we tender token 1 to CFMM 1.
+We can also see that the sparsity pattern of the optimal trades changes with t.
+   We illustrate the changing signs and sparsity of the optimal trades in figure 4, which
+shows the optimal trades for t = 0, t = 20, and t = 50. We plot whether each token is
+tendered to or received from each CFMM using color coded edges. A red edge connecting a
+token to a CFMM means that the CFMM is receiving this token, while a blue edge denotes
+that the CFMM is tendering this token. A dashed edge denotes that the CFMM neither
+tenders nor receives this token.
+   Even in this very simple example, the optimal trades are not obvious and involve trading
+with and among multiple CFMMs. For larger networks, the optimal trades are even less
+obvious.
+
+
+
+
+                                                 9
+                      40
+
+
+                      30
+
+               u(t)
+                      20
+
+
+                      10
+
+
+                       0
+                           0        10       20        30      40        50
+                                                   t
+
+Figure 2: Plot of u(t), the maximum amount of token 3 we obtain when we tender the amount t
+of token 1.
+
+
+
+
+                                                                                  (Λ1 − ∆1 )1
+   30
+                                                                                  (Λ1 − ∆1 )2
+   20                                                                             (Λ1 − ∆1 )3
+   10                                                                             (Λ2 − ∆2 )1
+                                                                                  (Λ2 − ∆2 )2
+     0                                                                            (Λ3 − ∆3 )1
+  −10                                                                             (Λ3 − ∆3 )2
+                                                                                  (Λ4 − ∆4 )1
+  −20                                                                             (Λ4 − ∆4 )2
+  −30                                                                             (Λ5 − ∆5 )1
+                                                                                  (Λ5 − ∆5 )2
+         0            10       20            30        40           50
+                                         t
+
+             Figure 3: Optimal trades versus t, the amount of token 1 tendered.
+
+
+
+                                              10
+    CFMMs                                                  CFMMs
+
+
+                          Tokens                                                Tokens
+    1                                                      1
+
+    2                          1                           2                         1
+
+    3                          2                           3                         2
+
+    4                          3                           4                         3
+
+    5                                                      5
+
+
+              (a) t = 0                                            (b) t = 20
+
+
+
+                               CFMMs
+
+
+                                                      Tokens
+                               1
+
+                               2                           1
+
+                               3                           2
+
+                               4                           3
+
+                               5
+
+
+                                         (c) t = 50
+
+Figure 4: Optimal trades as t varies. A red edge means the CFMM is receiving tokens; a blue
+edge means the CFMM is tendering tokens.
+
+
+
+
+                                            11
+5     Fixed transaction costs
+Our optimal routing problem (2) includes the trading costs built into CFMMs, via the
+parameters γi . But it does not include the small fixed cost associated with any trade. In this
+section we explore how these fixed transaction costs can be incorporated into the optimal
+routing problem.
+    We let qi ∈ R+ denote the fixed cost of executing a trade with CFMM i, denominated
+in some numeraire. We pay this whenever we trade, i.e., Λi − ∆i 6= 0. We introduce a new
+set of Boolean variables into the problem, η ∈ {0, 1}m , with ηi = 1 if a nonzero trade is
+made with CFMM i, and ηi = 0 otherwise, so the total fixed transaction cost is q T η. We
+assume that there is a known maximum size of a tendered basket with CFMM i, which we
+will denote ∆max
+              i   ∈ Rn+i . We can then express the problem of maximizing the utility minus
+the fixed transaction cost as
+                   maximize   U (Ψ) − q T η
+                   subject to Ψ = m
+                                  P
+                                     i=1 Ai (Λi − ∆i )
+                               ϕi (Ri + γi ∆i − Λi ) ≥ ϕi (Ri ),    i = 1, . . . , m         (7)
+                               0 ≤ ∆i ≤ ηi ∆max
+                                            i   ,     Λi ≥ 0,      i = 1, . . . , m,
+                                        m
+                               η ∈ {0, 1} ,
+
+where the variables are Ψ, Λi , ∆i , i = 1, . . . , m, and η ∈ {0, 1}m .
+   The optimal routing problem with fixed costs (7) is a mixed-integer convex program
+(MICP). It can be solved exactly, possibly with great computational effort, using global
+optimization methods, with MICP solvers such as Mosek [ApS19] or Gurobi [Gur21]. When
+m is small (say, under ten or so), it can be practical to solve it by brute force, by solving the
+convex problem we obtain for each of the 2m feasible values of η.
+
+Approximate solution methods. Many approximate methods have the speed of convex
+optimization, and (often) produce good approximate solutions. For example we can solve
+the relaxation of (7) obtained by replacing the constraints on η to η ∈ [0, 1]m (which gives
+a convex optimization problem). After that we set a threshold t ∈ (0, 1) for the relaxed
+optimal values η rel , and take ηi = 1 when η rel ≥ t and and ηi = 0 when η rel < t. We fix these
+values of η and then solve the resulting convex problem. This could be done for a modest
+number of values of t; we take the solution found with the largest objective (including the
+fixed costs q T η).
+    An alternative is a simple randomized method. We interpret ηirel as probabilities, and
+generate η ∈ {0, 1} randomly using these probabilities. We then solve the convex problem
+associated with this choice of η. We can repeat this procedure a modest number of times,
+and pick the feasible point with the highest payoff.
+
+
+
+
+                                               12
+References
+[AAE+ 21] Guillermo Angeris, Akshay Agrawal, Alex Evans, Tarun Chitra, and Stephen
+          Boyd. Constant Function Market Makers: Multi-Asset Trades via Convex Opti-
+          mization. arXiv:2107.12484 [math, q-fin], July 2021.
+
+[Aav20]   Aave. Flash loans: Pushing the limits of DeFi. https://aave.com/flash-loans/,
+          2020.
+
+[AC20]    Guillermo Angeris and Tarun Chitra. Improved Price Oracles: Constant Function
+          Market Makers. In Proceedings of the 2nd ACM Conference on Advances in
+          Financial Technologies, pages 80–91, New York NY USA, October 2020. ACM.
+
+[ApS19]   MOSEK ApS.             MOSEK Optimizer API for               Python    9.1.5.
+          https://docs.mosek.com/9.1/pythonapi/index.html, 2019.
+
+[AVDB18] Akshay Agrawal, Robin Verschueren, Steven Diamond, and Stephen Boyd. A
+         rewriting system for convex optimization problems. Journal of Control and De-
+         cision, 5(1):42–60, 2018.
+
+[blo21]   Dex aggregator volume. https://www.theblockcrypto.com/data/decentralized-
+          finance/dex-non-custodial/dex-aggregator-trade-volume, 2021.
+
+[BV04]    Stephen Boyd and Lieven Vandenberghe. Convex Optimization. Cambridge Uni-
+          versity Press, Cambridge, UK ; New York, 2004.
+
+[DB16]    Steven Diamond and Stephen Boyd. Cvxpy: A python-embedded modeling
+          language for convex optimization. The Journal of Machine Learning Research,
+          17(1):2909–2913, 2016.
+
+[DCB13]   Alexander Domahidi, Eric Chu, and Stephen Boyd. ECOS: An SOCP solver for
+          embedded systems. In 2013 European Control Conference (ECC), pages 3071–
+          3076, Zurich, July 2013. IEEE.
+
+[DHL17]   Iain Dunning, Joey Huchette, and Miles Lubin. JuMP: A modeling language for
+          mathematical optimization. SIAM Review, 59(2):295–320, January 2017.
+
+[DKP21]   Vincent Danos, Hamza El Khalloufi, and Julien Prat. Global order routing on
+          exchange networks. In International Conference on Financial Cryptography and
+          Data Security, pages 207–226. Springer, 2021.
+
+[EH21]    Daniel Engel and Maurice Herlihy. Composing networks of automated market
+          makers. CoRR, abs/2106.00083, 2021.
+
+[Gur21]   Gurobi Optimization, LLC. Gurobi Optimizer Reference Manual, 2021.
+
+[Lab21]   Uniswap Labs. Uniswap Router02. 2021.
+
+                                          13
+[OCPB16] Brendan O’Donoghue, Eric Chu, Neal Parikh, and Stephen Boyd. Conic opti-
+         mization via operator splitting and homogeneous self-dual embedding. Journal
+         of Optimization Theory and Applications, 169(3):1042–1068, June 2016.
+
+[ZCP18]   Yi Zhang, Xiaohong Chen, and Daejun Park. Formal specification of constant
+          product (xy = k) market maker model and implementation. 2018.
+
+
+
+
+                                         14
+A      Derivation of optimality conditions
+To derive condition (4), we introduce the Lagrangian of the convex optimal routing prob-
+lem (2),
+
+                                                  m
+                                                                    !
+                                                  X
+  L(Ψ, ∆, Λ, ν, λ, η, ξ) = −U (Ψ) + ν T      Ψ−         Ai (Λi − ∆i )
+                                                  i=1
+                                    m
+                                    X                                               m
+                                                                                    X
+                                +         λi (ϕi (Ri ) − ϕi (Ri + γi ∆i − Λi )) −         (ηiT ∆i + ξiT Λi ).
+                                    i=1                                             i=1
+
+Here, ν ∈ Rn , λ ∈ Rm                     ni
+                       + , and ηi , ξi ∈ R+ , i = 1, . . . , m. These are the dual variables
+or Lagrange multipliers for the equality constraint, the relaxed inequality constraints, and
+nonnegativity constraints for the tendered and received baskets of assets for each CFMM,
+respectively.
+   The optimality conditions are (primal) feasibility, and (the dual conditions)
+
+                              ∇Ψ L = 0,       ∇∆ L = 0,       ∇Λ L = 0.
+
+The first of these is
+                                          −∇U (Ψ) + ν = 0,
+while the latter two are
+
+  −ATi ν + λi ∇ϕi (Ri + γi ∆i − Λi ) − ξi = 0,          ATi ν − γi λi ∇ϕi (Ri + γi ∆i − Λi ) − ηi = 0.
+
+These can be written as
+
+       −ATi ν + λi ∇ϕi (Ri + γi ∆i − Λi ) ≥ 0,          ATi ν − γi λi ∇ϕi (Ri + γi ∆i − Λi ) ≥ 0,
+
+which simplifies to (4).
+
+
+
+
+                                                   15
+     B      Example code
+
+ 1   import numpy as np
+ 2   import cxvpy as cp
+ 3
+ 4   #   We assume the following is already defined :
+ 5   #   - ‘A ‘ , list of matrices A_i
+ 6   #   - ‘ reserves ‘ , list of vectors R_i
+ 7   #   - ‘ fees ‘ , list of fees for each CFMM i
+ 8   #   - ‘ num_tokens ‘ , list of n_i
+ 9   #   - ‘t ‘ , amount of asset 1 provided to the network
+10
+11   current_assets = np . array ([ t , 0 , 0])
+12
+13   # Build variables
+14   deltas = [ cp . Variable ( n_i , nonneg = True ) for n_i in num_tokens ]
+15   lambdas = [ cp . Variable ( n_i , nonneg = True ) for n_i in num_tokens ]
+16   psi = cp . sum ( A_i @ ( L - D ) for A_i , D , L in zip (A , deltas , lambdas ) )
+17
+18   # Objective is to trade t of asset 1 for a maximum amount of asset 3
+19   obj = cp . Maximize ( psi [2])
+20
+
+21   # Reserves after trade
+22   new_reserves = [ R + gamma_i * D - L \
+23       for R , gamma_i , D , L in zip ( reserves , fees , deltas , lambdas ) ]
+24
+25   # Trading function constraints
+26   cons = [
+27       # Balancer pool with weights 3 , 2 , 1
+28       cp . geo_mean ( new_reserves [0] , p = np . array ([3 , 2 , 1]) ) \
+29             >= cp . geo_mean ( reserves [0] , p = np . array ([3 , 2 , 1]) ) ,
+30
+31         # Uniswap v2 pools
+32         cp . geo_mean ( new_reserves [1]) >= cp . geo_mean ( reserves [1]) ,
+33         cp . geo_mean ( new_reserves [2]) >= cp . geo_mean ( reserves [2]) ,
+34         cp . geo_mean ( new_reserves [3]) >= cp . geo_mean ( reserves [3]) ,
+35
+36         # Constant sum pool
+37         cp . sum ( new_reserves [4]) >= cp . sum ( reserves [4]) ,
+38         new_reserves [4] >= 0 ,
+39
+40         # Allow all assets at hand to be traded
+41         psi + current_assets >= 0
+42   ]
+43
+44   # Set up and solve problem
+45   prob = cp . Problem ( obj , cons )
+46   prob . solve ()
+47
+48   print ( f " amount of asset 3 received : { psi [2]. value } " )
+
+
+                                                   16
+

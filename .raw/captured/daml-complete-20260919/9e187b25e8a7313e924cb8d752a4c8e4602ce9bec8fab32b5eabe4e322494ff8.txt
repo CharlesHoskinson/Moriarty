@@ -1,0 +1,409 @@
+On this page
+GetActiveContracts
+Protocol Details
+Inputs
+GetActiveContractsRequest
+Outputs
+GetActiveContractsResponse
+Related Schemas
+Ledger API
+gRPC API
+Packages
+v2
+Services
+StateService
+GetActiveContracts
+Copy page
+Copy page
+Copy page
+Copy page
+Ledger API
+›
+gRPC API
+›
+v2
+›
+GetActiveContracts
+com.daml.ledger.api.v2
+​
+GetActiveContracts
+gRPC
+RPC
+/com.daml.ledger.api.v2.StateService/GetActiveContracts
+​
+Protocol Details
+​
+Inputs
+​
+GetActiveContractsRequest
+active_at_offset
+int64
+event_format
+EventFormat
+stream_continuation_token
+bytes
+​
+Outputs
+​
+GetActiveContractsResponse
+workflow_id
+string
+active_contract
+ActiveContract
+incomplete_unassigned
+IncompleteUnassigned
+incomplete_assigned
+IncompleteAssigned
+stream_continuation_token
+bytes
+​
+Related Schemas
+com.daml.ledger.api.v2.GetActiveContractsRequest
+active_at_offset
+int64
+event_format
+EventFormat
+stream_continuation_token
+bytes
+com.daml.ledger.api.v2.EventFormat
+filters_by_party
+repeated map
+filters_for_any_party
+Filters
+verbose
+bool
+com.daml.ledger.api.v2.Filters
+cumulative
+repeated CumulativeFilter
+com.daml.ledger.api.v2.CumulativeFilter
+wildcard_filter
+WildcardFilter
+interface_filter
+InterfaceFilter
+template_filter
+TemplateFilter
+com.daml.ledger.api.v2.WildcardFilter
+include_created_event_blob
+bool
+com.daml.ledger.api.v2.InterfaceFilter
+interface_id
+Identifier
+include_interface_view
+bool
+include_created_event_blob
+bool
+com.daml.ledger.api.v2.Identifier
+package_id
+string
+module_name
+string
+entity_name
+string
+com.daml.ledger.api.v2.TemplateFilter
+template_id
+Identifier
+include_created_event_blob
+bool
+com.daml.ledger.api.v2.GetActiveContractsResponse
+workflow_id
+string
+active_contract
+ActiveContract
+incomplete_unassigned
+IncompleteUnassigned
+incomplete_assigned
+IncompleteAssigned
+stream_continuation_token
+bytes
+com.daml.ledger.api.v2.ActiveContract
+created_event
+CreatedEvent
+synchronizer_id
+string
+reassignment_counter
+uint64
+com.daml.ledger.api.v2.CreatedEvent
+offset
+int64
+node_id
+int32
+contract_id
+string
+template_id
+Identifier
+contract_key
+Value
+contract_key_hash
+bytes
+create_arguments
+Record
+created_event_blob
+bytes
+interface_views
+repeated InterfaceView
+witness_parties
+repeated string
+signatories
+repeated string
+observers
+repeated string
+created_at
+Timestamp
+package_name
+string
+acs_delta
+bool
+representative_package_id
+string
+com.daml.ledger.api.v2.Value
+unit
+Empty
+bool
+bool
+int64
+sint64
+date
+int32
+timestamp
+sfixed64
+numeric
+string
+party
+string
+text
+string
+contract_id
+string
+optional
+Optional
+list
+List
+text_map
+TextMap
+gen_map
+GenMap
+record
+Record
+variant
+Variant
+enum
+Enum
+com.daml.ledger.api.v2.Optional
+value
+Value
+com.daml.ledger.api.v2.List
+elements
+repeated Value
+com.daml.ledger.api.v2.TextMap
+entries
+repeated Entry
+com.daml.ledger.api.v2.TextMap.Entry
+key
+string
+value
+Value
+com.daml.ledger.api.v2.GenMap
+entries
+repeated Entry
+com.daml.ledger.api.v2.GenMap.Entry
+key
+Value
+value
+Value
+com.daml.ledger.api.v2.Record
+record_id
+Identifier
+fields
+repeated RecordField
+com.daml.ledger.api.v2.RecordField
+label
+string
+value
+Value
+com.daml.ledger.api.v2.Variant
+variant_id
+Identifier
+constructor
+string
+value
+Value
+com.daml.ledger.api.v2.Enum
+enum_id
+Identifier
+constructor
+string
+com.daml.ledger.api.v2.InterfaceView
+interface_id
+Identifier
+view_status
+Status
+view_value
+Record
+implementation_package_id
+string
+com.daml.ledger.api.v2.IncompleteUnassigned
+created_event
+CreatedEvent
+unassigned_event
+UnassignedEvent
+com.daml.ledger.api.v2.UnassignedEvent
+reassignment_id
+string
+contract_id
+string
+template_id
+Identifier
+source
+string
+target
+string
+submitter
+string
+reassignment_counter
+uint64
+assignment_exclusivity
+Timestamp
+witness_parties
+repeated string
+package_name
+string
+offset
+int64
+node_id
+int32
+com.daml.ledger.api.v2.IncompleteAssigned
+assigned_event
+AssignedEvent
+com.daml.ledger.api.v2.AssignedEvent
+source
+string
+target
+string
+reassignment_id
+string
+submitter
+string
+reassignment_counter
+uint64
+created_event
+CreatedEvent
+grpcurl
+grpcurl
+# Add -plaintext if the server is not using TLS.
+# This RPC uses streaming semantics. Send additional JSON messages on stdin as needed.
+grpcurl
+\
+-d
+@
+\
+<
+HOST:POR
+T
+>
+\
+com.daml.ledger.api.v2.StateService/GetActiveContracts
+<<
+'EOF'
+{
+"activeAtOffset": "0",
+"eventFormat": {
+"filtersByParty": [
+{
+"key": {
+"cumulative": [
+{
+"wildcardFilter": {}
+}
+]
+}
+}
+],
+"filtersForAnyParty": {
+"cumulative": [
+{
+"wildcardFilter": {}
+}
+]
+},
+"verbose": true
+},
+"streamContinuationToken": "BASE64_ENCODED_BYTES"
+}
+EOF
+OK
+application/json
+OK
+{
+"workflowId"
+:
+"string"
+,
+"activeContract"
+: {
+"createdEvent"
+: {
+"offset"
+:
+"0"
+,
+"nodeId"
+:
+0
+,
+"contractId"
+:
+"string"
+,
+"templateId"
+: {
+"packageId"
+:
+"string"
+,
+"moduleName"
+:
+"string"
+,
+"entityName"
+:
+"string"
+},
+"contractKey"
+: {
+"unit"
+:
+"string"
+},
+"contractKeyHash"
+:
+"BASE64_ENCODED_BYTES"
+,
+"createArguments"
+: {
+"recordId"
+: {},
+"fields"
+: [
+{}
+]
+},
+"createdEventBlob"
+:
+"BASE64_ENCODED_BYTES"
+},
+"synchronizerId"
+:
+"string"
+,
+"reassignmentCounter"
+:
+"0"
+},
+"streamContinuationToken"
+:
+"BASE64_ENCODED_BYTES"
+}
+Suggest edits
+Raise issue
+ListVettedPackages
+GetActiveContractsPage

@@ -1,0 +1,77 @@
+On this page
+Returns
+getCdpExtensionRegistrations
+Copy page
+Copy page
+Copy page
+Copy page
+function
+getCdpExtensionRegistrations
+()
+:
+ResourceServerExtension
+[];
+Defined in:
+server-extensions.ts:241
+Returns
+ResourceServerExtension
+registrations for all CDP-supported extensions.
+These register enrichment handlers on
+x402ResourceServer
+so that routes
+whose
+extensions
+include a CDP extension key get the correct
+PaymentRequired.extensions[key]
+value.
+createX402Server()
+calls this automatically. Call it manually only when
+building a resource server without
+createX402Server
+:
+import
+{
+x402ResourceServer
+}
+from
+"@x402/core/server"
+;
+import
+{
+getCdpExtensionRegistrations
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+const
+server
+=
+new
+x402ResourceServer
+(
+facilitatorClient
+);
+for
+(
+const
+ext
+of
+getCdpExtensionRegistrations
+()) {
+server
+.
+registerExtension
+(
+ext
+);
+}
+​
+Returns
+ResourceServerExtension
+[]
+Array of
+ResourceServerExtension
+registrations for gas-sponsoring and Bazaar.
+Was this page helpful?
+Yes
+No

@@ -1,0 +1,243 @@
+On this page
+Templates
+Data Types
+Splice APIs
+Splice Daml Packages
+splice-wallet
+Splice.Wallet.MintingDelegation
+Copy page
+Copy page
+Documentation for Splice.Wallet.MintingDelegation
+Copy page
+Copy page
+​
+Templates
+template
+MintingDelegation
+The right allowing the delegate to mint rewards on behalf of the beneficiary.
+Signatory: beneficiary, delegate
+Field
+Type
+Description
+beneficiary
+Party
+The party on whose behalf minting is performed.
+delegate
+Party
+The party authorized to perform minting operations.
+dso
+Party
+Expected DSO party.
+expiresAt
+Time
+The time after which this delegation is no longer valid.
+amuletMergeLimit
+Int
+The number of amulet contracts to keep after auto-merging; i.e., auto-merge contracts once there are strictly more than this number of contracts. This is a suggestion to the delegate and is not enforced in daml
+Choice
+Archive
+Controller: beneficiary, delegate
+Returns: ()
+(no fields)
+Choice
+MintingDelegation_Mint
+Controller: delegate
+Returns: MintingDelegation_MintResult
+Field
+Type
+Description
+inputs
+[TransferInput]
+The inputs to the transfer, like the validator liveness activity records owned by the beneficiary.
+context
+PaymentTransferContext
+The transfer context including amulet rules.
+Choice
+MintingDelegation_Reject
+Controller: delegate
+Returns: MintingDelegation_RejectResult
+(no fields)
+Choice
+MintingDelegation_Withdraw
+Controller: beneficiary
+Returns: MintingDelegation_WithdrawResult
+(no fields)
+template
+MintingDelegationProposal
+Proposal by the user to setup a minting delegation.
+Signatory: (DA.Internal.Record.getField @“beneficiary” delegation)
+Field
+Type
+Description
+delegation
+MintingDelegation
+The delegation to be created if accepted.
+Choice
+Archive
+Controller: (DA.Internal.Record.getField @“beneficiary” delegation)
+Returns: ()
+(no fields)
+Choice
+MintingDelegationProposal_Accept
+Controller: (DA.Internal.Record.getField @“delegate” delegation)
+Returns: MintingDelegationProposal_AcceptResult
+Field
+Type
+Description
+existingDelegationCid
+Optional
+(
+ContractId
+MintingDelegation)
+Optional existing delegation to archive while creating the new one. Useful for changing the parameters of the delegation.
+Choice
+MintingDelegationProposal_Reject
+Controller: (DA.Internal.Record.getField @“delegate” delegation)
+Returns: MintingDelegationProposal_RejectResult
+(no fields)
+Choice
+MintingDelegationProposal_Withdraw
+Controller: (DA.Internal.Record.getField @“beneficiary” delegation)
+Returns: MintingDelegationProposal_WithdrawResult
+(no fields)
+​
+Data Types
+data
+MintingDelegationProposal_AcceptResult
+MintingDelegationProposal_AcceptResult
+Field
+Type
+Description
+mintingDelegationCid
+ContractId
+MintingDelegation
+instance
+Eq
+MintingDelegationProposal_AcceptResult
+instance
+Show
+MintingDelegationProposal_AcceptResult
+instance
+GetField “mintingDelegationCid” MintingDelegationProposal_AcceptResult (
+ContractId
+MintingDelegation)
+instance
+SetField “mintingDelegationCid” MintingDelegationProposal_AcceptResult (
+ContractId
+MintingDelegation)
+instance
+HasExercise
+MintingDelegationProposal MintingDelegationProposal_Accept MintingDelegationProposal_AcceptResult
+instance
+HasFromAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Accept MintingDelegationProposal_AcceptResult
+instance
+HasToAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Accept MintingDelegationProposal_AcceptResult
+data
+MintingDelegationProposal_RejectResult
+MintingDelegationProposal_RejectResult
+(no fields)
+instance
+Eq
+MintingDelegationProposal_RejectResult
+instance
+Show
+MintingDelegationProposal_RejectResult
+instance
+HasExercise
+MintingDelegationProposal MintingDelegationProposal_Reject MintingDelegationProposal_RejectResult
+instance
+HasFromAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Reject MintingDelegationProposal_RejectResult
+instance
+HasToAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Reject MintingDelegationProposal_RejectResult
+data
+MintingDelegationProposal_WithdrawResult
+MintingDelegationProposal_WithdrawResult
+(no fields)
+instance
+Eq
+MintingDelegationProposal_WithdrawResult
+instance
+Show
+MintingDelegationProposal_WithdrawResult
+instance
+HasExercise
+MintingDelegationProposal MintingDelegationProposal_Withdraw MintingDelegationProposal_WithdrawResult
+instance
+HasFromAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Withdraw MintingDelegationProposal_WithdrawResult
+instance
+HasToAnyChoice
+MintingDelegationProposal MintingDelegationProposal_Withdraw MintingDelegationProposal_WithdrawResult
+data
+MintingDelegation_MintResult
+MintingDelegation_MintResult
+Field
+Type
+Description
+transferResult
+TransferResult
+instance
+Eq
+MintingDelegation_MintResult
+instance
+Show
+MintingDelegation_MintResult
+instance
+GetField “transferResult” MintingDelegation_MintResult TransferResult
+instance
+SetField “transferResult” MintingDelegation_MintResult TransferResult
+instance
+HasExercise
+MintingDelegation MintingDelegation_Mint MintingDelegation_MintResult
+instance
+HasFromAnyChoice
+MintingDelegation MintingDelegation_Mint MintingDelegation_MintResult
+instance
+HasToAnyChoice
+MintingDelegation MintingDelegation_Mint MintingDelegation_MintResult
+data
+MintingDelegation_RejectResult
+MintingDelegation_RejectResult
+(no fields)
+instance
+Eq
+MintingDelegation_RejectResult
+instance
+Show
+MintingDelegation_RejectResult
+instance
+HasExercise
+MintingDelegation MintingDelegation_Reject MintingDelegation_RejectResult
+instance
+HasFromAnyChoice
+MintingDelegation MintingDelegation_Reject MintingDelegation_RejectResult
+instance
+HasToAnyChoice
+MintingDelegation MintingDelegation_Reject MintingDelegation_RejectResult
+data
+MintingDelegation_WithdrawResult
+MintingDelegation_WithdrawResult
+(no fields)
+instance
+Eq
+MintingDelegation_WithdrawResult
+instance
+Show
+MintingDelegation_WithdrawResult
+instance
+HasExercise
+MintingDelegation MintingDelegation_Withdraw MintingDelegation_WithdrawResult
+instance
+HasFromAnyChoice
+MintingDelegation MintingDelegation_Withdraw MintingDelegation_WithdrawResult
+instance
+HasToAnyChoice
+MintingDelegation MintingDelegation_Withdraw MintingDelegation_WithdrawResult
+Suggest edits
+Raise issue
+Splice.Wallet.Install
+Splice.Wallet.TopUpState

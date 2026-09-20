@@ -10,6 +10,8 @@
 
 ## Global constraints
 
+This is an internal maintainer implementation plan. Task admission, reviewer selection, resource reservations and RP03 apply only to project-operated development campaigns using project resources or credentials. They are not permissions to author, compile, prove or deploy a Moriarty program. External developers use objective language/proof rules, contract and participant authorization, and target ledger validity. The separation is a specified requirement, not a claim of completed deployment support.
+
 Status: S2, specified-only. [Program rules](README.md) apply to every task.
 
 Full-completion dependencies (not individual task entry gates): SP03, SP05, SP06, SP07, SP08. Stage scope: f3, mandatory. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
@@ -45,15 +47,15 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 ## SP09.2: Implement the general bounded relation
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
-- [ ] Replace the fixed-instance limitation with the accepted versioned Core transition relation. Bind all state/effects/liabilities/observations/work fields. Define contract-property certificate judgments and admission into trusted deployment policy. Require all four named claims on every permitted path, including genesis and administration.
-- [ ] Verify: At least two non-hardcoded agreements and adversarial traces exercise the general relation. Genericity requires constructor coverage and correspondence, not merely those examples. Missing claims or unsupported property evidence fail closed.
+- [ ] Replace the fixed-instance limitation with the accepted versioned Core transition relation. Bind all state/effects/liabilities/observations/work fields. Define mechanically checked contract-property certificate judgments under commitments bound by the deployed contract, protocol rules and applicable participant authorization. Do not require Moriarty project approval of a developer or program. Require all four named claims on every permitted path, including genesis and administration.
+- [ ] Verify: At least two non-hardcoded agreements and adversarial traces exercise the general relation. Genericity requires constructor coverage and correspondence, not merely those examples. Missing claims or unsupported property evidence fail closed. The same valid evidence for a newly authored supported program must not fail solely because internal campaign or review records are absent; maintainer approval must not rescue missing proof.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
 
 ## SP09.3: Enforce authorization and policy lifecycle
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP09.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
-- [ ] Implement authenticated observations, durable partial-fill budgets, signature domains, expiry/currentness, permitted calls/recipients and one-time predecessor consumption. Bound claim counts, dependencies, sidecars and verification work before expensive allocation. Enforce verifier/spec activation, revocation and consumption-preserving migration.
+- [ ] Implement authenticated observations, durable partial-fill budgets, signature domains, expiry/currentness, permitted calls/recipients and one-time predecessor consumption. Bound claim counts, dependencies, sidecars and verification work before expensive allocation. Enforce verifier/spec activation, revocation and consumption-preserving migration under those contract/protocol/participant commitments, without a project-wide deployment permission service.
 - [ ] Verify: Proof-valid but intent-invalid execution rejects. Two individually valid conflicting spends cannot both finalize. Restart, cancellation, key revocation and migration cannot revive consumed authority or work.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
@@ -74,7 +76,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP09` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
 
-## Native packet boundaries
+## Internal project campaign boundaries
 
 SP09.1 expands into `execution/SP09-atomic-correspondence.md`, `execution/SP09-adapter-source.md`, `execution/SP09-adapter-native.md` and `execution/SP09-atomic-preview.md` under `openspec/sprints/`. The first two produce source/theorem candidates. Native execution requires subsequent current source/resource review and separate campaign admission. Preview execution follows actual native verification and atomic correspondence. Never combine preparation review and execution into one ungated command.
 
@@ -91,7 +93,7 @@ python3 experiments/moriarty-language/formal/k/run.py prove --claims experiments
 python3 experiments/moriarty-acceptance/proof/run-reviewed.py --contract experiments/moriarty-acceptance/proof/resource-contract.json --verify-retained
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or an undeclared or unauthorized partial effect. A logical action rejected before submission has no effects; a submitted Midnight transaction may retain guaranteed-phase effects and fees only within the signed phase-specific failure policy, and its receipt must distinguish failure from successful fulfillment. Project-operated proof or public-network campaigns using project resources or credentials additionally require live RP03 admission. Public compiler, prover and SDK use with developer-owned resources SHALL NOT require RP03, project reviewer receipts or Foreman/Pel records.
 
 ## Report-informed acceptance refinement
 

@@ -1,0 +1,566 @@
+On this page
+Daml.Script.Internal
+Data Types
+data CommandName
+data ErrorClassName
+data ErrorMessage
+data FailedCmd
+data ContractNotFoundAdditionalInfo
+data PackageName
+Functions
+tryCommands
+liftFailedCommandToFailureStatus
+isNotActive
+vetPackages
+vetPackagesOnParticipant
+unvetPackages
+unvetPackagesOnParticipant
+listVettedPackages
+listAllPackages
+allocateReplicatedPartyOn
+allocateReplicatedPartyWithHintOn
+throwAnyException
+History
+Daml Script
+Modules
+Daml.Script.Internal
+Copy page
+Copy page
+Reference documentation for Daml module Daml.Script.Internal.
+Copy page
+Copy page
+Daml module
+​
+Daml.Script.Internal
+Contains all Internal and Alpha functionality provided by Daml Script.
+Daml
+Updated 3.5.2
+​
+Data Types
+​
+data CommandName
+Name of the Daml Script Command (or Question) that failed
+Constructors:
+CommandName
+​
+getCommandName
+Text
+Instances:
+instance
+Eq
+CommandName
+instance
+Show
+CommandName
+instance
+GetField
+commandName
+FailedCmd
+CommandName
+instance
+GetField
+getCommandName
+CommandName
+Text
+instance
+SetField
+commandName
+FailedCmd
+CommandName
+instance
+SetField
+getCommandName
+CommandName
+Text
+​
+data ErrorClassName
+Scala class name of the exception thrown
+Constructors:
+ErrorClassName
+​
+getErrorClassName
+Text
+Instances:
+instance
+Eq
+ErrorClassName
+instance
+Show
+ErrorClassName
+instance
+GetField
+errorClassName
+FailedCmd
+ErrorClassName
+instance
+GetField
+getErrorClassName
+ErrorClassName
+Text
+instance
+SetField
+errorClassName
+FailedCmd
+ErrorClassName
+instance
+SetField
+getErrorClassName
+ErrorClassName
+Text
+​
+data ErrorMessage
+Result of the
+getMessage
+method on the Scala exception
+Constructors:
+ErrorMessage
+​
+getErrorMessage
+Text
+Instances:
+instance
+Eq
+ErrorMessage
+instance
+Show
+ErrorMessage
+instance
+GetField
+errorMessage
+FailedCmd
+ErrorMessage
+instance
+GetField
+getErrorMessage
+ErrorMessage
+Text
+instance
+SetField
+errorMessage
+FailedCmd
+ErrorMessage
+instance
+SetField
+getErrorMessage
+ErrorMessage
+Text
+​
+data FailedCmd
+Daml type representing a Scala exception thrown during script interpretation.
+Used for internal testing of the Daml Script library.
+Constructors:
+FailedCmd
+​
+commandName
+CommandName
+​
+errorClassName
+ErrorClassName
+​
+errorMessage
+ErrorMessage
+Instances:
+instance
+Eq
+FailedCmd
+instance
+Show
+FailedCmd
+instance
+GetField
+commandName
+FailedCmd
+CommandName
+instance
+GetField
+errorClassName
+FailedCmd
+ErrorClassName
+instance
+GetField
+errorMessage
+FailedCmd
+ErrorMessage
+instance
+SetField
+commandName
+FailedCmd
+CommandName
+instance
+SetField
+errorClassName
+FailedCmd
+ErrorClassName
+instance
+SetField
+errorMessage
+FailedCmd
+ErrorMessage
+​
+data ContractNotFoundAdditionalInfo
+Additional debugging information provided only by IDE Ledger
+Instances:
+instance
+Show
+ContractNotFoundAdditionalInfo
+instance
+GetField
+actAs
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+instance
+GetField
+additionalDebuggingInfo
+SubmitError
+(
+Optional
+ContractNotFoundAdditionalInfo
+)
+instance
+GetField
+additionalInfoCid
+ContractNotFoundAdditionalInfo
+AnyContractId
+instance
+GetField
+effectiveAt
+ContractNotFoundAdditionalInfo
+Text
+instance
+GetField
+observers
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+instance
+GetField
+readAs
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+instance
+SetField
+actAs
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+instance
+SetField
+additionalDebuggingInfo
+SubmitError
+(
+Optional
+ContractNotFoundAdditionalInfo
+)
+instance
+SetField
+additionalInfoCid
+ContractNotFoundAdditionalInfo
+AnyContractId
+instance
+SetField
+effectiveAt
+ContractNotFoundAdditionalInfo
+Text
+instance
+SetField
+observers
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+instance
+SetField
+readAs
+ContractNotFoundAdditionalInfo
+[
+Party
+]
+​
+data PackageName
+Used for vetting and unvetting packages
+Constructors:
+PackageName
+​
+name
+Text
+​
+version
+Text
+Instances:
+instance
+IsQuestion
+ListAllPackages
+[
+PackageName
+]
+instance
+IsQuestion
+ListVettedPackages
+[
+PackageName
+]
+instance
+Eq
+PackageName
+instance
+Ord
+PackageName
+instance
+Show
+PackageName
+instance
+GetField
+name
+PackageName
+Text
+instance
+GetField
+packages
+UnvetPackages
+[
+PackageName
+]
+instance
+GetField
+packages
+VetPackages
+[
+PackageName
+]
+instance
+GetField
+version
+PackageName
+Text
+instance
+SetField
+name
+PackageName
+Text
+instance
+SetField
+packages
+UnvetPackages
+[
+PackageName
+]
+instance
+SetField
+packages
+VetPackages
+[
+PackageName
+]
+instance
+SetField
+version
+PackageName
+Text
+​
+Functions
+​
+tryCommands
+tryCommands
+:
+Script
+a
+->
+Script
+(
+Either
+FailedCmd
+a
+)
+Internal testing tool that allows us to catch FailedCmds in the daml language
+​
+liftFailedCommandToFailureStatus
+liftFailedCommandToFailureStatus
+:
+Script
+a
+->
+Script
+a
+Runs a script and lifts FailedCmd scala exceptions into a FailureStatus, which can be caught via tryFailureStatus
+​
+isNotActive
+isNotActive
+:
+ContractNotFoundAdditionalInfo
+->
+Optional
+AnyContractId
+Exacts nonactive contract ID from ContractNotFoundAdditionalInfo
+​
+vetPackages
+vetPackages
+:
+HasCallStack
+=> [
+PackageName
+] ->
+Script
+()
+Vet a set of packages on all participants.
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+vetPackagesOnParticipant
+vetPackagesOnParticipant
+:
+HasCallStack
+=> [
+PackageName
+] ->
+ParticipantName
+->
+Script
+()
+Vet a set of packages on a single participant.
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+unvetPackages
+unvetPackages
+:
+HasCallStack
+=> [
+PackageName
+] ->
+Script
+()
+Unvet a set of packages on all participants.
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+unvetPackagesOnParticipant
+unvetPackagesOnParticipant
+:
+HasCallStack
+=> [
+PackageName
+] ->
+ParticipantName
+->
+Script
+()
+Unvet a set of packages on a single participant.
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+listVettedPackages
+listVettedPackages
+:
+HasCallStack
+=>
+Script
+[
+PackageName
+]
+Lists the vetted packages on the default participant
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+listAllPackages
+listAllPackages
+:
+HasCallStack
+=>
+Script
+[
+PackageName
+]
+Lists all packages (vetted and unvetted) on the default participant
+Note that the Admin API port must be provided when using this with a Canton Ledger
+Use
+--admin-port
+with the
+daml script
+CLI tool.
+​
+allocateReplicatedPartyOn
+allocateReplicatedPartyOn
+:
+Text
+->
+ParticipantName
+-> [
+ParticipantName
+] ->
+Script
+Party
+Allocate a party with the given display name on the specified main participant using the party management service
+and replicates it to the specified (possibly empty) list of additional participants. Commands submitted by the
+allocated party will be routed to the main participant.
+​
+allocateReplicatedPartyWithHintOn
+allocateReplicatedPartyWithHintOn
+:
+Text
+->
+PartyIdHint
+->
+ParticipantName
+-> [
+ParticipantName
+] ->
+Script
+Party
+Allocate a party with the given display name and id hint on the specified main participant using the party
+management service and replicates it to the specified (possibly empty) list of additional participants. Commands
+submitted by the allocated party will be routed to the main participant.
+​
+throwAnyException
+throwAnyException
+:
+AnyException
+->
+Script
+t
+Throws an
+AnyException
+, note that this function discards the stacktrace
+​
+History
+Updated
+3.5.2
+Module declarations or documentation updated.
+Updated
+3.5.1
+Module declarations or documentation updated.
+Updated
+3.4.11
+Module declarations or documentation updated.
+Updated
+3.4.10
+Module declarations or documentation updated.
+Suggest edits
+Raise issue
+Daml.Script
+@daml/types

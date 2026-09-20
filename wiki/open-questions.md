@@ -59,7 +59,7 @@ until resolved or explicitly deferred.
 
 ## Midnight-native PCD (added 2026-09-11)
 
-From the [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]]; experiments E1–E5 are in the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md).
+From the [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]]; experiments E1–E5 are in the [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md).
 
 - Does head read-then-write give exactly-once consumption on Preview, including fallible sections and pool reordering (E1)?
 - Does the fused step relation fit k ≤ 17, 600 s and 8 GiB on the proof server (E2)?

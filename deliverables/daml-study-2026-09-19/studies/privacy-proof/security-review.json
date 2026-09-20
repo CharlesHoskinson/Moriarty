@@ -1,0 +1,61 @@
+{
+  "reviewed_path": "/home/charl/research/daml-teardown-2026-09-19/SECURITY-PROVABILITY-DIRECTION.md",
+  "sha256": "f3d5150443bcf11035182e4fbe4962534ec09213c62fa6e0b9e2318662d21b42",
+  "verdict": "accept-as-research-direction-with-nonblocking-clarifications",
+  "scope": "Privacy, upgrade semantic drift, PCD statement assumptions and proof/runtime separation; not a formal soundness review of a selected construction",
+  "blocking_findings": [],
+  "clarifications": [
+    {
+      "id": "PRIV-PCD-1",
+      "severity": "medium",
+      "finding": "Privacy appears as item 9 of the local compliance relation. A single-run relation checking a disclosure policy does not by itself prove relational noninterference or ZK privacy.",
+      "requested_clarification": "Separate single-step disclosure-policy compliance from the relational observation-security theorem; explicitly include errors, fees/costs, network/hosting observations and public commitment links as in-scope or excluded leakage.",
+      "evidence": [
+        "DP01",
+        "DP02",
+        "DP05",
+        "DP13"
+      ]
+    },
+    {
+      "id": "PRIV-PCD-2",
+      "severity": "medium",
+      "finding": "State/history binding is present, but hidden-state completeness and absence are not explicit. A valid proof over a selected private subset can still omit an outstanding liability or revocation.",
+      "requested_clarification": "Add authenticated state-domain/frame and completeness/nonmembership obligations wherever a claim relies on absence or uniqueness; projection-local None must not stand for global nonexistence.",
+      "evidence": [
+        "DP07",
+        "DP11"
+      ]
+    },
+    {
+      "id": "PRIV-PCD-3",
+      "severity": "low",
+      "finding": "The induction appropriately distinguishes base and recursion, but a future construction must define well-founded history composition and legitimate base provenance precisely.",
+      "requested_clarification": "State whether histories are sequences or DAGs, how acyclicity/progress and branch joins are enforced, and how base resource legitimacy is rooted in actual ledger/external evidence rather than prover-selected state.",
+      "evidence": [
+        "DP06",
+        "DP07"
+      ]
+    },
+    {
+      "id": "PRIV-PCD-4",
+      "severity": "low",
+      "finding": "The evolution rule is correctly intent-preserving, but persistent continuations need the same binding and migration relation as immediate execution.",
+      "requested_clarification": "Require old residual duties, recovery rights, disclosure constraints and resource semantics to survive migration or obtain explicitly authorized amendment. SCU-compatible schemas/interfaces are insufficient evidence.",
+      "evidence": [
+        "DP08",
+        "DP09",
+        "DP10"
+      ]
+    }
+  ],
+  "strengths": [
+    "Correctly states that boundedness does not imply financial correctness or workflow liveness.",
+    "Adversarial witnesses and arbitrary verifier-key substitution are in scope.",
+    "Explicitly distinguishes ledger uniqueness/finality from recursive proof verification.",
+    "Versions, phase behavior, complete effects and residual duties are bound; no simulated global rollback claimed.",
+    "Maintainer approval is excluded from developer program validity."
+  ],
+  "companion_analysis": "/home/charl/research/daml-teardown-2026-09-19/studies/privacy-proof/SECURITY-PCD.md",
+  "review_assurance": "Source-grounded conceptual review only; no cryptographic scheme/constraint system audited or theorem discharged"
+}

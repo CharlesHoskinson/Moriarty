@@ -1,0 +1,34 @@
+By: Cam Whiteside (Cloudflare), Carson Roscoe (Coinbase), Conner Swenberg (Coinbase), Josh Nickerson (Coinbase), Philippe d’Argent (Coinbase)
+TL;DR:
+The x402 protocol is introducing batch settlement, enabling agents to transact at extremely low latency and fractions of a cent. Agents provide cryptographic vouchers that enable sellers to settle in bulk, reducing overhead. Batch settlement lets agents perform thousands of granular interactions while maintaining the economic efficiency of a single transaction. It brings the speed of HTTP to x402 payments, creating a scalable foundation for the agentic economy.
+The Evolution: Beyond One-to-One Settlement
+x402 was built to make HTTP-native payments a standard: pay for an API using the 402 Payment Required status code and a structured envelope. It’s the ideal architecture for autonomous agents: no UIs, no silos, just machine-to-machine value transfer.
+However, as we move toward high-frequency interactions per tool call, per token, or per kilobyte, the unit economics require a more sophisticated approach. While blockchains charge per transaction, the internet thrives on per-request agility. To bridge this gap, x402 is introducing batch settlement.
+Efficiency by Design: Decoupling Authorization from Settlement
+Batch settlement separates the intent to pay from the onchain finality:
+At request time: The buyer provides a proof of authorization that is near-instant to verify.
+At scale: Value moves onchain only when it is economically optimal, amortized across hundreds or thousands of interactions.
+This is a core protocol scheme, not a vendor-specific feature. It brings the efficiency of payment channels directly into the x402 envelope.
+How Batch Settlement Works
+Batch settlement is optimized for high-volume micro-transactions:
+Capital commitment: The buyer opens a session by committing funds (for example an EVM escrow or channel).
+The hot path: Every HTTP interaction includes a cryptographic voucher, a cumulative “I owe you” that increments with usage.
+Cheap verification: The seller verifies these vouchers via simple signature math, with no chain lookups required during the request, and serves the resource immediately.
+Amortized redemption: The seller settles onchain in bulk. Many logical payments are compressed into a single transaction.
+The result? You keep the granularity of per-request pricing without the friction of per-request gas or Facilitator fees.
+Dynamic Pricing, Static Overhead
+Real-world APIs aren’t always flat-rate. Inference, data processing, and compute vary based on LLM tokens, data sizes, and milliseconds. Batch settlement handles this natively by building on the “up to” mental model:
+The 402 header can advertise a ceiling for each interaction in a batch.
+The seller captures only the actual usage against the batch’s escrow.
+Unlike standard “up to” payments, which typically settle individually, batch settlement lets these “up to” authorizations accumulate silently until it’s time to finalize the batch.
+Why This is the “Agent” Tier
+Agents are loops: Plan → Act → Pay → Observe. If every “Act” requires an onchain settlement, the overhead grows linearly with the agent’s complexity.
+Batch settlement shifts that cost. The dominant expense moves toward the session or the day, rather than the individual call. This keeps the seller protected with signed commitments while allowing the agent to spin through loops at the speed of HTTP.
+Trust Without Hand-Waving
+Efficiency doesn’t mean sacrificing sovereignty. The x402 batch-settlement spec (and its EVM implementations) defines clear exit ramps. Escrow is explicit, limits are cryptographically signed, and buyers retain defined refund and withdrawal semantics. It’s a trust-minimized architecture designed for a permissionless web.
+Getting Started
+The protocol remains open and neutral. Support for the batch-settlement machinery is currently available in the TypeScript and Go SDKs, with Python support in development. For more detail, check out the docs:
+docs.x402.org/schemes/batch-settlement
+.
+The Bottom Line
+x402’s mission is to make internet-native commerce “boring”: standardized, reliable, and predictable. While the exact and “up to” schemes cover immediate, discrete transfers, batch settlement provides the economic rails for the next generation of high-density agentic markets. It tackles the fundamental trade-off of the machine economy: maximizing the integrity of the promise while minimizing the cost of the proof.

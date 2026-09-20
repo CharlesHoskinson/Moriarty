@@ -10,6 +10,8 @@
 
 ## Global constraints
 
+This is an internal maintainer implementation plan. Reviewer, task-admission and RP03 controls apply only to project-operated development and funded campaigns. Public authoring, compilation, proving and deployment with developer-owned resources require objective language/proof validity and participant authorization, not project records. The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope.
+
 Status: S2, specified-only. [Program rules](README.md) apply to every task.
 
 Full-completion dependencies (not individual task entry gates): SP11. Stage scope: release. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
@@ -33,7 +35,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Expose authoring, formatting, checking, simulation, canonical authorization display/signing, proving, submission and finality inspection. Explain fees, debt, locks, recovery rights, trust assumptions and residual duties. Keep mocked data out of the accepted workflow.
-- [ ] Verify: A cold-start developer runs valid loan/swap, rejected intent, stale observation, unavailable witness, pending redemption, restart, conflict, activation-window, revoked-key/spec and consumption-preserving migration scenarios. Unknown signed semantics rejects.
+- [ ] Verify: A cold-start developer without project metadata authors a new supported program beyond the fixed fixtures and runs valid loan/swap, rejected intent, stale observation, unavailable witness, pending redemption, restart, conflict, activation-window, revoked-key/spec and consumption-preserving migration scenarios. Unknown signed semantics rejects.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
 
@@ -48,7 +50,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 ## SP12.3: Audit the final release claims
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP12.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
-- [ ] Bind every MC package and all G01-G24 obligations to exact candidate/source/profile/deployment evidence. Run missing-audit, stale-hash, fake-proof and omitted-row controls. Obtain independent exact Fable 5.1 medium and fresh GPT-6 audits. Apply Humanizer to developer prose.
+- [ ] Bind every MC package and all G01-G24 obligations to exact candidate/source/profile/deployment evidence. Run missing-audit, stale-hash, fake-proof and omitted-row controls. Obtain the independent audits selected by the current maintainer release assignment. Review developer prose for accuracy and clarity. Neither activity is a public developer prerequisite.
 - [ ] Verify: Close only accepted predicates. Unperformed pilots, licensing, baselines or broader assurances stay explicit release blockers; this sprint does not infer production readiness.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP12` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
@@ -71,7 +73,7 @@ npm --prefix experiments/moriarty-release-check run verify -- --program openspec
 openspec validate --all --strict
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection rather than a crash or unauthorized effect. Pre-submission logical rejection is atomic; submitted transactions may retain only effects, authority/nonce consumption and fees permitted by the signed phase-specific failure policy. Project-operated proof and public-network campaigns additionally require live RP03 admission; independent public toolchain use does not.
 
 ## Report-informed acceptance refinement
 

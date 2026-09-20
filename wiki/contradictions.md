@@ -275,5 +275,9 @@ SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the
 
 ## Cross-contract calls and memory figures — 2026-09-11
 
-- **Cross-contract calls.** The [architecture page](moriarty-architecture.md) keeps cross-contract calls outside the initial Core. The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) needs claimed calls for `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim`. Decision PD4 resolves this for those entry points only, pending the user's confirmation. External non-Moriarty calls stay excluded in both positions.
+- **Cross-contract calls.** The [architecture page](moriarty-architecture.md) keeps cross-contract calls outside the initial Core. The [PCD integration amendment](attachments/historical-evidence/openspec/PCD-INTEGRATION-2026-09-11.md) needs claimed calls for `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim`. Decision PD4 resolves this for those entry points only, pending the user's confirmation. External non-Moriarty calls stay excluded in both positions.
 - **Memory figures.** Earlier vault pages quoted 4.3 GiB and 8.2 GiB for the pull request 738 tests. The retained logs give peaks of 4,168 MiB and 8,004 MiB, about 4.1 GiB and 7.8 GiB. The decision page, the benchmark page and CLM-0957 now use the retained values.
+
+## Recursion scope reconciliation — 2026-09-19
+
+The older categorical rejection of DAG/recursive history is superseded as target scope. The user assumes comprehensive Midnight recursion around March2027; full native financial recursion/private composition remains required. Ledger induction is a separate early evidence mode, not closure of MC03/MC06. Old source facts retain original pins. [Consolidated design](../docs/MORIARTY-CONSOLIDATED-DESIGN.md) and [backend requirements](../docs/MORIARTY-BACKEND-REQUIREMENTS.md) govern. Mina/DeFiFormal mechanisms are comparative evidence, not portable Midnight proofs.

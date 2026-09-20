@@ -1,0 +1,182 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-token-standard-test
+Splice.Testing.Registries.AmuletRegistry
+Copy page
+Copy page
+Documentation for Splice.Testing.Registries.AmuletRegistry
+Copy page
+Copy page
+Daml script functions for initializing and using an amulet registry via the token standard and the amulet specific functions.
+​
+Data Types
+data
+AmuletRegistry
+A reference to a mock amulet registry. Use it via the the token standard functions provided by the “Splice.Testing.RegistryApi” module and type-class; or via the amulet specific functions exported from this module.
+AmuletRegistry
+Field
+Type
+Description
+dso
+Party
+instrumentId
+InstrumentId
+instance
+RegistryApi AmuletRegistry
+instance
+Eq
+AmuletRegistry
+instance
+Ord
+AmuletRegistry
+instance
+Show
+AmuletRegistry
+instance
+GetField “dso” AmuletRegistry
+Party
+instance
+GetField “instrumentId” AmuletRegistry InstrumentId
+instance
+GetField “registry” AllocatedOTCTrade AmuletRegistry
+instance
+GetField “registry” TestSetup AmuletRegistry
+instance
+SetField “dso” AmuletRegistry
+Party
+instance
+SetField “instrumentId” AmuletRegistry InstrumentId
+instance
+SetField “registry” AllocatedOTCTrade AmuletRegistry
+instance
+SetField “registry” TestSetup AmuletRegistry
+data
+AmuletRegistryConfig
+AmuletRegistryConfig
+Field
+Type
+Description
+initialAmuletPrice
+Decimal
+demoTime
+Time
+dsoPartyName
+Text
+instance
+Eq
+AmuletRegistryConfig
+instance
+Show
+AmuletRegistryConfig
+instance
+GetField “demoTime” AmuletRegistryConfig
+Time
+instance
+GetField “dsoPartyName” AmuletRegistryConfig
+Text
+instance
+GetField “initialAmuletPrice” AmuletRegistryConfig
+Decimal
+instance
+SetField “demoTime” AmuletRegistryConfig
+Time
+instance
+SetField “dsoPartyName” AmuletRegistryConfig
+Text
+instance
+SetField “initialAmuletPrice” AmuletRegistryConfig
+Decimal
+​
+Functions
+defaultAmuletRegistryConfig
+: AmuletRegistryConfig
+Recommended default configuration for setting up the mock amulet registry.
+initialize
+: AmuletRegistryConfig -> Script AmuletRegistry
+Initialize the mock amulet registry.
+tapFaucet
+: AmuletRegistry ->
+Party
+->
+Decimal
+-> Script (
+ContractId
+Holding)
+Tap the faucet on DevNet to get a specified amount of Amulet.
+createLockedAmulet
+: AmuletRegistry ->
+Party
+->
+Decimal
+-> TimeLock -> Script (
+ContractId
+Holding)
+Direct-create locked amulet — used for testing purposes only.
+createTransferPreapproval
+: AmuletRegistry ->
+Party
+->
+Party
+->
+Time
+-> Script (
+ContractId
+TransferPreapproval)
+Simulate that a validator operator created a transfer pre-approval for a party for the purpose of that party being able to receive Amulet from any other party.
+featureApp
+: AmuletRegistry ->
+Party
+-> Script (
+ContractId
+FeaturedAppRight)
+Mark a particular registry provider part as featured.
+beneficiariesToMetadata
+: [(
+Party
+,
+Decimal
+)] -> Metadata
+Encode a list of beneficiaries as metadata to pass in via token standard choices. Currently only supported for allocation execution.
+expireLockAsOwner
+: AmuletRegistry ->
+ContractId
+Holding -> Script (
+ContractId
+Holding)
+tapLockedAndUnlockedFunds
+: AmuletRegistry ->
+Party
+->
+Decimal
+-> Script [
+ContractId
+Holding]
+Get funds in equal splits as locked and unlocked holdings to test using expired locked holdings as transfer inputs.
+advanceToNextRoundChange
+:
+Party
+-> Script ()
+Advance time to next round change
+getActiveOpenRoundsSorted
+:
+Party
+-> Script [(
+ContractId
+OpenMiningRound, OpenMiningRound)]
+convertAllFeaturedAppActivityMarkers
+:
+Party
+-> Script ()
+runNextIssuance
+:
+Party
+->
+Decimal
+-> Script ()
+Suggest edits
+Raise issue
+Splice.Testing.Registries.AmuletRegistry.Parameters
+Splice.Testing.TokenStandard.RegistryApi

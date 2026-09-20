@@ -1,0 +1,74 @@
+On this page
+0.21.0
+Release Notes
+Wallet SDK
+0.21.0
+Copy page
+Copy page
+Wallet SDK 0.21.0 release notes.
+Copy page
+Copy page
+​
+0.21.0
+Released on February 6th, 2026
+pagination support for listing UTXOs
+previously
+listHoldingsUtxo
+was limited to the ledger API upper bound of 200 items per request. For parties with a large number of holdings
+this meant not all UTXOs would be returned. A new optional
+continueUntilCompletion
+parameter has been added that when set to true will
+automatically page through all results, making it possible to reliably work with parties that hold more than 200 UTXOs.
+// fetch only the first page (default behaviour, up to 200 items)
+const
+utxos
+=
+await
+sdk.tokenStandard?.
+listHoldingsUtxo
+()
+// fetch ALL utxos regardless of how many there are
+const
+allUtxos
+=
+await
+sdk.tokenStandard?.
+listHoldingsUtxo
+(
+true
+,
+// include locked
+undefined
+,
+// offset
+undefined
+,
+// limit
+true
+// continueUntilCompletion
+)
+cost estimation now returned when using Canton 3.4
+when calling
+prepareSubmission
+against a Canton 3.4 participant the
+costEstimation
+field was previously dropped from the
+response. The response type has been corrected and the cost estimation is now correctly surfaced.
+const
+prepared
+=
+await
+sdk.userLedger?.
+prepareSubmission
+(
+transferCommand,
+keyPairSender.publicKey
+)
+// costEstimation is now available when running against Canton 3.4
+logger.
+info
+(prepared?.costEstimation)
+Suggest edits
+Raise issue
+0.21.1
+0.20.0

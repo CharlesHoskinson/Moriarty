@@ -8,6 +8,10 @@ description: Use when developing, reviewing, researching, planning, or reporting
 Use this skill to guide and guard development on the Moriarty financial language for Midnight.
 The CLI enforces registered dispatch controls; this skill supplies workflow guidance toward demonstrable product capabilities. Focus, context selection, model routing and acceptance reconciliation are agent responsibilities, not new mechanical gates.
 
+## Permissionless product boundary
+
+The September 19 [product contract](../../../../docs/MORIARTY-PRODUCT-CONTRACT.md) controls language scope. Moriarty programs compile to ZKIRv3 and run on Midnight. Project review, campaign and resource controls apply to maintainer-operated work only. They never authorize individual developers or become public compile/prove/deploy prerequisites. Preserve objective financial/proof requirements; supersede administrative program restrictions.
+
 ## Operating Principles
 
 1. **User Steering**: User requests, intent, or interruptions always take precedence over automatic action selection.

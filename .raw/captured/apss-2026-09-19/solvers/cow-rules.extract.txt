@@ -1,0 +1,266 @@
+🐮 CoW Protocol
+Technical reference
+Core
+Auction mechanism
+Solver competition rules
+On this page
+Use with LLM
+Solver competition rules
+All solvers participating in the solver competition must abide by certain rules. In this section, we outline all these rules. They naturally split into three classes:
+Those enforced explicitly by the
+smart contract
+Those enforced by the
+off-chain protocol
+infrastructure
+So-called social consensus rules enforced by
+governance
+Smart contract
+​
+Limit price constraint: this rule enforces that an order cannot be executed if its limit price is violated.
+Solver submitting a transaction needs to be whitelisted (the process about how a solver can get whitelisted is described
+here
+).
+Off-chain protocol
+​
+Scores: Every solution is associated with a
+score
+. The score is computed from executed amounts of all trades and is roughly equivalent to the amount of surplus a solution generates for users. For concrete formulas see
+the section on solving
+or
+CIP-38
+and
+CIP-65
+.
+Valid solutions: A solution is
+valid
+if
+it proposes the execution of at least one order eligible for contributing to score; and
+respects Uniform Directional Clearing Prices (UDCP): all orders trading the same tokens in the same direction must receive the same price (with an exception for orders containing hooks to account for the cost of gas). Importantly, each solution must respect UDCP, but there is no obligation to respect UDCP across solutions, even if submitted by the same solver.
+Winner selection: The set of winning solutions (and corresponding winning solvers) is chosen using a
+Fair Combinatorial Auction
+(see
+CIP-67
+) from all valid solutions. Each solution corresponds to a bid in the auction.
+The protocol first considers bids containing only orders on the same
+directed token pair
+, i.e., on the same token pair and in the same direction, and computes the best bid on each directed token pair, where the best bid is the one generating the highest score. The collection of these best bids is the reference outcome for each directed token pair, representing the best possible execution against outside liquidity.
+The protocol then uses the reference outcome to filter out
+unfair
+bids from the remaining batched bids (batched because, by definition, they contain orders on multiple directed token pairs). A batched bid is filtered out whenever it generates lower score for a given directed token pair than the reference outcome.
+In the final step, the protocol considers all the batched bids that survived the filtering and the best bids on individual directed token pairs. It computes the collection of winning bids, under the constraint that all orders on the same directed token pair must be part of the same winning bid.
+Winning solvers are rewarded according to a second-price auction mechanism; for more information see the
+rewards section
+.
+Valid settlements: A settlement executed on-chain is
+valid
+if:
+The solution was selected as winner and is executed as specified in the bidding stage with respect to solver, score, and executed amounts.
+Hooks of executed trades, as specified in app data of respective orders, are executed according to the following rules:
+Pre-hooks need to be executed before pulling in user funds
+Post-hooks need to be executed after pushing out user order proceeds
+Partially fillable orders:
+Should execute the pre-hooks on the first fill only
+Should execute the post-hooks on every fill
+Execution of a hook means:
+There exists an internal CALL in the settlement transaction with a
+matching triplet: target, gasLimit, calldata
+The hook needs to be attempted, meaning the hook reverting is not violating any rules
+Intermediate calls between the call to settle and hook execution must not revert
+The available gas forwarded to the hook CALL is greater or equal than specified gasLimit
+The settlement is executed before or at the deadline of that auction.
+Not following these rules can result in immediate denylisting of a solver until a manual inspection is executed. These rules are currently implemented in the
+circuit-breaker-validator
+.
+Buffer usage: solvers are allowed to use funds in the settlement contract for certain types of use cases.
+Solvers are supposed to store
+protocol and partner fees
+in the settlement contract.
+Solvers are allowed to store funds to cover
+network fees
+in the contract.
+Solvers are allowed to use funds in the settlement contract to offset price variations on liquidity sources, also referred to as
+slippage
+.
+Solvers are allowed to use funds in the settlement contract for executing trades, also referred to as
+internalizations
+, if the token which accumulates in the contract is among marked as
+"trusted": true
+in the auction json, see the
+API specification
+.
+Solvers bear responsibility for all changes to balances of the settlement contract. The concrete implementation of buffer accounting is described in the
+accounting section
+.
+note
+The deadline for solutions depends on the network and is set as a specific number of blocks after the current block at the time of sending the settle request to the solver:
+Mainnet: 3 blocks
+Gnosis chain: 3 blocks
+Arbitrum: 11 blocks
+Base: 4 blocks
+Avalanche: 8 blocks
+Polygon: 8 blocks
+BNB: 5 blocks
+Linea: 4 blocks
+Plasma: 5 blocks
+Ink: 5 blocks
+Governance
+​
+Social consensus rules are not enforced by the smart contract or the autopilot. However, by voting on them in a CoW Improvement Proposal (CIP), CoW DAO has decided that these rules should be followed to ensure a healthy competition. For that, the core team has developed monitoring tools that check every on-chain settlement and flag suspicious ones.
+caution
+At CoW DAO's discretion, systematic violation of these rules may lead to penalizing or slashing of the offending solver.
+Provision of unfair solutions (
+CIP-11
+). Uniform directional clearing prices computed by solvers should be in line (or even better) than what the users would get elsewhere. This becomes particularly relevant for solutions where CoWs happen, i.e., when some volume is settled as part of a CoW and not by routing through an AMM. This rule is often referenced as "EBBO" (Ethereum Best Bid and Offer), and the AMMs that "should" be considered by solvers when computing an execution route for an order are referenced as "Baseline liquidity". Baseline liquidity is defined with a set of protocols and a set of so-called base tokens, such that for every protocol and every order, the following pairs are considered:
+sell token / base token
+buy token / base token
+sell token / buy token
+Base protocols and tokens
+​
+The following detail sections list the protocols and base tokens that are considered for Ethereum Mainnet and Gnosis Chain:
+Ethereum mainnet baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Sushiswap, Swapr, Balancer v2, Pancakeswap
+Base tokens
+:
+WETH
+,
+DAI
+,
+USDC
+,
+USDT
+,
+COMP
+,
+MKR
+,
+WBTC
+,
+GNO
+Gnosis Chain baseline protocols and tokens
+Protocols
+: Honeyswap, Sushiswap, Baoswap, Swapr, Balancer v2
+Base tokens
+:
+WXDAI
+,
+HNY
+,
+USDT
+,
+USDC
+,
+sUSD
+,
+WBTC
+,
+GNO
+,
+STAKE
+,
+xOWL
+,
+WETH
+,
+wstETH
+,
+sDAI
+,
+USDC.e
+Arbitrum baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Sushiswap, Swapr, Balancer v2, Pancakeswap
+Base tokens
+:
+WETH
+,
+USDC
+,
+USDT
+,
+DAI
+,
+GNO
+Base chain baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Balancer v2
+Base tokens
+:
+WETH
+,
+USDC
+,
+DAI
+Avalanche chain baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Balancer v2
+Base tokens
+:
+WAVAX
+,
+USDC
+,
+USDT
+Polygon chain baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Balancer v2
+Base tokens
+:
+WPOL
+,
+USDC
+,
+USDT
+BNB chain baseline protocols and tokens
+Protocols
+: Uniswap v2/v3, Pancake Swap
+Base tokens
+:
+WBNB
+,
+BUSD
+,
+USDT
+,
+WETH
+Linea chain baseline protocols and tokens
+Protocols
+: Uniswap v3
+Base tokens
+:
+WETH
+,
+USDC
+,
+USDT
+Plasma chain baseline protocols and tokens
+Protocols
+: Uniswap v3
+Base tokens
+:
+WETH
+,
+USDT0
+,
+WXPL
+More details about how a certificate of an EBBO violation is computed, and what are the steps taken in case such a violation occurs can be found in
+this
+section.
+Inflation of the score (
+CIP-11
+). Using tokens for the sole purpose of inflating the score of a solution or maximizing the reward is forbidden (e.g., by creating fake tokens, or wash-trading with real tokens).
+Illegal use of internal buffers (
+CIP-11
+). The internal buffers may only be used to replace legitimate AMM interactions available to the general public for the purpose of saving transaction costs, and also to allow for the successful execution of settlements that incur some slippage. However, systematic and intentional buffer trading with tokens that are not safe, although will be accounted for as slippage, is discouraged as it poses a significant inventory risk to the protocol, and solvers that do so can be flagged and potentially slashed. In general, any attack vector to the internal buffers that is created by a solver can be considered a malicious and illegal behavior.
+Local Token Conservation, aka illegal surplus shifts (
+CIP-11
+). Due to the nature of batching, a solver can intentionally transfer surplus among orders that share a common token. This is not allowed, and non-trivial surplus shifts can be penalized and can lead to solver slashing.
+Pennying/overbidding (
+CIP-13
+). Pennying or overbidding is the intentional inflation of the reported score, by a solver, with the hope that their solution will win and that solver rewards, and/or the possibility of positive slippage, will cover the loss that they seem to be committing to. Systematically doing so can lead to solver slashing.
+Other malicious behavior (
+CIP-11
+). Malicious solver behavior is not limited to the above examples. Slashing can still happen for other reasons where there is intentional harm caused to the user and/or the protocol at the discretion of the CoW DAO. A concrete example of such is a solver intentionally not including the
+pre/post hooks
+associated with an order.
+Edit this page

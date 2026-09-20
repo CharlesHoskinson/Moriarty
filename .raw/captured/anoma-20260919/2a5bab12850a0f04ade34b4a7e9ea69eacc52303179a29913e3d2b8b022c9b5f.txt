@@ -1,0 +1,315 @@
+API Clients
+Copy page
+API Clients
+The
+api
+module provides four typed HTTP clients for communicating with Anoma Pay backend services. All clients extend the
+ApiClient
+base class which handles response parsing and error wrapping.
+import
+{
+TransferBackendClient,
+IndexerClient,
+EnvioClient,
+FeedbackClient,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+TransferBackendClient
+Communicates with the proving backend. This is the primary client for submitting transactions and monitoring their status.
+const
+backend
+=
+new
+TransferBackendClient
+(backendUrl);
+Methods
+transfer(parameters)
+Submits a built
+Parameters
+payload to the backend for proving and on-chain submission.
+const
+{
+transaction_hash
+}
+=
+await
+backend.
+transfer
+(parameters);
+// transaction_hash is a UUID string identifying the job
+transactionStatus(uuid)
+Polls the status of a submitted transaction. Call repeatedly until the status reaches a terminal state.
+const
+{
+status
+,
+hash
+}
+=
+await
+backend.
+transactionStatus
+(uuid);
+// status: "New" | "Proving" | "Proven" | "Submitted" | "Failed" | "Unprocessable"
+// hash: on-chain transaction hash (set once Proven)
+estimateFee(props)
+Returns a fee breakdown before submission. The response includes a base fee, a per-resource fee, and a percentage of the transfer amount.
+const
+fee
+=
+await
+backend.
+estimateFee
+({
+fee_token:
+"USDC"
+,
+// "USDC" | "USDT" | "WETH" | "XAN"
+transaction: parameters,
+});
+// fee.base_fee, fee.base_fee_per_resource, fee.percentage_fee, fee.token_type
+tokenPrice(tokenAddress)
+Returns the current USD price of a token.
+const
+{
+price
+}
+=
+await
+backend.
+tokenPrice
+(
+"0xA0b86991..."
+);
+// USDC contract
+tokenBalances(walletAddress)
+Returns the ERC-20 token balances held by an EVM wallet address.
+const
+balances
+=
+await
+backend.
+tokenBalances
+(
+"0xYourAddress"
+);
+statsQueue()
+Returns the current proving queue statistics. Use this to detect heavy load.
+const
+{
+created
+,
+completed
+,
+processing
+}
+=
+await
+backend.
+statsQueue
+();
+IndexerClient
+Communicates with the Indexer service, which tracks and stores encrypted resource payloads on-chain.
+const
+indexer
+=
+new
+IndexerClient
+(indexerUrl);
+Methods
+config()
+Returns the Indexer’s health status and the list of contracts it is currently indexing. Use this to get the
+indexed_contracts
+list to pass to
+resources()
+.
+const
+{
+status
+,
+version
+,
+indexed_contracts
+}
+=
+await
+indexer.
+config
+();
+The
+indexed_contracts
+array contains entries with
+chain_id
+,
+contract_address
+, and
+last_block
+.
+addKeys(keypair)
+Registers a discovery key pair with the Indexer so it can route incoming resources to you. Call this once after creating a new keyring.
+import
+{ toHex }
+from
+"@anomaorg/anoma-app-sdk"
+;
+await
+indexer.
+addKeys
+({
+public_key:
+toHex
+(keyring.discoveryKeyPair.publicKey),
+secret_key:
+toHex
+(keyring.discoveryKeyPair.privateKey),
+});
+resources(discoveryPrivateKey, contracts)
+Fetches encrypted resource blobs from the Indexer for each contract. The Indexer uses the discovery private key to look up blobs tagged for that key.
+import
+{ toHex }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+{
+resources
+}
+=
+await
+indexer.
+resources
+(
+toHex
+(keyring.discoveryKeyPair.privateKey),
+indexed_contracts
+);
+// resources: IndexerResource[] — each has resource_payload.blob and transaction_hash
+EnvioClient
+Queries the Envio GraphQL endpoint for public nullifier records. These are used to determine which resources have been spent.
+const
+envio
+=
+new
+EnvioClient
+(envioUrl);
+Methods
+publicNullifiers(logicRef, timestamp?)
+Returns all public nullifiers for the given logic reference. Use
+TRANSFER_LOGIC_VERIFYING_KEY
+as the
+logicRef
+for standard transfer resources. Optionally pass a
+timestamp
+to fetch only nullifiers from that Unix timestamp onwards.
+import
+{ TRANSFER_LOGIC_VERIFYING_KEY }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+nullifiers
+=
+await
+envio.
+publicNullifiers
+(
+TRANSFER_LOGIC_VERIFYING_KEY
+);
+// nullifiers: NullifierRecord[] — each has id, nullifier (hex), transaction
+Then pass the result to
+buildTransactionLookup()
+:
+import
+{ buildTransactionLookup }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+lookup
+=
+buildTransactionLookup
+(nullifiers);
+FeedbackClient
+Submits user feedback to the Anoma Pay feedback service.
+const
+feedback
+=
+new
+FeedbackClient
+(feedbackUrl);
+Methods
+submit(props)
+const
+{
+id
+}
+=
+await
+feedback.
+submit
+({
+title:
+"Bug report"
+,
+description:
+"Transaction failed unexpectedly."
+,
+tag:
+"bug"
+,
+});
+Error handling
+All clients throw
+ResponseError
+when the server returns a non-2xx response:
+import
+{ ResponseError }
+from
+"@anomaorg/anoma-app-sdk"
+;
+try
+{
+await
+backend.
+transfer
+(parameters);
+}
+catch
+(err) {
+if
+(err
+instanceof
+ResponseError
+) {
+console.
+error
+(
+"Status:"
+, err.status);
+console.
+error
+(
+"Response body:"
+, err.json);
+}
+}
+Use the
+getFirstErrorMessage
+utility to extract a user-readable message from any error type:
+import
+{ getFirstErrorMessage }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+message
+=
+getFirstErrorMessage
+(err);
+// Handles ResponseError, ZodError, and standard Error
+Last updated on
+April 2, 2026
+Earn
+Best Practices

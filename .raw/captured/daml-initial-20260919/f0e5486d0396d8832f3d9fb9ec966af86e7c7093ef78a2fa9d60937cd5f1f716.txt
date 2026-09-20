@@ -1,0 +1,1113 @@
+On this page
+Splice.Api.Token.TransferInstructionV2
+Interfaces
+Interface TransferFactory
+Choice Archive
+Choice TransferFactory_PublicFetch
+Choice TransferFactory_Transfer
+Method transferFactory_publicFetchImpl
+Method transferFactory_transferExtraObservers
+Method transferFactory_transferImpl
+Interface TransferInstruction
+Choice Archive
+Choice TransferInstruction_Accept
+Choice TransferInstruction_Reject
+Choice TransferInstruction_Withdraw
+Method transferInstruction_acceptExtraObservers
+Method transferInstruction_acceptImpl
+Method transferInstruction_rejectExtraObservers
+Method transferInstruction_rejectImpl
+Method transferInstruction_withdrawExtraObservers
+Method transferInstruction_withdrawImpl
+Data Types
+data Transfer
+data TransferFactoryView
+data TransferInstructionAction
+data TransferInstructionResult
+data TransferInstructionResult_Output
+data TransferInstructionView
+Functions
+transferInstruction_acceptImpl
+transferInstruction_rejectImpl
+transferInstruction_withdrawImpl
+transferInstruction_acceptExtraObservers
+transferInstruction_rejectExtraObservers
+transferInstruction_withdrawExtraObservers
+transferFactory_transferExtraObservers
+transferFactory_transferImpl
+transferFactory_publicFetchImpl
+Splice APIs
+Splice Daml Packages
+Token Standard v2
+splice-api-token-transfer-instruction-v2
+Splice.Api.Token.TransferInstructionV2
+Copy page
+Copy page
+Reference documentation for Daml module Splice.Api.Token.TransferInstructionV2.
+Copy page
+Copy page
+Daml module
+​
+Splice.Api.Token.TransferInstructionV2
+V2 API to instruct transfers of holdings between accounts.
+Daml
+​
+Interfaces
+​
+Interface
+TransferFactory
+A factory contract to instruct transfers of holdings between parties.
+View Type:
+TransferFactoryView
+Choices:
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+​
+Choice
+TransferFactory_PublicFetch
+Fetch the view of the factory contract.
+Controllers:
+actors
+Returns:
+TransferFactoryView
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the fetch.
+​
+Choice
+TransferFactory_Transfer
+Instruct the registry to execute a transfer.
+Implementations MUST ensure that this choice fails if
+transfer.executeBefore
+is in the past.
+Controllers:
+actors
+Returns:
+TransferInstructionResult
+Arguments:
+​
+transfer
+Transfer
+The transfer to execute.
+Implementations MUST validate that the admin of the transferred instrument
+matches the admin of the factory.
+​
+actors
+[Party]
+Set of parties executing the transfer.
+Implementations MUST check these parties to avoid unauthorized transfer instructions.
+Implementations SHOULD
+complete the transfer in a single-step if the actors include all
+parties required to authorize the transfer
+allow all the sender’s account parties to call this choice, so they
+can all initiate a transfer on their own
+​
+extraArgs
+ExtraArgs
+The extra arguments to pass to the transfer implementation.
+Methods:
+​
+Method
+transferFactory_publicFetchImpl
+Type:
+ContractId
+TransferFactory
+->
+TransferFactory_PublicFetch
+->
+Update
+TransferFactoryView
+​
+Method
+transferFactory_transferExtraObservers
+Type:
+TransferFactory_Transfer
+-> [
+Party
+]
+​
+Method
+transferFactory_transferImpl
+Type:
+ContractId
+TransferFactory
+->
+TransferFactory_Transfer
+->
+Update
+TransferInstructionResult
+​
+Interface
+TransferInstruction
+An interface for tracking the status of a transfer instruction,
+i.e., a request to a registry app to execute a transfer.
+View Type:
+TransferInstructionView
+Choices:
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+​
+Choice
+TransferInstruction_Accept
+Accept the transfer instruction as someone that needs to authorize it, either on the
+sending or receiving side.
+Implementations MUST ensure that the transfer instruction is archived upon acceptance.
+They SHOULD do so by calling
+TransferInstructionV1.TransferInstruction_Accept
+where possible to maximize compatibility with v1 transaction parsers.
+Note that while implementations will typically return
+TransferInstructionResult_Completed
+,
+this is not guaranteed. The result of the choice is implementation-specific and MAY
+be any of the three possible results.
+Controllers:
+actors
+Returns:
+TransferInstructionResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the acceptance.
+Implementations MUST check these parties to avoid unauthorized acceptance.
+Implementations SHOULD allow the owner and the provider of the recipient
+account to call this choice.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+TransferInstruction_Reject
+Reject the transfer offer represented by the transfer instruction.
+Implementations MUST ensure that the transfer instruction is archived upon rejection.
+They SHOULD do so by calling
+TransferInstructionV1.TransferInstruction_Reject
+where possible to maximize compatibility with v1 transaction parsers.
+Controllers:
+actors
+Returns:
+TransferInstructionResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the rejection.
+Implementations MUST check these parties to avoid unauthorized rejection.
+Implementations SHOULD allow the owner and the provider of the recipient
+account to call this choice.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+TransferInstruction_Withdraw
+Withdraw the transfer offer represented by the transfer instruction.
+Implementations MUST ensure that the transfer instruction is archived upon withdrawal.
+They SHOULD do so by calling
+TransferInstructionV1.TransferInstruction_Withdraw
+where possible to maximize compatibility with v1 transaction parsers.
+Controllers:
+actors
+Returns:
+TransferInstructionResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the withdrawal.
+Implementations MUST check these parties to avoid unauthorized withdrawal.
+Implementations SHOULD allow the owner and the provider of the sender
+account to call this choice.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+Methods:
+​
+Method
+transferInstruction_acceptExtraObservers
+Type:
+TransferInstruction_Accept
+-> [
+Party
+]
+​
+Method
+transferInstruction_acceptImpl
+Type:
+ContractId
+TransferInstruction
+->
+TransferInstruction_Accept
+->
+Update
+TransferInstructionResult
+​
+Method
+transferInstruction_rejectExtraObservers
+Type:
+TransferInstruction_Reject
+-> [
+Party
+]
+​
+Method
+transferInstruction_rejectImpl
+Type:
+ContractId
+TransferInstruction
+->
+TransferInstruction_Reject
+->
+Update
+TransferInstructionResult
+​
+Method
+transferInstruction_withdrawExtraObservers
+Type:
+TransferInstruction_Withdraw
+-> [
+Party
+]
+​
+Method
+transferInstruction_withdrawImpl
+Type:
+ContractId
+TransferInstruction
+->
+TransferInstruction_Withdraw
+->
+Update
+TransferInstructionResult
+​
+Data Types
+​
+data Transfer
+A specification of a transfer of holdings between two accounts.
+Constructors:
+Transfer
+​
+sender
+Account
+The sender of the transfer.
+​
+receiver
+Account
+The receiver of the transfer.
+​
+amount
+Decimal
+The amount to transfer.
+​
+instrumentId
+InstrumentId
+The instrument identifier.
+​
+requestedAt
+Time
+Wallet provided timestamp when the transfer was requested.
+MUST be in the past when instructing the transfer.
+​
+executeBefore
+Time
+Until when (exclusive) the transfer may be executed. MUST be in the
+future when instructing the transfer.
+Registries SHOULD NOT execute the transfer instruction after this time,
+so that senders can retry creating a new transfer instruction after this time.
+Registries MAY limit the duration between
+requestedAt
+and
+executeBefore
+to limit the resources spent on tracking active
+transfer instructions.
+​
+inputHoldingCids
+[ContractId Holding]
+The holding contracts that should be used to fund the transfer.
+The holdings MUST be owned by the sender account, and match the
+instrument specified by the transfer.
+MAY be empty if the registry supports automatic selection of holdings for transfers
+or does not represent holdings on-ledger.
+If specified, then the transfer MUST archive all of these holdings, so
+that the execution of the transfer conflicts with any other transfers
+using these holdings. Thereby allowing that the sender can use
+deliberate contention on holdings to prevent duplicate transfers.
+​
+meta
+Metadata
+Metadata.
+Instances:
+instance
+Eq
+Transfer
+instance
+Show
+Transfer
+instance
+GetField
+amount
+Transfer
+Decimal
+instance
+GetField
+executeBefore
+Transfer
+Time
+instance
+GetField
+inputHoldingCids
+Transfer
+[
+ContractId
+Holding
+]
+instance
+GetField
+instrumentId
+Transfer
+InstrumentId
+instance
+GetField
+meta
+Transfer
+Metadata
+instance
+GetField
+receiver
+Transfer
+Account
+instance
+GetField
+requestedAt
+Transfer
+Time
+instance
+GetField
+sender
+Transfer
+Account
+instance
+GetField
+transfer
+TransferFactory_Transfer
+Transfer
+instance
+GetField
+transfer
+TransferInstructionView
+Transfer
+instance
+SetField
+amount
+Transfer
+Decimal
+instance
+SetField
+executeBefore
+Transfer
+Time
+instance
+SetField
+inputHoldingCids
+Transfer
+[
+ContractId
+Holding
+]
+instance
+SetField
+instrumentId
+Transfer
+InstrumentId
+instance
+SetField
+meta
+Transfer
+Metadata
+instance
+SetField
+receiver
+Transfer
+Account
+instance
+SetField
+requestedAt
+Transfer
+Time
+instance
+SetField
+sender
+Transfer
+Account
+instance
+SetField
+transfer
+TransferFactory_Transfer
+Transfer
+instance
+SetField
+transfer
+TransferInstructionView
+Transfer
+​
+data TransferFactoryView
+View for
+TransferFactory
+.
+Constructors:
+TransferFactoryView
+​
+admin
+Party
+The party representing the registry app that administers the instruments for
+which this transfer factory can be used.
+​
+meta
+Metadata
+Additional metadata specific to the transfer factory, used for extensibility.
+Instances:
+instance
+Eq
+TransferFactoryView
+instance
+Show
+TransferFactoryView
+instance
+HasMethod
+TransferFactory
+transferFactory_publicFetchImpl
+(
+ContractId
+TransferFactory
+->
+TransferFactory_PublicFetch
+->
+Update
+TransferFactoryView
+)
+instance
+HasFromAnyView
+TransferFactory
+TransferFactoryView
+instance
+HasInterfaceView
+TransferFactory
+TransferFactoryView
+instance
+GetField
+admin
+TransferFactoryView
+Party
+instance
+GetField
+meta
+TransferFactoryView
+Metadata
+instance
+SetField
+admin
+TransferFactoryView
+Party
+instance
+SetField
+meta
+TransferFactoryView
+Metadata
+instance
+HasExercise
+TransferFactory
+TransferFactory_PublicFetch
+TransferFactoryView
+instance
+HasExerciseGuarded
+TransferFactory
+TransferFactory_PublicFetch
+TransferFactoryView
+instance
+HasFromAnyChoice
+TransferFactory
+TransferFactory_PublicFetch
+TransferFactoryView
+instance
+HasToAnyChoice
+TransferFactory
+TransferFactory_PublicFetch
+TransferFactoryView
+​
+data TransferInstructionAction
+Actions to advance the state of a transfer instruction.
+Constructors:
+TIA_Accept
+TIA_Reject
+TIA_Withdraw
+TIA_Custom
+​
+id
+Text
+Identifier of the action. Namespaced analogously to metadata keys.
+Used to represent registry-specific actions that need to happen
+for the transfer instruction to advance.
+Instances:
+instance
+Eq
+TransferInstructionAction
+instance
+Ord
+TransferInstructionAction
+instance
+Show
+TransferInstructionAction
+instance
+GetField
+availableActions
+TransferInstructionView
+(
+Map
+TransferInstructionAction
+[[
+Party
+]])
+instance
+GetField
+id
+TransferInstructionAction
+Text
+instance
+SetField
+availableActions
+TransferInstructionView
+(
+Map
+TransferInstructionAction
+[[
+Party
+]])
+instance
+SetField
+id
+TransferInstructionAction
+Text
+​
+data TransferInstructionResult
+The result of instructing a transfer or advancing the state of a transfer instruction.
+Constructors:
+TransferInstructionResult
+​
+output
+TransferInstructionResult_Output
+The output of the step.
+​
+senderChangeCids
+[ContractId Holding]
+New holdings owned by the sender created to return “change”. Can be used
+by actors to batch creating or updating multiple transfer instructions
+in a single Daml transaction.
+​
+meta
+Metadata
+Additional metadata specific to the transfer instruction, used for extensibility; e.g., fees charged.
+Instances:
+instance
+Eq
+TransferInstructionResult
+instance
+Show
+TransferInstructionResult
+instance
+HasMethod
+TransferFactory
+transferFactory_transferImpl
+(
+ContractId
+TransferFactory
+->
+TransferFactory_Transfer
+->
+Update
+TransferInstructionResult
+)
+instance
+HasMethod
+TransferInstruction
+transferInstruction_acceptImpl
+(
+ContractId
+TransferInstruction
+->
+TransferInstruction_Accept
+->
+Update
+TransferInstructionResult
+)
+instance
+HasMethod
+TransferInstruction
+transferInstruction_rejectImpl
+(
+ContractId
+TransferInstruction
+->
+TransferInstruction_Reject
+->
+Update
+TransferInstructionResult
+)
+instance
+HasMethod
+TransferInstruction
+transferInstruction_withdrawImpl
+(
+ContractId
+TransferInstruction
+->
+TransferInstruction_Withdraw
+->
+Update
+TransferInstructionResult
+)
+instance
+GetField
+meta
+TransferInstructionResult
+Metadata
+instance
+GetField
+output
+TransferInstructionResult
+TransferInstructionResult_Output
+instance
+GetField
+senderChangeCids
+TransferInstructionResult
+[
+ContractId
+Holding
+]
+instance
+SetField
+meta
+TransferInstructionResult
+Metadata
+instance
+SetField
+output
+TransferInstructionResult
+TransferInstructionResult_Output
+instance
+SetField
+senderChangeCids
+TransferInstructionResult
+[
+ContractId
+Holding
+]
+instance
+HasExercise
+TransferFactory
+TransferFactory_Transfer
+TransferInstructionResult
+instance
+HasExercise
+TransferInstruction
+TransferInstruction_Accept
+TransferInstructionResult
+instance
+HasExercise
+TransferInstruction
+TransferInstruction_Reject
+TransferInstructionResult
+instance
+HasExercise
+TransferInstruction
+TransferInstruction_Withdraw
+TransferInstructionResult
+instance
+HasExerciseGuarded
+TransferFactory
+TransferFactory_Transfer
+TransferInstructionResult
+instance
+HasExerciseGuarded
+TransferInstruction
+TransferInstruction_Accept
+TransferInstructionResult
+instance
+HasExerciseGuarded
+TransferInstruction
+TransferInstruction_Reject
+TransferInstructionResult
+instance
+HasExerciseGuarded
+TransferInstruction
+TransferInstruction_Withdraw
+TransferInstructionResult
+instance
+HasFromAnyChoice
+TransferFactory
+TransferFactory_Transfer
+TransferInstructionResult
+instance
+HasFromAnyChoice
+TransferInstruction
+TransferInstruction_Accept
+TransferInstructionResult
+instance
+HasFromAnyChoice
+TransferInstruction
+TransferInstruction_Reject
+TransferInstructionResult
+instance
+HasFromAnyChoice
+TransferInstruction
+TransferInstruction_Withdraw
+TransferInstructionResult
+instance
+HasToAnyChoice
+TransferFactory
+TransferFactory_Transfer
+TransferInstructionResult
+instance
+HasToAnyChoice
+TransferInstruction
+TransferInstruction_Accept
+TransferInstructionResult
+instance
+HasToAnyChoice
+TransferInstruction
+TransferInstruction_Reject
+TransferInstructionResult
+instance
+HasToAnyChoice
+TransferInstruction
+TransferInstruction_Withdraw
+TransferInstructionResult
+​
+data TransferInstructionResult_Output
+The output of instructing a transfer or advancing the state of a transfer instruction.
+Constructors:
+TransferInstructionResult_Pending
+​
+transferInstructionCid
+ContractId TransferInstruction
+Contract id of the transfer instruction representing the pending state.
+Use this result to communicate that the transfer is pending further steps.
+TransferInstructionResult_Completed
+​
+receiverHoldingCids
+[ContractId Holding]
+The newly created holdings owned by the receiver as part of successfully
+completing the transfer.
+MAY be empty if the registry does not represent holdings on-ledger.
+Use this result to communicate that the transfer succeeded and the receiver
+has received their holdings.
+TransferInstructionResult_Failed
+Use this result to communicate that the transfer did not succeed and all holdings (minus fees)
+have been returned to the sender.
+Instances:
+instance
+Eq
+TransferInstructionResult_Output
+instance
+Show
+TransferInstructionResult_Output
+instance
+GetField
+output
+TransferInstructionResult
+TransferInstructionResult_Output
+instance
+GetField
+receiverHoldingCids
+TransferInstructionResult_Output
+[
+ContractId
+Holding
+]
+instance
+GetField
+transferInstructionCid
+TransferInstructionResult_Output
+(
+ContractId
+TransferInstruction
+)
+instance
+SetField
+output
+TransferInstructionResult
+TransferInstructionResult_Output
+instance
+SetField
+receiverHoldingCids
+TransferInstructionResult_Output
+[
+ContractId
+Holding
+]
+instance
+SetField
+transferInstructionCid
+TransferInstructionResult_Output
+(
+ContractId
+TransferInstruction
+)
+​
+data TransferInstructionView
+View for
+TransferInstruction
+.
+Constructors:
+TransferInstructionView
+​
+originalInstructionCid
+Optional (ContractId TransferInstruction)
+The contract id of the original transfer instruction contract, which is
+None
+for the original transfer instruction itself.
+This SHOULD be used by wallets to correlate the same transfer instruction across
+updates to its state.
+​
+transfer
+Transfer
+The transfer specified by the transfer instruction.
+​
+expiresAt
+Optional Time
+The time at which the transfer instruction expires if inactive.
+Registries MAY expire the transfer instruction after this time. Thereby
+recovering storage resources and protecting themselves from
+denial-of-service attacks.
+Registries SHOULD avoid unnecessary expiries by
+making the expiry time as close to the transfer’s executeBefore as possible
+bumping expiry on every action on the transfer instruction
+​
+availableActions
+Map TransferInstructionAction [[Party]]
+What actions are available to which groups of parties. The list of lists
+is interpreted as a set of sets and represents a disjunction of
+conjunctions of parties, i.e., each inner list represents a group of
+parties that can act jointly to execute the action.
+This field can be used to inform wallet users whether they can take an action or not;
+and which other parties they might be waiting on to take their action.
+Supports multiple parties for actions that require joint authorization. Executing them
+will require appropriate, registry-specific delegation contracts to be in place.
+​
+meta
+Metadata
+Additional metadata specific to the transfer instruction, used for extensibility; e.g., more detailed status information.
+Instances:
+instance
+Eq
+TransferInstructionView
+instance
+Show
+TransferInstructionView
+instance
+HasFromAnyView
+TransferInstruction
+TransferInstructionView
+instance
+HasInterfaceView
+TransferInstruction
+TransferInstructionView
+instance
+GetField
+availableActions
+TransferInstructionView
+(
+Map
+TransferInstructionAction
+[[
+Party
+]])
+instance
+GetField
+expiresAt
+TransferInstructionView
+(
+Optional
+Time
+)
+instance
+GetField
+meta
+TransferInstructionView
+Metadata
+instance
+GetField
+originalInstructionCid
+TransferInstructionView
+(
+Optional
+(
+ContractId
+TransferInstruction
+))
+instance
+GetField
+transfer
+TransferInstructionView
+Transfer
+instance
+SetField
+availableActions
+TransferInstructionView
+(
+Map
+TransferInstructionAction
+[[
+Party
+]])
+instance
+SetField
+expiresAt
+TransferInstructionView
+(
+Optional
+Time
+)
+instance
+SetField
+meta
+TransferInstructionView
+Metadata
+instance
+SetField
+originalInstructionCid
+TransferInstructionView
+(
+Optional
+(
+ContractId
+TransferInstruction
+))
+instance
+SetField
+transfer
+TransferInstructionView
+Transfer
+​
+Functions
+​
+transferInstruction_acceptImpl
+transferInstruction_acceptImpl
+:
+TransferInstruction
+->
+ContractId
+TransferInstruction
+->
+TransferInstruction_Accept
+->
+Update
+TransferInstructionResult
+​
+transferInstruction_rejectImpl
+transferInstruction_rejectImpl
+:
+TransferInstruction
+->
+ContractId
+TransferInstruction
+->
+TransferInstruction_Reject
+->
+Update
+TransferInstructionResult
+​
+transferInstruction_withdrawImpl
+transferInstruction_withdrawImpl
+:
+TransferInstruction
+->
+ContractId
+TransferInstruction
+->
+TransferInstruction_Withdraw
+->
+Update
+TransferInstructionResult
+​
+transferInstruction_acceptExtraObservers
+transferInstruction_acceptExtraObservers
+:
+TransferInstruction
+->
+TransferInstruction_Accept
+-> [
+Party
+]
+​
+transferInstruction_rejectExtraObservers
+transferInstruction_rejectExtraObservers
+:
+TransferInstruction
+->
+TransferInstruction_Reject
+-> [
+Party
+]
+​
+transferInstruction_withdrawExtraObservers
+transferInstruction_withdrawExtraObservers
+:
+TransferInstruction
+->
+TransferInstruction_Withdraw
+-> [
+Party
+]
+​
+transferFactory_transferExtraObservers
+transferFactory_transferExtraObservers
+:
+TransferFactory
+->
+TransferFactory_Transfer
+-> [
+Party
+]
+​
+transferFactory_transferImpl
+transferFactory_transferImpl
+:
+TransferFactory
+->
+ContractId
+TransferFactory
+->
+TransferFactory_Transfer
+->
+Update
+TransferInstructionResult
+​
+transferFactory_publicFetchImpl
+transferFactory_publicFetchImpl
+:
+TransferFactory
+->
+ContractId
+TransferFactory
+->
+TransferFactory_PublicFetch
+->
+Update
+TransferFactoryView
+Suggest edits
+Raise issue
+Overview
+splice-dso-governance docs

@@ -1,0 +1,116 @@
+On this page
+Templates
+Data Types
+Splice APIs
+Splice Daml Packages
+splice-validator-lifecycle
+Splice.ValidatorOnboarding
+Copy page
+Copy page
+Documentation for Splice.ValidatorOnboarding
+Copy page
+Copy page
+​
+Templates
+template
+UsedSecret
+Template used by a sponsoring SV node for enforcing that an onboarding secret is used only once.
+Signatory: sv
+Field
+Type
+Description
+sv
+Party
+The SV node that sponsored the onboarding.
+secret
+Text
+An onboarding secret.
+validator
+Party
+The validator that onboarded using the secret.
+Choice
+Archive
+Controller: sv
+Returns: ()
+(no fields)
+template
+ValidatorOnboarding
+Template used by a sponsoring SV node to keep track of the onboarding of a validator candidate. We use a secret for authenticating the candidate once he has set up his participant. The secret should be unique, contain at least 256-bits of entropy, and be communicated to the candidate via a secure off-ledger channel. Once the candidate has set up his participants, he contacts the SV node via an API call and presents his secret, which triggers the SV node to add him as a validator (as a separate on-ledger action for reducing coupling with the DSO governance contracts).
+Signatory: sv
+Field
+Type
+Description
+sv
+Party
+The SV node sponsoring this onboarding.
+candidateSecret
+Text
+The unique secret given to the candidate.
+expiresAt
+Time
+Can be used by the SV for time-bounding the offer.
+Choice
+Archive
+Controller: sv
+Returns: ()
+(no fields)
+Choice
+ValidatorOnboarding_Expire
+Controller: sv
+Returns: ValidatorOnboarding_ExpireResult
+(no fields)
+Choice
+ValidatorOnboarding_Match
+Controller: sv
+Returns: ValidatorOnboarding_MatchResult
+Field
+Type
+Description
+providedSecret
+Text
+validator
+Party
+​
+Data Types
+data
+ValidatorOnboarding_ExpireResult
+ValidatorOnboarding_ExpireResult
+instance
+HasExercise
+ValidatorOnboarding ValidatorOnboarding_Expire ValidatorOnboarding_ExpireResult
+instance
+HasFromAnyChoice
+ValidatorOnboarding ValidatorOnboarding_Expire ValidatorOnboarding_ExpireResult
+instance
+HasToAnyChoice
+ValidatorOnboarding ValidatorOnboarding_Expire ValidatorOnboarding_ExpireResult
+data
+ValidatorOnboarding_MatchResult
+ValidatorOnboarding_MatchResult
+Field
+Type
+Description
+usedSecret
+ContractId
+UsedSecret
+instance
+GetField “usedSecret” ValidatorOnboarding_MatchResult (
+ContractId
+UsedSecret)
+instance
+SetField “usedSecret” ValidatorOnboarding_MatchResult (
+ContractId
+UsedSecret)
+instance
+HasExercise
+ValidatorOnboarding ValidatorOnboarding_Match ValidatorOnboarding_MatchResult
+instance
+HasFromAnyChoice
+ValidatorOnboarding ValidatorOnboarding_Match ValidatorOnboarding_MatchResult
+instance
+HasToAnyChoice
+ValidatorOnboarding ValidatorOnboarding_Match ValidatorOnboarding_MatchResult
+Suggest edits
+Raise issue
+splice-validator-life-cycle docs
+splice-wallet docs

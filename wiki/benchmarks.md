@@ -132,7 +132,7 @@ verification remain required before a network experiment.
 
 ## Midnight-native PCD measurements — 2026-09-11
 
-Reproduced on one machine: Intel Core Ultra 7 365, 6 cores, 31 GiB, WSL2. SRC-0113; full record in [the evidence directory](../evidence/pcd-midnight-native-2026-09-11/MEASUREMENTS.md).
+Reproduced on one machine: Intel Core Ultra 7 365, 6 cores, 31 GiB, WSL2. SRC-0113; full record in [the evidence directory](attachments/historical-evidence/evidence/pcd-midnight-native-2026-09-11/MEASUREMENTS.md).
 
 | Component | Circuit | Prove | Verify | Proof | Peak memory |
 | --- | --- | --- | --- | --- | --- |

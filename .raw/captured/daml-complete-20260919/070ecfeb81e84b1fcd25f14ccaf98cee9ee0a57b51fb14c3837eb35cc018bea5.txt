@@ -1,0 +1,516 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-util-token-standard-wallet
+Splice.Util.Token.Wallet.MergeDelegation
+Copy page
+Copy page
+Documentation for Splice.Util.Token.Wallet.MergeDelegation
+Copy page
+Copy page
+Delegation from users to wallet operators allowing them to merge their token standard holdings; and optionally transfer tokens from the operator to the user as part of the merge operation, e.g., for efficiently implementing extraTransfers.
+The main reasons for using this merge delegation infrastructure are:
+keeping the number of holdings low to reduce storage and compute cost on the validator node hosting them
+batching operations to execute them more efficiently both in terms of traffic spend and throughput
+​
+Templates
+template
+BatchMergeUtility
+Utility contract for a operator to execute a batch of merge calls with proper threading of the operator’s change holdings between the calls that involve extra transfers.
+Signatory: operator
+Field
+Type
+Description
+operator
+Party
+Choice
+Archive
+Controller: operator
+Returns: ()
+(no fields)
+Choice
+BatchMergeUtility_BatchMerge
+Controller: operator
+Returns: BatchMergeUtility_BatchMergeResult
+Field
+Type
+Description
+mergeCalls
+[MergeDelegationCall]
+template
+MergeDelegation
+The right for a operator like the wallet app operator to merge token standard holdings on behalf of a token owner.
+Signatory: owner, operator
+Field
+Type
+Description
+operator
+Party
+Operator allowed to merge holdings.
+owner
+Party
+Owner delegating their right.
+meta
+Metadata
+Metadata about the delegation, used for extensibility.
+Choice
+Archive
+Controller: owner, operator
+Returns: ()
+(no fields)
+Choice
+MergeDelegation_Merge
+Controller: operator
+Returns: MergeDelegation_MergeResult
+Field
+Type
+Description
+optMergeTransfer
+Optional
+TransferCall
+The self-transfer to merge holdings for the owner. Optional to allow for an extra transfer to be executed when the owner does not yet have any holdings. At least one of optMergeTransfer or optExtraTransfer must be provided.
+optExtraTransfer
+Optional
+TransferCall
+An optional extra transfer from the operator to the user to execute as part of the merge operation. The amount of the self-transfer will be increased by the amount of the extra transfer, and the new input holdings from the extra transfer will be added to the self-transfer’s input holdings. These extra transfers can for example be used to efficiently implement extraTransfers or reward distributions as part of the merge operation. Note that extra transfers only work for users that have preapproved incoming transfers from the operator. Therefore there is no additional restriction on the merge delegation to let users decide whether to allow or disallow those transfers as it is already controlled through the preapproval.
+optFeaturedAppRight
+Optional
+FeaturedAppRightCall
+The featured app right to use to feature the operator’s merging activity.
+Choice
+MergeDelegation_Reject
+Controller: operator
+Returns: MergeDelegation_RejectResult
+(no fields)
+Choice
+MergeDelegation_Withdraw
+Controller: owner
+Returns: MergeDelegation_WithdrawResult
+(no fields)
+template
+MergeDelegationProposal
+Proposal by the user to setup a merge delegation.
+Signatory: (DA.Internal.Record.getField @“owner” delegation)
+Field
+Type
+Description
+delegation
+MergeDelegation
+The delegation to be created if accepted.
+Choice
+Archive
+Controller: (DA.Internal.Record.getField @“owner” delegation)
+Returns: ()
+(no fields)
+Choice
+MergeDelegationProposal_Accept
+Controller: (DA.Internal.Record.getField @“operator” delegation)
+Returns: MergeDelegationProposal_AcceptResult
+(no fields)
+Choice
+MergeDelegationProposal_Reject
+Controller: (DA.Internal.Record.getField @“operator” delegation)
+Returns: MergeDelegationProposal_RejectResult
+(no fields)
+Choice
+MergeDelegationProposal_Withdraw
+Controller: (DA.Internal.Record.getField @“owner” delegation)
+Returns: MergeDelegationProposal_WithdrawResult
+(no fields)
+​
+Data Types
+data
+BatchMergeUtility_BatchMergeResult
+BatchMergeUtility_BatchMergeResult
+Field
+Type
+Description
+results
+[MergeDelegation_MergeResult]
+Results of each individual merge delegation call.
+operatorChangeMap
+InstrumentHoldingMap
+Change holdings for the operator after executing extra transfers.
+instance
+Eq
+BatchMergeUtility_BatchMergeResult
+instance
+Show
+BatchMergeUtility_BatchMergeResult
+instance
+GetField “operatorChangeMap” BatchMergeUtility_BatchMergeResult InstrumentHoldingMap
+instance
+GetField “results” BatchMergeUtility_BatchMergeResult [MergeDelegation_MergeResult]
+instance
+SetField “operatorChangeMap” BatchMergeUtility_BatchMergeResult InstrumentHoldingMap
+instance
+SetField “results” BatchMergeUtility_BatchMergeResult [MergeDelegation_MergeResult]
+instance
+HasExercise
+BatchMergeUtility BatchMergeUtility_BatchMerge BatchMergeUtility_BatchMergeResult
+instance
+HasFromAnyChoice
+BatchMergeUtility BatchMergeUtility_BatchMerge BatchMergeUtility_BatchMergeResult
+instance
+HasToAnyChoice
+BatchMergeUtility BatchMergeUtility_BatchMerge BatchMergeUtility_BatchMergeResult
+data
+FeaturedAppRightCall
+A call to create featured app markers using a featured app right.
+FeaturedAppRightCall
+Field
+Type
+Description
+appRightCid
+ContractId
+FeaturedAppRight
+beneficiaries
+[AppRewardBeneficiary]
+instance
+Eq
+FeaturedAppRightCall
+instance
+Show
+FeaturedAppRightCall
+instance
+GetField “appRightCid” FeaturedAppRightCall (
+ContractId
+FeaturedAppRight)
+instance
+GetField “beneficiaries” FeaturedAppRightCall [AppRewardBeneficiary]
+instance
+GetField “optFeaturedAppRight” MergeDelegation_Merge (
+Optional
+FeaturedAppRightCall)
+instance
+SetField “appRightCid” FeaturedAppRightCall (
+ContractId
+FeaturedAppRight)
+instance
+SetField “beneficiaries” FeaturedAppRightCall [AppRewardBeneficiary]
+instance
+SetField “optFeaturedAppRight” MergeDelegation_Merge (
+Optional
+FeaturedAppRightCall)
+type
+InstrumentHoldingMap
+=
+Map
+InstrumentId [
+ContractId
+Holding]
+instance
+GetField “operatorChangeMap” BatchMergeUtility_BatchMergeResult InstrumentHoldingMap
+instance
+SetField “operatorChangeMap” BatchMergeUtility_BatchMergeResult InstrumentHoldingMap
+data
+MergeDelegationCall
+MergeDelegationCall
+Field
+Type
+Description
+delegationCid
+ContractId
+MergeDelegation
+choiceArg
+MergeDelegation_Merge
+instance
+Eq
+MergeDelegationCall
+instance
+Show
+MergeDelegationCall
+instance
+GetField “choiceArg” MergeDelegationCall MergeDelegation_Merge
+instance
+GetField “delegationCid” MergeDelegationCall (
+ContractId
+MergeDelegation)
+instance
+GetField “mergeCalls” BatchMergeUtility_BatchMerge [MergeDelegationCall]
+instance
+SetField “choiceArg” MergeDelegationCall MergeDelegation_Merge
+instance
+SetField “delegationCid” MergeDelegationCall (
+ContractId
+MergeDelegation)
+instance
+SetField “mergeCalls” BatchMergeUtility_BatchMerge [MergeDelegationCall]
+data
+MergeDelegationProposal_AcceptResult
+MergeDelegationProposal_AcceptResult
+Field
+Type
+Description
+mergeDelegationCid
+ContractId
+MergeDelegation
+instance
+Eq
+MergeDelegationProposal_AcceptResult
+instance
+Show
+MergeDelegationProposal_AcceptResult
+instance
+GetField “mergeDelegationCid” MergeDelegationProposal_AcceptResult (
+ContractId
+MergeDelegation)
+instance
+SetField “mergeDelegationCid” MergeDelegationProposal_AcceptResult (
+ContractId
+MergeDelegation)
+instance
+HasExercise
+MergeDelegationProposal MergeDelegationProposal_Accept MergeDelegationProposal_AcceptResult
+instance
+HasFromAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Accept MergeDelegationProposal_AcceptResult
+instance
+HasToAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Accept MergeDelegationProposal_AcceptResult
+data
+MergeDelegationProposal_RejectResult
+Dedicated record type to simplify upgrading
+MergeDelegationProposal_RejectResult
+Field
+Type
+Description
+result
+()
+instance
+Eq
+MergeDelegationProposal_RejectResult
+instance
+Show
+MergeDelegationProposal_RejectResult
+instance
+GetField “result” MergeDelegationProposal_RejectResult ()
+instance
+SetField “result” MergeDelegationProposal_RejectResult ()
+instance
+HasExercise
+MergeDelegationProposal MergeDelegationProposal_Reject MergeDelegationProposal_RejectResult
+instance
+HasFromAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Reject MergeDelegationProposal_RejectResult
+instance
+HasToAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Reject MergeDelegationProposal_RejectResult
+data
+MergeDelegationProposal_WithdrawResult
+Dedicated record type to simplify upgrading
+MergeDelegationProposal_WithdrawResult
+Field
+Type
+Description
+result
+()
+instance
+Eq
+MergeDelegationProposal_WithdrawResult
+instance
+Show
+MergeDelegationProposal_WithdrawResult
+instance
+GetField “result” MergeDelegationProposal_WithdrawResult ()
+instance
+SetField “result” MergeDelegationProposal_WithdrawResult ()
+instance
+HasExercise
+MergeDelegationProposal MergeDelegationProposal_Withdraw MergeDelegationProposal_WithdrawResult
+instance
+HasFromAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Withdraw MergeDelegationProposal_WithdrawResult
+instance
+HasToAnyChoice
+MergeDelegationProposal MergeDelegationProposal_Withdraw MergeDelegationProposal_WithdrawResult
+data
+MergeDelegation_MergeResult
+MergeDelegation_MergeResult
+Field
+Type
+Description
+optMergeTransferResult
+Optional
+TransferInstructionResult
+optExtraTransferResult
+Optional
+TransferInstructionResult
+instance
+Eq
+MergeDelegation_MergeResult
+instance
+Show
+MergeDelegation_MergeResult
+instance
+GetField “optExtraTransferResult” MergeDelegation_MergeResult (
+Optional
+TransferInstructionResult)
+instance
+GetField “optMergeTransferResult” MergeDelegation_MergeResult (
+Optional
+TransferInstructionResult)
+instance
+GetField “results” BatchMergeUtility_BatchMergeResult [MergeDelegation_MergeResult]
+instance
+SetField “optExtraTransferResult” MergeDelegation_MergeResult (
+Optional
+TransferInstructionResult)
+instance
+SetField “optMergeTransferResult” MergeDelegation_MergeResult (
+Optional
+TransferInstructionResult)
+instance
+SetField “results” BatchMergeUtility_BatchMergeResult [MergeDelegation_MergeResult]
+instance
+HasExercise
+MergeDelegation MergeDelegation_Merge MergeDelegation_MergeResult
+instance
+HasFromAnyChoice
+MergeDelegation MergeDelegation_Merge MergeDelegation_MergeResult
+instance
+HasToAnyChoice
+MergeDelegation MergeDelegation_Merge MergeDelegation_MergeResult
+data
+MergeDelegation_RejectResult
+Dedicated record type to simplify upgrading
+MergeDelegation_RejectResult
+Field
+Type
+Description
+result
+()
+instance
+Eq
+MergeDelegation_RejectResult
+instance
+Show
+MergeDelegation_RejectResult
+instance
+GetField “result” MergeDelegation_RejectResult ()
+instance
+SetField “result” MergeDelegation_RejectResult ()
+instance
+HasExercise
+MergeDelegation MergeDelegation_Reject MergeDelegation_RejectResult
+instance
+HasFromAnyChoice
+MergeDelegation MergeDelegation_Reject MergeDelegation_RejectResult
+instance
+HasToAnyChoice
+MergeDelegation MergeDelegation_Reject MergeDelegation_RejectResult
+data
+MergeDelegation_WithdrawResult
+Dedicated record type to simplify upgrading
+MergeDelegation_WithdrawResult
+Field
+Type
+Description
+result
+()
+instance
+Eq
+MergeDelegation_WithdrawResult
+instance
+Show
+MergeDelegation_WithdrawResult
+instance
+GetField “result” MergeDelegation_WithdrawResult ()
+instance
+SetField “result” MergeDelegation_WithdrawResult ()
+instance
+HasExercise
+MergeDelegation MergeDelegation_Withdraw MergeDelegation_WithdrawResult
+instance
+HasFromAnyChoice
+MergeDelegation MergeDelegation_Withdraw MergeDelegation_WithdrawResult
+instance
+HasToAnyChoice
+MergeDelegation MergeDelegation_Withdraw MergeDelegation_WithdrawResult
+data
+TransferCall
+A call to perform a transfer using a transfer factory.
+TransferCall
+Field
+Type
+Description
+factoryCid
+ContractId
+TransferFactory
+choiceArg
+TransferFactory_Transfer
+instance
+Eq
+TransferCall
+instance
+Show
+TransferCall
+instance
+GetField “choiceArg” TransferCall TransferFactory_Transfer
+instance
+GetField “factoryCid” TransferCall (
+ContractId
+TransferFactory)
+instance
+GetField “optExtraTransfer” MergeDelegation_Merge (
+Optional
+TransferCall)
+instance
+GetField “optMergeTransfer” MergeDelegation_Merge (
+Optional
+TransferCall)
+instance
+SetField “choiceArg” TransferCall TransferFactory_Transfer
+instance
+SetField “factoryCid” TransferCall (
+ContractId
+TransferFactory)
+instance
+SetField “optExtraTransfer” MergeDelegation_Merge (
+Optional
+TransferCall)
+instance
+SetField “optMergeTransfer” MergeDelegation_Merge (
+Optional
+TransferCall)
+​
+Functions
+runBatch
+:
+Party
+-> [MergeDelegationCall] -> InstrumentHoldingMap -> [MergeDelegation_MergeResult] ->
+Update
+BatchMergeUtility_BatchMergeResult
+Run a batch of token standard transfers.
+createActivityMarkerForProvider
+:
+Party
+-> FeaturedAppRightCall ->
+Update
+()
+checkExpected
+: (
+Eq
+a,
+Show
+a) =>
+Text
+-> a -> a ->
+Update
+()
+require
+:
+CanAssert
+m =>
+Text
+->
+Bool
+-> m ()
+Check whether a required condition is true. If it’s not, abort the transaction with a message saying that the requirement was not met.
+Suggest edits
+Raise issue
+splice-util-token-standard-wallet docs
+splice-validator-life-cycle docs

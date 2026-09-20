@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-4337: Account Abstraction Using Alt Mempool</title>
+      <meta property="og:title" content="ERC-4337: Account Abstraction Using Alt Mempool" />
+    
+    <meta name="description" content="Account abstraction without consensus-layer protocol changes, instead relying on higher-layer infrastructure." />
+    <meta property="og:description" content="Account abstraction without consensus-layer protocol changes, instead relying on higher-layer infrastructure." />
+    <meta name="twitter:description" content="Account abstraction without consensus-layer protocol changes, instead relying on higher-layer infrastructure." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-4337" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-4337" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-4337: Account Abstraction Using Alt Mempool
+    <a href="https://ethereum-magicians.org/t/erc-4337-account-abstraction-via-entry-point-contract-specification/7160" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4337.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Account abstraction without consensus-layer protocol changes, instead relying on higher-layer infrastructure.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Vitalik Buterin&nbsp;(<a href="https://github.com/vbuterin">@vbuterin</a>), Yoav Weiss&nbsp;(<a href="https://github.com/yoavw">@yoavw</a>), Dror Tirosh&nbsp;(<a href="https://github.com/drortirosh">@drortirosh</a>), Shahaf Nacson&nbsp;(<a href="https://github.com/shahafn">@shahafn</a>), Alex Forshtat&nbsp;(<a href="https://github.com/forshtat">@forshtat</a>), Kristof Gazso&nbsp;(<a href="https://github.com/kristofgazso">@kristofgazso</a>), Tjaden Hess&nbsp;(<a href="https://github.com/tjade273">@tjade273</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2021-09-29</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-712">EIP-712</a>, 
+
+  <a href="eip-7702">EIP-7702</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definitions">Definitions</a></li>
+      <li><a href="#the-useroperation-structure">The UserOperation structure</a></li>
+      <li><a href="#entrypoint-interface">EntryPoint interface</a></li>
+      <li><a href="#smart-contract-account-interface">Smart Contract Account Interface</a></li>
+      <li><a href="#semi-abstracted-nonce-support">Semi-abstracted Nonce Support</a></li>
+      <li><a href="#required-entrypoint-contract-functionality">Required EntryPoint contract functionality</a></li>
+      <li><a href="#json-rpc-api-for-erc-4337">JSON-RPC API for ERC-4337</a></li>
+      <li><a href="#support-for-eip-712-signatures">Support for EIP-712 signatures</a></li>
+      <li><a href="#support-for-eip-7702-authorizations">Support for EIP-7702 authorizations</a></li>
+      <li><a href="#extension-paymasters">Extension: paymasters</a></li>
+      <li><a href="#bundler-behavior-upon-receiving-a-useroperation">Bundler behavior upon receiving a UserOperation</a></li>
+      <li><a href="#useroperation-simulation">UserOperation Simulation</a></li>
+      <li><a href="#estimating-preverificationgas">Estimating preVerificationGas</a></li>
+      <li><a href="#alternative-mempools">Alternative Mempools</a></li>
+      <li><a href="#bundling">Bundling</a></li>
+      <li><a href="#error-codes">Error codes.</a></li>
+      <li><a href="#factory-contracts">Factory contracts</a></li>
+      <li><a href="#paymasters-contracts">Paymasters contracts</a></li>
+      <li><a href="#aggregator-contracts">Aggregator contracts</a></li>
+      <li><a href="#eip-7702-delegated-smart-contract-accounts">EIP-7702 delegated Smart Contract Accounts</a></li>
+      <li><a href="#smart-contract-accounts">Smart Contract Accounts</a></li>
+      <li><a href="#transient-storage">Transient Storage</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#validation-rules-rationale">Validation Rules Rationale</a></li>
+      <li><a href="#reputation-rationale">Reputation Rationale</a></li>
+      <li><a href="#paymasters">Paymasters</a></li>
+      <li><a href="#first-time-smart-contract-account-creation">First-time Smart Contract Account creation</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>Historically, users could interact with Ethereum only by sending transactions from special accounts controlled by private keys, with transaction validation entirely enforced by fixed protocol rules. Account abstraction is an alternative model that allows each account to supply its own validation logic executed as smart contract code, while the protocol provides only minimal constraints.</p>
+
+<p>This document is an account abstraction proposal which completely avoids the need for consensus-layer protocol changes. Instead of adding new protocol features and changing the bottom-layer transaction type, this proposal instead introduces a higher-layer pseudo-transaction object called a <code class="language-plaintext highlighter-rouge">UserOperation</code>. Users send <code class="language-plaintext highlighter-rouge">UserOperation</code> objects into a separate mempool. A special class of actor called bundlers package up a set of these objects into a transaction making a <code class="language-plaintext highlighter-rouge">handleOps</code> call to a special contract, and that transaction then gets included in a block.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Historically, introducing Account Abstraction has been a long-standing goal of the Ethereum protocol.
+A number of proposals have been thoroughly discussed, but so far none of them have been implemented in the protocol.</p>
+
+<p>This proposal takes a different approach, avoiding any adjustments to the consensus layer. It seeks to achieve the following goals:</p>
+
+<ul>
+  <li><strong>Achieve the key goal of Account Abstraction</strong>: allow users to use Smart Contract Accounts containing arbitrary verification logic instead of EOAs as their primary account. Completely remove any need at all for users to also have EOAs,
+ as required by both status quo Smart Contract Accounts and <a href="/EIPS/eip-7702">EIP-7702</a>.</li>
+  <li><strong>Decentralization</strong>
+    <ul>
+      <li>Allow any bundler (think: block builder) to participate in the process of including account-abstracted <code class="language-plaintext highlighter-rouge">UserOperations</code></li>
+      <li>Work with all activity happening over a public mempool; users do not need to know the direct communication addresses (eg. IP, onion) of any specific actors</li>
+      <li>Avoid trust assumptions on bundlers</li>
+    </ul>
+  </li>
+  <li><strong>Do not require any Ethereum consensus changes</strong>: Ethereum consensus layer development is focusing on scalability-oriented features, and there may not be any opportunity for further protocol changes for a long time. Hence, to increase the chance of faster adoption, this proposal avoids Ethereum consensus changes.</li>
+  <li><strong>Support other use cases</strong>
+    <ul>
+      <li>Privacy-preserving applications</li>
+      <li>Atomic multi-operations (similar goal to <a href="/EIPS/eip-7702">EIP-7702</a>)</li>
+      <li>Pay tx fees with <a href="/EIPS/eip-20">ERC-20</a> tokens, allow developers to pay fees for their users, and <a href="/EIPS/eip-7702">EIP-7702</a>-like <strong>sponsored transaction</strong> use cases more generally</li>
+      <li>abstracting the validation allows the contract to use different signature schemes, multisig configuration, custom recovery, and more.</li>
+      <li>abstracting gas payments allows easy onboarding by 3rd party payments, paying with tokens, cross-chain gas payments</li>
+      <li>abstracting execution allows bundled transactions</li>
+    </ul>
+  </li>
+</ul>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+  
+    <h3 id="definitions">
+      
+      
+        <a href="#definitions" class="anchor-link"></a> Definitions
+      
+      
+    </h3>
+
+<ul>
+  <li><strong>UserOperation</strong> - a structure that describes a transaction to be sent on behalf of a user. To avoid confusion, it is not named “transaction”.
+    <ul>
+      <li>Like a transaction, it contains <code class="language-plaintext highlighter-rouge">to</code>, <code class="language-plaintext highlighter-rouge">calldata</code>, <code class="language-plaintext highlighter-rouge">maxFeePerGas</code>, <code class="language-plaintext highlighter-rouge">maxPriorityFeePerGas</code>, <code class="language-plaintext highlighter-rouge">nonce</code>, <code class="language-plaintext highlighter-rouge">signature</code>.</li>
+      <li>Unlike a transaction, it contains several other fields, described below.</li>
+      <li>Notably, the <code class="language-plaintext highlighter-rouge">signature</code> field usage is not defined by the protocol, but by the Smart Contract Account implementation.</li>
+    </ul>
+  </li>
+  <li><strong>Sender</strong> - the Smart Contract Account sending a <code class="language-plaintext highlighter-rouge">UserOperation</code>.</li>
+  <li><strong>EntryPoint</strong> - a singleton contract to execute bundles of <code class="language-plaintext highlighter-rouge">UserOperations</code>. Bundlers should whitelist the supported <code class="language-plaintext highlighter-rouge">EntryPoint</code>.</li>
+  <li><strong>Bundler</strong> - a node (block builder) that can handle <code class="language-plaintext highlighter-rouge">UserOperations</code>,
+create a valid <code class="language-plaintext highlighter-rouge">entryPoint.handleOps()</code> transaction,
+and add it to the block while it is still valid.
+This can be achieved by a number of ways:
+    <ul>
+      <li>Bundler can act as a block builder itself.</li>
+      <li>If the bundler is not a block builder, it should work with the block builder through an infrastructure such as <code class="language-plaintext highlighter-rouge">mev-boost</code>, or any other kind of proposer-builder separation.</li>
+    </ul>
+  </li>
+  <li><strong>Paymaster</strong> - a helper contract that agrees to pay for the transaction, instead of the sender itself.</li>
+  <li><strong>Factory</strong> - a helper contract that performs a deployment for a new <code class="language-plaintext highlighter-rouge">sender</code> contract if necessary.</li>
+  <li><strong>Aggregator</strong> - also known as “authorizer contract” - a contract that enables multiple <code class="language-plaintext highlighter-rouge">UserOperations</code> to share a single validation. The full design of such contracts is outside the scope of this proposal.</li>
+  <li><strong>Canonical <code class="language-plaintext highlighter-rouge">UserOperation</code> mempool</strong> - a decentralized permissionless P2P network where bundlers exchange <code class="language-plaintext highlighter-rouge">UserOperations</code> that are valid and conform with the same shared set of rules applied to the validation code. The full specification of such rules is outside the scope of this proposal.</li>
+  <li><strong>Alternative <code class="language-plaintext highlighter-rouge">UserOperation</code> mempool</strong> - any other P2P mempool where the validity of <code class="language-plaintext highlighter-rouge">UserOperations</code> is determined by rules that are different from the shared set of rules, applied to the validation code, in any way.</li>
+  <li><strong>Deposit</strong> - an amount of Ether (or any L2 native currency) that a <code class="language-plaintext highlighter-rouge">Sender</code> or <code class="language-plaintext highlighter-rouge">Paymaster</code> contract has transferred to the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract intended to pay gas costs of the future <code class="language-plaintext highlighter-rouge">UserOperations</code>.</li>
+</ul>
+  
+    <h3 id="the-useroperation-structure">
+      
+      
+        <a href="#the-useroperation-structure" class="anchor-link"></a> The <code class="language-plaintext highlighter-rouge">UserOperation</code> structure
+      
+      
+    </h3>
+
+<p>To avoid Ethereum consensus changes, we do not attempt to create new transaction types for account-abstracted transactions. Instead, users package up the action they want their Smart Contract Account to take in a struct named <code class="language-plaintext highlighter-rouge">UserOperation</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sender</code></td>
+      <td><code class="language-plaintext highlighter-rouge">address</code></td>
+      <td>The Account making the <code class="language-plaintext highlighter-rouge">UserOperation</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nonce</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>Anti-replay parameter (see “Semi-abstracted Nonce Support” )</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">factory</code></td>
+      <td><code class="language-plaintext highlighter-rouge">address</code></td>
+      <td>Account Factory for new Accounts OR <code class="language-plaintext highlighter-rouge">0x7702</code> flag for EIP-7702 Accounts, otherwise <code class="language-plaintext highlighter-rouge">address(0)</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">factoryData</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>data for the Account Factory if <code class="language-plaintext highlighter-rouge">factory</code> is provided OR EIP-7702 initialization data, or empty array</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">callData</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>The data to pass to the <code class="language-plaintext highlighter-rouge">sender</code> during the main execution call</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">callGasLimit</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>The amount of gas to allocate the main execution call</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">verificationGasLimit</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>The amount of gas to allocate for the verification step</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">preVerificationGas</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>Extra gas to pay the bundler</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">maxFeePerGas</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>Maximum fee per gas (similar to <a href="/EIPS/eip-1559">EIP-1559</a> <code class="language-plaintext highlighter-rouge">max_fee_per_gas</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">maxPriorityFeePerGas</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>Maximum priority fee per gas (similar to EIP-1559 <code class="language-plaintext highlighter-rouge">max_priority_fee_per_gas</code>)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">paymaster</code></td>
+      <td><code class="language-plaintext highlighter-rouge">address</code></td>
+      <td>Address of paymaster contract, (or empty, if the <code class="language-plaintext highlighter-rouge">sender</code> pays for gas by itself)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">paymasterVerificationGasLimit</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>The amount of gas to allocate for the paymaster validation code (only if paymaster exists)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">paymasterPostOpGasLimit</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td>The amount of gas to allocate for the paymaster post-operation code (only if paymaster exists)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">paymasterData</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>Data for paymaster (only if paymaster exists)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">signature</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>Data passed into the <code class="language-plaintext highlighter-rouge">sender</code> to verify authorization</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Users send <code class="language-plaintext highlighter-rouge">UserOperation</code> objects to a dedicated <code class="language-plaintext highlighter-rouge">UserOperation</code> mempool.</p>
+
+<p>To prevent replay attacks, either cross-chain or with multiple <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract versions,
+the <code class="language-plaintext highlighter-rouge">signature</code> MUST depend on <code class="language-plaintext highlighter-rouge">chainid</code> and the <code class="language-plaintext highlighter-rouge">EntryPoint</code> address.</p>
+
+<p>Note that one <a href="/EIPS/eip-7702">EIP-7702</a> “authorization tuple” value can be provided alongside the <code class="language-plaintext highlighter-rouge">UserOperation</code> struct,
+but “authorization tuples” are not included in the <code class="language-plaintext highlighter-rouge">UserOperation</code> itself.</p>
+  
+    <h3 id="entrypoint-interface">
+      
+      
+        <a href="#entrypoint-interface" class="anchor-link"></a> <code class="language-plaintext highlighter-rouge">EntryPoint</code> interface
+      
+      
+    </h3>
+
+<p>When passed on-chain, to the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract, the <code class="language-plaintext highlighter-rouge">Account</code> and the <code class="language-plaintext highlighter-rouge">Paymaster</code>, a “packed” version of the above structure called <code class="language-plaintext highlighter-rouge">PackedUserOperation</code> is used:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sender</code></td>
+      <td><code class="language-plaintext highlighter-rouge">address</code></td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">nonce</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">initCode</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>concatenation of factory address and factoryData (or empty), or <a href="#support-for-eip-7702-authorizations">EIP-7702 data</a></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">callData</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">accountGasLimits</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes32</code></td>
+      <td>concatenation of verificationGasLimit (16 bytes) and callGasLimit (16 bytes)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">preVerificationGas</code></td>
+      <td><code class="language-plaintext highlighter-rouge">uint256</code></td>
+      <td> </td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">gasFees</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes32</code></td>
+      <td>concatenation of maxPriorityFeePerGas (16 bytes) and maxFeePerGas (16 bytes)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">paymasterAndData</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td>concatenation of paymaster fields (or empty)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">signature</code></td>
+      <td><code class="language-plaintext highlighter-rouge">bytes</code></td>
+      <td> </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The core interface of the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract is as follows:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">handleOps</span><span class="p">(</span><span class="n">PackedUserOperation</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">ops</span><span class="p">,</span> <span class="kt">address</span> <span class="k">payable</span> <span class="n">beneficiary</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">beneficiary</code> is the address that will be paid with all the gas fees collected during the execution of the bundle.</p>
+  
+    <h3 id="smart-contract-account-interface">
+      
+      
+        <a href="#smart-contract-account-interface" class="anchor-link"></a> Smart Contract Account Interface
+      
+      
+    </h3>
+
+<p>The core interface required for the Smart Contract Account to have is:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IAccount</span> <span class="p">{</span>
+  <span class="k">function</span> <span class="n">validateUserOp</span>
+      <span class="p">(</span><span class="n">PackedUserOperation</span> <span class="k">calldata</span> <span class="n">userOp</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">userOpHash</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">missingAccountFunds</span><span class="p">)</span>
+      <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">validationData</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">userOpHash</code> is a hash over the <code class="language-plaintext highlighter-rouge">userOp</code> (except <code class="language-plaintext highlighter-rouge">signature</code>), <code class="language-plaintext highlighter-rouge">entryPoint</code> and <code class="language-plaintext highlighter-rouge">chainId</code>.</p>
+
+<p>The Smart Contract Account:</p>
+
+<ul>
+  <li>MUST validate the caller is a trusted <code class="language-plaintext highlighter-rouge">EntryPoint</code></li>
+  <li>MUST validate that the signature is a valid signature of the <code class="language-plaintext highlighter-rouge">userOpHash</code>, and
+SHOULD return <code class="language-plaintext highlighter-rouge">SIG_VALIDATION_FAILED</code> (<code class="language-plaintext highlighter-rouge">1</code>) without reverting on signature mismatch. Any other error MUST revert.</li>
+  <li>SHOULD not return early when returning <code class="language-plaintext highlighter-rouge">SIG_VALIDATION_FAILED</code> (<code class="language-plaintext highlighter-rouge">1</code>). Instead, it SHOULD complete the normal flow to enable performing a gas estimation for the validation function.</li>
+  <li>MUST pay the <code class="language-plaintext highlighter-rouge">EntryPoint</code> (caller) at least the <code class="language-plaintext highlighter-rouge">missingAccountFunds</code> (which might be zero, in case the current <code class="language-plaintext highlighter-rouge">sender</code>’s deposit is sufficient)</li>
+  <li>The <code class="language-plaintext highlighter-rouge">sender</code> MAY pay more than this minimum to cover future transactions. It can also call <code class="language-plaintext highlighter-rouge">withdrawTo</code> to retrieve it later at any time.</li>
+  <li>The return value MUST be packed of <code class="language-plaintext highlighter-rouge">aggregator</code>/<code class="language-plaintext highlighter-rouge">authorizer</code>, <code class="language-plaintext highlighter-rouge">validUntil</code> and <code class="language-plaintext highlighter-rouge">validAfter</code> timestamps.
+    <ul>
+      <li><code class="language-plaintext highlighter-rouge">aggregator</code>/<code class="language-plaintext highlighter-rouge">authorizer</code> - 0 for valid signature, 1 to mark signature failure. Otherwise, an address of an <code class="language-plaintext highlighter-rouge">aggregator</code>/<code class="language-plaintext highlighter-rouge">authorizer</code> contract.</li>
+      <li><code class="language-plaintext highlighter-rouge">validUntil</code> is 6-byte timestamp value, or zero for “infinite”. The <code class="language-plaintext highlighter-rouge">UserOperation</code> is valid only up to this time.</li>
+      <li><code class="language-plaintext highlighter-rouge">validAfter</code> is 6-byte timestamp. The <code class="language-plaintext highlighter-rouge">UserOperation</code> is valid only after this time.</li>
+      <li>In order to specify a validity range using block numbers, both the <code class="language-plaintext highlighter-rouge">validUntil</code> and <code class="language-plaintext highlighter-rouge">validAfter</code> need to set their highest bit to 1.</li>
+      <li><strong>Note:</strong> The validity range can be expressed by two block timestamps or two block numbers, but one timestamp and one block number cannot be mixed in the same UserOperation’s validity range.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>The Smart Contract Account MAY implement the interface <code class="language-plaintext highlighter-rouge">IAccountExecute</code></p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IAccountExecute</span> <span class="p">{</span>
+  <span class="k">function</span> <span class="n">executeUserOp</span><span class="p">(</span><span class="n">PackedUserOperation</span> <span class="k">calldata</span> <span class="n">userOp</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">userOpHash</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>This method will be called by the <code class="language-plaintext highlighter-rouge">EntryPoint</code> with the current UserOperation, instead of executing the <code class="language-plaintext highlighter-rouge">callData</code> itself directly on the <code class="language-plaintext highlighter-rouge">sender</code>.</p>
+  
+    <h3 id="semi-abstracted-nonce-support">
+      
+      
+        <a href="#semi-abstracted-nonce-support" class="anchor-link"></a> Semi-abstracted Nonce Support
+      
+      
+    </h3>
+
+<p>In Ethereum protocol, the sequential transaction <code class="language-plaintext highlighter-rouge">nonce</code> value is used as a replay protection method as well as to
+determine the valid order of transaction being included in blocks.</p>
+
+<p>It also contributes to the transaction hash uniqueness, as a transaction by the same sender with the same
+nonce may not be included in the chain twice.</p>
+
+<p>However, requiring a single sequential <code class="language-plaintext highlighter-rouge">nonce</code> value is limiting to the senders’ ability to define their custom logic
+with regard to transaction ordering and replay protection.</p>
+
+<p>Instead of sequential <code class="language-plaintext highlighter-rouge">nonce</code> we implement a nonce mechanism that uses a single <code class="language-plaintext highlighter-rouge">uint256</code> nonce value in the <code class="language-plaintext highlighter-rouge">UserOperation</code>,
+but treats it as two values:</p>
+
+<ul>
+  <li>192-bit “key”</li>
+  <li>64-bit “sequence”</li>
+</ul>
+
+<p>These values are represented on-chain in the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract.
+We define the following method in the <code class="language-plaintext highlighter-rouge">EntryPoint</code> interface to expose these values:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">getNonce</span><span class="p">(</span><span class="kt">address</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">uint192</span> <span class="n">key</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span> <span class="n">nonce</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>For each <code class="language-plaintext highlighter-rouge">key</code> the <code class="language-plaintext highlighter-rouge">sequence</code> is validated by the <code class="language-plaintext highlighter-rouge">EntryPoint</code> for each UserOperation.
+If the nonce validation fails the <code class="language-plaintext highlighter-rouge">UserOperation</code> is considered invalid and the bundle is reverted.
+The <code class="language-plaintext highlighter-rouge">sequence</code> value is incremented sequentially and monotonically for the <code class="language-plaintext highlighter-rouge">sender</code> for each UserOperation.
+A new <code class="language-plaintext highlighter-rouge">key</code> can be introduced with an arbitrary value at any point, with its <code class="language-plaintext highlighter-rouge">sequence</code> starting at <code class="language-plaintext highlighter-rouge">0</code>.</p>
+
+<p>This approach maintains the guarantee of <code class="language-plaintext highlighter-rouge">UserOperation</code> hash uniqueness on-chain on the protocol level while allowing
+Accounts to implement any custom logic they may need operating on a 192-bit “key” field, while fitting the 32 byte word.</p>
+  
+    <h4 id="reading-and-validating-the-nonce">
+      
+      
+        <a href="#reading-and-validating-the-nonce" class="anchor-link"></a> Reading and validating the nonce
+      
+      
+    </h4>
+
+<p>When preparing the <code class="language-plaintext highlighter-rouge">UserOperation</code> bundlers may make a view call to this method to determine a valid value for the <code class="language-plaintext highlighter-rouge">nonce</code> field.</p>
+
+<p>Bundler’s validation of a <code class="language-plaintext highlighter-rouge">UserOperation</code> SHOULD start with <code class="language-plaintext highlighter-rouge">getNonce</code> to ensure the transaction has a valid <code class="language-plaintext highlighter-rouge">nonce</code> field.</p>
+
+<p>If the bundler is willing to accept multiple <code class="language-plaintext highlighter-rouge">UserOperations</code> by the same sender into their mempool,
+this bundler is supposed to track the <code class="language-plaintext highlighter-rouge">key</code> and <code class="language-plaintext highlighter-rouge">sequence</code> pair of the <code class="language-plaintext highlighter-rouge">UserOperations</code> already added in the mempool.</p>
+  
+    <h4 id="usage-examples">
+      
+      
+        <a href="#usage-examples" class="anchor-link"></a> Usage examples
+      
+      
+    </h4>
+
+<ol>
+  <li>
+    <p>Classic sequential nonce.</p>
+
+    <p>In order to require the Account to have classic, sequential nonce, the validation function MUST perform:</p>
+
+    <div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">require</span><span class="p">(</span><span class="n">userOp</span><span class="p">.</span><span class="n">nonce</span><span class="o">&lt;</span><span class="k">type</span><span class="p">(</span><span class="kt">uint64</span><span class="p">).</span><span class="n">max</span><span class="p">)</span>
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Ordered administrative events</p>
+
+    <p>In some cases, an account may need to have an “administrative” channel of operations running in parallel to normal
+operations.</p>
+
+    <p>In this case, the account may use a specific <code class="language-plaintext highlighter-rouge">key</code> when calling methods on the account itself:</p>
+
+    <div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">bytes4</span> <span class="n">sig</span> <span class="o">=</span> <span class="kt">bytes4</span><span class="p">(</span><span class="n">userOp</span><span class="p">.</span><span class="n">callData</span><span class="p">[</span><span class="mi">0</span> <span class="o">:</span> <span class="mi">4</span><span class="p">]);</span>
+<span class="kt">uint</span> <span class="n">key</span> <span class="o">=</span> <span class="n">userOp</span><span class="p">.</span><span class="n">nonce</span> <span class="o">&gt;&gt;</span> <span class="mi">64</span><span class="p">;</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">sig</span> <span class="o">==</span> <span class="n">ADMIN_METHODSIG</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">require</span><span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="n">ADMIN_KEY</span><span class="p">,</span> <span class="s">"wrong nonce-key for admin operation"</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nb">require</span><span class="p">(</span><span class="n">key</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">"wrong nonce-key for normal operation"</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>    </div>
+  </li>
+</ol>
+  
+    <h3 id="required-entrypoint-contract-functionality">
+      
+      
+        <a href="#required-entrypoint-contract-functionality" class="anchor-link"></a> Required <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract functionality
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code> method is <code class="language-plaintext highlighter-rouge">handleOps</code>, which handles an array of <code class="language-plaintext highlighter-rouge">UserOperations</code></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code>’s <code class="language-plaintext highlighter-rouge">handleOps</code> function must perform the following steps (we first describe the simpler non-paymaster case). It must make two loops, the <strong>verification loop</strong> and the <strong>execution loop</strong>.
+In the verification loop, the <code class="language-plaintext highlighter-rouge">handleOps</code> call must perform the following steps for each <code class="language-plaintext highlighter-rouge">UserOperation</code>:</p>
+
+<ul>
+  <li><strong>Create the <code class="language-plaintext highlighter-rouge">sender</code> Smart Contract Account if it does not yet exist</strong>, using the <code class="language-plaintext highlighter-rouge">initcode</code> provided in the <code class="language-plaintext highlighter-rouge">UserOperation</code>.
+    <ul>
+      <li>If the <code class="language-plaintext highlighter-rouge">factory</code> address is “0x7702”, then the sender MUST be an EOA with an <a href="/EIPS/eip-7702">EIP-7702</a> authorization designation. The <code class="language-plaintext highlighter-rouge">EntryPoint</code> validates the authorized address matches the one specified in the <code class="language-plaintext highlighter-rouge">UserOperation</code> signature (see <a href="#support-for-eip-7702-authorizations">Support for [EIP-7702] authorizations</a>).</li>
+      <li>If the <code class="language-plaintext highlighter-rouge">sender</code> does not exist, <em>and</em> the <code class="language-plaintext highlighter-rouge">initcode</code> is empty, or does not deploy a contract at the “sender” address, the call must fail.</li>
+      <li><strong>WARNING</strong>: If the <code class="language-plaintext highlighter-rouge">sender</code> does exist, <em>and</em> the <code class="language-plaintext highlighter-rouge">initcode</code> is <em>not</em> empty, then the <code class="language-plaintext highlighter-rouge">initcode</code> is ignored.</li>
+    </ul>
+  </li>
+  <li>calculate the maximum possible fee the <code class="language-plaintext highlighter-rouge">sender</code> needs to pay based on validation and call gas limits, and current gas values.</li>
+  <li>calculate the fee the <code class="language-plaintext highlighter-rouge">sender</code> must add to its “deposit” in the <code class="language-plaintext highlighter-rouge">EntryPoint</code></li>
+  <li><strong>Call <code class="language-plaintext highlighter-rouge">validateUserOp</code> on the <code class="language-plaintext highlighter-rouge">sender</code> contract</strong>, passing in the <code class="language-plaintext highlighter-rouge">UserOperation</code>, its hash and the required fee.
+The Smart Contract Account MUST verify the <code class="language-plaintext highlighter-rouge">UserOperation</code>’s <code class="language-plaintext highlighter-rouge">signature</code> parameter, and pay the fee if the <code class="language-plaintext highlighter-rouge">sender</code> considers the <code class="language-plaintext highlighter-rouge">UserOperation</code> valid. If any <code class="language-plaintext highlighter-rouge">validateUserOp</code> call fails, <code class="language-plaintext highlighter-rouge">handleOps</code> must skip execution of at least that <code class="language-plaintext highlighter-rouge">UserOperation</code>, and may revert entirely.</li>
+  <li>Validate the account’s deposit in the <code class="language-plaintext highlighter-rouge">EntryPoint</code> is high enough to cover the max possible cost (cover the already-done verification and max execution gas)</li>
+</ul>
+
+<p>In the execution loop, the <code class="language-plaintext highlighter-rouge">handleOps</code> call must perform the following steps for each <code class="language-plaintext highlighter-rouge">UserOperation</code>:</p>
+
+<ul>
+  <li><strong>Call the account with the <code class="language-plaintext highlighter-rouge">UserOperation</code>’s calldata</strong>. It’s up to the account to choose how to parse the calldata; an expected workflow is for the account to have an <code class="language-plaintext highlighter-rouge">execute</code> function that parses the remaining calldata as a series of one or more calls that the account should make.</li>
+  <li>If the calldata starts with the methodsig <code class="language-plaintext highlighter-rouge">IAccountExecute.executeUserOp</code>, then the <code class="language-plaintext highlighter-rouge">EntryPoint</code> must build a calldata by encoding <code class="language-plaintext highlighter-rouge">executeUserOp(userOp,userOpHash)</code> and call the account using that calldata.</li>
+  <li>After the call, refund the account’s deposit with the excess gas cost that was pre-charged.<br />
+ A penalty of <code class="language-plaintext highlighter-rouge">10%</code> (<code class="language-plaintext highlighter-rouge">UNUSED_GAS_PENALTY_PERCENT</code>) is applied on the amounts of <code class="language-plaintext highlighter-rouge">callGasLimit</code> and <code class="language-plaintext highlighter-rouge">paymasterPostOpGasLimit</code> gas that remains <strong>unused</strong>.<br />
+ This penalty is only applied if the amount of the remaining unused gas is greater than or equal <code class="language-plaintext highlighter-rouge">40000</code> (<code class="language-plaintext highlighter-rouge">PENALTY_GAS_THRESHOLD</code>).<br />
+ This penalty is necessary to prevent the <code class="language-plaintext highlighter-rouge">UserOperations</code> from reserving large parts of the gas space in the bundle but leaving it unused and preventing the bundler from including other <code class="language-plaintext highlighter-rouge">UserOperations</code>.</li>
+  <li>After the execution of all calls, pay the collected fees from all <code class="language-plaintext highlighter-rouge">UserOperations</code> to the <code class="language-plaintext highlighter-rouge">beneficiary</code> address provided by the bundler.</li>
+</ul>
+
+<p><img src="/assets/eip-4337/bundle-seq.svg" alt="" /></p>
+
+<p>Before accepting a <code class="language-plaintext highlighter-rouge">UserOperation</code>, bundlers SHOULD use an RPC method to locally call the <code class="language-plaintext highlighter-rouge">handleOps</code> function on the <code class="language-plaintext highlighter-rouge">EntryPoint</code>,
+to verify that the signature is correct and the <code class="language-plaintext highlighter-rouge">UserOperation</code> actually pays fees; see the <a href="#useroperation-simulation">Simulation section below</a> for details.
+A node/bundler MUST reject a <code class="language-plaintext highlighter-rouge">UserOperation</code> that fails the validation, meaning not adding it to the local mempool
+and not propagating it to other peers.</p>
+  
+    <h3 id="json-rpc-api-for-erc-4337">
+      
+      
+        <a href="#json-rpc-api-for-erc-4337" class="anchor-link"></a> JSON-RPC API for <a href="/EIPS/eip-4337">ERC-4337</a>
+      
+      
+    </h3>
+
+<p>In order to support sending <code class="language-plaintext highlighter-rouge">UserOperation</code> objects to bundlers, which in turn propagate them through the P2P mempool,
+we introduce a set of JSON-RPC APIs including <code class="language-plaintext highlighter-rouge">eth_sendUserOperation</code> and <code class="language-plaintext highlighter-rouge">eth_getUserOperationReceipt</code>.</p>
+
+<p>The full definition of the new JSON-RPC API is outside the scope of this proposal.</p>
+  
+    <h3 id="support-for-eip-712-signatures">
+      
+      
+        <a href="#support-for-eip-712-signatures" class="anchor-link"></a> Support for <a href="/EIPS/eip-712">EIP-712</a> signatures
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">userOpHash</code> is calculated as an [EIP-712] typed message hash with the following parameters:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">bytes32</span> <span class="k">constant</span> <span class="n">TYPE_HASH</span> <span class="o">=</span>
+    <span class="nb">keccak256</span><span class="p">(</span>
+        <span class="s">"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"</span>
+    <span class="p">);</span>
+
+<span class="kt">bytes32</span> <span class="k">constant</span> <span class="n">PACKED_USEROP_TYPEHASH</span> <span class="o">=</span>
+    <span class="nb">keccak256</span><span class="p">(</span>
+        <span class="s">"PackedUserOperation(address sender,uint256 nonce,bytes initCode,bytes callData,bytes32 accountGasLimits,uint256 preVerificationGas,bytes32 gasFees,bytes paymasterAndData)"</span>
+    <span class="p">);</span>
+</code></pre></div></div>
+  
+    <h3 id="support-for-eip-7702-authorizations">
+      
+      
+        <a href="#support-for-eip-7702-authorizations" class="anchor-link"></a> Support for <a href="/EIPS/eip-7702">EIP-7702</a> authorizations
+      
+      
+    </h3>
+
+<p>On networks with <a href="/EIPS/eip-7702">EIP-7702</a> enabled, the <code class="language-plaintext highlighter-rouge">eth_sendUserOperation</code> method accepts an extra <code class="language-plaintext highlighter-rouge">eip7702Auth</code> parameter.
+If this parameter is set, it MUST be a valid <a href="/EIPS/eip-7702">EIP-7702</a> authorization tuple, and signed by the <code class="language-plaintext highlighter-rouge">sender</code> address.
+The bundler MUST add all required <code class="language-plaintext highlighter-rouge">eip7702Auth</code> of all <code class="language-plaintext highlighter-rouge">UserOperations</code> in a bundle to the <code class="language-plaintext highlighter-rouge">authorizationList</code> and execute
+the bundle using a transaction type <code class="language-plaintext highlighter-rouge">SET_CODE_TX_TYPE</code>.
+Additionally, the <code class="language-plaintext highlighter-rouge">UserOperation</code> hash calculation is updated to include the desired <a href="/EIPS/eip-7702">EIP-7702</a> delegation address.</p>
+
+<p>If the <code class="language-plaintext highlighter-rouge">initCode</code> field starts with <code class="language-plaintext highlighter-rouge">0x7702</code> right-padded with 18 zeros, and this account was deployed using an EIP-7702 transaction, then the hash is calculated as follows:</p>
+
+<ul>
+  <li>For the purpose of hash calculation, the first 20 bytes of the <code class="language-plaintext highlighter-rouge">initCode</code> field of the <code class="language-plaintext highlighter-rouge">UserOperation</code> are set to account’s EIP-7702 delegate address (fetched with EXTCODECOPY)</li>
+  <li>The <code class="language-plaintext highlighter-rouge">initCode</code> is not used to call a factory contract.</li>
+  <li>If the <code class="language-plaintext highlighter-rouge">initCode</code> is longer than 20 bytes, then the rest of the initCode is used to call an initialization function in the account itself.</li>
+</ul>
+
+<p>Note that a <code class="language-plaintext highlighter-rouge">UserOperation</code> may still be executed without such <code class="language-plaintext highlighter-rouge">initCode</code>.
+In this case the <code class="language-plaintext highlighter-rouge">EntryPoint</code> doesn’t hash the current <a href="/EIPS/eip-7702">EIP-7702 delegate</a>, and can be potentially executed against a modified account.</p>
+
+<p>Additionally, EIP-7702 defines the gas cost of executing an authorization equal to <code class="language-plaintext highlighter-rouge">PER_EMPTY_ACCOUNT_COST = 25000</code>.
+This gas consumption is not observable on-chain by the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract and MUST be included in the <code class="language-plaintext highlighter-rouge">preVerificationGas</code> value.</p>
+  
+    <h3 id="extension-paymasters">
+      
+      
+        <a href="#extension-paymasters" class="anchor-link"></a> Extension: paymasters
+      
+      
+    </h3>
+
+<p>We extend the <code class="language-plaintext highlighter-rouge">EntryPoint</code> logic to support <strong>paymasters</strong> that can sponsor transactions for other users. This feature can be used to allow application developers to subsidize fees for their users, allow users to pay fees with ERC-20 tokens and many other use cases. When the <code class="language-plaintext highlighter-rouge">paymasterAndData</code> field in the <code class="language-plaintext highlighter-rouge">UserOperation</code> is not empty, the <code class="language-plaintext highlighter-rouge">EntryPoint</code> implements a different flow for that UserOperation:</p>
+
+<p><img src="/assets/eip-4337/bundle-seq-pm.svg" alt="" /></p>
+
+<p>During the verification loop, in addition to calling <code class="language-plaintext highlighter-rouge">validateUserOp</code>, the <code class="language-plaintext highlighter-rouge">handleOps</code> execution also must check that the paymaster has enough ETH deposited with the <code class="language-plaintext highlighter-rouge">EntryPoint</code> to pay for the <code class="language-plaintext highlighter-rouge">UserOperation</code>, and then call <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code> on the paymaster to verify that the paymaster is willing to pay for the <code class="language-plaintext highlighter-rouge">UserOperation</code>. Note that in this case, the <code class="language-plaintext highlighter-rouge">validateUserOp</code> is called with a <code class="language-plaintext highlighter-rouge">missingAccountFunds</code> of 0 to reflect that the account’s deposit is not used for payment for this <code class="language-plaintext highlighter-rouge">UserOperation</code>.</p>
+
+<p>If the paymaster’s <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code> returns a non-empty <code class="language-plaintext highlighter-rouge">context</code> byte array, then <code class="language-plaintext highlighter-rouge">handleOps</code> must call <code class="language-plaintext highlighter-rouge">postOp</code> on the paymaster after making the main execution call.
+Otherwise, no call is done to the <code class="language-plaintext highlighter-rouge">postOp</code> function.</p>
+
+<p>Maliciously crafted paymasters could pose a risk of a DoS attack against the system and bundlers should take steps to mitigate it.
+As a mitigation, bundlers should use a reputation system for contracts they serve, and the paymaster must either limit its storage usage, or deposit a stake in a reputation system.
+Full specification of a reputation system is outside the scope of this proposal.</p>
+  
+    <h4 id="the-paymasteranddata-field-encoding-and-paymastersignature">
+      
+      
+        <a href="#the-paymasteranddata-field-encoding-and-paymastersignature" class="anchor-link"></a> The <code class="language-plaintext highlighter-rouge">paymasterAndData</code> field encoding and <code class="language-plaintext highlighter-rouge">paymasterSignature</code>
+      
+      
+    </h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">paymasterAndData</code> field is a byte array that contains a non-standard encoding of the following fields:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">paymasterAddress</code> - 20 bytes — the address of the paymaster contract</li>
+  <li><code class="language-plaintext highlighter-rouge">paymasterVerificationGasLimit</code> - 16 bytes - the gas limit for the verification function</li>
+  <li><code class="language-plaintext highlighter-rouge">postOpGasLimit</code> - 16 bytes - the gas limit for the postOp function</li>
+  <li><code class="language-plaintext highlighter-rouge">paymasterData</code> - the data that the paymaster contract will receive in the <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code> call</li>
+</ul>
+
+<p>The following data can optionally be appended to the <code class="language-plaintext highlighter-rouge">paymasterAndData</code> field:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">paymasterSignature</code> - the “signature” value byte array to be checked by the paymaster contract; this value can be provided <strong>without affecting the UserOperation hash</strong></li>
+  <li><code class="language-plaintext highlighter-rouge">paymasterSignatureLength</code> - 2 bytes - the exact length of the <code class="language-plaintext highlighter-rouge">paymasterSignature</code> parameter byte array</li>
+  <li><code class="language-plaintext highlighter-rouge">PAYMASTER_SIG_MAGIC</code> (<code class="language-plaintext highlighter-rouge">0x22e325a297439656</code>) - the magic value that is appended to indicate the use of the <code class="language-plaintext highlighter-rouge">paymasterSignature</code> feature by the UserOperation</li>
+</ul>
+
+<p>Note that as both the <code class="language-plaintext highlighter-rouge">signature</code> and the <code class="language-plaintext highlighter-rouge">paymasterSignature</code> fields do not affect the UserOperation hash, the signing by the Sender and the Paymaster can be performed in parallel.</p>
+
+<p>The paymaster interface is as follows:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function</span> <span class="n">validatePaymasterUserOp</span>
+    <span class="p">(</span><span class="n">PackedUserOperation</span> <span class="k">calldata</span> <span class="n">userOp</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">userOpHash</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">maxCost</span><span class="p">)</span>
+    <span class="k">external</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes</span> <span class="k">memory</span> <span class="n">context</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">validationData</span><span class="p">);</span>
+
+<span class="k">function</span> <span class="n">postOp</span>
+    <span class="p">(</span><span class="n">PostOpMode</span> <span class="n">mode</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">context</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">actualGasCost</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">actualUserOpFeePerGas</span><span class="p">)</span>
+    <span class="k">external</span><span class="p">;</span>
+
+<span class="k">enum</span> <span class="n">PostOpMode</span> <span class="p">{</span>
+    <span class="n">opSucceeded</span><span class="p">,</span> <span class="c1">// UserOperation succeeded
+</span>    <span class="n">opReverted</span> <span class="c1">// UserOperation reverted. paymaster still has to pay for gas.
+</span><span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code> must implement the following API to let entities like paymasters have a stake, and thus have more flexibility in their storage access.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// add a stake to the calling entity
+</span><span class="k">function</span> <span class="n">addStake</span><span class="p">(</span><span class="kt">uint32</span> <span class="n">_unstakeDelaySec</span><span class="p">)</span> <span class="k">external</span> <span class="k">payable</span><span class="p">;</span>
+
+<span class="c1">// unlock the stake (must wait unstakeDelay before can withdraw)
+</span><span class="k">function</span> <span class="n">unlockStake</span><span class="p">()</span> <span class="k">external</span><span class="p">;</span>
+
+<span class="c1">// withdraw the unlocked stake
+</span><span class="k">function</span> <span class="n">withdrawStake</span><span class="p">(</span><span class="kt">address</span> <span class="k">payable</span> <span class="n">withdrawAddress</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>The paymaster must also have a deposit, which the <code class="language-plaintext highlighter-rouge">EntryPoint</code> will charge <code class="language-plaintext highlighter-rouge">UserOperation</code> costs from.
+The deposit (for paying gas fees) is separate from the stake (which is locked).</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code> must implement the following interface to allow Paymasters (and optionally Accounts) to manage their deposit:</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// return the deposit of an account
+</span><span class="k">function</span> <span class="n">balanceOf</span><span class="p">(</span><span class="kt">address</span> <span class="n">account</span><span class="p">)</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">uint256</span><span class="p">);</span>
+
+<span class="c1">// add to the deposit of the given account
+</span><span class="k">function</span> <span class="n">depositTo</span><span class="p">(</span><span class="kt">address</span> <span class="n">account</span><span class="p">)</span> <span class="k">public</span> <span class="k">payable</span><span class="p">;</span>
+
+<span class="c1">// add to the deposit of the calling account
+</span><span class="k">receive</span><span class="p">()</span> <span class="k">external</span> <span class="k">payable</span><span class="p">;</span>
+
+<span class="c1">// withdraw from the deposit of the current account
+</span><span class="k">function</span> <span class="n">withdrawTo</span><span class="p">(</span><span class="kt">address</span> <span class="k">payable</span> <span class="n">withdrawAddress</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">withdrawAmount</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+
+<span class="c1">// get the currently executing UserOperation hash, or 0 if not called during the execution
+</span><span class="k">function</span> <span class="n">getCurrentUserOpHash</span><span class="p">()</span> <span class="k">public</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="kt">bytes32</span><span class="p">);</span>
+</code></pre></div></div>
+  
+    <h3 id="bundler-behavior-upon-receiving-a-useroperation">
+      
+      
+        <a href="#bundler-behavior-upon-receiving-a-useroperation" class="anchor-link"></a> Bundler behavior upon receiving a UserOperation
+      
+      
+    </h3>
+
+<p><img src="/assets/eip-4337/bundle-build-full-seq.svg" alt="" /></p>
+
+<p>Similar to an Ethereum transaction, the offchain flow of a <code class="language-plaintext highlighter-rouge">UserOperation</code> can be described as follows:</p>
+<ol>
+  <li>Client sends a <code class="language-plaintext highlighter-rouge">UserOperation</code> to the bundler through an RPC call <code class="language-plaintext highlighter-rouge">eth_sendUserOperation</code>.</li>
+  <li>Before including the <code class="language-plaintext highlighter-rouge">UserOperation</code> in the mempool, the bundler runs the <em>first validation</em> of the newly received UserOperation. If the <code class="language-plaintext highlighter-rouge">UserOperation</code> fails validation, the bundler drops it and returns an error in response to <code class="language-plaintext highlighter-rouge">eth_sendUserOperation</code>.</li>
+  <li>Later, once building a bundle, the bundler takes <code class="language-plaintext highlighter-rouge">UserOperations</code> from the mempool and runs the <em>second validation</em> of a single <code class="language-plaintext highlighter-rouge">UserOperation</code> on each of them. If it succeeds, it is scheduled for inclusion in the next bundle, and dropped otherwise.</li>
+  <li>Before submitting the new bundle onchain, the bundler performs the <em>third validation</em> of the entire <code class="language-plaintext highlighter-rouge">UserOperations</code> bundle. If any of the <code class="language-plaintext highlighter-rouge">UserOperations</code> fail validation, the bundler drops them. The bundler should keep track of the peers’ reputation. The full design of such a reputation system is outside the scope of this proposal.</li>
+</ol>
+
+<p>When a bundler receives a <code class="language-plaintext highlighter-rouge">UserOperation</code>, it must first run some basic sanity checks, namely that:</p>
+
+<ul>
+  <li>Either the <code class="language-plaintext highlighter-rouge">sender</code> is an existing contract, or the <code class="language-plaintext highlighter-rouge">initCode</code> is not empty (but not both)</li>
+  <li>If <code class="language-plaintext highlighter-rouge">initCode</code> is not empty, parse its first 20 bytes as a factory address or an <a href="/EIPS/eip-7702">EIP-7702</a> flag.<br />
+Record whether the factory is staked, in case the later simulation indicates that it needs to be. If the factory accesses the global state, it must be staked.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">verificationGasLimit</code> and <code class="language-plaintext highlighter-rouge">paymasterVerificationGasLimits</code> are lower than <code class="language-plaintext highlighter-rouge">MAX_VERIFICATION_GAS</code> (<code class="language-plaintext highlighter-rouge">500000</code>) and the <code class="language-plaintext highlighter-rouge">preVerificationGas</code> is high enough to pay for the calldata gas cost of serializing the <code class="language-plaintext highlighter-rouge">UserOperation</code> plus <code class="language-plaintext highlighter-rouge">PRE_VERIFICATION_OVERHEAD_GAS</code> (<code class="language-plaintext highlighter-rouge">50000</code>).</li>
+  <li>The <code class="language-plaintext highlighter-rouge">paymasterAndData</code> is either empty, or starts with the <strong>paymaster</strong> address, which is a contract that (i) currently has nonempty code on chain, (ii) has a sufficient deposit to pay for the UserOperation, and (iii) is not currently banned. During simulation, the paymaster’s stake is also checked, depending on its storage usage.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">callGasLimit</code> is at least the cost of a <code class="language-plaintext highlighter-rouge">CALL</code> with non-zero value.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">maxFeePerGas</code> and <code class="language-plaintext highlighter-rouge">maxPriorityFeePerGas</code> are above a configurable minimum value that the bundler is willing to accept. At the minimum, they are sufficiently high to be included with the upcoming <code class="language-plaintext highlighter-rouge">block.basefee</code>.</li>
+  <li>The <code class="language-plaintext highlighter-rouge">sender</code> doesn’t have another <code class="language-plaintext highlighter-rouge">UserOperation</code> already present in the mempool (or it replaces an existing entry with the same sender and nonce, with a higher <code class="language-plaintext highlighter-rouge">maxPriorityFeePerGas</code> and an equally increased <code class="language-plaintext highlighter-rouge">maxFeePerGas</code>).
+Only one <code class="language-plaintext highlighter-rouge">UserOperation</code> per sender may be included in a single bundle.
+A sender is exempt from this rule and may have multiple <code class="language-plaintext highlighter-rouge">UserOperations</code> in the mempool and in a bundle if it is staked.
+  
+    <h3 id="useroperation-simulation">
+      
+      
+        <a href="#useroperation-simulation" class="anchor-link"></a> UserOperation Simulation
+      
+      
+    </h3>
+  </li>
+</ul>
+
+<p>We define <code class="language-plaintext highlighter-rouge">UserOperation</code> simulation, as the offchain view call (or trace call) to the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract with the <code class="language-plaintext highlighter-rouge">UserOperation</code>, and the enforcement of the shared set of rules applied to the validation code, as part of the <code class="language-plaintext highlighter-rouge">UserOperation</code> validation.</p>
+  
+    <h4 id="simulation-rationale">
+      
+      
+        <a href="#simulation-rationale" class="anchor-link"></a> Simulation Rationale
+      
+      
+    </h4>
+<p>To validate a normal Ethereum transaction <code class="language-plaintext highlighter-rouge">tx</code>, the bundler performs static checks, like:</p>
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">ecrecover(tx.v, tx.r, tx.s)</code> has to return a valid EOA</li>
+  <li><code class="language-plaintext highlighter-rouge">tx.nonce</code> has to be the current nonce of the recovered EOA</li>
+  <li><code class="language-plaintext highlighter-rouge">balance</code> of the recovered EOA has to be sufficient to pay for the transaction</li>
+  <li><code class="language-plaintext highlighter-rouge">tx.gasLimit</code> has to be sufficient to cover the intrinsic gas cost of a transaction</li>
+  <li><code class="language-plaintext highlighter-rouge">chainId</code> has to match the current chain</li>
+</ol>
+
+<p>All of these checks do not rely on EVM state, and cannot be affected by other Accounts’ transactions.</p>
+
+<p>In contrast, <code class="language-plaintext highlighter-rouge">UserOperation</code> validation rely on EVM state (calls to <code class="language-plaintext highlighter-rouge">validateUserOp</code>, <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code>), can be changed by other <code class="language-plaintext highlighter-rouge">UserOperations</code> (or normal Ethereum transactions). Therefore, we introduce simulation as a new mechanism to check its validity.
+Intuitively, the aim of the simulation is to ensure the onchain validation code of a <code class="language-plaintext highlighter-rouge">UserOperation</code> is sandboxed, isolated from other <code class="language-plaintext highlighter-rouge">UserOperations</code> in the same bundle.</p>
+  
+    <h4 id="simulation-specification">
+      
+      
+        <a href="#simulation-specification" class="anchor-link"></a> Simulation Specification:
+      
+      
+    </h4>
+
+<p>To simulate a <code class="language-plaintext highlighter-rouge">UserOperation</code> validation, the bundler makes a view call to the <code class="language-plaintext highlighter-rouge">handleOps()</code> method with the <code class="language-plaintext highlighter-rouge">UserOperation</code> to check.</p>
+
+<p>Simulation should run only on the validation section of the <code class="language-plaintext highlighter-rouge">sender</code> and <code class="language-plaintext highlighter-rouge">paymaster</code>, and is not required for the <code class="language-plaintext highlighter-rouge">UserOperation</code>’s execution.
+A bundler MAY add second “always failed” <code class="language-plaintext highlighter-rouge">UserOperation</code> to the bundle, so that the simulation will 
+end as soon as the first UserOperation’s validation complete.</p>
+
+<p>The bundler MUST drop the <code class="language-plaintext highlighter-rouge">UserOperation</code> if the simulation reverts</p>
+
+<p>The simulated call performs the full validation, by calling:</p>
+
+<ol>
+  <li>If <code class="language-plaintext highlighter-rouge">initCode</code> is present, create the <code class="language-plaintext highlighter-rouge">sender</code> Account.</li>
+  <li><code class="language-plaintext highlighter-rouge">account.validateUserOp</code>.</li>
+  <li>if specified a paymaster: <code class="language-plaintext highlighter-rouge">paymaster.validatePaymasterUserOp</code>.</li>
+</ol>
+
+<p>Either <code class="language-plaintext highlighter-rouge">sender</code> or <code class="language-plaintext highlighter-rouge">paymaster</code> may return a time-range (<code class="language-plaintext highlighter-rouge">validAfter</code>/<code class="language-plaintext highlighter-rouge">validUntil</code>).
+The <code class="language-plaintext highlighter-rouge">UserOperation</code> MUST be valid at the current time to be considered valid, defined as <code class="language-plaintext highlighter-rouge">validAfter&lt;=block.timestamp</code>.</p>
+
+<p>A bundler MUST drop a <code class="language-plaintext highlighter-rouge">UserOperation</code> if it expires too soon and is likely to become invalid before the next block.
+To decode the returned time-ranges, the bundler MUST run the validation using tracing, to decode the return value from the <code class="language-plaintext highlighter-rouge">validateUserOp</code> and <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code> methods.</p>
+
+<p>To prevent DoS attacks on bundlers, they must make sure the validation methods above pass the validation rules, which constrain their usage of opcodes and storage.
+The full design of such a shared set of rules, applied to the validation code, is outside the scope of this proposal.</p>
+  
+    <h3 id="estimating-preverificationgas">
+      
+      
+        <a href="#estimating-preverificationgas" class="anchor-link"></a> Estimating <code class="language-plaintext highlighter-rouge">preVerificationGas</code>
+      
+      
+    </h3>
+
+<p>This document does not specify a canonical way to estimate this value,
+as it depends on non-permanent network properties such as operation and data gas pricing and the expected bundle size.</p>
+
+<p>However, the requirement is for the estimated value to be sufficient to cover the following costs:</p>
+
+<ul>
+  <li>Base bundle transaction cost. On Ethereum, <code class="language-plaintext highlighter-rouge">21000</code> gas divided by the number of <code class="language-plaintext highlighter-rouge">UserOperations</code>.</li>
+  <li>The calldata gas cost related to the <code class="language-plaintext highlighter-rouge">UserOperation</code> as defined in <a href="/EIPS/eip-2028">EIP-2028</a>.</li>
+  <li>Static <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract code execution.</li>
+  <li>Static memory cost when loading the fixed size fields of the <code class="language-plaintext highlighter-rouge">UserOperation</code> into EVM memory</li>
+  <li>Memory cost (including expansion cost) due to context returned by paymaster <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code> function, if relevant.
+    <ul>
+      <li>External call to the <code class="language-plaintext highlighter-rouge">innerHandleOp()</code> function which is a major part of the <code class="language-plaintext highlighter-rouge">EntryPoint</code> implementation.
+Note that this value is not static and depends on the <code class="language-plaintext highlighter-rouge">UserOperation</code>’s position in the bundle.</li>
+    </ul>
+  </li>
+  <li>[EIP-7702] authorization cost, if any.</li>
+  <li><a href="/EIPS/eip-7623">EIP-7623</a> calldata floor price increase is estimated as follows:
+    <ul>
+      <li>Apply the new formula for <code class="language-plaintext highlighter-rouge">tx.gasUsed</code>, replacing the <code class="language-plaintext highlighter-rouge">execution_gas_used</code> value with an estimate for value made for this UserOperation.</li>
+      <li>The estimate is calculated as a sum of all verification gas used during simulation (account creation, validation and paymaster validation) and 10% of the sum of execution and <code class="language-plaintext highlighter-rouge">postOp</code> gas limit.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>The bundler MUST require a slack in <code class="language-plaintext highlighter-rouge">PreVerificationGas</code> value, to accommodate memory expansion costs in the future bundle, and the expected position of the <code class="language-plaintext highlighter-rouge">UserOperation</code> in it.</p>
+  
+    <h3 id="alternative-mempools">
+      
+      
+        <a href="#alternative-mempools" class="anchor-link"></a> Alternative Mempools
+      
+      
+    </h3>
+
+<p>The simulation rules above are strict and prevent the ability of paymasters to grief the system.
+However, there might be use cases where specific paymasters can be validated
+(through manual auditing) and verified that they cannot cause any problem, while still require relaxing of the opcode rules.
+A bundler cannot simply “whitelist” a request from a specific paymaster: if that paymaster is not accepted by all
+bundlers, then its support will be sporadic at best.
+Instead, we introduce the term “alternate mempool”: a modified validation rules, and procedure of propagating them to other bundlers.</p>
+
+<p>The procedure of using alternate mempools is outside the scope of this proposal.</p>
+  
+    <h3 id="bundling">
+      
+      
+        <a href="#bundling" class="anchor-link"></a> Bundling
+      
+      
+    </h3>
+
+<p>Bundling is the process where a node/bundler collects multiple <code class="language-plaintext highlighter-rouge">UserOperations</code> and creates a single transaction to submit on-chain.</p>
+
+<p>During bundling, the bundler MUST:</p>
+
+<ul>
+  <li>Exclude <code class="language-plaintext highlighter-rouge">UserOperations</code> that access any sender address of another <code class="language-plaintext highlighter-rouge">UserOperation</code> in the same bundle.</li>
+  <li>Exclude <code class="language-plaintext highlighter-rouge">UserOperations</code> that access any address created by another <code class="language-plaintext highlighter-rouge">UserOperation</code> validation in the same bundle (via a factory).</li>
+  <li>For each paymaster used in the bundle, keep track of the balance while adding <code class="language-plaintext highlighter-rouge">UserOperations</code>. Ensure that it has sufficient deposit to pay for all the <code class="language-plaintext highlighter-rouge">UserOperations</code> that use it.</li>
+</ul>
+
+<p>After creating the bundle, before including the transaction in a block, the bundler SHOULD:</p>
+
+<ul>
+  <li>Run <code class="language-plaintext highlighter-rouge">debug_traceCall</code> with maximum possible gas, to enforce the validation rules on opcode and storage access,
+as well as to verify the entire <code class="language-plaintext highlighter-rouge">handleOps</code> bundle transaction,
+and use the consumed gas for the actual transaction execution.</li>
+  <li>If the call reverted, the bundler MUST use the trace result to find the entity that reverted the call. <br />
+This is the last entity that is CALL’ed by the <code class="language-plaintext highlighter-rouge">EntryPoint</code> prior to the revert. <br />
+(the bundler cannot assume the revert is <code class="language-plaintext highlighter-rouge">FailedOp</code>)</li>
+  <li>If any verification context rule was violated the bundlers MUST treat it the same as
+if this <code class="language-plaintext highlighter-rouge">UserOperation</code> reverted.</li>
+  <li>Remove the offending <code class="language-plaintext highlighter-rouge">UserOperation</code> from the current bundle and from mempool.</li>
+  <li>If the error is caused by a <code class="language-plaintext highlighter-rouge">factory</code> or a <code class="language-plaintext highlighter-rouge">paymaster</code>, and the <code class="language-plaintext highlighter-rouge">sender</code>
+of the <code class="language-plaintext highlighter-rouge">UserOperation</code> <strong>is not</strong> a staked entity, then issue a “ban” for the guilty factory or paymaster.</li>
+  <li>If the error is caused by a <code class="language-plaintext highlighter-rouge">factory</code> or a <code class="language-plaintext highlighter-rouge">paymaster</code>, and the <code class="language-plaintext highlighter-rouge">sender</code>
+of the <code class="language-plaintext highlighter-rouge">UserOperation</code> <strong>is</strong> a staked entity, do not ban the <code class="language-plaintext highlighter-rouge">factory</code> / <code class="language-plaintext highlighter-rouge">paymaster</code> from the mempool.
+Instead, issue a “ban” for the staked <code class="language-plaintext highlighter-rouge">sender</code> entity.</li>
+  <li>Repeat until <code class="language-plaintext highlighter-rouge">debug_traceCall</code> succeeds.</li>
+</ul>
+
+<p>As staked entries may use some kind of transient storage to communicate data between <code class="language-plaintext highlighter-rouge">UserOperations</code> in the same bundle,
+it is critical that the exact same opcode and precompile banning rules as well as storage access rules are enforced
+for the <code class="language-plaintext highlighter-rouge">handleOps</code> validation in its entirety as for individual <code class="language-plaintext highlighter-rouge">UserOperations</code>.
+Otherwise, attackers may be able to use the banned opcodes to detect running on-chain and trigger a <code class="language-plaintext highlighter-rouge">FailedOp</code> revert.</p>
+
+<p>When a bundler includes a bundle in a block it must ensure that earlier transactions in the block don’t make any <code class="language-plaintext highlighter-rouge">UserOperation</code> fail.</p>
+  
+    <h3 id="error-codes">
+      
+      
+        <a href="#error-codes" class="anchor-link"></a> Error codes.
+      
+      
+    </h3>
+
+<p>While performing validation, the <code class="language-plaintext highlighter-rouge">EntryPoint</code> must revert on failures. During simulation, the calling bundler MUST be able to determine which entity (<code class="language-plaintext highlighter-rouge">sender</code>,<code class="language-plaintext highlighter-rouge">factory</code> or <code class="language-plaintext highlighter-rouge">paymaster</code>) caused the failure.
+The attribution of a revert to an entity is done using call-tracing: the last entity called by the <code class="language-plaintext highlighter-rouge">EntryPoint</code> prior to the revert is the entity that caused the revert.</p>
+<ul>
+  <li>For diagnostic purposes, the <code class="language-plaintext highlighter-rouge">EntryPoint</code> must only revert with explicit <code class="language-plaintext highlighter-rouge">SignatureValidationFailed()</code>, <code class="language-plaintext highlighter-rouge">FailedOp()</code> or <code class="language-plaintext highlighter-rouge">FailedOpWithRevert()</code> errors.</li>
+  <li>The message of the error starts with event code, AA##</li>
+  <li>Event code starting with “AA1” signifies an error during <code class="language-plaintext highlighter-rouge">sender</code> creation</li>
+  <li>Event code starting with “AA2” signifies an error during <code class="language-plaintext highlighter-rouge">sender</code> validation (<code class="language-plaintext highlighter-rouge">validateUserOp</code>)</li>
+  <li>Event code starting with “AA3” signifies an error during <code class="language-plaintext highlighter-rouge">paymaster</code> validation (<code class="language-plaintext highlighter-rouge">validatePaymasterUserOp</code>)</li>
+</ul>
+  
+    <h3 id="factory-contracts">
+      
+      
+        <a href="#factory-contracts" class="anchor-link"></a> Factory contracts
+      
+      
+    </h3>
+
+<p>All <code class="language-plaintext highlighter-rouge">factory</code> contracts MUST check that all calls to the <code class="language-plaintext highlighter-rouge">createAccount()</code> function originate from the <code class="language-plaintext highlighter-rouge">entryPoint.senderCreator()</code> address.</p>
+  
+    <h3 id="paymasters-contracts">
+      
+      
+        <a href="#paymasters-contracts" class="anchor-link"></a> Paymasters contracts
+      
+      
+    </h3>
+
+<p>All <code class="language-plaintext highlighter-rouge">paymaster</code> contracts MUST check that all calls to the <code class="language-plaintext highlighter-rouge">validatePaymasterUserOp()</code> and <code class="language-plaintext highlighter-rouge">postOp()</code> functions originate from the <code class="language-plaintext highlighter-rouge">EntryPoint</code>.</p>
+  
+    <h3 id="aggregator-contracts">
+      
+      
+        <a href="#aggregator-contracts" class="anchor-link"></a> Aggregator contracts
+      
+      
+    </h3>
+
+<p>All <code class="language-plaintext highlighter-rouge">aggregator</code> contracts MUST check that all calls to the <code class="language-plaintext highlighter-rouge">validateSignatures()</code> function originates from the <code class="language-plaintext highlighter-rouge">EntryPoint</code>.</p>
+  
+    <h3 id="eip-7702-delegated-smart-contract-accounts">
+      
+      
+        <a href="#eip-7702-delegated-smart-contract-accounts" class="anchor-link"></a> EIP-7702 delegated Smart Contract Accounts
+      
+      
+    </h3>
+
+<p>All EIP-7702 delegated Smart Contract Account implementations MUST check that all calls to the initialization function originate from the <code class="language-plaintext highlighter-rouge">entryPoint.senderCreator()</code> address.</p>
+
+<p>There is no way for the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract to know whether an EIP-7702 account has been initialized or not, and therefore the EIP-7702 account initialization code, can be called multiple times through <code class="language-plaintext highlighter-rouge">EntryPoint</code>.
+The Account code SHOULD only allow calling it once and the Wallet Application SHOULD NOT pass the <code class="language-plaintext highlighter-rouge">initCode</code> repeatedly.</p>
+  
+    <h3 id="smart-contract-accounts">
+      
+      
+        <a href="#smart-contract-accounts" class="anchor-link"></a> Smart Contract Accounts
+      
+      
+    </h3>
+  
+    <h4 id="storage-layout-collisions">
+      
+      
+        <a href="#storage-layout-collisions" class="anchor-link"></a> Storage layout collisions
+      
+      
+    </h4>
+
+<p>It is expected that most of ERC-4337 Smart Contract Account will be upgradeable,
+either via on-chain delegate proxy contracts or via EIP-7702.</p>
+
+<p>When changing the underlying implementation, all Accounts MUST ensure that there are no conflicts in the storage layout
+of the two contracts.</p>
+
+<p>One common approach to this problem is often referred to as “diamond storage” and is fully described in <a href="/EIPS/eip-7201">ERC-7201</a>.</p>
+  
+    <h3 id="transient-storage">
+      
+      
+        <a href="#transient-storage" class="anchor-link"></a> Transient Storage
+      
+      
+    </h3>
+
+<p>Contracts using the <a href="/EIPS/eip-1153">EIP-1153</a> transient storage MUST take into account that ERC-4337 allows multiple
+<code class="language-plaintext highlighter-rouge">UserOperations</code> from different unrelated <code class="language-plaintext highlighter-rouge">sender</code> addresses to be included in the same underlying transaction.
+The transient storage MUST be cleaned up manually if contains any sensitive information or is used for access control.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The main challenge with a purely “Smart Contract Accounts” based Account Abstraction system is DoS safety: how can a block builder including an operation make sure that it will actually pay fees, without having to first execute the entire operation?
+Requiring the block builder to execute the entire operation opens a DoS attack vector, as an attacker could easily send many operations that pretend to pay a fee but then revert at the last moment after a long execution.
+Similarly, to prevent attackers from cheaply clogging the mempool, nodes in the P2P network need to check if an operation will pay a fee before they are willing to forward it.</p>
+
+<p>The first step is a clean separation between validation (acceptance of UserOperation, and acceptance to pay) and execution.
+In this proposal, we expect Accounts to have a <code class="language-plaintext highlighter-rouge">validateUserOp</code> method that takes as input a <code class="language-plaintext highlighter-rouge">UserOperation</code>, verifies the signature and pays the fee.
+Only if this method returns successfully, the execution will happen.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code>-based approach allows for a clean separation between verification and execution, and keeps Smart Contract Accounts’ logic simple. It enforces the simple rule that only after validation is successful and the <code class="language-plaintext highlighter-rouge">UserOperation</code> can pay, the execution is done and only done once, and also guarantees the fee payment.</p>
+  
+    <h3 id="validation-rules-rationale">
+      
+      
+        <a href="#validation-rules-rationale" class="anchor-link"></a> Validation Rules Rationale
+      
+      
+    </h3>
+<p>The next step is protecting the bundlers from denial-of-service attacks by a mass number of <code class="language-plaintext highlighter-rouge">UserOperations</code> that appear to be valid (and pay) but that eventually revert, and thus block the bundler from processing valid <code class="language-plaintext highlighter-rouge">UserOperations</code>.</p>
+
+<p>There are two types of <code class="language-plaintext highlighter-rouge">UserOperations</code> that can fail validation:</p>
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">UserOperations</code> that succeed in initial validation (and accepted into the mempool), but rely on the environment state to fail later when attempting to include them in a block.</li>
+  <li><code class="language-plaintext highlighter-rouge">UserOperations</code> that are valid when checked independently but fail when bundled together to be put on-chain.
+To prevent such rogue <code class="language-plaintext highlighter-rouge">UserOperations</code>, the bundler is required to follow a set of shared set of rules applied to the validation code, to prevent such denial-of-service attacks.</li>
+</ol>
+  
+    <h3 id="reputation-rationale">
+      
+      
+        <a href="#reputation-rationale" class="anchor-link"></a> Reputation Rationale
+      
+      
+    </h3>
+
+<p>UserOperation’s storage access rules prevent them from interfering with each other.
+But “global” entities - paymasters and factories are accessed by multiple <code class="language-plaintext highlighter-rouge">UserOperations</code>, and thus might invalidate multiple previously valid <code class="language-plaintext highlighter-rouge">UserOperations</code>.</p>
+
+<p>To prevent abuse, we throttle down (or completely ban for a period of time) an entity that causes invalidation of a large number of <code class="language-plaintext highlighter-rouge">UserOperations</code> in the mempool.
+To prevent such entities from “Sybil-attack”, we require them to stake with the system, and thus make such DoS attack very expensive.
+Note that this stake is never slashed. There is no slashing mechanism involved and the only use for the stake in sybil attack prevention.
+The stake can be withdrawn at any time after the specified unstake delay.</p>
+
+<p>Unstaked entities are allowed, under the rules below.</p>
+
+<p>When staked, an entity is less restricted in its use of contract storage.</p>
+
+<p>The stake value is not enforced on-chain, but specifically by each bundler while simulating a transaction.</p>
+  
+    <h3 id="paymasters">
+      
+      
+        <a href="#paymasters" class="anchor-link"></a> Paymasters
+      
+      
+    </h3>
+
+<p>Paymaster contracts allow the abstraction of gas: having a contract, that is not the sender of the transaction, to pay for the transaction fees.</p>
+
+<p>Paymaster architecture allows them to follow the model of “pre-charge, and later refund”.
+E.g. a token-paymaster may pre-charge the user with the max possible price of the transaction, and refund the user with the excess afterwards.</p>
+  
+    <h3 id="first-time-smart-contract-account-creation">
+      
+      
+        <a href="#first-time-smart-contract-account-creation" class="anchor-link"></a> First-time Smart Contract Account creation
+      
+      
+    </h3>
+
+<p>NOTE: for contracts using EIP-7702 this flow is described in <a href="#support-for-eip-7702-authorizations">Support for EIP-7702 authorizations</a>.</p>
+
+<p>It is an important design goal of this proposal to replicate the key property of EOAs that users do not need to perform some custom action or rely on an existing user to create their Smart Contract Account;
+they can simply generate an address locally and immediately start accepting funds.</p>
+
+<p>The Smart Contract Account creation itself is done by a “factory” contract, with some Account-specific data.
+The Factory is expected to use <code class="language-plaintext highlighter-rouge">CREATE2 0xF5</code> (not <code class="language-plaintext highlighter-rouge">CREATE 0xF0</code>) to create the Account, so that the order of creation of the Accounts doesn’t interfere with the generated addresses.
+The <code class="language-plaintext highlighter-rouge">initCode</code> field (if non-zero length) is parsed as a 20-byte <code class="language-plaintext highlighter-rouge">factory</code> address, followed by <code class="language-plaintext highlighter-rouge">calldata</code> to pass to this address.
+This method call is expected to create the Account and return its address.
+If the factory does use <code class="language-plaintext highlighter-rouge">CREATE2 0xF5</code> or some other deterministic method to create the Account, it’s expected to return the Account address even if it had already been created.
+This comes to make it easier for bundlers to query the address without knowing if the Account has already been deployed, by simulating a call to <code class="language-plaintext highlighter-rouge">entryPoint.getSenderAddress()</code>, which calls the <code class="language-plaintext highlighter-rouge">factory</code> under the hood.
+When <code class="language-plaintext highlighter-rouge">initCode</code> is specified, if either the <code class="language-plaintext highlighter-rouge">sender</code> address points to an existing contract or the <code class="language-plaintext highlighter-rouge">sender</code> address still does not exist after calling the <code class="language-plaintext highlighter-rouge">initCode</code>,
+then the operation is aborted.
+The <code class="language-plaintext highlighter-rouge">initCode</code> is not called directly from the <code class="language-plaintext highlighter-rouge">EntryPoint</code>, but from another address. This is a security measure as calls originated from <code class="language-plaintext highlighter-rouge">EntryPoint</code> may be unconditionally trusted by wallets or paymasters.
+If the contract created by this factory method later accepts a call to <code class="language-plaintext highlighter-rouge">validateUserOp</code> to validate the <code class="language-plaintext highlighter-rouge">UserOperation</code>’s signature, the account creation UserOperation is successfully validated.
+For security reasons, it is important that the generated contract address will depend on the initial signature.
+This way, even if someone can deploy an Account at that address, he can’t set different credentials to control it.
+The Factory has to be staked if it accesses global storage.
+NOTE: In order for the Wallet Application to determine the “counterfactual” address of the Account prior to its creation,
+it makes a static call to the <code class="language-plaintext highlighter-rouge">entryPoint.getSenderAddress()</code></p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>This ERC does not change the consensus layer, so there are no backwards compatibility issues for Ethereum as a whole. Unfortunately it is not easily compatible with pre-<a href="/EIPS/eip-4337">ERC-4337</a> Smart Contract Accounts, because those Accounts do not have a <code class="language-plaintext highlighter-rouge">validateUserOp</code> function. If the Smart Contract Account has a function for authorizing a trusted <code class="language-plaintext highlighter-rouge">UserOperation</code> submitter, then this could be fixed by creating an <a href="/EIPS/eip-4337">ERC-4337</a> compatible Account that re-implements the verification logic as a wrapper and setting it to be the original Account’s trusted <code class="language-plaintext highlighter-rouge">UserOperation</code> submitter.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract will need to be audited and formally verified, because it will serve as a central trust point for <em>all</em> [ERC-4337]. In total, this architecture reduces auditing and formal verification load for the ecosystem, because the amount of work that individual <em>accounts</em> have to do becomes much smaller (they need only verify the <code class="language-plaintext highlighter-rouge">validateUserOp</code> function and its “check signature and pay fees” logic) and check that other functions are <code class="language-plaintext highlighter-rouge">msg.sender == ENTRY_POINT</code> gated (perhaps also allowing <code class="language-plaintext highlighter-rouge">msg.sender == self</code>), but it is nevertheless the case that this is done precisely by concentrating security risk in the <code class="language-plaintext highlighter-rouge">EntryPoint</code> contract that needs to be verified to be very robust.</p>
+
+<p>Verification would need to cover two primary claims (not including claims needed to protect paymasters, and claims needed to establish p2p-level DoS resistance):</p>
+
+<ul>
+  <li><strong>Safety against arbitrary hijacking</strong>: The <code class="language-plaintext highlighter-rouge">EntryPoint</code> only calls to the <code class="language-plaintext highlighter-rouge">sender</code> with <code class="language-plaintext highlighter-rouge">userOp.calldata</code> and only if <code class="language-plaintext highlighter-rouge">validateUserOp</code> to that specific <code class="language-plaintext highlighter-rouge">sender</code> has passed.</li>
+  <li><strong>Safety against fee draining</strong>: If the <code class="language-plaintext highlighter-rouge">EntryPoint</code> calls <code class="language-plaintext highlighter-rouge">validateUserOp</code> and passes, it also must make the generic call with calldata equal to <code class="language-plaintext highlighter-rouge">userOp.calldata</code></li>
+</ul>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Vitalik Buterin&nbsp;(<a href="https://github.com/vbuterin">@vbuterin</a>), Yoav Weiss&nbsp;(<a href="https://github.com/yoavw">@yoavw</a>), Dror Tirosh&nbsp;(<a href="https://github.com/drortirosh">@drortirosh</a>), Shahaf Nacson&nbsp;(<a href="https://github.com/shahafn">@shahafn</a>), Alex Forshtat&nbsp;(<a href="https://github.com/forshtat">@forshtat</a>), Kristof Gazso&nbsp;(<a href="https://github.com/kristofgazso">@kristofgazso</a>), Tjaden Hess&nbsp;(<a href="https://github.com/tjade273">@tjade273</a>), "ERC-4337: Account Abstraction Using Alt Mempool," <em>Ethereum Improvement Proposals</em>, no. 4337, September 2021. Available: https://eips.ethereum.org/EIPS/eip-4337.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-4337: Account Abstraction Using Alt Mempool",
+    "name": "ERC-4337: Account Abstraction Using Alt Mempool",
+    "author": "Vitalik Buterin (@vbuterin), Yoav Weiss (@yoavw), Dror Tirosh (@drortirosh), Shahaf Nacson (@shahafn), Alex Forshtat (@forshtat), Kristof Gazso (@kristofgazso), Tjaden Hess (@tjade273)",
+    "dateCreated": "2021-09-29",
+    "datePublished": "2021-09-29",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-4337-account-abstraction-via-entry-point-contract-specification/7160",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2021"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

@@ -1,0 +1,318 @@
+Advanced Concepts
+Serialization
+On this page
+Serialization
+Proofs and verification keys can be serialized to disk for convenience and interoperability.  Compiled
+constraint systems also have a cache protocol which can be used to speed up the time it takes to generate
+and verify proofs.  In the following examples, pretend we have a dummy
+ZkProgram
+like so:
+const
+Dummy
+=
+ZkProgram
+(
+{
+name
+:
+"Dummy"
+,
+publicOutput
+:
+null
+,
+methods
+:
+{
+dummy
+:
+{
+privateInputs
+:
+[
+]
+,
+method
+:
+async
+(
+)
+=>
+{
+return
+{
+publicOutput
+:
+null
+}
+;
+}
+,
+}
+,
+}
+,
+}
+)
+;
+Serializing Proofs and Verification Keys
+​
+Proofs and verification keys in o1js are really representations of
+Pickles
+artifacts that are passed through
+the bindings layer into OCaml.  In JavaScript, we only store base64 encoded strings, which can be easily
+serialized to save for later use.
+// Compile once to generate the Verification Key
+const
+dummy
+=
+await
+Dummy
+.
+compile
+(
+)
+;
+// Serialize the verification key
+fs
+.
+writeFileSync
+(
+"dummy_vk.json"
+,
+VerificationKey
+.
+toJSON
+(
+dummy
+.
+verificationKey
+)
+)
+;
+const
+proof
+=
+await
+Dummy
+.
+dummy
+(
+)
+;
+// Serialize the proof
+fs
+.
+writeFileSync
+(
+"dummy_proof.json"
+,
+JSON
+.
+stringify
+(
+proof
+.
+proof
+.
+toJSON
+(
+)
+)
+)
+;
+Using the Cache Protocol for ZkProgram and SmartContract
+​
+When calling
+compile
+on a
+ZkProgram
+or
+SmartContract
+, you can pass in a cache parameter.  The cache must
+be an object that implements the Cache protocol.  o1js exports a file system cache implementation by default.
+Here's an example of how to use it:
+// Pass in a cache to write the artifacts to disk
+const
+cache
+=
+Cache
+.
+FileSystemDefault
+;
+await
+Dummy
+.
+compile
+(
+{
+cache
+}
+)
+;
+Check out the
+api reference
+for more details.
+Edit this page
+Previous
+Full Proof Flow with ZkProgram
+Next
+Recursion
+Serializing Proofs and Verification Keys
+Using the Cache Protocol for ZkProgram and SmartContract
+Advanced Concepts
+Serialization
+On this page
+Serialization
+Proofs and verification keys can be serialized to disk for convenience and interoperability.  Compiled
+constraint systems also have a cache protocol which can be used to speed up the time it takes to generate
+and verify proofs.  In the following examples, pretend we have a dummy
+ZkProgram
+like so:
+const
+Dummy
+=
+ZkProgram
+(
+{
+name
+:
+"Dummy"
+,
+publicOutput
+:
+null
+,
+methods
+:
+{
+dummy
+:
+{
+privateInputs
+:
+[
+]
+,
+method
+:
+async
+(
+)
+=>
+{
+return
+{
+publicOutput
+:
+null
+}
+;
+}
+,
+}
+,
+}
+,
+}
+)
+;
+Serializing Proofs and Verification Keys
+​
+Proofs and verification keys in o1js are really representations of
+Pickles
+artifacts that are passed through
+the bindings layer into OCaml.  In JavaScript, we only store base64 encoded strings, which can be easily
+serialized to save for later use.
+// Compile once to generate the Verification Key
+const
+dummy
+=
+await
+Dummy
+.
+compile
+(
+)
+;
+// Serialize the verification key
+fs
+.
+writeFileSync
+(
+"dummy_vk.json"
+,
+VerificationKey
+.
+toJSON
+(
+dummy
+.
+verificationKey
+)
+)
+;
+const
+proof
+=
+await
+Dummy
+.
+dummy
+(
+)
+;
+// Serialize the proof
+fs
+.
+writeFileSync
+(
+"dummy_proof.json"
+,
+JSON
+.
+stringify
+(
+proof
+.
+proof
+.
+toJSON
+(
+)
+)
+)
+;
+Using the Cache Protocol for ZkProgram and SmartContract
+​
+When calling
+compile
+on a
+ZkProgram
+or
+SmartContract
+, you can pass in a cache parameter.  The cache must
+be an object that implements the Cache protocol.  o1js exports a file system cache implementation by default.
+Here's an example of how to use it:
+// Pass in a cache to write the artifacts to disk
+const
+cache
+=
+Cache
+.
+FileSystemDefault
+;
+await
+Dummy
+.
+compile
+(
+{
+cache
+}
+)
+;
+Check out the
+api reference
+for more details.
+Edit this page

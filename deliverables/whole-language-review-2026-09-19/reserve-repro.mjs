@@ -1,0 +1,13 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {prepareFinancialLifecycle,LIFECYCLE_VERSION} from '/home/charl/Moriarty-aeon-study/experiments/moriarty-language/src/successor/financial-lifecycle.ts';
+const directory='/home/charl/research/moriarty-whole-design-2026-09-19/';
+const state=JSON.parse(readFileSync('/home/charl/Moriarty-aeon-study/experiments/moriarty-language/spec/successor/examples/financial-lifecycle-payment.state.json','utf8'));
+state.work.remaining='2';
+const actions=[{kind:'Transfer',id:'D1',from:'Lender',to:'Borrower',asset:'Cash',amount:'100'},{kind:'Originate',obligationId:'Loan1',transferId:'D1',originationId:'O1',debtor:'Borrower',creditor:'Lender',nominalAmount:'100',denomination:'Cash',settlementAsset:'Cash',conversion:{mantissa:'1',scale:'0',rounding:'none'},allocationRule:'AccrualFirst',accrualTerms:{numerator:'1',denominator:'10',rounding:'floor',periodSeconds:'60',firstPeriodStart:'1000'},nominalLiabilityCap:'110'}];
+const firstInput={schemaVersion:LIFECYCLE_VERSION,state,actions};
+const first=prepareFinancialLifecycle(JSON.stringify(firstInput));
+const secondInput=first.status==='Prepared'?{schemaVersion:LIFECYCLE_VERSION,state:first.post,actions:[{kind:'Transfer',id:'P1',from:'Borrower',to:'Lender',asset:'Cash',amount:'100'},{kind:'Repay',allocationId:'A1',transferId:'P1',obligationId:'Loan1',payer:'Borrower',nominalAmount:'100'}]}:null;
+const second=secondInput?prepareFinancialLifecycle(JSON.stringify(secondInput)):null;
+const result={timestamp:new Date().toISOString(),node:process.version,firstInput,first,secondInput,second};
+writeFileSync(directory+'reserve-repro-output.json',JSON.stringify(result,null,2)+'\n');
+console.log(JSON.stringify({firstStatus:first.status,work:first.post?.work,outstanding:first.post?.obligations[0]?.outstanding,second}));

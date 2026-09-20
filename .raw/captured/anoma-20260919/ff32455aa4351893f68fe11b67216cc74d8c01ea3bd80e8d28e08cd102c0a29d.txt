@@ -1,0 +1,333 @@
+Juvix Docs
+anoma/juvix
+Home
+How-to guides
+Tutorials
+Reference
+Reference
+Language reference
+Language reference
+Functions
+Builtins
+Data types
+Data types
+Table of contents
+Syntax of Data Type Declaration
+General Declaration
+Examples of data types
+Records
+Traits
+Modules
+Local definitions
+Control structures
+Comments
+Pragmas
+Axioms
+Syntax extensions
+Standard library
+Example programs
+Tooling
+Compiler implementation
+Standard library
+Packages and Projects
+Blog
+Talks
+Table of contents
+Syntax of Data Type Declaration
+General Declaration
+Examples of data types
+Reference
+Language reference
+Defining Data Types in Juvix
+¶
+A crucial aspect of any programming language is the ability to define custom
+data types. In Juvix, these are known as
+inductive types
+. An inductive type is
+a type with elements constructed from a finite set of
+constructors
+.
+As a first example, consider the data type
+Bool
+with two
+constructors
+true
+and
+false
+.
+type
+Bool
+:=
+|
+true
+:
+Bool
+|
+false
+:
+Bool
+;
+Syntax of Data Type Declaration
+¶
+General Declaration
+¶
+The declaration of a data type in Juvix consists of the keyword
+type
+, followed
+by a unique name, optional type parameters, and constructors.
+type <name> <type-parameters> :=
+    | <constructor1> : <type1>
+    | ...
+    | <constructorn> : <typen>;
+In this syntax:
+<name>
+represents a unique name for the declared data type.
+<type-parameters>
+denote optional type parameters in the form
+A B C ...
+or
+  with typing information
+(A : Type)
+.
+<constructor1>
+through
+<constructorn>
+are the constructors of the data
+  type. Each constructor has a unique name and a type, which can be a function type with
+  the type of the declared data type in the target.
+While there are variations in the syntax for declaring a data type (see the
+ADT
+syntax
+and
+record syntax
+), the most general syntax
+is the one outlined above.
+Note
+A data type declaration implicitly declares a
+module
+with
+the same name as the data type, containing the symbols of the constructors,
+and the type of the data type itself. One can open this module to access
+these symbols or hide it to prevent access to them.
+Examples of data types
+¶
+The
+Unit
+type has a single constructor named
+unit
+.
+type
+Unit
+:=
+unit
+:
+Unit
+;
+Below is a declaration of the
+Nat
+type unary natural numbers. It
+introduces two constructors:
+zero
+and
+suc
+. For instance,
+suc
+zero
+represents one, while
+suc (suc zero)
+represents two.
+type
+Nat
+:=
+|
+zero
+:
+Nat
+|
+suc
+:
+Nat
+->
+Nat
+;
+These constructors can be used as regular functions or as patterns in
+pattern matching. Here is an example of a function adding two natural
+numbers:
+syntax
+operator
++
+additive
+;
++
+:
+Nat
+->
+Nat
+->
+Nat
+|
+Nat
+.
+zero
+b
+:=
+b
+|
+(
+Nat
+.
+suc
+a
+)
+b
+:=
+Nat
+.
+suc
+(
+a
++
+b
+)
+;
+ADT syntax
+¶
+As an alternative to the above syntax, we can use a more familiar and
+compact syntax for declaring data types. This syntax is similar to the
+ADT syntax in Haskell, OCaml or other functional languages.
+type <name> <type-parameters> :=
+  | <constructor1> <arg1-1> ... <arg1-n>
+  | ...
+  | <constructorN> <argn-1> ... <argn-n>;
+Instead of specifying the type of each constructor, we only provide the types of constructor arguments.
+If a constructor as above has no arguments, then its type is the data
+type being declared. If the constructor has arguments, then its type
+is the function type from the types of the arguments to the data type
+being declared.
+For example, the
+Nat
+type can be declared as follows:
+type
+Nat
+:=
+|
+Z
+|
+S
+Nat
+;
+Another example is the
+List
+type, which is polymorphic in the type of its
+elements.
+type
+List
+A
+:=
+|
+Nil
+|
+Cons
+A
+(
+List
+A
+)
+;
+Polymorphic data type
+¶
+A data type can have type parameters. When a data type has a type parameter
+A
+, it is referred to as
+polymorphic in
+A
+.
+A classic example of this concept is the
+List
+type, which is polymorphic in
+the type of its list elements.
+type
+List
+(
+A
+:
+Type
+)
+:=
+|
+nil
+:
+List
+A
+|
+::
+:
+A
+->
+List
+A
+->
+List
+A
+;
+open
+List
+;
+syntax
+operator
+::
+cons
+;
+The following function determines whether an element is in a list or not.
+isElem
+{
+A
+}
+(
+eq
+:
+A
+->
+A
+->
+Bool
+)
+(
+s
+:
+A
+)
+:
+List
+A
+->
+Bool
+|
+nil
+:=
+false
+|
+(
+x
+::
+xs
+)
+:=
+eq
+s
+x
+||
+isElem
+eq
+s
+xs
+;
+For more examples of inductive types and how to use them, see
+the Juvix
+standard library
+.
+2025-06-10
+2023-04-17
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! Help us improve this page by opening an issue on GitHub.

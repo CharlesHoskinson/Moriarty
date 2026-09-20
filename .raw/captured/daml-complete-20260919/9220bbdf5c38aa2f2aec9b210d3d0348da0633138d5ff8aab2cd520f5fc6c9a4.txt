@@ -1,0 +1,176 @@
+On this page
+Docker Issues
+Image Pull Failures
+Resource Limits
+Volume Permission Errors
+Kubernetes Issues
+Helm Chart Errors
+PVC Provisioning Failures
+Init Container Failures
+Network Issues
+DNS Resolution
+Firewall Rules
+Troubleshooting
+Installation Issues
+Copy page
+Copy page
+Resolving Docker, Kubernetes, and network problems during validator installation
+Copy page
+Copy page
+Installation failures typically fall into three categories: container runtime issues, Kubernetes provisioning problems, or network-level blocks that prevent your validator from reaching the synchronizer.
+​
+Docker Issues
+​
+Image Pull Failures
+If
+docker compose up
+fails with an image pull error:
+Error response from daemon: pull access denied...
+Possible causes:
+A typo in the image tag. Verify the image name and version in your
+docker-compose.yaml
+or
+.env
+file against the release notes.
+Stale cached credentials from an old
+docker login
+.
+​
+Resource Limits
+Containers that crash immediately or show
+OOMKilled
+status need more memory.
+# Check if any container was OOM-killed
+docker
+inspect
+--format=
+'{{.State.OOMKilled}}'
+<
+container_nam
+e
+>
+Minimum resource requirements for a validator:
+Memory:
+8 GB allocated to Docker
+CPU:
+4 cores
+Disk:
+50 GB free
+For Colima users on macOS:
+colima
+stop
+colima
+start
+--memory
+8
+--cpu
+4
+--disk
+100
+​
+Volume Permission Errors
+If a container fails with permission denied errors on mounted volumes:
+java.io.IOException: Permission denied: /data/canton
+The container user (typically UID 1000) must have write access to the host directory. Fix this with:
+sudo
+chown
+-R
+1000:1000
+./data
+​
+Kubernetes Issues
+​
+Helm Chart Errors
+Common Helm failures during
+helm install
+or
+helm upgrade
+:
+Error: INSTALLATION FAILED: cannot re-use a name that is still in use
+— A previous release exists. Use
+helm upgrade
+instead, or uninstall first with
+helm uninstall validator -n validator
+.
+Error: template: splice-validator/templates/...: ... not defined
+— Your values file references a variable that does not exist in this chart version. Compare your
+validator-values.yaml
+against the chart’s
+values.yaml
+for the target version.
+# Inspect the chart's default values
+helm
+show
+values
+splice-validator/splice-validator
+--version
+0.5.4
+​
+PVC Provisioning Failures
+If pods remain in
+Pending
+state, check PersistentVolumeClaim (PVC) events:
+kubectl
+describe
+pvc
+-n
+validator
+Common causes:
+The StorageClass does not exist in your cluster. List available classes with
+kubectl get storageclass
+.
+Insufficient disk quota in your cloud provider account.
+The requested storage size exceeds available capacity.
+​
+Init Container Failures
+If the main container never starts, an init container may be failing:
+kubectl
+logs
+-n
+validator
+<
+pod-nam
+e
+>
+-c
+init-db
+--previous
+Init containers commonly fail due to database connectivity issues — the PostgreSQL instance is unreachable or the credentials are wrong.
+​
+Network Issues
+​
+DNS Resolution
+If your validator cannot resolve synchronizer hostnames:
+# From inside a Kubernetes pod
+kubectl
+exec
+-n
+validator
+deployment/validator-app
+--
+nslookup
+sequencer.sync.global
+If DNS fails, check your cluster’s CoreDNS pods and any custom DNS configuration.
+​
+Firewall Rules
+Your validator needs outbound access on the following ports:
+443 (HTTPS/gRPC-TLS)
+— to the synchronizer sequencer
+5432
+— to your PostgreSQL database (if external)
+443
+— to your OIDC provider (if using authentication)
+Test connectivity:
+nc
+-zv
+sequencer.sync.global
+443
+nc
+-zv
+sequencer.test.sync.global
+443
+If connections time out, work with your network team to open the required egress rules. For DevNet, you also need VPN connectivity to the DevNet sequencer.
+Suggest edits
+Raise issue
+Diagnose Canton Nodes
+Configuration Problems

@@ -1,0 +1,175 @@
+Core Concepts
+Transactions
+On this page
+Transactions
+Transactions are the top-level unit of interaction with the Aleo network. Every action — deploying a program, executing a function, or transferring credits — is packaged as a transaction.
+Transaction Types
+​
+Execute
+​
+The most common type. An execute transaction calls one or more program functions, producing a zero-knowledge proof of correct execution.
+An execute transaction contains:
+One or more
+transitions
+(individual function calls, up to 32 per transaction)
+A
+fee transition
+(one of the 32 slots is reserved for the fee)
+A ZK proof for the transaction
+Deploy
+​
+Publishes a new program to the network. A deploy transaction includes the program bytecode, verification keys for each function, and the deployer's signature.
+Program Upgrade
+​
+A program upgrade uses the same deploy transaction format with
+edition
+incremented by 1 each time, allowing program logic to change without migrating state.
+Upgradability must be designed in from the start: every upgradable program includes a
+constructor
+, an immutable block executed by the AVM on every deployment and upgrade (but never on normal function calls). Because the
+constructor
+cannot be changed after deployment, it serves as the permanent onchain governance rule for who can upgrade and under what conditions.
+Three metadata operands are available within
+constructor
+and
+finalize
+scope:
+Operand
+Type
+Description
+edition
+u16
+Version counter.
+0u16
+on first deploy; increments by 1 on each upgrade.
+checksum
+[u8; 32u32]
+SHA3-256 hash of the program bytecode.
+program_owner
+address
+Address of the account that submitted the deployment.
+Component
+Delete
+Modify
+Add
+struct
+,
+record
+,
+mapping
+,
+closure
+,
+import
+❌
+❌
+✅
+function
+/
+finalize
+logic
+❌
+✅
+✅
+constructor
+❌
+❌
+❌
+Programs deployed before upgradability was activated have no
+constructor
+and are permanently non-upgradable — there is no migration path. For the full specification, governance patterns, and Leo syntax, see
+ARC-0006
+and the
+Program Upgradability guide
+.
+Fee
+​
+A standalone fee transaction, generated when an execute or deploy transaction is
+rejected
+. The original logic fails, but the fee is still collected to prevent spam.
+Transitions
+​
+A
+transition
+is a single function call within a transaction. Each transition:
+Belongs to a specific program and function
+Has its own inputs and outputs
+Can consume and create records independently
+When a program calls another program, each call produces a separate transition. This means a single transaction can span multiple programs.
+Transition View Key
+​
+Each transition generates its own
+transition view key (TVK)
+— a unique key used to encrypt and decrypt the private inputs and outputs of that specific transition. The TVK is derived from the signer's address and a per-transition random value, so even multiple transitions within the same transaction have independent encryption.
+The transition view key is distinct from the account-level
+view key
+, which can decrypt all records belonging to the account. A TVK is scoped to a single transition's data. This allows a user to share a TVK with an auditor to reveal the details of a specific function call — without compromising any other activity on the account.
+Transaction Lifecycle
+​
+Construction
+— The user's device (or SDK) assembles the transaction: signs authorizations, executes transitions locally, and generates ZK proofs.
+Broadcast
+— The signed transaction is submitted to the network.
+Mempool
+— Validators receive the transaction and place it in the mempool for inclusion in a block.
+Verification
+— Validators verify the ZK proofs and execute any finalize logic onchain.
+Commitment
+— The transaction is included in a block through AleoBFT consensus.
+Transaction Status
+​
+Status
+Description
+Accepted
+Execution and fee both succeeded. Transaction is confirmed onchain.
+Rejected
+Execution failed (e.g., finalize logic reverted), but the fee was still processed. A separate fee transaction is created.
+Aborted
+Both execution and fee processing failed. The transaction is discarded.
+Rejected transactions still incur fees. This prevents attackers from spamming the network with transactions that intentionally fail.
+Fees
+​
+Transaction fees are paid in
+Aleo Credits
+(microcredits). Fees have two components:
+Base Fee
+​
+Covers the cost of processing the transaction. Calculated from:
+Execution/storage cost
+— Based on transaction size (linear for small transactions, quadratic for larger ones)
+Finalize cost
+— Based on the onchain operations performed (mapping reads/writes, hashing, etc.)
+For deployments, the base fee also includes namespace cost (shorter program names are more expensive) and synthesis cost (based on circuit complexity).
+Priority Fee
+​
+An optional additional fee that gives the transaction higher priority in the mempool. Transactions with priority fees are processed before the standard queue.
+Fee Visibility
+​
+Fees can be paid publicly or privately:
+Public fee
+— Deducted from the sender's public
+account
+mapping balance. The payer's address is visible.
+Private fee
+— Paid using a private
+credits
+record. The payer's address is hidden, and a change record is returned.
+Sponsored fee
+— A separate party can pay the fee on behalf of the transaction sender, using an independent authorization.
+Previous
+Programs
+Next
+Credits & Transfers
+Transaction Types
+Execute
+Deploy
+Program Upgrade
+Fee
+Transitions
+Transition View Key
+Transaction Lifecycle
+Transaction Status
+Fees
+Base Fee
+Priority Fee
+Fee Visibility

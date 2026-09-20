@@ -1,0 +1,389 @@
+On this page
+Prerequisites
+1. Install the SDKs
+2. Write the client
+3. (Optional) Fund the wallet
+4. Make the paid call
+Runnable examples
+What to read next
+Buyer
+Quickstart: pay for an API
+Copy page
+Copy page
+Copy page
+Copy page
+This guide takes you from nothing to one successful server-side paid API call. You will pay for a
+protected endpoint with test USDC on Base testnet, using a CDP-managed wallet, so there is no
+private key to store anywhere.
+CDP SDK wallets run on your backend. Use this path when you are:
+Building an agent that autonomously pays for API services.
+Adding x402 payments to an application backend.
+Building a managed wallet or payment flow for your users.
+Building a browser or full-stack payment flow?
+Use
+x402 payments with Embedded Wallets
+when users should pay
+from their own self-custodial wallets.
+Want an agent to pay without writing payment code?
+Start with
+Agentic Accounts
+.
+New to the protocol?
+How x402 works
+explains the
+request, the
+402
+response, and the payment that follows.
+Using a coding agent?
+Install the matching skill and your agent runs this guide in your own
+project:
+npx
+skills
+add
+coinbase/cdp-sdk
+--skill
+build-x402-client
+​
+Prerequisites
+A
+CDP API key and wallet secret
+. The wallet secret lets
+the SDK sign payments with your CDP wallet.
+Node.js 22 or later.
+Set your credentials in the environment before running anything:
+export
+CDP_API_KEY_ID
+=
+"your-api-key-id"
+export
+CDP_API_KEY_SECRET
+=
+"your-api-key-secret"
+export
+CDP_WALLET_SECRET
+=
+"your-wallet-secret"
+​
+1. Install the SDKs
+The CDP SDK handles the wallet. The x402 packages handle the protocol.
+TypeScript
+Python
+npm
+install
+@coinbase/cdp-sdk
+@x402/core
+@x402/evm
+@x402/svm
+@x402/extensions
+@x402/fetch
+Python 3.10 or later is required.
+pip
+install
+"cdp-sdk"
+"x402[evm,svm,httpx]"
+​
+2. Write the client
+The client resolves a CDP-managed wallet, prints the address that pays, and then requests a
+protected endpoint. The wrapper handles the
+402
+response, payment, and retry.
+TypeScript
+Python
+CdpX402Client
+provisions the wallet and registers payment schemes for you, then plugs
+into
+wrapFetchWithPayment
+from
+@x402/fetch
+.
+// client.ts
+import
+{
+CdpX402Client
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+wrapFetchWithPayment
+}
+from
+"@x402/fetch"
+;
+// "development" uses the Base testnet. Omit it to use Base mainnet.
+const
+client
+=
+new
+CdpX402Client
+({
+environment:
+"development"
+});
+// The wallet is managed internally, so print its address to know what to fund.
+const
+{
+evmAddress
+}
+=
+await
+client
+.
+getAddresses
+();
+console
+.
+log
+(
+`Paying from
+${
+evmAddress
+}
+`
+);
+const
+fetchWithPayment
+=
+wrapFetchWithPayment
+(
+globalThis
+.
+fetch
+,
+client
+);
+const
+response
+=
+await
+fetchWithPayment
+(
+"https://x402.vercel.app/protected"
+);
+console
+.
+log
+(
+`HTTP
+${
+response
+.
+status
+}
+`
+);
+Python has no
+CdpX402Client
+, so you assemble the same pieces yourself: wrap the CDP
+account with
+EvmLocalAccount
+, adapt it to the x402 signer protocol with
+EthAccountSigner
+, and register the scheme on a standard
+x402Client
+.
+# client.py
+import
+asyncio
+from
+cdp
+import
+CdpClient
+from
+cdp.evm_local_account
+import
+EvmLocalAccount
+from
+x402
+import
+x402Client
+from
+x402.http.clients
+import
+x402HttpxClient
+from
+x402.mechanisms.evm
+import
+EthAccountSigner
+from
+x402.mechanisms.evm.exact
+import
+ExactEvmScheme
+async
+def
+main
+() ->
+None
+:
+async
+with
+CdpClient()
+as
+cdp:
+account
+=
+await
+cdp.evm.get_or_create_account(
+name
+=
+"x402-client-wallet-1"
+)
+# EthAccountSigner adapts the CDP account to the x402 signer protocol.
+signer
+=
+EthAccountSigner(EvmLocalAccount(account))
+print
+(
+f
+"Paying from
+{
+signer.address
+}
+"
+)
+payment_client
+=
+x402Client()
+payment_client.register(
+"eip155:84532"
+, ExactEvmScheme(signer))
+async
+with
+x402HttpxClient(payment_client)
+as
+http:
+response
+=
+await
+http.get(
+"https://x402.vercel.app/protected"
+)
+await
+response.aread()
+print
+(
+f
+"HTTP
+{
+response.status_code
+}
+"
+)
+asyncio.run(main())
+EvmLocalAccount
+and the x402 signer protocol declare
+sign_typed_data
+differently, and
+EthAccountSigner
+reconciles them.
+ExactEvmScheme
+applies the same wrap for you if you pass
+the account directly, so writing it out is a matter of making the adaptation visible.
+​
+3. (Optional) Fund the wallet
+Run the client once:
+TypeScript
+Python
+npx
+tsx
+client.ts
+python
+client.py
+It prints the address it pays from and then fails, because the wallet holds no USDC yet:
+Paying from 0x1724a4c282e3f7d8012F9C2d22fE7e1f95B5860E
+Send test USDC on Base testnet to that address. The fastest route is the
+Faucets quickstart
+, which covers both the CDP Portal and
+the API. To claim it in code with the credentials you already exported:
+TypeScript
+Python
+import
+{
+CdpClient
+}
+from
+"@coinbase/cdp-sdk"
+;
+const
+cdp
+=
+new
+CdpClient
+();
+await
+cdp
+.
+evm
+.
+requestFaucet
+({
+address:
+evmAddress
+,
+network:
+"base-sepolia"
+,
+token:
+"usdc"
+,
+});
+await
+cdp.evm.request_faucet(
+address
+=
+signer.address,
+network
+=
+"base-sepolia"
+,
+token
+=
+"usdc"
+)
+​
+4. Make the paid call
+Wait for the faucet transaction to confirm, then run the client again:
+Paying from 0x1724a4c282e3f7d8012F9C2d22fE7e1f95B5860E
+HTTP 200
+An
+HTTP 200
+means the payment was verified and settled, and you received the protected resource.
+You paid for an API without an account, an invoice, or a card.
+​
+Runnable examples
+Complete versions of the client include faucet funding and settlement details:
+TypeScript
+Python
+payForApi.ts
+payForApiWithAxios.ts
+pay_for_api.py
+pay_for_api_with_requests.py
+​
+What to read next
+You paid a service you already knew about. To find services you don’t, browse the catalog in
+Discover services
+.
+Where you go next depends on what you are building:
+Building an app.
+Let your users pay from their own wallets with
+x402 payments in Embedded Wallets
+.
+Building an agent.
+Start with an
+Agentic Wallet
+, or carry discovery and payment over MCP
+with
+Discover & pay over MCP
+.
+Need spend limits or an existing x402 client?
+See
+Client configuration
+.
+Was this page helpful?
+Yes
+No
+Production Configuration
+Previous
+Discover services (Bazaar)
+Next

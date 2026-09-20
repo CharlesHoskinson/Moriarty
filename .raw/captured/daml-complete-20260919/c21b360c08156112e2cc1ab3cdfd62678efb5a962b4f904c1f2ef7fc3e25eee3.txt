@@ -1,0 +1,1175 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Amulet
+Copy page
+Copy page
+Documentation for Splice.Amulet
+Copy page
+Copy page
+The contracts representing the long-term state of Splice.
+​
+Templates
+template
+Amulet
+A amulet, which can be locked and whose amount expires over time.
+The expiry serves to charge an inactivity fee, and thereby ensures that the SVs can reclaim the corresponding storage space at some point in the future.
+Signatory: dso, owner
+Field
+Type
+Description
+dso
+Party
+owner
+Party
+amount
+ExpiringAmount
+Choice
+Amulet_Expire
+Controller: dso
+Returns: Amulet_ExpireResult
+Field
+Type
+Description
+roundCid
+ContractId
+OpenMiningRound
+Choice
+Amulet_ExpireV2
+Controller: dso
+Returns: Amulet_ExpireV2Result
+Field
+Type
+Description
+externalPartyConfigState0Cid
+ContractId
+ExternalPartyConfigState
+externalPartyConfigState1Cid
+ContractId
+ExternalPartyConfigState
+Choice
+Archive
+Controller: dso, owner
+Returns: ()
+(no fields)
+interface instance
+Holding
+for
+Amulet
+template
+AppRewardCoupon
+A coupon for receiving app rewards proportional to the usage fee paid as part of a Amulet transfer coordinated by the app of a provider.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+provider
+Party
+Application provider
+featured
+Bool
+amount
+Decimal
+round
+Round
+beneficiary
+Optional
+Party
+The party that can mint this reward. If not set, this is the provider
+Choice
+AppRewardCoupon_DsoExpire
+Controller: dso
+Returns: AppRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+DevelopmentFundCoupon
+A coupon recording an emission for the Development Fund under CIP-0082, which can be collected by the designated beneficiary.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+beneficiary
+Party
+The owner of the
+Amulet
+to be minted.
+fundManager
+Party
+The party that executed the assignment of the coupon to the beneficiary so they can mint from the development fund.
+amount
+Decimal
+The total amount of
+Amulet
+to mint on collection.
+expiresAt
+Time
+Until when the minting can be completed.
+reason
+Text
+Reason for the emission of the coupon.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+DevelopmentFundCoupon_DsoExpire
+Controller: dso
+Returns: DevelopmentFundCoupon_DsoExpireResult
+(no fields)
+Choice
+DevelopmentFundCoupon_Reject
+Controller: beneficiary
+Returns: DevelopmentFundCoupon_RejectResult
+Field
+Type
+Description
+reason
+Text
+Reason for rejecting the coupon.
+Choice
+DevelopmentFundCoupon_Withdraw
+Controller: fundManager
+Returns: DevelopmentFundCoupon_WithdrawResult
+Field
+Type
+Description
+reason
+Text
+Reason for withdrawing the coupon.
+template
+FeaturedAppActivityMarker
+A marker created by a featured application for activity generated from that app. This is used to record activity other than amulet transfers where regular AppRewardCoupons are not created directly.
+Will be converted to a AppRewardCoupon through automation run by the SVs and can then be minted as part of the normal minting process.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+provider
+Party
+The featured app provider that created the activity marker.
+beneficiary
+Party
+The party that has the right to mint the reward.
+weight
+Decimal
+The weight of the marker. This is used to split the rewards for a single action, e.g., multiple parties collaborating to enable a transfer, by creating several FeaturedAppActivityMarkers with different beneficiaries such that the weights add up to 1.0.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+interface instance
+FeaturedAppActivityMarker
+for
+FeaturedAppActivityMarker
+interface instance
+FeaturedAppActivityMarker
+for
+FeaturedAppActivityMarker
+template
+FeaturedAppRight
+The right for an application provider to earn featured app rewards.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+provider
+Party
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+FeaturedAppRight_Cancel
+Controller: provider
+Returns: FeaturedAppRight_CancelResult
+(no fields)
+Choice
+FeaturedAppRight_Withdraw
+Controller: dso
+Returns: FeaturedAppRight_WithdrawResult
+Field
+Type
+Description
+reason
+Text
+interface instance
+FeaturedAppRight
+for
+FeaturedAppRight
+interface instance
+FeaturedAppRight
+for
+FeaturedAppRight
+template
+LockedAmulet
+Signatory: (DA.Internal.Record.getField @“holders” lock), signatory amulet
+Field
+Type
+Description
+amulet
+Amulet
+lock
+TimeLock
+Choice
+Archive
+Controller: (DA.Internal.Record.getField @“holders” lock), signatory amulet
+Returns: ()
+(no fields)
+Choice
+LockedAmulet_ExpireAmulet
+Controller: (DA.Internal.Record.getField @“dso” amulet)
+Returns: LockedAmulet_ExpireAmuletResult
+Field
+Type
+Description
+roundCid
+ContractId
+OpenMiningRound
+Choice
+LockedAmulet_ExpireAmuletV2
+Controller: (DA.Internal.Record.getField @“dso” amulet)
+Returns: LockedAmulet_ExpireAmuletV2Result
+Field
+Type
+Description
+externalPartyConfigState0Cid
+ContractId
+ExternalPartyConfigState
+externalPartyConfigState1Cid
+ContractId
+ExternalPartyConfigState
+Choice
+LockedAmulet_OwnerExpireLock
+Controller: (DA.Internal.Record.getField @“owner” amulet)
+Returns: LockedAmulet_OwnerExpireLockResult
+Field
+Type
+Description
+openRoundCid
+ContractId
+OpenMiningRound
+Choice
+LockedAmulet_OwnerExpireLockV2
+Controller: (DA.Internal.Record.getField @“owner” amulet)
+Returns: LockedAmulet_OwnerExpireLockV2Result
+(no fields)
+Choice
+LockedAmulet_Unlock
+Controller: (DA.Internal.Record.getField @“owner” amulet) :: (DA.Internal.Record.getField @“holders” lock)
+Returns: LockedAmulet_UnlockResult
+Field
+Type
+Description
+openRoundCid
+ContractId
+OpenMiningRound
+Choice
+LockedAmulet_UnlockV2
+Controller: (DA.Internal.Record.getField @“owner” amulet) :: (DA.Internal.Record.getField @“holders” lock)
+Returns: LockedAmulet_UnlockV2Result
+(no fields)
+interface instance
+Holding
+for
+LockedAmulet
+template
+SvRewardCoupon
+A coupon for a beneficiary to receive part of the SV issuance for a specific SV node and round.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+sv
+Party
+The party identifying the SV node for which the reward is issued.
+beneficiary
+Party
+The beneficiary allowed to receive the reward.
+round
+Round
+weight
+Int
+Coupons receive a share of the SV issuance proportional to their weight.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+SvRewardCoupon_ArchiveAsBeneficiary
+Controller: beneficiary
+Returns: SvRewardCoupon_ArchiveAsBeneficiaryResult
+(no fields)
+Choice
+SvRewardCoupon_DsoExpire
+Controller: dso
+Returns: SvRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+template
+UnclaimedActivityRecord
+A record of activity that can be minted by the beneficiary. Note that these do not come out of the per-round issuance but are instead created by burning UnclaimedRewardCoupon as defined through a vote by the SVs. That’s also why expiry is a separate time-based expiry instead of being tied to a round like the other activity records.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+beneficiary
+Party
+The owner of the
+Amulet
+to be minted.
+amount
+Decimal
+The amount of
+Amulet
+to be minted.
+reason
+Text
+A reason to mint the
+Amulet
+.
+expiresAt
+Time
+Selected timestamp defining the lifetime of the contract.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+UnclaimedActivityRecord_DsoExpire
+Controller: dso
+Returns: UnclaimedActivityRecord_DsoExpireResult
+(no fields)
+template
+UnclaimedDevelopmentFundCoupon
+A coupon recording an emission for the Development Fund from CIP-0082 that was not yet assigned to a specific beneficiary.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+amount
+Decimal
+The total amount of
+Amulet
+to mint on collection.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+UnclaimedReward
+Rewards that have not been claimed and are thus at the disposal of the foundation.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+amount
+Decimal
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+ValidatorRewardCoupon
+A coupon for receiving validator rewards proportional to the usage fee paid by a user hosted by a validator operator.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+user
+Party
+amount
+Decimal
+round
+Round
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+ValidatorRewardCoupon_ArchiveAsValidator
+This choice is used by validators to archive the burn receipt upon claiming its corresponding issuance.
+Controller: dso, validator
+Returns: ValidatorRewardCoupon_ArchiveAsValidatorResult
+Field
+Type
+Description
+validator
+Party
+rightCid
+ContractId
+ValidatorRight
+Choice
+ValidatorRewardCoupon_DsoExpire
+Controller: dso
+Returns: ValidatorRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+template
+ValidatorRight
+The right to claim amulet issuances for a user’s burns as their validator.
+Signatory: user, validator
+Field
+Type
+Description
+dso
+Party
+user
+Party
+validator
+Party
+Choice
+Archive
+Controller: user, validator
+Returns: ()
+(no fields)
+Choice
+ValidatorRight_ArchiveAsUser
+Controller: user
+Returns: ValidatorRight_ArchiveAsUserResult
+(no fields)
+Choice
+ValidatorRight_ArchiveAsValidator
+Controller: validator
+Returns: ValidatorRight_ArchiveAsValidatorResult
+(no fields)
+​
+Data Types
+data
+AmuletCreateSummary amuletContractId
+Result of an operation that created a new amulet, e.g., by minting a fresh amulet, or by unlocking a locked amulet.
+AmuletCreateSummary
+Field
+Type
+Description
+amulet
+amuletContractId
+The new amulet that was created
+amuletPrice
+Decimal
+The amulet price at the round the amulet was created
+round
+Round
+Round for which this amulet was created.
+instance
+Eq
+amuletContractId =>
+Eq
+(AmuletCreateSummary amuletContractId)
+instance
+Show
+amuletContractId =>
+Show
+(AmuletCreateSummary amuletContractId)
+instance
+GetField “amulet” (AmuletCreateSummary amuletContractId) amuletContractId
+instance
+GetField “amuletPrice” (AmuletCreateSummary amuletContractId)
+Decimal
+instance
+GetField “amuletSum” LockedAmulet_OwnerExpireLockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “amuletSum” LockedAmulet_UnlockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “amuletSum” AmuletRules_DevNet_TapResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “amuletSum” AmuletRules_MintResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “round” (AmuletCreateSummary amuletContractId) Round
+instance
+SetField “amulet” (AmuletCreateSummary amuletContractId) amuletContractId
+instance
+SetField “amuletPrice” (AmuletCreateSummary amuletContractId)
+Decimal
+instance
+SetField “amuletSum” LockedAmulet_OwnerExpireLockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” LockedAmulet_UnlockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” AmuletRules_DevNet_TapResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” AmuletRules_MintResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “round” (AmuletCreateSummary amuletContractId) Round
+data
+AmuletExpireSummary
+AmuletExpireSummary
+Field
+Type
+Description
+owner
+Party
+round
+Round
+Round for which this expiry was registered.
+changeToInitialAmountAsOfRoundZero
+Decimal
+changeToHoldingFeesRate
+Decimal
+The change of total holding fees introduced by a amulet expiry.
+instance
+Eq
+AmuletExpireSummary
+instance
+Show
+AmuletExpireSummary
+instance
+GetField “changeToHoldingFeesRate” AmuletExpireSummary
+Decimal
+instance
+GetField “changeToInitialAmountAsOfRoundZero” AmuletExpireSummary
+Decimal
+instance
+GetField “expireSum” Amulet_ExpireResult AmuletExpireSummary
+instance
+GetField “expireSum” LockedAmulet_ExpireAmuletResult AmuletExpireSummary
+instance
+GetField “owner” AmuletExpireSummary
+Party
+instance
+GetField “round” AmuletExpireSummary Round
+instance
+SetField “changeToHoldingFeesRate” AmuletExpireSummary
+Decimal
+instance
+SetField “changeToInitialAmountAsOfRoundZero” AmuletExpireSummary
+Decimal
+instance
+SetField “expireSum” Amulet_ExpireResult AmuletExpireSummary
+instance
+SetField “expireSum” LockedAmulet_ExpireAmuletResult AmuletExpireSummary
+instance
+SetField “owner” AmuletExpireSummary
+Party
+instance
+SetField “round” AmuletExpireSummary Round
+data
+AmuletExpireV2Summary
+AmuletExpireV2Summary
+Field
+Type
+Description
+owner
+Party
+instance
+Eq
+AmuletExpireV2Summary
+instance
+Show
+AmuletExpireV2Summary
+instance
+GetField “expireSum” Amulet_ExpireV2Result AmuletExpireV2Summary
+instance
+GetField “expireSum” LockedAmulet_ExpireAmuletV2Result AmuletExpireV2Summary
+instance
+GetField “owner” AmuletExpireV2Summary
+Party
+instance
+SetField “expireSum” Amulet_ExpireV2Result AmuletExpireV2Summary
+instance
+SetField “expireSum” LockedAmulet_ExpireAmuletV2Result AmuletExpireV2Summary
+instance
+SetField “owner” AmuletExpireV2Summary
+Party
+data
+Amulet_ExpireResult
+Amulet_ExpireResult
+Field
+Type
+Description
+expireSum
+AmuletExpireSummary
+meta
+Optional
+Metadata
+instance
+GetField “expireSum” Amulet_ExpireResult AmuletExpireSummary
+instance
+GetField “meta” Amulet_ExpireResult (
+Optional
+Metadata)
+instance
+SetField “expireSum” Amulet_ExpireResult AmuletExpireSummary
+instance
+SetField “meta” Amulet_ExpireResult (
+Optional
+Metadata)
+instance
+HasExercise
+Amulet Amulet_Expire Amulet_ExpireResult
+instance
+HasFromAnyChoice
+Amulet Amulet_Expire Amulet_ExpireResult
+instance
+HasToAnyChoice
+Amulet Amulet_Expire Amulet_ExpireResult
+data
+Amulet_ExpireV2Result
+Amulet_ExpireV2Result
+Field
+Type
+Description
+expireSum
+AmuletExpireV2Summary
+meta
+Metadata
+instance
+GetField “expireSum” Amulet_ExpireV2Result AmuletExpireV2Summary
+instance
+GetField “meta” Amulet_ExpireV2Result Metadata
+instance
+SetField “expireSum” Amulet_ExpireV2Result AmuletExpireV2Summary
+instance
+SetField “meta” Amulet_ExpireV2Result Metadata
+instance
+HasExercise
+Amulet Amulet_ExpireV2 Amulet_ExpireV2Result
+instance
+HasFromAnyChoice
+Amulet Amulet_ExpireV2 Amulet_ExpireV2Result
+instance
+HasToAnyChoice
+Amulet Amulet_ExpireV2 Amulet_ExpireV2Result
+data
+AppRewardCoupon_DsoExpireResult
+AppRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+featured
+Bool
+amount
+Decimal
+instance
+GetField “amount” AppRewardCoupon_DsoExpireResult
+Decimal
+instance
+GetField “featured” AppRewardCoupon_DsoExpireResult
+Bool
+instance
+SetField “amount” AppRewardCoupon_DsoExpireResult
+Decimal
+instance
+SetField “featured” AppRewardCoupon_DsoExpireResult
+Bool
+instance
+HasExercise
+AppRewardCoupon AppRewardCoupon_DsoExpire AppRewardCoupon_DsoExpireResult
+instance
+HasFromAnyChoice
+AppRewardCoupon AppRewardCoupon_DsoExpire AppRewardCoupon_DsoExpireResult
+instance
+HasToAnyChoice
+AppRewardCoupon AppRewardCoupon_DsoExpire AppRewardCoupon_DsoExpireResult
+data
+DevelopmentFundCoupon_DsoExpireResult
+DevelopmentFundCoupon_DsoExpireResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCid
+ContractId
+UnclaimedDevelopmentFundCoupon
+instance
+GetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_DsoExpireResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+SetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_DsoExpireResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+HasExercise
+DevelopmentFundCoupon DevelopmentFundCoupon_DsoExpire DevelopmentFundCoupon_DsoExpireResult
+instance
+HasFromAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_DsoExpire DevelopmentFundCoupon_DsoExpireResult
+instance
+HasToAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_DsoExpire DevelopmentFundCoupon_DsoExpireResult
+data
+DevelopmentFundCoupon_RejectResult
+DevelopmentFundCoupon_RejectResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCid
+ContractId
+UnclaimedDevelopmentFundCoupon
+instance
+GetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_RejectResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+SetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_RejectResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+HasExercise
+DevelopmentFundCoupon DevelopmentFundCoupon_Reject DevelopmentFundCoupon_RejectResult
+instance
+HasFromAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_Reject DevelopmentFundCoupon_RejectResult
+instance
+HasToAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_Reject DevelopmentFundCoupon_RejectResult
+data
+DevelopmentFundCoupon_WithdrawResult
+DevelopmentFundCoupon_WithdrawResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCid
+ContractId
+UnclaimedDevelopmentFundCoupon
+instance
+GetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_WithdrawResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+SetField “unclaimedDevelopmentFundCouponCid” DevelopmentFundCoupon_WithdrawResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+HasExercise
+DevelopmentFundCoupon DevelopmentFundCoupon_Withdraw DevelopmentFundCoupon_WithdrawResult
+instance
+HasFromAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_Withdraw DevelopmentFundCoupon_WithdrawResult
+instance
+HasToAnyChoice
+DevelopmentFundCoupon DevelopmentFundCoupon_Withdraw DevelopmentFundCoupon_WithdrawResult
+data
+FeaturedAppRight_CancelResult
+FeaturedAppRight_CancelResult
+instance
+HasExercise
+FeaturedAppRight FeaturedAppRight_Cancel FeaturedAppRight_CancelResult
+instance
+HasFromAnyChoice
+FeaturedAppRight FeaturedAppRight_Cancel FeaturedAppRight_CancelResult
+instance
+HasToAnyChoice
+FeaturedAppRight FeaturedAppRight_Cancel FeaturedAppRight_CancelResult
+data
+FeaturedAppRight_WithdrawResult
+FeaturedAppRight_WithdrawResult
+instance
+HasExercise
+FeaturedAppRight FeaturedAppRight_Withdraw FeaturedAppRight_WithdrawResult
+instance
+HasFromAnyChoice
+FeaturedAppRight FeaturedAppRight_Withdraw FeaturedAppRight_WithdrawResult
+instance
+HasToAnyChoice
+FeaturedAppRight FeaturedAppRight_Withdraw FeaturedAppRight_WithdrawResult
+data
+LockedAmulet_ExpireAmuletResult
+LockedAmulet_ExpireAmuletResult
+Field
+Type
+Description
+expireSum
+AmuletExpireSummary
+meta
+Optional
+Metadata
+instance
+GetField “expireSum” LockedAmulet_ExpireAmuletResult AmuletExpireSummary
+instance
+GetField “meta” LockedAmulet_ExpireAmuletResult (
+Optional
+Metadata)
+instance
+SetField “expireSum” LockedAmulet_ExpireAmuletResult AmuletExpireSummary
+instance
+SetField “meta” LockedAmulet_ExpireAmuletResult (
+Optional
+Metadata)
+instance
+HasExercise
+LockedAmulet LockedAmulet_ExpireAmulet LockedAmulet_ExpireAmuletResult
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_ExpireAmulet LockedAmulet_ExpireAmuletResult
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_ExpireAmulet LockedAmulet_ExpireAmuletResult
+data
+LockedAmulet_ExpireAmuletV2Result
+LockedAmulet_ExpireAmuletV2Result
+Field
+Type
+Description
+expireSum
+AmuletExpireV2Summary
+meta
+Metadata
+instance
+GetField “expireSum” LockedAmulet_ExpireAmuletV2Result AmuletExpireV2Summary
+instance
+GetField “meta” LockedAmulet_ExpireAmuletV2Result Metadata
+instance
+SetField “expireSum” LockedAmulet_ExpireAmuletV2Result AmuletExpireV2Summary
+instance
+SetField “meta” LockedAmulet_ExpireAmuletV2Result Metadata
+instance
+HasExercise
+LockedAmulet LockedAmulet_ExpireAmuletV2 LockedAmulet_ExpireAmuletV2Result
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_ExpireAmuletV2 LockedAmulet_ExpireAmuletV2Result
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_ExpireAmuletV2 LockedAmulet_ExpireAmuletV2Result
+data
+LockedAmulet_OwnerExpireLockResult
+LockedAmulet_OwnerExpireLockResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+meta
+Optional
+Metadata
+instance
+GetField “amuletSum” LockedAmulet_OwnerExpireLockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “meta” LockedAmulet_OwnerExpireLockResult (
+Optional
+Metadata)
+instance
+SetField “amuletSum” LockedAmulet_OwnerExpireLockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “meta” LockedAmulet_OwnerExpireLockResult (
+Optional
+Metadata)
+instance
+HasExercise
+LockedAmulet LockedAmulet_OwnerExpireLock LockedAmulet_OwnerExpireLockResult
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_OwnerExpireLock LockedAmulet_OwnerExpireLockResult
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_OwnerExpireLock LockedAmulet_OwnerExpireLockResult
+data
+LockedAmulet_OwnerExpireLockV2Result
+LockedAmulet_OwnerExpireLockV2Result
+Field
+Type
+Description
+amuletCid
+ContractId
+Amulet
+meta
+Metadata
+instance
+GetField “amuletCid” LockedAmulet_OwnerExpireLockV2Result (
+ContractId
+Amulet)
+instance
+GetField “meta” LockedAmulet_OwnerExpireLockV2Result Metadata
+instance
+SetField “amuletCid” LockedAmulet_OwnerExpireLockV2Result (
+ContractId
+Amulet)
+instance
+SetField “meta” LockedAmulet_OwnerExpireLockV2Result Metadata
+instance
+HasExercise
+LockedAmulet LockedAmulet_OwnerExpireLockV2 LockedAmulet_OwnerExpireLockV2Result
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_OwnerExpireLockV2 LockedAmulet_OwnerExpireLockV2Result
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_OwnerExpireLockV2 LockedAmulet_OwnerExpireLockV2Result
+data
+LockedAmulet_UnlockResult
+LockedAmulet_UnlockResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+meta
+Optional
+Metadata
+instance
+GetField “amuletSum” LockedAmulet_UnlockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “meta” LockedAmulet_UnlockResult (
+Optional
+Metadata)
+instance
+SetField “amuletSum” LockedAmulet_UnlockResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “meta” LockedAmulet_UnlockResult (
+Optional
+Metadata)
+instance
+HasExercise
+LockedAmulet LockedAmulet_Unlock LockedAmulet_UnlockResult
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_Unlock LockedAmulet_UnlockResult
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_Unlock LockedAmulet_UnlockResult
+data
+LockedAmulet_UnlockV2Result
+LockedAmulet_UnlockV2Result
+Field
+Type
+Description
+amuletCid
+ContractId
+Amulet
+meta
+Metadata
+instance
+GetField “amuletCid” LockedAmulet_UnlockV2Result (
+ContractId
+Amulet)
+instance
+GetField “meta” LockedAmulet_UnlockV2Result Metadata
+instance
+SetField “amuletCid” LockedAmulet_UnlockV2Result (
+ContractId
+Amulet)
+instance
+SetField “meta” LockedAmulet_UnlockV2Result Metadata
+instance
+HasExercise
+LockedAmulet LockedAmulet_UnlockV2 LockedAmulet_UnlockV2Result
+instance
+HasFromAnyChoice
+LockedAmulet LockedAmulet_UnlockV2 LockedAmulet_UnlockV2Result
+instance
+HasToAnyChoice
+LockedAmulet LockedAmulet_UnlockV2 LockedAmulet_UnlockV2Result
+data
+SvRewardCoupon_ArchiveAsBeneficiaryResult
+SvRewardCoupon_ArchiveAsBeneficiaryResult
+instance
+HasExercise
+SvRewardCoupon SvRewardCoupon_ArchiveAsBeneficiary SvRewardCoupon_ArchiveAsBeneficiaryResult
+instance
+HasFromAnyChoice
+SvRewardCoupon SvRewardCoupon_ArchiveAsBeneficiary SvRewardCoupon_ArchiveAsBeneficiaryResult
+instance
+HasToAnyChoice
+SvRewardCoupon SvRewardCoupon_ArchiveAsBeneficiary SvRewardCoupon_ArchiveAsBeneficiaryResult
+data
+SvRewardCoupon_DsoExpireResult
+SvRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+weight
+Int
+instance
+GetField “weight” SvRewardCoupon_DsoExpireResult
+Int
+instance
+SetField “weight” SvRewardCoupon_DsoExpireResult
+Int
+instance
+HasExercise
+SvRewardCoupon SvRewardCoupon_DsoExpire SvRewardCoupon_DsoExpireResult
+instance
+HasFromAnyChoice
+SvRewardCoupon SvRewardCoupon_DsoExpire SvRewardCoupon_DsoExpireResult
+instance
+HasToAnyChoice
+SvRewardCoupon SvRewardCoupon_DsoExpire SvRewardCoupon_DsoExpireResult
+data
+UnclaimedActivityRecord_ArchiveAsBeneficiaryResult
+UnclaimedActivityRecord_ArchiveAsBeneficiaryResult
+data
+UnclaimedActivityRecord_DsoExpireResult
+UnclaimedActivityRecord_DsoExpireResult
+Field
+Type
+Description
+unclaimedRewardCid
+ContractId
+UnclaimedReward
+instance
+GetField “unclaimedRewardCid” UnclaimedActivityRecord_DsoExpireResult (
+ContractId
+UnclaimedReward)
+instance
+SetField “unclaimedRewardCid” UnclaimedActivityRecord_DsoExpireResult (
+ContractId
+UnclaimedReward)
+instance
+HasExercise
+UnclaimedActivityRecord UnclaimedActivityRecord_DsoExpire UnclaimedActivityRecord_DsoExpireResult
+instance
+HasFromAnyChoice
+UnclaimedActivityRecord UnclaimedActivityRecord_DsoExpire UnclaimedActivityRecord_DsoExpireResult
+instance
+HasToAnyChoice
+UnclaimedActivityRecord UnclaimedActivityRecord_DsoExpire UnclaimedActivityRecord_DsoExpireResult
+data
+ValidatorRewardCoupon_ArchiveAsValidatorResult
+ValidatorRewardCoupon_ArchiveAsValidatorResult
+(no fields)
+instance
+HasExercise
+ValidatorRewardCoupon ValidatorRewardCoupon_ArchiveAsValidator ValidatorRewardCoupon_ArchiveAsValidatorResult
+instance
+HasFromAnyChoice
+ValidatorRewardCoupon ValidatorRewardCoupon_ArchiveAsValidator ValidatorRewardCoupon_ArchiveAsValidatorResult
+instance
+HasToAnyChoice
+ValidatorRewardCoupon ValidatorRewardCoupon_ArchiveAsValidator ValidatorRewardCoupon_ArchiveAsValidatorResult
+data
+ValidatorRewardCoupon_DsoExpireResult
+ValidatorRewardCoupon_DsoExpireResult
+Field
+Type
+Description
+amount
+Decimal
+instance
+GetField “amount” ValidatorRewardCoupon_DsoExpireResult
+Decimal
+instance
+SetField “amount” ValidatorRewardCoupon_DsoExpireResult
+Decimal
+instance
+HasExercise
+ValidatorRewardCoupon ValidatorRewardCoupon_DsoExpire ValidatorRewardCoupon_DsoExpireResult
+instance
+HasFromAnyChoice
+ValidatorRewardCoupon ValidatorRewardCoupon_DsoExpire ValidatorRewardCoupon_DsoExpireResult
+instance
+HasToAnyChoice
+ValidatorRewardCoupon ValidatorRewardCoupon_DsoExpire ValidatorRewardCoupon_DsoExpireResult
+data
+ValidatorRight_ArchiveAsUserResult
+ValidatorRight_ArchiveAsUserResult
+instance
+HasExercise
+ValidatorRight ValidatorRight_ArchiveAsUser ValidatorRight_ArchiveAsUserResult
+instance
+HasFromAnyChoice
+ValidatorRight ValidatorRight_ArchiveAsUser ValidatorRight_ArchiveAsUserResult
+instance
+HasToAnyChoice
+ValidatorRight ValidatorRight_ArchiveAsUser ValidatorRight_ArchiveAsUserResult
+data
+ValidatorRight_ArchiveAsValidatorResult
+ValidatorRight_ArchiveAsValidatorResult
+instance
+HasExercise
+ValidatorRight ValidatorRight_ArchiveAsValidator ValidatorRight_ArchiveAsValidatorResult
+instance
+HasFromAnyChoice
+ValidatorRight ValidatorRight_ArchiveAsValidator ValidatorRight_ArchiveAsValidatorResult
+instance
+HasToAnyChoice
+ValidatorRight ValidatorRight_ArchiveAsValidator ValidatorRight_ArchiveAsValidatorResult
+​
+Functions
+amuletMetadata
+: Amulet -> Metadata
+validateAppRewardBeneficiaries
+: [AppRewardBeneficiary] ->
+Update
+()
+validateAppRewardBeneficiariesV2
+: [AppRewardBeneficiary] ->
+Update
+()
+requireAmuletExpiredForAllRounds
+:
+ContractId
+ExternalPartyConfigState ->
+ContractId
+ExternalPartyConfigState -> Amulet ->
+Update
+()
+Suggest edits
+Raise issue
+Splice.Amulet.TwoStepTransfer
+Splice.AmuletAllocation

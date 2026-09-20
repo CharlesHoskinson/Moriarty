@@ -1,0 +1,3313 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.AmuletRules
+Copy page
+Copy page
+Documentation for Splice.AmuletRules
+Copy page
+Copy page
+​
+Templates
+template
+AmuletRules
+The rules governing how Amulet users can modify the Amulet state managed by the DSO party.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+configSchedule
+Schedule
+Time
+(AmuletConfig USD)
+isDevNet
+Bool
+contractStateSchemaVersion
+Optional
+Int
+Choice
+AmuletRules_AddFutureAmuletConfigSchedule
+Controller: dso
+Returns: AmuletRules_AddFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+newScheduleItem
+(
+Time
+, AmuletConfig USD)
+Choice
+AmuletRules_AdvanceOpenMiningRounds
+Controller: dso
+Returns: AmuletRules_AdvanceOpenMiningRoundsResult
+Field
+Type
+Description
+amuletPrice
+Decimal
+roundToArchiveCid
+ContractId
+OpenMiningRound
+middleRoundCid
+ContractId
+OpenMiningRound
+latestRoundCid
+ContractId
+OpenMiningRound
+Choice
+AmuletRules_AllocateDevelopmentFundCoupon
+Allows the Development Fund manager to allocate a specified amount from a collection of UnclaimedDevelopmentFundCoupons to a beneficiary, generating a DevelopmentFundCoupon and producing a leftover unclaimed coupon if applicable.
+Controller: fundManager
+Returns: AmuletRules_AllocateDevelopmentFundCouponResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCids
+[
+ContractId
+UnclaimedDevelopmentFundCoupon]
+beneficiary
+Party
+amount
+Decimal
+expiresAt
+Time
+reason
+Text
+fundManager
+Party
+Choice
+AmuletRules_Amulet_ExpireTransferInstructions
+Controller: dso
+Returns: AmuletRules_Amulet_ExpireTransferInstructionsResult
+Field
+Type
+Description
+expectedDso
+Party
+inputs
+[AmuletRules_ExpireTransferInstructionInput]
+observers
+[
+Party
+]
+Choice
+AmuletRules_BootstrapExternalPartyConfigState
+Controller: dso
+Returns: AmuletRules_BootstrapExternalPartyConfigStateResult
+Field
+Type
+Description
+openMiningRoundTriple
+OpenMiningRoundTriple
+expectedDso
+Party
+Choice
+AmuletRules_Bootstrap_Rounds
+Controller: dso
+Returns: AmuletRules_Bootstrap_RoundsResult
+Field
+Type
+Description
+amuletPrice
+Decimal
+round0Duration
+RelTime
+initialRound
+Optional
+Int
+Choice
+AmuletRules_BuyMemberTraffic
+Controller: provider
+Returns: AmuletRules_BuyMemberTrafficResult
+Field
+Type
+Description
+inputs
+[TransferInput]
+context
+TransferContext
+provider
+Party
+memberId
+Text
+synchronizerId
+Text
+migrationId
+Int
+trafficAmount
+Int
+expectedDso
+Optional
+Party
+Choice
+AmuletRules_ClaimExpiredRewards
+Controller: dso
+Returns: AmuletRules_ClaimExpiredRewardsResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+validatorRewardCouponCids
+[
+ContractId
+ValidatorRewardCoupon]
+appCouponCids
+[
+ContractId
+AppRewardCoupon]
+svRewardCouponCids
+[
+ContractId
+SvRewardCoupon]
+optValidatorFaucetCouponCids
+Optional
+[
+ContractId
+ValidatorFaucetCoupon]
+optValidatorLivenessActivityRecordCids
+Optional
+[
+ContractId
+ValidatorLivenessActivityRecord]
+Choice
+AmuletRules_ComputeFees
+Compute the output fees for transfer against the given context
+Controller: sender
+Returns: AmuletRules_ComputeFeesResult
+Field
+Type
+Description
+context
+TransferContext
+sender
+Party
+outputs
+[TransferOutput]
+expectedDso
+Optional
+Party
+Choice
+AmuletRules_ConvertFeaturedAppActivityMarkers
+Controller: dso
+Returns: AmuletRules_ConvertFeaturedAppActivityMarkersResult
+Field
+Type
+Description
+markerCids
+[
+ContractId
+FeaturedAppActivityMarker]
+openMiningRoundCid
+ContractId
+OpenMiningRound
+observers
+Optional
+[
+Party
+]
+A list of choice observers. This is expected to be set to the union of all providers and beneficiaries to ensure that this creates only one view.
+Choice
+AmuletRules_CreateExternalPartySetupProposal
+Propose to host an external party The provider pre-pays the fees for the creation of a TransferPreapproval contract on behalf of the external party when exercising this choice
+Controller: validator
+Returns: AmuletRules_CreateExternalPartySetupProposalResult
+Field
+Type
+Description
+context
+PaymentTransferContext
+inputs
+[TransferInput]
+user
+Party
+validator
+Party
+preapprovalExpiresAt
+Time
+expectedDso
+Optional
+Party
+Choice
+AmuletRules_CreateTransferPreapproval
+Pre-approve incoming amulet transfers
+Controller: provider, receiver
+Returns: AmuletRules_CreateTransferPreapprovalResult
+Field
+Type
+Description
+context
+PaymentTransferContext
+inputs
+[TransferInput]
+receiver
+Party
+provider
+Party
+expiresAt
+Time
+expectedDso
+Optional
+Party
+Choice
+AmuletRules_DevNet_FeatureApp
+Controller: provider
+Returns: AmuletRules_DevNet_FeatureAppResult
+Field
+Type
+Description
+provider
+Party
+Choice
+AmuletRules_DevNet_Tap
+Controller: receiver
+Returns: AmuletRules_DevNet_TapResult
+Field
+Type
+Description
+receiver
+Party
+amount
+Decimal
+openRound
+ContractId
+OpenMiningRound
+Choice
+AmuletRules_Fetch
+Controller: p
+Returns: AmuletRules
+Field
+Type
+Description
+p
+Party
+Choice
+AmuletRules_MergeMemberTrafficContracts
+Controller: dso
+Returns: AmuletRules_MergeMemberTrafficContractsResult
+Field
+Type
+Description
+trafficCids
+[
+ContractId
+MemberTraffic]
+Choice
+AmuletRules_MergeUnclaimedDevelopmentFundCoupons
+Batch merge of unclaimed development fund coupons
+Controller: dso
+Returns: AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCids
+[
+ContractId
+UnclaimedDevelopmentFundCoupon]
+Choice
+AmuletRules_MergeUnclaimedRewards
+Controller: dso
+Returns: AmuletRules_MergeUnclaimedRewardsResult
+Field
+Type
+Description
+unclaimedRewardCids
+[
+ContractId
+UnclaimedReward]
+Choice
+AmuletRules_MiningRound_Archive
+Controller: dso
+Returns: AmuletRules_MiningRound_ArchiveResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+Choice
+AmuletRules_MiningRound_Close
+Controller: dso
+Returns: AmuletRules_MiningRound_CloseResult
+Field
+Type
+Description
+issuingRoundCid
+ContractId
+IssuingMiningRound
+Choice
+AmuletRules_MiningRound_StartIssuing
+Controller: dso
+Returns: AmuletRules_MiningRound_StartIssuingResult
+Field
+Type
+Description
+miningRoundCid
+ContractId
+SummarizingMiningRound
+summary
+OpenMiningRoundSummary
+Choice
+AmuletRules_Mint
+Controller: dso, receiver
+Returns: AmuletRules_MintResult
+Field
+Type
+Description
+receiver
+Party
+amount
+Decimal
+openRound
+ContractId
+OpenMiningRound
+Choice
+AmuletRules_RemoveFutureAmuletConfigSchedule
+Controller: dso
+Returns: AmuletRules_RemoveFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+scheduleTime
+Time
+Choice
+AmuletRules_SetConfig
+Controller: dso
+Returns: AmuletRules_SetConfigResult
+Field
+Type
+Description
+newConfig
+AmuletConfig USD
+baseConfig
+AmuletConfig USD
+Choice
+AmuletRules_Transfer
+Controller: Set.toList (transferControllers transfer)
+Returns: TransferResult
+Field
+Type
+Description
+transfer
+Transfer
+context
+TransferContext
+expectedDso
+Optional
+Party
+Choice
+AmuletRules_UpdateExternalPartyConfigStates
+Controller: dso
+Returns: AmuletRules_UpdateExternalPartyConfigStatesResult
+Field
+Type
+Description
+externalPartyConfigStateCid0
+ContractId
+ExternalPartyConfigState
+externalPartyConfigStateCid1
+ContractId
+ExternalPartyConfigState
+openMiningRoundTriple
+OpenMiningRoundTriple
+Choice
+AmuletRules_UpdateFutureAmuletConfigSchedule
+Controller: dso
+Returns: AmuletRules_UpdateFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+scheduleItem
+(
+Time
+, AmuletConfig USD)
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+ExternalPartySetupProposal
+Signatory: validator, dso
+Field
+Type
+Description
+validator
+Party
+user
+Party
+dso
+Party
+createdAt
+Time
+preapprovalExpiresAt
+Time
+Choice
+Archive
+Controller: validator, dso
+Returns: ()
+(no fields)
+Choice
+ExternalPartySetupProposal_Accept
+Controller: user
+Returns: ExternalPartySetupProposal_AcceptResult
+(no fields)
+Choice
+ExternalPartySetupProposal_Reject
+Controller: user
+Returns: ExternalPartySetupProposal_RejectResult
+Field
+Type
+Description
+reason
+Text
+Choice
+ExternalPartySetupProposal_Withdraw
+Controller: validator
+Returns: ExternalPartySetupProposal_WithdrawResult
+Field
+Type
+Description
+reason
+Text
+template
+TransferPreapproval
+A pre-approval by a receiver to receive Amulet from anybody.
+Pre-approvals are indexed by the SVs and served from scan for easy discovery until they expire. The cost of providing this discovery service is charged by burning Amulet.
+Receivers can either purchase and renew these pre-approvals by themselves, or have an app provider do so for them in exchange for the app rewards for the amulet transfers completed via the managed pre-approval.
+Signatory: receiver, provider, dso
+Field
+Type
+Description
+dso
+Party
+receiver
+Party
+The receiver party
+provider
+Party
+The app provider that manages the pre-approval for the receiver. Equal to the receiver for self-managed pre-approvals.
+validFrom
+Time
+This timestamp marks the start of the period for which fees were paid for the pre-approval. Preserved across renewals.
+lastRenewedAt
+Time
+When the pre-approval was last renewed. Set equal to
+validFrom
+on creation and updated on each renewal.
+expiresAt
+Time
+Provider selected timestamp defining the lifetime of the contract. Can be extended by renewing the contract.
+Choice
+Archive
+Controller: receiver, provider, dso
+Returns: ()
+(no fields)
+Choice
+TransferPreapproval_Cancel
+Controller: p
+Returns: TransferPreapproval_CancelResult
+Field
+Type
+Description
+p
+Party
+Choice
+TransferPreapproval_Expire
+Controller: dso
+Returns: TransferPreapproval_ExpireResult
+(no fields)
+Choice
+TransferPreapproval_Fetch
+Controller: p
+Returns: TransferPreapproval
+Field
+Type
+Description
+p
+Party
+Choice
+TransferPreapproval_Renew
+Controller: provider
+Returns: TransferPreapproval_RenewResult
+Field
+Type
+Description
+context
+PaymentTransferContext
+inputs
+[TransferInput]
+newExpiresAt
+Time
+Choice
+TransferPreapproval_Send
+Deprecated: Use TransferPreapproval_SendV2 instead.
+Controller: sender
+Returns: TransferPreapproval_SendResult
+Field
+Type
+Description
+context
+PaymentTransferContext
+inputs
+[TransferInput]
+amount
+Decimal
+sender
+Party
+description
+Optional
+Text
+Choice
+TransferPreapproval_SendV2
+Controller: sender
+Returns: TransferPreapproval_SendV2Result
+Field
+Type
+Description
+context
+ExternalPartyTransferContext
+inputs
+[TransferInput]
+amount
+Decimal
+sender
+Party
+description
+Optional
+Text
+​
+Data Types
+data
+AmuletRules_AddFutureAmuletConfigScheduleResult
+AmuletRules_AddFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+newAmuletRules
+ContractId
+AmuletRules
+instance
+GetField “newAmuletRules” AmuletRules_AddFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+SetField “newAmuletRules” AmuletRules_AddFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+HasExercise
+AmuletRules AmuletRules_AddFutureAmuletConfigSchedule AmuletRules_AddFutureAmuletConfigScheduleResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_AddFutureAmuletConfigSchedule AmuletRules_AddFutureAmuletConfigScheduleResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_AddFutureAmuletConfigSchedule AmuletRules_AddFutureAmuletConfigScheduleResult
+data
+AmuletRules_AdvanceOpenMiningRoundsResult
+AmuletRules_AdvanceOpenMiningRoundsResult
+Field
+Type
+Description
+summarizingRoundCid
+ContractId
+SummarizingMiningRound
+openRoundCid
+ContractId
+OpenMiningRound
+instance
+GetField “openRoundCid” AmuletRules_AdvanceOpenMiningRoundsResult (
+ContractId
+OpenMiningRound)
+instance
+GetField “summarizingRoundCid” AmuletRules_AdvanceOpenMiningRoundsResult (
+ContractId
+SummarizingMiningRound)
+instance
+SetField “openRoundCid” AmuletRules_AdvanceOpenMiningRoundsResult (
+ContractId
+OpenMiningRound)
+instance
+SetField “summarizingRoundCid” AmuletRules_AdvanceOpenMiningRoundsResult (
+ContractId
+SummarizingMiningRound)
+instance
+HasExercise
+AmuletRules AmuletRules_AdvanceOpenMiningRounds AmuletRules_AdvanceOpenMiningRoundsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_AdvanceOpenMiningRounds AmuletRules_AdvanceOpenMiningRoundsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_AdvanceOpenMiningRounds AmuletRules_AdvanceOpenMiningRoundsResult
+data
+AmuletRules_AllocateDevelopmentFundCouponResult
+AmuletRules_AllocateDevelopmentFundCouponResult
+Field
+Type
+Description
+developmentFundCouponCid
+ContractId
+DevelopmentFundCoupon
+optUnclaimedDevelopmentFundCouponCid
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+GetField “developmentFundCouponCid” AmuletRules_AllocateDevelopmentFundCouponResult (
+ContractId
+DevelopmentFundCoupon)
+instance
+GetField “optUnclaimedDevelopmentFundCouponCid” AmuletRules_AllocateDevelopmentFundCouponResult (
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon))
+instance
+SetField “developmentFundCouponCid” AmuletRules_AllocateDevelopmentFundCouponResult (
+ContractId
+DevelopmentFundCoupon)
+instance
+SetField “optUnclaimedDevelopmentFundCouponCid” AmuletRules_AllocateDevelopmentFundCouponResult (
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon))
+instance
+HasExercise
+AmuletRules AmuletRules_AllocateDevelopmentFundCoupon AmuletRules_AllocateDevelopmentFundCouponResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_AllocateDevelopmentFundCoupon AmuletRules_AllocateDevelopmentFundCouponResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_AllocateDevelopmentFundCoupon AmuletRules_AllocateDevelopmentFundCouponResult
+data
+AmuletRules_Amulet_ExpireTransferInstructionsResult
+AmuletRules_Amulet_ExpireTransferInstructionsResult
+Field
+Type
+Description
+results
+[TransferInstructionResult]
+instance
+Eq
+AmuletRules_Amulet_ExpireTransferInstructionsResult
+instance
+Show
+AmuletRules_Amulet_ExpireTransferInstructionsResult
+instance
+GetField “results” AmuletRules_Amulet_ExpireTransferInstructionsResult [TransferInstructionResult]
+instance
+SetField “results” AmuletRules_Amulet_ExpireTransferInstructionsResult [TransferInstructionResult]
+instance
+HasExercise
+AmuletRules AmuletRules_Amulet_ExpireTransferInstructions AmuletRules_Amulet_ExpireTransferInstructionsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_Amulet_ExpireTransferInstructions AmuletRules_Amulet_ExpireTransferInstructionsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_Amulet_ExpireTransferInstructions AmuletRules_Amulet_ExpireTransferInstructionsResult
+data
+AmuletRules_BootstrapExternalPartyConfigStateResult
+AmuletRules_BootstrapExternalPartyConfigStateResult
+instance
+Eq
+AmuletRules_BootstrapExternalPartyConfigStateResult
+instance
+Show
+AmuletRules_BootstrapExternalPartyConfigStateResult
+instance
+HasExercise
+AmuletRules AmuletRules_BootstrapExternalPartyConfigState AmuletRules_BootstrapExternalPartyConfigStateResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_BootstrapExternalPartyConfigState AmuletRules_BootstrapExternalPartyConfigStateResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_BootstrapExternalPartyConfigState AmuletRules_BootstrapExternalPartyConfigStateResult
+data
+AmuletRules_Bootstrap_RoundsResult
+AmuletRules_Bootstrap_RoundsResult
+Field
+Type
+Description
+openMiningRoundCid
+ContractId
+OpenMiningRound
+initialRound
+Optional
+Round
+instance
+GetField “initialRound” AmuletRules_Bootstrap_RoundsResult (
+Optional
+Round)
+instance
+GetField “openMiningRoundCid” AmuletRules_Bootstrap_RoundsResult (
+ContractId
+OpenMiningRound)
+instance
+SetField “initialRound” AmuletRules_Bootstrap_RoundsResult (
+Optional
+Round)
+instance
+SetField “openMiningRoundCid” AmuletRules_Bootstrap_RoundsResult (
+ContractId
+OpenMiningRound)
+instance
+HasExercise
+AmuletRules AmuletRules_Bootstrap_Rounds AmuletRules_Bootstrap_RoundsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_Bootstrap_Rounds AmuletRules_Bootstrap_RoundsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_Bootstrap_Rounds AmuletRules_Bootstrap_RoundsResult
+data
+AmuletRules_BuyMemberTrafficResult
+AmuletRules_BuyMemberTrafficResult
+Field
+Type
+Description
+round
+Round
+summary
+TransferSummary
+amuletPaid
+Decimal
+purchasedTraffic
+ContractId
+MemberTraffic
+senderChangeAmulet
+Optional
+(
+ContractId
+Amulet)
+meta
+Optional
+Metadata
+instance
+Eq
+AmuletRules_BuyMemberTrafficResult
+instance
+Show
+AmuletRules_BuyMemberTrafficResult
+instance
+GetField “amuletPaid” AmuletRules_BuyMemberTrafficResult
+Decimal
+instance
+GetField “meta” AmuletRules_BuyMemberTrafficResult (
+Optional
+Metadata)
+instance
+GetField “purchasedTraffic” AmuletRules_BuyMemberTrafficResult (
+ContractId
+MemberTraffic)
+instance
+GetField “round” AmuletRules_BuyMemberTrafficResult Round
+instance
+GetField “senderChangeAmulet” AmuletRules_BuyMemberTrafficResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+GetField “summary” AmuletRules_BuyMemberTrafficResult TransferSummary
+instance
+SetField “amuletPaid” AmuletRules_BuyMemberTrafficResult
+Decimal
+instance
+SetField “meta” AmuletRules_BuyMemberTrafficResult (
+Optional
+Metadata)
+instance
+SetField “purchasedTraffic” AmuletRules_BuyMemberTrafficResult (
+ContractId
+MemberTraffic)
+instance
+SetField “round” AmuletRules_BuyMemberTrafficResult Round
+instance
+SetField “senderChangeAmulet” AmuletRules_BuyMemberTrafficResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+SetField “summary” AmuletRules_BuyMemberTrafficResult TransferSummary
+instance
+HasExercise
+AmuletRules AmuletRules_BuyMemberTraffic AmuletRules_BuyMemberTrafficResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_BuyMemberTraffic AmuletRules_BuyMemberTrafficResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_BuyMemberTraffic AmuletRules_BuyMemberTrafficResult
+data
+AmuletRules_ClaimExpiredRewardsResult
+AmuletRules_ClaimExpiredRewardsResult
+Field
+Type
+Description
+unclaimedRewardCid
+Optional
+(
+ContractId
+UnclaimedReward)
+instance
+GetField “unclaimedRewardCid” AmuletRules_ClaimExpiredRewardsResult (
+Optional
+(
+ContractId
+UnclaimedReward))
+instance
+SetField “unclaimedRewardCid” AmuletRules_ClaimExpiredRewardsResult (
+Optional
+(
+ContractId
+UnclaimedReward))
+instance
+HasExercise
+AmuletRules AmuletRules_ClaimExpiredRewards AmuletRules_ClaimExpiredRewardsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_ClaimExpiredRewards AmuletRules_ClaimExpiredRewardsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_ClaimExpiredRewards AmuletRules_ClaimExpiredRewardsResult
+data
+AmuletRules_ComputeFeesResult
+AmuletRules_ComputeFeesResult
+Field
+Type
+Description
+fees
+[
+Decimal
+]
+instance
+GetField “fees” AmuletRules_ComputeFeesResult [
+Decimal
+]
+instance
+SetField “fees” AmuletRules_ComputeFeesResult [
+Decimal
+]
+instance
+HasExercise
+AmuletRules AmuletRules_ComputeFees AmuletRules_ComputeFeesResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_ComputeFees AmuletRules_ComputeFeesResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_ComputeFees AmuletRules_ComputeFeesResult
+data
+AmuletRules_ConvertFeaturedAppActivityMarkersResult
+AmuletRules_ConvertFeaturedAppActivityMarkersResult
+Field
+Type
+Description
+appRewardCouponCids
+[
+ContractId
+AppRewardCoupon]
+instance
+GetField “appRewardCouponCids” AmuletRules_ConvertFeaturedAppActivityMarkersResult [
+ContractId
+AppRewardCoupon]
+instance
+SetField “appRewardCouponCids” AmuletRules_ConvertFeaturedAppActivityMarkersResult [
+ContractId
+AppRewardCoupon]
+instance
+HasExercise
+AmuletRules AmuletRules_ConvertFeaturedAppActivityMarkers AmuletRules_ConvertFeaturedAppActivityMarkersResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_ConvertFeaturedAppActivityMarkers AmuletRules_ConvertFeaturedAppActivityMarkersResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_ConvertFeaturedAppActivityMarkers AmuletRules_ConvertFeaturedAppActivityMarkersResult
+data
+AmuletRules_CreateExternalPartySetupProposalResult
+AmuletRules_CreateExternalPartySetupProposalResult
+Field
+Type
+Description
+proposalCid
+ContractId
+ExternalPartySetupProposal
+user
+Party
+validator
+Party
+transferResult
+TransferResult
+amuletPaid
+Decimal
+meta
+Optional
+Metadata
+instance
+Eq
+AmuletRules_CreateExternalPartySetupProposalResult
+instance
+Show
+AmuletRules_CreateExternalPartySetupProposalResult
+instance
+GetField “amuletPaid” AmuletRules_CreateExternalPartySetupProposalResult
+Decimal
+instance
+GetField “meta” AmuletRules_CreateExternalPartySetupProposalResult (
+Optional
+Metadata)
+instance
+GetField “proposalCid” AmuletRules_CreateExternalPartySetupProposalResult (
+ContractId
+ExternalPartySetupProposal)
+instance
+GetField “transferResult” AmuletRules_CreateExternalPartySetupProposalResult TransferResult
+instance
+GetField “user” AmuletRules_CreateExternalPartySetupProposalResult
+Party
+instance
+GetField “validator” AmuletRules_CreateExternalPartySetupProposalResult
+Party
+instance
+SetField “amuletPaid” AmuletRules_CreateExternalPartySetupProposalResult
+Decimal
+instance
+SetField “meta” AmuletRules_CreateExternalPartySetupProposalResult (
+Optional
+Metadata)
+instance
+SetField “proposalCid” AmuletRules_CreateExternalPartySetupProposalResult (
+ContractId
+ExternalPartySetupProposal)
+instance
+SetField “transferResult” AmuletRules_CreateExternalPartySetupProposalResult TransferResult
+instance
+SetField “user” AmuletRules_CreateExternalPartySetupProposalResult
+Party
+instance
+SetField “validator” AmuletRules_CreateExternalPartySetupProposalResult
+Party
+instance
+HasExercise
+AmuletRules AmuletRules_CreateExternalPartySetupProposal AmuletRules_CreateExternalPartySetupProposalResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_CreateExternalPartySetupProposal AmuletRules_CreateExternalPartySetupProposalResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_CreateExternalPartySetupProposal AmuletRules_CreateExternalPartySetupProposalResult
+data
+AmuletRules_CreateTransferPreapprovalResult
+AmuletRules_CreateTransferPreapprovalResult
+Field
+Type
+Description
+transferPreapprovalCid
+ContractId
+TransferPreapproval
+transferResult
+TransferResult
+amuletPaid
+Decimal
+meta
+Optional
+Metadata
+instance
+Eq
+AmuletRules_CreateTransferPreapprovalResult
+instance
+Show
+AmuletRules_CreateTransferPreapprovalResult
+instance
+GetField “amuletPaid” AmuletRules_CreateTransferPreapprovalResult
+Decimal
+instance
+GetField “meta” AmuletRules_CreateTransferPreapprovalResult (
+Optional
+Metadata)
+instance
+GetField “transferPreapprovalCid” AmuletRules_CreateTransferPreapprovalResult (
+ContractId
+TransferPreapproval)
+instance
+GetField “transferResult” AmuletRules_CreateTransferPreapprovalResult TransferResult
+instance
+SetField “amuletPaid” AmuletRules_CreateTransferPreapprovalResult
+Decimal
+instance
+SetField “meta” AmuletRules_CreateTransferPreapprovalResult (
+Optional
+Metadata)
+instance
+SetField “transferPreapprovalCid” AmuletRules_CreateTransferPreapprovalResult (
+ContractId
+TransferPreapproval)
+instance
+SetField “transferResult” AmuletRules_CreateTransferPreapprovalResult TransferResult
+instance
+HasExercise
+AmuletRules AmuletRules_CreateTransferPreapproval AmuletRules_CreateTransferPreapprovalResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_CreateTransferPreapproval AmuletRules_CreateTransferPreapprovalResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_CreateTransferPreapproval AmuletRules_CreateTransferPreapprovalResult
+data
+AmuletRules_DevNet_FeatureAppResult
+AmuletRules_DevNet_FeatureAppResult
+Field
+Type
+Description
+featuredAppRightCid
+ContractId
+FeaturedAppRight
+instance
+GetField “featuredAppRightCid” AmuletRules_DevNet_FeatureAppResult (
+ContractId
+FeaturedAppRight)
+instance
+SetField “featuredAppRightCid” AmuletRules_DevNet_FeatureAppResult (
+ContractId
+FeaturedAppRight)
+instance
+HasExercise
+AmuletRules AmuletRules_DevNet_FeatureApp AmuletRules_DevNet_FeatureAppResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_DevNet_FeatureApp AmuletRules_DevNet_FeatureAppResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_DevNet_FeatureApp AmuletRules_DevNet_FeatureAppResult
+data
+AmuletRules_DevNet_TapResult
+AmuletRules_DevNet_TapResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+meta
+Optional
+Metadata
+instance
+GetField “amuletSum” AmuletRules_DevNet_TapResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “meta” AmuletRules_DevNet_TapResult (
+Optional
+Metadata)
+instance
+SetField “amuletSum” AmuletRules_DevNet_TapResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “meta” AmuletRules_DevNet_TapResult (
+Optional
+Metadata)
+instance
+HasExercise
+AmuletRules AmuletRules_DevNet_Tap AmuletRules_DevNet_TapResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_DevNet_Tap AmuletRules_DevNet_TapResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_DevNet_Tap AmuletRules_DevNet_TapResult
+data
+AmuletRules_ExpireTransferInstructionInput
+AmuletRules_ExpireTransferInstructionInput
+Field
+Type
+Description
+transferInstructionCid
+ContractId
+TransferInstruction
+expireLock
+Bool
+instance
+Eq
+AmuletRules_ExpireTransferInstructionInput
+instance
+Show
+AmuletRules_ExpireTransferInstructionInput
+instance
+GetField “expireLock” AmuletRules_ExpireTransferInstructionInput
+Bool
+instance
+GetField “inputs” AmuletRules_Amulet_ExpireTransferInstructions [AmuletRules_ExpireTransferInstructionInput]
+instance
+GetField “transferInstructionCid” AmuletRules_ExpireTransferInstructionInput (
+ContractId
+TransferInstruction)
+instance
+SetField “expireLock” AmuletRules_ExpireTransferInstructionInput
+Bool
+instance
+SetField “inputs” AmuletRules_Amulet_ExpireTransferInstructions [AmuletRules_ExpireTransferInstructionInput]
+instance
+SetField “transferInstructionCid” AmuletRules_ExpireTransferInstructionInput (
+ContractId
+TransferInstruction)
+data
+AmuletRules_MergeMemberTrafficContractsResult
+AmuletRules_MergeMemberTrafficContractsResult
+Field
+Type
+Description
+mergedTrafficCid
+ContractId
+MemberTraffic
+instance
+GetField “mergedTrafficCid” AmuletRules_MergeMemberTrafficContractsResult (
+ContractId
+MemberTraffic)
+instance
+SetField “mergedTrafficCid” AmuletRules_MergeMemberTrafficContractsResult (
+ContractId
+MemberTraffic)
+instance
+HasExercise
+AmuletRules AmuletRules_MergeMemberTrafficContracts AmuletRules_MergeMemberTrafficContractsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MergeMemberTrafficContracts AmuletRules_MergeMemberTrafficContractsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MergeMemberTrafficContracts AmuletRules_MergeMemberTrafficContractsResult
+data
+AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+Field
+Type
+Description
+unclaimedDevelopmentFundCouponCid
+ContractId
+UnclaimedDevelopmentFundCoupon
+instance
+GetField “unclaimedDevelopmentFundCouponCid” AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+SetField “unclaimedDevelopmentFundCouponCid” AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult (
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+HasExercise
+AmuletRules AmuletRules_MergeUnclaimedDevelopmentFundCoupons AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MergeUnclaimedDevelopmentFundCoupons AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MergeUnclaimedDevelopmentFundCoupons AmuletRules_MergeUnclaimedDevelopmentFundCouponsResult
+data
+AmuletRules_MergeUnclaimedRewardsResult
+AmuletRules_MergeUnclaimedRewardsResult
+Field
+Type
+Description
+unclaimedRewardCid
+ContractId
+UnclaimedReward
+instance
+GetField “unclaimedRewardCid” AmuletRules_MergeUnclaimedRewardsResult (
+ContractId
+UnclaimedReward)
+instance
+SetField “unclaimedRewardCid” AmuletRules_MergeUnclaimedRewardsResult (
+ContractId
+UnclaimedReward)
+instance
+HasExercise
+AmuletRules AmuletRules_MergeUnclaimedRewards AmuletRules_MergeUnclaimedRewardsResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MergeUnclaimedRewards AmuletRules_MergeUnclaimedRewardsResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MergeUnclaimedRewards AmuletRules_MergeUnclaimedRewardsResult
+data
+AmuletRules_MiningRound_ArchiveResult
+AmuletRules_MiningRound_ArchiveResult
+instance
+HasExercise
+AmuletRules AmuletRules_MiningRound_Archive AmuletRules_MiningRound_ArchiveResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MiningRound_Archive AmuletRules_MiningRound_ArchiveResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MiningRound_Archive AmuletRules_MiningRound_ArchiveResult
+data
+AmuletRules_MiningRound_CloseResult
+AmuletRules_MiningRound_CloseResult
+Field
+Type
+Description
+closedRoundCid
+ContractId
+ClosedMiningRound
+instance
+GetField “closedRoundCid” AmuletRules_MiningRound_CloseResult (
+ContractId
+ClosedMiningRound)
+instance
+SetField “closedRoundCid” AmuletRules_MiningRound_CloseResult (
+ContractId
+ClosedMiningRound)
+instance
+HasExercise
+AmuletRules AmuletRules_MiningRound_Close AmuletRules_MiningRound_CloseResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MiningRound_Close AmuletRules_MiningRound_CloseResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MiningRound_Close AmuletRules_MiningRound_CloseResult
+data
+AmuletRules_MiningRound_StartIssuingResult
+AmuletRules_MiningRound_StartIssuingResult
+Field
+Type
+Description
+issuingRoundCid
+ContractId
+IssuingMiningRound
+unclaimedDevelopmentFundCouponCid
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon)
+instance
+GetField “issuingRoundCid” AmuletRules_MiningRound_StartIssuingResult (
+ContractId
+IssuingMiningRound)
+instance
+GetField “unclaimedDevelopmentFundCouponCid” AmuletRules_MiningRound_StartIssuingResult (
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon))
+instance
+SetField “issuingRoundCid” AmuletRules_MiningRound_StartIssuingResult (
+ContractId
+IssuingMiningRound)
+instance
+SetField “unclaimedDevelopmentFundCouponCid” AmuletRules_MiningRound_StartIssuingResult (
+Optional
+(
+ContractId
+UnclaimedDevelopmentFundCoupon))
+instance
+HasExercise
+AmuletRules AmuletRules_MiningRound_StartIssuing AmuletRules_MiningRound_StartIssuingResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_MiningRound_StartIssuing AmuletRules_MiningRound_StartIssuingResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_MiningRound_StartIssuing AmuletRules_MiningRound_StartIssuingResult
+data
+AmuletRules_MintResult
+AmuletRules_MintResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” AmuletRules_MintResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” AmuletRules_MintResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+AmuletRules AmuletRules_Mint AmuletRules_MintResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_Mint AmuletRules_MintResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_Mint AmuletRules_MintResult
+data
+AmuletRules_RemoveFutureAmuletConfigScheduleResult
+AmuletRules_RemoveFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+newAmuletRules
+ContractId
+AmuletRules
+instance
+GetField “newAmuletRules” AmuletRules_RemoveFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+SetField “newAmuletRules” AmuletRules_RemoveFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+HasExercise
+AmuletRules AmuletRules_RemoveFutureAmuletConfigSchedule AmuletRules_RemoveFutureAmuletConfigScheduleResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_RemoveFutureAmuletConfigSchedule AmuletRules_RemoveFutureAmuletConfigScheduleResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_RemoveFutureAmuletConfigSchedule AmuletRules_RemoveFutureAmuletConfigScheduleResult
+data
+AmuletRules_SetConfigResult
+AmuletRules_SetConfigResult
+Field
+Type
+Description
+newAmuletRules
+ContractId
+AmuletRules
+instance
+GetField “newAmuletRules” AmuletRules_SetConfigResult (
+ContractId
+AmuletRules)
+instance
+SetField “newAmuletRules” AmuletRules_SetConfigResult (
+ContractId
+AmuletRules)
+instance
+HasExercise
+AmuletRules AmuletRules_SetConfig AmuletRules_SetConfigResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_SetConfig AmuletRules_SetConfigResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_SetConfig AmuletRules_SetConfigResult
+data
+AmuletRules_UpdateExternalPartyConfigStatesResult
+AmuletRules_UpdateExternalPartyConfigStatesResult
+Field
+Type
+Description
+newExternalPartyConfigStateCid
+ContractId
+ExternalPartyConfigState
+instance
+Eq
+AmuletRules_UpdateExternalPartyConfigStatesResult
+instance
+Show
+AmuletRules_UpdateExternalPartyConfigStatesResult
+instance
+GetField “newExternalPartyConfigStateCid” AmuletRules_UpdateExternalPartyConfigStatesResult (
+ContractId
+ExternalPartyConfigState)
+instance
+SetField “newExternalPartyConfigStateCid” AmuletRules_UpdateExternalPartyConfigStatesResult (
+ContractId
+ExternalPartyConfigState)
+instance
+HasExercise
+AmuletRules AmuletRules_UpdateExternalPartyConfigStates AmuletRules_UpdateExternalPartyConfigStatesResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_UpdateExternalPartyConfigStates AmuletRules_UpdateExternalPartyConfigStatesResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_UpdateExternalPartyConfigStates AmuletRules_UpdateExternalPartyConfigStatesResult
+data
+AmuletRules_UpdateFutureAmuletConfigScheduleResult
+AmuletRules_UpdateFutureAmuletConfigScheduleResult
+Field
+Type
+Description
+newAmuletRules
+ContractId
+AmuletRules
+instance
+GetField “newAmuletRules” AmuletRules_UpdateFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+SetField “newAmuletRules” AmuletRules_UpdateFutureAmuletConfigScheduleResult (
+ContractId
+AmuletRules)
+instance
+HasExercise
+AmuletRules AmuletRules_UpdateFutureAmuletConfigSchedule AmuletRules_UpdateFutureAmuletConfigScheduleResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_UpdateFutureAmuletConfigSchedule AmuletRules_UpdateFutureAmuletConfigScheduleResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_UpdateFutureAmuletConfigSchedule AmuletRules_UpdateFutureAmuletConfigScheduleResult
+data
+AppTransferContext
+AppTransferContext
+Field
+Type
+Description
+amuletRules
+ContractId
+AmuletRules
+openMiningRound
+ContractId
+OpenMiningRound
+featuredAppRight
+Optional
+(
+ContractId
+FeaturedAppRight)
+instance
+Eq
+AppTransferContext
+instance
+Show
+AppTransferContext
+instance
+GetField “amuletRules” AppTransferContext (
+ContractId
+AmuletRules)
+instance
+GetField “featuredAppRight” AppTransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+instance
+GetField “openMiningRound” AppTransferContext (
+ContractId
+OpenMiningRound)
+instance
+SetField “amuletRules” AppTransferContext (
+ContractId
+AmuletRules)
+instance
+SetField “featuredAppRight” AppTransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+instance
+SetField “openMiningRound” AppTransferContext (
+ContractId
+OpenMiningRound)
+data
+BalanceChange
+BalanceChange
+Field
+Type
+Description
+changeToInitialAmountAsOfRoundZero
+Decimal
+The change to the total balance introduced by this balance change, normalized to round zero, i.e., a amulet created in round 3 is treated as a amulet created in round 0 with a higher initial amount.
+changeToHoldingFeesRate
+Decimal
+The change of total holding fees introduced by this balance change.
+instance
+Eq
+BalanceChange
+instance
+Additive
+BalanceChange
+instance
+Show
+BalanceChange
+instance
+GetField “balanceChanges” TransferSummary (
+Map
+Party
+BalanceChange)
+instance
+GetField “changeToHoldingFeesRate” BalanceChange
+Decimal
+instance
+GetField “changeToInitialAmountAsOfRoundZero” BalanceChange
+Decimal
+instance
+SetField “balanceChanges” TransferSummary (
+Map
+Party
+BalanceChange)
+instance
+SetField “changeToHoldingFeesRate” BalanceChange
+Decimal
+instance
+SetField “changeToInitialAmountAsOfRoundZero” BalanceChange
+Decimal
+data
+CreatedAmulet
+TransferResultAmulet (
+ContractId
+Amulet)
+TransferResultLockedAmulet (
+ContractId
+LockedAmulet)
+ExtCreatedAmulet
+Field
+Type
+Description
+dummyUnitField
+()
+Extension constructor (and field) to work around the current lack of upgrading for variants in Daml 3.0
+instance
+Eq
+CreatedAmulet
+instance
+Ord
+CreatedAmulet
+instance
+Show
+CreatedAmulet
+instance
+GetField “createdAmulets” TransferResult [CreatedAmulet]
+instance
+GetField “dummyUnitField” CreatedAmulet ()
+instance
+SetField “createdAmulets” TransferResult [CreatedAmulet]
+instance
+SetField “dummyUnitField” CreatedAmulet ()
+data
+ExternalPartySetupProposal_AcceptResult
+ExternalPartySetupProposal_AcceptResult
+Field
+Type
+Description
+validatorRightCid
+ContractId
+ValidatorRight
+transferPreapprovalCid
+ContractId
+TransferPreapproval
+instance
+Eq
+ExternalPartySetupProposal_AcceptResult
+instance
+Show
+ExternalPartySetupProposal_AcceptResult
+instance
+GetField “transferPreapprovalCid” ExternalPartySetupProposal_AcceptResult (
+ContractId
+TransferPreapproval)
+instance
+GetField “validatorRightCid” ExternalPartySetupProposal_AcceptResult (
+ContractId
+ValidatorRight)
+instance
+SetField “transferPreapprovalCid” ExternalPartySetupProposal_AcceptResult (
+ContractId
+TransferPreapproval)
+instance
+SetField “validatorRightCid” ExternalPartySetupProposal_AcceptResult (
+ContractId
+ValidatorRight)
+instance
+HasExercise
+ExternalPartySetupProposal ExternalPartySetupProposal_Accept ExternalPartySetupProposal_AcceptResult
+instance
+HasFromAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Accept ExternalPartySetupProposal_AcceptResult
+instance
+HasToAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Accept ExternalPartySetupProposal_AcceptResult
+data
+ExternalPartySetupProposal_RejectResult
+ExternalPartySetupProposal_RejectResult
+Field
+Type
+Description
+dummyArg
+()
+instance
+Eq
+ExternalPartySetupProposal_RejectResult
+instance
+Show
+ExternalPartySetupProposal_RejectResult
+instance
+GetField “dummyArg” ExternalPartySetupProposal_RejectResult ()
+instance
+SetField “dummyArg” ExternalPartySetupProposal_RejectResult ()
+instance
+HasExercise
+ExternalPartySetupProposal ExternalPartySetupProposal_Reject ExternalPartySetupProposal_RejectResult
+instance
+HasFromAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Reject ExternalPartySetupProposal_RejectResult
+instance
+HasToAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Reject ExternalPartySetupProposal_RejectResult
+data
+ExternalPartySetupProposal_WithdrawResult
+ExternalPartySetupProposal_WithdrawResult
+Field
+Type
+Description
+dummyArg
+()
+instance
+Eq
+ExternalPartySetupProposal_WithdrawResult
+instance
+Show
+ExternalPartySetupProposal_WithdrawResult
+instance
+GetField “dummyArg” ExternalPartySetupProposal_WithdrawResult ()
+instance
+SetField “dummyArg” ExternalPartySetupProposal_WithdrawResult ()
+instance
+HasExercise
+ExternalPartySetupProposal ExternalPartySetupProposal_Withdraw ExternalPartySetupProposal_WithdrawResult
+instance
+HasFromAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Withdraw ExternalPartySetupProposal_WithdrawResult
+instance
+HasToAnyChoice
+ExternalPartySetupProposal ExternalPartySetupProposal_Withdraw ExternalPartySetupProposal_WithdrawResult
+data
+ExternalPartyTransferContext
+Contracts that need to be passed in to a Transfer so that we can reference them by contract id instead of by key.
+ExternalPartyTransferContext
+Field
+Type
+Description
+externalPartyConfigState
+ContractId
+ExternalPartyConfigState
+featuredAppRight
+Optional
+(
+ContractId
+FeaturedAppRight)
+Optional proof that the provider is a featured app provider.
+instance
+Eq
+ExternalPartyTransferContext
+instance
+Show
+ExternalPartyTransferContext
+instance
+GetField “context” TransferPreapproval_SendV2 ExternalPartyTransferContext
+instance
+GetField “externalPartyConfigState” ExternalPartyTransferContext (
+ContractId
+ExternalPartyConfigState)
+instance
+GetField “featuredAppRight” ExternalPartyTransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+instance
+SetField “context” TransferPreapproval_SendV2 ExternalPartyTransferContext
+instance
+SetField “externalPartyConfigState” ExternalPartyTransferContext (
+ContractId
+ExternalPartyConfigState)
+instance
+SetField “featuredAppRight” ExternalPartyTransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+data
+InvalidTransferReason
+ITR_InsufficientFunds
+Field
+Type
+Description
+missingAmount
+Decimal
+ITR_UnknownSynchronizer
+Field
+Type
+Description
+synchronizerId
+Text
+ITR_InsufficientTopupAmount
+Field
+Type
+Description
+requestedTopupAmount
+Int
+minTopupAmount
+Int
+ITR_Other
+Field
+Type
+Description
+description
+Text
+ExtInvalidTransferReason
+Field
+Type
+Description
+dummyUnitField
+()
+Extension constructor (and field) to work around the current lack of upgrading for variants in Daml 3.0
+instance
+Eq
+InvalidTransferReason
+instance
+Show
+InvalidTransferReason
+instance
+GetField “description” InvalidTransferReason
+Text
+instance
+GetField “dummyUnitField” InvalidTransferReason ()
+instance
+GetField “minTopupAmount” InvalidTransferReason
+Int
+instance
+GetField “missingAmount” InvalidTransferReason
+Decimal
+instance
+GetField “reason” TransferCommandResult InvalidTransferReason
+instance
+GetField “requestedTopupAmount” InvalidTransferReason
+Int
+instance
+GetField “synchronizerId” InvalidTransferReason
+Text
+instance
+SetField “description” InvalidTransferReason
+Text
+instance
+SetField “dummyUnitField” InvalidTransferReason ()
+instance
+SetField “minTopupAmount” InvalidTransferReason
+Int
+instance
+SetField “missingAmount” InvalidTransferReason
+Decimal
+instance
+SetField “reason” TransferCommandResult InvalidTransferReason
+instance
+SetField “requestedTopupAmount” InvalidTransferReason
+Int
+instance
+SetField “synchronizerId” InvalidTransferReason
+Text
+data
+OpenMiningRoundTriple
+OpenMiningRoundTriple
+Field
+Type
+Description
+round0Cid
+ContractId
+OpenMiningRound
+round1Cid
+ContractId
+OpenMiningRound
+round2Cid
+ContractId
+OpenMiningRound
+instance
+Eq
+OpenMiningRoundTriple
+instance
+Show
+OpenMiningRoundTriple
+instance
+GetField “openMiningRoundTriple” AmuletRules_BootstrapExternalPartyConfigState OpenMiningRoundTriple
+instance
+GetField “openMiningRoundTriple” AmuletRules_UpdateExternalPartyConfigStates OpenMiningRoundTriple
+instance
+GetField “round0Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+instance
+GetField “round1Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+instance
+GetField “round2Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+instance
+SetField “openMiningRoundTriple” AmuletRules_BootstrapExternalPartyConfigState OpenMiningRoundTriple
+instance
+SetField “openMiningRoundTriple” AmuletRules_UpdateExternalPartyConfigStates OpenMiningRoundTriple
+instance
+SetField “round0Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+instance
+SetField “round1Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+instance
+SetField “round2Cid” OpenMiningRoundTriple (
+ContractId
+OpenMiningRound)
+data
+PaymentTransferContext
+PaymentTransferContext
+Field
+Type
+Description
+amuletRules
+ContractId
+AmuletRules
+context
+TransferContext
+instance
+Eq
+PaymentTransferContext
+instance
+Show
+PaymentTransferContext
+instance
+GetField “amuletRules” PaymentTransferContext (
+ContractId
+AmuletRules)
+instance
+GetField “context” AmuletRules_CreateExternalPartySetupProposal PaymentTransferContext
+instance
+GetField “context” AmuletRules_CreateTransferPreapproval PaymentTransferContext
+instance
+GetField “context” PaymentTransferContext TransferContext
+instance
+GetField “context” TransferPreapproval_Renew PaymentTransferContext
+instance
+GetField “context” TransferPreapproval_Send PaymentTransferContext
+instance
+GetField “context” TransferCommand_Send PaymentTransferContext
+instance
+SetField “amuletRules” PaymentTransferContext (
+ContractId
+AmuletRules)
+instance
+SetField “context” AmuletRules_CreateExternalPartySetupProposal PaymentTransferContext
+instance
+SetField “context” AmuletRules_CreateTransferPreapproval PaymentTransferContext
+instance
+SetField “context” PaymentTransferContext TransferContext
+instance
+SetField “context” TransferPreapproval_Renew PaymentTransferContext
+instance
+SetField “context” TransferPreapproval_Send PaymentTransferContext
+instance
+SetField “context” TransferCommand_Send PaymentTransferContext
+data
+PreprocessedTransferOutput
+PreprocessedTransferOutput
+Field
+Type
+Description
+owner
+Party
+Owner of the output
+outputFee
+Decimal
+Fee charged to create this output
+amount
+Decimal
+Amount of amulet held by this output (after deducting fees)
+lock
+Optional
+TimeLock
+Whether to lock the amulet or not
+instance
+Eq
+PreprocessedTransferOutput
+instance
+Show
+PreprocessedTransferOutput
+instance
+GetField “amount” PreprocessedTransferOutput
+Decimal
+instance
+GetField “lock” PreprocessedTransferOutput (
+Optional
+TimeLock)
+instance
+GetField “outputFee” PreprocessedTransferOutput
+Decimal
+instance
+GetField “owner” PreprocessedTransferOutput
+Party
+instance
+SetField “amount” PreprocessedTransferOutput
+Decimal
+instance
+SetField “lock” PreprocessedTransferOutput (
+Optional
+TimeLock)
+instance
+SetField “outputFee” PreprocessedTransferOutput
+Decimal
+instance
+SetField “owner” PreprocessedTransferOutput
+Party
+data
+RewardsIssuanceConfig
+An easy way to configure
+exucuteTransfer
+wrt what rewards to issue. We currently only use two configurations: but all of the options in here make sense, so we keep them.
+RewardsIssuanceConfig
+Field
+Type
+Description
+issueAppRewards
+Bool
+issueValidatorRewards
+Bool
+instance
+GetField “issueAppRewards” RewardsIssuanceConfig
+Bool
+instance
+GetField “issueValidatorRewards” RewardsIssuanceConfig
+Bool
+instance
+SetField “issueAppRewards” RewardsIssuanceConfig
+Bool
+instance
+SetField “issueValidatorRewards” RewardsIssuanceConfig
+Bool
+data
+Transfer
+Representation of a batch transfer.
+Transfer
+Field
+Type
+Description
+sender
+Party
+provider
+Party
+inputs
+[TransferInput]
+outputs
+[TransferOutput]
+beneficiaries
+Optional
+[AppRewardBeneficiary]
+Beneficiaries between which the app reward is split.
+instance
+Eq
+Transfer
+instance
+Ord
+Transfer
+instance
+Show
+Transfer
+instance
+GetField “beneficiaries” Transfer (
+Optional
+[AppRewardBeneficiary])
+instance
+GetField “inputs” Transfer [TransferInput]
+instance
+GetField “outputs” Transfer [TransferOutput]
+instance
+GetField “provider” Transfer
+Party
+instance
+GetField “sender” Transfer
+Party
+instance
+GetField “transfer” AmuletRules_Transfer Transfer
+instance
+SetField “beneficiaries” Transfer (
+Optional
+[AppRewardBeneficiary])
+instance
+SetField “inputs” Transfer [TransferInput]
+instance
+SetField “outputs” Transfer [TransferOutput]
+instance
+SetField “provider” Transfer
+Party
+instance
+SetField “sender” Transfer
+Party
+instance
+SetField “transfer” AmuletRules_Transfer Transfer
+data
+TransferContext
+Contracts that need to be passed in to a Transfer so that we can reference them by contract id instead of by key.
+TransferContext
+Field
+Type
+Description
+openMiningRound
+ContractId
+OpenMiningRound
+issuingMiningRounds
+Map
+Round (
+ContractId
+IssuingMiningRound)
+validatorRights
+Map
+Party
+(
+ContractId
+ValidatorRight)
+Map from user to ValidatorRight contract.
+featuredAppRight
+Optional
+(
+ContractId
+FeaturedAppRight)
+Optional proof that the provider is a featured app provider.
+instance
+Eq
+TransferContext
+instance
+Show
+TransferContext
+instance
+GetField “context” AmuletRules_BuyMemberTraffic TransferContext
+instance
+GetField “context” AmuletRules_ComputeFees TransferContext
+instance
+GetField “context” AmuletRules_Transfer TransferContext
+instance
+GetField “context” PaymentTransferContext TransferContext
+instance
+GetField “featuredAppRight” TransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+instance
+GetField “issuingMiningRounds” TransferContext (
+Map
+Round (
+ContractId
+IssuingMiningRound))
+instance
+GetField “openMiningRound” TransferContext (
+ContractId
+OpenMiningRound)
+instance
+GetField “validatorRights” TransferContext (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+instance
+SetField “context” AmuletRules_BuyMemberTraffic TransferContext
+instance
+SetField “context” AmuletRules_ComputeFees TransferContext
+instance
+SetField “context” AmuletRules_Transfer TransferContext
+instance
+SetField “context” PaymentTransferContext TransferContext
+instance
+SetField “featuredAppRight” TransferContext (
+Optional
+(
+ContractId
+FeaturedAppRight))
+instance
+SetField “issuingMiningRounds” TransferContext (
+Map
+Round (
+ContractId
+IssuingMiningRound))
+instance
+SetField “openMiningRound” TransferContext (
+ContractId
+OpenMiningRound)
+instance
+SetField “validatorRights” TransferContext (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+data
+TransferContextSummary
+Deprecated: unused, we just can’t remove it yet due to upgrading rules
+TransferContextSummary
+Field
+Type
+Description
+featuredAppProvider
+Optional
+Party
+config
+TransferConfig Amulet
+openRound
+OpenMiningRound
+issuingMiningRounds
+Map
+Round IssuingMiningRound
+validatorRights
+Map
+Party
+(
+ContractId
+ValidatorRight)
+instance
+Eq
+TransferContextSummary
+instance
+Show
+TransferContextSummary
+instance
+GetField “config” TransferContextSummary (TransferConfig Amulet)
+instance
+GetField “featuredAppProvider” TransferContextSummary (
+Optional
+Party
+)
+instance
+GetField “issuingMiningRounds” TransferContextSummary (
+Map
+Round IssuingMiningRound)
+instance
+GetField “openRound” TransferContextSummary OpenMiningRound
+instance
+GetField “validatorRights” TransferContextSummary (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+instance
+SetField “config” TransferContextSummary (TransferConfig Amulet)
+instance
+SetField “featuredAppProvider” TransferContextSummary (
+Optional
+Party
+)
+instance
+SetField “issuingMiningRounds” TransferContextSummary (
+Map
+Round IssuingMiningRound)
+instance
+SetField “openRound” TransferContextSummary OpenMiningRound
+instance
+SetField “validatorRights” TransferContextSummary (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+data
+TransferContextSummaryV2
+TransferContextSummaryV2
+Field
+Type
+Description
+dso
+Party
+featuredAppProvider
+Optional
+Party
+config
+TransferConfigV2 Amulet
+openRoundNumber
+Round
+amuletPrice
+Decimal
+issuingMiningRounds
+Map
+Round IssuingMiningRound
+validatorRights
+Map
+Party
+(
+ContractId
+ValidatorRight)
+instance
+Eq
+TransferContextSummaryV2
+instance
+Show
+TransferContextSummaryV2
+instance
+GetField “amuletPrice” TransferContextSummaryV2
+Decimal
+instance
+GetField “config” TransferContextSummaryV2 (TransferConfigV2 Amulet)
+instance
+GetField “dso” TransferContextSummaryV2
+Party
+instance
+GetField “featuredAppProvider” TransferContextSummaryV2 (
+Optional
+Party
+)
+instance
+GetField “issuingMiningRounds” TransferContextSummaryV2 (
+Map
+Round IssuingMiningRound)
+instance
+GetField “openRoundNumber” TransferContextSummaryV2 Round
+instance
+GetField “validatorRights” TransferContextSummaryV2 (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+instance
+SetField “amuletPrice” TransferContextSummaryV2
+Decimal
+instance
+SetField “config” TransferContextSummaryV2 (TransferConfigV2 Amulet)
+instance
+SetField “dso” TransferContextSummaryV2
+Party
+instance
+SetField “featuredAppProvider” TransferContextSummaryV2 (
+Optional
+Party
+)
+instance
+SetField “issuingMiningRounds” TransferContextSummaryV2 (
+Map
+Round IssuingMiningRound)
+instance
+SetField “openRoundNumber” TransferContextSummaryV2 Round
+instance
+SetField “validatorRights” TransferContextSummaryV2 (
+Map
+Party
+(
+ContractId
+ValidatorRight))
+data
+TransferInput
+An individual input for a batch transfer.
+InputAppRewardCoupon (
+ContractId
+AppRewardCoupon)
+InputValidatorRewardCoupon (
+ContractId
+ValidatorRewardCoupon)
+InputSvRewardCoupon (
+ContractId
+SvRewardCoupon)
+InputAmulet (
+ContractId
+Amulet)
+ExtTransferInput
+Field
+Type
+Description
+dummyUnitField
+()
+Extension constructor (and field) to work around the current lack of upgrading for variants in Daml 3.0
+optInputValidatorFaucetCoupon
+Optional
+(
+ContractId
+ValidatorFaucetCoupon)
+Added in CIP-3. Optional validator faucet coupon input into this transfer.
+InputValidatorLivenessActivityRecord (
+ContractId
+ValidatorLivenessActivityRecord)
+InputUnclaimedActivityRecord (
+ContractId
+UnclaimedActivityRecord)
+InputDevelopmentFundCoupon (
+ContractId
+DevelopmentFundCoupon)
+instance
+Eq
+TransferInput
+instance
+Ord
+TransferInput
+instance
+Show
+TransferInput
+instance
+GetField “dummyUnitField” TransferInput ()
+instance
+GetField “inputs” AmuletRules_BuyMemberTraffic [TransferInput]
+instance
+GetField “inputs” AmuletRules_CreateExternalPartySetupProposal [TransferInput]
+instance
+GetField “inputs” AmuletRules_CreateTransferPreapproval [TransferInput]
+instance
+GetField “inputs” Transfer [TransferInput]
+instance
+GetField “inputs” TransferPreapproval_Renew [TransferInput]
+instance
+GetField “inputs” TransferPreapproval_Send [TransferInput]
+instance
+GetField “inputs” TransferPreapproval_SendV2 [TransferInput]
+instance
+GetField “inputs” TransferCommand_Send [TransferInput]
+instance
+GetField “optInputValidatorFaucetCoupon” TransferInput (
+Optional
+(
+ContractId
+ValidatorFaucetCoupon))
+instance
+SetField “dummyUnitField” TransferInput ()
+instance
+SetField “inputs” AmuletRules_BuyMemberTraffic [TransferInput]
+instance
+SetField “inputs” AmuletRules_CreateExternalPartySetupProposal [TransferInput]
+instance
+SetField “inputs” AmuletRules_CreateTransferPreapproval [TransferInput]
+instance
+SetField “inputs” Transfer [TransferInput]
+instance
+SetField “inputs” TransferPreapproval_Renew [TransferInput]
+instance
+SetField “inputs” TransferPreapproval_Send [TransferInput]
+instance
+SetField “inputs” TransferPreapproval_SendV2 [TransferInput]
+instance
+SetField “inputs” TransferCommand_Send [TransferInput]
+instance
+SetField “optInputValidatorFaucetCoupon” TransferInput (
+Optional
+(
+ContractId
+ValidatorFaucetCoupon))
+data
+TransferInputsSummary
+TransferInputsSummary
+Field
+Type
+Description
+totalAmuletAmount
+Decimal
+totalAppRewardAmount
+Decimal
+totalValidatorRewardAmount
+Decimal
+totalValidatorFaucetAmount
+Decimal
+Note that the validator faucet amount does not need to be optional in this type, as it is not stored on the ledger.
+totalSvRewardAmount
+Decimal
+totalHoldingFees
+Decimal
+amountArchivedAsOfRoundZero
+Decimal
+changeToHoldingFeesRate
+Decimal
+totalUnclaimedActivityRecordAmount
+Optional
+Decimal
+Note: Made optional as the addition of this field is checked by the upgrade checker on package upload because
+TransferInputsSummary
+is serializable.
+totalDevelopmentFundAmount
+Optional
+Decimal
+Note: Same rationale as above — made optional to ensure compatibility with the upgrade checker on package upload because
+TransferInputsSummary
+is serializable.
+instance
+Eq
+TransferInputsSummary
+instance
+Show
+TransferInputsSummary
+instance
+GetField “amountArchivedAsOfRoundZero” TransferInputsSummary
+Decimal
+instance
+GetField “changeToHoldingFeesRate” TransferInputsSummary
+Decimal
+instance
+GetField “totalAmuletAmount” TransferInputsSummary
+Decimal
+instance
+GetField “totalAppRewardAmount” TransferInputsSummary
+Decimal
+instance
+GetField “totalDevelopmentFundAmount” TransferInputsSummary (
+Optional
+Decimal
+)
+instance
+GetField “totalHoldingFees” TransferInputsSummary
+Decimal
+instance
+GetField “totalSvRewardAmount” TransferInputsSummary
+Decimal
+instance
+GetField “totalUnclaimedActivityRecordAmount” TransferInputsSummary (
+Optional
+Decimal
+)
+instance
+GetField “totalValidatorFaucetAmount” TransferInputsSummary
+Decimal
+instance
+GetField “totalValidatorRewardAmount” TransferInputsSummary
+Decimal
+instance
+SetField “amountArchivedAsOfRoundZero” TransferInputsSummary
+Decimal
+instance
+SetField “changeToHoldingFeesRate” TransferInputsSummary
+Decimal
+instance
+SetField “totalAmuletAmount” TransferInputsSummary
+Decimal
+instance
+SetField “totalAppRewardAmount” TransferInputsSummary
+Decimal
+instance
+SetField “totalDevelopmentFundAmount” TransferInputsSummary (
+Optional
+Decimal
+)
+instance
+SetField “totalHoldingFees” TransferInputsSummary
+Decimal
+instance
+SetField “totalSvRewardAmount” TransferInputsSummary
+Decimal
+instance
+SetField “totalUnclaimedActivityRecordAmount” TransferInputsSummary (
+Optional
+Decimal
+)
+instance
+SetField “totalValidatorFaucetAmount” TransferInputsSummary
+Decimal
+instance
+SetField “totalValidatorRewardAmount” TransferInputsSummary
+Decimal
+data
+TransferOutput
+An individual output for a batch transfer.
+TransferOutput
+Field
+Type
+Description
+receiver
+Party
+The receiver who will own the created output amulet.
+receiverFeeRatio
+Decimal
+The ratio of the output fee paid from receiver’s output amount. 1.0 means the whole fee is deducted from the specified output amount, 0.0 the whole fee is deducted from the sender’s input balance. If a receiver’s fee is not covered by the specified output amount, the transfer is aborted.
+amount
+Decimal
+The amount of amulet to receive, before deducting the receiver’s part of the output fee.
+lock
+Optional
+TimeLock
+The lock to be added, if any.
+instance
+Eq
+TransferOutput
+instance
+Ord
+TransferOutput
+instance
+Show
+TransferOutput
+instance
+GetField “amount” TransferOutput
+Decimal
+instance
+GetField “lock” TransferOutput (
+Optional
+TimeLock)
+instance
+GetField “outputs” AmuletRules_ComputeFees [TransferOutput]
+instance
+GetField “outputs” Transfer [TransferOutput]
+instance
+GetField “receiver” TransferOutput
+Party
+instance
+GetField “receiverFeeRatio” TransferOutput
+Decimal
+instance
+SetField “amount” TransferOutput
+Decimal
+instance
+SetField “lock” TransferOutput (
+Optional
+TimeLock)
+instance
+SetField “outputs” AmuletRules_ComputeFees [TransferOutput]
+instance
+SetField “outputs” Transfer [TransferOutput]
+instance
+SetField “receiver” TransferOutput
+Party
+instance
+SetField “receiverFeeRatio” TransferOutput
+Decimal
+type
+TransferOutputsSummary
+= [PreprocessedTransferOutput]
+data
+TransferPreapproval_CancelResult
+TransferPreapproval_CancelResult
+instance
+Eq
+TransferPreapproval_CancelResult
+instance
+Show
+TransferPreapproval_CancelResult
+instance
+HasExercise
+TransferPreapproval TransferPreapproval_Cancel TransferPreapproval_CancelResult
+instance
+HasFromAnyChoice
+TransferPreapproval TransferPreapproval_Cancel TransferPreapproval_CancelResult
+instance
+HasToAnyChoice
+TransferPreapproval TransferPreapproval_Cancel TransferPreapproval_CancelResult
+data
+TransferPreapproval_ExpireResult
+TransferPreapproval_ExpireResult
+(no fields)
+instance
+Eq
+TransferPreapproval_ExpireResult
+instance
+Show
+TransferPreapproval_ExpireResult
+instance
+HasExercise
+TransferPreapproval TransferPreapproval_Expire TransferPreapproval_ExpireResult
+instance
+HasFromAnyChoice
+TransferPreapproval TransferPreapproval_Expire TransferPreapproval_ExpireResult
+instance
+HasToAnyChoice
+TransferPreapproval TransferPreapproval_Expire TransferPreapproval_ExpireResult
+data
+TransferPreapproval_RenewResult
+TransferPreapproval_RenewResult
+Field
+Type
+Description
+transferPreapprovalCid
+ContractId
+TransferPreapproval
+transferResult
+TransferResult
+receiver
+Party
+provider
+Party
+amuletPaid
+Decimal
+meta
+Optional
+Metadata
+instance
+Eq
+TransferPreapproval_RenewResult
+instance
+Show
+TransferPreapproval_RenewResult
+instance
+GetField “amuletPaid” TransferPreapproval_RenewResult
+Decimal
+instance
+GetField “meta” TransferPreapproval_RenewResult (
+Optional
+Metadata)
+instance
+GetField “provider” TransferPreapproval_RenewResult
+Party
+instance
+GetField “receiver” TransferPreapproval_RenewResult
+Party
+instance
+GetField “transferPreapprovalCid” TransferPreapproval_RenewResult (
+ContractId
+TransferPreapproval)
+instance
+GetField “transferResult” TransferPreapproval_RenewResult TransferResult
+instance
+SetField “amuletPaid” TransferPreapproval_RenewResult
+Decimal
+instance
+SetField “meta” TransferPreapproval_RenewResult (
+Optional
+Metadata)
+instance
+SetField “provider” TransferPreapproval_RenewResult
+Party
+instance
+SetField “receiver” TransferPreapproval_RenewResult
+Party
+instance
+SetField “transferPreapprovalCid” TransferPreapproval_RenewResult (
+ContractId
+TransferPreapproval)
+instance
+SetField “transferResult” TransferPreapproval_RenewResult TransferResult
+instance
+HasExercise
+TransferPreapproval TransferPreapproval_Renew TransferPreapproval_RenewResult
+instance
+HasFromAnyChoice
+TransferPreapproval TransferPreapproval_Renew TransferPreapproval_RenewResult
+instance
+HasToAnyChoice
+TransferPreapproval TransferPreapproval_Renew TransferPreapproval_RenewResult
+data
+TransferPreapproval_SendResult
+TransferPreapproval_SendResult
+Field
+Type
+Description
+result
+TransferResult
+meta
+Optional
+Metadata
+instance
+Eq
+TransferPreapproval_SendResult
+instance
+Show
+TransferPreapproval_SendResult
+instance
+GetField “meta” TransferPreapproval_SendResult (
+Optional
+Metadata)
+instance
+GetField “result” TransferPreapproval_SendResult TransferResult
+instance
+SetField “meta” TransferPreapproval_SendResult (
+Optional
+Metadata)
+instance
+SetField “result” TransferPreapproval_SendResult TransferResult
+instance
+HasExercise
+TransferPreapproval TransferPreapproval_Send TransferPreapproval_SendResult
+instance
+HasFromAnyChoice
+TransferPreapproval TransferPreapproval_Send TransferPreapproval_SendResult
+instance
+HasToAnyChoice
+TransferPreapproval TransferPreapproval_Send TransferPreapproval_SendResult
+data
+TransferPreapproval_SendV2Result
+TransferPreapproval_SendV2Result
+Field
+Type
+Description
+result
+TransferResult
+meta
+Metadata
+instance
+Eq
+TransferPreapproval_SendV2Result
+instance
+Show
+TransferPreapproval_SendV2Result
+instance
+GetField “meta” TransferPreapproval_SendV2Result Metadata
+instance
+GetField “result” TransferPreapproval_SendV2Result TransferResult
+instance
+SetField “meta” TransferPreapproval_SendV2Result Metadata
+instance
+SetField “result” TransferPreapproval_SendV2Result TransferResult
+instance
+HasExercise
+TransferPreapproval TransferPreapproval_SendV2 TransferPreapproval_SendV2Result
+instance
+HasFromAnyChoice
+TransferPreapproval TransferPreapproval_SendV2 TransferPreapproval_SendV2Result
+instance
+HasToAnyChoice
+TransferPreapproval TransferPreapproval_SendV2 TransferPreapproval_SendV2Result
+data
+TransferResult
+TransferResult
+Field
+Type
+Description
+round
+Round
+Round for which this transfer was registered.
+summary
+TransferSummary
+Summary of amount input and outputs, and fees paid.
+createdAmulets
+[CreatedAmulet]
+References to the created output amulets.
+senderChangeAmulet
+Optional
+(
+ContractId
+Amulet)
+Optional reference to the amulet for the change returned to the sender. Only created if there was some change to be returned after deducting the fee for returning change.
+meta
+Optional
+Metadata
+instance
+Eq
+TransferResult
+instance
+Show
+TransferResult
+instance
+GetField “createdAmulets” TransferResult [CreatedAmulet]
+instance
+GetField “meta” TransferResult (
+Optional
+Metadata)
+instance
+GetField “result” TransferPreapproval_SendResult TransferResult
+instance
+GetField “result” TransferPreapproval_SendV2Result TransferResult
+instance
+GetField “result” TransferCommandResult TransferResult
+instance
+GetField “round” TransferResult Round
+instance
+GetField “senderChangeAmulet” TransferResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+GetField “summary” TransferResult TransferSummary
+instance
+GetField “transferResult” AmuletRules_CreateExternalPartySetupProposalResult TransferResult
+instance
+GetField “transferResult” AmuletRules_CreateTransferPreapprovalResult TransferResult
+instance
+GetField “transferResult” TransferPreapproval_RenewResult TransferResult
+instance
+SetField “createdAmulets” TransferResult [CreatedAmulet]
+instance
+SetField “meta” TransferResult (
+Optional
+Metadata)
+instance
+SetField “result” TransferPreapproval_SendResult TransferResult
+instance
+SetField “result” TransferPreapproval_SendV2Result TransferResult
+instance
+SetField “result” TransferCommandResult TransferResult
+instance
+SetField “round” TransferResult Round
+instance
+SetField “senderChangeAmulet” TransferResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+SetField “summary” TransferResult TransferSummary
+instance
+SetField “transferResult” AmuletRules_CreateExternalPartySetupProposalResult TransferResult
+instance
+SetField “transferResult” AmuletRules_CreateTransferPreapprovalResult TransferResult
+instance
+SetField “transferResult” TransferPreapproval_RenewResult TransferResult
+instance
+HasExercise
+AmuletRules AmuletRules_Transfer TransferResult
+instance
+HasFromAnyChoice
+AmuletRules AmuletRules_Transfer TransferResult
+instance
+HasToAnyChoice
+AmuletRules AmuletRules_Transfer TransferResult
+data
+TransferSummary
+Summary of input and output amounts and fees paid. This summary is intended to be used together with the
+Transfer
+specification used to initiate the transfer when displaying a transaction summary. Its fields are intended to provide shortcuts for key numbers that are complex to compute off-ledger.
+All amounts are denominated in Splice.
+TransferSummary
+Field
+Type
+Description
+inputAppRewardAmount
+Decimal
+Total amount of app reward coupon issunace input into this transfer.
+inputValidatorRewardAmount
+Decimal
+Total amount of validator rewards coupon issuance input into this transfer.
+inputSvRewardAmount
+Decimal
+Total amount of SV reward coupon issuance input into this transfer.
+inputAmuletAmount
+Decimal
+Total input amount of amulet input into this transfer, before deducting holding fees.
+balanceChanges
+Map
+Party
+BalanceChange
+Balance changes per party
+holdingFees
+Decimal
+Holding fees paid by the sender on their input amulets.
+outputFees
+[
+Decimal
+]
+Fees paid for the individual output amulets in the order they were specified.
+senderChangeFee
+Decimal
+Fee charged for returning change to the sender, which is the smaller of the left-over balance after paying for all outputs or one amulet create fee. In case the left-over balance after paying for all outputs is smaller than a create fee, all of that balance is consumed by the fee for returning change, and no actual amulet is created for the sender, i.e., the
+senderChangeAmount
+is zero. The transfer does though succeed. For transfers that do not allow returning change to the sender, the left-over balance after paying for all outputs must be zero, and thus the
+senderChangeFee
+must be zero as well.
+senderChangeAmount
+Decimal
+The final amount of amulet returned to the sender after paying for all outputs and fees. If it is zero, then no amulet is created for the sender.
+amuletPrice
+Decimal
+The amulet price at the round this transfer was executed.
+inputValidatorFaucetAmount
+Optional
+Decimal
+Added in CIP-3. Total amount of validator faucet coupon issuance input into this transfer.
+inputUnclaimedActivityRecordAmount
+Optional
+Decimal
+Total amount of unclaimed activity record issuance input into this transfer. Note: Made optional as the addition of this field is checked by the upgrade checker.
+inputDevelopmentFundAmount
+Optional
+Decimal
+Total amount of development fund coupon issuance input into this transfer. Note: Made optional as the addition of this field is checked by the upgrade checker.
+instance
+Eq
+TransferSummary
+instance
+Show
+TransferSummary
+instance
+GetField “amuletPrice” TransferSummary
+Decimal
+instance
+GetField “balanceChanges” TransferSummary (
+Map
+Party
+BalanceChange)
+instance
+GetField “holdingFees” TransferSummary
+Decimal
+instance
+GetField “inputAmuletAmount” TransferSummary
+Decimal
+instance
+GetField “inputAppRewardAmount” TransferSummary
+Decimal
+instance
+GetField “inputDevelopmentFundAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+GetField “inputSvRewardAmount” TransferSummary
+Decimal
+instance
+GetField “inputUnclaimedActivityRecordAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+GetField “inputValidatorFaucetAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+GetField “inputValidatorRewardAmount” TransferSummary
+Decimal
+instance
+GetField “outputFees” TransferSummary [
+Decimal
+]
+instance
+GetField “senderChangeAmount” TransferSummary
+Decimal
+instance
+GetField “senderChangeFee” TransferSummary
+Decimal
+instance
+GetField “summary” AmuletRules_BuyMemberTrafficResult TransferSummary
+instance
+GetField “summary” TransferResult TransferSummary
+instance
+SetField “amuletPrice” TransferSummary
+Decimal
+instance
+SetField “balanceChanges” TransferSummary (
+Map
+Party
+BalanceChange)
+instance
+SetField “holdingFees” TransferSummary
+Decimal
+instance
+SetField “inputAmuletAmount” TransferSummary
+Decimal
+instance
+SetField “inputAppRewardAmount” TransferSummary
+Decimal
+instance
+SetField “inputDevelopmentFundAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+SetField “inputSvRewardAmount” TransferSummary
+Decimal
+instance
+SetField “inputUnclaimedActivityRecordAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+SetField “inputValidatorFaucetAmount” TransferSummary (
+Optional
+Decimal
+)
+instance
+SetField “inputValidatorRewardAmount” TransferSummary
+Decimal
+instance
+SetField “outputFees” TransferSummary [
+Decimal
+]
+instance
+SetField “senderChangeAmount” TransferSummary
+Decimal
+instance
+SetField “senderChangeFee” TransferSummary
+Decimal
+instance
+SetField “summary” AmuletRules_BuyMemberTrafficResult TransferSummary
+instance
+SetField “summary” TransferResult TransferSummary
+data
+ValidatedOpenMiningRounds
+ValidatedOpenMiningRounds
+Field
+Type
+Description
+oldestRound
+OpenMiningRound
+latestUsableRound
+OpenMiningRound
+instance
+Eq
+ValidatedOpenMiningRounds
+instance
+Show
+ValidatedOpenMiningRounds
+instance
+GetField “latestUsableRound” ValidatedOpenMiningRounds OpenMiningRound
+instance
+GetField “oldestRound” ValidatedOpenMiningRounds OpenMiningRound
+instance
+SetField “latestUsableRound” ValidatedOpenMiningRounds OpenMiningRound
+instance
+SetField “oldestRound” ValidatedOpenMiningRounds OpenMiningRound
+​
+Functions
+validateOpenMiningRoundTriple
+:
+Party
+-> OpenMiningRoundTriple ->
+Update
+ValidatedOpenMiningRounds
+transferControllers
+: Transfer -> Set
+Party
+The controllers for a transfer.
+mkUnknownSynchronizerFailure
+:
+Text
+-> FailureStatus
+mkInsufficientTopupAmountFailure
+:
+Int
+->
+Int
+-> FailureStatus
+mkMaximumInputsExceededFailure
+: FailureStatus
+mkMaximumOutputsExceededFailure
+: FailureStatus
+mkInsufficientFundsFailure
+:
+Decimal
+-> FailureStatus
+spliceErrorId
+:
+Text
+->
+Text
+mkFailureStatus
+:
+Text
+-> FailureCategory ->
+Text
+->
+TextMap
+Text
+-> FailureStatus
+checkTransferConstraints
+: Transfer -> TransferSummary -> TransferConfigV2 unit ->
+Either
+FailureStatus ()
+executeTransfer
+: RewardsIssuanceConfig -> TransferContext ->
+Party
+-> Transfer ->
+Update
+TransferResult
+Execute a transfer.
+executeExternalPartyTransfer
+:
+Party
+-> ExternalPartyTransferContext -> Transfer ->
+Update
+TransferResult
+Execute a transfer for external parties so that the prepared tx remains valid for 24h
+executeTransfer’
+: RewardsIssuanceConfig -> TransferContextSummaryV2 ->
+Party
+-> Transfer ->
+Update
+TransferResult
+summarizeAndValidateContext
+: TransferContext ->
+Party
+-> Transfer ->
+Update
+TransferContextSummaryV2
+summarizeAndValidateExternalPartyContext
+: ExternalPartyTransferContext ->
+Party
+-> Transfer ->
+Update
+TransferContextSummaryV2
+getValidatorRight
+: TransferContextSummaryV2 ->
+Party
+->
+Update
+(
+ContractId
+ValidatorRight)
+getIssuingMiningRound
+: TransferContextSummaryV2 -> Round ->
+Update
+IssuingMiningRound
+summarizeAndConsumeInputs
+: TransferContextSummaryV2 ->
+Party
+->
+Party
+-> [TransferInput] ->
+Update
+TransferInputsSummary
+dedupOutputLockHolders
+: TransferOutput -> TransferOutput
+Deduplicate lock-holders to store them and charge for them at most once
+preprocessOutputs
+: TransferConfigV2 Amulet -> [TransferOutput] ->
+Update
+TransferOutputsSummary
+summarizeTransfer
+:
+Party
+-> Round ->
+Decimal
+-> TransferConfigV2 Amulet -> TransferInputsSummary -> TransferOutputsSummary ->
+Update
+TransferSummary
+issueRewards
+: RewardsIssuanceConfig -> TransferContextSummaryV2 ->
+Party
+->
+Optional
+[AppRewardBeneficiary] ->
+Update
+()
+createTransferOutputs
+: Round -> TransferConfigV2 Amulet ->
+Party
+->
+Party
+-> TransferSummary -> TransferOutputsSummary ->
+Update
+([CreatedAmulet],
+Optional
+(
+ContractId
+Amulet))
+scaleFees
+:
+Decimal
+-> TransferConfig USD -> TransferConfig Amulet
+Scale the ‘AmuletConfig’ such that the fees charged are scaled by the same scale factor.
+scaleFees2
+:
+Decimal
+-> TransferConfigV2 USD -> TransferConfigV2 Amulet
+Scale the ‘TranserConfigV2’ such that the fees charged are scaled by the same scale factor.
+transferConfigAmuletFromOpenRound
+: OpenMiningRound -> TransferConfig Amulet
+validateBuyMemberTrafficInputs
+: AmuletConfig USD ->
+Text
+->
+Int
+->
+Either
+FailureStatus ()
+computeSynchronizerFees
+:
+Party
+->
+Party
+->
+Int
+-> AmuletRules -> TransferContext ->
+Update
+(
+Decimal
+,
+Decimal
+)
+Computing synchronizer fees
+legacyAmuletCreateSummary
+:
+Party
+->
+Party
+->
+ContractId
+OpenMiningRound ->
+ContractId
+Amulet ->
+Update
+(AmuletCreateSummary (
+ContractId
+Amulet))
+checkExpectedDso
+:
+Party
+->
+Optional
+Party
+->
+Update
+()
+exerciseAppTransfer
+:
+Party
+-> AppTransferContext -> Transfer ->
+Update
+TransferResult
+exercisePaymentTransfer
+:
+Party
+-> PaymentTransferContext -> Transfer ->
+Update
+TransferResult
+amuletTransferContext
+:
+ContractId
+OpenMiningRound ->
+Optional
+(
+ContractId
+FeaturedAppRight) -> TransferContext
+Helper to construct transfer context with only amulet inputs
+createdAmuletToHolding
+: CreatedAmulet ->
+ContractId
+Holding
+mkInputValidatorFaucetCoupon
+:
+ContractId
+ValidatorFaucetCoupon -> TransferInput
+Smart constructor for inputing validator faucet coupons into a transfer.
+computeTransferPreapprovalFee
+:
+RelTime
+-> AmuletConfig USD -> TransferContext ->
+Party
+->
+Update
+(
+Decimal
+,
+Decimal
+)
+splitAndBurn
+:
+Party
+->
+Decimal
+-> [TransferInput] -> TransferContext ->
+Party
+->
+Text
+->
+Update
+(TransferResult, Metadata)
+totalBurnFromSummary
+: TransferSummary ->
+Decimal
+Compute the total burn done as part of the transfer.
+externalPartyTransferFromChoiceContext
+:
+Party
+-> ChoiceContext ->
+Update
+ExternalPartyTransferContext
+unfeaturedPaymentContextFromChoiceContext
+:
+Party
+-> ChoiceContext ->
+Update
+ExternalPartyTransferContext
+Used when we want to ignore a featured app right, even if it is present in the context.
+bootstrapExternalPartyConfigState
+: AmuletRules -> OpenMiningRoundTriple ->
+Update
+()
+Suggest edits
+Raise issue
+Splice.AmuletConfig
+Splice.AmuletTransferInstruction

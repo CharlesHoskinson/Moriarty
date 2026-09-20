@@ -1,0 +1,314 @@
+{
+  "model": "claude-fable-5-1",
+  "effort": "medium",
+  "track": "pl-semantics-financial-contracts",
+  "report_markdown": "# NEAR transaction patterns as Moriarty staged transactions and contingent settlement\n\nStatus: bounded independent pass over supplied primary excerpts only. No repository, page or network was read beyond the excerpts quoted in the prompt. No code was run. The three preparatory drafts were treated as untrusted; every proposition below is marked as verified from a supplied primary excerpt, taken from documentation text only, draft-only, or a design inference. The controlling document is /home/charl/Moriarty-aeon-study/docs/MORIARTY-PRODUCT-CONTRACT.md lines 5, 11, 33-39 and 64-68.\n\n## Explanation: what NEAR actually gives a staged transaction\n\nNEAR has no global transaction. It has a signed transaction that is converted into one action receipt, and receipts that spawn further receipts. The verified excerpts establish the shape precisely.\n\nA transaction passes config checks and a signature check over the transaction hash (transaction.rs L327-343). The ordinary access-key path then checks nonce against the effective nonce, available balance against total cost, allowance, storage stake and, for function-call keys, the single-action/zero-deposit/receiver/method restriction (verifier.rs L406-497, L298-344). None of this states anything about economic outcome. It is native authorization and resource validity, and Moriarty's table at product-contract lines 45-52 classifies exactly these things as owner authorization and Midnight execution conditions, not as intent refinement.\n\nA successful verdict creates a receipt and reports SuccessReceiptId (runtime/lib.rs L2234-2283). The signer's amount, nonce and key are committed under TransactionProcessing (L2325-2354) before any action executes. So authority and fee consumption are committed at a boundary that precedes effects. That is the first pattern Moriarty must carry: consumed authority and nonce are a phase-1 fact that survives later failure.\n\nReceipt execution consumes input data dependencies, removing them from state and mapping Some/None to PromiseResult::Successful/Failed (L860-898), commits pending updates before running actions (L902-904), then either commits or rolls back prospective state for that receipt only (L1077-1087). TrieUpdate::rollback clears only the prospective map and pending deploys (update.rs L225-227). Gas burnt is computed on the failure path too (L1089-1094), and a failed function call still adds burnt gas and logs while withholding new receipts (function_call.rs L101-152, L226-227). This is receipt-local atomicity with retained cost, which is the same shape as Midnight's guaranteed/fallible phase split described at product-contract line 39.\n\nCallbacks are data dependencies, not control flow. create_action_receipt appends output_data_receivers to the receipts it waits on and records input_data_ids on the new receipt (receipt_manager.rs L112-137; receipt.rs L590-606). promise_then is sugar over promise_batch_then plus a function call (host.rs L2432-2458). The VM context separately exposes signer, predecessor, refund_to, promise_results, attached deposit and prepaid gas (context.rs L11-64). The docs state that between call and callback any public method may run (reentrancy.mdx L6-8), that no automatic rollback exists (crosscontract L35, L449-459), that batches to one contract act as a unit while parallel calls to different contracts are independent (L465-483), and that a callback that panics after removing a pending record reverts its own cleanup and leaves the obligation stuck (callback-panics.mdx L28-35).\n\nLiveness is a separate axis. Cross-shard receipts are buffered when outgoing gas or bandwidth limits are hit (congestion_control.rs L49-74, L98-117, L159-175). Gas is split into burnt and reserved-for-promises with two limits (gas_counter.rs L126-149). Chunk validation replays recorded storage and checks receipt-proof shard IDs, Merkle root, transaction root and encoded root (chunk_validation.rs L532-566, L764-790); NEP-509 assumes at most one third corrupted stake, never rolls back state, and puts ZK integration out of scope (nep-0509.md L30, L36, L104-109). Doomslug readiness needs strictly more than two thirds of stake (doomslug.rs L267-283). A state witness is validator replay evidence, not a proof of a user's signed outcome.\n\nThe Intents layer adds an application acceptance kernel on top. From documentation only: intents in a batch execute in order but their cross-contract calls need not complete in order (intent-types L22-41); nonces carry a rotating salt (L119-131); a withdrawal storage_deposit is not refunded on failure (L597-598); simulation excludes external asynchronous effects (simulating-intents L481-487); the solver relay's guaranteed delivery is at-least-once with acknowledge-then-process and dedupe by seq (guaranteed-delivery L275-348). The engine source and the ft_resolve_withdraw branches described in the intents-kernel draft were not supplied as primary excerpts and remain unverified here.\n\n## Reference: Moriarty types for staged, contingent execution\n\nThese are design proposals for Moriarty semantics, not implemented features. Names are provisional.\n\n**Stage.** A transition bound to program identity and semantics version, stage identifier, authenticated predecessor, the signed intent, authority in and authority out, complete effects, duties in and duties out, cost bound and the pinned Midnight phase layout. A stage is the unit that a proof statement binds (product contract line 31).\n\n**Receipt.** An authenticated data dependency produced by a stage and consumed by exactly one continuation. Its payload is a typed sum: Success(value), Failed(reason), Unknown(observation set). Success and Failed correspond to NEAR's Some/None input data (lib.rs L893-894). Unknown has no NEAR native analogue for same-chain callbacks, because the docs say the callback always runs if the origin succeeded (crosscontract L425-432); it is required for external chains, bridges and Midnight fallible phases where the observation may never arrive.\n\n**Continuation.** {stage_id, awaits: receipt set, join: All | Any | Quorum(k), resume_token, expiry policy, allowed_next transitions}. The resume token is one-shot: consuming it is part of the stage's effects, mirroring the removal of ReceivedData from state (lib.rs L882-885). Resuming twice is a predecessor mismatch and must fail to prove.\n\n**Authority.** Affine spending authority derived from signed intent: exact asset identity or explicit substitution predicate, recipients, gross debit, fee and liability bounds, minimum net outcome, validity, replay and revocation rules, allowed partial completion (product contract line 33). Authority only decreases across stages. It is distinct from a NEAR function-call key, which restricts invocation (verifier.rs L298-344) and says nothing about balances or debt.\n\n**ResidualDuty.** A persistent liability: owed_to, asset, amount, kind (Refund | Settle | Deliver | Compensate), discharge conditions. Duties obey opening plus created minus explicitly discharged equals closing (product contract line 35). A stage that fails cannot delete a duty; only a discharge transition can. This is the formal version of the callback-panics rule.\n\n**Outcome state.** prepared, authorized, pending, partial(filled), settled, failed, unknown, compensating, recovered. Timeout moves pending to unknown or to expired-with-late-arrival-policy. It never moves to failed on its own.\n\n**Join semantics.** All: resume when every awaited receipt exists; the continuation sees each result separately and inherits the union of surviving duties, matching NEAR's P1.and(P2).then(P3) (crosscontract L226-235). Any/Quorum: resume on the first k arrivals, but every late receipt must still be consumed by a declared absorb transition that either discharges or re-records its duty. No NEAR native any-join is documented; independent parallel calls simply proceed (L478-483), so a late branch is a real resource that must not be dropped silently.\n\n**Partial fills.** The intent declares allowed partial completion and minimum net outcome. Each fill receipt strictly reduces remaining authority and increases filled amount; the proof of every fill stage must show cumulative fills stay within gross debit and fee bounds and that residual authority plus refund duty equals the original reservation.\n\n**Refund versus compensation.** Refund discharges a duty by returning an asset that was reserved and never released. Compensation is a new transition that creates a credit or a new external effect after an external release already occurred; it can itself be pending or fail, and it does not rewind history. Both are permitted transitions only if the signed intent admits them. The NEAR docs' fallback of crediting a withdrawable balance (callback-panics L53) is the compensation form.\n\n**Native check versus proof-carrying intention.** Native, checked by the ledger: signature, nonce, revocation, balance, fee affordability, storage, phase validity, verifier key identity. Proof-carrying, established by the bound relation: intent refinement, transition validity, authority monotonicity, duty conservation, history linkage, complete-effect accounting. A valid signature or a state witness discharges only the first column.\n\n## How-to: translate a NEAR pattern into Moriarty stages\n\n1. Identify the NEAR commit boundaries you rely on: transaction processing commit (lib.rs L2352-2354), receipt start commit (L902-904), receipt end commit or rollback (L1077-1087). Map each to a Moriarty stage and a Midnight phase in the pinned layout.\n2. For each cross-contract call, replace the implicit promise with an explicit pending transition that records reserved authority and a Settle-or-Recover duty before the effect leaves the stage. Do not rely on a later callback to create the duty; NEAR shows the callback may revert its own work.\n3. Type every callback as a continuation with a one-shot resume token and an authenticated receipt. Re-check current state and remaining authority at resume; reentrancy between call and callback is documented behaviour.\n4. Enumerate failure outcomes: Failed, Unknown, gas exhausted, phase partially applied. Each gets an explicit transition that retains fees and consumed nonces, following the burnt-gas-on-failure path (function_call.rs L141-148).\n5. For any-joins, write the absorb transition for late branches before writing the happy path.\n6. Bind cumulative fees, recipients, custody and liability evolution in the complete effects of the last stage, not in an off-chain simulation.\n7. Keep deployment permissionless: the inspected deploy action requires actor equal to account (actions.rs L755-775) and code/storage accounting (L290-327) with no allowlist in the excerpt. Moriarty may require certified semantics and proof validity, never reviewer identity.\n\n## Tutorial: reserve, contingent release, timeout\n\nAlice signs an intent: debit at most 100 A plus fee bound 1 A, release A to Solver only against accepted evidence of 200 B delivery, partial fills allowed to a minimum net of 195 B, refund after expiry E under policy P.\n\nStage 1 (authorized to pending): consumes nonce, reserves 100 A in custody, records duty D1 = Refund-or-Settle 100 A owed to Alice, emits Receipt R1. Fees charged here are bound in the intent and survive any later failure.\n\nStage 2a (pending to partial): receipt R2 carries accepted evidence of 120 B delivered. Proof shows 60 A released to Solver, remaining authority 40 A, D1 reduced to 40 A, filled 120 B, cumulative fee within bound.\n\nStage 2b (partial to unknown): expiry E passes with no further receipt. State becomes unknown for the remaining 40 A. No refund yet. D1 stays live.\n\nStage 3 (unknown to recovered or settled): either a late receipt shows 80 B delivered and 40 A is released, or policy P's bound condition is met and 40 A is refunded, discharging D1. If evidence later shows an external release already happened for the same 40 A, the only admissible path is a Compensate duty, not a second refund.\n\nAdversarial checks the pipeline must reject: a second R2 with the same resume token; a resume against a predecessor whose custody was altered by an interleaved stage; a callback that records failure but whose fallible phase reverted the duty update; a solver-supplied success flag with no bound observation; a lowerer that inserts a fee-on-failure policy not present in the intent; a refund transition issued while D1 is unknown; a fill that substitutes asset identity without a signed substitution predicate.\n\n## Limits\n\nNightshade and Doomslug papers, the intents engine source, the MPC contract and the omni-bridge were not supplied as primary excerpts. Live protocol activation, deployed code hashes and governance holders are unknown. All Moriarty types above are proposals and impose objective proof obligations that no current artifact discharges.",
+  "claims": [
+    {
+      "id": "C01",
+      "claim": "Transaction validation checks config validity then verifies the signature over the transaction hash with the transaction's public key.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/core/primitives/src/transaction.rs#L327-L343",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C02",
+      "claim": "The ordinary access-key path checks nonce against max(access_key.nonce, pending.max_nonce), balance against total cost, allowance, storage stake and function-call permission, returning new account amount and a nonce/allowance update.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/verifier.rs#L406-L497",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C03",
+      "claim": "A function-call permission admits exactly one FunctionCall action with zero deposit to the permitted receiver, and method must be listed when the list is non-empty.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/verifier.rs#L298-L344",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C04",
+      "claim": "A successful verdict creates one action receipt, reports SuccessReceiptId, and routes it to the local queue or to forward_or_buffer_receipt.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/lib.rs#L2234-L2283",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C05",
+      "claim": "Signer account, gas-key nonce and access key updates are committed under StateChangeCause::TransactionProcessing before any action receipt executes.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/lib.rs#L2325-L2354",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C06",
+      "claim": "Receipt processing removes consumed ReceivedData from state and maps Some/None to PromiseResult Successful/Failed, then commits prior updates before executing actions.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/lib.rs#L860-L904",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C07",
+      "claim": "After actions, storage stake is checked on success; a failed system refund burns the deposit; state is committed on Ok and rolled back on Err; burnt gas is still computed on failure.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/lib.rs#L1007-L1098",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C08",
+      "claim": "TrieUpdate::commit moves prospective entries to committed changes; rollback clears only prospective entries and pending deploys.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/core/store/src/trie/update.rs#L213-L227",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C09",
+      "claim": "A guest abort sets the action result to Err while burnt gas, used gas and logs are still accumulated; new receipts, balance and storage updates are applied only when execution succeeded; PromiseYield receipts enqueue a timeout.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/function_call.rs#L101-L228",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C10",
+      "claim": "VMRunnerError denotes non-deterministic infrastructure failure, whereas VMOutcome.aborted is a deterministic guest error whose gas values must agree across validators.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/near-vm-runner/src/runner.rs#L10-L25",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C11",
+      "claim": "VMContext separately exposes signer, predecessor, refund_to, promise_results, attached_deposit and prepaid_gas.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/near-vm-runner/src/logic/context.rs#L11-L64",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C12",
+      "claim": "Callbacks are data dependencies: create_action_receipt appends output_data_receivers to dependency receipts and records input_data_ids on the new receipt; promise_then wraps promise_batch_then plus a function call.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/receipt_manager.rs#L101-L137; core/primitives/src/receipt.rs#L590-L606; runtime/near-vm-runner/src/logic/host.rs#L2413-L2458",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C13",
+      "claim": "Gas accounting distinguishes burnt gas from gas reserved for promises with separate max_gas_burnt and prepaid_gas limits and checked arithmetic.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/near-vm-runner/src/logic/gas_counter.rs#L118-L149",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C14",
+      "claim": "Outgoing cross-shard receipts are forwarded or buffered under per-shard gas and bandwidth limits; same-shard receipts have no gas limit.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/congestion_control.rs#L49-L74,#L98-L117,#L159-L175",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C15",
+      "claim": "Chunk validation checks receipt-proof shard IDs and Merkle path, replays recorded storage, and checks post state root, receipts root, tx root and encoded Merkle root.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/chain/chain/src/stateless_validation/chunk_validation.rs#L532-L633,#L764-L790",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C16",
+      "claim": "NEP-509 uses stateless validation with no state rollback, assumes at most one third corrupted stake, requires more than two thirds of shard-assigned stake for chunk endorsement, and lists ZK integration as out of scope.",
+      "evidence_locator": "https://github.com/near/NEPs/blob/dcc0bcbd452f68c936696e5f9552e567c3b162e0/neps/nep-0509.md#L13-L40,#L66-L109",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C17",
+      "claim": "Doomslug block production readiness requires approved stake strictly greater than two thirds; header validation checks approvals and finality ancestry.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/chain/chain/src/doomslug.rs#L264-L283; chain/chain/src/chain.rs#L980-L1017",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C18",
+      "claim": "Pinned binary constants: stable 88, min supported 84, nightly 157, spice 200, Spice feature 180, GasKeys 85; view calls may be clamped to the minimum supported version.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/core/primitives-core/src/version.rs#L605-L621,#L636-L703",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C19",
+      "claim": "Docs state gas keys were introduced in protocol version 86, while source activates GasKeys at 85.",
+      "evidence_locator": "https://github.com/near/docs/blob/c06865496870cdf8fa985424eca2b13ee2ac6ecf/protocol/accounts-contracts/access-keys.mdx#L63-L70 vs version.rs#L608-L621",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C20",
+      "claim": "Docs state refund receipts always succeed, while runtime burns deposited tokens when a system-predecessor receipt fails.",
+      "evidence_locator": "https://github.com/near/docs/blob/c06865496870cdf8fa985424eca2b13ee2ac6ecf/protocol/transactions/transaction-execution.mdx#L62-L64 vs runtime/runtime/src/lib.rs#L1046-L1053",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C21",
+      "claim": "get_execution_status follows SuccessReceiptId links until a value or failure; docs describe status as determined by the first receipt and note a successful transaction may have failed later receipts.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/chain/chain/src/chain.rs#L3150-L3185; docs transaction-execution.mdx#L85-L89",
+      "classification": "verified-primary-excerpt"
+    },
+    {
+      "id": "C22",
+      "claim": "Between a cross-contract call and its callback any public method may run; a callback that panics reverts its own cleanup and leaves the pending operation intact; no automatic rollback or refund to signer exists.",
+      "evidence_locator": "https://github.com/near/docs/blob/c06865496870cdf8fa985424eca2b13ee2ac6ecf/smart-contracts/security/cross-contract-calls/reentrancy.mdx#L6-L8; callback-panics.mdx#L28-L57; https://docs.near.org/smart-contracts/anatomy/crosscontract lines 35, 425-459",
+      "classification": "verified-doc-excerpt"
+    },
+    {
+      "id": "C23",
+      "claim": "Batch calls to one contract act as a unit; parallel calls to different contracts are independent; P1.and(P2).then(P3) is the documented join; nested then/join forms are invalid.",
+      "evidence_locator": "https://docs.near.org/smart-contracts/anatomy/crosscontract lines 213-256, 461-486",
+      "classification": "verified-doc-excerpt"
+    },
+    {
+      "id": "C24",
+      "claim": "The deploy action path in the excerpt requires actor equal to account and performs code/storage accounting with no maintainer allowlist visible.",
+      "evidence_locator": "https://github.com/near/nearcore/blob/a47cf412bf55b020421e99e5fc5b15ed970a7a61/runtime/runtime/src/actions.rs#L290-L327,#L755-L775",
+      "classification": "verified-primary-excerpt (bounded)"
+    },
+    {
+      "id": "C25",
+      "claim": "Intents in a batch execute in order but their cross-contract calls need not complete in order; nonces carry a rotating 4-byte salt; withdrawal storage_deposit is not refunded on failure.",
+      "evidence_locator": "https://docs.near-intents.org/integration/verifier-contract/intent-types-and-execution lines 22-41, 119-131, 597-598",
+      "classification": "verified-doc-excerpt"
+    },
+    {
+      "id": "C26",
+      "claim": "simulate_intents reflects only Verifier-internal effects and excludes external asynchronous calls; the docs' statement that simulation and execution have always matched is a vendor claim.",
+      "evidence_locator": "https://docs.near-intents.org/integration/verifier-contract/simulating-intents lines 481-487",
+      "classification": "verified-doc-excerpt"
+    },
+    {
+      "id": "C27",
+      "claim": "Solver relay guaranteed delivery is at-least-once: acknowledge before processing, dedupe by seq or quote_hash, 5 second redelivery, 256 in-flight, 7 day retention; the page states no solver has exercised it yet.",
+      "evidence_locator": "https://docs.near-intents.org/integration/market-makers/message-bus/guaranteed-delivery lines 8-9, 275-348, 457-469",
+      "classification": "verified-doc-excerpt"
+    },
+    {
+      "id": "C28",
+      "claim": "Protocol fee is stated as 1 pip; additional channel and 1Click fees are stated per docs.",
+      "evidence_locator": "https://docs.near-intents.org/resources/fees lines 9-70",
+      "classification": "verified-doc-excerpt (not code-verified)"
+    },
+    {
+      "id": "C29",
+      "claim": "Engine::execute_signed_intents ordering, TokenDiff exact-delta semantics, ft_resolve_withdraw branch behaviour and administrative roles as described in the intents-kernel draft.",
+      "evidence_locator": "/home/charl/research/near-teardown-2026-09-19/studies/intents-kernel/REPORT.md lines 9-15, 29-33, 53-55",
+      "classification": "draft-only-unverified"
+    },
+    {
+      "id": "C30",
+      "claim": "Chain Signatures request wire format, yield/response flow and timeout behaviour as described in the abstraction draft.",
+      "evidence_locator": "/home/charl/research/near-teardown-2026-09-19/studies/abstraction/REPORT.md lines 26, 39",
+      "classification": "draft-only-unverified"
+    },
+    {
+      "id": "C31",
+      "claim": "Nightshade and Doomslug paper page contents as described in the runtime draft.",
+      "evidence_locator": "/home/charl/research/near-teardown-2026-09-19/studies/runtime/REPORT.md lines 25-31",
+      "classification": "draft-only-unverified"
+    },
+    {
+      "id": "C32",
+      "claim": "Moriarty Stage/Receipt/Continuation/Authority/ResidualDuty types, join relation, one-shot resume tokens, and unknown/compensating states.",
+      "evidence_locator": "This report, Reference section; grounded on C05-C09, C12, C22-C23 and product contract lines 33-39",
+      "classification": "design-inference"
+    }
+  ],
+  "proposed_requirements": [
+    {
+      "id": "R01",
+      "ears": "The Moriarty stage proof statement shall bind program identity, semantics version, stage identifier, authenticated predecessor, signed intent, authority in and out, complete effects, duties in and out, cost bound and the pinned Midnight phase layout.",
+      "positive_scenario": "A stage proof for a reserve step binds all fields; the verifier accepts it and a tampered predecessor hash is rejected.",
+      "negative_scenario": "A proof binding only program and effects but not predecessor is accepted, allowing replay of a settlement against a different custody state."
+    },
+    {
+      "id": "R02",
+      "ears": "When a stage emits an effect that completes outside the stage, the stage shall transition to a typed pending state, record reserved authority and a residual duty of kind Settle-or-Recover before the effect is emitted.",
+      "positive_scenario": "Reserve of 100 A records duty D1 = 100 A owed to Alice in the same stage.",
+      "negative_scenario": "The duty is created only in the callback; the callback's fallible phase fails and no duty exists on chain."
+    },
+    {
+      "id": "R03",
+      "ears": "When a continuation resumes, the resuming stage shall consume a one-shot resume token bound to the awaited receipt set and shall fail to prove if the token is already consumed.",
+      "positive_scenario": "First callback with receipt R2 consumes token; second identical callback has no token to consume and is rejected.",
+      "negative_scenario": "Two identical callbacks each release funds because nothing in the predecessor state distinguishes them."
+    },
+    {
+      "id": "R04",
+      "ears": "Where a continuation uses an Any or Quorum join, the program shall declare an absorb transition for every late receipt that either discharges or re-records its duty.",
+      "positive_scenario": "Branch B arrives after Branch A settled; absorb transition credits a withdrawable balance and closes B's duty.",
+      "negative_scenario": "Late branch result is discarded and its reserved funds are neither released nor refunded."
+    },
+    {
+      "id": "R05",
+      "ears": "If an expiry policy fires while a stage is pending, then the stage shall transition to unknown or expired-with-late-arrival-policy, and shall not transition to failed or refund without the bound condition in the signed intent.",
+      "positive_scenario": "Expiry passes; state becomes unknown; refund occurs only after policy P's bound condition is satisfied.",
+      "negative_scenario": "Timeout is treated as nonexecution and a refund is paid while an external release later lands, producing a double payout."
+    },
+    {
+      "id": "R06",
+      "ears": "The lowerer shall not introduce any failure outcome, fee charge or retention behaviour that is not enumerated in the signed intent and the pinned phase layout.",
+      "positive_scenario": "Intent lists guaranteed-phase fee retention on fallible failure; the compiled artifact retains exactly that.",
+      "negative_scenario": "Compiled artifact charges a fee on failure that the intent never stated."
+    },
+    {
+      "id": "R07",
+      "ears": "While partial completion is authorized, each fill stage shall prove cumulative fills stay within gross debit and fee bounds and that remaining authority plus refund duty equals the original reservation.",
+      "positive_scenario": "Fill of 60 A leaves 40 A authority and 40 A duty; cumulative fee within bound.",
+      "negative_scenario": "Two fills totalling 110 A are accepted against a 100 A bound."
+    },
+    {
+      "id": "R08",
+      "ears": "If external evidence shows an asset was already released, then any recovery for that asset shall be a Compensate transition creating a new duty or credit, and shall not be a Refund transition of the released asset.",
+      "positive_scenario": "Release already observed; program credits a withdrawable balance funded from a declared source.",
+      "negative_scenario": "A refund is issued from custody that no longer holds the asset."
+    },
+    {
+      "id": "R09",
+      "ears": "The acceptance relation shall treat signature validity, nonce, balance, fee, storage and phase validity as native authorization and execution conditions, and shall separately require the bound proof that effects refine the signed intent.",
+      "positive_scenario": "A validly signed transaction with a missing refinement proof is rejected.",
+      "negative_scenario": "A valid signature is accepted as evidence that outputs meet the minimum net outcome."
+    },
+    {
+      "id": "R10",
+      "ears": "The Moriarty deployment path shall accept any program that type-checks against supported semantics and carries valid certificates, and shall not consult reviewer identity, council approval, registry membership or hosted solver credentials.",
+      "positive_scenario": "A clean external installation deploys a new staged program without project metadata.",
+      "negative_scenario": "Deployment fails because a program hash is absent from a maintainer allowlist."
+    },
+    {
+      "id": "R11",
+      "ears": "Where a continuation accepts contingent release, the release condition shall be a bound observation or proof in the stage statement and shall not be a proposer-supplied success flag.",
+      "positive_scenario": "Release requires an accepted delivery proof for B bound in R2.",
+      "negative_scenario": "A solver message stating success triggers release."
+    },
+    {
+      "id": "R12",
+      "ears": "When a continuation resumes, it shall re-check current custody, remaining authority, deadline and revocation against the signed policy, not against the state at emission time.",
+      "positive_scenario": "Interleaved stage altered custody; resume proof fails and a recovery transition is required.",
+      "negative_scenario": "Callback releases funds based on a stale reservation that was already spent."
+    }
+  ],
+  "contradictions": [
+    "Gas keys activation: source sets GasKeys at protocol version 85 (version.rs L608-621); docs say protocol version 86 (access-keys.mdx L65). Unresolved; do not harmonize.",
+    "Refund receipts: docs say refund receipts always succeed (transaction-execution.mdx L64); runtime burns deposited tokens when a system-predecessor receipt fails (lib.rs L1046-1053). The failure model needs the actual branch and version.",
+    "Transaction status: docs say status is determined by the first receipt (transaction-execution.mdx L87); implementation follows SuccessReceiptId links until a value or failure (chain.rs L3159-3185). Returned promise chains and side branches differ.",
+    "Callback always executes (crosscontract L425-432) applies to same-chain receipts after a successful origin; it does not cover external-chain or bridge settlement, where unknown is a real state. Not a contradiction but a scope boundary the drafts sometimes blur.",
+    "Simulation accuracy: docs claim simulation and execution have always matched (simulating-intents L484) while also stating simulation excludes external asynchronous effects (L485-487). Only the second is a semantic statement.",
+    "Guaranteed delivery is described as live in production and simultaneously as unexercised by any solver (guaranteed-delivery L8-9).",
+    "Stake thresholds: NEP-509 assumes at most one third corrupted stake and requires more than two thirds of shard-assigned stake for endorsements; Doomslug readiness uses more than two thirds of total epoch stake. Different denominators; drafts must not conflate them."
+  ],
+  "missing_evidence": [
+    "near/intents engine source at 32a7836f: execute_signed_intents ordering, TokenDiff, ft_resolve_withdraw branches, admin roles. Only draft text was supplied.",
+    "near/mpc contract source at 3499a2a: sign entrypoint, yield/timeout behaviour.",
+    "Near-One/omni-bridge and defuse-protocol repositories: no excerpts supplied.",
+    "Nightshade and Doomslug paper pages: no images or text supplied.",
+    "Live protocol activation, deployed code hashes, access keys, role holders, fee configuration for any NEAR deployment.",
+    "Midnight ZKIRv3 instruction surface, phase layout specification, verifier deployment identity and any Moriarty compiler artifact.",
+    "PR #17 Agda development contents and its WShape conditions.",
+    "Execution of any proposed adversarial scenario; none were run."
+  ],
+  "recommendations_for_moriarty": [
+    "Adopt the Stage/Receipt/Continuation/Authority/ResidualDuty types as language-level constructs with proof obligations, not runtime status labels (proposal, not implemented).",
+    "Make duty creation part of the emitting stage, never the callback, mirroring NEAR's committed-before-action boundary.",
+    "Require one-shot resume tokens for continuations and treat duplicate resume as predecessor mismatch.",
+    "Define All and Any/Quorum joins with mandatory absorb transitions for late branches.",
+    "Model timeout as unknown with a signed late-arrival policy; forbid timeout-implies-nonexecution in the semantics.",
+    "Separate Refund and Compensate as distinct transition kinds; compensation may itself be pending.",
+    "Bind fee retention on failure to the signed intent and pinned phase layout; the lowerer must not synthesize a failure policy.",
+    "Keep native checks and proof-carrying refinement as two columns in the acceptance relation, per product contract lines 45-52.",
+    "Borrow exact asset identity, salted nonces with domain binding to verifier identity, and at-least-once delivery with idempotent resume from NEAR/Intents; reject the finite intent enum as an expressivity ceiling and reject any hosted credential as a deployment gate.",
+    "Add counterexample cases: duplicate callback, stale continuation, callback panic with partial phase effects, gas exhaustion, missing branch result, successful transfer with failed bookkeeping, retry after unknown, asset substitution without predicate, lowerer-invented fee. Require evaluator replay for each."
+  ],
+  "evidence_that_would_change_conclusions": [
+    "Intents engine source showing a general predicate or proof-carrying intent variant would weaken the claim that NEAR Intents is a finite operation kernel.",
+    "A Midnight ledger specification showing guaranteed-phase effects can be reverted on fallible failure would change the phase-retention obligations.",
+    "nearcore code showing an any-join or automatic late-branch handling would change the absorb-transition recommendation.",
+    "Evidence that GasKeys activated at 86 on mainnet would resolve the version discrepancy in the docs' favour.",
+    "A runtime branch showing failed refund receipts are retried rather than burned in the deployed version would change the refund failure model.",
+    "Demonstration of a pinned ZKIRv3 artifact with a certified phase layout would move several proposed types from inference toward implementable obligations.",
+    "Any maintainer allowlist in the full deploy path outside the inspected excerpt would change the permissionless comparison."
+  ]
+}

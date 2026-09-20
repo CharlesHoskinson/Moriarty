@@ -1,15 +1,19 @@
-# Moriarty DeFi Kernel: Interface Specification
+# Moriarty DeFi Kernel: Optional Managed-Routing Interface Research
 
-**How to read this.** The document is layered, and each layer has an audience that never needs the one below it.
+**Scope correction — September 19, 2026.** Moriarty is a permissionless financial language for Midnight developers, with proof-carrying intention and mandatory correctness, authorization, transition and history obligations. Developers do not need administrative approval to author, compile or deploy supported programs. This document studies an optional managed multichain application built with that language; its identity service, router, operator catalog, pricing and foreign adapters are not prerequisites for using Moriarty or additional language backend commitments. Its service-local admission and governance rules do not authorize a developer allowlist or a universal program-deployment registry. Public semantic validity, bounded resources, user signatures and ledger acceptance remain necessary. Internal project review and campaign controls govern maintainers' work and funds, not developers' permission to deploy.
+
+The correction changes the scope and assurance claims below, not the retained adapter findings or historical receipts. See the accompanying [reconciliation record](2026-09-12-defi-kernel-sdk-interface-reconciliation.md#september-19-scope-and-assurance-correction).
+
+**How to read this.** The document is layered by audience. Material authorization and evidence assumptions cross those layers and remain visible in signed terms and receipts.
 
 | Part | Audience | Contains |
 |---|---|---|
 | I — The interface | Account holders, application developers | The whole of what the kernel offers: identity, spending, receiving, orchestration, outcomes |
-| II — The kernel | Protocol implementers | How Part I's guarantees are kept: intent binding, settlement, pricing, operators, error contract |
+| II — The kernel | Protocol implementers | Proposed enforcement of Part I's requirements: intent binding, settlement, pricing, operators, error contract |
 | III — The adapter contract | Chain integrators | Everything chain-specific: what a chain must supply to be routable, and what is currently routable |
 | IV — Record | Maintainers | Decisions taken, and parameters still unfixed |
 
-Part I names no chain, no venue and no signing scheme. That is deliberate and is the point of the design: an account holder states an outcome, and which chains and assets serve it is a routing decision. A reader who only wants to know what the kernel does for them can stop at the end of Part I.
+Part I describes the optional application's outcome-oriented interface. Routing mechanics may be abstracted, but concrete asset identity, settlement domains, authorized substitutions and material trust assumptions remain part of the signed meaning. A reader can stop at Part I to understand the proposed service contract; it does not replace Moriarty's language specification.
 
 **Status:** specified only. No adapter has been tested against deployed behaviour, no meter value has been benchmarked, and no attestation committee has been audited for independence. A number that neither a source nor a measurement fixes is not written into this document; Part IV names each one, what would settle it, and who owns it.
 
@@ -17,40 +21,40 @@ Part I names no chain, no venue and no signing scheme. That is deliberate and is
 
 # Part I — The interface
 
-This part is the whole of what an account holder and an application see. It names no chain, no venue and no signing scheme, because none of those is a property of what the kernel does. Chains and assets are routing details, resolved below the line in Part III.
+This part describes what an account holder and an application see when they opt into the proposed managed service. Part III resolves routing mechanics within the concrete identities, domains and substitution predicate the user authorized; those constraints are not hidden implementation details.
 
 ## 1. What the kernel does
 
-You state an outcome you want. The kernel reaches it, using whatever chains, venues, assets and counterparties the outcome requires, and reports what actually happened.
+You state an outcome you want and authorize its constraints. The service seeks an execution within those constraints and reports what actually happened. Completion depends on available liquidity, witnesses, operators, network inclusion and finality, and the disclosed assumptions of any foreign route. A proof of a valid transition does not establish those availability conditions.
 
-Five guarantees hold for every outcome, on every chain, whatever fails:
+The following are specified requirements for supported service paths, conditional on the stated enforcement and environment assumptions; they are not implemented guarantees for every chain or every failure:
 
-- **Bounded loss, on both sides.** A cap bounds what may leave your accounts. A floor bounds what must arrive. Both are carried in the intent you signed, both are enforced where value moves, and every authority the kernel creates is charged against your caps when it is created rather than when it is used. This holds against a failed step, a hostile counterparty, an operator fault, a chain halt, and any combination.
+- **Bounded loss, on both sides.** A cap bounds what may leave your accounts. A floor bounds what must arrive. Both are carried in the intent you signed, both are enforced where value moves, and every authority the kernel creates is charged against your caps when it is created rather than when it is used. The cap and success floor constrain accepted effects; a chain halt or unavailable evidence can prevent completion or recovery. Residual exposure and duties remain recorded, and a below-floor partial result is not success. The design does not prove protection against arbitrary failure of the enforcing ledger, custody or observation assumptions.
 - **Honest outcomes.** The kernel never reports an outcome stronger than it achieved. A submitted transaction is not a settled one, an outcome nobody can yet prove is reported as unresolved rather than as success or failure, and waiting is never reported as failure. An outcome describes an intent; it is never a statement that your exposure has ended.
 - **Authority is bounded and ends.** Every authority the kernel creates carries a ceiling and a moment it stops, no later than the intent that needed it, and it stops then without anyone acting. Everything live is enumerable at any time. Where an outcome could only be reached by authority the kernel cannot bound that way, **the outcome is refused rather than the authority granted** — and where an authority the kernel meant to retire could not be retired, it is reported as unretired rather than as closed.
 - **One identity, outliving whatever authorizes it.** One identity spends and receives everywhere. You never hold a per-chain key, a per-chain gas balance or a per-chain approval, and changing what you authorize with never changes your accounts or where value already sent to you lands.
 - **Nothing arriving unbidden spends your money.** Pricing, routing, converting and consolidating all cost something. The kernel performs none of them for value you did not ask for, so a stranger who sends you something cannot thereby choose what you spend.
 
-### Assets and chains are routing details
+### Asset identity and authorized routing
 
-You name assets symbolically. An intent names an asset, never a token address on a particular chain. Resolving that to a specific asset on a specific chain, and deciding whether reaching it needs a conversion, a transfer or nothing at all, is the router's decision and is not part of what you sign.
+An interface may display symbolic asset names, but the canonical signed intention binds concrete asset identity, settlement domain, denomination and scale, or an explicit bounded predicate describing the permitted concrete substitutions. Identity includes the applicable issuer, contract or native-asset identifier and network; a ticker alone is insufficient. The router may choose only within that signed predicate. Conversion, wrapping and bridging require explicit authorization, including their fees, minimum net outcome and residual exposure; a later alias-table change cannot widen authority.
 
-Where the same name exists on several chains, they are distinct assets to the router and one asset to you. The kernel never treats two same-named assets as interchangeable without an explicit conversion step it can evidence, and an inbound asset bearing your settlement asset's name is not your settlement asset until the kernel has established that it is.
+Assets with the same name on different chains remain distinct in the signed terms and receipts. An evidenced conversion does not itself authorize substitution: its resulting asset must satisfy the signed predicate. An inbound asset bearing the settlement asset's name is not that asset merely because a router or attestor reports the alias.
 
 You never hold a chain's gas token. Execution costs on every chain are sourced by the kernel and billed to you in your settlement asset, inside the caps you signed, reserved at their worst case before work begins.
 
 ### Grades
 
-Exactly one property of the underlying mechanism reaches you, because it changes what an outcome is worth rather than how it was obtained. Every outcome and every receipt carries two marks:
+Every outcome and receipt reports its predicate, evidence dependencies and two summary marks. The marks do not replace the underlying assumptions:
 
 | Mark | Values | Meaning |
 |---|---|---|
-| Strength | `Proven` or `Attested` | `Proven`: the settling ledger verified the fact itself. `Attested`: a named committee signed that the fact occurred, and the outcome is correct unless enough of them are wrong together |
-| Finality | `Final` or `Contingent` | `Final`: no further condition can reverse it. `Contingent`: a dispute period, unlock or challenge window is still open, and the record names the condition and when it closes |
+| Strength | `Proven` or `Attested` | `Proven`: the settling ledger verified the named predicate under its stated proof and semantic assumptions. `Attested`: a named committee authenticated a claim about an observation; signatures establish endorsement, not the observation's truth. A proof consuming that observation remains conditional on it, and the receipt retains its `Attested` dependency |
+| Finality | `Final` or `Contingent` | `Final`: the named chain and settlement policy's finality conditions were evidenced under explicit consensus and trust assumptions. `Contingent`: a dispute period, unlock or challenge condition remains open, and the record names it. Neither mark asserts immunity to every consensus failure, governance change or asset-issuer action |
 
-The router always selects the strongest path available for the outcome you asked for. You are told the grade of what you got. You are never told the mechanism that produced it, and you never choose between signing schemes.
+The router selects within the signed evidence, asset, cost and timing constraints. The preview and receipt disclose the selected evidence policy and material proof, attestation and finality dependencies. Users need not select low-level signing algorithms, but those dependencies cannot be hidden behind a grade or described as a universally strongest path.
 
-An intent may require a minimum grade. An intent that demands `Proven` and can only be served `Attested` is refused before anything moves, with the reason given as the grade shortfall.
+An intent may require a minimum grade. An intent that demands independently proved observations and can only be served by attestation is refused before anything moves, with the grade shortfall named. Proving that an attestation signature verifies does not upgrade the observed fact to `Proven`.
 
 ---
 
@@ -81,7 +85,7 @@ An identity delegates without surrendering. An application acts for you only thr
 
 **Every outcome names the authority that produced it** — the capability it was authorized under and the means of authorization behind it — so you can always say which authority moved what.
 
-**One action stops everything.** You can withdraw all authority from your identity in a single act, without naming what you are withdrawing it from. It takes effect at once, for every capability, on every network. While your identity stands down, no new capability can be created and no new intent is accepted under it; receiving is unaffected, and what you already hold stays yours. Standing down is forward-looking: it stops authority being used again, and the kernel never reports that it reached work already dispatched.
+**One action requests withdrawal of all authority.** The service immediately refuses new local work after authenticating this request. Effective revocation on each network depends on its authority mechanism, propagation and finality. The record distinguishes requested, submitted, acknowledged and finalized revocation, with outstanding independently exercisable authority and expiry. Dispatched work is not undone. A route cannot claim stronger revocation than it enforces; incompatible routes are refused or require explicit signed bounds and disclosed expiry limitations. Receiving and asset ownership are unaffected by the service's local refusal.
 
 ### Proving an account is yours
 
@@ -124,13 +128,13 @@ A policy whose period has no stated beginning, or whose carry-over is unstated, 
 
 **A cap has a unit, a moment and a band.** Every cap is a quantity of your settlement asset. A quote states the reference used to value anything else against that asset, when that reference was taken, how long the quote is good for, and who absorbs movement in it. A longer validity window may cost more, and what it costs is part of the quote. Movement within the band the quote states is absorbed by whoever the quote says absorbs it. Movement outside the band voids the quote: the intent is refused before value moves, and is never repriced against a cap you signed under a different assumption. The kernel will not value an asset on a reference it cannot obtain fresh, and will not move an asset it cannot value. Where value is returned to you, it is returned in the amount actually recoverable, and the quote that priced the outgoing movement does not govern it.
 
-**Running out stops work; it never becomes debt.** When a budget is exhausted the kernel stops taking on new work. It does not fall back to charging you, and a sponsor's shortfall never converts into your liability. Work already in flight is completed from a reserve set aside before it began, so stopping never strands something half-done.
+**Running out stops work; it never becomes debt.** When a budget is exhausted the kernel stops taking on new work. It does not fall back to charging you, and a sponsor's shortfall never converts into your liability. The service reserves bounded costs for the declared continuation or recovery policy before work begins. Progress still depends on network availability, evidence and inclusion. When progress is unavailable, it retains pending/unknown state, residual duties and reserved funds; a funded reserve is not a liveness proof.
 
 **Work that fails still costs.** An attempt that does not reach the outcome can still consume budget. The kernel charges what attempts actually cost, inside the caps you signed, and reports it whether the outcome was reached or not. It never charges you for a cost caused by an operator's fault. A returned consideration is not a returned cost: where an outcome was not reached and your consideration came back, the cost of attempting it is stated separately.
 
 **What is live is readable.** At any moment you can read the authority outstanding against your identity, the budget reserved against it, the budget remaining in the current period and when that period ends, and for each reserve the condition that releases it and when that is expected. A reserve awaiting release is reported as reserved, never as spent and never as available. Where the kernel cannot source execution costs on a path you need, that is reported as a refusal with its reason, never as work that is merely slow.
 
-**Revocation is forward-looking and says so.** Withdrawing an application's capability stops it being used again. It does not reach back into work already authorized, and the kernel never reports that it did. Revoking states what was still live when it took effect: the intents already authorized, and the budget already reserved against them. A single withdrawal reaching every capability at once is always available. A capability's holder may renounce it without you. Budget reserved for work a revocation stopped is released to your caps, not stranded, and a capability re-issued under a name you have used before begins with a stated budget — the kernel never silently inherits or resets what an earlier capability of that name had spent.
+**Revocation is forward-looking and says so.** Withdrawing an application's capability stops it being used again. It does not reach back into work already authorized, and the kernel never reports that it did. Revoking states what was still live when it took effect: the intents already authorized, and the budget already reserved against them. A single request can initiate withdrawal of all capabilities; effectiveness is tracked per domain, without claiming simultaneous revocation. A capability's holder may renounce it without you. Budget reserved for work a revocation stopped is released to your caps, not stranded, and a capability re-issued under a name you have used before begins with a stated budget — the kernel never silently inherits or resets what an earlier capability of that name had spent.
 
 ---
 
@@ -150,7 +154,7 @@ You state what you accept — value you are expecting, value from counterparties
 
 You can state what is owed to you before it arrives: the amount, the asset, the counterparty where you know it, your own reference, and the time by which it is due. That is an expectation, and it is what makes an arrival expected. Value matching an expectation is applied to it and routed. Value matching no expectation is unsolicited, whatever it is and whoever sent it.
 
-A request you hand to a payer carries the asset, the amount, your reference and the deadline, and names no chain. Which network a payer uses to satisfy it is their routing decision, and you are told which one they used after the fact.
+A request you hand to a payer carries the concrete asset or authorized substitution predicate, permitted settlement domains, amount, reference and deadline. The payer may select a network only within those terms; the receipt identifies the concrete asset and domain used.
 
 An expectation ends in exactly one of: met, met in part, met in excess, met late, or unmet at its deadline. Each is reported as itself. An amount short of what was due is never reported as met, an expectation is never quietly extended past its deadline, and value beyond what was due is reported as excess rather than absorbed. These are the states of an expectation and they do not widen the outcomes an intent can reach.
 
@@ -180,23 +184,23 @@ Positions that are locked or subject to a release condition are reported with th
 
 ## 5. Orchestration
 
-You declare an outcome. You never describe a route.
+You may declare an outcome without prescribing the whole route. Every selected route remains within the signed asset, domain, authority and evidence constraints.
 
 **An intent bounds both sides.** A cap bounds what may leave your accounts. A floor bounds what must arrive. Every intent that acquires, disposes of or converts value carries both, and the kernel enforces the floor exactly as it enforces the cap: where value moves, not in the interface. A route that cannot hold the floor is not offered. A result below the floor is not a settlement, and is never reported as one. An intent with no floor is refused rather than served at whatever price the route returns.
 
-An intent names what you want, the cap, the floor, the deadline, the minimum acceptable grade, and what should happen if it cannot be reached. It does not name chains, venues, sequence, gas, or signing. From that the router selects venues and counterparties, sequences whatever steps the outcome needs across however many chains, sources execution costs on each, and handles failure of any individual step. A route that cannot satisfy the caps, the floor, the deadline, the grade or the recovery requirement is not offered to you; the kernel refuses before value moves rather than discovering it midway.
+An intent names what you want, the cap, the floor, the deadline, the minimum acceptable grade, and what should happen if it cannot be reached. It binds concrete assets and settlement domains or their authorized substitution predicate, together with material evidence dependencies; it need not prescribe the entire route or low-level signing scheme. From that the router selects venues and counterparties, sequences whatever steps the outcome needs across however many chains, sources execution costs on each, and handles failure of any individual step. A route that cannot satisfy the caps, the floor, the deadline, the grade or the recovery requirement is not offered to you; the service refuses known-unsatisfiable constraints before value moves. Later liquidity loss, state changes or unavailable evidence can still prevent fulfillment and require the signed partial-progress or recovery path.
 
 **A floor is priced against a reference, and the reference is disclosed.** Every quote states the reference price it was assessed against, the deviation of the quote from that reference, and whether that reference is independent of the venues the route would use. Where the only available reference is the venue that would trade, the quote says so before you sign, because a price confirmed only by the party quoting it is not confirmed. An intent may require an independent reference, and one that requires it where none exists is refused before anything moves.
 
 **Authority expires by construction.** Every intent carries a deadline, the deadline bounds the window in which any authority derived from it can be used, and the kernel refuses an intent whose authority would remain usable after its deadline has passed. There is no open-ended authorization, and no intent that can be executed later at a price its signer never saw.
 
-**A quote is valid for a stated period, and time is a term.** A quote states when it expires, what the outcome is expected to take, and the longest it can take while still being served. The long figure is the one the kernel is held to. Where a route's speed depends on a shared resource that can be exhausted, the quote says so and states what the outcome becomes if it is. Signing against an expired quote is refused; re-quoting is an ordinary priced call.
+**A quote is valid for a stated period, and time is a term.** A quote states when it expires, what the outcome is expected to take, and the longest it can take while still being served. The long figure bounds the proposed completion window under the quote's stated availability and finality assumptions. It is not a guarantee that a halted or censoring network will settle by then; the quote states expiry, residual obligations and available remedies if completion fails. Where a route's speed depends on a shared resource that can be exhausted, the quote says so and states what the outcome becomes if it is. Signing against an expired quote is refused; re-quoting is an ordinary priced call.
 
 ### Preview
 
-**Nothing is signed unseen, and this is the call that makes that true.** `preview(intent)` returns, in your settlement asset, the complete exposure of an intent before it is signed: the most that can leave, the least that must arrive, the reference price and the deviation from it, the deadline, every charge with its payer, every commitment with its release condition and delay, the grade that will be achieved, the expected and worst-case time to settle, and what you are left holding on each way the intent can fail. Signing is refused for an intent whose preview was not produced. The preview is the kernel's own statement, not the application's rendering of it, and an application cannot alter, suppress or relabel it.
+**Nothing is signed unseen, and this is the call that makes that true.** `preview(intent)` returns, in your settlement asset, the complete exposure of an intent before it is signed: the most that can leave, the least that must arrive, the reference price and the deviation from it, the deadline, every charge with its payer, every commitment with its release condition and delay, the required grade and its dependencies, the expected and conditional worst-case time to settle, and what you are left holding on each way the intent can fail. Signing is refused for an intent whose preview was not produced. The preview is the kernel's own statement, not the application's rendering of it, and an application cannot alter, suppress or relabel it.
 
-A preview states what the kernel will enforce. It is not a prediction of the market: only the caps, the floor, the deadline and the grade are guaranteed.
+A preview states the constraints the proposed acceptance path must enforce and its assumptions. Caps, a successful-outcome floor, authorization deadlines and minimum evidence requirements do not guarantee fulfillment. A missed completion window preserves residual duties and follows the signed remedy rules; it does not undo finalized foreign effects. Proof correctness, observation authenticity and conditional liveness are separate claims.
 
 ### Intents that wait
 
@@ -242,7 +246,7 @@ An application works entirely in these terms. Calls are grouped by what they are
 | Execution | `sign`, `execute`, `status`, `resume`, `cancel`, `replace` | Authorize, run, observe, recover from a client crash, stop future work, and supersede an intent |
 | Reporting | `outcome`, `statement`, `positions` | The result and its grade, the complete exportable statement, and what you hold in its three states |
 
-`capabilities(outcome)` answers whether the kernel can reach an outcome, at what grade, by when, and at what cost, without naming how — and where it cannot, names the missing condition. An application asks that, not whether a particular chain is supported.
+`capabilities(outcome)` reports currently supported paths, their grade, cost and conditional timing, with material evidence and availability assumptions. Where no path satisfies the requested constraints, it names the missing condition. The result is not a promise of future liquidity, inclusion or finality.
 
 `execute` runs to completion or to a reported outcome without further application involvement. Where the kernel needs authority it does not have, it stops and reports rather than proceeding with less.
 
@@ -284,7 +288,7 @@ An intent is in exactly one state at any moment, and ends in exactly one termina
 
 ## 7. What the kernel will not do
 
-- **It will not promise atomicity across chains.** Multi-chain outcomes are sequences. A step can succeed while a later one fails, and you can end up holding part of the outcome. The kernel bounds what that costs you, states it before you sign, and pays the compensation you agreed. It does not claim a rollback it cannot perform.
+- **It will not promise atomicity across chains.** Multi-chain outcomes are sequences. A step can succeed while a later one fails, and you can end up holding part of the outcome. The signed terms bound authorized exposure and state any compensation obligation, its funding, enforceability and payment conditions. A compensation promise is not evidence that liquidity or network availability will permit payment. It does not claim a rollback it cannot perform.
 - **It will not sign anything you cannot see.** There is no path, through any call or sequence of calls, that signs an opaque payload on your behalf. It will not prove anything about you that you were not shown, and a proof that an account is yours carries no authority to move value, names its recipient, and expires.
 - **It will not create authority it cannot bound.** Authority without a ceiling, without an expiry, or exercisable after the intent that needed it has ended, is not created — the outcome is refused instead, however good the price. It will not issue an open-ended capability, will not extend or renew one that has ended, and will not let authority widen as it is passed on.
 - **It will not execute at a price you did not bound.** An intent without a floor is refused. A cap on what leaves your account is not a price, and the kernel never treats it as one.
@@ -317,7 +321,7 @@ An intent is in exactly one state at any moment, and ends in exactly one termina
 
 # Part II — The kernel
 
-Nothing in this part reaches an account holder or an application. It is how the guarantees in Part I are kept. The calls named here are internal: an application that could invoke them could exceed the authority its user granted.
+This part describes the proposed managed service's enforcement mechanisms. Its material authority and evidence assumptions also appear in Part I's signed terms. The calls named here are internal to that service; keeping them internal does not restrict independent Moriarty program deployment, and every execution path must enforce the user's authority.
 
 ---
 
@@ -486,7 +490,7 @@ Grouped by stage. Each call returns `Verified<T>` or a typed refusal from sectio
 
 `resume(pendingId)` reconstructs the session from the anchored pending record and the local submission records, reconciles every leg whose recorded state is `Submitted` or `UnknownExecution`, and returns the reconciled record. It is the only supported entry after a crash, and it issues no signature and broadcasts nothing.
 
-Primitive registration is not on this surface. Admitting a new foreign primitive changes what the interface can be made to do, so it is a governed deployment change to the profile and the adapter set, reflected here only by `listAdapters` and `adapterManifest`. A runtime call that registers a primitive is an unrestricted call by another name.
+Runtime mutation of this managed service's foreign-primitive catalog is not on this surface. An operator may review and govern changes to its own pinned service profile and adapter set, reflected by `listAdapters` and `adapterManifest`. That service-local restriction does not govern permissionless deployment of Moriarty programs, independent services or supported compositions. An opaque new foreign primitive needs defined semantics and checks before this service can safely expose it; ordinary programs using the supported language do not need catalog admission or administrator approval.
 
 ### What the surface refuses to compose
 
@@ -851,7 +855,7 @@ Medium: quote spam, repeated proving, retry amplification and free cancellation 
 
 # Part III — The adapter contract
 
-This part is the contract between the kernel and a chain integrator. Every chain-specific fact in the design lives here and nowhere above it. An application never reads this part, and an account holder is never shown its contents.
+This part is the contract between the proposed service and a chain integrator. It retains chain-specific implementation details. Concrete asset and domain constraints, relevant evidence policies and material trust assumptions must also be exposed in the preview, signed intention and receipt.
 
 ---
 
@@ -925,9 +929,9 @@ Where a venue's signed action carries no expiry, a signature remains usable unti
 
 Import acceptance is split, because the two halves have different strengths and conflating them is how an off-ledger fact gets presented as anchored.
 
-The **transition relation** enforces the value-level conditions: the identities, the quantities, the predicates, the cumulative accounting and the uniqueness of each discharge. These hold by construction, and a violation rejects the transition.
+The **transition relation** enforces the value-level conditions: the identities, the quantities, the predicates, the cumulative accounting and the uniqueness of each discharge. These are specified predicates whose enforcement requires the corresponding implementation, proof and correspondence evidence; a conforming acceptance path rejects their violation. This research document does not establish that evidence.
 
-The **deployment's authentication policy** establishes that the evidence is what it claims to be: the quorum's keys and threshold, the signature over the canonical import statement, and the freshness of the observation. This is an external check against a provider bound when the instance was created. It fails closed, but it is trust, not proof, and every surface that reports the resulting fact reports it as imported.
+The **service deployment's authentication policy** checks the claimed provenance: the quorum's keys and threshold, the signature over the canonical import statement, and the required freshness evidence. It does not establish that the external event occurred or that the quorum's shared data source is correct. This is an external check against a provider bound when the instance was created. It fails closed, but it is trust, not proof, and every surface that reports the resulting fact reports it as imported.
 
 Two consequences are normative. The provider set and the authentication policy are fixed for the life of the instance, so rotating an attestor quorum means a new instance, and a live session cannot migrate to one while composition across instances is unadmitted. And the clock that decides freshness is itself an authenticated observation, not a host clock read.
 
@@ -959,7 +963,7 @@ The first prevents one foreign event from discharging more than one obligation, 
 
 ## 18. Routing and the capability registry
 
-These are inputs to the router, not product tiers, and no account holder or application ever sees them. The router offers an outcome when a path exists that meets the intent's caps, deadline and minimum grade, and declines when none does. What reaches Part I is a grade or a refusal.
+These classes are service-local router inputs, not Moriarty product tiers. The router offers only paths meeting the signed constraints under disclosed assumptions, and declines when none is available. Part I reports the grade or refusal together with the material evidence and availability dependencies; it cannot conceal them behind the class label.
 
 A chain becomes routable by satisfying the obligations in section 16; it does not become routable by being popular. Where a chain supports observation but not value movement, outcomes that only read from it are routable and outcomes that move value through it are not, and neither fact is phrased as a limitation of the chain.
 
@@ -1075,10 +1079,10 @@ Each row records a decision, the alternative it displaced, and why that alternat
 | An unrecognized venue status yields an indeterminate outcome | Collapsing an unknown status to failure | Venue status vocabularies are open-world. Treating unknown as non-execution is how recovery releases funds against a leg that executed |
 | Cumulative executed quantity is checked per leg and asset across attempts | A per-import predicate only | Two partial fills each inside the cap can together exceed the authorization |
 | A refusal is a pre-dispatch result only; after dispatch the outputs are lifecycle states | Typed refusals available at any point | A refusal after dispatch is indistinguishable from a partial attempt, which the contract forbids. As a structural rule, any post-dispatch refusal path is a testable defect |
-| Primitive registration leaves the call surface; admitting a primitive is a governed deployment change | A runtime registration call | Registering a foreign primitive at runtime is an unrestricted new call shape, which section 13 forbids |
+| Runtime primitive registration leaves this service's call surface; catalog changes are governed locally, not permission to deploy Moriarty programs | A runtime registration call | Registering a foreign primitive at runtime is an unrestricted new call shape, which section 13 forbids |
 | Five planes, with an ordered test assigning every charge to exactly one | The plane table with no assignment rule | Without a rule a venue-collected ordering payment books to both foreign execution and priority. The prior text asserted separation instead of deciding it |
 | Commitments and surplus are accounted as vectors that are not planes | Booking locked capital as a cost and leaving positive deviation unassigned | Locked capital is refundable on a condition, so booking it as cost overstates cost and loses the release condition. Unassigned surplus is retained by whichever operator touches it last |
-| Budget exhaustion stops the admission of new work, and a per-leg completion reserve is held before dispatch | A uniform hard stop, or exempting dispatched legs from the budget | A uniform stop strands a dispatched leg with no import and no recovery; exempting dispatched work makes the budget unbounded. Reserving completion before dispatch satisfies both |
+| Budget exhaustion stops the admission of new work, and a per-leg completion reserve is held before dispatch | A uniform hard stop, or exempting dispatched legs from the budget | A uniform stop strands a dispatched leg with no import and no recovery; exempting dispatched work makes the budget unbounded. Reserving bounded continuation/recovery costs prevents budget overspend; actual progress remains conditional on evidence, network availability and inclusion |
 | Recurring capacity is purchased, not staked | Refundable stake funding recurring capacity | Stake has no revenue source for operating costs, and a capacity model allotting a share of total staked weight yields no deterministic amount from a fixed stake |
 | The application fee cap is the minimum of capability rate, profile cap for the market class, and the venue's enforced maximum | Stating fixed spot and derivative percentages as Moriarty's caps | Those figures are one venue's builder-fee ceiling, not a protocol parameter, and stating them omits venues with different or no ceiling |
 | Every parameter no source or measurement fixes is named in section 14 and absent from the text | Publishing arbitrary figures as proposed launch values | A number in normative text is implemented as written. Tariffs, shares, quorum size and bond constants had neither source nor measurement |

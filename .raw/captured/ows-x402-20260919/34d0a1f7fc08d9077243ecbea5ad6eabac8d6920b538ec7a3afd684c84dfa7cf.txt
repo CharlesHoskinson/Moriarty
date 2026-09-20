@@ -1,0 +1,204 @@
+Open Standard v1.0.0
+An open standard that unifies how agents interact with wallets.
+Every CLI, agent, and script implements its own key management. The result: keys scattered everywhere with no shared security. OWS is a unified local storage format to create, sign, and manage wallets securely across every tool and chain.
+Get Started
+Read the spec
+Create
+Sign
+Ecosystem
+$
+ows wallet create --name agent-treasury
+✓
+Created wallet agent-treasury
+Chain
+Address
+Path
+eip155:1
+0xab16...7e3f
+m/44'/60'/0'/0/0
+solana:5eykt4U
+7Kz9...Bm4x
+m/44'/501'/0'/0'
+bip122:000...e93
+bc1q...8k4m
+m/84'/0'/0'/0/0
+cosmos:cosmo...
+cosmos1...j4kp
+m/44'/118'/0'/0/0
+tron:mainnet
+TKLm...9xP2
+m/44'/195'/0'/0/0
+ton:mainnet
+EQCx...Wd3k
+m/44'/607'/0'/0'
+$
+One command creates addresses for every supported chain
+Every tool reinvents the wallet.
+When every tool owns its own keys, nobody owns security.
+today
+×
+foundry
+~/.foundry/keystores/
+×
+hardhat
+.env PRIVATE_KEY=0xab3f...
+×
+solana
+~/.config/solana/id.json
+×
+agent-x
+.env.local SIGNER=0x91c...
+×
+your-bot
+./config/wallet.json
+×
+.zsh_history
+export PRIVATE_KEY=0x...
+6
+formats · 6 locations · 0 encryption
+with OWS
+✓
+~/.ows/wallets/
+AES-256-GCM encrypted
+1
+vault · 1 interface · AES-256-GCM
+6 formats
+1 standard
+plaintext keys
+AES-256-GCM
+per-tool silos
+shared vault
+Built for the agent era.
+Six principles that make OWS different from every wallet SDK, cloud API, and ad-hoc keystore that came before it.
+01
+Local-first
+Your keys live in ~/.ows/ — not in a browser extension, not in the cloud, not scattered across tool-specific config directories.
+02
+No API calls
+No HTTP. No vendor lock-in. No authentication flows. No rate limits. OWS runs entirely on your machine.
+03
+Multi-chain by default
+One wallet, every chain. Create BTC, ETH, SOL, ATOM, TON, TRON addresses from a single seed.
+04
+Self-custody
+Your keys. Your device. No remote signing. No custodians. No third-party access.
+05
+Zero-trust
+Agents never see plaintext keys. Instead, they authenticate with scoped API tokens.
+06
+Composable
+Works with any tool that speaks JSON. CLI, MCP, SDK, REST — same wallet, same security model.
+How it works.
+Agents talk to the Access Layer. The Access Layer enforces policies before any key material is touched, and never exposes key material upstream.
+Tempo
+Claude
+OpenAI
+Polymarket
+…
+OWS Interface
+MCP · SDK · CLI · REST
+Keys never cross this boundary
+Policy Engine
+Evaluate limits, allowlists, chain rules
+Signer
+mlock · zeroize · key wiped after use
+Wallet Vault
+~/.ows/wallets/
+Signed Transaction
+Key wiped · returned to caller
+Step 1
+Request
+Agent calls ows_sign via MCP, REST, or SDK with a chain ID and transaction object.
+Step 2
+Policy Check
+Spending limits, allowlists, chain restrictions, and simulation requirements are evaluated before any key is touched.
+Step 3
+Sign
+Key is decrypted, transaction signed, key immediately wiped. Signed transaction returned to caller.
+Step 4
+Submit
+(optional)
+If RPC URLs are configured, the signed transaction is broadcast on-chain and the transaction hash is returned.
+From zero to signing in 60 seconds.
+No configuration files, no cloud setup, no SDK initialization ceremony. Install, create, sign.
+Install
+npm install -g @open-wallet-standard/core
+Create wallet
+ows wallet create --name my-agent
+That's it.
+No environment variables, no config files, no authentication flows. Your wallet is encrypted with a password you provide, stored locally at
+~/.ows/
+, and ready to use.
+How OWS compares.
+OWS vs cloud wallet APIs vs traditional keystores.
+Feature
+OWS
+Cloud Wallet APIs
+Traditional Keystores
+Multi-chain support
+✓ All chains via CAIP
+⊗ Per-chain APIs
+⊗ Single chain
+Agent access
+✓ MCP + REST + SDK
+△ REST only
+⊗ Manual integration
+Local-first
+✓ No network required
+⊗ Cloud-dependent
+✓ Local
+Policy engine
+✓ Built-in
+△ Limited
+⊗ None
+Encryption
+✓ AES-256-GCM
+△ HSM or KMS
+△ Varies
+Audit logging
+✓ Append-only
+△ Cloud logs
+⊗ None
+Vendor lock-in
+✓ None
+⊗ Full lock-in
+✓ None
+✓
+Full support
+△
+Partial support
+⊗
+Not supported
+Inspired by:
+OWS builds on proven cryptographic and interoperability standards.
+x402
+Spec structure, scheme/network/transport separation, contribution templates
+Privy
+Policy engine design, key sharding concepts, CAIP-2 chain identifiers
+Coinbase AgentKit
+ActionProvider/WalletProvider pattern, MCP tool exposure
+Keystore v3
+Proven encrypted storage format since 2015
+CAIP Standards
+Chain-agnostic identifiers for chains, accounts, and methods
+ERC-4337
+Session keys, programmable validation, paymaster sponsorship
+Turnkey
+TEE-based signing, sub-100ms latency targets
+W3C Universal Wallet
+lock/unlock/import/export interface patterns
+Solana Wallet Standard
+Feature-based capability registration
+Crossmint
+Dual-key model, on-chain policy enforcement
+Lit Protocol
+Decentralized key management, IPFS-published policies
+WalletConnect v2
+Session authorization model, relay architecture
+No new primitives.
+OWS doesn't invent new cryptography or chain-specific abstractions. It implements existing standards in a composable, agent-friendly way. If a BIP or CAIP proposal exists, OWS uses it.
+Every agent deserves a wallet.
+Every wallet deserves a standard.
+Read the spec. Build an implementation. Join the standard.
+Read the Specification
+GitHub

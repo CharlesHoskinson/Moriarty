@@ -1,0 +1,591 @@
+Transfers
+Copy page
+Transfers
+Anoma Pay supports three types of transfer operations. Each moves value between the EVM world and the shielded resource pool in a different direction.
+Operation
+Direction
+Description
+Mint
+EVM → shielded pool
+Deposit ERC-20 tokens into the protocol
+Transfer
+shielded → shielded
+Send tokens between Anoma Pay users
+Burn
+shielded pool → EVM
+Withdraw tokens back to an EVM wallet
+All three operations ultimately produce a
+Parameters
+object that is submitted to the proving backend via
+TransferBackendClient.transfer()
+.
+Mint (deposit)
+A mint deposits ERC-20 tokens from an EVM wallet into the shielded pool. The user signs a
+Permit2
+authorization that transfers tokens to the forwarder contract. In exchange, a new private resource encrypted to the user is created.
+EVM wallet balance → [Permit2 → Forwarder] → private resource
+Initialize the builder
+import
+{ TransferBuilder }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+TransferBuilder.init()
+loads the WASM module. Call this once and reuse the instance.
+Create the mint resource pair
+import
+type
+{ UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+mintResources
+=
+transferBuilder.client.
+createMintResources
+({
+userAddress: walletAddress,
+// the depositor's EVM address
+forwarderAddress:
+"0xfAa9DE..."
+,
+// the chain's forwarder contract
+token: tokenAddress,
+// ERC-20 contract address
+quantity:
+10_000_000
+n
+,
+// 10 USDC (6 decimals)
+keyring,
+});
+// mintResources.createdResource   — the new private resource for the user
+// mintResources.consumedResource  — the ephemeral deposit resource
+// mintResources.actionTree        — Merkle tree of nullifier + commitment
+Sign the Permit2 authorization
+import
+{
+getPermit2Data,
+signPermit,
+toDeadline,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ useSignTypedData, useAccount }
+from
+"wagmi"
+;
+const
+{
+signTypedDataAsync
+}
+=
+useSignTypedData
+();
+const
+deadline
+=
+toDeadline
+(
+1_800_000
+);
+// 30 minutes from now
+const
+nonce
+=
+BigInt
+(Date.
+now
+());
+const
+permit2Props
+=
+{
+permit2Address:
+"0x000000000022D473030F116dDEE9F6B43aC78BA3"
+,
+spenderAddress: forwarderAddress,
+deadline,
+chainId:
+8453
+,
+// Base mainnet
+nonce,
+actionTreeRoot: mintResources.actionTree.
+root
+().
+toHex
+(),
+token: tokenAddress,
+amount:
+10_000_000
+n
+,
+};
+const
+{
+signature
+}
+=
+await
+signPermit
+(signTypedDataAsync, permit2Props, walletAddress);
+Build and submit
+const
+parameters
+=
+transferBuilder.
+buildMintParameters
+(
+mintResources,
+{ deadline, nonce: nonce.
+toString
+(), signature },
+walletAddress,
+tokenAddress,
+keyring
+);
+const
+backend
+=
+new
+TransferBackendClient
+(
+"https://backend.anoma.money"
+);
+const
+{
+transaction_hash
+:
+txId
+}
+=
+await
+backend.
+transfer
+(parameters);
+Transfer (private send)
+A transfer moves tokens from the sender’s resource to a new resource encrypted to the receiver’s public keys. Neither the amount nor the parties are visible on-chain.
+sender's resource → [ZK proof] → receiver's resource
+If the sender’s resource is larger than the transfer amount, a change-back resource is automatically created for the remainder.
+import
+{
+TransferBuilder,
+TransferBackendClient,
+ParametersDraftResolver,
+PayloadBuilder,
+decodePayAddress,
+isValidPayAddress,
+allSupportedChains,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ AppResource, UserKeyring, TokenRegistry }
+from
+"@anomaorg/anoma-app-sdk"
+;
+async
+function
+sendTransfer
+(
+keyring
+:
+UserKeyring
+,
+availableResources
+:
+AppResource
+[],
+receiverPayAddress
+:
+string
+,
+token
+:
+TokenRegistry
+,
+amount
+:
+bigint
+) {
+if
+(
+!
+isValidPayAddress
+(receiverPayAddress)) {
+throw
+new
+Error
+(
+"Invalid Pay Address"
+);
+}
+const
+receiverKeys
+=
+decodePayAddress
+(receiverPayAddress);
+const
+chain
+=
+allSupportedChains.
+find
+(
+c
+=>
+c.network
+===
+"base"
+)
+!
+;
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+const
+resolver
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+resolver.
+addReceiver
+({
+type:
+"AnomaAddress"
+,
+userPublicKeys: receiverKeys,
+quantity: amount,
+token,
+});
+// Selects resources, creates resource pairs, handles change-back automatically
+const
+resolved
+=
+resolver.
+build
+(availableResources, chain.forwarderAddress);
+// Sign the action tree and serialize the payload
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+const
+backend
+=
+new
+TransferBackendClient
+(
+"https://backend.anoma.money"
+);
+const
+{
+transaction_hash
+:
+txId
+}
+=
+await
+backend.
+transfer
+(parameters);
+return
+txId;
+}
+Multiple receivers
+Call
+addReceiver
+multiple times before
+build()
+to send to several recipients in a single atomic transaction.
+ParametersDraftResolver
+automatically selects the minimum set of resources needed across all receivers:
+resolver.
+addReceiver
+({ type:
+"AnomaAddress"
+, userPublicKeys: keys1, quantity:
+5_000_000
+n
+, token });
+resolver.
+addReceiver
+({ type:
+"AnomaAddress"
+, userPublicKeys: keys2, quantity:
+3_000_000
+n
+, token });
+const
+resolved
+=
+resolver.
+build
+(availableResources, chain.forwarderAddress);
+The action tree must be signed after all receivers are added and build() has been called. Calling withAuthorization before build() will authorize the wrong action set.
+Burn (withdrawal)
+A burn withdraws tokens from the shielded pool back to an EVM wallet address. The flow is identical to a transfer except the receiver is declared as
+EvmAddress
+:
+resolver.
+addReceiver
+({
+type:
+"EvmAddress"
+,
+address:
+"0xYourWalletAddress"
+,
+// EVM wallet to receive the tokens
+quantity: amount,
+token,
+});
+const
+resolved
+=
+resolver.
+build
+(availableResources, chain.forwarderAddress);
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+Fee estimation
+Before submitting a transaction, query the backend for the exact fee amount:
+import
+{ TransferBackendClient }
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ Parameters, SupportedFeeToken }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+backend
+=
+new
+TransferBackendClient
+(
+"https://backend.anoma.money"
+);
+const
+fee
+=
+await
+backend.
+estimateFee
+({
+fee_token:
+"USDC"
+,
+// "USDC" | "USDT" | "WETH" | "XAN"
+transaction: parameters,
+});
+// fee.base_fee              — flat fee per transaction
+// fee.base_fee_per_resource — additional fee per resource
+// fee.percentage_fee        — percentage of the transfer amount
+// fee.token_type            — symbol of the fee token
+Fee estimates may fluctuate by up to 5% between estimation and submission due to token price movements. The SDK accepts this variance automatically.
+Estimating proof time
+Use
+estimateTransferTimeInSeconds
+to give users an estimated wait time before they submit:
+import
+{ estimateTransferTimeInSeconds }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+seconds
+=
+estimateTransferTimeInSeconds
+(parameters);
+// Each resource pair requires ~20 seconds to prove
+Transaction lifecycle
+After submission, poll
+transactionStatus
+until the transaction reaches a terminal state:
+import
+{ TransferBackendClient }
+from
+"@anomaorg/anoma-app-sdk"
+;
+async
+function
+waitForProof
+(
+txId
+:
+string
+)
+:
+Promise
+<
+string
+> {
+const
+backend
+=
+new
+TransferBackendClient
+(
+"https://backend.anoma.money"
+);
+const
+terminal
+=
+new
+Set
+([
+"Proven"
+,
+"Failed"
+,
+"Unprocessable"
+]);
+while
+(
+true
+) {
+const
+{
+status
+,
+hash
+}
+=
+await
+backend.
+transactionStatus
+(txId
+as
+`${
+string
+}-${
+string
+}-${
+string
+}-${
+string
+}-${
+string
+}`
+);
+if
+(status
+===
+"Proven"
+)
+return
+hash;
+if
+(terminal.
+has
+(status))
+throw
+new
+Error
+(
+`Transaction ended: ${
+status
+}`
+);
+await
+new
+Promise
+(
+r
+=>
+setTimeout
+(r,
+5_000
+));
+// poll every 5 seconds
+}
+}
+The possible status values are:
+Status
+Meaning
+New
+Received by the backend, awaiting processing
+Proving
+Zero-knowledge proof is being generated
+Proven
+Proof ready; submitting to the chain
+Submitted
+On-chain submission sent
+Failed
+Proving or on-chain submission failed
+Unprocessable
+The submitted parameters were invalid
+Budget approximately
+20 seconds per resource pair
+for proof generation. A simple transfer with no split takes around 60 seconds total.
+Checking queue load
+The proving backend has finite GPU capacity. Use
+statsQueue
+to check current load before showing the estimated wait time:
+import
+{
+TransferBackendClient,
+isHeavyLoad,
+provingGPUs,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+{
+processing
+}
+=
+await
+backend.
+statsQueue
+();
+const
+heavy
+=
+isHeavyLoad
+(processing, provingGPUs);
+// Warn the user if the queue is under heavy load
+Last updated on
+January 13, 2026
+Resources
+Swaps

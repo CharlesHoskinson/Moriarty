@@ -1,0 +1,48 @@
+[
+  {
+    "case": "valid_bounded_payment",
+    "source": "def pay : {p:Int | p >= 90 && p + 3 <= 100} := 97;",
+    "accepted": true,
+    "errors": [],
+    "trust": []
+  },
+  {
+    "case": "fee_over_budget",
+    "source": "def pay : {p:Int | p >= 90 && p + 3 <= 100} := 100;",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation"
+    ],
+    "trust": []
+  },
+  {
+    "case": "misses_minimum",
+    "source": "def pay : {p:Int | p >= 90 && p + 3 <= 100} := 89;",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation"
+    ],
+    "trust": []
+  },
+  {
+    "case": "false_native_promise",
+    "source": "def pay : {p:Int | p >= 90 && p + 3 <= 100} := native \"100\";",
+    "accepted": true,
+    "errors": [],
+    "trust": [
+      {
+        "name": "pay",
+        "kind": "native"
+      }
+    ]
+  },
+  {
+    "case": "zero_division",
+    "source": "def pay : Int := 10 / 0;",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation"
+    ],
+    "trust": []
+  }
+]

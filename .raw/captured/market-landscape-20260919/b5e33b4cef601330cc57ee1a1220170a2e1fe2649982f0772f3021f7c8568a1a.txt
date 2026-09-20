@@ -1,0 +1,226 @@
+January 31 2025
+Discover Compact, the smart contract language of Midnight
+Claude Barde
+Developer Relations Engineer
+Developers
+Developer resources
+Sign up now so you never miss an update
+subscribe
+contributors
+Claude Barde
+Developer Relations Engineer
+Kevin Millikin
+Principal Architect
+Learn how to get started with Midnight’s TypeScript-based domain-specific language and take the first step towards building data-protecting blockchain DApps.
+The Midnight network is being developed to empower developers to create applications that feature robust and reliable on-chain data protection. To achieve this goal, Midnight introduces a new programming language specifically designed for this purpose: Compact.
+Compact is a smart contract language
+that abstracts away the complexities of zero-knowledge proofs, provides a simple and intuitive syntax based on TypeScript for a minimal learning curve, and enables seamless integration with other on-chain features. By leveraging these properties, Compact enables data protection and allows developers to create applications that keep sensitive data confidential without sacrificing the benefits of decentralization and transparency.
+This article introduces the language, its key components, and explains how to get started with Compact to develop zero-knowledge-enabled applications on the Midnight blockchain.
+Disclaimer: at the time of writing, Midnight is still on testnet. Both the network itself and the syntax of Compact may have undergone substantial improvements by the time you read it. If you find any discrepancies, please share it with the team on the
+Midnight Discord channel
+.
+Smart contracts on Midnight
+A smart contract is a little program that runs on a blockchain and that automates various user-initiated actions to update its on-chain state.
+A smart contract on most blockchains is usually made up of two parts:
+The code
+that is run when a transaction is sent to one of its entry points;
+The state
+that stores contract data, and that may or may not be updated when the code runs.
+Midnight smart contracts, however, have some distinct features, relating to data protection, that lead developers to think about their on-chain code differently.
+For example, many variables related to the context of the execution of the transaction that are available on other blockchains (like Ethereum) are not available on Midnight. Giving developers access to the sender of a transaction, or the amount of tokens sent, would defeat the purpose of a data-protection-focused network.
+Another unique feature of Midnight smart contracts is the existence of
+witnesses
+. A
+witness
+is a function that runs off-chain with access to private data. This feature allows DApps to keep a private state
+off-chain
+, and to construct a proof using data that never makes its way to the public network.
+Getting started with Compact
+The first thing to do is download the latest Compact
+compiler (0.210.0 at the time of writing)
+from the
+Midnight testnet releases repository
+. You can choose either the Linux or macOS package, depending on your operating system.
+Next, create a directory where you want to place the compiler and its supporting binaries. Unzip the downloaded file inside that directory.
+If you're using macOS, you need to add the executables
+compact.bin
+and
+zkir
+to your authorized applications set. To do this:
+Run
+compactc.bin
+in your terminal; macOS will warn you that it cannot be opened because 'the developer cannot be verified'. Click the Cancel button.
+Open your System settings and navigate to Privacy & Security.
+Scroll down near the bottom, and you should see "
+compactc.bin
+" is blocked from use because it is not from an identified developer, with a button that says Allow Anyway. Click that button.
+Repeat the process for `
+zkir`
+.
+While still in the directory where you unzipped the compiler, run the following command to verify that it's working:
+You should see a version number printed, such as 0.20.0. On macOS, the first time you run compactc, you may be warned that it cannot be opened because 'the identity of the developer cannot be confirmed'. Click the Open button in this dialogue to continue.
+You may also want to add the absolute path to `
+compactc
+` to your `PATH` environment variable for easier access to the compiler.
+The compiler
+After installing the compiler as shown above, you can run it with the following command:
+The
+compactc
+command takes two arguments: the relative path of the contract you want to compile (
+main.compact
+in this example, but it can be another filename) and the relative path of the folder where you want to output the compiled files.
+The compilation process verifies that the contract is correct and outputs a collection of TypeScript/JavaScript files to work with the contract.
+Structure of a contract
+A Compact contract is made up of a few different components, explained in more detail in the subsections below:
+Standard library
+: includes builtin
+types
+and
+functions
+that are very useful when developing a smart contract.
+Ledger declarations
+: represents the
+local state
+of the smart contract, i.e. the state that is kept on-chain.
+Circuits
+: are Compact functions that represent the contract’s entry points as well as helper functions.
+Witnesses
+: can read and write off-chain private state and are implemented in TypeScript or JavaScript; circuits can use them to get private data.
+Syntax overview
+Before diving into the different parts of a smart contract on Midnight, let’s take a look at the syntax of Compact.
+The main goal behind the syntax of Compact is to make it as similar to TypeScript as possible. If you can read TypeScript, you should be able to read Compact. If you know how to write TypeScript, you won’t find Compact’s syntax surprising, and you’ll be able to get up and running very fast.
+Compact’s primitive types include unsigned integers, booleans, byte arrays and vectors. Compact also has an
+Opaque
+type that represents JavaScript types (for the moment,
+string
+and
+Uint8Array
+) that can be passed to a Compact contract.
+The
+enum
+and
+struct
+types give developers some flexibility to define their own types.
+Compact also has functions called
+circuits
+that allow developers to abstract different parts of their code like they would in a general-purpose language. To go even further, Compact offers modules that can be used, for example, to create shared libraries of code that can be included in multiple contracts (without copying and pasting the code).
+Finally, Compact includes
+flow control statements,
+like conditions with
+if
+and loops with
+for
+. The
+assert
+keyword makes it easy to verify that a value follows a certain condition and aborts the execution of the contract with an error message if it doesn’t.
+The standard library
+Compact comes with a
+standard library
+, a module that includes types and circuits that you can use out of the box.
+In there, you’ll find the
+Maybe
+and
+Either
+types, and the required circuits to work with these types.
+Other circuits from the standard library will help you work with hashes, Merkle trees and coins. For example,
+mint_token
+allows you to mint new coins, while
+send
+can send coins to the specified recipient.
+Note that the standard library must be manually imported with
+import
+CompactStandardLibrary;
+Ledger
+Like smart contracts on most blockchains, contracts in Compact need to be able to keep track of their
+state
+. This state is recorded in a structure called the
+ledger
+, that resembles an object in JavaScript. It’s possible to save different values of different types in the ledger of a Compact contract, like numbers, bytes or maps.
+The ledger is initialized by a
+constructor
+method that is run when the contract is deployed. The values in the ledger are visible and public.
+The ledger has its own type of values that expose methods to update them. For example, the ledger allows values of type
+Counter
+that are used for numbers that can be incremented or decremented (like the total supply in a token contract). Then, any value of type
+Counter
+exposes
+increment
+and
+decrement
+methods to change that value:
+```
+export ledger counter: Counter;
+export circuit
+addOne(): [] {
+counter.increment(1);
+}
+```
+In the example above, calling the
+addOne
+entry point of the contract will add
+1
+to the current value of the counter in the ledger.
+Note that there’s no constructor in the ledger here because values of type
+Counter
+are initialized to zero by default.
+Circuits
+The term
+circuit
+is ubiquitous in zero knowledge literature. On Midnight, a circuit can be seen as a function: it receives arguments and outputs a value. There are two types of circuits:
+Exported circuits
+start with the keyword
+export
+and represent entry points to the contract that can be called from a DApp’s JavaScript code.
+Non-exported circuits
+are “helper” circuits that can be used by (multiple) other circuits, but are not available to be called from external JavaScript code.
+A circuit is defined with the keyword “circuit” followed by its name, its arguments between parentheses, and its return type. For example, we can update the example given above to get a value and add it to the current counter:
+```
+export ledger counter: Counter;
+export circuit addIncrincrement(incr: Uint<64>): []Void {
+counter.increment(incr);
+}
+```
+Witnesses
+All the on-chain activity in non-data-protecting networks (most blockchains) is public. The address of everyone who sends a transaction, every transferred token, every gas fee paid, etc. The idea is to protect these details or to allow them to be revealed only when strictly necessary.
+Witnesses
+are a key component introduced by Compact to enable data protection on the network. Witnesses allow users to keep sensitive information private while still providing proof of that information when necessary.
+For instance, a smart contract may need to verify a user's identity without revealing their public key to the network. In Compact, witnesses facilitate this by acting as a function declaration that represents a type of data provided by the user. This data can be used to identify users or validate specific information only the user knows without compromising this private information.
+To make it more concrete, consider a scenario in Midnight where users maintain a private, off-chain state. They can generate a zero-knowledge (ZK) proof of that state and provide it to the contract. This enables the contract to verify the user's state without exposing the underlying data.
+For example:
+```
+export ledger last_user: Cell<Bytes<32>>;
+witness secret_key(): Bytes<32>;
+export circuit update(): Void {
+const sk = secret_key();
+const myself = persistent_hash<Bytes<32>>(sk);
+last_user.write(disclose(myself));
+}
+export circuit check_last_user(): Void {
+const sk = secret_key();
+const myself = persistent_hash<Bytes<32>>(sk);
+assert myself == last_user "Oops: you're not the current user";
+}
+```
+In this example, the user calls the
+update
+entry point and provides a hash of their secret key which is then recorded in the ledger. In the
+check_last_user
+entry point, a user can provide a hash of their secret key which is then compared to the one recorded in the ledger.
+Next steps
+Compact is a smart contract language created with two main goals: to offer developers the facilities to write code for provable transactions that hide private state, empowering them to create applications focused on data protection; and to do so while being as similar as possible to TypeScript, in order to allow new developers to quickly jump in and start building on Midnight.
+And this is just the beginning. Despite already having many innovative features to work with shielded and unshielded transactions, Compact is a work in progress – as it evolves, it will only improve.
+To learn more about Compact, check out
+this episode of the Unshielded podcast
+. For a deeper dive into the language, its grammar, and syntax, head to the
+Compact section of the Midnight docs
+.
+Developers
+Developer resources
+Share
+twitter
+linkedin
+Copy link
+Previous Post
+Report: security, data breaches, and zero-knowledge
+Next Post
+Midnight welcomes new ecosystem partner Cherry Servers

@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>EIP-712: Typed structured data hashing and signing</title>
+      <meta property="og:title" content="EIP-712: Typed structured data hashing and signing" />
+    
+    <meta name="description" content="A procedure for hashing and signing of typed structured data as opposed to just bytestrings." />
+    <meta property="og:description" content="A procedure for hashing and signing of typed structured data as opposed to just bytestrings." />
+    <meta name="twitter:description" content="A procedure for hashing and signing of typed structured data as opposed to just bytestrings." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-712" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-712" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+    
+    
+      <span class="badge text-light bg-success" data-bs-toggle="tooltip" data-bs-title="This EIP is finalized and is added as an Ethereum Standard. "> 🎉 Final</span>
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Improvements around client API/RPC specifications and standards, and also certain language-level standards like method names and contract ABIs." href="../interface">Standards Track: Interface</a>
+    
+  </span>
+  <h1 class="page-heading">
+    EIP-712: Typed structured data hashing and signing
+    <a href="https://ethereum-magicians.org/t/eip-712-eth-signtypeddata-as-a-standard-for-machine-verifiable-and-human-readable-typed-data-signing/397" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>A procedure for hashing and signing of typed structured data as opposed to just bytestrings.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Remco Bloemen&nbsp;(<a href="https://github.com/Recmo">@Recmo</a>), Leonid Logvinov&nbsp;(<a href="https://github.com/LogvinovLeon">@LogvinovLeon</a>), Jacob Evans&nbsp;(<a href="https://github.com/dekz">@dekz</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2017-09-12</td>
+        </tr>
+      
+      
+             
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-155">EIP-155</a>, 
+
+  <a href="eip-191">EIP-191</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#definition-of-typed-structured-data-𝕊">Definition of typed structured data 𝕊</a></li>
+      <li><a href="#definition-of-hashstruct">Definition of hashStruct</a></li>
+      <li><a href="#definition-of-encodetype">Definition of encodeType</a></li>
+      <li><a href="#definition-of-encodedata">Definition of encodeData</a></li>
+      <li><a href="#definition-of-domainseparator">Definition of domainSeparator</a></li>
+      <li><a href="#specification-of-the-eth_signtypeddata-json-rpc">Specification of the eth_signTypedData JSON RPC</a></li>
+      <li><a href="#specification-of-the-web3-api">Specification of the Web3 API</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#rationale-for-typehash">Rationale for typeHash</a></li>
+      <li><a href="#rationale-for-encodedata">Rationale for encodeData</a></li>
+      <li><a href="#rationale-for-domainseparator">Rationale for domainSeparator</a></li>
+    </ul>
+  </li>
+  <li><a href="#backwards-compatibility">Backwards Compatibility</a></li>
+  <li><a href="#test-cases">Test Cases</a></li>
+  <li><a href="#security-considerations">Security Considerations</a>
+    <ul>
+      <li><a href="#replay-attacks">Replay attacks</a></li>
+      <li><a href="#frontrunning-attacks">Frontrunning attacks</a></li>
+    </ul>
+  </li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This is a standard for hashing and signing of typed structured data as opposed to just bytestrings. It includes a</p>
+
+<ul>
+  <li>theoretical framework for correctness of encoding functions,</li>
+  <li>specification of structured data similar to and compatible with Solidity structs,</li>
+  <li>safe hashing algorithm for instances of those structures,</li>
+  <li>safe inclusion of those instances in the set of signable messages,</li>
+  <li>an extensible mechanism for domain separation,</li>
+  <li>new RPC call <code class="language-plaintext highlighter-rouge">eth_signTypedData</code>, and</li>
+  <li>an optimized implementation of the hashing algorithm in EVM.</li>
+</ul>
+
+<p>It does not include replay protection.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>Signing data is a solved problem if all we care about are bytestrings. Unfortunately in the real world we care about complex meaningful messages. Hashing structured data is non-trivial and errors result in loss of the security properties of the system.</p>
+
+<p>As such, the adage “don’t roll your own crypto” applies. Instead, a peer-reviewed well-tested standard method needs to be used. This EIP aims to be that standard.</p>
+
+<p>This EIP aims to improve the usability of off-chain message signing for use on-chain. We are seeing growing adoption of off-chain message signing as it saves gas and reduces the number of transactions on the blockchain. Currently signed messages are an opaque hex string displayed to the user with little context about the items that make up the message.</p>
+
+<p><img src="/assets/eip-712/eth_sign.png" alt="eth_sign screenshot" /></p>
+
+<p>Here we outline a scheme to encode data along with its structure which allows it to be displayed to the user for verification when signing. Below is an example of what a user could be shown when signing a message according to the present proposal.</p>
+
+<p><img src="/assets/eip-712/eth_signTypedData.png" alt="eth_signTypedData screenshot" /></p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The set of signable messages is extended from transactions and bytestrings <code class="language-plaintext highlighter-rouge">𝕋 ∪ 𝔹⁸ⁿ</code> to also include structured data <code class="language-plaintext highlighter-rouge">𝕊</code>. The new set of signable messages is thus <code class="language-plaintext highlighter-rouge">𝕋 ∪ 𝔹⁸ⁿ ∪ 𝕊</code>. They are encoded to bytestrings suitable for hashing and signing as follows:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">encode(transaction : 𝕋) = RLP_encode(transaction)</code></li>
+  <li><code class="language-plaintext highlighter-rouge">encode(message : 𝔹⁸ⁿ) = "\x19Ethereum Signed Message:\n" ‖ len(message) ‖ message</code> where <code class="language-plaintext highlighter-rouge">len(message)</code> is the <em>non-zero-padded</em> ascii-decimal encoding of the number of bytes in <code class="language-plaintext highlighter-rouge">message</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">encode(domainSeparator : 𝔹²⁵⁶, message : 𝕊) = "\x19\x01" ‖ domainSeparator ‖ hashStruct(message)</code> where <code class="language-plaintext highlighter-rouge">domainSeparator</code> and <code class="language-plaintext highlighter-rouge">hashStruct(message)</code> are defined below.</li>
+</ul>
+
+<p>This encoding is deterministic because the individual components are. The encoding is injective because the three cases always differ in first byte. (<code class="language-plaintext highlighter-rouge">RLP_encode(transaction)</code> does not start with <code class="language-plaintext highlighter-rouge">\x19</code>.)</p>
+
+<p>The encoding is compliant with <a href="/EIPS/eip-191">ERC-191</a>. The ‘version byte’ is fixed to <code class="language-plaintext highlighter-rouge">0x01</code>, the ‘version specific data’ is the 32-byte domain separator <code class="language-plaintext highlighter-rouge">domainSeparator</code> and the ‘data to sign’ is the 32-byte <code class="language-plaintext highlighter-rouge">hashStruct(message)</code>.</p>
+  
+    <h3 id="definition-of-typed-structured-data-𝕊">
+      
+      
+        <a href="#definition-of-typed-structured-data-𝕊" class="anchor-link"></a> Definition of typed structured data <code class="language-plaintext highlighter-rouge">𝕊</code>
+      
+      
+    </h3>
+
+<p>To define the set of all structured data, we start with defining acceptable types. Like ABIv2 these are closely related to Solidity types. It is illustrative to adopt Solidity notation to explain the definitions. The standard is specific to the Ethereum Virtual Machine, but aims to be agnostic to higher level languages. Example:</p>
+
+<pre><code class="language-Solidity">struct Mail {
+    address from;
+    address to;
+    string contents;
+}
+</code></pre>
+
+<p><strong>Definition</strong>: A <em>struct type</em> has valid identifier as name and contains zero or more member variables. Member variables have a member type and a name.</p>
+
+<p><strong>Definition</strong>: A <em>member type</em> can be either an atomic type, a dynamic type or a reference type.</p>
+
+<p><strong>Definition</strong>: The <em>atomic types</em> are <code class="language-plaintext highlighter-rouge">bytes1</code> to <code class="language-plaintext highlighter-rouge">bytes32</code>, <code class="language-plaintext highlighter-rouge">uint8</code> to <code class="language-plaintext highlighter-rouge">uint256</code>, <code class="language-plaintext highlighter-rouge">int8</code> to <code class="language-plaintext highlighter-rouge">int256</code>, <code class="language-plaintext highlighter-rouge">bool</code> and <code class="language-plaintext highlighter-rouge">address</code>. These correspond to their definition in Solidity. Note that there are no aliases <code class="language-plaintext highlighter-rouge">uint</code> and <code class="language-plaintext highlighter-rouge">int</code>. Note that contract addresses are always plain <code class="language-plaintext highlighter-rouge">address</code>. Fixed point numbers are not supported by the standard. Future versions of this standard may add new atomic types.</p>
+
+<p><strong>Definition</strong>: The <em>dynamic types</em> are <code class="language-plaintext highlighter-rouge">bytes</code> and <code class="language-plaintext highlighter-rouge">string</code>. These are like the atomic types for the purpose of type declaration, but their treatment in encoding is different.</p>
+
+<p><strong>Definition</strong>: The <em>reference types</em> are arrays and structs. Arrays are either fixed size or dynamic and denoted by <code class="language-plaintext highlighter-rouge">Type[n]</code> or <code class="language-plaintext highlighter-rouge">Type[]</code> respectively. Structs are references to other structs by their name. The standard supports recursive struct types.</p>
+
+<p><strong>Definition</strong>: The set of structured typed data <code class="language-plaintext highlighter-rouge">𝕊</code> contains all the instances of all the struct types.</p>
+  
+    <h3 id="definition-of-hashstruct">
+      
+      
+        <a href="#definition-of-hashstruct" class="anchor-link"></a> Definition of <code class="language-plaintext highlighter-rouge">hashStruct</code>
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">hashStruct</code> function is defined as</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">hashStruct(s : 𝕊) = keccak256(typeHash ‖ encodeData(s))</code> where <code class="language-plaintext highlighter-rouge">typeHash = keccak256(encodeType(typeOf(s)))</code></li>
+</ul>
+
+<p><strong>Note</strong>: The <code class="language-plaintext highlighter-rouge">typeHash</code> is a constant for a given struct type and does not need to be runtime computed.</p>
+  
+    <h3 id="definition-of-encodetype">
+      
+      
+        <a href="#definition-of-encodetype" class="anchor-link"></a> Definition of <code class="language-plaintext highlighter-rouge">encodeType</code>
+      
+      
+    </h3>
+
+<p>The type of a struct is encoded as <code class="language-plaintext highlighter-rouge">name ‖ "(" ‖ member₁ ‖ "," ‖ member₂ ‖ "," ‖ … ‖ memberₙ ")"</code> where each member is written as <code class="language-plaintext highlighter-rouge">type ‖ " " ‖ name</code>. For example, the above <code class="language-plaintext highlighter-rouge">Mail</code> struct is encoded as <code class="language-plaintext highlighter-rouge">Mail(address from,address to,string contents)</code>.</p>
+
+<p>If the struct type references other struct types (and these in turn reference even more struct types), then the set of referenced struct types is collected, sorted by name and appended to the encoding. An example encoding is <code class="language-plaintext highlighter-rouge">Transaction(Person from,Person to,Asset tx)Asset(address token,uint256 amount)Person(address wallet,string name)</code>.</p>
+  
+    <h3 id="definition-of-encodedata">
+      
+      
+        <a href="#definition-of-encodedata" class="anchor-link"></a> Definition of <code class="language-plaintext highlighter-rouge">encodeData</code>
+      
+      
+    </h3>
+
+<p>The encoding of a struct instance is <code class="language-plaintext highlighter-rouge">enc(value₁) ‖ enc(value₂) ‖ … ‖ enc(valueₙ)</code>, i.e. the concatenation of the encoded member values in the order that they appear in the type. Each encoded member value is exactly 32-byte long.</p>
+
+<p>The atomic values are encoded as follows: Boolean <code class="language-plaintext highlighter-rouge">false</code> and <code class="language-plaintext highlighter-rouge">true</code> are encoded as <code class="language-plaintext highlighter-rouge">uint256</code> values <code class="language-plaintext highlighter-rouge">0</code> and <code class="language-plaintext highlighter-rouge">1</code> respectively. Addresses are encoded as <code class="language-plaintext highlighter-rouge">uint160</code>. Integer values are sign-extended to 256-bit and encoded in big endian order. <code class="language-plaintext highlighter-rouge">bytes1</code> to <code class="language-plaintext highlighter-rouge">bytes31</code> are arrays with a beginning (index <code class="language-plaintext highlighter-rouge">0</code>) and an end (index <code class="language-plaintext highlighter-rouge">length - 1</code>), they are zero-padded at the end to <code class="language-plaintext highlighter-rouge">bytes32</code> and encoded in beginning to end order. This corresponds to their encoding in ABI v1 and v2.</p>
+
+<p>The dynamic values <code class="language-plaintext highlighter-rouge">bytes</code> and <code class="language-plaintext highlighter-rouge">string</code> are encoded as a <code class="language-plaintext highlighter-rouge">keccak256</code> hash of their contents.</p>
+
+<p>The array values are encoded as the <code class="language-plaintext highlighter-rouge">keccak256</code> hash of the concatenated <code class="language-plaintext highlighter-rouge">encodeData</code> of their contents (i.e. the encoding of <code class="language-plaintext highlighter-rouge">SomeType[5]</code> is identical to that of a struct containing five members of type <code class="language-plaintext highlighter-rouge">SomeType</code>).</p>
+
+<p>The struct values are encoded recursively as <code class="language-plaintext highlighter-rouge">hashStruct(value)</code>. This is undefined for cyclical data.</p>
+  
+    <h3 id="definition-of-domainseparator">
+      
+      
+        <a href="#definition-of-domainseparator" class="anchor-link"></a> Definition of <code class="language-plaintext highlighter-rouge">domainSeparator</code>
+      
+      
+    </h3>
+
+<pre><code class="language-Solidity">domainSeparator = hashStruct(eip712Domain)
+</code></pre>
+
+<p>where the type of <code class="language-plaintext highlighter-rouge">eip712Domain</code> is a struct named <code class="language-plaintext highlighter-rouge">EIP712Domain</code> with one or more of the below fields. Protocol designers only need to include the fields that make sense for their signing domain. Unused fields are left out of the struct type.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">string name</code> the user readable name of signing domain, i.e. the name of the DApp or the protocol.</li>
+  <li><code class="language-plaintext highlighter-rouge">string version</code> the current major version of the signing domain. Signatures from different versions are not compatible.</li>
+  <li><code class="language-plaintext highlighter-rouge">uint256 chainId</code> the <a href="/EIPS/eip-155">EIP-155</a> chain id. The user-agent <em>should</em> refuse signing if it does not match the currently active chain.</li>
+  <li><code class="language-plaintext highlighter-rouge">address verifyingContract</code> the address of the contract that will verify the signature. The user-agent <em>may</em> do contract specific phishing prevention.</li>
+  <li><code class="language-plaintext highlighter-rouge">bytes32 salt</code> a disambiguating salt for the protocol. This can be used as a domain separator of last resort.</li>
+</ul>
+
+<p>Future extensions to this standard can add new fields with new user-agent behaviour constraints. User-agents are free to use the provided information to inform/warn users or refuse signing. Dapp implementers should not add private fields, new fields should be proposed through the EIP process.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">EIP712Domain</code> fields should be the order as above, skipping any absent fields. Future field additions must be in alphabetical order and come after the above fields. User-agents should accept fields in any order as specified by the <code class="language-plaintext highlighter-rouge">EIP712Domain</code> type.</p>
+  
+    <h3 id="specification-of-the-eth_signtypeddata-json-rpc">
+      
+      
+        <a href="#specification-of-the-eth_signtypeddata-json-rpc" class="anchor-link"></a> Specification of the <code class="language-plaintext highlighter-rouge">eth_signTypedData</code> JSON RPC
+      
+      
+    </h3>
+
+<p>The method <code class="language-plaintext highlighter-rouge">eth_signTypedData</code> is added to the Ethereum JSON-RPC. The method parallels <code class="language-plaintext highlighter-rouge">eth_sign</code>.</p>
+  
+    <h4 id="eth_signtypeddata">
+      
+      
+        <a href="#eth_signtypeddata" class="anchor-link"></a> eth_signTypedData
+      
+      
+    </h4>
+
+<p>The sign method calculates an Ethereum specific signature with: <code class="language-plaintext highlighter-rouge">sign(keccak256("\x19\x01" ‖ domainSeparator ‖ hashStruct(message)))</code>, as defined above.</p>
+
+<p><strong>Note</strong>: the address to sign with must be unlocked.</p>
+  
+    <h5 id="parameters">
+      
+      
+        <a href="#parameters" class="anchor-link"></a> Parameters
+      
+      
+    </h5>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">Address</code> - 20 Bytes - Address of the account that will sign the messages.</li>
+  <li><code class="language-plaintext highlighter-rouge">TypedData</code> - Typed structured data to be signed.</li>
+</ol>
+
+<p>Typed data is a JSON object containing type information, domain separator parameters and the message object. Below is the json-schema definition for <code class="language-plaintext highlighter-rouge">TypedData</code> param.</p>
+
+<pre><code class="language-JavaScript">{
+  type: 'object',
+  properties: {
+    types: {
+      type: 'object',
+      properties: {
+        EIP712Domain: {type: 'array'},
+      },
+      additionalProperties: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: {type: 'string'},
+            type: {type: 'string'}
+          },
+          required: ['name', 'type']
+        }
+      },
+      required: ['EIP712Domain']
+    },
+    primaryType: {type: 'string'},
+    domain: {type: 'object'},
+    message: {type: 'object'}
+  },
+  required: ['types', 'primaryType', 'domain', 'message']
+}
+</code></pre>
+  
+    <h5 id="returns">
+      
+      
+        <a href="#returns" class="anchor-link"></a> Returns
+      
+      
+    </h5>
+
+<p><code class="language-plaintext highlighter-rouge">DATA</code>: Signature. As in <code class="language-plaintext highlighter-rouge">eth_sign</code> it is a hex encoded 65 byte array starting with <code class="language-plaintext highlighter-rouge">0x</code>. It encodes the <code class="language-plaintext highlighter-rouge">r</code>, <code class="language-plaintext highlighter-rouge">s</code> and <code class="language-plaintext highlighter-rouge">v</code> parameters from appendix F of the yellow paper in big-endian format. Bytes 0…32 contain the <code class="language-plaintext highlighter-rouge">r</code> parameter, bytes 32…64 the <code class="language-plaintext highlighter-rouge">s</code> parameter and the last byte the <code class="language-plaintext highlighter-rouge">v</code> parameter. Note that the <code class="language-plaintext highlighter-rouge">v</code> parameter includes the chain id as specified in <a href="/EIPS/eip-155">EIP-155</a>.</p>
+  
+    <h5 id="example">
+      
+      
+        <a href="#example" class="anchor-link"></a> Example
+      
+      
+    </h5>
+
+<p>Request:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> POST <span class="nt">--data</span> <span class="s1">'{"jsonrpc":"2.0","method":"eth_signTypedData","params":["0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826", {"types":{"EIP712Domain":[{"name":"name","type":"string"},{"name":"version","type":"string"},{"name":"chainId","type":"uint256"},{"name":"verifyingContract","type":"address"}],"Person":[{"name":"name","type":"string"},{"name":"wallet","type":"address"}],"Mail":[{"name":"from","type":"Person"},{"name":"to","type":"Person"},{"name":"contents","type":"string"}]},"primaryType":"Mail","domain":{"name":"Ether Mail","version":"1","chainId":1,"verifyingContract":"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC"},"message":{"from":{"name":"Cow","wallet":"0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826"},"to":{"name":"Bob","wallet":"0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB"},"contents":"Hello, Bob!"}}],"id":1}'</span>
+</code></pre></div></div>
+
+<p>Result:</p>
+
+<pre><code class="language-JavaScript">{
+  "id":1,
+  "jsonrpc": "2.0",
+  "result": "0x4355c47d63924e8a72e509b65029052eb6c299d53a04e167c5775fd466751c9d07299936d304c153f6443dfa05f40ff007d72911b6f72307f996231605b915621c"
+}
+</code></pre>
+
+<p>An example how to use Solidity ecrecover to verify the signature calculated with <code class="language-plaintext highlighter-rouge">eth_signTypedData</code> can be found in the <a href="/assets/eip-712/Example.js">Example.js</a>. The contract is deployed on the testnet Ropsten and Rinkeby.</p>
+  
+    <h4 id="personal_signtypeddata">
+      
+      
+        <a href="#personal_signtypeddata" class="anchor-link"></a> personal_signTypedData
+      
+      
+    </h4>
+
+<p>There also should be a corresponding <code class="language-plaintext highlighter-rouge">personal_signTypedData</code> method which accepts the password for an account as the last argument.</p>
+  
+    <h3 id="specification-of-the-web3-api">
+      
+      
+        <a href="#specification-of-the-web3-api" class="anchor-link"></a> Specification of the Web3 API
+      
+      
+    </h3>
+
+<p>Two methods are added to Web3.js version 1 that parallel the <code class="language-plaintext highlighter-rouge">web3.eth.sign</code> and <code class="language-plaintext highlighter-rouge">web3.eth.personal.sign</code> methods.</p>
+  
+    <h4 id="web3ethsigntypeddata">
+      
+      
+        <a href="#web3ethsigntypeddata" class="anchor-link"></a> web3.eth.signTypedData
+      
+      
+    </h4>
+
+<pre><code class="language-JavaScript">web3.eth.signTypedData(typedData, address [, callback])
+</code></pre>
+
+<p>Signs typed data using a specific account. This account needs to be unlocked.</p>
+  
+    <h5 id="parameters-1">
+      
+      
+        <a href="#parameters-1" class="anchor-link"></a> Parameters
+      
+      
+    </h5>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">Object</code> - Domain separator and typed data to sign. Structured according to the JSON-Schema specified above in the <code class="language-plaintext highlighter-rouge">eth_signTypedData</code> JSON RPC call.</li>
+  <li><code class="language-plaintext highlighter-rouge">String|Number</code> - Address to sign data with. Or an address or index of a local wallet in :ref:<code class="language-plaintext highlighter-rouge">web3.eth.accounts.wallet &lt;eth_accounts_wallet&gt;</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">Function</code> - (optional) Optional callback, returns an error object as first parameter and the result as second.</li>
+</ol>
+
+<p><strong>Note</strong>: The 2. <code class="language-plaintext highlighter-rouge">address</code> parameter can also be an address or index from the <code class="language-plaintext highlighter-rouge">web3.eth.accounts.wallet &lt;eth_accounts_wallet&gt;</code>. It will then sign locally using the private key of this account.</p>
+  
+    <h5 id="returns-1">
+      
+      
+        <a href="#returns-1" class="anchor-link"></a> Returns
+      
+      
+    </h5>
+
+<p><code class="language-plaintext highlighter-rouge">Promise</code> returns <code class="language-plaintext highlighter-rouge">String</code> - The signature as returned by <code class="language-plaintext highlighter-rouge">eth_signTypedData</code>.</p>
+  
+    <h5 id="example-1">
+      
+      
+        <a href="#example-1" class="anchor-link"></a> Example
+      
+      
+    </h5>
+
+<p>See the <code class="language-plaintext highlighter-rouge">eth_signTypedData</code> JSON-API example above for the value of <code class="language-plaintext highlighter-rouge">typedData</code>.</p>
+
+<pre><code class="language-JavaScript">web3.eth.signTypedData(typedData, "0xCD2a3d9F938E13CD947Ec05AbC7FE734Df8DD826")
+.then(console.log);
+&gt; "0x4355c47d63924e8a72e509b65029052eb6c299d53a04e167c5775fd466751c9d07299936d304c153f6443dfa05f40ff007d72911b6f72307f996231605b915621c"
+</code></pre>
+  
+    <h4 id="web3ethpersonalsigntypeddata">
+      
+      
+        <a href="#web3ethpersonalsigntypeddata" class="anchor-link"></a> web3.eth.personal.signTypedData
+      
+      
+    </h4>
+
+<pre><code class="language-JavaScript">web3.eth.personal.signTypedData(typedData, address, password [, callback])
+</code></pre>
+
+<p>Identical to <code class="language-plaintext highlighter-rouge">web3.eth.signTypedData</code> except for an additional <code class="language-plaintext highlighter-rouge">password</code> parameter analogous to <code class="language-plaintext highlighter-rouge">web3.eth.personal.sign</code>.</p>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+
+<p>The <code class="language-plaintext highlighter-rouge">encode</code> function is extended with a new case for the new types. The first byte of the encoding distinguishes the cases. For the same reason it is not safe to start immediately with the domain separator or a <code class="language-plaintext highlighter-rouge">typeHash</code>. While hard, it may be possible to construct a <code class="language-plaintext highlighter-rouge">typeHash</code> that also happens to be a prefix of a valid RLP encoded transaction.</p>
+
+<p>The domain separator prevents collision of otherwise identical structures. It is possible that two DApps come up with an identical structure like <code class="language-plaintext highlighter-rouge">Transfer(address from,address to,uint256 amount)</code> that should not be compatible. By introducing a domain separator the DApp developers are guaranteed that there can be no signature collision.</p>
+
+<p>The domain separator also allows for multiple distinct signatures use-cases on the same struct instance within a given DApp. In the previous example, perhaps signatures from both <code class="language-plaintext highlighter-rouge">from</code> and <code class="language-plaintext highlighter-rouge">to</code> are required. By providing two distinct domain separators these signatures can be distinguished from each other.</p>
+
+<p><strong>Alternative 1</strong>: Use the target contract address as domain separator. This solves the first problem, contracts coming up with identical types, but does not address the second use-case. The standard does suggest implementors to use the target contract address where this is appropriate.</p>
+
+<p>The function <code class="language-plaintext highlighter-rouge">hashStruct</code> starts with a <code class="language-plaintext highlighter-rouge">typeHash</code> to separate types. By giving different types a different prefix the <code class="language-plaintext highlighter-rouge">encodeData</code> function only has to be injective within a given type. It is okay for <code class="language-plaintext highlighter-rouge">encodeData(a)</code> to equal <code class="language-plaintext highlighter-rouge">encodeData(b)</code> as long as <code class="language-plaintext highlighter-rouge">typeOf(a)</code> is not <code class="language-plaintext highlighter-rouge">typeOf(b)</code>.</p>
+  
+    <h3 id="rationale-for-typehash">
+      
+      
+        <a href="#rationale-for-typehash" class="anchor-link"></a> Rationale for <code class="language-plaintext highlighter-rouge">typeHash</code>
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">typeHash</code> is designed to turn into a compile time constant in Solidity. For example:</p>
+
+<pre><code class="language-Solidity">bytes32 constant MAIL_TYPEHASH = keccak256(
+  "Mail(address from,address to,string contents)");
+</code></pre>
+
+<p>For the type hash several alternatives were considered and rejected for the reasons:</p>
+
+<p><strong>Alternative 2</strong>: Use ABIv2 function signatures. <code class="language-plaintext highlighter-rouge">bytes4</code> is not enough to be collision resistant. Unlike function signatures, there is negligible runtime cost incurred by using longer hashes.</p>
+
+<p><strong>Alternative 3</strong>: ABIv2 function signatures modified to be 256-bit. While this captures type info, it does not capture any of the semantics other than the function. This is already causing a practical collision between <a href="/EIPS/eip-20">ERC-20</a>’s and <a href="/EIPS/eip-721">ERC-721</a>’s <code class="language-plaintext highlighter-rouge">transfer(address,uint256)</code>, where in the former the <code class="language-plaintext highlighter-rouge">uint256</code> refers to an amount and the latter to a unique id. In general ABIv2 favors compatibility where a hashing standard should prefer incompatibility.</p>
+
+<p><strong>Alternative 4</strong>: 256-bit ABIv2 signatures extended with parameter names and struct names. The <code class="language-plaintext highlighter-rouge">Mail</code> example from above would be encoded as <code class="language-plaintext highlighter-rouge">Mail(Person(string name,address wallet) from,Person(string name,address wallet) to,string contents)</code>. This is longer than the proposed solution. And indeed, the length of the string can grow exponentially in the length of the input (consider <code class="language-plaintext highlighter-rouge">struct A{B a;B b;}; struct B {C a;C b;}; …</code>). It also does not allow a recursive struct type (consider <code class="language-plaintext highlighter-rouge">struct List {uint256 value; List next;}</code>).</p>
+
+<p><strong>Alternative 5</strong>: Include natspec documentation. This would include even more semantic information in the schemaHash and further reduces chances of collision. It makes extending and amending documentation a breaking changes, which contradicts common assumptions. It also makes the schemaHash mechanism very verbose.</p>
+  
+    <h3 id="rationale-for-encodedata">
+      
+      
+        <a href="#rationale-for-encodedata" class="anchor-link"></a> Rationale for <code class="language-plaintext highlighter-rouge">encodeData</code>
+      
+      
+    </h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">encodeData</code> is designed to allow easy implementation of <code class="language-plaintext highlighter-rouge">hashStruct</code> in Solidity:</p>
+
+<pre><code class="language-Solidity">function hashStruct(Mail memory mail) pure returns (bytes32 hash) {
+    return keccak256(abi.encode(
+        MAIL_TYPEHASH,
+        mail.from,
+        mail.to,
+        keccak256(mail.contents)
+    ));
+}
+</code></pre>
+
+<p>it also allows for an efficient in-place implementation in EVM</p>
+
+<pre><code class="language-Solidity">function hashStruct(Mail memory mail) pure returns (bytes32 hash) {
+
+    // Compute sub-hashes
+    bytes32 typeHash = MAIL_TYPEHASH;
+    bytes32 contentsHash = keccak256(mail.contents);
+
+    assembly {
+        // Back up select memory
+        let temp1 := mload(sub(mail, 32))
+        let temp2 := mload(add(mail, 128))
+
+        // Write typeHash and sub-hashes
+        mstore(sub(mail, 32), typeHash)
+        mstore(add(mail, 64), contentsHash)
+
+        // Compute hash
+        hash := keccak256(sub(mail, 32), 128)
+
+        // Restore memory
+        mstore(sub(mail, 32), temp1)
+        mstore(add(mail, 64), temp2)
+    }
+}
+</code></pre>
+
+<p>The in-place implementation makes strong but reasonable assumptions on the memory layout of structs in memory. Specifically it assumes structs are not allocated below address 32, that members are stored in order, that all values are padded to 32-byte boundaries, and that dynamic and reference types are stored as a 32-byte pointers.</p>
+
+<p><strong>Alternative 6</strong>: Tight packing. This is the default behaviour in Solidity when calling <code class="language-plaintext highlighter-rouge">keccak256</code> with multiple arguments. It minimizes the number of bytes to be hashed but requires complicated packing instructions in EVM to do so. It does not allow in-place computation.</p>
+
+<p><strong>Alternative 7</strong>: ABIv2 encoding. Especially with the upcoming <code class="language-plaintext highlighter-rouge">abi.encode</code> it should be easy to use <code class="language-plaintext highlighter-rouge">abi.encode</code> as the <code class="language-plaintext highlighter-rouge">encodeData</code> function. The ABIv2 standard by itself fails the determinism security criteria. There are several valid ABIv2 encodings of the same data. ABIv2 does not allow in-place computation.</p>
+
+<p><strong>Alternative 8</strong>: Leave <code class="language-plaintext highlighter-rouge">typeHash</code> out of <code class="language-plaintext highlighter-rouge">hashStruct</code> and instead combine it with the domain separator. This is more efficient, but then the semantics of the Solidity <code class="language-plaintext highlighter-rouge">keccak256</code> hash function are not injective.</p>
+
+<p><strong>Alternative 9</strong>: Support cyclical data structures. The current standard is optimized for tree-like data structures and undefined for cyclical data structures. To support cyclical data a stack containing the path to the current node needs to be maintained and a stack offset substituted when a cycle is detected. This is prohibitively more complex to specify and implement. It also breaks composability where the hashes of the member values are used to construct the hash of the struct (the hash of the member values would depend on the path). It is possible to extend the standard in a compatible way to define hashes of cyclical data.</p>
+
+<p>Similarly, a straightforward implementation is sub-optimal for directed acyclic graphs. A simple recursion through the members can visit the same node twice. Memoization can optimize this.</p>
+  
+    <h3 id="rationale-for-domainseparator">
+      
+      
+        <a href="#rationale-for-domainseparator" class="anchor-link"></a> Rationale for <code class="language-plaintext highlighter-rouge">domainSeparator</code>
+      
+      
+    </h3>
+
+<p>Since different domains have different needs, an extensible scheme is used where the DApp specifies a <code class="language-plaintext highlighter-rouge">EIP712Domain</code> struct type and an instance <code class="language-plaintext highlighter-rouge">eip712Domain</code> which it passes to the user-agent. The user-agent can then apply different verification measures depending on the fields that are there.</p>
+  
+    <h2 id="backwards-compatibility">
+      
+      
+        <a href="#backwards-compatibility" class="anchor-link"></a> Backwards Compatibility
+      
+      
+    </h2>
+
+<p>The RPC calls, web3 methods and <code class="language-plaintext highlighter-rouge">SomeStruct.typeHash</code> parameter are currently undefined. Defining them should not affect the behaviour of existing DApps.</p>
+
+<p>The Solidity expression <code class="language-plaintext highlighter-rouge">keccak256(someInstance)</code> for an instance <code class="language-plaintext highlighter-rouge">someInstance</code> of a struct type <code class="language-plaintext highlighter-rouge">SomeStruct</code> is valid syntax. It currently evaluates to the <code class="language-plaintext highlighter-rouge">keccak256</code> hash of the memory address of the instance. This behaviour should be considered dangerous. In some scenarios it will appear to work correctly but in others it will fail determinism and/or injectiveness. DApps that depend on the current behaviour should be considered dangerously broken.</p>
+  
+    <h2 id="test-cases">
+      
+      
+        <a href="#test-cases" class="anchor-link"></a> Test Cases
+      
+      
+    </h2>
+
+<p>An example contract can be found in <a href="/assets/eip-712/Example.sol">Example.sol</a> and an example implementation of signing in JavaScript in <a href="/assets/eip-712/Example.js">Example.js</a></p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+  
+    <h3 id="replay-attacks">
+      
+      
+        <a href="#replay-attacks" class="anchor-link"></a> Replay attacks
+      
+      
+    </h3>
+
+<p>This standard is only about signing messages and verifying signatures. In many practical applications, signed messages are used to authorize an action, for example an exchange of tokens. It is <em>very important</em> that implementers make sure the application behaves correctly when it sees the same signed message twice. For example, the repeated message should be rejected or the authorized action should be idempotent. How this is implemented is specific to the application and out of scope for this standard.</p>
+  
+    <h3 id="frontrunning-attacks">
+      
+      
+        <a href="#frontrunning-attacks" class="anchor-link"></a> Frontrunning attacks
+      
+      
+    </h3>
+
+<p>The mechanism for reliably broadcasting a signature is application-specific and out of scope for this standard. When the signature is broadcast to a blockchain for use in a contract, the application has to be secure against frontrunning attacks. In this kind of attack, an attacker intercepts the signature and submits it to the contract before the original intended use takes place. The application should behave correctly when the signature is submitted first by an attacker, for example by rejecting it or simply producing exactly the same effect as intended by the signer.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Remco Bloemen&nbsp;(<a href="https://github.com/Recmo">@Recmo</a>), Leonid Logvinov&nbsp;(<a href="https://github.com/LogvinovLeon">@LogvinovLeon</a>), Jacob Evans&nbsp;(<a href="https://github.com/dekz">@dekz</a>), "EIP-712: Typed structured data hashing and signing," <em>Ethereum Improvement Proposals</em>, no. 712, September 2017. Available: https://eips.ethereum.org/EIPS/eip-712.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "EIP-712: Typed structured data hashing and signing",
+    "name": "EIP-712: Typed structured data hashing and signing",
+    "author": "Remco Bloemen (@Recmo), Leonid Logvinov (@LogvinovLeon), Jacob Evans (@dekz)",
+    "dateCreated": "2017-09-12",
+    "datePublished": "2017-09-12",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/eip-712-eth-signtypeddata-as-a-standard-for-machine-verifiable-and-human-readable-typed-data-signing/397",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2017"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

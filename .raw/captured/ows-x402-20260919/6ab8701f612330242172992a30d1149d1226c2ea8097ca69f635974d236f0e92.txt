@@ -1,0 +1,1007 @@
+On this page
+How it works
+Prerequisites
+1. Return a 402 from your endpoint
+2. Pay the endpoint as an agent
+3. Confirm settlement and fulfill
+Test with a small amount
+Refunds
+What to read next
+Checkout APIs
+Build an x402-Paid API with Checkouts
+Copy page
+Copy page
+Copy page
+Copy page
+You can put any HTTP API behind an x402 paywall and settle the payments through Coinbase Business Checkouts. Your service creates a checkout for each request and hands the caller the checkout’s
+x402_url
+; Coinbase hosts that x402 payment endpoint, captures the funds, and notifies you when the payment settles. An AI agent can then pay for your API programmatically — no hosted page, wallet pop-up, or human in the loop.
+This guide builds a minimal paid endpoint: an agent calls it, your server responds
+402 Payment Required
+with a checkout’s
+x402_url
+, the agent pays that URL, and your server returns the resource once Coinbase confirms settlement.
+Coinbase hosts the x402 payment endpoint (
+x402_url
+) and verifies the payment. Your service orchestrates the flow — it creates checkouts and confirms settlement through webhooks — but never verifies a payment signature itself. Treat the checkout reaching
+COMPLETED
+as the source of truth for payment, not the HTTP response an agent sees.
+​
+How it works
+An agent requests your paid endpoint without proof of payment.
+Your server creates a checkout with the
+Create Checkout
+endpoint and returns
+402
+with the checkout’s
+x402_url
+and
+id
+.
+The agent pays the
+x402_url
+with an x402 client that supports the
+auth-capture
+scheme.
+Coinbase captures and settles the payment; the checkout moves
+ACTIVE → PROCESSING → COMPLETED
+and a
+checkout.payment.success
+webhook
+fires.
+Your server marks that checkout paid and serves the resource when the agent retries.
+​
+Prerequisites
+A
+Coinbase Business account
+with a CDP API key, enabled for agentic checkouts. See
+Authentication
+. A checkout is agent-payable only when its create response includes an
+x402_url
+— if that field is absent, your account is not routed to agentic checkouts yet.
+A public HTTPS endpoint that can receive
+webhooks
+.
+Node.js
+22.18 or later and npm for the examples.
+On the paying (agent) side: a
+CDP Secret API Key
+(
+CDP_API_KEY_ID
+,
+CDP_API_KEY_SECRET
+), a
+Wallet Secret
+(
+CDP_WALLET_SECRET
+), and a wallet funded with USDC on Base.
+​
+1. Return a 402 from your endpoint
+Install
+express
+(
+npm install express
+), then create the endpoint. On an unpaid request it creates a checkout and returns the
+x402_url
+. Authenticate the Create Checkout call with a JWT Bearer token signed with your CDP API key secret (the
+rat#view
+scope is required). Require a UUID v4
+X-Idempotency-Key
+on the request and forward it to Create Checkout, so a retried or duplicated request reuses the same checkout rather than minting a new one.
+server.ts
+import
+express
+from
+"express"
+;
+const
+app
+=
+express
+();
+// Replace with a durable store in production. Keyed by checkout id.
+const
+paidCheckouts
+=
+new
+Set
+<
+string
+>();
+async
+function
+createCheckout
+(
+idempotencyKey
+:
+string
+) {
+const
+res
+=
+await
+fetch
+(
+"https://business.coinbase.com/api/v1/checkouts"
+, {
+method:
+"POST"
+,
+headers:
+{
+Authorization:
+`Bearer
+${
+process
+.
+env
+.
+JWT
+}
+`
+,
+"Content-Type"
+:
+"application/json"
+,
+// Reuse the caller's key so a retried request returns the same checkout.
+"X-Idempotency-Key"
+:
+idempotencyKey
+,
+},
+body:
+JSON
+.
+stringify
+({
+amount:
+"0.01"
+,
+currency:
+"USDC"
+,
+description:
+"Premium API access"
+,
+metadata:
+{
+orderId:
+idempotencyKey
+},
+}),
+});
+if
+(
+!
+res
+.
+ok
+)
+throw
+new
+Error
+(
+`create checkout failed:
+${
+res
+.
+status
+}
+`
+);
+return
+res
+.
+json
+();
+// { id, x402_url, amount, currency, ... }
+}
+app
+.
+get
+(
+"/premium"
+,
+async
+(
+req
+,
+res
+)
+=>
+{
+const
+checkoutId
+=
+req
+.
+header
+(
+"X-Checkout-Id"
+);
+// A caller polling an existing checkout: serve the resource once the
+// settlement webhook has recorded it, otherwise report "not yet paid".
+// Do not create a new checkout here — that would mint a fresh one on every poll.
+if
+(
+checkoutId
+) {
+if
+(
+paidCheckouts
+.
+has
+(
+checkoutId
+)) {
+res
+.
+json
+({
+data:
+"your paid resource"
+});
+}
+else
+{
+res
+.
+status
+(
+202
+).
+json
+({
+status:
+"payment_pending"
+,
+checkoutId
+});
+}
+return
+;
+}
+// First contact: create a checkout and challenge the caller to pay it.
+// Require a stable idempotency key (UUID v4) so a retried or duplicated
+// request reuses the same checkout instead of minting a new one.
+const
+idempotencyKey
+=
+req
+.
+header
+(
+"X-Idempotency-Key"
+);
+if
+(
+!
+idempotencyKey
+) {
+res
+.
+status
+(
+400
+).
+json
+({
+error:
+"X-Idempotency-Key header required (UUID v4)"
+});
+return
+;
+}
+const
+checkout
+=
+await
+createCheckout
+(
+idempotencyKey
+);
+res
+.
+status
+(
+402
+).
+json
+({
+x402_url:
+checkout
+.
+x402_url
+,
+checkoutId:
+checkout
+.
+id
+,
+amount:
+checkout
+.
+amount
+,
+currency:
+checkout
+.
+currency
+,
+});
+});
+app
+.
+listen
+(
+3000
+);
+Run the server with
+node server.ts
+on Node.js 22.18 or later, and add
+"type": "module"
+to its
+package.json
+so the
+import
+statements resolve.
+Keep the
+x402_url
+from the create response. Only single-checkout responses carry it —
+List Checkouts
+does not — so re-fetch the checkout by
+id
+if you need it again. The
+x402_url
+stops accepting payment 24 hours after the checkout is created, regardless of any
+expiresAt
+you set.
+​
+2. Pay the endpoint as an agent
+The agent calls your endpoint, reads the
+x402_url
+from the
+402
+body, pays it, then retries your endpoint referencing the checkout it paid.
+Checkouts advertise the EVM
+auth-capture
+scheme, which matches the authorize-then-capture flow.
+Register
+AuthCaptureEvmScheme
+from
+@x402/evm
+on your
+client — a client that handles only the
+exact
+scheme cannot pay a checkout.
+1
+Install the client packages
+npm
+install
+@coinbase/cdp-sdk
+@x402/fetch
+@x402/core
+@x402/evm
+@x402/svm
+@x402/extensions
+dotenv
+Add
+"type": "module"
+to your
+package.json
+so the snippet’s
+import
+and top-level
+await
+run under
+node
+.
+2
+Create and fund the payer account
+This creates a CDP-managed EVM account and prints its address. Send it USDC on Base before paying — an underfunded payer is rejected with another
+402
+that names the insufficient balance.
+getOrCreateAccount
+returns an EOA server account, the simplest signer to use here. Smart-contract wallets also work: the endpoint verifies
+auth-capture
+signatures with
+ecrecover
+for EOAs and falls back to on-chain EIP-1271/ERC-6492 verification for contract signers, which must be deployed on-chain (funded with a little ETH on Base) before they can pay.
+import
+"dotenv/config"
+;
+import
+{
+CdpClient
+}
+from
+"@coinbase/cdp-sdk"
+;
+const
+cdp
+=
+new
+CdpClient
+();
+// reads CDP_API_KEY_ID, CDP_API_KEY_SECRET, CDP_WALLET_SECRET
+const
+account
+=
+await
+cdp
+.
+evm
+.
+getOrCreateAccount
+({
+name:
+"x402-api-payer"
+});
+console
+.
+log
+(
+"Fund this EVM address with USDC on Base:"
+,
+account
+.
+address
+);
+3
+Pay and retrieve the resource
+applySpendControls
+caps every payment the client will sign — set it to a ceiling that suits your agent before pointing it at mainnet.
+import
+"dotenv/config"
+;
+import
+{
+CdpClient
+}
+from
+"@coinbase/cdp-sdk"
+;
+import
+{
+applySpendControls
+,
+fromCdpEvmAccount
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+AuthCaptureEvmScheme
+}
+from
+"@x402/evm"
+;
+import
+{
+decodePaymentResponseHeader
+,
+wrapFetchWithPayment
+,
+x402Client
+}
+from
+"@x402/fetch"
+;
+import
+{
+randomUUID
+}
+from
+"node:crypto"
+;
+const
+cdp
+=
+new
+CdpClient
+();
+const
+account
+=
+await
+cdp
+.
+evm
+.
+getOrCreateAccount
+({
+name:
+"x402-api-payer"
+});
+// Register auth-capture for Base mainnet and Base Sepolia. The scheme reads
+// the network and asset from the challenge, so neither is hardcoded.
+const
+signer
+=
+fromCdpEvmAccount
+(
+account
+);
+const
+client
+=
+new
+x402Client
+()
+.
+register
+(
+"eip155:8453"
+,
+new
+AuthCaptureEvmScheme
+(
+signer
+))
+.
+register
+(
+"eip155:84532"
+,
+new
+AuthCaptureEvmScheme
+(
+signer
+));
+// Refuse to sign anything larger than 5 USDC.
+applySpendControls
+(
+client
+, {
+maxAmountPerPayment:
+{
+atomic:
+5_000_000
+n
+} });
+const
+fetchWithPayment
+=
+wrapFetchWithPayment
+(
+globalThis
+.
+fetch
+,
+client
+);
+const
+api
+=
+process
+.
+env
+.
+API_URL
+;
+// your paid endpoint, for example http://localhost:3000/premium
+if
+(
+!
+api
+)
+throw
+new
+Error
+(
+"Set API_URL to your paid endpoint"
+);
+// A stable idempotency key for this logical request — generated once and
+// reused on any retry so the server returns the same checkout.
+const
+idempotencyKey
+=
+randomUUID
+();
+// 1. Call the endpoint unpaid; it returns 402 with the checkout's x402_url.
+const
+challenge
+=
+await
+fetch
+(
+api
+, {
+headers:
+{
+"X-Idempotency-Key"
+:
+idempotencyKey
+} });
+if
+(
+challenge
+.
+status
+!==
+402
+)
+throw
+new
+Error
+(
+`expected 402, got
+${
+challenge
+.
+status
+}
+`
+);
+const
+{
+x402_url
+,
+checkoutId
+}
+=
+await
+challenge
+.
+json
+();
+// 2. Pay the Coinbase-hosted x402 endpoint (a POST endpoint).
+const
+paid
+=
+await
+fetchWithPayment
+(
+x402_url
+, {
+method:
+"POST"
+});
+const
+settlement
+=
+paid
+.
+headers
+.
+get
+(
+"payment-response"
+);
+if
+(
+settlement
+)
+console
+.
+log
+(
+decodePaymentResponseHeader
+(
+settlement
+));
+if
+(
+paid
+.
+status
+!==
+200
+) {
+throw
+new
+Error
+(
+`payment not authorized:
+${
+paid
+.
+status
+}
+${
+await
+paid
+.
+text
+()
+}
+`
+);
+}
+// 3. Poll the endpoint until settlement is recorded. Capture and webhook
+// delivery take a few seconds, so a single immediate retry returns 202.
+let
+resource
+:
+Response
+|
+undefined
+;
+for
+(
+let
+attempt
+=
+0
+;
+attempt
+<
+30
+;
+attempt
+++
+) {
+resource
+=
+await
+fetch
+(
+api
+, {
+headers:
+{
+"X-Checkout-Id"
+:
+checkoutId
+} });
+if
+(
+resource
+.
+status
+===
+200
+)
+break
+;
+await
+new
+Promise
+((
+r
+)
+=>
+setTimeout
+(
+r
+,
+2000
+));
+}
+console
+.
+log
+(
+resource
+?.
+status
+,
+await
+resource
+?.
+text
+());
+A
+200
+from the
+x402_url
+means the payment was
+authorized
+, not yet settled. Your endpoint returns the resource only after it records the
+checkout.payment.success
+webhook, so the agent polls (and gets
+202
+until then). The loop in step 3 is bounded rather than waiting indefinitely.
+​
+3. Confirm settlement and fulfill
+Subscribe your webhook endpoint to the checkout event types and verify every delivery, then mark the checkout paid when it settles.
+Follow
+Webhooks
+to create a subscription for
+checkout.payment.success
+(and the other checkout events) and to verify the
+X-Hook0-Signature
+header. Verify the signature before trusting any payload — an unverified webhook can be forged.
+// Mount with the raw body so signatures verify; see the Webhooks guide.
+app
+.
+post
+(
+"/webhooks/checkout"
+,
+express
+.
+raw
+({
+type:
+"application/json"
+}), (
+req
+,
+res
+)
+=>
+{
+const
+raw
+=
+req
+.
+body
+.
+toString
+();
+// verifyWebhookSignature is the HMAC check from the Webhooks guide. Reject
+// forged deliveries before parsing the body or mutating any state — this
+// endpoint is the fulfillment authorization boundary.
+const
+authentic
+=
+verifyWebhookSignature
+(
+raw
+,
+req
+.
+header
+(
+"X-Hook0-Signature"
+)
+??
+""
+,
+process
+.
+env
+.
+WEBHOOK_SECRET
+??
+""
+,
+req
+.
+headers
+,
+);
+if
+(
+!
+authentic
+) {
+res
+.
+status
+(
+400
+).
+send
+(
+"Invalid signature"
+);
+return
+;
+}
+const
+event
+=
+JSON
+.
+parse
+(
+raw
+);
+if
+(
+event
+.
+eventType
+===
+"checkout.payment.success"
+&&
+event
+.
+status
+===
+"COMPLETED"
+) {
+paidCheckouts
+.
+add
+(
+event
+.
+id
+);
+// event.id is the checkout id; Set dedupes repeat deliveries
+}
+res
+.
+status
+(
+200
+).
+send
+(
+"OK"
+);
+});
+The webhook payload’s top-level
+id
+is the checkout id — the value this guide correlates on.
+metadata
+echoes any fields you set at creation, so you can attach your own order reference and match on that instead. Handle deliveries in an idempotent way: webhooks can arrive more than once, and a checkout is single-use.
+If you cannot receive webhooks, poll the
+Get Checkout
+endpoint until
+status
+reaches a terminal value (
+COMPLETED
+,
+FAILED
+,
+EXPIRED
+, or
+DEACTIVATED
+) instead. Ordinary payment rejections — bad signature, wrong amount, insufficient balance, expired window — come back to the agent as another
+402
+and leave the checkout
+ACTIVE
+, so they are safe to retry; a checkout that has reached
+FAILED
+is terminal, so create a new one. A
+COMPLETED
+checkout can still move to
+PARTIALLY_REFUNDED
+or
+REFUNDED
+later if you refund it (see
+Refunds
+).
+​
+Test with a small amount
+Test the end-to-end flow with a checkout for a small amount (for example,
+0.01
+USDC), and only fund the payer with the amount you intend to pay.
+Do not route on the checkout’s
+network
+field: it reports
+base
+in every environment. The client registers both Base mainnet (
+eip155:8453
+) and Base Sepolia (
+eip155:84532
+), and
+AuthCaptureEvmScheme
+picks the network from the challenge.
+​
+Refunds
+A
+COMPLETED
+checkout can be refunded in full or in part with the
+Refund Checkout
+endpoint. Refunds are funded from your own Coinbase Business USDC balance rather than from the buyer’s payment, settle asynchronously, and emit a
+checkout.refund.success
+webhook. Poll the refund’s own
+status
+to catch the failure case. See
+Accept Agentic Payments with x402
+for details.
+​
+What to read next
+Accept Agentic Payments with x402
+The end-to-end reference for paying a checkout’s x402_url.
+Webhooks
+Subscribe to checkout events and verify signatures.
+x402 overview
+How the x402 payment protocol works.
+Checkouts API reference
+Full endpoint documentation.
+Was this page helpful?
+Yes
+No
+Accept Agentic Payments with x402
+Previous
+Migrate from Payment Links Overview
+Next
