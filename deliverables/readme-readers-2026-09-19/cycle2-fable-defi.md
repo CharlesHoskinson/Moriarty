@@ -1,0 +1,7 @@
+Verdict: FLAGS
+
+1. "A `.mori` source file defines an agreement. An instance supplies" — I could not form a concrete picture of what an instance or an action is as a developer, or how they relate to a source file; the section stays abstract and the only syntax appears much later in the quickstart, so I read the whole design section without knowing what I would actually write. — severity: medium
+2. "The DeFi studies supply behaviors such as swaps" — I had no idea what "the DeFi studies" refers to; ACTUS and Marlowe are introduced, but this reference is used as if I already knew it. — severity: medium
+3. "Here it provides a vocabulary for assigning responsibilities" — I lost the thread on why "supported Moriarty programs require no deployment license" follows from the CAKE Permission definition; I had to reread to see whether this was a clarification, a caveat or a separate point. — severity: medium
+4. "The kernel's zero-knowledge (ZK) proofs, multi-party computation" — I skimmed from here through the next paragraph on the destination's enforcement boundary; I stopped following which of these mechanisms I would actually touch as an application developer versus which are federation-internal. — severity: medium
+5. "The September 17 loan result paid an amount due" — I did not know what result this was or where it was reported; no earlier passage introduced a dated run, so I had to infer it was one of the Midnight Preview executions mentioned in the prior sentence. — severity: medium

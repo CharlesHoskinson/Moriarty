@@ -2,9 +2,9 @@
 
 # Moriarty
 
-Moriarty is a programming language for financial intention on the Midnight blockchain. An owner specifies the outcomes they will accept, the authority they delegate, the costs they permit and the obligations that must survive incomplete execution. A solver is a program or service that proposes how to carry out that intention, choosing among the options the owner allows. The language's purpose is to make compliance with those conditions a prerequisite for accepting the resulting financial effects.
+Moriarty is a programming language for financial intention on the Midnight blockchain. An owner specifies the outcomes they will accept, the authority they delegate, the costs they permit and the obligations that must survive incomplete execution. A solver proposes a way to carry out that intention, choosing among the options the owner allows. The language's purpose is to make compliance with those conditions a prerequisite for accepting the resulting financial effects.
 
-The intended scope extends from a direct private agreement on Midnight to a multichain financial workflow coordinated by the Federated DeFi Kernel, a separate, optional system for coordinating solvers and settlement. Partial transactions, conditional settlement with programmable escrow, continuing liabilities and recovery are part of the language design. Human developers and AI solvers work within the same authority and proof requirements.
+The intended scope extends from a direct private agreement on Midnight to a multichain financial workflow coordinated by an optional Federated DeFi Kernel. Partial transactions, conditional settlement with programmable escrow, continuing liabilities and recovery are part of the language design. Human developers and AI solvers work within the same authority and proof requirements.
 
 Moriarty is experimental. Developers can author and simulate supported source programs today; the full proof and settlement path described here remains under development. The repository is not a production SDK or an audited deployment. Two references separate the design requirements from the current language:
 
@@ -25,10 +25,7 @@ For developers, the attraction is a common foundation for financial applications
 
 A `.mori` source file defines an agreement. For a loan, the source describes how origination, interest and repayment work. An instance binds that agreement to a particular lender, borrower and current debt. Calling its repayment action proposes a change to that debt and the associated payment.
 
-<details>
-<summary>A local repayment example and source profiles</summary>
-
-A source profile specifies the syntax and operations the frontend supports. Start with `moriarty-financial-agreement-source/5` to explore the current local loan lifecycle. The older `moriarty-bounded-atomic/1` profile supports the original loan/swap examples and restricted compilation. These are separate language versions with different supported operations. The local developer quickstart below exercises both; the syntax and semantics reference supplies their complete grammar.
+A source profile specifies the syntax and operations the frontend supports. The quickstart exercises two profiles: the older atomic loan/swap examples and the newer local loan lifecycle. Their syntax and supported operations differ, and the syntax and semantics reference documents each profile.
 
 For example, the repayment action in `experiments/moriarty-language/spec/successor/examples/loan-lifecycle.mori` records the debt discharge alongside the transfer. This excerpt names the obligation and links the repayment to its transfer; the complete source also declares the record types, emits the transfer and checks postconditions:
 
@@ -42,16 +39,14 @@ emit Repay {
 };
 ```
 
-Here `emit` declares a financial operation for the evaluator to check. It does not send a ledger transaction. `nominalAmount` is the amount of debt to discharge; the associated transfer supplies its settlement payment. The complete source file shows the enclosing `agreement` and `action` declarations; its accompanying demo constructs the instance state and participant inputs.
-
-</details>
+Here `emit` declares a financial operation for the evaluator to check. It does not send a ledger transaction. `nominalAmount` is the amount of debt to discharge; the associated transfer supplies its settlement payment.
 
 
-Authorization can fix an **exact plan**, including its action, state updates and financial effects, or permit an **outcome intent**, within which a solver chooses a plan. An owner who wants a particular transfer need not delegate route selection. An owner who wants a minimum return can leave choices open while bounding gross spending, fees, recipients and allowed actions. The local atomic evaluator already checks both forms as authority supplied alongside an action, using simulated authentication. Binding that authority cryptographically to ledger acceptance and durable replay protection remains implementation work.
+Authorization can fix an **exact plan**, including its action, writes and effects, or permit an **outcome intent**, within which a solver chooses a plan. An owner who wants a particular transfer need not delegate route selection. An owner who wants a minimum return can leave choices open while bounding gross spending, fees, recipients and allowed actions. Cryptographic authorization and replay protection must ultimately bind either form to ledger acceptance.
 
 ### Bounded computation, continuing agreements
 
-A stage is a bounded step in an agreement's execution, checked before its proposed effects are accepted. In the current local demos, evaluating an action supplies such a step. The language deliberately excludes unrestricted loops and source recursion within a stage, a restriction called Turing incompleteness. Arithmetic has defined behavior and supported operations have inspectable semantics. This makes termination, resource accounting and correspondence between a program and its proof obligations tractable subjects for verification. It also gives developers a place to state failures such as overflow, insufficient authority or an unsatisfied condition.
+Each stage performs a bounded amount of computation. The language deliberately excludes unrestricted loops and source recursion within a stage, a restriction called Turing incompleteness. Arithmetic has defined behavior and supported operations have inspectable semantics. This makes termination, resource accounting and correspondence between a program and its proof obligations tractable subjects for verification. It also gives developers a place to state failures such as overflow, insufficient authority or an unsatisfied condition.
 
 A completed stage can leave a continuation: authenticated state that records what remains to be done and the conditions for the next step. A loan can therefore accrue, receive payments and eventually close through successive bounded transitions. A trade can wait for evidence and resume when that evidence arrives. The target does not impose one fixed depth on all histories; each stage and each composition step must remain bounded. Authorized continuations must also preserve cumulative work limits.
 
@@ -59,7 +54,7 @@ Termination of a stage does not establish completion of the agreement. A counter
 
 ### Financial meaning belongs in the program
 
-Amounts need asset identities, units and domains. Prices need a declared orientation. Fees, rounding and overflow need exact rules. Settlement bindings must specify how nominal obligations convert into ledger asset quantities. Otherwise, a perfectly valid proof may establish arithmetic over values whose financial interpretation was wrong at the outset. Moriarty's design therefore treats these choices as part of the semantic contract carried into compilation and verification.
+Amounts need asset identities, units and domains. Prices need a declared orientation. Fees, rounding and overflow need exact rules. Otherwise, a perfectly valid proof may establish arithmetic over values whose financial interpretation was wrong at the outset. Moriarty's design therefore treats these choices as part of the semantic contract carried into compilation and verification.
 
 Authority and liability have different lifecycles. Unused spending authority need not be exercised. A consumed receipt must not be consumed again, and a debt remains until it is discharged, transferred with the required consent, amended or explicitly forgiven. Default does not erase that debt. A transfer to an address cannot by itself impose a new obligation on its owner, though ordinary receipt of value need not require an interactive acceptance ceremony.
 
@@ -71,9 +66,9 @@ The design places exact values, bounded evaluation, state transitions, authority
 
 ACTUS, the Algorithmic Contract Types Unified Standards, supplies reference behavior for scheduled financial events and cash flows, including interest, principal repayment and maturity. The project's DeFi research, indexed in `wiki/index.md`, catalogues swaps, liquidity and lending as implementation targets. Together they give the language concrete conformance targets across DeFi and traditional finance; dates, rounding and residual claims must agree with the selected financial contract. Marlowe supplies an earlier example of a financial DSL organized around analyzable agreements. These references guide the work; full conformance remains unfinished.
 
-A frequently used operation can have a faster implementation, provided a certificate establishes that it retains the reference operation's meaning. Simplicity, Blockstream's language for verifiable programs, calls such optimized implementations jets. For Moriarty, the certificate must cover preconditions, outputs, failure behavior, complete effects and the declared cost relation. Testing the normal implementation is insufficient: the proof constraints must also rule out fabricated inputs that would make an incorrect execution appear valid. This lets a financial library optimize common calculations while preserving the meaning an application relies on.
+A frequently used operation can have a faster implementation, provided a certificate establishes that it retains the reference operation's meaning. Simplicity, Blockstream's language for verifiable programs, calls such optimized implementations jets. For Moriarty, the certificate must cover preconditions, outputs, failure behavior, complete effects and the declared cost relation. Testing the normal implementation is insufficient: the proof constraints must also rule out fabricated inputs that would make an incorrect execution appear valid.
 
-Planned developer tools would check a candidate program against its constraints and show a counterexample when a check finds a violation. An author could also leave a gap with a specified type and ask a bounded search to fill it. The generated solution would face the same checks as a manually written program. Unsupported checks, timeouts and inconsistent assumptions must remain distinguishable from success.
+Developer assistance can build on the same foundation. Refinement checks, counterexamples, typed holes and bounded synthesis should help an author discover and discharge obligations. A generated solution must pass the same checks as a manually written program. Unsupported checks, timeouts and inconsistent assumptions must remain distinguishable from success.
 
 ### Midnight as the execution target
 
@@ -88,7 +83,7 @@ Moriarty uses Midnight's native proof system, based on PLONK/KZG. Its guarantees
 
 </details>
 
-Proof-carrying data (PCD) is data accompanied by evidence that it and the predecessors it depends on were produced according to specified rules. For Moriarty, the target is a transition certificate that connects the proposed state and effects to an authenticated origin and compliant predecessors. Proof recursion means verifying predecessor proofs inside a new proof; source computation stays bounded while the evidence certifies earlier stages. Comprehensive native recursion is intended to support portable history and private handoff, where one participant passes a continuing agreement and the required private data to another authorized participant. It must also support combining histories with multiple predecessors. Such composition must preserve consent, cumulative spending and every outstanding duty. Combining proofs without checking those relationships would only compress evidence for disconnected claims.
+Proof-carrying data (PCD) is data accompanied by evidence that it and the predecessors it depends on were produced according to specified rules. For Moriarty, the target is a transition certificate that connects the proposed state and effects to an authenticated origin and compliant predecessors. Comprehensive native recursion is intended to support portable history and private handoff, where one participant passes a continuing agreement and the required private data to another authorized participant. It must also support combining histories with multiple predecessors. Such composition must preserve consent, cumulative spending and every outstanding duty. Combining proofs without checking those relationships would only compress evidence for disconnected claims.
 
 The requirements page calls the next-version backend workstream **ZKIRv4**. This is a proposed requirements label, not a claim that an upstream release with that name has been announced. The approximately March 2027 horizon for comprehensive Midnight recursion is a project planning assumption recorded on September 19, 2026, rather than a verified release commitment.
 
@@ -96,7 +91,7 @@ The requirements page calls the next-version backend workstream **ZKIRv4**. This
 
 The central adversarial case is a party proposing an execution that appears to meet the owner's request while exercising more authority, hiding an effect or discarding an obligation. A solver, proof producer, transaction forwarder or counterparty may be malicious. A witness is the supporting data supplied to a proof, including private inputs when the relation permits them. The acceptance rules must constrain every accepted witness, including ones that the normal software would never generate.
 
-Acceptance requires four kinds of evidence. The agreement's required properties must hold over their stated domain. The chosen execution must stay within the owner's authenticated authorization, a requirement called intent refinement. The next state and financial effects must follow the program's rules. Finally, the transition must extend a compliant history from a legitimate origin. Each obligation needs an enforcement point in native constraints, authenticated state or a justified ledger mechanism. A host-side check, an unused Boolean or a label saying "verified" cannot supply a missing obligation. If an owner's signed authorization requires evidence of a spending limit, a prover cannot omit that requirement or substitute a check that does not enforce it. Acceptance must reject missing evidence, unsupported required checks and unresolved dependencies.
+Acceptance requires four kinds of evidence. The agreement's required properties must hold over their stated domain. The chosen execution must stay within the owner's authenticated authorization, a requirement called intent refinement. The next state and financial effects must follow the program's rules. Finally, the transition must extend a compliant history from a legitimate origin. Each obligation needs an enforcement point in native constraints, authenticated state or a justified ledger mechanism. A host-side check, an unused Boolean or a label saying "verified" cannot supply a missing obligation. A signed mandatory claim cannot be removed or replaced with an unsupported check; acceptance must reject missing evidence and unresolved dependencies.
 
 ### Bind the proof to the execution
 
@@ -130,11 +125,9 @@ A proof of compliance does not establish profitability or optimal execution. Pri
 
 ## How the Federated DeFi Kernel works with Moriarty
 
-The proposed Federated DeFi Kernel coordinates work that extends beyond one local agreement. Its intended responsibilities include collecting intentions, connecting solvers, obtaining evidence, arranging constrained signing, submitting external transactions and managing authorized recovery. Moriarty defines acceptable behavior and the evidence required for it. Midnight checks the native proof relation and enforces its own ledger's state and consumption rules. Each external domain retains its own execution and finality assumptions.
+The proposed Federated DeFi Kernel coordinates work that extends beyond one local agreement. Its intended responsibilities include collecting intentions, connecting solvers, obtaining evidence, arranging constrained signing, submitting external transactions and managing authorized recovery. Kernel integration and solver connections remain design work in this Moriarty repository. Planned adapters cover the Open Wallet Standard (OWS) for wallet operations and x402 for HTTP service payments. The local evaluator APIs are the available starting point. Moriarty defines acceptable behavior and the evidence required for it. Midnight checks the native proof relation and enforces its own ledger's state and consumption rules. Each external domain retains its own execution and finality assumptions.
 
-Kernel integration and solver connections remain design work in this Moriarty repository. Planned adapters cover the Open Wallet Standard (OWS) for wallet operations and x402 for HTTP service payments. The local evaluator APIs are the available starting point.
-
-The CAKE chain-abstraction framework distinguishes four concerns. Applications express the financial purpose. Permission records user and application authority, including required consent. Solvers search for candidate plans within that authority. Settlement mechanisms execute effects and establish what occurred. The kernel coordinates these activities without acquiring a right to weaken the agreement.
+This separates three kinds of work. Applications express the financial purpose and required consent. Solvers search for candidate plans within that authority. Settlement mechanisms execute effects and establish what occurred. The kernel coordinates these activities without acquiring a right to weaken the agreement. The CAKE chain-abstraction framework names these concerns Applications, Permission, Solvers and Settlement. Here it provides a vocabulary for assigning responsibilities across the stack. Permission here means the authority granted by users and applications.
 
 A typical coordinated workflow begins with an owner signing constraints and allowed evidence policies. A solver proposes a route. The relevant budgets are reserved, the candidate is checked against the agreement, and each permitted stage executes under its stated conditions. Authenticated results update the continuing state. Further action depends on those results, with unresolved outcomes retained for reconciliation and recovery rather than treated as either success or failure.
 
@@ -178,13 +171,11 @@ Developers can parse, check and locally evaluate supported source programs, incl
 
 These results demonstrate particular programs and financial effects. They do not yet establish the full path from arbitrary supported source programs to mandatory native proofs of their complete ledger effects. The scoped records remain in `deliverables/`; kernel and wallet integration interfaces described above are still planned.
 
-The full path still needs proof that compilation preserves the language's meaning and that acceptance enforces the complete authenticated intention. Native recursive history, private handoff and composition must carry those guarantees between stages and participants. Conditional settlement, recovery and broader financial libraries need their own conformance evidence, including the behavior of federation and solver integrations at external boundaries.
-
-Each claim needs an appropriate check. Semantic comparisons test selected cases; compiler correspondence addresses preservation of meaning; adversarial witness tests look for invalid executions that constraints admit. Resource measurements and ledger results establish further, distinct facts. Before claiming a financial capability for release, the project requires its Midnight Preview effects and resulting state to be observed and checked. That evidence requirement governs project claims, not users' permission to deploy programs.
+The principal remaining obligations are language-to-ledger correspondence, enforcement of the complete authenticated intention, native recursive history, private handoff and composition, conditional settlement with sound recovery, and broader financial-library conformance. Federation and solver integrations must preserve those obligations at their external boundaries. Release evidence must include actual Midnight Preview effects and state readback for the claimed financial capability; this is a project verification requirement, not permission to deploy a program. Each step needs evidence appropriate to the claim: finite semantic comparisons, adversarial witness tests, compiler correspondence arguments, resource measurements and actual ledger results establish different things.
 
 The immediate direction is to connect a newly authored bounded financial program through the public compilation and proving path to observed Midnight effects, with controls that reject altered intention, effects and history. That same relation must then extend to partial fulfillment, conditional escrow and late-result recovery. Recursion and private composition expand how compliant history can be carried between stages and participants. The requirements reference above records these obligations; the syntax and semantics reference records the language profiles available for inspection today.
 
-## Local developer quickstart
+## Try the local developer workflow
 
 Use Node.js 24. The local demos require no wallet, faucet, network access or npm dependency installation after obtaining the repository:
 
