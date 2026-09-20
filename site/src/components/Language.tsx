@@ -20,8 +20,10 @@ export function Language() {
       <p className="lede">
         {mode === 'build'
           ? 'A developer reading twelve lines should know what the agreement forbids, because the agreement says so.'
-          : 'Source files carry the extension .mori. Two syntax profiles exist and they are not interchangeable.'}
+          : 'Source files carry the extension .mori. Versioned source profiles exist and they are not interchangeable.'}
       </p>
+
+      <p><a href="docs/language.html#syntax">Read the complete syntax reference</a> and <a href="docs/language.html#semantics">operational semantics</a>. The examples below illustrate their named profiles.</p>
 
       <div className="profiles">
         {PROFILES.map((p) => (
