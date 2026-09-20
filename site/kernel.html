@@ -6,7 +6,7 @@
     <title>The Federated DeFi Kernel — Moriarty</title>
     <meta
       name="description"
-      content="How the optional Federated DeFi Kernel coordinates solvers, evidence and settlement across chains while Moriarty preserves what the owner authorized. An interactive illustration of the target design."
+      content="Why a bounded intent language needs an optional coordinator when its agreements settle across independent chains, and what that coordinator can and cannot do. An explanation of the Federated DeFi Kernel with an interactive illustration."
     />
   </head>
   <body class="kernel-page">
@@ -33,27 +33,84 @@
       <!-- 1. An agreement that spans transactions -------------------------- -->
       <section id="agreement" aria-labelledby="agreement-h">
         <div class="wrap">
-          <p class="eyebrow">An interactive illustration of the target design</p>
+          <p class="eyebrow">Moriarty and cross-chain settlement</p>
           <h1 id="agreement-h">The Federated DeFi Kernel</h1>
           <p class="lede">
-            You define the agreement. Solvers find possible routes. The kernel
-            coordinates the work across participants and chains, while each
-            accepted stage must satisfy the agreement.
-          </p>
-          <p class="k-intro">
-            Most of that work happens in more than one transaction. A first
-            delivery can land while a second is still crossing another chain,
-            and the agreement has to say what is spent, what is merely
-            reserved, what has arrived and who still owes what. This page walks
-            one such agreement through its good, bad and unresolved endings.
-            The examples sign nothing and submit nothing. The kernel and its
-            integrations remain development work, and a Moriarty program can
-            also run directly on Midnight without any federation.
-          </p>
+              The Federated DeFi Kernel coordinates financial agreements
+              across chains and services. Moriarty gives those agreements a
+              precise meaning: what the owner authorizes, what each
+              participant owes, and what must hold before settlement. The
+              kernel carries that meaning through the work of finding a
+              route, collecting evidence and completing or recovering each
+              stage, while the signed agreement continues to govern every
+              use of the owner’s assets.
+            </p>
+
+          <div class="k-prose">
+            <p>
+              Moriarty is a bounded financial language for Midnight. Its
+              programs compile to ZKIRv3 for execution through Midnight’s
+              native proof infrastructure. Developers can author, compile,
+              prove and deploy programs without approval from the project or
+              a hosted service, subject to Midnight’s validity rules,
+              resource costs and asset-owner authorization. Finite execution
+              and explicit financial effects make the program’s behavior
+              amenable to proof.
+            </p>
+            <p>
+              An intention specifies which assets may leave an account,
+              where value must arrive, the permitted fees and liabilities,
+              and the evidence required before a stage proceeds. It also
+              says which duties survive partial settlement or failure. These
+              conditions give a solver room to choose how to fulfill an
+              agreement while preserving what the participants authorized.
+              The <a href="docs/language.html">language reference</a>
+              defines the syntax and semantics, and the <a
+              href="docs/requirements.html">requirements reference</a>
+              records the obligations that the language and its backend must
+              satisfy.
+            </p>
+            <p>
+              An agreement settled entirely on Midnight can use the ledger’s
+              own proof and state-transition rules. Cross-chain agreements
+              also depend on events beyond that ledger: a transfer
+              elsewhere, a document attested by an issuer, or another
+              participant’s signature. Each event has its own timing and
+              evidence, so a delay can leave an agreement partly fulfilled
+              without establishing that the remaining work failed.
+            </p>
+            <p>
+              The kernel coordinates this continuing work. It gathers
+              candidate routes, collects evidence, reserves spending
+              authority, submits effects and reconciles observations with
+              the agreement. Its recovery paths carry forward the costs
+              already incurred and the duties still owed. This coordination
+              lets an agreement span independently settling systems without
+              treating them as a single atomic transaction.
+            </p>
+            <p>
+              Using the kernel is optional. Direct Midnight execution avoids
+              federation dependencies for local agreements; the federated
+              path reaches other chains and services through explicitly
+              chosen evidence, custody and signing arrangements. Those
+              arrangements add trust and availability assumptions that the
+              agreement must account for. They confer no authority to change
+              its signed constraints or turn kernel-service eligibility into
+              permission to use Moriarty.
+            </p>
+            <p>
+              Consider a buyer exchanging A for B under conditional
+              settlement with programmable escrow. The buyer permits partial
+              fills, but payment requires the provider’s signature, the
+              recipient’s acceptance and a fresh document attestation. The
+              example below follows that agreement through successful
+              delivery, a failed attempt and an unresolved result.
+            </p>
+          </div>
 
           <div class="k-agreement">
             <div class="k-agreement-card card">
-              <h2 class="k-card-title">One agreement, two assets</h2>
+              <h2 class="k-card-title">The agreement</h2>
               <dl class="k-terms">
                 <div><dt>Buyer authorizes</dt><dd>Spend at most <span class="num">11 A</span> gross, of which at most <span class="num">1 A</span> may be fees</dd></div>
                 <div><dt>Goal on completion</dt><dd>Receive at least <span class="num">20 B</span> at <code>recipient-b-account</code></dd></div>
@@ -72,24 +129,66 @@
                 would be a different asset. Nothing here is a market price.
               </p>
             </div>
-            <div class="k-agreement-aside">
-              <h3>Outcome, not route</h3>
+            <div class="k-agreement-aside k-prose">
+              <h3>What the buyer has and has not said</h3>
               <p>
-                The buyer has not said which venue to use or which chain to
-                cross. They have said what they will accept. A solver proposes
-                the route, and every route is measured against the same signed
-                constraints.
+              The buyer fixes the assets, their settlement domains, the
+              recipient and the financial limits, while leaving the choice
+              of route, venue and intermediary to the solver within those
+              constraints. A solver can improve the route without asking the
+              buyer to authorize every implementation detail. It cannot
+              substitute another recipient or acquire additional spending
+              authority by finding a more convenient path.
+            </p>
+              <p>
+                The funding line matters for the same reason. Moving 11 A into
+                escrow is a precondition of the illustration, not one of its
+                effects, so it is excluded from the gross cap explicitly rather
+                than by silence. An agreement that left this ambiguous would let
+                a reader count the same 11 A twice, or not at all.
               </p>
-              <h3>Six quantities kept apart</h3>
-              <ul class="k-six">
-                <li><strong>Actual gross debit.</strong> Left the buyer for good.</li>
-                <li><strong>Incurred fees.</strong> Part of the debit, with its own cap.</li>
-                <li><strong>Active reservation.</strong> Exposure against authority. Not a debit, and not proof of escrow.</li>
-                <li><strong>Confirmed receipt.</strong> B that the recipient authentically holds.</li>
-                <li><strong>Custody.</strong> The last confirmed, accounted balance of the buyer’s A under escrow. While an external attempt is unresolved, the current location of the amount it covers is unknown; a reservation is not custody.</li>
-                <li><strong>Accepted duties.</strong> What a consenting party still owes, and how it is discharged.</li>
-              </ul>
             </div>
+          </div>
+
+          <div class="k-prose">
+            <h3>Why the account keeps its quantities apart</h3>
+            <p>
+              The gross cap of 11 A limits cumulative debit, including fees.
+              The separate 1 A fee cap limits the portion spent on fees, so
+              each fee consumes capacity under both bounds. A later return
+              of principal is a separate effect; it does not erase the
+              earlier debit or replenish fees already spent.
+            </p>
+            <p>
+              Reservations account for exposure before an attempt’s outcome
+              is known. Reserving capacity prevents another attempt from
+              using the same authority while the first remains unresolved.
+              The reservation records a commitment against a budget; the
+              custody record and authenticated observations establish where
+              the assets are held.
+            </p>
+            <p>
+              On the receiving side, confirmed receipt counts only B that the
+              recipient authentically holds, which is a different fact from B
+              that a destination reports having sent. Custody is the last
+              confirmed, accounted balance of the buyer’s A under escrow. While
+              an external attempt is unresolved, the current location of the
+              amount it covers is unknown, because the destination may already
+              have executed; the custody figure is a record, not a live reading.
+              Finally, the account carries accepted duties: what a consenting
+              party still owes and how each duty is discharged. Duties survive
+              partial progress. Delivering the first half of an order does not
+              shrink the obligation to deliver the second, and a failed attempt
+              turns a conditional remedy from dormant to pending instead of
+              making it vanish.
+            </p>
+            <p>
+              After the first fill, 5.5 A has been spent and 10 B received.
+              Reserving another 5.5 A for the second fill brings spending
+              plus exposure to the 11 A cap. A competing solver therefore
+              has no remaining capacity to reserve, even while the second
+              transfer’s outcome is unknown.
+            </p>
           </div>
         </div>
       </section>
@@ -98,11 +197,14 @@
       <section id="responsibilities" aria-labelledby="resp-h">
         <div class="wrap">
           <p class="eyebrow">Who does what</p>
-          <h2 id="resp-h">A responsibility map, not a deployment.</h2>
+          <h2 id="resp-h">Where each responsibility sits</h2>
           <p class="lede">
-            Five parties touch one agreement. Each can do something the others
-            cannot, and each has a limit the reader must not forget.
-          </p>
+              The owner authorizes the agreement, Moriarty defines its
+              financial rules, and the kernel coordinates its execution.
+              Midnight and the external systems enforce conditions within
+              their respective domains. Their different responsibilities
+              determine where each condition must be checked.
+            </p>
 
           <figure class="k-lanes" aria-labelledby="lanes-cap">
             <figcaption id="lanes-cap" class="sr-only">
@@ -125,7 +227,7 @@
               <li class="k-lane k-lane-kernel">
                 <h3>Optional kernel</h3>
                 <p class="k-does">Coordinate solvers, evidence, reservations, configured custody and signing, submission, observation and authorized recovery.</p>
-                <p class="k-limit">Cannot amend signed constraints or make service eligibility a language license.</p>
+                <p class="k-limit">Cannot amend signed constraints or make service eligibility a language licence.</p>
                 <p class="k-arrow" aria-label="receives candidates from solvers and submits effects">candidate <span aria-hidden="true">→</span> submitted effect <span aria-hidden="true">↓</span></p>
               </li>
               <li class="k-lane k-lane-midnight">
@@ -143,59 +245,90 @@
             </ol>
           </figure>
 
-          <div class="k-two">
-            <div>
-              <h3>Two paths, one language</h3>
-              <p>
-                A direct path runs a Moriarty program on Midnight with no
-                federation at all. The federated path adds coordination for
-                work that reaches other participants and chains. Authoring,
-                compiling, proving and deploying need no project membership,
-                reviewer approval or deployment license on either path.
-                Asset-owner authorization and application conditions still apply.
-              </p>
-            </div>
-            <div>
-              <h3>Four concerns, not four steps</h3>
-              <p>
-                The CAKE framework names Applications, Permission, Solvers and
-                Settlement. They cross these lanes rather than forming a
-                pipeline. Permission means owner and application authority.
-                It is not a deployment admission scheme, and no lane is
-                allowed to skip a check because another lane ran first.
-              </p>
-            </div>
+          <div class="k-prose">
+            <p>
+              These responsibilities cross organizational boundaries. The
+              CAKE framework describes Applications, Permission, Solvers and
+              Settlement as concerns of chain abstraction. In Moriarty, the
+              application expresses the agreement, permission concerns
+              asset-owner and application authority, solvers propose
+              executions, and settlement systems enforce the rules they
+              accept. A federation can coordinate these activities without
+              becoming a language-wide deployment authority.
+            </p>
+            <p>
+              Moriarty expresses the evidence an agreement requires, while
+              issuers and settlement systems provide observations under
+              their own authority. A document predicate can establish that a
+              named issuer attested a specified document; physical delivery
+              requires evidence appropriate to that separate claim.
+              Similarly, transaction inclusion, successful execution,
+              finality and receipt by the intended recipient answer
+              different questions. The kernel reconciles those observations
+              against the agreement, and Midnight enforces the resulting
+              native proof relation and its own state-consumption rules.
+              Foreign effects remain subject to the destination’s
+              enforcement and the adapter’s evidence assumptions.
+            </p>
           </div>
 
-          <div class="k-judgments">
-            <h3>Four acceptance judgments, kept apart</h3>
+          <div class="k-prose">
+            <h3>How the federation shares responsibility</h3>
             <p>
-              Before Midnight accepts a stage, four different questions have
-              answers, and no one of them stands in for another. The explorer
-              below shows illustrative rule checks for each. They are
-              JavaScript in a web page and produce none of the native proof
-              obligations the real judgments carry.
+              The federation is a configured membership of operators that
+              shares the work and authority of coordination. Where it provides
+              threshold custody, members hold signing shares and combine them
+              under the signing protocol to authorize an external effect. A
+              membership epoch identifies the operator set and threshold to
+              which that signature belongs. The protocol also specifies how
+              operators order work, handle conflicting statements, respond to
+              unavailable members and change membership without losing the
+              agreement’s outstanding duties.
+            </p>
+            <p>
+              Solvers supply candidate executions to this coordination system;
+              proposing a route does not confer a signing share. ZK proofs bind
+              execution to the agreement, MPC distributes signing authority,
+              and TEE attestations provide evidence about measured execution
+              environments. Each contributes a distinct assurance, whose
+              assumptions and enforcement points are explained below.
+            </p>
+          </div>
+
+          <div class="k-judgments k-prose">
+            <h3>What acceptance has to establish</h3>
+            <p>
+              Acceptance binds the execution to the agreement and its
+              history. The required claims address different ways a
+              transaction could violate the participants’ intention, so
+              satisfying one cannot compensate for failing another:
             </p>
             <ol class="k-judgment-list">
               <li><strong>Contract properties.</strong> The agreement’s required properties hold over their stated domain: the named recipient, the gross and fee caps, the completion goal.</li>
               <li><strong>Intent refinement.</strong> The chosen execution stays within the owner’s authenticated authorization. A committed route may do less than the intention allows, never more or other.</li>
-              <li><strong>Transition validity.</strong> The next state and its financial effects follow the program’s rules: each event moves the account only by its stated effect, and a rejected event moves nothing.</li>
+              <li><strong>Transition validity.</strong> The next state and its financial effects follow the program’s rules: each outcome, including failure, retains exactly the effects and duties its phase policy specifies.</li>
               <li><strong>History compliance.</strong> The stage extends a compliant history from a legitimate origin: the identifiers it consumes were unconsumed, and its predecessors were themselves accepted.</li>
             </ol>
+            <p>
+              Acceptance depends on these claims rather than on who
+              assembled the transaction. The compiler must preserve them
+              from the developer’s source program through Core semantics
+              into the native constraints Midnight verifies. This
+              correspondence gives the proof its financial meaning: the
+              verified relation must be the agreement the developer
+              expressed, with the owner’s authorization bound into it.
+            </p>
             <details class="k-disclosure">
               <summary>How these map onto the fixture</summary>
               <p>
-                The candidate checks in step 1 are contract-property and
-                intent-refinement rules. The reducer’s refusal to move the
-                account on a rejected event, and its per-event delta, are the
-                transition-validity rule. The consumed-identifier list and the
-                attempt and fill identifiers are the history-compliance rule.
-                In the target design each obligation needs an enforcement point
-                in native constraints, authenticated state or a justified ledger
-                mechanism. A host-side check, an unused Boolean or a label
-                saying “verified” cannot supply a missing obligation, and the
-                checks on this page are host-side checks.
-              </p>
+              The explorer’s candidate checks illustrate contract properties
+              and intent refinement. Its account changes illustrate
+              transition validity, while the consumed identifiers and
+              predecessor records illustrate history compliance. In the
+              language, each obligation has an enforcement point in native
+              constraints, authenticated state or a justified ledger
+              mechanism.
+            </p>
             </details>
           </div>
         </div>
@@ -205,20 +338,23 @@
       <section id="follow" aria-labelledby="follow-h" class="k-follow">
         <div class="wrap">
           <p class="eyebrow">Follow the agreement</p>
-          <h2 id="follow-h">Choose a route, then watch the account.</h2>
+          <h2 id="follow-h">Conditional settlement in practice</h2>
           <p class="lede">
-            Every control below applies one event to a small, fixed model of
-            the agreement. Amounts are integer hundredths. Nothing changes
-            unless an event says so, and the event record and the account
-            always sit side by side.
-          </p>
+              The agreement permits a successful first fill to stand while
+              the second remains unresolved. The interactive model shows how
+              that partial settlement changes the account and the provider’s
+              duties. Choose a route, obtain provider consent and commit it;
+              the remaining controls release fills and supply observations.
+              The model runs in the browser without signing or submitting
+              transactions.
+            </p>
 
           <div id="kernel-root" class="k-root"></div>
 
           <div id="kernel-static" class="k-static">
             <p class="k-static-note">
               The interactive explorer needs scripts. The same illustration
-              follows as three transcripts, all from one signed policy.
+              follows as transcripts, all from one signed policy.
             </p>
 
             <h3>The shared path</h3>
@@ -229,18 +365,18 @@
                   <tr><th scope="col">Event</th><th scope="col">Gross A</th><th scope="col">Fees A</th><th scope="col">Reserved A</th><th scope="col">Confirmed B</th><th scope="col">Meaning</th></tr>
                 </thead>
                 <tbody>
-                  <tr data-account="0,0,0,0"><th scope="row">Candidate proposed: direct route</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>Every named check holds. No accepted effects or newly imposed duties.</td></tr>
-                  <tr data-account="0,0,0,0"><th scope="row">Provider consents to duties</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>Consent precedes any duty. The account does not move.</td></tr>
-                  <tr data-account="0,0,0,0"><th scope="row">Candidate committed</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>The route is bound to the intention. Commitment authorizes stages and executes none.</td></tr>
+                  <tr data-account="0,0,0,0"><th scope="row">Candidate proposed: direct route</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>Every named check holds. Nothing is spent and no duty is imposed.</td></tr>
+                  <tr data-account="0,0,0,0"><th scope="row">Provider consents to duties</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>Consent precedes any duty, and the account does not move.</td></tr>
+                  <tr data-account="0,0,0,0"><th scope="row">Candidate committed</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>The route is bound to the intention. Commitment authorizes stages without executing any.</td></tr>
                   <tr data-account="0,0,0,0"><th scope="row">Fresh attestation presented</th><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>The document predicate is met. It identifies evidence, not physical delivery.</td></tr>
-                  <tr data-account="550,50,0,1000"><th scope="row">First fill finalized</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">0</td><td class="num">10</td><td>An accepted prefix. Its debit and fee are permanent, and the remaining duty persists.</td></tr>
-                  <tr data-account="550,50,550,1000"><th scope="row">Second fill reserved and submitted</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>Spent plus reserved equals 11. Another solver cannot reserve it again.</td></tr>
-                  <tr data-account="550,50,550,1000"><th scope="row">Deadline passes; result unknown</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>Same exposure. A timeout is not nonexecution. The escrow balance is the last confirmed 5.5 A; where the reserved 5.5 A currently sits is unknown.</td></tr>
+                  <tr data-account="550,50,0,1000"><th scope="row">First fill finalized</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">0</td><td class="num">10</td><td>An accepted prefix. Its debit and fee are permanent, and the duty to deliver the rest persists.</td></tr>
+                  <tr data-account="550,50,550,1000"><th scope="row">Second fill reserved and submitted</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>Spent plus reserved equals 11, so another solver cannot reserve the same capacity.</td></tr>
+                  <tr data-account="550,50,550,1000"><th scope="row">Deadline passes; result unknown</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>The exposure is unchanged, because a timeout does not establish nonexecution. The escrow balance is the last confirmed 5.5 A; where the reserved 5.5 A currently sits is unknown.</td></tr>
                 </tbody>
               </table>
             </div>
 
-            <h3>Three endings from the same submitted attempt</h3>
+            <h3>Endings from the same submitted attempt</h3>
             <div class="scroll-x">
               <table class="k-transcript" data-transcript="branches">
                 <caption>Alternative branches. Each row is the account after the named observation.</caption>
@@ -250,15 +386,15 @@
                 <tbody>
                   <tr data-branch="success" data-account="1100,100,0,2000"><th scope="row">Late authenticated success</th><td class="num">11</td><td class="num">1</td><td class="num">0</td><td class="num">20</td><td>Completion, because every other required predicate also holds. A duplicate terminal observation afterwards records no second payment or discharge.</td></tr>
                   <tr data-branch="failure" data-account="600,100,0,1000"><th scope="row">Authenticated failure, fee retained</th><td class="num">6</td><td class="num">1</td><td class="num">0</td><td class="num">10</td><td>The fixture’s evidence policy establishes principal nonexecution, so the reservation releases. The 0.5 A fee is gone. 5 A of ordinary capacity and no fee capacity remain, and the remedy duty is pending.</td></tr>
-                  <tr data-branch="unknown" data-account="550,50,550,1000"><th scope="row">Still unknown</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>No invented recovery and no automatic release. The current location of the reserved 5.5 A remains unknown. A refund attempted on elapsed time and a recovery signature is refused.</td></tr>
+                  <tr data-branch="unknown" data-account="550,50,550,1000"><th scope="row">Still unknown</th><td class="num">5.5</td><td class="num">0.5</td><td class="num">5.5</td><td class="num">10</td><td>No invented recovery and no automatic release. The current location of the reserved 5.5 A remains unknown, and a refund attempted on elapsed time and a recovery signature is refused.</td></tr>
                 </tbody>
               </table>
             </div>
 
             <h3>Candidates that never reach the account</h3>
             <ul class="k-static-list">
-              <li><strong>Wrong recipient.</strong> Same amounts, delivered to the solver’s own account. It fails the named recipient check and cannot be committed. The account stays at zero.</li>
-              <li><strong>Excessive fee.</strong> The same 5.5 A per fill, but 0.75 A of it is fee. Gross stays within 11 A and fees would reach 1.5 A against the 1 A cap. It fails the fee check alone.</li>
+              <li><strong>Wrong recipient.</strong> Same amounts, delivered to the solver’s own account. It fails the named recipient check and cannot be committed, so the account stays at zero.</li>
+              <li><strong>Excessive fee.</strong> The same 5.5 A per fill, but 0.75 A of it is fee. Gross stays within 11 A while fees would reach 1.5 A against the 1 A cap, so it fails the fee check alone.</li>
             </ul>
           </div>
         </div>
@@ -268,34 +404,100 @@
       <section id="unknown" aria-labelledby="unknown-h">
         <div class="wrap">
           <p class="eyebrow">When an outcome is unknown</p>
-          <h2 id="unknown-h">Unknown is a state, not a failure.</h2>
+          <h2 id="unknown-h">Settlement when the outcome is unknown</h2>
           <p class="lede">
-            A deadline tells you which transitions may now be attempted. It
-            does not tell you what the other chain did.
+            The second fill has been submitted to another chain, its deadline
+            has passed, and nothing has come back. What the agreement may do
+            next depends entirely on what it later learns, and the design
+            refuses to let elapsed time count as learning something.
           </p>
-          <div class="k-three">
-            <article class="k-branch">
-              <h3>Late success</h3>
-              <p>The reservation becomes an actual debit. The receipt is confirmed. The attempt’s identifier is consumed, so a second copy of the same result cannot pay twice, and no later report of failure can release the debit or make the receipt unhappen.</p>
-              <p class="k-branch-note">Acceptance as a stage of the agreement is a separate judgment. If the document attestation or another predicate is missing, the external result is still accounted and consumed, but the fill is not accepted and the delivery duty stays open. Restoring the predicate reconciles the same observed result exactly once.</p>
-            </article>
-            <article class="k-branch">
-              <h3>Authenticated failure</h3>
-              <p>The evidence policy in this fixture establishes that the principal did not execute, so the reservation releases. The fee the destination retained is real spending, and it counts against both caps.</p>
-              <p class="k-branch-note">Not every real adapter has this failure policy. The remedy duty the provider accepted is now pending, not discharged.</p>
-            </article>
-            <article class="k-branch">
-              <h3>Still unknown</h3>
-              <p>Nothing changes. The buyer’s remaining authority is still reserved against an attempt that may yet land, or may already have executed. The escrow figure is the last confirmed balance; the current location of the reserved amount is unknown. Reconciliation may continue.</p>
-              <p class="k-branch-note">A recovery grant alone does not make a refund safe. A remedy needs signed authority, authenticated evidence, controlled assets, remaining resources and an exclusive consumption rule. Absent those, the outcome stays unresolved.</p>
-            </article>
+          <div class="k-prose">
+            <p>
+              A deadline is a fact about the agreement, not about the other
+              chain. When it passes, the set of transitions that may now be
+              attempted changes: reconciliation may begin, a recovery path may
+              become eligible, a solver may be released from further work. What
+              the deadline does not do is establish that the destination failed
+              to execute. The transfer may have been included and finalized a
+              moment after the last observation, or it may be sitting in a
+              queue, or it may never have left. Until an authenticated
+              observation arrives, the reservation stays exactly where it was,
+              the buyer’s remaining authority stays encumbered by an attempt
+              that may yet land, and the custody figure remains the last
+              confirmed balance, which says nothing about where the reserved
+              5.5 A is now.
+            </p>
+            <p>
+              Suppose the destination eventually reports an authenticated
+              success. The reservation becomes an actual debit, the receipt of
+              10 B is confirmed, and the attempt’s identifier is consumed, so a
+              second copy of the same result cannot pay twice and no later
+              report of failure can release the debit or make the receipt
+              unhappen. That much is accounting, and it happens as soon as the
+              result is authenticated.
+            </p>
+            <p>
+              Whether the fill is also an accepted
+              stage of the agreement is a separate judgment. The release conditions held when the attempt was submitted.
+              During the wait, an attestation can expire or cease to be available
+              for the acceptance check. If the document
+              attestation or another predicate is missing at that moment, the
+              external result is still accounted and its identifier still
+              consumed, because the money really moved, but the fill is not
+              accepted and the delivery duty stays open. Restoring the missing
+              predicate later reconciles the same observed result exactly once,
+              with no new debit and no new receipt. The account records what
+              happened in the world; acceptance records whether what happened
+              satisfied the agreement, and the two are allowed to disagree for
+              a while.
+            </p>
+            <p>
+              Suppose instead the destination reports an authenticated failure
+              and, as this fixture’s evidence policy allows, that failure
+              establishes the principal did not execute. Then the reservation
+              releases, and the buyer’s account shows 6 A gross with 1 A of it
+              fees. The fee the destination retained is real spending. It
+              counts against the gross cap and exhausts the fee cap, which is
+              why the specified second fill cannot be retried: 5 A of gross
+              capacity remains, but its 0.5 A fee would exceed the exhausted
+              fee cap. The remedy duty the provider accepted at the start is
+              now pending rather than discharged. Its discharge requires an
+              authenticated remedy transition; failure-free completion also
+              discharges the conditional duty when no remedy becomes due.
+              The fixture specifies this duty and its discharge rule, but no
+              remedy payout amount, so the failure branch records the duty
+              without issuing a refund. An executable remedy must specify its
+              asset, amount and release conditions in the signed terms.
+            </p>
+            <p>
+              Not every adapter can
+              supply a failure policy this clean, and where one cannot, a
+              failure report would not by itself establish that the principal
+              never left.
+            </p>
+            <p>
+              Suppose, finally, that reconciliation finds nothing. Then nothing
+              changes, and that is the correct result. The buyer’s remaining
+              authority is still reserved against an attempt that may yet land
+              or may already have executed; the escrow figure is still the last
+              confirmed balance; reconciliation may continue. A refund at this
+              point would be an invented recovery. A recovery grant alone does
+              not make one safe, because a remedy needs signed authority,
+              authenticated evidence, assets actually under control, remaining
+              resources and an exclusive consumption rule, and an elapsed
+              deadline supplies none of them. In the explorer, a refund
+              attempted on the strength of a timeout and a recovery signature
+              is refused for exactly that reason.
+            </p>
+            <p>
+              In none of these endings does the first fill come back. It was an
+              accepted prefix, its debit and fee are permanent, and whatever
+              happens to the second attempt cannot unwind it. A compensating
+              payment or a cancellation is a new authorized action with its own
+              costs, and calling it a rollback would misdescribe both the ledger
+              and the agreement.
+            </p>
           </div>
-          <p class="k-plain">
-            Recovery never erases a committed prefix. The first fill is done
-            whatever happens to the second. A compensating payment or a
-            cancellation is a new authorized action with its own costs, and
-            it may not be described as a rollback.
-          </p>
         </div>
       </section>
 
@@ -303,17 +505,74 @@
       <section id="evidence" aria-labelledby="evidence-h" class="k-evidence">
         <div class="wrap">
           <p class="eyebrow">What each form of evidence establishes</p>
-          <h2 id="evidence-h">Three mechanisms, one statement, separate assumptions.</h2>
+          <h2 id="evidence-h">Evidence under its own assumptions</h2>
           <p class="lede">
-            Zero knowledge, threshold signing and attested hardware each
-            establish something specific under its own assumptions. Combining
-            them can add protection when the required checks bind the same
-            statement and are enforced at the relevant acceptance point;
-            common binding is necessary, not sufficient. Where one operator
-            controls several of them, those checks share a failure and become
-            correlated dependencies. The distinct proof, threshold and
-            hardware assumptions still need separate analysis.
-          </p>
+              Zero knowledge, threshold signing and attested hardware
+              establish different facts. Their value depends on what each
+              checks and where the resulting evidence is enforced.
+            </p>
+
+          <div class="k-prose">
+            <p>
+              The agreement releases a fill only when the provider has signed,
+              the recipient has accepted and a fresh attestation of the
+              shipping document has arrived from the authorized issuer. The attestation shows that a document
+              satisfied a named predicate at a named freshness; it does not show
+              that the document is legally true or that goods were delivered.
+              The explorer treats a missing attestation as unknown, never as
+              false, and an attestation in an unsupported format as
+              establishing nothing either way, because a predicate that has not
+              been evaluated is a different state from one that failed.
+            </p>
+            <p>
+              A zero-knowledge proof establishes that an encoded relation holds
+              for the public statement it is bound to, and, under the proof
+              system’s separate zero-knowledge assumptions, discloses no witness
+              information beyond that statement and its intended disclosure.
+              That is a strong claim about the relation and a narrow claim about
+              privacy: public effects, metadata and authorized outputs remain
+              visible as specified, and a valid proof hands nobody the witness
+              the next stage will need.
+            </p>
+            <p>
+              A threshold signature establishes that a
+              signature over exactly these bytes verifies under the group key
+              for the bound membership epoch. A 3-of-5 threshold counts signing shares, which can include
+              corrupt participants. With t required shares and at most f corrupt, a valid
+              signature needs at least t − f honest shares under the protocol’s
+              assumptions, and whether those honest participants actually
+              checked the policy before signing depends on honest participants
+              following the specified protocol; the signature itself does not
+              record their checks.
+            </p>
+            <p>
+              A TEE attestation establishes that a report signed under the vendor
+              root identifies the measured code and configuration that produced
+              it, together with whatever report data the enclave bound. Any
+              claim that this code ran on this input and produced this output
+              depends on the measured code binding its input and output into
+              that report, on the attestation being fresh for this epoch and
+              stage, on sealed state not having been rolled back, and on
+              trusting both the vendor root and the measured code itself.
+            </p>
+            <p>
+              Because each mechanism establishes something different, combining
+              them only helps when they are all talking about the same thing.
+              Every mechanism has to bind the same signed intention, program
+              identity, settlement domain, stage, epoch and complete effects,
+              or evidence for one intention can be presented for another, a
+              proof of a weaker relation can stand in for the pinned one, and a
+              prover can bind only the flattering part of what happened. Even
+              a common statement is not enough on its own. It has to be
+              enforced at the point where a stage is accepted, and where one
+              operator holds the keys, hardware or code behind more than one
+              mechanism, those checks share a failure and are correlated
+              dependencies rather than multiplied protection. The inspector
+              below lets you select one mechanism, one binding field and one
+              destination profile, and shows what each establishes, what it
+              assumes and where it can be bypassed.
+            </p>
+          </div>
 
           <div id="kernel-evidence-root" class="k-root"></div>
 
@@ -336,17 +595,27 @@
               failure and are correlated dependencies rather than multiplied
               protection; the distinct assumptions still stand on their own.
             </p>
+          </div>
+
+          <div class="k-prose">
             <h3>Where the destination decides</h3>
             <p>
-              A foreign account that accepts a threshold signature alone will
-              honor any transfer the threshold signs. If that toy 3-of-5 is
-              compromised, the honest signers’ policy checks are bypassed at
-              that destination, and a local exclusive-state rule on Midnight
-              cannot retroactively stop the foreign effect. A hypothetical
-              destination that also checks a named relation and a
-              consumption rule narrows this, and only for the checks it
-              actually performs. There is no generic proof-enforcing chain that
-              checks every Moriarty property for you.
+              A foreign account that accepts a threshold signature alone
+              honors any transfer the threshold signs. If the illustrative
+              3-of-5 signer set is compromised, that destination accepts
+              transfers that bypass the honest signers’ policy checks.
+              Midnight can refuse to accept such a transfer as a stage of
+              the agreement, but that refusal cannot reverse the foreign
+              transfer.
+            </p>
+            <p>
+              A destination that also verifies a named relation and enforces
+              a consumption rule narrows this exposure to the extent of the
+              checks it performs. Its adapter must identify those checks
+              precisely, including the bytes and identities they bind. The
+              agreement can then rely on the destination’s actual
+              enforcement rather than treating every external transfer as if
+              Midnight governed it.
             </p>
           </div>
         </div>
@@ -356,46 +625,48 @@
       <section id="solvers" aria-labelledby="solvers-h">
         <div class="wrap">
           <p class="eyebrow">People and AI solvers</p>
-          <h2 id="solvers-h">The same authority, whoever proposes the route.</h2>
+          <h2 id="solvers-h">The same authority, whoever proposes the route</h2>
           <p class="lede">
-            An AI solver can search faster. It cannot spend more, pay a
-            different recipient or skip a condition, because solver identity
-            changes no hard constraint.
-          </p>
-          <div class="k-two">
-            <div>
-              <h3>Delegation through a wallet standard</h3>
-              <p>
-                The planned Open Wallet Standard integration gives solvers a
-                common interface for wallet operations. The program defines
-                the assets, destinations, amounts and operations a solver may
-                touch. Interoperability must preserve those limits rather than
-                handing over an unrestricted key.
-              </p>
-            </div>
-            <div>
-              <h3>Paying a service is not receiving its result</h3>
-              <p>
-                An x402 payment receipt establishes payment. It does not prove
-                the requested computation finished or that the result reached
-                the owner. Payment, availability and delivery are three events
-                with three records.
-              </p>
-            </div>
+              An AI solver searches for executions that satisfy the
+              agreement using the same bounded authority as any other
+              solver. Delegation determines which operations it can request,
+              while the agreement continues to govern spending, recipients,
+              evidence and settlement.
+            </p>
+          <div class="k-prose">
+            <p>
+              The Open Wallet Standard gives solvers a common interface for
+              wallet operations. Moriarty’s authorization rules limit the
+              assets, destinations, amounts and operations that a delegation
+              exposes through that interface. A solver therefore receives
+              the authority needed for its assignment without acquiring an
+              unrestricted signing key. The explorer’s proposer label leaves
+              these constraints unchanged: choosing a human or AI proposer
+              does not alter the financial agreement.
+            </p>
+            <p>
+              A paid service request adds another settlement obligation. An
+              x402 payment receipt establishes payment for the request,
+              while result availability and delivery to the authorized
+              recipient require their own evidence. If a connection drops,
+              reconciliation uses the existing request identity to find the
+              result already paid for. A further charge requires fresh
+              authorization; a retry cannot silently turn the same request
+              into another purchase.
+            </p>
           </div>
           <details class="k-disclosure">
             <summary>A fixed request, retried once</summary>
             <ol class="k-trace">
-              <li><span class="k-trace-k">request R1 authorized</span> Scoped to one paid query, one price, one recipient. Logical identity fixed.</li>
-              <li><span class="k-trace-k">payment observed</span> The x402 receipt for R1 is authenticated. Paid, not delivered.</li>
-              <li><span class="k-trace-k">connection drops</span> Result availability is unknown. Delivery is unknown.</li>
+              <li><span class="k-trace-k">request R1 authorized</span> Scoped to one paid query, one price, one recipient. Its logical identity is fixed.</li>
+              <li><span class="k-trace-k">payment observed</span> The x402 receipt for R1 is authenticated. The request is paid for and not yet delivered.</li>
+              <li><span class="k-trace-k">connection drops</span> Whether the result is available, and whether it was delivered, are both unknown.</li>
               <li><span class="k-trace-k">retry, same R1</span> Reconciliation asks for the result of R1. It does not authorize a second charge.</li>
-              <li><span class="k-trace-k">result delivered</span> Delivery to the authorized recipient is recorded against R1. One payment, one delivery, one request.</li>
+              <li><span class="k-trace-k">result delivered</span> Delivery to the authorized recipient is recorded against R1: one request, one payment, one delivery.</li>
             </ol>
             <p class="k-plain">
               Reconciliation alone never authorizes another charge. A new
-              billable request needs its own authorization. OWS and x402 are
-              planned integrations, and no interoperability has been demonstrated.
+              billable request needs its own authorization.
             </p>
           </details>
           <details class="k-disclosure">
@@ -405,20 +676,19 @@
               its accepted predecessors, the duties that remain, the
               identifiers already consumed and the next stage it may take.
               Whoever takes that next stage needs the private witness it
-              depends on. A valid proof does not hand the next participant its
-              witness.
+              depends on, and a valid proof of the previous stage does not hand
+              the next participant that witness.
             </p>
             <p>
-              Two stages sharing an ancestor are not a double spend. What
-              would be a double spend is two stages consuming the same
-              identifier, which the consumption rule forbids. Each stage and
-              its predecessor fan-in remain bounded; a growing finite history
-              can continue through authenticated stages within the signed
-              episode and lifetime budgets, which is not a promise of
-              unbounded execution or storage. Native
-              recursive history and private handoff remain requirements work.
-              ZKIRv3 is the target today, and any later native interface is a
-              planning assumption rather than a release fact.
+              Continuation proofs carry compliance across stages while each
+              stage’s execution and predecessor fan-in remain bounded.
+              Shared ancestry is legitimate; consuming the same claim twice
+              is forbidden. A growing finite history proceeds within its
+              signed episode and lifetime budgets, preserving remaining
+              duties and consumed identifiers. Private witness handoff
+              supplies the information that the next participant needs to
+              continue; a valid predecessor proof alone does not deliver
+              that information.
             </p>
           </details>
         </div>
@@ -428,7 +698,14 @@
       <section id="status" aria-labelledby="status-h">
         <div class="wrap">
           <p class="eyebrow">What exists, what remains</p>
-          <h2 id="status-h">Scoped local results, and the integration still to build.</h2>
+          <h2 id="status-h">Implementation and further reading</h2>
+          <p class="lede">
+              The architecture described here guides the implementation
+              roadmap. The existing compiler, semantic comparisons and
+              Preview examples provide the foundations listed below; kernel
+              integration, native recursive history and complete source-to-
+              ledger correspondence remain development work.
+            </p>
           <div class="k-status">
             <article class="k-status-col">
               <h3>Exists, within stated scope</h3>
@@ -449,11 +726,15 @@
               </ul>
             </article>
           </div>
-          <p class="k-plain">
-            Nothing on this page is a native proof or a settlement. The
-            explorer is a small deterministic model whose only job is to keep
-            the account honest. The sources it follows are below.
-          </p>
+          <div class="k-prose">
+            <p>
+              The browser model illustrates the account and acceptance
+              rules. It produces no native proof or ledger settlement. The
+              references below specify the architecture and track its
+              implementation, including the OWS and x402 integrations and
+              the ZKIR and recursion workstreams.
+            </p>
+          </div>
           <ul class="k-sources">
             <li><a href="docs/requirements.html">Requirements: MPLRs, proposed ZKIRv4 and recursion</a>, including <a href="docs/requirements.html#architecture">the architecture statement</a>.</li>
             <li><a href="docs/language.html">Current formal syntax and semantics</a>.</li>
@@ -470,7 +751,7 @@
     <footer class="k-footer">
       <div class="wrap">
         <a href="index.html">Moriarty home</a> · <a href="docs/requirements.html">Requirements</a> · <a href="docs/language.html">Syntax &amp; semantics</a> · <a href="https://github.com/CharlesHoskinson/Moriarty">Source repository</a>
-        <p>Research documentation. An illustration of a target design, not a deployed service or an audited implementation.</p>
+        <p>The Federated DeFi Kernel · Architecture and settlement semantics.</p>
       </div>
     </footer>
 

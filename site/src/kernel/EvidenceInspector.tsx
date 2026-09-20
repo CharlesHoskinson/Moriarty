@@ -59,8 +59,8 @@ export function EvidenceInspector() {
           <p className="k-insp-fine">
             Where one operator controls the keys, hardware or code behind several
             mechanisms, those checks share a failure and count as correlated
-            dependencies, not multiplied protection. The distinct hardware and
-            cryptographic assumptions still stand on their own.
+            dependencies rather than multiplied protection, while the distinct
+            hardware and cryptographic assumptions still stand on their own.
           </p>
         </div>
       </div>
@@ -77,7 +77,7 @@ export function EvidenceInspector() {
           </div>
         </div>
         <div className="k-insp-panel" aria-live="polite">
-          {d.hypothetical ? <p className="k-insp-flag">Hypothetical profile for comparison. It names its checks and nothing else.</p> : null}
+          {d.hypothetical ? <p className="k-insp-flag">A hypothetical profile for comparison, which names its checks and nothing else.</p> : null}
           <p className="k-insp-label">The destination enforces</p>
           <ul className="k-insp-list">
             {d.enforces.map((e) => <li key={e}>{e}</li>)}

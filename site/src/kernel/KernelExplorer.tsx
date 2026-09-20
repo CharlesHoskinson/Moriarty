@@ -62,7 +62,7 @@ export function KernelExplorer() {
       {/* --- controls ------------------------------------------------- */}
       <div className="k-controls">
         <fieldset className="k-fs">
-          <legend>1 · Candidate route</legend>
+          <legend>Candidate route</legend>
           <div className="k-seg k-seg-wrap">
             {CANDIDATES.map((c) => (
               <button
@@ -92,17 +92,14 @@ export function KernelExplorer() {
               </ul>
             </div>
           ) : (
-            <p className="k-hint">Pick a route. Two are compliant. Two fail a named check and never reach the account.</p>
+            <p className="k-hint">Pick a route. A compliant route can be committed; a route that fails a named check never reaches the account.</p>
           )}
           <p className="k-hint k-hint-judgments">
-            These checks are illustrative JavaScript rules. They stand in for the four
-            acceptance judgments the design keeps distinct, and produce none of their
-            native proof obligations: <span>contract properties</span> (the recipient,
-            cap and goal checks), <span>intent refinement</span> (the committed route
-            stays within what was signed), <span>transition validity</span> (each event
-            moves the account only by its stated effect) and <span>history
-            compliance</span> (each stage extends the consumed-identifier record from
-            the fixture&rsquo;s origin).
+            Candidate checks illustrate <span>contract properties</span> and
+            <span> intent refinement</span>: the recipient, financial limits and
+            route must satisfy the agreement. Later events illustrate
+            <span> transition validity</span> through account changes and
+            <span> history compliance</span> through predecessor and consumed-identifier records.
           </p>
           <div className="k-row">
             <span className="k-row-label" id="solver-kind-h">Proposed by</span>
@@ -113,12 +110,12 @@ export function KernelExplorer() {
                 </button>
               ))}
             </div>
-            <span className="k-row-note">Label only. Authority and acceptance rules do not read it.</span>
+            <span className="k-row-note">A label only; the authority and acceptance rules do not read it.</span>
           </div>
         </fieldset>
 
         <fieldset className="k-fs">
-          <legend>2 · Consent and commitment</legend>
+          <legend>Consent and commitment</legend>
           <div className="k-btns">
             <button type="button" className="k-act" disabled={!can('provider-accepts-duties')} onClick={() => dispatch({ type: 'provider-accepts-duties' })} data-event="provider-accepts-duties">
               Provider accepts duties
@@ -127,11 +124,11 @@ export function KernelExplorer() {
               Commit candidate
             </button>
           </div>
-          <p className="k-hint">Consent comes first. Commitment binds the route and spends nothing.</p>
+          <p className="k-hint">The provider consents before any duty can arise, and commitment then binds the route without spending anything.</p>
         </fieldset>
 
         <fieldset className="k-fs">
-          <legend>3 · Release conditions</legend>
+          <legend>Release conditions</legend>
           <div className="k-conds">
             {CONDITIONS.map((c) => (
               <div key={c.id} className="k-row k-row-tight">
@@ -158,11 +155,11 @@ export function KernelExplorer() {
           <p className="k-evidence-result" data-status={evidenceResult.status}>
             <span className="k-status-word">{evidenceResult.status}</span> {evidenceResult.reason}
           </p>
-          <p className="k-hint">All three together release a fill. Missing evidence is unknown, not false; unsupported evidence establishes nothing either way.</p>
+          <p className="k-hint">A fill is released only when the signature, the acceptance and the attestation all hold. Missing evidence leaves the predicate unknown rather than false, and evidence in an unsupported format establishes nothing either way.</p>
         </fieldset>
 
         <fieldset className="k-fs">
-          <legend>4 · Next event</legend>
+          <legend>Next event</legend>
           <div className="k-btns">
             <button type="button" className="k-act" disabled={!can('finalize-fill')} onClick={() => dispatch({ type: 'finalize-fill' })} data-event="finalize-fill">
               Finalize a fill
@@ -189,11 +186,11 @@ export function KernelExplorer() {
               Accept the observed fill
             </button>
           </div>
-          <p className="k-hint">The first fill is finalized locally; the second is reserved and submitted externally. An observed external result is accounted when it arrives. Acceptance against every predicate is a separate step, taken once.</p>
+          <p className="k-hint">The first fill is finalized locally and the second is reserved and submitted to the external domain. When an external result is observed it is accounted at once, and accepting it against every predicate of the agreement is a separate step that can be taken only once.</p>
         </fieldset>
 
         <fieldset className="k-fs k-fs-adverse">
-          <legend>5 · Try a conflicting event</legend>
+          <legend>Try a conflicting event</legend>
           <div className="k-btns">
             <button type="button" className="k-act" disabled={!can('second-solver-reserve')} onClick={() => dispatch({ type: 'second-solver-reserve' })} data-event="second-solver-reserve">
               Second solver reserves
@@ -208,14 +205,14 @@ export function KernelExplorer() {
               Refund on timeout
             </button>
           </div>
-          <p className="k-hint">Each is refused for a stated reason and leaves the account untouched. Foreign signer compromise is a separate risk, explored in the evidence inspector.</p>
+          <p className="k-hint">Each of these is refused for a stated reason and leaves the account untouched. Compromise of a foreign signer set is a different kind of risk, and the evidence inspector below covers it.</p>
         </fieldset>
 
         <div className="k-reset-row">
           <button type="button" className="k-act k-act-reset" onClick={() => dispatch({ type: 'reset' })} data-event="reset">
             Reset to a new illustration
           </button>
-          <span className="k-row-note">Starts a fresh uncommitted fixture. It is not a rollback of anything modeled.</span>
+          <span className="k-row-note">Starts a fresh uncommitted fixture; nothing modeled is rolled back.</span>
         </div>
       </div>
 
@@ -241,8 +238,8 @@ export function KernelExplorer() {
           </tbody>
         </table>
         <p className="k-hint k-hint-custody" data-testid="custody-note">
-          The escrow row is the last confirmed, accounted balance, not a live
-          reading. A reservation is not custody.
+          The escrow row is the last confirmed, accounted balance rather than a
+          live reading, and a reservation is not custody.
           {state.phase === 'in-flight'
             ? ` While the submitted attempt is unresolved, the current location of the ${fmt(state.account.reserved)} A it covers is unknown: the destination may already have executed.`
             : ''}
@@ -250,7 +247,7 @@ export function KernelExplorer() {
 
         <h3 className="k-sub">Accepted duties</h3>
         {state.duties.length === 0 ? (
-          <p className="k-hint">None. No one owes anything until the provider consents.</p>
+          <p className="k-hint">None yet, because no one owes anything until the provider consents.</p>
         ) : (
           <ul className="k-duties">
             {state.duties.map((x) => (
@@ -266,7 +263,7 @@ export function KernelExplorer() {
 
         <h3 className="k-sub">Event record</h3>
         {state.events.length === 0 ? (
-          <p className="k-hint">Empty. A fresh illustration has no history.</p>
+          <p className="k-hint">Empty, since a fresh illustration has no history.</p>
         ) : (
           <ol className="k-log" ref={logRef}>
             {state.events.map((e) => (
