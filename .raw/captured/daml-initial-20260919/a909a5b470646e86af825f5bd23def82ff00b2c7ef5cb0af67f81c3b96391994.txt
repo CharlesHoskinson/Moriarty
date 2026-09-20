@@ -1,0 +1,350 @@
+On this page
+DA.Date
+Data Types
+data DayOfWeek
+data Month
+Functions
+addDays
+subtractDays
+subDate
+dayOfWeek
+fromGregorian
+toGregorian
+date
+isLeapYear
+fromMonth
+monthDayCount
+datetime
+toDateUTC
+Orphan Typeclass Instances
+History
+Daml Standard Library
+Modules
+DA.Date
+Copy page
+Copy page
+Reference documentation for Daml module DA.Date.
+Copy page
+Copy page
+Daml module
+​
+DA.Date
+This module provides a set of functions to manipulate Date values.
+Daml
+Updated 3.5.1
+​
+Data Types
+​
+data DayOfWeek
+Constructors:
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+Sunday
+Instances:
+instance
+Serializable
+DayOfWeek
+instance
+Eq
+DayOfWeek
+instance
+Ord
+DayOfWeek
+instance
+Bounded
+DayOfWeek
+instance
+Enum
+DayOfWeek
+instance
+Show
+DayOfWeek
+​
+data Month
+The
+Month
+type represents a month in the Gregorian calendar.
+Note that, while
+Month
+has an
+Enum
+instance, the
+toEnum
+and
+fromEnum
+functions start counting at 0, i.e.
+toEnum 1 :: Month
+is
+Feb
+.
+Constructors:
+Jan
+Feb
+Mar
+Apr
+May
+Jun
+Jul
+Aug
+Sep
+Oct
+Nov
+Dec
+Instances:
+instance
+Serializable
+Month
+instance
+Eq
+Month
+instance
+Ord
+Month
+instance
+Bounded
+Month
+instance
+Enum
+Month
+instance
+Show
+Month
+​
+Functions
+​
+addDays
+addDays
+:
+Date
+->
+Int
+->
+Date
+Add the given number of days to a date.
+​
+subtractDays
+subtractDays
+:
+Date
+->
+Int
+->
+Date
+Subtract the given number of days from a date.
+subtractDays d r
+is equivalent to
+addDays d (- r)
+.
+​
+subDate
+subDate
+:
+Date
+->
+Date
+->
+Int
+Returns the number of days between the two given dates.
+​
+dayOfWeek
+dayOfWeek
+:
+Date
+->
+DayOfWeek
+Returns the day of week for the given date.
+​
+fromGregorian
+fromGregorian
+: (
+Int
+,
+Month
+,
+Int
+) ->
+Date
+Constructs a
+Date
+from the triplet
+(year, month, days)
+.
+​
+toGregorian
+toGregorian
+:
+Date
+-> (
+Int
+,
+Month
+,
+Int
+)
+Turn
+Date
+value into a
+(year, month, day)
+triple, according
+to the Gregorian calendar.
+​
+date
+date
+:
+Int
+->
+Month
+->
+Int
+->
+Date
+Given the three values (year, month, day), constructs a
+Date
+value.
+date y m d
+turns the year
+y
+, month
+m
+, and day
+d
+into a
+Date
+value.
+Raises an error if
+d
+is outside the range
+1 .. monthDayCount y m
+.
+​
+isLeapYear
+isLeapYear
+:
+Int
+->
+Bool
+Returns
+True
+if the given year is a leap year.
+​
+fromMonth
+fromMonth
+:
+Month
+->
+Int
+Get the number corresponding to given month. For example,
+Jan
+corresponds
+to
+1
+,
+Feb
+corresponds to
+2
+, and so on.
+​
+monthDayCount
+monthDayCount
+:
+Int
+->
+Month
+->
+Int
+Get number of days in the given month in the given year, according to Gregorian calendar.
+This does not take historical calendar changes into account (for example, the
+moves from Julian to Gregorian calendar), but does count leap years.
+​
+datetime
+datetime
+:
+Int
+->
+Month
+->
+Int
+->
+Int
+->
+Int
+->
+Int
+->
+Time
+Constructs an instant using
+year
+,
+month
+,
+day
+,
+hours
+,
+minutes
+,
+seconds
+.
+​
+toDateUTC
+toDateUTC
+:
+Time
+->
+Date
+Extracts UTC date from UTC time.
+This function will truncate Time to Date, but in many cases it will not return the date you really want.
+The reason for this is that usually the source of Time would be getTime, and getTime returns UTC, and most likely
+the date you want is something local to a location or an exchange. Consequently the date retrieved this way would be
+yesterday if retrieved when the market opens in say Singapore.
+​
+Orphan Typeclass Instances
+instance
+Eq
+DayOfWeek
+instance
+Ord
+DayOfWeek
+instance
+Show
+DayOfWeek
+instance
+Enum
+DayOfWeek
+instance
+Bounded
+DayOfWeek
+instance
+Eq
+Month
+instance
+Ord
+Month
+instance
+Show
+Month
+instance
+Enum
+Month
+instance
+Bounded
+Month
+instance
+Enum
+Date
+instance
+Bounded
+Date
+​
+History
+Updated
+3.5.1
+Module declarations or documentation updated.
+Suggest edits
+Raise issue
+DA.Crypto.Text
+DA.Either

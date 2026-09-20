@@ -1,0 +1,82 @@
+Writing complex contracts on Bitcoin has been almost impossible. Bitcoin Script has limits, and the leading alternatives mean leaving the chain entirely.
+Simplicity
+is a programming language built for exactly that gap. It's been live on Liquid mainnet since July 2025, and the developer surface around it has been shipping steadily.
+Here's what builders can use today, and what's coming next.
+A Zero-Friction Development Environment
+Setting up a Simplicity contract toolchain used to mean configuring a local environment from scratch. The
+GitHub Codespace
+and the local
+VSCode devcontainer
+now replace that path. Both ship with the SimplicityHL compiler, the Simplicity software development kit (SDK), and a library of contract examples.
+The environment is paired with a language server that gives autocomplete and hover documentation for SimplicityHL jets, the pre-compiled native operations Simplicity contracts call into. The early-stage friction that used to dominate Simplicity work has been removed.
+SimplicityHL v0.7.0: Modular, Maintainable Code
+SimplicityHL is the Rust-like high-level language developers write; the compiled bytecode runs underneath on full nodes. The latest release, v0.7.0, brings the language closer to what builders expect from a modern systems language.
+Native module support lets contract logic split across files and import only what's needed. The compiler flattens nested expressions before generating bytecode, which makes compiled programs easier to audit. And compiler diagnostics have been refactored to point at the precise syntactic source of failures rather than the downstream consequences.
+For developers writing serious Simplicity contracts, this is the first SimplicityHL release that scales cleanly from a single-file example to a multi-module codebase.
+Reliable Local Testing With Simplicity SDK: Smplx v0.0.8
+The Simplicity SDK is the local testing harness that lets developers run, validate, and step through Simplicity contracts before touching a live network. The v0.0.8 release tightens the command-line interface (CLI) and clears a backlog of edge-case bugs in contract execution. The result is a predictable local loop: write, compile, test, iterate, without spinning up a regtest node for every change.
+Blockstream builds on the same stack it gives developers. The world's first Bitcoin-collateralized lending application Blockstream is building on Simplicity uses the Simplicity SDK for the same validation builders rely on.
+Post-Quantum Signatures, Live on Liquid Mainnet
+On March 3, 2026,
+Blockstream Research deployed the first post-quantum-signed transactions on Liquid mainnet
+. The signature scheme is SHRINCS (Stateful Hash-based Reduced-size Incremental CoSign Scheme), a hash-based design
+described in eprint 2025/2203
+. SHRINCS produces compact 324-byte signatures on first use; subsequent signatures from the same key add roughly 16 bytes each in stateful mode. The full transaction including the Simplicity verification program is closer to 38 KB; a future native opcode would eliminate that overhead.
+SHRINCS landed as a Simplicity contract on Liquid without a network-wide consensus change, which is the part of the deployment that matters most for the developer story. Simplicity's expressiveness was enough to verify a post-quantum signature scheme as a standard contract. The only cryptographic assumption is the security of SHA-256, the same hash function Bitcoin already relies on for proof-of-work, address derivation, and Merkle trees, and no new cryptographic primitive was introduced.
+Developers don't have to wait years for a consensus fork to ship a new cryptographic feature on Liquid; if a primitive fits within Simplicity's program budget, it can ship.
+A Finalized Lending Architecture, and an Ecosystem That's Building
+The contract code for the Lending v2 application is finalized. Developers building lending and credit applications on Liquid have a tested template to model their own work against.
+Beyond Blockstream's own use, the ecosystem is building.
+SideSwap
+, Resolvr, and independent developers are working with Simplicity for core financial logic.
+Recent hackathons
+have drawn growing participation, and the Turin event saw the highest Simplicity attendance to date.
+What's Coming
+Automated Security Through Fuzz Testing
+Blockstream Research is building a Simplicity-specific fuzz testing framework. Once available, the framework will let developers subject their contracts to millions of automated, randomized inputs before mainnet deployment. Fuzzing is the practical bridge between high-level development and the mathematical proofs the Simplicity stack supports underneath. It catches the edge-case behaviors that careful code review can miss.
+The work is ongoing; a release timeline has not been finalized.
+A Standardized Wallet Interface
+Browser-extension bridges between wallets and contract applications are fragile. An upcoming Elements Library Improvement Proposal (ELIP) replaces the brittle extension layer with a
+standardized wallet interface
+built on secure websocket connections.
+The design centers on user control. Public keys shared with Simplicity contracts would stay under the user's authority, and critical wallet data would remain local; an application would not accidentally read or leak user secrets. The Wallet application binary interface (ABI) ELIP and a companion Wallet remote procedure call (RPC) specification are being developed in parallel. Together they define how developer tools talk to Simplicity contracts across the Liquid and Bitcoin ecosystem. Native integration with the
+Liquid Wallet Kit
+(LWK) and hardware-backed safety through LWK-Jade are part of the same effort.
+For developers, the payoff is a single interface specification that works across wallets, rather than custom integrations per wallet vendor.
+The Contract Registry, tx-manifest.json and Human-Readable Signing Requests
+The riskiest moment in any contract interaction is the moment of signing. If a wallet shows raw bytecode, the user is signing blind. The upcoming Contract Registry, modeled on the Ethereum
+ERC-7730 clear-signing standard
+, would map compiled Simplicity bytecode to its Commitment Merkle Root (CMR). Wallets could verify in real time that a user is interacting with an audited, unaltered contract template.
+A companion tx-manifest.json file would let
+developers describe what their contract does
+in plain language. A wallet rendering "Lock 1 LBTC to borrow $35,000 USDT" reads far cleaner than a hex blob, and an advanced "View Source" toggle stays available for auditors who want the underlying detail.
+Wallets would also natively track contract lifecycle states (Fund > Active > Liquidate > Claim), which gives developers a foundation for intuitive interfaces over contracts that may run for weeks or months. The same pattern extends beyond financial contracts to assets like non-fungible tokens, where users need a clear view of what they're approving.
+Start Building on Simplicity
+Builders can get hands-on with Simplicity today through any of these entry points:
+Launch a
+Simplicity Codespace
+and start writing contracts.
+Read the
+Simplicity documentation
+.
+Try the
+Simplicity Web IDE
+in a browser.
+Join the
+Simplicity community forum
+.
+Join the
+Simplicity Telegram community
+.
+Subscribe
+If you have specific preferences, please, mark the topic(s) you would like to read:
+All
+All topics
+Bitcoin Layer-2
+The latest on Core Lightning and Liquid
+Research
+Stay on the bleeding-edge of Bitcoin research with updates from the Blockstream Research team
+Finance
+Analysis and updates on Blockstream Finance products like the BMN and BASIC Fund
+Quarterly Update
+A concise, monthly newsletter on all-things Blockstream

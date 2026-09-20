@@ -1,5 +1,9 @@
 # Moriarty target-first completion program
 
+**Scheduling consolidation, 2026-09-19:** [U0–U7](../ROADMAP.md) is the single current roadmap. This document preserves MC acceptance, historical budgets and evidence, not an independent dispatch queue. Native recursive financial history and private composition remain required; ledger induction does not close MC03/MC06. Any planned `.lean` paths below are retained historical references, not active delivery ownership. The native Midnight stack is the sole proving target; no Lean workstream is authorized.
+
+**Scope correction, 2026-09-19:** The [product contract](../docs/MORIARTY-PRODUCT-CONTRACT.md) supersedes conflicting product scope. All reviewer, RP03, campaign admission and resource-allocation rules below govern project-operated development and experiments only. They are not inputs to public program deployment or transaction acceptance. Preserve objective proof, financial and ledger obligations; remove administrative program approval. See the [current roadmap](../ROADMAP.md).
+
 Current review authority: [latest Fable instruction](../raw/assignments/moriarty-fable-return-2026-09-07.md). Future audits use exact Fable 5.1 at medium effort and fresh GPT-6; historical Fable receipts retain their original scope.
 
 Status: S2, specified-only. The plan files do not establish an active execution loop.
@@ -13,7 +17,7 @@ The [OpenSpec sprint plans](sprints/README.md) sequence this program without rep
 
 ## Report reconciliation
 
-The [three-report reconciliation](REPORT-RECONCILIATION-2026-09-07.md) defines RP01 financial/intent challenges, RP02 complete native/ledger feasibility, and RP03 current campaign admission. Its review status is recorded in the machine register. These are early conditions inside MC01-MC08, not new completion packages or evidence of runtime enforcement. Preserve all original acceptance obligations.
+The [three-report reconciliation](REPORT-RECONCILIATION-2026-09-07.md) defines RP01 financial/intent challenges, RP02 complete native/ledger feasibility, and RP03 current campaign admission. Its review status is recorded in the machine register. These are early conditions inside MC01-MC08, not new completion packages or evidence of runtime enforcement. Retain objective correctness obligations. Supersede administrative restrictions that conflict with permissionless deployment.
 
 ## Intended result and current foundation
 
@@ -25,7 +29,7 @@ Turing incompleteness establishes neither financial correctness nor practical pr
 The retained local evaluator supports loan and swap examples with local outcome authorization.
 Its nonce history is not durable, and its mandatory native proofs remain unavailable.
 [Preview evidence](../evidence/midnight-preview-2026-09-07/README.md) records a finalized deployment, call, and exact message readback.
-It does not record a financial transfer comparison or Moriarty PCD acceptance.
+That early record does not establish financial transfer comparison or Moriarty PCD acceptance. Later September 17 loan and scoped swap results establish financial effects (see the current roadmap); general mandatory PCD remains open.
 [Native R3 evidence](../evidence/moriarty-native-ivc-r3-2026-09-07/README.md) records row exhaustion at k17.
 No recursive proof exists at that boundary.
 The target study inventories ACTUS and DeFi; inventory is not full conformance.
@@ -88,8 +92,8 @@ MC06 must prove its additional split/join relations; the MC03 proof cannot subst
 Each extension requires a reviewed relation, valid feasible examples, and meaningful rejection controls.
 
 K is the primary executable semantics of Moriarty Core. The [sprint formal contract](sprints/README.md#formal-verification-contract) defines required claim verification.
-A supporting Lean or other proof-assistant bridge is optional only when the reviewed theorem design justifies it.
-Existing planned `.lean` paths are conditional extension ownership, not a mandate to implement a second semantics.
+Lean is not a Moriarty dependency or active delivery workstream.
+Existing planned `.lean` paths below are historical ownership records; use the current native correspondence design for implementation.
 Pin every selected toolchain and dependency. Name each theorem, input domain, assumption and executable-code connection.
 Reject proof holes, unchecked axioms and assumed compiler/verifier correctness as correspondence evidence.
 Record the trusted computing base. A successful compiler or proof-assistant build alone does not establish correspondence.

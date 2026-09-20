@@ -1,0 +1,914 @@
+On this page
+Splice.Api.Token.AllocationInstructionV2
+Interfaces
+Interface AllocationFactory
+Choice AllocationFactory_Allocate
+Choice AllocationFactory_PublicFetch
+Choice Archive
+Method allocationFactory_allocateExtraObservers
+Method allocationFactory_allocateImpl
+Method allocationFactory_publicFetchImpl
+Interface AllocationInstruction
+Choice AllocationInstruction_Accept
+Choice AllocationInstruction_Withdraw
+Choice Archive
+Method allocationInstruction_acceptExtraObservers
+Method allocationInstruction_acceptImpl
+Method allocationInstruction_withdrawExtraObservers
+Method allocationInstruction_withdrawImpl
+Data Types
+data AllocationFactoryView
+data AllocationInstructionAction
+data AllocationInstructionResult
+data AllocationInstructionResult_Output
+data AllocationInstructionView
+Functions
+allocationInstruction_withdrawImpl
+allocationInstruction_withdrawExtraObservers
+allocationInstruction_acceptImpl
+allocationInstruction_acceptExtraObservers
+allocationFactory_allocateExtraObservers
+allocationFactory_allocateImpl
+allocationFactory_publicFetchImpl
+Splice APIs
+Splice Daml Packages
+Token Standard v2
+splice-api-token-allocation-instruction-v2
+Splice.Api.Token.AllocationInstructionV2
+Copy page
+Copy page
+Reference documentation for Daml module Splice.Api.Token.AllocationInstructionV2.
+Copy page
+Copy page
+Daml module
+​
+Splice.Api.Token.AllocationInstructionV2
+V2 interfaces to enable wallets to instruct the registry to create allocations.
+Daml
+​
+Interfaces
+​
+Interface
+AllocationFactory
+Contracts implementing
+AllocationFactory
+are retrieved from the registry app and are
+used by the wallet to create allocation instructions (or allocations directly).
+View Type:
+AllocationFactoryView
+Choices:
+​
+Choice
+AllocationFactory_Allocate
+Request the creation of an allocation for a particular settlement.
+It depends on the registry whether this results in the allocation being
+created directly or in an allocation instruction being created instead.
+Controllers:
+actors
+Returns:
+AllocationInstructionResult
+Arguments:
+​
+settlement
+SettlementInfo
+The settlement for which this allocation is made.
+​
+allocation
+AllocationSpecification
+The allocation which should be created.
+Implementations MUST validate that the allocation’s admin party
+matches the admin of the factory.
+​
+requestedAt
+Time
+The time at which the allocation was requested.
+​
+inputHoldingCids
+[ContractId Holding]
+The holdings to use to fund the allocation.
+Implementations MUST return change and all input holdings not used for funding
+in the
+authorizerChangeCids
+field of the
+AllocationInstructionResult
+.
+​
+extraArgs
+ExtraArgs
+Additional choice arguments.
+​
+actors
+[Party]
+Set of parties executing the allocation.
+Implementations MUST check their concrete values to avoid unauthorized allocation creation.
+Implementations SHOULD allow the initiation of the allocation if the
+actors
+is equal to the
+authorizer
+of the allocation. Likewise, for accounts
+where the account provider has the right to allocate funds, the registry
+SHOULD allow the initiation of the allocation if the
+actors
+are
+equal to the account provider.
+​
+Choice
+AllocationFactory_PublicFetch
+Controllers:
+actors
+Returns:
+AllocationFactoryView
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the fetch.
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+Methods:
+​
+Method
+allocationFactory_allocateExtraObservers
+Type:
+AllocationFactory_Allocate
+-> [
+Party
+]
+​
+Method
+allocationFactory_allocateImpl
+Type:
+ContractId
+AllocationFactory
+->
+AllocationFactory_Allocate
+->
+Update
+AllocationInstructionResult
+​
+Method
+allocationFactory_publicFetchImpl
+Type:
+ContractId
+AllocationFactory
+->
+AllocationFactory_PublicFetch
+->
+Update
+AllocationFactoryView
+​
+Interface
+AllocationInstruction
+An interface for tracking the status of an allocation instruction,
+i.e., a request to a registry app to create an allocation.
+Registries MAY evolve the allocation instruction in multiple steps. They SHOULD
+do so using only the choices on this interface, so that wallets can reliably
+parse the transaction history and determine whether the creation of the allocation ultimately
+succeeded or failed.
+View Type:
+AllocationInstructionView
+Choices:
+​
+Choice
+AllocationInstruction_Accept
+Accept the allocation instruction as someone that needs to authorize it.
+Controllers:
+actors
+Returns:
+AllocationInstructionResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the acceptance.
+Registries are free to decide on the required authorization for
+acceptance. They MUST however report the parties that can accept
+unilaterally via the
+AllocationInstructionView.availableActions
+field, so that wallets can show the accept option to the user.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+AllocationInstruction_Withdraw
+Withdraw the allocation instruction.
+Controllers:
+actors
+Returns:
+AllocationInstructionResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the withdrawal.
+Implementations MUST check these parties to avoid unauthorized withdrawal.
+Registries are free to decide on the required authorization for
+withdrawal. They MUST however report the parties that can withdraw
+unilaterally via the
+AllocationInstructionView.availableActions
+field, so that wallets can show the withdrawal option to the user.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+Methods:
+​
+Method
+allocationInstruction_acceptExtraObservers
+Type:
+AllocationInstruction_Accept
+-> [
+Party
+]
+​
+Method
+allocationInstruction_acceptImpl
+Type:
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Accept
+->
+Update
+AllocationInstructionResult
+​
+Method
+allocationInstruction_withdrawExtraObservers
+Type:
+AllocationInstruction_Withdraw
+-> [
+Party
+]
+​
+Method
+allocationInstruction_withdrawImpl
+Type:
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Withdraw
+->
+Update
+AllocationInstructionResult
+​
+Data Types
+​
+data AllocationFactoryView
+View for
+AllocationFactory
+.
+Constructors:
+AllocationFactoryView
+​
+admin
+Party
+The party representing the registry app that administers the instruments
+for which this allocation factory can be used.
+​
+meta
+Metadata
+Additional metadata specific to the allocation factory, used for extensibility.
+Instances:
+instance
+Eq
+AllocationFactoryView
+instance
+Show
+AllocationFactoryView
+instance
+HasMethod
+AllocationFactory
+allocationFactory_publicFetchImpl
+(
+ContractId
+AllocationFactory
+->
+AllocationFactory_PublicFetch
+->
+Update
+AllocationFactoryView
+)
+instance
+HasFromAnyView
+AllocationFactory
+AllocationFactoryView
+instance
+HasInterfaceView
+AllocationFactory
+AllocationFactoryView
+instance
+GetField
+admin
+AllocationFactoryView
+Party
+instance
+GetField
+meta
+AllocationFactoryView
+Metadata
+instance
+SetField
+admin
+AllocationFactoryView
+Party
+instance
+SetField
+meta
+AllocationFactoryView
+Metadata
+instance
+HasExercise
+AllocationFactory
+AllocationFactory_PublicFetch
+AllocationFactoryView
+instance
+HasExerciseGuarded
+AllocationFactory
+AllocationFactory_PublicFetch
+AllocationFactoryView
+instance
+HasFromAnyChoice
+AllocationFactory
+AllocationFactory_PublicFetch
+AllocationFactoryView
+instance
+HasToAnyChoice
+AllocationFactory
+AllocationFactory_PublicFetch
+AllocationFactoryView
+​
+data AllocationInstructionAction
+Actions to advance the state of an allocation instruction.
+Constructors:
+AIA_Withdraw
+AIA_Accept
+AIA_Custom
+​
+id
+Text
+Identifier of the action. Namespaced analogously to metadata keys.
+Used to represent registry-specific actions that need to happen
+for the allocation to be created.
+Instances:
+instance
+Eq
+AllocationInstructionAction
+instance
+Ord
+AllocationInstructionAction
+instance
+Show
+AllocationInstructionAction
+instance
+GetField
+availableActions
+AllocationInstructionView
+(
+Map
+AllocationInstructionAction
+[[
+Party
+]])
+instance
+GetField
+id
+AllocationInstructionAction
+Text
+instance
+SetField
+availableActions
+AllocationInstructionView
+(
+Map
+AllocationInstructionAction
+[[
+Party
+]])
+instance
+SetField
+id
+AllocationInstructionAction
+Text
+​
+data AllocationInstructionResult
+The result of instructing an allocation or advancing the state of an allocation instruction.
+Constructors:
+AllocationInstructionResult
+​
+output
+AllocationInstructionResult_Output
+The output of the step.
+​
+authorizerChangeCids
+TextMap [ContractId Holding]
+Holdings owned by the authorizer that were not used to fund the
+allocation or that were created to return “change”, keyed by
+instrumentId.id
+. Can be used by callers to batch creating or
+updating multiple allocation instructions in a single Daml transaction.
+​
+meta
+Metadata
+Additional metadata specific to the allocation instruction, used for extensibility; e.g., fees charged.
+Instances:
+instance
+Eq
+AllocationInstructionResult
+instance
+Show
+AllocationInstructionResult
+instance
+HasMethod
+AllocationFactory
+allocationFactory_allocateImpl
+(
+ContractId
+AllocationFactory
+->
+AllocationFactory_Allocate
+->
+Update
+AllocationInstructionResult
+)
+instance
+HasMethod
+AllocationInstruction
+allocationInstruction_acceptImpl
+(
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Accept
+->
+Update
+AllocationInstructionResult
+)
+instance
+HasMethod
+AllocationInstruction
+allocationInstruction_withdrawImpl
+(
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Withdraw
+->
+Update
+AllocationInstructionResult
+)
+instance
+GetField
+authorizerChangeCids
+AllocationInstructionResult
+(
+TextMap
+[
+ContractId
+Holding
+])
+instance
+GetField
+meta
+AllocationInstructionResult
+Metadata
+instance
+GetField
+output
+AllocationInstructionResult
+AllocationInstructionResult_Output
+instance
+SetField
+authorizerChangeCids
+AllocationInstructionResult
+(
+TextMap
+[
+ContractId
+Holding
+])
+instance
+SetField
+meta
+AllocationInstructionResult
+Metadata
+instance
+SetField
+output
+AllocationInstructionResult
+AllocationInstructionResult_Output
+instance
+HasExercise
+AllocationFactory
+AllocationFactory_Allocate
+AllocationInstructionResult
+instance
+HasExercise
+AllocationInstruction
+AllocationInstruction_Accept
+AllocationInstructionResult
+instance
+HasExercise
+AllocationInstruction
+AllocationInstruction_Withdraw
+AllocationInstructionResult
+instance
+HasExerciseGuarded
+AllocationFactory
+AllocationFactory_Allocate
+AllocationInstructionResult
+instance
+HasExerciseGuarded
+AllocationInstruction
+AllocationInstruction_Accept
+AllocationInstructionResult
+instance
+HasExerciseGuarded
+AllocationInstruction
+AllocationInstruction_Withdraw
+AllocationInstructionResult
+instance
+HasFromAnyChoice
+AllocationFactory
+AllocationFactory_Allocate
+AllocationInstructionResult
+instance
+HasFromAnyChoice
+AllocationInstruction
+AllocationInstruction_Accept
+AllocationInstructionResult
+instance
+HasFromAnyChoice
+AllocationInstruction
+AllocationInstruction_Withdraw
+AllocationInstructionResult
+instance
+HasToAnyChoice
+AllocationFactory
+AllocationFactory_Allocate
+AllocationInstructionResult
+instance
+HasToAnyChoice
+AllocationInstruction
+AllocationInstruction_Accept
+AllocationInstructionResult
+instance
+HasToAnyChoice
+AllocationInstruction
+AllocationInstruction_Withdraw
+AllocationInstructionResult
+​
+data AllocationInstructionResult_Output
+The output of instructing an allocation or advancing the state of an allocation instruction.
+Constructors:
+AllocationInstructionResult_Pending
+​
+allocationInstructionCid
+ContractId AllocationInstruction
+Contract id of the allocation instruction representing the pending state.
+Use this result to communicate that the creation of the allocation is pending further steps.
+AllocationInstructionResult_Completed
+​
+allocationCid
+ContractId Allocation
+The newly created allocation.
+Use this result to communicate that the allocation was created.
+AllocationInstructionResult_Failed
+Use this result to communicate that the creation of the allocation did not succeed and
+all holdings reserved for funding the allocation have been released.
+Instances:
+instance
+Eq
+AllocationInstructionResult_Output
+instance
+Show
+AllocationInstructionResult_Output
+instance
+GetField
+allocationCid
+AllocationInstructionResult_Output
+(
+ContractId
+Allocation
+)
+instance
+GetField
+allocationInstructionCid
+AllocationInstructionResult_Output
+(
+ContractId
+AllocationInstruction
+)
+instance
+GetField
+output
+AllocationInstructionResult
+AllocationInstructionResult_Output
+instance
+SetField
+allocationCid
+AllocationInstructionResult_Output
+(
+ContractId
+Allocation
+)
+instance
+SetField
+allocationInstructionCid
+AllocationInstructionResult_Output
+(
+ContractId
+AllocationInstruction
+)
+instance
+SetField
+output
+AllocationInstructionResult
+AllocationInstructionResult_Output
+​
+data AllocationInstructionView
+View for
+AllocationInstruction
+.
+Constructors:
+AllocationInstructionView
+​
+originalInstructionCid
+Optional (ContractId AllocationInstruction)
+The contract id of the first allocation instruction contract of this
+allocation instruction workflow, if this is not the first step of the workflow.
+This SHOULD be used by wallets to correlate the same allocation instruction across
+updates to its state. It should not be used to correlate different allocation
+instructions for the same settlement. That can be done using the
+allocation.settlement
+field.
+​
+settlement
+SettlementInfo
+The settlement for which this allocation is made.
+​
+allocation
+AllocationSpecification
+The allocation that this instruction should create.
+​
+requestedAt
+Time
+The time at which the allocation was originally requested.
+​
+inputHoldingCids
+[ContractId Holding]
+The holdings to be used to fund the allocation.
+Empty for allocations that do not require funding.
+MAY be empty for registries that do not represent their holdings on-ledger.
+​
+expiresAt
+Optional Time
+The time at which the allocation instruction expires if inactive.
+Registries MAY expire the allocation instruction after this time.
+Thereby recovering storage resources and protecting themselves from
+denial-of-service attacks.
+Registries SHOULD avoid unnecessary expiries by
+making the expiry time as close to the allocation’s settlement deadline as possible
+bumping expiry on every action on the allocation instruction
+​
+availableActions
+Map AllocationInstructionAction [[Party]]
+What actions are available to which groups of parties. The list of lists
+is interpreted as a set of sets and represents a disjunction of
+conjunctions of parties, i.e., each inner list represents a group of
+parties that can act jointly to execute the action.
+This field can be used to inform wallet users whether they can take an action or not;
+and which other parties they might be waiting on to take their action.
+Supports multiple parties for actions that require joint authorization. Executing them
+will require appropriate, registry-specific delegation contracts to be in place.
+​
+meta
+Metadata
+Additional metadata specific to the allocation instruction, used for
+extensibility; e.g., more detailed status information.
+Instances:
+instance
+Eq
+AllocationInstructionView
+instance
+Show
+AllocationInstructionView
+instance
+HasFromAnyView
+AllocationInstruction
+AllocationInstructionView
+instance
+HasInterfaceView
+AllocationInstruction
+AllocationInstructionView
+instance
+GetField
+allocation
+AllocationInstructionView
+AllocationSpecification
+instance
+GetField
+availableActions
+AllocationInstructionView
+(
+Map
+AllocationInstructionAction
+[[
+Party
+]])
+instance
+GetField
+expiresAt
+AllocationInstructionView
+(
+Optional
+Time
+)
+instance
+GetField
+inputHoldingCids
+AllocationInstructionView
+[
+ContractId
+Holding
+]
+instance
+GetField
+meta
+AllocationInstructionView
+Metadata
+instance
+GetField
+originalInstructionCid
+AllocationInstructionView
+(
+Optional
+(
+ContractId
+AllocationInstruction
+))
+instance
+GetField
+requestedAt
+AllocationInstructionView
+Time
+instance
+GetField
+settlement
+AllocationInstructionView
+SettlementInfo
+instance
+SetField
+allocation
+AllocationInstructionView
+AllocationSpecification
+instance
+SetField
+availableActions
+AllocationInstructionView
+(
+Map
+AllocationInstructionAction
+[[
+Party
+]])
+instance
+SetField
+expiresAt
+AllocationInstructionView
+(
+Optional
+Time
+)
+instance
+SetField
+inputHoldingCids
+AllocationInstructionView
+[
+ContractId
+Holding
+]
+instance
+SetField
+meta
+AllocationInstructionView
+Metadata
+instance
+SetField
+originalInstructionCid
+AllocationInstructionView
+(
+Optional
+(
+ContractId
+AllocationInstruction
+))
+instance
+SetField
+requestedAt
+AllocationInstructionView
+Time
+instance
+SetField
+settlement
+AllocationInstructionView
+SettlementInfo
+​
+Functions
+​
+allocationInstruction_withdrawImpl
+allocationInstruction_withdrawImpl
+:
+AllocationInstruction
+->
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Withdraw
+->
+Update
+AllocationInstructionResult
+​
+allocationInstruction_withdrawExtraObservers
+allocationInstruction_withdrawExtraObservers
+:
+AllocationInstruction
+->
+AllocationInstruction_Withdraw
+-> [
+Party
+]
+​
+allocationInstruction_acceptImpl
+allocationInstruction_acceptImpl
+:
+AllocationInstruction
+->
+ContractId
+AllocationInstruction
+->
+AllocationInstruction_Accept
+->
+Update
+AllocationInstructionResult
+​
+allocationInstruction_acceptExtraObservers
+allocationInstruction_acceptExtraObservers
+:
+AllocationInstruction
+->
+AllocationInstruction_Accept
+-> [
+Party
+]
+​
+allocationFactory_allocateExtraObservers
+allocationFactory_allocateExtraObservers
+:
+AllocationFactory
+->
+AllocationFactory_Allocate
+-> [
+Party
+]
+​
+allocationFactory_allocateImpl
+allocationFactory_allocateImpl
+:
+AllocationFactory
+->
+ContractId
+AllocationFactory
+->
+AllocationFactory_Allocate
+->
+Update
+AllocationInstructionResult
+​
+allocationFactory_publicFetchImpl
+allocationFactory_publicFetchImpl
+:
+AllocationFactory
+->
+ContractId
+AllocationFactory
+->
+AllocationFactory_PublicFetch
+->
+Update
+AllocationFactoryView
+Suggest edits
+Raise issue
+Overview
+Overview

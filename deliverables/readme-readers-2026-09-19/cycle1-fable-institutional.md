@@ -1,0 +1,12 @@
+Verdict: FLAGS
+
+1. "Moriarty is deliberately Turing incomplete within each stage." — I did not know what "Turing incomplete" means and had to infer from the following sentences that it means computation is limited and predictable. — severity: medium
+2. "A bounded stage can produce an authenticated continuation." — "Continuation" was never explained; I reread the paragraph before settling on "the agreement carries forward to the next step." — severity: medium
+3. "Optimized primitives follow the lesson of Simplicity's jets" — Simplicity, jets, "malicious witness" and "underconstrained circuit" are all unknown to me, and I lost why this paragraph matters to the agreement's guarantees. — severity: medium
+4. "Compact can serve as an intermediate when its relationship" — Compact, the mapper, "pure Compact kernels" and "atomic profile" are not explained; I could not follow what is currently working versus not, which is what I wanted from this paragraph. — severity: medium
+5. "Midnight's native PLONK/KZG stack is the proof foundation" — PLONK/KZG, Lean and "executable K definitions" meant nothing to me; I could not tell what assurance this paragraph is offering or withholding. — severity: medium
+6. "The solver, witness producer, relayer or counterparty may be malicious." — "Witness producer" and "relayer" are roles I do not recognise, and "witness" recurs afterwards as a key term without ever being defined, so I was unsure what is being constrained. — severity: medium
+7. "In the CAKE chain-abstraction framework's Applications, Permission, Solvers and Settlement model" — This framework is referenced as if I know it; I could not tell why the point about "permission" was being made or what it corrects. — severity: medium
+8. "The local protected financial evaluator checks a bounded stage" — This component is introduced as though already familiar; I had to reread to work out how it differs from the kernel. — severity: medium
+9. "Use Node.js 24." — I skimmed this whole section; the commands, profile names and file paths are not relevant to my evaluation, and I only recovered attention at "Where the project stands." — severity: medium
+10. "The repository contains versioned parsers and local evaluators" — "Native K expression/lifecycle comparisons," "Midnight Preview" and "state readback" are unexplained; I could not judge how close the project is to usable, which is what this section promised. — severity: medium

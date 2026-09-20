@@ -1,0 +1,550 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-wallet-payments
+Splice.Wallet.Payment
+Copy page
+Copy page
+Documentation for Splice.Wallet.Payment
+Copy page
+Copy page
+​
+Templates
+template
+AcceptedAppPayment
+Signatory: sender, provider, map (\ r -> (DA.Internal.Record.getField @“receiver” r)) amuletReceiverAmounts
+Field
+Type
+Description
+sender
+Party
+amuletReceiverAmounts
+[ReceiverAmuletAmount]
+provider
+Party
+dso
+Party
+lockedAmulet
+ContractId
+LockedAmulet
+round
+Round
+The round in which the locked amulet was created, added as an extra field so we can avoid ingesting locked amulets.
+reference
+ContractId
+AppPaymentRequest
+The contract id of the original payment request to correlate it. Note that the contract will no longer be active.
+Choice
+AcceptedAppPayment_Collect
+Controller: signatory this
+Returns: AcceptedAppPayment_CollectResult
+Field
+Type
+Description
+context
+AppTransferContext
+Choice
+AcceptedAppPayment_Expire
+Controller: sender
+Returns: AcceptedAppPayment_ExpireResult
+Field
+Type
+Description
+context
+AppTransferContext
+Choice
+AcceptedAppPayment_Reject
+Controller: map (\ r -> (DA.Internal.Record.getField @“receiver” r)) amuletReceiverAmounts
+Returns: AcceptedAppPayment_RejectResult
+Field
+Type
+Description
+context
+AppTransferContext
+Choice
+Archive
+Controller: sender, provider, map (\ r -> (DA.Internal.Record.getField @“receiver” r)) amuletReceiverAmounts
+Returns: ()
+(no fields)
+template
+AppPaymentRequest
+Signatory: sender, appPaymentRequest_receivers this, provider
+Field
+Type
+Description
+sender
+Party
+The party that should pay.
+receiverAmounts
+[ReceiverAmount]
+Pairs of (party, amount) requesting to be paid.
+provider
+Party
+The app provider; receives usage rewards.
+dso
+Party
+The DSO party of the amulet that should be used to make the payment.
+expiresAt
+Time
+When the payment request expires.
+description
+Text
+Human readable description of the reason / good for which the payment is requested.
+Choice
+AppPaymentRequest_Accept
+Controller: sender, walletProvider
+Returns: AppPaymentRequest_AcceptResult
+Field
+Type
+Description
+inputs
+[TransferInput]
+context
+PaymentTransferContext
+walletProvider
+Party
+Choice
+AppPaymentRequest_Expire
+Controller: actor
+Returns: AppPaymentRequest_ExpireResult
+Field
+Type
+Description
+actor
+Party
+Choice
+AppPaymentRequest_Reject
+Controller: sender
+Returns: AppPaymentRequest_RejectResult
+(no fields)
+Choice
+AppPaymentRequest_Withdraw
+Controller: appPaymentRequest_receivers this
+Returns: AppPaymentRequest_WithdrawResult
+(no fields)
+Choice
+Archive
+Controller: sender, appPaymentRequest_receivers this, provider
+Returns: ()
+(no fields)
+template
+TerminatedAppPayment
+Instead of just archiving payments (e.g. when the request is accepted) we create an TerminatedAppPayment contract. This allows the coordinating workflow to archive its own contracts once the app-payment workflow terminated.
+Signatory: sender, provider, receivers
+Field
+Type
+Description
+sender
+Party
+provider
+Party
+receivers
+[
+Party
+]
+reference
+ContractId
+AppPaymentRequest
+Choice
+Archive
+Controller: sender, provider, receivers
+Returns: ()
+(no fields)
+​
+Data Types
+data
+AcceptedAppPayment_CollectResult
+AcceptedAppPayment_CollectResult
+Field
+Type
+Description
+receiverAmulets
+[(
+Party
+,
+ContractId
+Amulet)]
+instance
+GetField “receiverAmulets” AcceptedAppPayment_CollectResult [(
+Party
+,
+ContractId
+Amulet)]
+instance
+SetField “receiverAmulets” AcceptedAppPayment_CollectResult [(
+Party
+,
+ContractId
+Amulet)]
+instance
+HasExercise
+AcceptedAppPayment AcceptedAppPayment_Collect AcceptedAppPayment_CollectResult
+instance
+HasFromAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Collect AcceptedAppPayment_CollectResult
+instance
+HasToAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Collect AcceptedAppPayment_CollectResult
+data
+AcceptedAppPayment_ExpireResult
+AcceptedAppPayment_ExpireResult
+Field
+Type
+Description
+amulet
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amulet” AcceptedAppPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amulet” AcceptedAppPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+AcceptedAppPayment AcceptedAppPayment_Expire AcceptedAppPayment_ExpireResult
+instance
+HasFromAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Expire AcceptedAppPayment_ExpireResult
+instance
+HasToAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Expire AcceptedAppPayment_ExpireResult
+data
+AcceptedAppPayment_RejectResult
+AcceptedAppPayment_RejectResult
+Field
+Type
+Description
+amulet
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amulet” AcceptedAppPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amulet” AcceptedAppPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+AcceptedAppPayment AcceptedAppPayment_Reject AcceptedAppPayment_RejectResult
+instance
+HasFromAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Reject AcceptedAppPayment_RejectResult
+instance
+HasToAnyChoice
+AcceptedAppPayment AcceptedAppPayment_Reject AcceptedAppPayment_RejectResult
+data
+AppPaymentRequest_AcceptResult
+AppPaymentRequest_AcceptResult
+Field
+Type
+Description
+acceptedPayment
+ContractId
+AcceptedAppPayment
+senderChangeAmulet
+Optional
+(
+ContractId
+Amulet)
+instance
+GetField “acceptedPayment” AppPaymentRequest_AcceptResult (
+ContractId
+AcceptedAppPayment)
+instance
+GetField “senderChangeAmulet” AppPaymentRequest_AcceptResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+SetField “acceptedPayment” AppPaymentRequest_AcceptResult (
+ContractId
+AcceptedAppPayment)
+instance
+SetField “senderChangeAmulet” AppPaymentRequest_AcceptResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+HasExercise
+AppPaymentRequest AppPaymentRequest_Accept AppPaymentRequest_AcceptResult
+instance
+HasFromAnyChoice
+AppPaymentRequest AppPaymentRequest_Accept AppPaymentRequest_AcceptResult
+instance
+HasToAnyChoice
+AppPaymentRequest AppPaymentRequest_Accept AppPaymentRequest_AcceptResult
+data
+AppPaymentRequest_ExpireResult
+AppPaymentRequest_ExpireResult
+Field
+Type
+Description
+terminatedAppPayment
+ContractId
+TerminatedAppPayment
+instance
+GetField “terminatedAppPayment” AppPaymentRequest_ExpireResult (
+ContractId
+TerminatedAppPayment)
+instance
+SetField “terminatedAppPayment” AppPaymentRequest_ExpireResult (
+ContractId
+TerminatedAppPayment)
+instance
+HasExercise
+AppPaymentRequest AppPaymentRequest_Expire AppPaymentRequest_ExpireResult
+instance
+HasFromAnyChoice
+AppPaymentRequest AppPaymentRequest_Expire AppPaymentRequest_ExpireResult
+instance
+HasToAnyChoice
+AppPaymentRequest AppPaymentRequest_Expire AppPaymentRequest_ExpireResult
+data
+AppPaymentRequest_RejectResult
+AppPaymentRequest_RejectResult
+Field
+Type
+Description
+terminatedAppPayment
+ContractId
+TerminatedAppPayment
+instance
+GetField “terminatedAppPayment” AppPaymentRequest_RejectResult (
+ContractId
+TerminatedAppPayment)
+instance
+SetField “terminatedAppPayment” AppPaymentRequest_RejectResult (
+ContractId
+TerminatedAppPayment)
+instance
+HasExercise
+AppPaymentRequest AppPaymentRequest_Reject AppPaymentRequest_RejectResult
+instance
+HasFromAnyChoice
+AppPaymentRequest AppPaymentRequest_Reject AppPaymentRequest_RejectResult
+instance
+HasToAnyChoice
+AppPaymentRequest AppPaymentRequest_Reject AppPaymentRequest_RejectResult
+data
+AppPaymentRequest_WithdrawResult
+AppPaymentRequest_WithdrawResult
+Field
+Type
+Description
+terminatedAppPayment
+ContractId
+TerminatedAppPayment
+instance
+GetField “terminatedAppPayment” AppPaymentRequest_WithdrawResult (
+ContractId
+TerminatedAppPayment)
+instance
+SetField “terminatedAppPayment” AppPaymentRequest_WithdrawResult (
+ContractId
+TerminatedAppPayment)
+instance
+HasExercise
+AppPaymentRequest AppPaymentRequest_Withdraw AppPaymentRequest_WithdrawResult
+instance
+HasFromAnyChoice
+AppPaymentRequest AppPaymentRequest_Withdraw AppPaymentRequest_WithdrawResult
+instance
+HasToAnyChoice
+AppPaymentRequest AppPaymentRequest_Withdraw AppPaymentRequest_WithdrawResult
+data
+PaymentAmount
+PaymentAmount
+Field
+Type
+Description
+amount
+Decimal
+unit
+Unit
+instance
+Eq
+PaymentAmount
+instance
+Ord
+PaymentAmount
+instance
+Show
+PaymentAmount
+instance
+GetField “amount” PaymentAmount
+Decimal
+instance
+GetField “amount” ReceiverAmount PaymentAmount
+instance
+GetField “paymentAmount” SubscriptionPayData PaymentAmount
+instance
+GetField “unit” PaymentAmount Unit
+instance
+SetField “amount” PaymentAmount
+Decimal
+instance
+SetField “amount” ReceiverAmount PaymentAmount
+instance
+SetField “paymentAmount” SubscriptionPayData PaymentAmount
+instance
+SetField “unit” PaymentAmount Unit
+data
+ReceiverAmount
+ReceiverAmount
+Field
+Type
+Description
+receiver
+Party
+amount
+PaymentAmount
+instance
+Eq
+ReceiverAmount
+instance
+Ord
+ReceiverAmount
+instance
+Show
+ReceiverAmount
+instance
+GetField “amount” ReceiverAmount PaymentAmount
+instance
+GetField “receiver” ReceiverAmount
+Party
+instance
+GetField “receiverAmounts” AppPaymentRequest [ReceiverAmount]
+instance
+SetField “amount” ReceiverAmount PaymentAmount
+instance
+SetField “receiver” ReceiverAmount
+Party
+instance
+SetField “receiverAmounts” AppPaymentRequest [ReceiverAmount]
+data
+ReceiverAmulet
+ReceiverAmulet
+Field
+Type
+Description
+receiver
+Party
+lockedAmulet
+ContractId
+LockedAmulet
+instance
+Eq
+ReceiverAmulet
+instance
+Show
+ReceiverAmulet
+instance
+GetField “lockedAmulet” ReceiverAmulet (
+ContractId
+LockedAmulet)
+instance
+GetField “receiver” ReceiverAmulet
+Party
+instance
+SetField “lockedAmulet” ReceiverAmulet (
+ContractId
+LockedAmulet)
+instance
+SetField “receiver” ReceiverAmulet
+Party
+data
+ReceiverAmuletAmount
+ReceiverAmuletAmount
+Field
+Type
+Description
+receiver
+Party
+amuletAmount
+Decimal
+instance
+Eq
+ReceiverAmuletAmount
+instance
+Ord
+ReceiverAmuletAmount
+instance
+Show
+ReceiverAmuletAmount
+instance
+GetField “amuletAmount” ReceiverAmuletAmount
+Decimal
+instance
+GetField “amuletReceiverAmounts” AcceptedAppPayment [ReceiverAmuletAmount]
+instance
+GetField “receiver” ReceiverAmuletAmount
+Party
+instance
+SetField “amuletAmount” ReceiverAmuletAmount
+Decimal
+instance
+SetField “amuletReceiverAmounts” AcceptedAppPayment [ReceiverAmuletAmount]
+instance
+SetField “receiver” ReceiverAmuletAmount
+Party
+data
+Unit
+USDUnit
+AmuletUnit
+ExtUnit
+Extension constructor to work around the current lack of upgrading for variants in Daml 3.0. Will serve as the default value in a containing record in case of an extension.
+instance
+Eq
+Unit
+instance
+Ord
+Unit
+instance
+Show
+Unit
+instance
+GetField “unit” PaymentAmount Unit
+instance
+SetField “unit” PaymentAmount Unit
+​
+Functions
+paymentAmountToAmulet
+:
+Party
+-> OpenMiningRound -> PaymentAmount ->
+Update
+Decimal
+receiverAmountToAmuletReceiverAmount
+:
+Party
+-> OpenMiningRound -> ReceiverAmount ->
+Update
+ReceiverAmuletAmount
+appPaymentRequest_receivers
+: AppPaymentRequest -> [
+Party
+]
+unzipReceiverAmulets
+: [ReceiverAmulet] -> ([
+Party
+], [
+ContractId
+LockedAmulet])
+mkReceiverOutput
+: ReceiverAmuletAmount -> TransferOutput
+Suggest edits
+Raise issue
+splice-wallet-payments docs
+Splice.Wallet.Subscriptions

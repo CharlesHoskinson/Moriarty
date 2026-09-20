@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en" data-color-scheme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+
+    <title>Blockstream</title>
+
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /> 
+
+
+    <link rel="preload" href="/assets/dist/app.min.js?v=tZlhIyOa7aKDFTYH" as="script">
+    <link rel="preload" href="/assets/dist/app.min.css?v=IYrC6TiavSH3sgHM" as="style">
+    <link rel="stylesheet" href="https://use.typekit.net/chx2fbn.css">
+
+    
+
+    <script>
+  // ===============
+  // Basic Config
+  // ===============
+  let config = {
+    /* Replace it with your domain: ghost_host: 'https://yoursite.domain' */
+    // Main blog
+    ghost_url: 'https://blog.blockstream.com',
+    // Development blog
+    /* ghost_url: 'http://localhost:2368,  */
+    
+    /* Settings > Integrations > New Custom Integration. Copy Key. Replace ghost_key below. */
+    // Main blog
+    ghost_key: 'bc6f6fc4faaa6e9b2d823b5ee8',
+    //Development blog
+    /* ghost_key: '5ba34a40e6866efa7627e3672f', */
+
+    /* Ghost version: v4 or v3 */
+    ghost_version: 'v4',
+
+    /* Ghost enable search in content */
+    enable_search_in_content: true,
+
+    /* Default Color Scheme. Values: preference(detects user setting), light, dark. */
+    color_scheme_default: 'dark',
+
+    /* Enable Progress Bar for posts */
+    enable_progress_bar: true,
+
+    /* Enable lightbox for post images */
+    enable_image_lightbox: true,
+
+    /* Enable Scroll Top Button */
+    enable_scroll_top: true,
+
+    /* Enable hyphens */
+    enable_hyphens: false,
+
+    /* Enable PWA - Progressive Web App */
+    enable_pwa: false,
+
+    /* Replace 'biron-demo' with your disqus account shortname */
+    disqus_shortname: 'biron-demo',
+
+    /* Open external links in posts in a new tab */
+    open_links_in_new_tab: false
+  }
+
+  // =========================
+  // Dark/Light Theme Handling
+  // =========================
+  let preferredTheme; 
+  if (config.color_scheme_default === 'preference') {
+    const preferredColorScheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    preferredTheme = localStorage.getItem('USER_COLOR_SCHEME') || preferredColorScheme;
+  } else {
+    preferredTheme = localStorage.getItem('USER_COLOR_SCHEME') || config.color_scheme_default;
+  }
+  document.documentElement.setAttribute("data-color-scheme", preferredTheme);
+
+  // =========================
+  // Set Hyphens property
+  // =========================
+  const root = document.documentElement;
+  if (config.enable_hyphens) {
+    root.style.setProperty('--global-hyphens', 'auto')
+  }
+  
+  // ===============================
+  // Global values used in the theme
+  // ===============================
+  const global = {
+    pagination_current_page: parseInt(``),
+    pagination_next_page: parseInt(``),
+    pagination_next_page_link: '',
+    pagination_max_pages: parseInt(''), 
+    pagination_posts_per_page: parseInt('11'),
+  }
+</script>
+
+    <link rel="stylesheet" type="text/css" href="/assets/dist/app.min.css?v=IYrC6TiavSH3sgHM" />
+
+    <script async defer src="/assets/dist/app.min.js?v=tZlhIyOa7aKDFTYH"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+    <script type="text/javascript" src="https://www.google.com/recaptcha/api.js?render=6LcC8qMfAAAAAKQvHTUiJyxB_DO3nXwei4BFktyg"></script>
+    <script async defer src="/assets/js/newsletter.js?v=6Ai_sLKafgsJhtVG"></script>
+
+    <!--cssential--><style></style><!--/cssential-->
+
+    <link href="/assets/font-awesome/css/all.min.css?v=JXQY3gkQH_d5HUEP" rel="stylesheet">
+
+    <link rel="icon" href="https://blog.blockstream.com/content/images/size/w256h256/2021/10/favicon_new-1.png" type="image/png">
+    <link rel="canonical" href="https://blog.blockstream.com/simplicity-jets-release/">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    
+    <meta property="og:site_name" content="Blockstream">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Simplicity: Jets Release">
+    <meta property="og:description" content="This week we are excited to announce a milestone in Simplicity development: a major new developer preview release with jets. Jets can be thought of as pre-made building blocks that can be combined together to construct complex Simplicity programs without having to build everything from scratch, simultaneously speeding up">
+    <meta property="og:url" content="https://blog.blockstream.com/simplicity-jets-release/">
+    <meta property="og:image" content="https://blog.blockstream.com/content/images/size/w1200/2026/04/1-yd7huqvwicyyyrgdbelvqw.png">
+    <meta property="article:published_time" content="2020-04-04T21:53:00.000Z">
+    <meta property="article:modified_time" content="2026-04-07T19:15:31.000Z">
+    <meta property="article:publisher" content="https://www.facebook.com/ghost">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Simplicity: Jets Release">
+    <meta name="twitter:description" content="This week we are excited to announce a milestone in Simplicity development: a major new developer preview release with jets. Jets can be thought of as pre-made building blocks that can be combined together to construct complex Simplicity programs without having to build everything from scratch, simultaneously speeding up">
+    <meta name="twitter:url" content="https://blog.blockstream.com/simplicity-jets-release/">
+    <meta name="twitter:image" content="https://blog.blockstream.com/content/images/size/w1200/2026/04/1-yd7huqvwicyyyrgdbelvqw.png">
+    <meta name="twitter:site" content="@ghost">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="675">
+    
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Blockstream",
+        "url": "https://blog.blockstream.com/",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://blog.blockstream.com/content/images/2021/10/favicon_new.png",
+            "width": 60,
+            "height": 60
+        }
+    },
+    "author": {
+        "@type": "Person",
+        "name": "Andrew Poelstra",
+        "url": "https://blog.blockstream.com/author/andrew-poelstra/",
+        "sameAs": []
+    },
+    "contributor": [
+        {
+            "@type": "Person",
+            "name": "Russell O'Connor",
+            "url": "https://blog.blockstream.com/author/russell-oconnor/",
+            "sameAs": []
+        }
+    ],
+    "headline": "Simplicity: Jets Release",
+    "url": "https://blog.blockstream.com/simplicity-jets-release/",
+    "datePublished": "2020-04-04T21:53:00.000Z",
+    "dateModified": "2026-04-07T19:15:31.000Z",
+    "image": {
+        "@type": "ImageObject",
+        "url": "https://blog.blockstream.com/content/images/size/w1200/2026/04/1-yd7huqvwicyyyrgdbelvqw.png",
+        "width": 1200,
+        "height": 675
+    },
+    "keywords": "Simplicity Language, Blockstream Research",
+    "description": "This week we are excited to announce a milestone in Simplicity development: a major new developer preview release with jets. Jets can be thought of as pre-made building blocks that can be combined together to construct complex Simplicity programs without having to build everything from scratch, simultaneously speeding up the process of developing Simplicity-based smart contracts while reducing their resource costs. We go into detail on this development below.\n\nThis release also introduces Simpli",
+    "mainEntityOfPage": "https://blog.blockstream.com/simplicity-jets-release/"
+}
+    </script>
+
+    <meta name="generator" content="Ghost 6.61">
+    <link rel="alternate" type="application/rss+xml" title="Blockstream" href="https://blog.blockstream.com/rss/">
+    <script defer src="https://cdn.jsdelivr.net/ghost/portal@~2.71/umd/portal.min.js" data-i18n="true" data-ghost="https://blog.blockstream.com/" data-key="6cc7cda8b5c7cd5c8806889b42" data-api="https://blog.blockstream.com/ghost/api/content/" data-locale="en" crossorigin="anonymous"></script><style id="gh-members-styles">.gh-post-upgrade-cta-content,
+.gh-post-upgrade-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    text-align: center;
+    width: 100%;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.gh-post-upgrade-cta-content {
+    border-radius: 8px;
+    padding: 40px 4vw;
+}
+
+.gh-post-upgrade-cta h2 {
+    color: #ffffff;
+    font-size: 28px;
+    letter-spacing: -0.2px;
+    margin: 0;
+    padding: 0;
+}
+
+.gh-post-upgrade-cta p {
+    margin: 20px 0 0;
+    padding: 0;
+}
+
+.gh-post-upgrade-cta small {
+    font-size: 16px;
+    letter-spacing: -0.2px;
+}
+
+.gh-post-upgrade-cta a {
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 500;
+    box-shadow: none;
+    text-decoration: underline;
+}
+
+.gh-post-upgrade-cta a:hover {
+    color: #ffffff;
+    opacity: 0.8;
+    box-shadow: none;
+    text-decoration: underline;
+}
+
+.gh-post-upgrade-cta a.gh-btn {
+    display: block;
+    background: #ffffff;
+    text-decoration: none;
+    margin: 28px 0 0;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.gh-post-upgrade-cta a.gh-btn:hover {
+    opacity: 0.92;
+}</style>
+    <script defer src="https://cdn.jsdelivr.net/ghost/sodo-search@~1.8/umd/sodo-search.min.js" data-key="6cc7cda8b5c7cd5c8806889b42" data-styles="https://cdn.jsdelivr.net/ghost/sodo-search@~1.8/umd/main.css" data-sodo-search="https://blog.blockstream.com/" data-locale="en" crossorigin="anonymous"></script>
+    
+    <link href="https://blog.blockstream.com/webmentions/receive/" rel="webmention">
+    <script defer src="/public/cards.min.js?v=ShRHxgy4po8zN-Wf"></script>
+    <link rel="stylesheet" type="text/css" href="/public/cards.min.css?v=WwnU9jw5ancNC8Gc">
+    <script defer src="/public/member-attribution.min.js?v=AKG4hWena9j3yX3I"></script><style>:root {--ghost-accent-color: #111316;}</style>
+    <!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W55GXHB');</script>
+<!-- End Google Tag Manager -->
+
+<style>
+  .post-hero {
+    figure {
+      justify-content: center;
+    }
+  }
+</style>
+  </head>
+  <body class="post-template tag-simplicity-language tag-blockstream-research">
+    <div class="search" id="search">
+  <div class="search__header">
+    <form action="/" method="get" class="search__form" id="search-form">
+      <input type="text" id="ghost-search-field" class="search__input" 
+        title="Search" placeholder="Search" autocomplete="off" required/>
+      <div class="search__icon">
+        <i class="icon icon-search icon--lg">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#search"></use>
+  </svg>
+</i>      </div>
+    </form>
+    <a tabindex="0" class="search--close" id="search-close">
+      <i class="icon icon-x icon--lg">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#x"></use>
+  </svg>
+</i>    </a>
+  </div>
+  <div class="search-content">
+    <div class="search-result" id="ghost-search-results"></div>
+  </div>
+</div>
+
+    
+<header class="header_primary">
+
+    <div class="header_primary_logo"> 
+      <a href="https://www.blockstream.com/">
+        <img src="https://blockstream.com/img/icons/logo_blks.png" alt="Blockstream">
+      </a>
+    </div>
+    <div class="hamburger header_primary_mobile-menu-button" onclick="mobileNavToggle()">
+      <div class="bar top">
+      </div>
+      <div class="bar middle">
+      </div>
+      <div class="bar bottom">
+      </div>
+    </div>
+
+    <nav class="header_primary_navigation">
+      <ul class="header_primary_navigation_list">
+                 <li class="header_primary_navigation_item font-h5 color-white">
+                <a class='header_primary_navigation_item_link header_primary_navigation_dropdown-button' id="nav-dropdown-products" href="#" onclick="mobileNavDropdown(event)">
+                    Products
+                    <span>
+                        <div class="arrow-icon">
+                            <div class="arrow a-top"></div>
+                            <div class="arrow a-bottom"></div>
+                        </div>
+                    </span>
+                </a>
+                <ul class="header_primary_navigation_item_sub-list" id="primary_navigation_list_products">
+                    <li class="header_primary_navigation_item_sub-list_header">
+                        <div class="product-subnav">
+                            <div class="subnav-grid">
+                                <div class="product-subnav-col subnav-grid-item-2">
+                                    <h4 class="font-h4">CONSUMERS</h4>
+                                    <ul class="product-subnav-grid-container subnav-grid">
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_app">
+                                            <a class="product-subnav-grid-container_link" data-nav-item="app" href="https://blockstream.com/app/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Blockstream App</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">A multi-platform, feature-rich Bitcoin and Liquid Wallet</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_jade">
+                                            <a class="product-subnav-grid-container_link" data-nav-item="jade" href="https://blockstream.com/jade/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Blockstream Jade</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">A fully-open source hardware wallet for Bitcoin and Liquid</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+<div class="product-subnav-col subnav-grid-item-2">  
+                                    <h4 class="font-h4">ENTERPRISE</h4>         
+                                    <ul class="product-subnav-grid-container subnav-grid">
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_enterprise">
+                                            <a class="product-subnav-grid-container_link" data-nav-item="enterprise" href="https://blockstream.com/enterprise/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Blockstream Enterprise</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">Enterprise-grade custody and treasury management tool</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_amp">
+                                            <a class='product-subnav-grid-container_link' data-nav-item="amp" href="https://blockstream.com/amp/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">AMP</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">An API to issue and manage digital assets on the Liquid Network</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                            </div>
+                            
+
+                            
+                            <h4 class="font-h4">DEVELOPERS</h4>    
+                            <div class="subnav-grid">
+                                <div class="product-subnav-col subnav-grid-item-2">  
+                                    <h5 class="font-h5">TOOLS</h5>   
+
+                                    <ul class="product-subnav-grid-container subnav-grid">
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_explorer">
+                                            <a class='product-subnav-grid-container_link' data-nav-item="explorer" href="https://blockstream.info/explorer-api/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Blockstream Explorer API</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">Search data from the Bitcoin and Liquid blockchains</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_cryptofeed">
+                                            <a class='product-subnav-grid-container_link' data-nav-item="cryptofeed" href="https://blockstream.com/cryptofeed/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Cryptocurrency Data Feed</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">Real-time and historical cryptocurrency trade data</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="product-subnav-col subnav-grid-item-2">
+                                    <h5 class="font-h5">COMMUNITY PROJECTS</h5>   
+                                    <ul class="product-subnav-grid-container subnav-grid">
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_lightning">
+                                            <a class='product-subnav-grid-container_link' data-nav-item="lightning" href="https://blockstream.com/lightning/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Core Lightning</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">Implementation of the Lightning Protocol</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_liquid">
+                                            <a class='product-subnav-grid-container_link' data-nav-item="liquid" href="https://blockstream.com/liquid/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Liquid Network</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">Bitcoin layer-2 for digital asset issuance</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_elements">
+                                            <a class="product-subnav-grid-container_link" data-nav-item="elements" href="https://blockstream.com/elements/">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Elements</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">An open-source, sidechain-capable blockchain platform</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+
+                                        <li class="header_primary_navigation_item_sub-list_item subnav-grid-item-2 font-h4 text-white" id="primary_navigation_simplicity">
+                                            <a class="product-subnav-grid-container_link" data-nav-item="simplicity" href="https://simplicity-lang.org/" target="_blank">
+                                                <div class="header_primary_navigation_item_sub-list_item_link">
+                                                    <div class="header_primary_navigation_item_sub-list_item_link_block">
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_title font-h4 text-white">Simplicity</p>
+                                                        <p class="header_primary_navigation_item_sub-list_item_link_block_text font-p3 text-gray">High-assurance smart contracts</p>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        
+                                    </ul>
+                                </div>
+                            </div>
+
+                        </div>
+                    </li>
+                </ul>
+            </li>
+        <li class="header_primary_navigation_item font-h5 color-white"> <a class="header_primary_navigation_item_link header_primary_navigation_dropdown-button" id="nav-dropdown-news" href="#" onclick="mobileNavDropdown(event)"> Newsroom <span>
+              <div class="arrow-icon">
+                <div class="arrow a-top"></div>
+                <div class="arrow a-bottom"></div>
+              </div>
+            </span> </a>
+          <ul class="header_primary_navigation_item_sub-list" id="primary_navigation_list_news">
+            <li class="header_primary_navigation_item_sub-list_header">
+              <ul class="subnav-grid-container">
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_blog">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title blog-link font-h4 text-white" href="https://blog.blockstream.com" data-nav-item="blog" onclick="blogLinkClicked(event)"> <i class="fas fa-edit header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Blog</a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_press-newsroom">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title " href="https://blockstream.com/newsroom/" data-nav-item="newsroom"> <i class="fas fa-newspaper header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>In
+                        The News</a></div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_press-release">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title " href="https://blockstream.com/press-releases/" data-nav-item="press-release"> <i class="fas fa-list-alt header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Press
+                        Releases</a></div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_quantum">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://blockstream.com/quantum/" data-nav-item="quantum" target="_blank"> <i class="fal fa-atom header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Quantum</a></div>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="header_primary_navigation_item font-h5 color-white"> <a class="header_primary_navigation_item_link header_primary_navigation_dropdown-button" id="nav-dropdown-developer" href="#" onclick="mobileNavDropdown(event)"> Developers <span>
+              <div class="arrow-icon">
+                <div class="arrow a-top"></div>
+                <div class="arrow a-bottom"></div>
+              </div>
+            </span> </a>
+          <ul class="header_primary_navigation_item_sub-list" id="primary_navigation_list_developer">
+            <li class="header_primary_navigation_item_sub-list_header">
+              <ul class="subnav-grid-container">
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_eng-blog">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://blog.blockstream.com/blockstream-research/" target="blank" data-nav-item="eng-blog">
+                        <i class="fas fa-cog header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Engineering
+                        Blog</a></div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_documentation">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> 
+                      <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://docs.liquid.net/docs" target="blank" data-nav-item="documentation">
+                                <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"
+                                            src="/assets/images/liquid_static.svg?v=xJrxRISXRbf9vfm5" alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"   
+                                            src="/assets/images/liquid_hover.svg?v=rgeTt9QZvKoyaX7F"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/liquid_white.svg?v=CZq55z1bVGgIR0bW"  alt="icon" /><span>Liquid Documentation</span>
+                            </a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_documentation_cln">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> 
+                      <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://docs.corelightning.org/docs" target="blank" data-nav-item="documentation_cln">
+                                <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"  src="/assets/images/cln_static.svg?v=hsF5mQZ2HXXMpQol"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"  src="/assets/images/cln_hover.svg?v=G6XiHMiCbxNvtf1d"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/cln_white.svg?v=AnntrCGQtvOq8cDq"  alt="icon" />
+                                            <span>Core Lightning Documentation</span>
+                            </a>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="header_primary_navigation_item font-h5 color-white"> <a class="header_primary_navigation_item_link header_primary_navigation_dropdown-button " id="nav-dropdown-about" href="#" onclick="mobileNavDropdown(event)"> Company <span>
+              <div class="arrow-icon">
+                <div class="arrow a-top"></div>
+                <div class="arrow a-bottom"></div>
+              </div>
+            </span> </a>
+          <ul class="header_primary_navigation_item_sub-list" id="primary_navigation_list_about">
+            <li class="header_primary_navigation_item_sub-list_header">
+              <ul class="subnav-grid-container">
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_research">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://research.blockstream.com/" data-nav-item="research"> <i class="fas fa-book-open header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Research</a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_about">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title " href="https://blockstream.com/about/" data-nav-item="about"> <i class="fas fa-building header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>About</a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_careers">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title " href="https://blockstream.com/careers/" data-nav-item="careers"> <i class="fas fa-user header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Careers</a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_brand-assets">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://design.blockstream.com/styleguide/branding/overview" data-nav-item="brand-assets" target="_blank"> <i class="fas fa-toolbox header_primary_navigation_item_sub-list_item_link_icon header_primary_navigation_item_sub-list_item_link_icon_font-awesome"></i>Brand
+                        Assets</a></div>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li class="header_primary_navigation_item font-h5 text-white store-link"> <a class="header_primary_navigation_item_link " href="https://store.blockstream.com/" target="_blank">Store</a>
+        </li>
+        <li class="header_primary_navigation_item font-h5 text-white"> <a class="header_primary_navigation_item_link header_primary_navigation_dropdown-button" id="nav-dropdown-support" href="#" onclick="mobileNavDropdown(event)"> Support <span>
+              <div class="arrow-icon">
+                <div class="arrow a-top"></div>
+                <div class="arrow a-bottom"></div>
+              </div>
+            </span> </a>
+          <ul class="header_primary_navigation_item_sub-list" id="primary_navigation_list_developer">
+            <li class="header_primary_navigation_item_sub-list_header">
+              <ul class="subnav-grid-container">
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_help-center">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> 
+                      <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://help.blockstream.com" target="blank" data-nav-item="help-center">
+                                <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"
+                                            src="/assets/images/help_center_static.svg?v=MYLj1ImmPbIVXNpy" alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"   
+                                            src="/assets/images/help_center_hover.svg?v=yIppvbvk9Do69_Jy"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/help_center_white.svg?v=OpbJ3pFhDIMp_Q_j"  alt="icon" /><span>Help Center</span>
+                        </a>
+                      </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_education">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> 
+                      <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://help.blockstream.com/education" target="blank" data-nav-item="education">
+                                 <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"
+                                            src="/assets/images/bitcoin_education_static.svg?v=P2FQRS8Z0wx7eAXc" alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"   
+                                            src="/assets/images/bitcoin_education_hover.svg?v=oheSPD3hB_sfcjo3"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/bitcoin_education_white.svg?v=lSzKcVSO9JwLHjRO"  alt="icon" /><span>Bitcoin Education</span>
+                      </a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item font-h4 text-white" id="primary_navigation_glossary">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> 
+                      <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://help.blockstream.com/education/glossary" target="blank" data-nav-item="glossary">
+                                <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"
+                                            src="/assets/images/glossary_static.svg?v=TTQTqcvxzcaVpzzX" alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"   
+                                            src="/assets/images/glossary_hover.svg?v=5oh5K4eUXIA1Owg7"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/glossary_white.svg?v=7daUCU_TPfPJbXU-"  alt="icon" /><span>Glossary</span>
+                        </a>
+                    </div>
+                  </div>
+                </li>
+                <li class="header_primary_navigation_item_sub-list_item" id="primary_navigation_local">
+                  <div class="header_primary_navigation_item_sub-list_item_link">
+                    <div class="header_primary_navigation_item_sub-list_item_link_block"> <a class="header_primary_navigation_item_sub-list_item_link_block_title" href="https://help.blockstream.com/local" target="blank" data-nav-item="local"> 
+                     <img class="header_primary_navigation_item_sub-list_item_link_block_title_img default-icon"
+                                            src="/assets/images/local_static.svg?v=ddVnIeQBHSWmNsAe" alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon"   
+                                            src="/assets/images/local_hover.svg?v=X4HLJt_MHifzeBjh"  alt="icon" />
+                                            <img class="header_primary_navigation_item_sub-list_item_link_block_title_img hover-icon-white" src="/assets/images/local_white.svg?v=PeKCBIjsPB3S1fo8"  alt="icon" /><span>Local</span>
+                     </a></div>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+  </header>    
+
+    <main class="main">
+      
+
+  
+  <div class="container-fluid wrapper">
+    <div class="row">
+      <div class="col-xs-12">
+        <div class="post-hero">
+    <figure class="post-hero__image">
+      <img
+        class="lazyload"
+        data-srcset="/content/images/size/w300/2026/04/1-yd7huqvwicyyyrgdbelvqw.png 300w,
+                /content/images/size/w600/2026/04/1-yd7huqvwicyyyrgdbelvqw.png 600w,
+                /content/images/size/w1000/2026/04/1-yd7huqvwicyyyrgdbelvqw.png 1000w,
+                /content/images/size/w2000/2026/04/1-yd7huqvwicyyyrgdbelvqw.png 2000w"
+        data-sizes="(max-width: 800px) 50vw,
+                (max-width: 1170px) 60vw,
+                1400px"
+        data-src="/content/images/size/w2000/2026/04/1-yd7huqvwicyyyrgdbelvqw.png"
+        src="/assets/images/img-placeholder-md.jpg?v=pq9J8DP_VxV7_s05"
+        alt="Simplicity: Jets Release"
+      />
+        <figcaption>A new developer preview of Simplicity introducing jets to streamline contract development</figcaption>
+    </figure>
+  <div class="post-hero__content">
+    <div class="post-hero__header">
+          <a class="tag-Simplicity Language post-hero__tag" href="/simplicity-language" 
+          title="Simplicity Language" aria-label="Simplicity Languages">Simplicity Language</a>
+          <a class="tag-Blockstream Research post-hero__tag" href="/blockstream-research" 
+          title="Blockstream Research" aria-label="Blockstream Researchs">Blockstream Research</a>
+    </div>
+
+    <h1 class="post-hero__title font-h2 text-white">Simplicity: Jets Release</h1>
+
+    <div class="post-hero__details">
+      <div class="post-hero__authors is-flex multi">
+          <div class="post-hero__author">
+              <span class="post-hero__author-icon" aria-label="Andrew Poelstra">
+                <i class="icon icon-user">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#user"></use>
+  </svg>
+</i>              </span>
+          </div>
+          <div class="post-hero__author">
+              <span class="post-hero__author-icon" aria-label="Russell O&#x27;Connor">
+                <i class="icon icon-user">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#user"></use>
+  </svg>
+</i>              </span>
+          </div>
+      </div>
+
+      <div class="post-hero__info">
+        <div class="post-hero__author-names font-p2 text-gray">
+          <a href="/author/andrew-poelstra/">Andrew Poelstra</a>, <a href="/author/russell-oconnor/">Russell O&#x27;Connor</a>
+        </div>
+
+        <time datetime="2020-04-04" class="post-hero__date font-p5 text-gray">
+          Apr 4, 2020
+        </time>
+      </div>
+    </div>
+  </div>
+</div>      </div>
+      <div class="col-xs-12 col-lg-8 col-xl-9">
+        <article class="post tag-simplicity-language tag-blockstream-research post-access-public has-sidebar">
+            <div class="social-share">
+  <a class="social-share__item js-share" tabindex="0"
+   href="https://x.com/intent/tweet?url=https%3A%2F%2Fblog.blockstream.com%2Fsimplicity-jets-release%2F&text=Simplicity%3A%20Jets%20Release"
+   target="_blank" rel="noopener noreferrer"
+   title="Share on X" aria-label="Share on X" style="display: flex; justify-content: center; align-items: center;">
+    <svg width="14" height="14" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="white"/>
+    </svg>
+  </a>
+  <a class="social-share__item js-share" tabindex="0"
+      data-type="facebook" data-title="Simplicity%3A%20Jets%20Release" data-url="https://blog.blockstream.com/simplicity-jets-release/"
+      title="Share on Facebook" aria-label="Share on Facebook">
+    <i class="icon icon-facebook icon--sm">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#facebook"></use>
+  </svg>
+</i>  </a>
+  <a class="social-share__item js-share" tabindex="0"
+      data-type="linkedin" data-title="Simplicity%3A%20Jets%20Release" data-url="https://blog.blockstream.com/simplicity-jets-release/"
+      title="Share on Linkedin" aria-label="Share on Linkedin">
+    <i class="icon icon-linkedin icon--sm">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#linkedin"></use>
+  </svg>
+</i>  </a>
+  <a href="mailto:?subject=Simplicity%3A%20Jets%20Release&body=https://blog.blockstream.com/simplicity-jets-release/"
+      class="social-share__item js-share" tabindex="0"
+      data-type="email" data-title="Simplicity%3A%20Jets%20Release" data-url="https://blog.blockstream.com/simplicity-jets-release/"
+      title="Share by email" aria-label="Share by email">
+    <i class="icon icon-mail icon--sm">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#mail"></use>
+  </svg>
+</i>  </a>
+  <a class="copy-link js-share js-copy-link" tabindex="0"
+    data-type="copy" data-title="Simplicity%3A%20Jets%20Release" data-url="https://blog.blockstream.com/simplicity-jets-release/"
+    title="Copy to clipboard" data-label="Copied!" aria-label="Copy to clipboard">
+    <i class="icon icon-copy icon--sm">
+  <svg class="icon__svg">
+    <use xlink:href="/assets/icons/feather-sprite.svg?v=Uc9WR8sZh_dpthZV#copy"></use>
+  </svg>
+</i>  </a>
+</div>
+          <div class="post__content">
+              <p>This week we are excited to announce a milestone in Simplicity development: a major new developer preview release with jets. Jets can be thought of as pre-made building blocks that can be combined together to construct complex Simplicity programs without having to build everything from scratch, simultaneously speeding up the process of developing Simplicity-based smart contracts while reducing their resource costs. We go into detail on this development below.</p><p>This release also introduces Simplicity support for <a href="https://github.com/roconnor-blockstream/bitcoin/tree/d4919e23bb48894915a5c4a3ac7277a03739f281?ref=blog.blockstream.com" rel="noopener ugc nofollow">test branches of Bitcoin</a> and <a href="https://github.com/ElementsProject/elements/tree/235b4b1bb86a41fa73e6a952a8b2696766112a07?ref=blog.blockstream.com" rel="noopener ugc nofollow">Elements</a>, making it easier for developers to start thinking about how Simplicity as a script language upgrade could work for Bitcoin in the future. To demonstrate the new functionality in this release we give details of some test transactions written using pure Simplicity validation logic. These transactions are signed with <a href="https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki?ref=blog.blockstream.com" rel="noopener ugc nofollow">BIP-Schnorr</a> signatures, implemented in Simplicity itself, on modified Bitcoin and Elements <a href="https://bitcoin.stackexchange.com/questions/70156/difference-between-regtest-and-testnet?ref=blog.blockstream.com" rel="noopener ugc nofollow">regtest networks</a>.</p><p>The test transactions demonstrate that Simplicity core is functionally complete, and is closer to being production-ready. While there is not yet any tooling available for developers, the code is available to download for anyone wanting to start experimenting with the new scripting language.</p><h1 id="an-intro-to-simplicity">An Intro to Simplicity</h1><p>Simplicity is a blockchain programming language expressly designed for formal verification of correctness and for efficiency. It was built to overcome the limitations of Bitcoin scripting on Bitcoin and “Bitcoin-like” chains (e.g. Elements and Liquid), introducing:</p><ul><li><strong>Introspection: </strong>allowing contracts to observe and control the amounts and destinations of transactions based on spend criteria.</li><li><strong>Generality:</strong> supports any program a developer can think of, while still guaranteeing the verifiability of resource costs.</li><li><strong>Extensibility:</strong> even new library-level functionality can be implemented in Simplicity itself—for example, Schnorr signatures.</li></ul><p>With these tools, developers can produce a wide variety of new Bitcoin and sidechain-based applications, including:</p><ul><li><strong>Vaults: </strong>users can secure their coins by requiring a devaulting withdrawal notice period before moving to their final destination. During the devaulting stage they can approve or cancel the withdrawal. This means that even if keys are stolen, an attacker cannot abscond with coins without giving the user sufficient time to detect and block the theft.</li><li><strong>Limit order swaps: </strong>a<strong> </strong>limitation of swaps made using the <a href="https://docs.blockstream.com/liquid/swap_tool.html?ref=blog.blockstream.com" rel="noopener ugc nofollow">Liquid Swap Tool</a> is the atomic swap contract only supports the execution of a trade of a fixed amount of an asset. A partial order match requires a new contract to be created. With Simplicity, traders can set up far more flexible swap contracts that support partially-filled orders. This enables the generation of “limit orders” with reduced settlement risk — useful for building P2P and non-custodial asset exchanges. Even more advanced uses are possible, including algorithmic trading or even smart contract-based derivatives.</li></ul><p>The language’s reference implementation is in the <a href="https://coq.inria.fr/?ref=blog.blockstream.com" rel="noopener ugc nofollow">Coq proof assistant</a> language, which allows users to create mathematical proofs of their programs’ semantics. As such, Simplicity is a very low-level language, consisting of nine primitive operators called <strong>combinators</strong>, which can be composed in various ways to create complete programs. While Simplicity is not <a href="https://en.wikipedia.org/wiki/Turing_completeness?ref=blog.blockstream.com" rel="noopener ugc nofollow">Turing complete</a>, it can verify the execution of a Turing-complete set of programs, which is the property we need for blockchain applications.</p><p>These combinators are pure functions, meaning that every time they are executed they have the same result. This allows Simplicity programs to be represented as trees (or <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph?ref=blog.blockstream.com" rel="noopener ugc nofollow">DAGs</a>) of combinators, where unused branches can be removed and known branches can be safely computed by optimized machine code rather than executing the full Simplicity code.</p><p>Simplicity combinators are very low-level, so Simplicity lacks native facilities for expressing even such basic concepts as <a href="https://en.wikipedia.org/wiki/Bitwise_operation?ref=blog.blockstream.com" rel="noopener ugc nofollow">bitwise</a> arithmetic or comparison of values. These operations and functions must instead be built up from Simplicity combinators, which in turn can be used to build a series of higher-level constructs until we can implement elliptic curve arithmetic and digital signature verification. Writing such a program is akin to building a signature verifier starting from a big bag of transistors — and this is exactly what Blockstream’s Russell O’Connor did to implement Schnorr signature verification.</p><h1 id="history">History</h1><p>The last technical blog update on Simplicity <a href="https://blockstream.com/2018/11/28/en-simplicity-github/?ref=blog.blockstream.com" rel="noopener ugc nofollow">was in November 2018</a>, when we announced the first source code release of the interpreter in multiple languages, along with a technical report detailing the language. This announcement marked a shift from Simplicity as a research project, to Simplicity as a production-targeted blockchain language intended for real use cases on real blockchains.</p><p>In September 2019, we released the first Simplicity developer release along with <a href="https://lists.ozlabs.org/pipermail/simplicity/2019/000018.html?ref=blog.blockstream.com" rel="noopener ugc nofollow">the first Simplicity transaction</a> being created on an Elements regtest network. While this was an exciting milestone, it was not complete enough to demonstrate the full power of Simplicity. In particular, the entirety of the signature verification was provided on-chain in Simplicity code. Execution of this program took many minutes, even on fast hardware, because pure Simplicity is a low-level language lacking hardware support for even simple operations such as bitwise addition.</p><p>Over the last year, we have also implemented Simplicity interpreters in <a href="https://github.com/elementsproject/simplicity/?ref=blog.blockstream.com" rel="noopener ugc nofollow">C</a> and <a href="https://github.com/apoelstra/rust-simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">Rust</a>, extended the language with Bitcoin and Elements primitives, and are pleased to have <a href="https://github.com/ElementsProject/simplicity/issues?q=is%3Aissue+author%3Aysangkok&ref=blog.blockstream.com" rel="noopener ugc nofollow">started receiving external contributions</a>.</p><h1 id="the-advent-of-jets">The Advent of Jets</h1><p>To deploy Simplicity in real life, we need a feature called <strong>jets</strong>. Jets are fragments of Simplicity programs that have efficient machine-code implementations and are implemented in a language such as C designed for raw performance. When validators recognize a Simplicity fragment for which a jet exists, they can substitute the high-performance C version of the code for the raw Simplicity. On a network with a standard set of jets, the original Simplicity code does not even need to be provided on the blockchain.</p><p>Earlier this year, by extending the C implementation to support jets, and implementing key functionality with a <a href="https://github.com/ElementsProject/simplicity/tree/C-secp256k1/C/secp256k1?ref=blog.blockstream.com" rel="noopener ugc nofollow">modified version of the high-performance libsecp256k1 library</a>, we were able to recreate the previous release’s test transaction, but now with a greatly reduced program size of 448 bytes, down from 14,635 bytes! For reference, a standard Bitcoin script of similar functionality is 107 bytes. There are still plenty more jets to implement, which will further reduce script sizes, but these numbers and the surprising compactness of Simplicity script object code, shows that Simplicity is practical and usable in a blockchain context.</p><h1 id="simplicity-on-bitcoin">Simplicity on Bitcoin</h1><p>Like Segregated Witnesses, which was originally developed by Blockstream researchers for Elements Alpha before being overhauled by the Bitcoin community, we hope that one day Simplicity will make its way into Bitcoin. To demonstrate what this might look like, we have made a <a href="https://github.com/roconnor-blockstream/bitcoin/tree/simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">branch of Bitcoin Core</a> to allow the creation of Simplicity-enabled Bitcoin regtest networks.</p><p>If Bitcoin had Simplicity scripting today, the recent BIP proposal for <a href="https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki?ref=blog.blockstream.com" rel="noopener ugc nofollow">Taproot</a> &amp; <a href="https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki?ref=blog.blockstream.com" rel="noopener ugc nofollow">Schnorr signatures</a> could instead have been implemented as a smart contract, without needing a soft-fork, as could the new Lightning network design <a href="https://www.blockstream.com/eltoo.pdf?ref=blog.blockstream.com" rel="noopener ugc nofollow">eltoo</a>.</p><p>In fact, we implement Schnorr signatures fully in Simplicity using jets as a Simplicity <em>“Hello, World!”</em> program — a programming benchmark to demonstrate the power and compactness of using scripting to build new signature schemes.</p><p>In our previous release, Schnorr signatures were implemented in pure, manual, inline Simplicity script. For this release, Schnorr signatures were implemented using jets, yielding further efficiency benefits as shown in the results below.</p><figure class="kg-card kg-image-card"><img src="https://blog.blockstream.com/content/images/2022/08/1-t09xjT34sO_HCCkif4_JDQ.png" class="kg-image" alt loading="lazy" width="748" height="318" srcset="https://blog.blockstream.com/content/images/size/w600/2022/08/1-t09xjT34sO_HCCkif4_JDQ.png 600w, https://blog.blockstream.com/content/images/2022/08/1-t09xjT34sO_HCCkif4_JDQ.png 748w" sizes="(min-width: 720px) 720px"></figure><h1 id="simplicity-on-elements-liquid">Simplicity on Elements &amp; Liquid</h1><p>Unlocking the full power of Simplicity is a long-term project, and we expect it to take some years for the technical community to get to grips with the potential of the new language. Uptake should be aided by being able to try Simplicity within the Bitcoin-like context of Elements, and later, Liquid.</p><p>As a step towards Simplicity in Liquid, we have also created a <a href="https://github.com/ElementsProject/elements/tree/simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">Simplicity-enabled branch of Elements</a>. This branch will be the basis of implementing Simplicity on Liquid later this year.</p><h1 id="future-work">Future Work</h1><p>Before Simplicity is ready for deployment on Liquid, some of the steps we’ll be working on include:</p><ul><li>Implementing <a href="https://github.com/sipa/bips/blob/bip-schnorr/bip-taproot.mediawiki?ref=blog.blockstream.com" rel="noopener ugc nofollow">Taproot</a> on Liquid.</li><li>Cleaning up our Elements branch and updating Simplicity to build on Taproot, which provides a more flexible script-updating mechanism than raw SegWit.</li><li>Determining an accurate cost model for Simplicity programs, starting from the formal Bit Machine (as in Section 3.5.2 of the <a href="https://github.com/ElementsProject/simplicity/blob/pdf/Simplicity-TR.pdf?ref=blog.blockstream.com" rel="noopener ugc nofollow">Simplicity Tech Report</a>) but modified to take account of jets. Similarly, designing an update mechanism to allow these costs to change as new jets are implemented.</li><li>Completing the implementation of Simplicity, including all resource estimation features, anti-denial-of-service mitigations, and finalizing the canonical program representation.</li></ul><p>In addition to this work on the consensus layer, to make Simplicity more usable we need to write high-level tools to enable programmers to work with the language. As a first step toward this, we intend to implement a Simplicity target for the <a href="https://github.com/apoelstra/rust-miniscript?ref=blog.blockstream.com" rel="noopener ugc nofollow">rust-miniscript library</a>, allowing users to compile Miniscript policies to Simplicity. By decompiling the resulting programs back to the policy language (called <strong>lifting</strong>), users can easily verify that the resulting programs have identical semantics to the corresponding Miniscript, allowing them to explore the additional powers of Simplicity starting from a rich but formally-verifiable baseline.</p><p>Building a new blockchain programming language is no easy task. We’re extremely proud of how much we’ve achieved since embarking on developing Simplicity in 2017, and are excited about building real things for real users in 2020.</p><p>To keep up with the latest Simplicity developments, make sure you <a href="https://blockstream.typeform.com/to/UmVglp?ref=blog.blockstream.com" rel="noopener ugc nofollow">sign up for our official newsletter</a> or subscribe to the <a href="https://lists.ozlabs.org/listinfo/simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">simplicity-dev mailing list</a>.</p><p>Our CEO, Adam Back, will be presenting a webinar on basics of Simplicity on the 8th of April at 16:00 UTC. It’ll be a great chance for bitcoiners to get their questions answered, so make sure you don’t miss it!</p><p><a href="https://blockstream.clickmeeting.com/simplicity-next-gen-smart-contracting-webinar/register?ref=blog.blockstream.com" rel="noopener ugc nofollow">Register here!</a></p><figure class="kg-card kg-image-card"><img src="https://blog.blockstream.com/content/images/2026/04/1-xbifr0xzrqrgekuxrxqgag.jpg" class="kg-image" alt loading="lazy" width="1276" height="714" srcset="https://blog.blockstream.com/content/images/size/w600/2026/04/1-xbifr0xzrqrgekuxrxqgag.jpg 600w, https://blog.blockstream.com/content/images/size/w1000/2026/04/1-xbifr0xzrqrgekuxrxqgag.jpg 1000w, https://blog.blockstream.com/content/images/2026/04/1-xbifr0xzrqrgekuxrxqgag.jpg 1276w" sizes="(min-width: 720px) 720px"></figure><p><strong>Developers who want to explore potential uses of Simplicity are encouraged to check out either of the <a href="https://github.com/roconnor-blockstream/bitcoin/tree/simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">Bitcoin</a> or <a href="https://github.com/ElementsProject/elements/tree/simplicity?ref=blog.blockstream.com" rel="noopener ugc nofollow">Elements</a> branches and start playing around, but we’d stress that for now, this should only be attempted by expert users.</strong></p><p><em>Note: This blog was originally posted at <a href="https://medium.com/blockstream/simplicity-jets-release-803db10fd589?ref=blog.blockstream.com">https://medium.com/blockstream/simplicity-jets-release-803db10fd589</a></em></p>
+
+          
+          </div>
+            <form id="newsletter"> 
+    <div class="newsletterRow">
+  <input type="email" placeholder="E-mail Address" id="email" name="email" required=""> 
+  <input type="hidden" id="captchaResponse" name="g-recaptcha-response"> 
+  <button class="g-btn primary-btn">Subscribe</button>
+    </div>
+    <div class="newsletterRow">
+    <p>If you have specific preferences, please, mark the topic(s) you would like to read:</p>
+    </div>
+    <div class="newsletterRow newsletterCol">
+    <label for="all">
+        	<input type="checkbox" value="all" name="newsletterPref[]" id="all" checked />All
+        <i class="fa fa-question-circle" aria-hidden="true"></i>
+        <span class="newsletter-tooltip">All topics</span>
+    </label>
+    <label for="bitcoinLayer2">
+        <input type="checkbox" value="bitcoinLayer2" name="newsletterPref[]" id="bitcoinLayer2" />Bitcoin Layer-2
+        <i class="fa fa-question-circle" aria-hidden="true"></i>
+        <span class="newsletter-tooltip">The latest on Core Lightning and Liquid</span>
+    </label>
+    <label for="research">
+        <input type="checkbox" value="research" name="newsletterPref[]" id="research" />Research
+        <i class="fa fa-question-circle" aria-hidden="true"></i>
+        <span class="newsletter-tooltip">Stay on the bleeding-edge of Bitcoin research with updates from the Blockstream Research team
+</span>
+    </label>
+    <label for="finance">
+        <input type="checkbox" value="finance" name="newsletterPref[]" id="finance" />Finance
+        <i class="fa fa-question-circle" aria-hidden="true"></i>
+        <span class="newsletter-tooltip">Analysis and updates on Blockstream Finance products like the BMN and BASIC Fund
+</span>
+    </label>
+        <label for="newsletter">
+        <input type="checkbox" value="newsletter" name="newsletterPref[]" id="newsletter" />Quarterly Update
+            <i class="fa fa-question-circle" aria-hidden="true"></i>
+            <span class="newsletter-tooltip">A concise, monthly newsletter on all-things Blockstream
+</span>
+    </label>
+    </div>
+</form>
+        </article>
+        
+      </div>
+      <div class="col-xs-12 col-lg-4 col-xl-3 has-sidebar">
+        <aside class="sidebar">
+  <div class="sidebar__section sidebar__outline-border">
+    <h4 class="sidebar__title font-h4">Blockstream</h4>
+    <div class="sidebar__description font-p3 text-gray">Bitcoin and digital asset infrastructure</div>
+    <h4 class="sidebar__title font-h4">Follow Us</h4>
+    <div class="social-links">
+  <a href="https://x.com/Blockstream" target="_blank" class="x-icon"> 
+    <svg width="12" height="12" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="white"/>
+    </svg> 
+  </a>
+  <a href="https://ca.linkedin.com/company/blockstream" target="_blank"> <i class="fab fa-linkedin-in"></i></a>
+  <a href="https://t.me/blockstream" target="_blank"> <i class="fab fa-telegram"></i> </a>
+  <a href="https://github.com/Blockstream" target="_blank"> <i class="fab fa-github"></i> </a>
+  <a href="https://www.youtube.com/channel/UCZNt3fZazX9cwWcC9vjDJ4Q" target="_blank"> <i class="fab fa-youtube"></i> </a>
+</div>
+  </div>
+
+     
+  <div class="sidebar__section">
+      <h4 class="sidebar__title font-h4">Blog Categories</h4>
+      <a class="sidebar__tag" href="/" title="all-posts" aria-label="all-posts">
+        <h5 class="sidebar__tag-name font-h5">All Posts</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-amp/" title="blockstream amp" aria-label="blockstream-amp">
+        <h5 class="sidebar__tag-name font-h5">Blockstream AMP</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-explorer/" title="blockstream explorer" aria-label="blockstream-explorer">
+        <h5 class="sidebar__tag-name font-h5">Blockstream Explorer</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-finance/" title="blockstream finance" aria-label="blockstream-finance">
+        <h5 class="sidebar__tag-name font-h5">Blockstream Finance</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-app/" title="blockstream app" aria-label="blockstream-app">
+        <h5 class="sidebar__tag-name font-h5">Blockstream App</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-jade/" title="blockstream jade" aria-label="blockstream-jade">
+        <h5 class="sidebar__tag-name font-h5">Blockstream Jade</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-research/" title="blockstream research" aria-label="blockstream-research">
+        <h5 class="sidebar__tag-name font-h5">Blockstream Research</h5>
+      </a>
+      <a class="sidebar__tag" href="/blockstream-satellite/" title="blockstream satellite" aria-label="blockstream-satellite">
+        <h5 class="sidebar__tag-name font-h5">Blockstream Satellite</h5>
+      </a>
+      <a class="sidebar__tag" href="/company/" title="company" aria-label="company">
+        <h5 class="sidebar__tag-name font-h5">Company</h5>
+      </a>
+      <a class="sidebar__tag" href="/cryptocurrency-data-feed/" title="cryptocurrency data feed" aria-label="cryptocurrency-data-feed">
+        <h5 class="sidebar__tag-name font-h5">Cryptocurrency Data Feed</h5>
+      </a>
+      <a class="sidebar__tag" href="/elements/" title="elements" aria-label="elememts">
+        <h5 class="sidebar__tag-name font-h5">Elements</h5>
+      </a>
+      <a class="sidebar__tag" href="/enterprise/" title="enterprise" aria-label="enterprise">
+        <h5 class="sidebar__tag-name font-h5">Enterprise</h5>
+      </a>
+      <a class="sidebar__tag" href="/insights/" title="insights" aria-label="insights">
+        <h5 class="sidebar__tag-name font-h5">Insights</h5>
+      </a>
+      <a class="sidebar__tag" href="/layer-2-report/" title="layer-2 roundup" aria-label="layer-2-report">
+        <h5 class="sidebar__tag-name font-h5">Layer-2 Report</h5>
+      </a>
+      <a class="sidebar__tag" href="/lightning-network/" title="lightning network" aria-label="lightning-network">
+        <h5 class="sidebar__tag-name font-h5">Lightning Network</h5>
+      </a>
+      <a class="sidebar__tag" href="/liquid-network/" title="liquid network" aria-label="liquid-network">
+        <h5 class="sidebar__tag-name font-h5">Liquid Network</h5>
+      </a>
+      <a class="sidebar__tag" href="/quantum/" title="quantum" aria-label="quantum">
+        <h5 class="sidebar__tag-name font-h5">Quantum</h5>
+      </a>
+      <a class="sidebar__tag" href="/quarterly-update/" title="quarterly-update" aria-label="quarterly-update">
+        <h5 class="sidebar__tag-name font-h5">Quarterly Update</h5>
+      </a>
+      <a class="sidebar__tag" href="/simplicity-language/" title="simplicity-language" aria-label="simplicity-language">
+        <h5 class="sidebar__tag-name font-h5">Simplicity Language</h5>
+      </a>
+  </div>
+
+  <div class="sidebar__section sidebar-search">
+    <input class="gh-search" placeholder="Search for an article" />
+    <i class="fal fa-search"></i>
+  </div>
+
+  <!-- Search Modal -->
+  <div id="searchModal" class="search-modal">
+      <div class="search-modal-content">
+        <div class="search-modal-input">
+          <span class="search-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="16" width="16" alt="Search"><path d="M23.38,21.62l-6.53-6.53a9.15,9.15,0,0,0,1.9-5.59,9.27,9.27,0,1,0-3.66,7.36l6.53,6.53a1.26,1.26,0,0,0,1.76,0A1.25,1.25,0,0,0,23.38,21.62ZM2.75,9.5A6.75,6.75,0,1,1,9.5,16.25,6.76,6.76,0,0,1,2.75,9.5Z" fill="#1c1c1c"></path></svg>
+          </span>
+          <span class="search-clear">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="11" width="11" ><path stroke-linecap="round" stroke-width="0.4" fill="#1c1c1c" stroke="#000000" stroke-linejoin="round" d="M.44,21.44a1.49,1.49,0,0,0,0,2.12,1.5,1.5,0,0,0,2.12,0l9.26-9.26a.25.25,0,0,1,.36,0l9.26,9.26a1.5,1.5,0,0,0,2.12,0,1.49,1.49,0,0,0,0-2.12L14.3,12.18a.25.25,0,0,1,0-.36l9.26-9.26A1.5,1.5,0,0,0,21.44.44L12.18,9.7a.25.25,0,0,1-.36,0L2.56.44A1.5,1.5,0,0,0,.44,2.56L9.7,11.82a.25.25,0,0,1,0,.36Z"></path></svg>
+          </span>
+          <input type="text" id="modalSearchInput" placeholder="Search posts, tags and authors">
+        </div>
+        <div id="searchResults">
+        </div>
+      </div>
+  </div>
+
+  <div class="sidebar__section sidebar__outline-border">
+    <script>
+
+document.addEventListener("DOMContentLoaded", () => {
+    const formSubmissionSb = document.getElementById("sidebar-newsletter");
+    const submitBtnSb = document.querySelector("#sidebar-newsletter .g-btn");
+    const emailSb = document.getElementById('sidebar-email');
+    const checkboxesSb = document.querySelectorAll('#sidebar-newsletter .sidebar-topics');
+    const allSb = document.getElementById('sidebar-all');
+
+
+  (function () {
+    const allSb = document.getElementById('sidebar-all')
+    const specificSb = document.getElementById('sidebar-specific');
+    const specificListSb = document.querySelector('.sidebar-specific-list');
+
+    specificSb.addEventListener('change', e => {
+        if(e.target.checked){
+          specificListSb.style.display = "block";
+        } 
+    });
+
+    allSb.addEventListener('change', e => {
+      if(e.target.checked){
+        specificListSb.style.display = "none";
+      } 
+    });
+
+})();
+
+    allSb.addEventListener('change', e => {
+        if(e.currentTarget.checked) {
+            let checkboxList = document.querySelectorAll('input[type="checkbox"]');
+            checkboxList.forEach(i => {
+                i.checked = false;
+            });
+        }
+    });
+
+    const inputFieldsSb = [emailSb];
+
+    let shouldValidateSb = false;
+    let isFormValidSb = false;
+
+    function resetElmSb(elm) {
+        elm.classList.remove("invalid-input");
+    }
+
+    function invalidateElmSb(elm) {
+        elm.classList.add("invalid-input");
+    }
+
+    const validateInputsSb = () => {
+        isFormValidSb = true;
+        resetElmSb(emailSb);
+
+        if (!emailSb.value || emailSb.value.indexOf("@") == -1 || emailSb.value.length < 5) {
+            isFormValidSb = false;
+            invalidateElmSb(emailSb);
+        }
+
+    };
+
+    function subscriptionsPrefSb(){
+        const preferencesList = [];
+        checkboxesSb.forEach(checkbox => {
+            if(checkbox.checked === true) {
+                preferencesList.push(checkbox.value);
+            }
+        });
+        return preferencesList;
+    }
+
+    function formSendSb(e){
+        e.preventDefault();
+        formSubmitedSb(e);
+        submitBtnSb.style.display = "none";
+        emailSb.style.display = "none";
+        formSubmissionSb.innerHTML = "<h4 class='submitted-message'>Thank you!</h4>";
+    }
+
+    function formSubmitedSb(e) {
+       e.preventDefault();
+       const formData = new FormData();
+       formData.append(
+           'email',
+           `${emailSb.value === "" ? "n/a" : emailSb.value}`
+       );
+       formData.append(
+        'subscriptions',
+        `${subscriptionsPrefSb()}`
+       );
+
+       grecaptcha.ready(function() {
+            grecaptcha.execute('6LcC8qMfAAAAAKQvHTUiJyxB_DO3nXwei4BFktyg', {action: 'contact'}).then(function(token) {
+                formData.append('g-recaptcha-response', token);
+                // Production version - Getform API endpoint
+                fetch("https://getform.io/f/5f1f20be-e019-4bcf-a218-dd770809b977",
+
+                // Development version - Getform API endpoint
+                // fetch("https://getform.io/f/06e2d1c9-dcd5-4e5d-85d8-f401f9aa0427",
+                    {
+                        method: "POST",
+                        body: formData,
+                    })
+                    .then(response => console.log(response))
+                    .catch(error => console.log(error));
+            });
+        });
+    
+    }
+
+    submitBtnSb.addEventListener("click", (e) => {
+        e.preventDefault();
+        shouldValidateSb = true;
+        validateInputsSb();
+        if (isFormValidSb) {
+            formSendSb(event);
+        }
+    });
+
+    inputFieldsSb.forEach((input) => input.addEventListener("input", () => {
+        validateInputsSb();
+    }));
+});
+</script>
+
+<form class="sidebar_form" id="sidebar-newsletter">
+  <h4 class="sidebar__title font-h4">Join the Conversation</h4>
+  <div class="sidebar__description font-p3 text-gray">Subscribe to have the latest announcements and most cutting-edge research from Blockstream delivered to your inbox.</div>
+  <label class="sidebar-inputContainer font-p3 text-gray" for="sidebar-all">
+    <input class="sidebar-topics" type="radio" name="sidebar-topics" id="sidebar-all" value="all" checked />Subscribe to all topics
+    <span class="sidebar-checkmark"></span>
+  </label>
+  <label class="sidebar-inputContainer font-p3 text-gray" for="sidebar-specific">
+    <input type="radio" name="sidebar-topics" id="sidebar-specific" value="specific" />Subscribe to select topics
+    <span class="sidebar-checkmark"></span>
+  </label>
+  <div class="sidebar-specific-list">
+    <label class="sidebar-inputContainer">
+      <input class="sidebar-topics" type="checkbox" value="bitcoinLayer2" name="sidebar-newsletterPref[]" id="sidebar-bitcoinLayer2" />Bitcoin
+      Layer-2
+      <span class="sidebar-checkmarkBox"></span>
+    </label>
+    <label class="sidebar-inputContainer">
+      <input class="sidebar-topics" type="checkbox" value="research" name="sidebar-newsletterPref[]" id="sidebar-research" />Research
+      <span class="sidebar-checkmarkBox"></span>
+    </label>
+    <label class="sidebar-inputContainer">
+      <input class="sidebar-topics" type="checkbox" value="finance" name="sidebar-newsletterPref[]" id="sidebar-finance" />Finance
+      <span class="sidebar-checkmarkBox"></span>
+    </label>
+    <label class="sidebar-inputContainer">
+      <input class="sidebar-topics" type="checkbox" value="newsletter" name="sidebar-newsletterPref[]" id="sidebar-newsletter" />Quarterly Update
+      <span class="sidebar-checkmarkBox"></span>
+    </label>
+  </div>
+  <input type="text" id="sidebar-email" placeholder="Email Address" />
+  <button class="g-btn primary-btn font-btn-2">Subscribe</button>
+</form>  </div>
+</aside>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  const searchInput = document.querySelector('.gh-search');
+  const searchModal = document.getElementById('searchModal');
+  const modalSearchInput = document.getElementById('modalSearchInput');
+  const searchResults = document.getElementById('searchResults');
+  const searchClear = document.querySelector('.search-clear');
+  const searchIcon = document.querySelector('.search-icon');
+
+  let currentPage = 0;
+  const size = 10;
+
+  searchInput.addEventListener('focus', function() {
+      searchModal.style.display = 'block';
+      modalSearchInput.focus();
+  });
+
+  modalSearchInput.addEventListener('input', function() {
+      currentPage = 0;
+      updateSearchResults(this.value);
+      if (this.value.length > 0) {
+          searchClear.style.display = 'flex'; 
+          searchIcon.style.display = 'none';  
+      } else {
+          searchClear.style.display = 'none';  
+          searchIcon.style.display = 'flex'; 
+      }
+  });
+
+  searchClear.addEventListener('click', function() {
+      modalSearchInput.value = '';         
+      searchResults.innerHTML = '';         
+      searchClear.style.display = 'none';   
+      searchIcon.style.display = 'flex';    
+      modalSearchInput.focus();             
+  });
+
+  window.addEventListener('click', function(event) {
+      if (event.target === searchModal) {
+          searchModal.style.display = 'none';
+            modalSearchInput.value = '';
+            searchResults.innerHTML = '';
+      }
+  });
+
+  function updateSearchResults(query, append = false) {
+    if (!query) {
+        searchResults.innerHTML = '';
+        currentPage = 0;
+        return;
+    }
+
+    const from = currentPage * size;
+
+    fetch(`https://blog-search-index.blockstream.com/search?query=${encodeURIComponent(query)}&from=${from}&size=${size}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            let htmlContent = '';
+
+            if (data.length === 0 && currentPage === 0) {
+                htmlContent = '<p class="no-matches">No matches found</p>';
+            } else {
+                data.forEach(item => {
+                    htmlContent += '<a class="search-item" href="' + item._source.url + '">';
+                    htmlContent += '<span class="search-item-title">' + item._source.title + '</span>';
+                    htmlContent += '<span class="search-item-text">' + item._source.plaintext.substring(0, 50) + '...</span>';
+                    htmlContent += '</a>';
+                });
+
+                const existingLoadMoreBtn = document.getElementById('loadMoreBtn');
+                if (existingLoadMoreBtn) {
+                    existingLoadMoreBtn.remove();
+                }
+
+                if (data.length === size) {
+                    htmlContent += '<div class="load-more-btn-wrapper"><button id="loadMoreBtn" class="load-more-btn">Show more results</button></div>';
+                }
+            }
+
+            if (append) {
+                searchResults.insertAdjacentHTML('beforeend', htmlContent);
+            } else {
+                searchResults.innerHTML = htmlContent;
+            }
+
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', function() {
+                    currentPage++;
+                    updateSearchResults(modalSearchInput.value, true);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            searchResults.innerHTML = '<p style="padding: 10px 26px;">Error loading results.</p>';
+        });
+  }
+
+  
+});
+
+</script>
+      </div>
+    </div>
+  </div>
+
+    </main>
+
+      <footer>
+    <div class="footer">
+        <div class="footer-sitemap">
+            <div class="footer-sitemap_logo-grid">
+                <img
+                src="https://blockstream.com/img/icons/logo_blks.png" alt="logo"> </a>
+                <div class="social-links">
+                    <div class="social-links">
+                        <a href="https://x.com/Blockstream" target="_blank" class="x-icon"> 
+                            <svg width="12" height="12" viewBox="0 0 1200 1227" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z" fill="white"/>
+                            </svg> 
+                        </a>
+                        <a href="https://ca.linkedin.com/company/blockstream" target="_blank"> <i class="fab fa-linkedin-in"></i> </a>
+                        <a href="https://t.me/blockstream" target="_blank"> <i class="fab fa-telegram"></i> </a>
+                        <a href="https://github.com/Blockstream" target="_blank"> <i class="fab fa-github"></i> </a>
+                        <a href="https://www.youtube.com/channel/UCZNt3fZazX9cwWcC9vjDJ4Q" target="_blank"> <i class="fab fa-youtube"></i> </a>
+                    </div>
+                </div>
+                <div class="footer-sitemap_logo-grid_terms_privacy">
+                    <ul>
+                        <li>
+                            <a class="font-p3 text-gray" href="https://blockstream.com/terms">Terms</a>
+                        </li>
+                        <li>
+                            <a class="font-p3 text-gray" href="https://blockstream.com/privacy">Privacy</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="footer-sitemap_logo-grid_copyright font-p3 text-gray">
+                    <script type="text/javascript">
+                        document.write("&copy; " + new Date().getFullYear());
+                    </script>
+                    Blockstream Corporation Inc.<br/> All rights reserved.
+                </div>
+            </div>
+            <div class="footer-sitemap_sitelinks">
+                <div class="footer-sitemap_products">
+                    <h4 class="footer-title font-h4 text-white">Products</h4>
+                    <div class="footer-sitemap_products_twoColGrid collapse">
+                        <ul>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/app">Blockstream App</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/jade">Blockstream Jade</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/enterprise">Blockstream Enterprise</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/amp">Blockstream AMP</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.info/">Blockstream Explorer</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstreamfunds.com/">Blockstream Asset Management</a></li>
+                        </ul>
+                        <ul>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/cryptofeed">Cryptocurrency Data Feed</a></li>              
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/liquid">Liquid Network</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/lightning">Core Lightning</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://blockstream.com/elements">Elements</a></li>
+                            <li> <a class="font-p3 text-gray" href="https://simplicity-lang.org/">Simplicity</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="footer-sitemap_otherlinks">
+                    <div>
+                        <h4 class="footer-title font-h4 text-white">Developers</h4>
+                        <ul class="collapse">
+                            <li>
+                                <a class="font-p3 text-gray" href="https://blog.blockstream.com/blockstream-research/" target="_blank">Engineering Blog</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://docs.liquid.net/docs" target="_blank">Liquid Documentation</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://docs.corelightning.org/docs" target="_blank">Core Lightning Documentation</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 class="footer-title font-h4 text-white">Company</h4>
+                        <ul class="collapse">
+                            <li>
+                                <a class="font-p3 text-gray" href="https://research.blockstream.com/">Research</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://blockstream.com/about">About</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://blockstream.com/careers">Careers</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 class="footer-title font-h4 text-white">Resources</h4>
+                        <ul class="collapse">
+                            <li>
+                                <a class="font-p3 text-gray" href="https://help.blockstream.com/">Help Center</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://help.blockstream.com/education">Bitcoin Education</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://help.blockstream.com/education/glossary">Glossary</a>
+                            </li>
+                            <li> <a class="font-p3 text-gray" href="https://help.blockstream.com/local">Local</a></li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://blockstream.com/contact">Contact</a>
+                            </li>
+                            <li>
+                                <a class="font-p3 text-gray" href="https://design.blockstream.com/styleguide/branding/overview">Brand Assets</a>
+                            </li>
+                        </ul>
+                    </div>
+                        
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>      <div class="scroll-to-top"></div>
+
+    <svg class="wave-gradient" version="1.1">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="var(--color-primary)" />
+      <stop offset="100%" stop-color="var(--color-secondary)" />
+    </linearGradient>
+  </defs>
+</svg>
+    <script>
+      if (config.enable_pwa && 'serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+
+    <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-W55GXHB"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+  </body>
+</html>

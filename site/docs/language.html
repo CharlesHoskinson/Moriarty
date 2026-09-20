@@ -1,0 +1,443 @@
+<h1>Current formal syntax and semantics</h1>
+<p class="lede">A program first belongs to a particular language profile. Its grammar determines the terms that can be written; its semantics determines the executions and rejections those terms denote.</p>
+<aside class="status">Implementation reference as recorded on September 19, 2026. The profiles below have distinct scopes. A parsed program, a local evaluation and a native ledger proof are different results; the general correspondence between them remains an obligation.</aside>
+<p>The definitions are presented together so that a reader can follow the passage from a source expression to its operational meaning. The current local financial-agreement-source/5 profile supports bounded protected financial actions, while the historical repayment projection supplies a narrower reduction system. Neither definition is silently enlarged to cover the future features in the <a href="requirements.html">requirements agenda</a>.</p>
+<nav class="toc" aria-label="On this page"><a href="#syntax">Syntax and profiles</a><a href="#semantics">Operational semantics</a></nav>
+<h2 id="syntax">Syntax and source profiles</h2>
+<p>The version numbers name separate contracts: expression-source/1 elaborates to moriarty-expression-contract/1, the 40-constructor Core; financial-agreement-source/3 uses moriarty-financial-expression-contract/2; financial-agreement-source/5 uses moriarty-financial-expression-contract/4. The financial Core versions extend a different contract family, so matching a version number alone does not establish compatibility.</p>
+<aside class="status">Implemented local source profiles, as recorded on September 19, 2026. A parsed or locally evaluated program is not evidence of a native proof or ledger settlement.</aside>
+<p>Moriarty files use <code>.mori</code>. Each header selects a versioned language profile. Syntax, static checking, runtime execution and backend admission are separate boundaries.</p>
+<table><thead><tr><th>Profile</th><th>Scope</th></tr></thead><tbody>
+<tr><td>bounded-atomic/1</td><td>Existing atomic loan, swap and Compact examples.</td></tr>
+<tr><td>successor-syntax/0</td><td>Successor parser and formatter; a separate funded-source/0 API admits a smaller executable subset.</td></tr>
+<tr><td>expression-source/1</td><td>Trusted-schema, one-action frontend for the 40-constructor expression Core.</td></tr>
+<tr><td>financial-expression-source/1</td><td>Eight additional pure constructors, including shares, variants, UInt256 and dimensional arithmetic; no financial settlement.</td></tr>
+<tr><td>financial-agreement-source/1–5</td><td>Successive schema, multiple-action, PRE-read, POST-read and local Originate/Accrue profiles. Their contracts remain distinct.</td></tr>
+</tbody></table>
+<p>The complete latest implemented grammar follows. <a href="#semantics">Semantics</a> defines evaluation and rejection; <a href="requirements.html#zkir">ZKIRv4 requirements</a> describe proposed capabilities whose source-language implementations remain open.</p>
+<h3>Successor source grammar (EBNF)</h3>
+<p>This is the complete syntax grammar for <strong><code>moriarty-financial-agreement-source/5</code></strong>, reproduced from the <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf">canonical EBNF</a>. It admits uninitialized state, record and operation declarations, multiple named actions, six generic financial PRE reads, and six Ensure-only financial POST reads. Protected Originate and Accrue use nested <code>record&lt;Row&gt;{...}</code> constructors and <code>u64(...)</code> literals. The parser, formatter, checker and local funded evaluator support that profile. Historical full grammars remain separate: <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/grammar.ebnf"><code>syntax/0</code></a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf"><code>expression-source/1</code></a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf"><code>financial-expression-source/1</code></a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf"><code>agreement-source/1</code></a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf"><code>agreement-source/2</code></a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf"><code>agreement-source/3</code></a> and <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf"><code>agreement-source/4</code></a>. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md">source contract</a> defines the <code>/5</code> schema binding, Core <code>/4</code> constructors, lifecycle kernel evaluation, diagnostics and work rules. The earlier <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/expression-source.md">expression-source contract</a> still describes the trusted-schema one-action factory. Complete successor authoring, general K correspondence and Preview settlement through this full language profile remain open; scoped loan and swap results do not establish that complete path.</p>
+<p>The grammar uses <strong>Extended Backus–Naur Form (EBNF)</strong> with ISO/IEC 14977 notation. Production names use letters and digits; they are names in this specification, not Moriarty source keywords.</p>
+<table>
+<thead>
+<tr>
+<th>Notation</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>=</code> and <code>;</code></td>
+<td>Define and end a production</td>
+</tr>
+<tr>
+<td><code>,</code></td>
+<td>Concatenation: match items in order</td>
+</tr>
+<tr>
+<td><code>|</code></td>
+<td>Alternatives: match one choice</td>
+</tr>
+<tr>
+<td><code>[ ... ]</code></td>
+<td>Optional: zero or one occurrence</td>
+</tr>
+<tr>
+<td><code>{ ... }</code></td>
+<td>Repetition: zero or more occurrences</td>
+</tr>
+<tr>
+<td><code>( ... )</code></td>
+<td>Group an EBNF expression</td>
+</tr>
+<tr>
+<td><code>"..."</code></td>
+<td>Literal source text</td>
+</tr>
+<tr>
+<td><code>? ... ?</code></td>
+<td>A token or EOF condition defined by the lexical specification</td>
+</tr>
+<tr>
+<td><code>(* ... *)</code></td>
+<td>A comment in the grammar specification</td>
+</tr>
+</tbody>
+</table>
+<p>Quoted punctuation denotes Moriarty source text. Unquoted punctuation above belongs to EBNF; source comments instead use <code>//</code> or <code>/* ... */</code>.</p>
+<p>The grammar below is the complete <code>/5</code> syntax, typeset from the canonical file, which remains authoritative. Its header comment records the fixed conditions: the source header must match exactly and older profiles remain separate; lexical rules are <code>lexical.md</code> plus profile-gated <code>[</code>, <code>]</code> and <code>?</code> punctuation; <code>record</code> and <code>operation</code> are profile-gated declaration spellings; state fields have no initializer; parentheses create no AST nodes; conditional is right-associative below Or; generic, financial-read and financial-post-read names are excluded from <code>ordinaryPrimaryName</code>; integer lexical tokens remain unsigned canonical decimals with <code>-</code> as a separate token; the source contract supplies all type, domain, metadata and diagnostic rules. The compact spellings in the preserved header comment, such as source65536, denote these simultaneous bounds: 65,536 source UTF-8 bytes, 8,192 tokens, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action, 64 record fields, 64 ordinary call arguments, 128 collection-intrinsic arguments and 256 action parameters. These source-parser limits are separate from the expression Core contract’s own 4,096-node bound; satisfying the parser does not waive Core admission.</p>
+<pre><code class="language-ebnf">(* ISO/IEC 14977 EBNF for moriarty-financial-agreement-source/5.
+   Source header must match exactly; /1, /2, /3, /4 and older profiles remain separate.
+   Lexical rules are lexical.md plus the financial-expression punctuation
+   [ ] and ?. record and operation are profile-gated declaration spellings
+   and are not added to the global keyword catalog.
+   State fields in this profile have no initializer.
+   Multiple actionDecl forms are admitted in declaration order.
+   Zero actions is a semantic SOURCE_ACTION_COUNT rejection.
+   Parentheses create no AST nodes. Conditional is right-associative below Or.
+   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
+   declarations256, statements256 per action, record fields64, ordinary call
+   arguments64, collection intrinsic arguments128, action parameters256.
+   Integer lexical tokens remain unsigned canonical decimals; - is separate.
+   financialRead and financialPostRead use typeArgs; exactly one simple
+   generic symbol is a static SOURCE_ARITY / SOURCE_TYPE_SHAPE rule, not a
+   parse rejection. financialPostRead is legal only in ensures.
+   The source contract supplies all type/domain/metadata and diagnostic rules.
+*)
+
+program = profileDecl, agreementDecl, ? end of file ? ;
+
+profileDecl = &quot;profile&quot;, stringToken, &quot;;&quot; ;
+
+agreementDecl = &quot;agreement&quot;, identifier, &quot;{&quot;, { declaration }, &quot;}&quot; ;
+
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | recordDecl
+            | operationDecl
+            | uninitializedStateDecl
+            | actionDecl ;
+
+unitDecl = &quot;unit&quot;, identifier, &quot;;&quot; ;
+
+partyDecl = &quot;party&quot;, identifier, &quot;;&quot; ;
+
+assetDecl = &quot;asset&quot;, identifier, &quot;:&quot;, type, &quot;;&quot; ;
+
+recordDecl = &quot;record&quot;, identifier, &quot;{&quot;, { recordField }, &quot;}&quot; ;
+
+recordField = identifier, &quot;:&quot;, type, &quot;;&quot; ;
+
+operationDecl = &quot;operation&quot;, identifier, &quot;:&quot;, type, &quot;;&quot; ;
+
+uninitializedStateDecl = &quot;state&quot;, identifier, &quot;:&quot;, type, &quot;;&quot; ;
+
+actionDecl = &quot;action&quot;, identifier, &quot;(&quot;, [ parameters ], &quot;)&quot;,
+              &quot;{&quot;, { statement }, { postcondition }, &quot;}&quot; ;
+
+parameters = parameter, { &quot;,&quot;, parameter } ;
+
+parameter = identifier, &quot;:&quot;, type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = &quot;requires&quot;, expression, &quot;;&quot; ;
+
+binding = &quot;let&quot;, identifier, &quot;=&quot;, expression, &quot;;&quot; ;
+
+update = &quot;next&quot;, &quot;.&quot;, identifier, &quot;=&quot;, expression, &quot;;&quot; ;
+
+emission = &quot;emit&quot;, identifier, ( &quot;{&quot;, [ effectFields ], &quot;}&quot; | expression ), &quot;;&quot; ;
+
+effectFields = effectField, { &quot;,&quot;, effectField } ;
+
+effectField = identifier, &quot;:&quot;, expression ;
+
+postcondition = &quot;ensures&quot;, expression, &quot;;&quot; ;
+
+type = identifier, [ typeArgs ] ;
+
+typeArgs = &quot;&lt;&quot;, typeArgument, { &quot;,&quot;, typeArgument }, &quot;&gt;&quot; ;
+
+typeArgument = type | signedInteger ;
+signedInteger = [ &quot;-&quot; ], integerToken ;
+
+expression = conditional ;
+
+conditional = disjunction, [ &quot;?&quot;, expression, &quot;:&quot;, conditional ] ;
+
+disjunction = conjunction, { &quot;or&quot;, conjunction } ;
+
+conjunction = negation, { &quot;and&quot;, negation } ;
+
+negation = { &quot;not&quot; }, comparison ;
+
+comparison = sum, [ comparisonOp, sum ] ;
+
+comparisonOp = &quot;==&quot; | &quot;!=&quot; | &quot;&lt;&quot; | &quot;&lt;=&quot; | &quot;&gt;&quot; | &quot;&gt;=&quot; ;
+
+sum = product, { ( &quot;+&quot; | &quot;-&quot; ), product } ;
+
+product = postfix, { &quot;*&quot;, postfix } ;
+
+postfix = primary, { &quot;.&quot;, identifier | &quot;[&quot;, expression, &quot;]&quot; } ;
+
+ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record, amount, shares, variant, project_variant, to_uint, outstanding, principal, accrued, balance, allowance_remaining, allowance_spent, post_outstanding, post_principal, post_accrued, post_balance, post_allowance_remaining, post_allowance_spent ? ;
+
+primary = &quot;-&quot;, integerToken
+        | integerToken
+        | stringToken
+        | &quot;true&quot;
+        | &quot;false&quot;
+        | ordinaryPrimaryName, [ &quot;(&quot;, [ arguments ], &quot;)&quot; ]
+        | genericCall
+        | dynamicOrLiteral
+        | financialGeneric
+        | financialRead
+        | financialPostRead
+        | recordLiteral
+        | &quot;(&quot;, expression, &quot;)&quot; ;
+
+genericCall = ( &quot;some&quot; | &quot;none&quot; | &quot;collection&quot; | &quot;quantity&quot; ),
+              &quot;&lt;&quot;, typeArgument, { &quot;,&quot;, typeArgument }, &quot;&gt;&quot;,
+              &quot;(&quot;, [ arguments ], &quot;)&quot; ;
+
+dynamicOrLiteral = ( &quot;amount&quot; | &quot;shares&quot; ), [ typeArgs ],
+                   &quot;(&quot;, [ arguments ], &quot;)&quot; ;
+
+financialGeneric = ( &quot;variant&quot; | &quot;project_variant&quot; | &quot;to_uint&quot; ),
+                   typeArgs, &quot;(&quot;, [ arguments ], &quot;)&quot; ;
+
+financialRead = ( &quot;outstanding&quot; | &quot;principal&quot; | &quot;accrued&quot; | &quot;balance&quot;
+                | &quot;allowance_remaining&quot; | &quot;allowance_spent&quot; ),
+                typeArgs, &quot;(&quot;, [ arguments ], &quot;)&quot; ;
+
+financialPostRead = ( &quot;post_outstanding&quot; | &quot;post_principal&quot; | &quot;post_accrued&quot;
+                    | &quot;post_balance&quot; | &quot;post_allowance_remaining&quot;
+                    | &quot;post_allowance_spent&quot; ),
+                    typeArgs, &quot;(&quot;, [ arguments ], &quot;)&quot; ;
+
+recordLiteral = &quot;record&quot;, &quot;&lt;&quot;, type, &quot;&gt;&quot;, &quot;{&quot;, [ effectFields ], &quot;}&quot; ;
+
+arguments = expression, { &quot;,&quot;, expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+stringToken = ? JSON string token defined in lexical.md ? ;
+</code></pre>
+<p>The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/lexical.md">lexical specification</a> defines the referenced tokens and their source spans. Identifiers match <code>[A-Za-z][A-Za-z0-9_]*</code>, are case-sensitive, and cannot be keywords. Integers are canonical unsigned decimals (<code>0</code> or a nonzero digit followed by digits); strings use JSON escapes and must decode to Unicode scalar values. Only ASCII space, tab, CR and LF separate tokens as whitespace. Source comments use <code>//</code> or non-nesting <code>/* ... */</code>; a bare <code>/</code> is not an operator. Input must be valid UTF-8, with no BOM stripping or Unicode normalization.</p>
+<p>The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/expression-source.md">expression-source bounds</a> extend the base <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/syntax-profile.json">syntax bounds</a> and apply together: 65,536 source UTF-8 bytes, 64 ASCII characters per identifier, 1,024 decoded UTF-8 bytes per string, 78 digits per integer, 8,192 tokens including EOF, 8,192 AST nodes, nesting depth 64, 256 declarations, 256 statements per action including <code>ensures</code>, 256 action parameters, 128 collection-intrinsic arguments, and 64 ordinary call arguments or effect fields. These parser limits are separate from the atomic execution bounds and from financial runtime limits.</p>
+<p>Syntax acceptance does not imply execution. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/funded-source.md">bounded funded source profile</a>, <code>moriarty-funded-source/0</code>, uses the older <code>moriarty-successor-syntax/0</code> source header and <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/grammar.ebnf">grammar</a> through a separate preparation API. It supports a typed subset of unit, party, asset and action declarations with explicit <code>Transfer</code> and <code>Repay</code> emissions, producing local <code>Prepared</code> candidates. It rejects state and const declarations, <code>requires</code>, <code>let</code>, <code>next</code>, <code>ensures</code>, projections and operators, although those forms appear in its syntax/0 grammar. Its numeric values are limited to UInt128. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/examples/funded-partial-payment.mori">funded example</a> exercises that subset; the separate <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/examples/partial-payment.mori">syntax-only example</a> does not implement a funded payment. Neither parsing nor local preparation establishes authorization, a proof, ledger acceptance or source/Core/K correspondence.</p>
+<h2 id="semantics">Operational semantics</h2>
+<aside class="status">Executable local semantics and scoped native K evidence exist. Finite matching cases do not establish a general source/Core/K/backend correspondence theorem.</aside>
+<p>Static judgments describe admissible programs. Small-step rules describe execution. K supplies executable operational definitions; financial properties and cross-layer correspondence remain separate proof obligations. The verification effort targets Midnight’s native proof stack and does not require the Lean theorem prover.</p>
+<h3>Current lifecycle boundary</h3>
+<p>The local financial-agreement-source/5 profile binds the scoped Core /4 lifecycle. It checks all actions, selects one, admits financial inputs and snapshots, evaluates the expression prefix once, executes the protected financial actions once, and evaluates the Ensure-only suffix once. PRE reads remain stable throughout the call. POST reads inspect the tentative post-state. Rejection publishes no tentative financial effects or used identifiers.</p>
+<p>The protected operations are Transfer, Repay, Originate and Accrue. The work accounting includes expression prefix, kernel actions and suffix. This local protected financial evaluator is distinct from the optional Federated DeFi Kernel. This is a local evaluation contract; local JSON state is not ledger acceptance. See the <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md">source /5 contract</a> and <a href="requirements.html#architecture">language and federation responsibilities</a>.</p>
+<p>The September 17 native K run matched 125 expression cases, 104 lifecycle cases and six Unicode probes. These finite results do not close general correspondence or full acceptance of the SP02 authoring and SP03 operational-semantics sprint contracts. The historical repayment projection and expression rules below retain their own scopes.</p>
+<h3>Small-step semantics (implemented repayment subset)</h3>
+<p>This presentation uses <strong>Felleisen–Hieb reduction semantics</strong>: terms, evaluation contexts, primitive contractions, context closure and terminal answers. Felleisen and Hieb's <a href="https://plv.mpi-sws.org/plerg/papers/felleisen-hieb-92-2up.pdf"><em>Revised Report</em></a>, §2 Definitions 2.1/2.3 and §3.1, supplies the presentation method; its metatheorems are not claims about Moriarty. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/reduction-semantics-textbooks-2026-09-09/CORPUS.md">downloaded open textbooks and Redex corpus</a> and <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/reduction-semantics-textbooks-2026-09-09/BEST-PRACTICES.md">source-linked practices</a> provide further references.</p>
+<p>The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/formal/k/moriarty.k">K definition</a> implements the provisional <strong><code>moriarty-funded-repayment/0</code></strong> projection: one Transfer, optionally followed by one Repay; two initial balances, one allowance, one obligation and empty used-ID lists. It supports <code>AccrualFirst</code>, <code>PrincipalFirst</code> and <code>ProRata</code>, with explicit <code>none</code>, <code>floor</code> or <code>ceil</code> conversion rounding. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/numeric-k-2026-09-09/README.md">numeric extension's evidence</a> records its execution and review status. This repayment projection excludes full successor expressions and arbitrary action sequences. Later expression and lifecycle profiles are separate definitions; general correspondence proofs remain open.</p>
+<p>The codec admits closed records and canonical UInt128 fields. K checks positive conversion mantissa and scale at most 18 before reaching the stage that computes powers or division. Invalid financial values such as zero mantissa or a huge scale reach K and reject; malformed records and unsupported collection/action shapes stop at the codec. Raw K terms outside this admitted domain are not covered.</p>
+<p><strong>Terms and contexts.</strong> <span class="math-inline" data-tex="P"></span> is a packet and <span class="math-inline" data-tex="H"></span> its codec-supplied digest. <span class="math-inline" data-tex="s, r"></span> are sender/receiver row indices (<span class="math-inline" data-tex="-1"></span> means absent). <span class="math-inline" data-tex="x, q, u, c, v"></span> are intermediate integers. <span class="math-inline" data-tex="\varepsilon"></span> is empty computation, <span class="math-inline" data-tex="\rhd"></span> sequencing, and <span class="math-inline" data-tex="\square"></span> one context hole. This is explanatory notation, not raw K syntax.</p>
+<div class="math-block" data-tex="\begin{array}{llcl}
+\text{Instruction} &amp; a &amp; ::= &amp; \mathsf{start}(P) \mid \mathsf{inspect}(P,s,r) \mid \mathsf{ensure}(H,b,\mathit{code},i) \\
+&amp; &amp; \mid &amp; \mathsf{convert}(P,s,r) \mid \mathsf{divide}(P,s,r,x) \mid \mathsf{round}(P,s,r,q,u) \\
+&amp; &amp; \mid &amp; \mathsf{fund}(P,s,r,c) \mid \mathsf{allocate}(P,s,r,c) \mid \mathsf{split}(P,s,r,c) \\
+&amp; &amp; \mid &amp; \mathsf{finishT}(P,s,r) \mid \mathsf{finishR}(P,s,r,c,v) \\[6pt]
+\text{Computation} &amp; k &amp; ::= &amp; \varepsilon \mid a \mid k \rhd k \\[6pt]
+\text{Context} &amp; E &amp; ::= &amp; \square \mid E \rhd k \\[6pt]
+\text{Program} &amp; t &amp; ::= &amp; \mathsf{run}_H(k) \mid \mathsf{prepared}(H,F) \mid \mathsf{rejected}(H,\mathit{code},i)
+\end{array}"></div>
+
+<p>Sequences are identified up to associativity and the two unit equations <span class="math-inline" data-tex="\varepsilon \rhd k = k = k \rhd \varepsilon"></span>, so contexts select the first pending instruction and retain its suffix. There is no <span class="math-inline" data-tex="k \rhd E"></span> context that skips an unfinished instruction, and no context enters packet data or terminal answers. Only programs reachable from <span class="math-inline" data-tex="\mathsf{run}_H(\mathsf{start}(P))"></span> for admitted <span class="math-inline" data-tex="P"></span> are in the domain.</p>
+<p><strong>Pure helpers and guards.</strong> Within a repayment rule, <span class="math-inline" data-tex="n"></span> is nominal payment, <span class="math-inline" data-tex="m"></span> conversion mantissa, <span class="math-inline" data-tex="\ell"></span> scale, <span class="math-inline" data-tex="\rho"></span> rounding mode, <span class="math-inline" data-tex="p, a"></span> principal/accrued debt, <span class="math-inline" data-tex="T"></span> transferred cash and <span class="math-inline" data-tex="\lambda"></span> allocation rule, all read from <span class="math-inline" data-tex="P"></span>. Let <span class="math-inline" data-tex="U = 2^{128} - 1"></span> and write <span class="math-inline" data-tex="g(b, \mathit{code})"></span> for <span class="math-inline" data-tex="\mathsf{ensure}(H, b, \mathit{code}, 1)"></span>. <span class="math-inline" data-tex="R(\rho, q, u)"></span> returns <span class="math-inline" data-tex="q"></span>, except that ceil with nonzero remainder returns <span class="math-inline" data-tex="q + 1"></span>.</p>
+<div class="math-block" data-tex="R(\rho,q,u) =
+\begin{cases}
+q + 1 &amp; \rho = \mathtt{ceil} \text{ and } u \neq 0 \\
+q &amp; \text{otherwise}
+\end{cases}"></div>
+
+<div class="math-block" data-tex="\mathit{DP}(\lambda,n,p,a) =
+\begin{cases}
+n - \min(n,a) &amp; \lambda = \mathtt{AccrualFirst} \\
+\min(n,p) &amp; \lambda = \mathtt{PrincipalFirst} \\
+\left\lfloor \dfrac{n\,p}{p+a} \right\rfloor &amp; \lambda = \mathtt{ProRata}
+\end{cases}"></div>
+
+<p>The ProRata helper is used only after a positive outstanding obligation and a fitting <span class="math-inline" data-tex="n\,p"></span> product have passed their guards. Integer division therefore has a positive denominator. Helpers abstract internal K equational steps; they are not financial action-work charges.</p>
+<p><strong>Primitive contractions.</strong> <span class="math-inline" data-tex="\mathit{checks}(P,s,r)"></span> contains 15 ordered guards for Transfer-only or 21 initial guards for repayment. <span class="math-inline" data-tex="\mathit{tail}(P,s,r)"></span> is <span class="math-inline" data-tex="\mathsf{finishT}"></span> or <span class="math-inline" data-tex="\mathsf{convert}"></span>, respectively. Both are exact instruction-list abbreviations, not new program constructors. In the SPLIT rule, <span class="math-inline" data-tex="d"></span> abbreviates <span class="math-inline" data-tex="\mathit{DP}(\lambda,n,p,a)"></span>.</p>
+<div class="math-block" data-tex="\begin{array}{rcll}
+\mathsf{start}(P) &amp; \leadsto &amp; \mathsf{inspect}(P,\mathit{sender}(P),\mathit{receiver}(P)) &amp; \text{(START)} \\[4pt]
+\mathsf{inspect}(P,s,r) &amp; \leadsto &amp; \mathit{checks}(P,s,r) \rhd \mathit{tail}(P,s,r) &amp; \text{(EXPAND)} \\[4pt]
+\mathsf{ensure}(H,\mathsf{true},\mathit{code},i) &amp; \leadsto &amp; \varepsilon &amp; \text{(CHECK)} \\[10pt]
+\mathsf{convert}(P,s,r) &amp; \leadsto &amp; g(n\,m \le U,\ \mathtt{OVERFLOW}) \rhd \mathsf{divide}(P,s,r,n\,m) &amp; \text{(CONVERT)} \\[4pt]
+\mathsf{divide}(P,s,r,x) &amp; \leadsto &amp; \mathsf{round}\bigl(P,s,r,\ x\ \mathrm{div}\ 10^{\ell},\ x \bmod 10^{\ell}\bigr) &amp; \text{(DIVIDE)} \\[4pt]
+\mathsf{round}(P,s,r,q,u) &amp; \leadsto &amp; g(\rho \neq \mathtt{none} \lor u = 0,\ \mathtt{INEXACT\_CONVERSION}) &amp; \text{(ROUND)} \\
+&amp; &amp; \quad \rhd\ \mathsf{fund}(P,s,r,R(\rho,q,u)) &amp; \\[4pt]
+\mathsf{fund}(P,s,r,c) &amp; \leadsto &amp; g(c \le U,\ \mathtt{OVERFLOW}) \rhd g(c &gt; 0,\ \mathtt{DUST}) &amp; \text{(FUND)} \\
+&amp; &amp; \quad \rhd\ g(c \le T,\ \mathtt{INSUFFICIENT\_UNALLOCATED}) &amp; \\
+&amp; &amp; \quad \rhd\ \mathsf{allocate}(P,s,r,c) &amp; \\[4pt]
+\mathsf{allocate}(P,s,r,c) &amp; \leadsto &amp; g(\lambda \neq \mathtt{ProRata} \lor n\,p \le U,\ \mathtt{OVERFLOW}) &amp; \text{(ALLOCATE)} \\
+&amp; &amp; \quad \rhd\ \mathsf{split}(P,s,r,c) &amp; \\[4pt]
+\mathsf{split}(P,s,r,c) &amp; \leadsto &amp; g(d \le p \land n - d \le a,\ \mathtt{ALLOCATION\_COMPONENT}) &amp; \text{(SPLIT)} \\
+&amp; &amp; \quad \rhd\ \mathsf{finishR}(P,s,r,c,d) &amp;
+\end{array}"></div>
+
+<p>The stage boundaries matter: a huge scale cannot trigger exponentiation before its state guard, and a product that exceeds UInt128 cannot be divided first to obtain an apparently fitting answer. The definition uses K instructions, rather than eager numeric helpers over the whole future continuation, for these boundaries.</p>
+<p><strong>Contextual and terminal reductions.</strong> <span class="math-inline" data-tex="\to"></span> is generated by context closure and the following whole-program rules. ABORT discards the entire continuation, including finalization; rejected output has no tentative state or effects.</p>
+<div class="math-block" data-tex="\frac{a \leadsto k&#x27;}{\mathsf{run}_H(E[a]) \to \mathsf{run}_H(E[k&#x27;])}\ \text{(CONTEXT)}"></div>
+
+<div class="math-block" data-tex="\begin{array}{rcll}
+\mathsf{run}_H\bigl(E[\mathsf{ensure}(H,\mathsf{false},\mathit{code},i)]\bigr) &amp; \to &amp; \mathsf{rejected}(H,\mathit{code},i) &amp; \text{(ABORT)} \\[6pt]
+\mathsf{run}_H(\mathsf{finishT}(P,s,r)) &amp; \to &amp; \mathsf{prepared}(H,\mathit{FT}(P,s,r)) &amp; \text{(PREPARE-T)} \\[4pt]
+\mathsf{run}_H(\mathsf{finishR}(P,s,r,c,v)) &amp; \to &amp; \mathsf{prepared}(H,\mathit{FR}(P,s,r,c,v)) &amp; \text{(PREPARE-R)}
+\end{array}"></div>
+
+<p><span class="math-inline" data-tex="\mathit{FT}"></span> and <span class="math-inline" data-tex="\mathit{FR}"></span> abbreviate the exact distinct scalar records returned by K's <code>preparedTransfer</code> and <code>prepared</code> constructors. Both include the input digest and receiver index. The codec reconstructs complete unchanged metadata and ordered effects. For Transfer-only, unchanged debt and allocation history are copied by the codec: they are not separately computed debt outputs or a proved K invariant. No context reduces inside <span class="math-inline" data-tex="\mathsf{prepared}"></span> or <span class="math-inline" data-tex="\mathsf{rejected}"></span>.</p>
+<p>Checks run in this order; the <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/formal/k/moriarty.k">K rules</a> specify every predicate.</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Ordered checks</th>
+<th>Error index</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>State</td>
+<td>Distinct balance keys; allowance sum; positive conversion mantissa and scale ≤18; debt sum/status; total work including reserve</td>
+<td><code>−1</code> (decoded as null)</td>
+</tr>
+<tr>
+<td>Work</td>
+<td>Ordinary remaining work covers one or two actions; spent work can increase by that count</td>
+<td><code>−1</code></td>
+</tr>
+<tr>
+<td>Transfer</td>
+<td>Positive amount; distinct parties; sender exists and covers cash; exact allowance exists and covers cash; allowance-spent and receiver additions fit</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td>Repay, when present</td>
+<td>Positive nominal amount; matching obligation; outstanding status; nominal ≤ outstanding; prior transfer ID; matching payer/creditor/asset</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>Conversion</td>
+<td>Product fits; <code>none</code> has zero remainder; rounded amount fits and is positive; converted cash ≤ transferred cash</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td>Allocation</td>
+<td>ProRata product fits; discharged principal/accrual fit their existing components</td>
+<td><code>1</code></td>
+</tr>
+</tbody>
+</table>
+<p>A successful Transfer-only moves cash and gross allowance, appends only its Transfer ID, emits one Transfer and charges <strong>one action-work unit</strong>. It preserves the complete obligation, including a settled ProRata obligation, because no allocation occurs. A non-creditor recipient is legal for this operation.</p>
+<p>A successful repayment charges <strong>two action-work units</strong>, emits Transfer then Repayment, and appends both IDs. With computed settlement <span class="math-inline" data-tex="c"></span> and principal discharge <span class="math-inline" data-tex="v"></span>, the obligation becomes</p>
+<div class="math-block" data-tex="p&#x27; = p - v, \qquad a&#x27; = a - (n - v), \qquad o&#x27; = p + a - n, \qquad \text{Settled} \iff o&#x27; = 0 ."></div>
+
+<p>Only nominal <span class="math-inline" data-tex="n"></span> discharges debt; cash <span class="math-inline" data-tex="T"></span> and settlement <span class="math-inline" data-tex="c"></span> have distinct roles. Closure reserve is unchanged.</p>
+<p>For example, ProRata with principal 100, accrued 10 and nominal payment 7 gives <span class="math-inline" data-tex="v = \lfloor 700/110 \rfloor = 6"></span>, leaving principal 94, accrued 9 and outstanding 103. At mantissa 3, scale 1 and floor rounding, settlement is <span class="math-inline" data-tex="\lfloor 21/10 \rfloor = 2"></span>: transferring 2 can fund that nominal payment. <code>none</code> would reject the same fractional conversion; floor producing zero cash rejects DUST.</p>
+<p><strong>Presentation bound.</strong> Assuming pure helper termination on the admitted domain, successful Transfer-only takes <strong>18 control steps</strong> (START, EXPAND, 15 guards, PREPARE-T). Successful repayment takes <strong>37</strong> (eight stage contractions, 28 guards, PREPARE-R). Rejection ends at its first false guard and discards the remaining stages. Unlike the earlier single-expansion presentation, the failure step count depends on which numeric stages were reached. These are control-presentation counts, not internal K rewrites, execution fees or a mechanized termination proof.</p>
+<p>The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/bounded-k-2026-09-09/README.md">initial execution</a>, <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/repayment-k-branches-2026-09-09/README.md">additional repayment branches</a>, and <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/transfer-only-k-2026-09-09/README.md">Transfer-only extension</a> retain their original source-bound evidence and earlier control counts. The numeric suite combines all 42 prior distinct inputs with 22 new independent cases. Finite comparisons do not establish full source/Core/K correspondence, SP03 completion, mandatory proof-carrying data (PCD) or finalized settlement through the full language path. <code>Prepared</code> remains a local proposal, not authorization or Midnight acceptance.</p>
+<h3>Expression small-step semantics (40-constructor Core)</h3>
+<p>The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/semantic-contract.md">expression contract</a> and its <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/static-semantics.md">static semantics</a> define the 40-constructor Core that <code>moriarty-expression-source/1</code> text elaborates to. Both Core contract documents retain proposal status with scoped independent design approval; the separately versioned expression-source/1 authoring profile is implemented. This document status imposes no registration condition on public programs. The presentation below restates their §E and §S0 as a reduction system in the same explanatory notation as the repayment section. The contract's prose remains authoritative, the <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/sp02-expression-runtime-2026-09-10/RESULT.md">runtime</a> is TypeScript rather than K, and no correspondence between the two is proved.</p>
+<p><strong>Terms and frames.</strong> An action is a statement list followed by an Ensure suffix. <span class="math-inline" data-tex="K(e_1,\ldots,e_n)"></span> is an unentered constructor occurrence and <span class="math-inline" data-tex="K^{\circ}"></span> the same occurrence once entered; <span class="math-inline" data-tex="v"></span> ranges over values. The frame <span class="math-inline" data-tex="\sigma = \langle \mathit{pre}, W, L, A, O, D \rangle"></span> holds the immutable pre-state, staged writes, locals, arguments, observations and emitted descriptors. <span class="math-inline" data-tex="w"></span> is remaining work and <span class="math-inline" data-tex="w_0"></span> the initial budget. Expression configurations are <span class="math-inline" data-tex="\langle e, w\rangle"></span> and reduce under a fixed frame <span class="math-inline" data-tex="\sigma"></span> that reads consult and that no expression rule changes; statement configurations are <span class="math-inline" data-tex="\langle S, \sigma, w\rangle"></span>. In the frame and typing environments, O denotes observations; in Emit(O, e) and Operation_O(v), the same letter denotes an operation name. These roles are distinguished by their syntactic position. Every occurrence keeps its original span and node path.</p>
+<div class="math-block" data-tex="\begin{array}{llcl}
+\text{Statement} &amp; s &amp; ::= &amp; \mathsf{Require}(e) \mid \mathsf{Let}(x,e) \mid \mathsf{NextWrite}(f,e) \mid \mathsf{Emit}(O,e) \\[4pt]
+\text{Suffix} &amp; q &amp; ::= &amp; \mathsf{Ensure}(e) \\[4pt]
+\text{Action} &amp; \mathcal{A} &amp; ::= &amp; s_1;\ldots;s_m;\ q_1;\ldots;q_k \\[4pt]
+\text{Context} &amp; C &amp; ::= &amp; [\,] \\
+ &amp; &amp; \mid &amp; K^{\circ}(v_1,\ldots,v_{i-1},\,C,\,e_{i+1},\ldots,e_n) \qquad K \notin \{\mathsf{And},\mathsf{Or}\} \\
+ &amp; &amp; \mid &amp; \mathsf{And}^{\circ}(C,e_2) \;\mid\; \mathsf{Or}^{\circ}(C,e_2)
+\end{array}"></div>
+
+<p>In the generic alternative <span class="math-inline" data-tex="i"></span> ranges over the constructor's evaluated operands in listed order; metadata operands are never evaluated. There is no <span class="math-inline" data-tex="\mathsf{And}^{\circ}(v,C)"></span> or <span class="math-inline" data-tex="\mathsf{Or}^{\circ}(v,C)"></span> context: the right operand is reached only by the contractions below.</p>
+<p><strong>Entry and context closure.</strong> Entering a constructor occurrence costs one unit of work, including statement constructors such as Require, Let and Ensure. An occurrence that cannot be entered rejects without consuming work.</p>
+<div class="math-block" data-tex="\frac{w &gt; 0}{\langle K(e_1,\ldots,e_n),\ w\rangle \to \langle K^{\circ}(e_1,\ldots,e_n),\ w-1\rangle}\ \text{(E-ENTER)}
+\qquad
+\frac{\langle e,\ w\rangle \to \langle e&#x27;,\ w&#x27;\rangle}{\langle C[e],\ w\rangle \to \langle C[e&#x27;],\ w&#x27;\rangle}\ \text{(E-CONTEXT)}"></div>
+
+<div class="math-block" data-tex="\langle C[K(e_1,\ldots,e_n)],\ 0\rangle \to \mathsf{Rejected}(\mathtt{WORK\_EXHAUSTED},\ \mathrm{span}(K),\ \mathrm{path}(K),\ w_0)\ \text{(E-EXHAUSTED)}"></div>
+
+<p><strong>Primitive rules.</strong> For <span class="math-inline" data-tex="K"></span> other than <span class="math-inline" data-tex="\mathsf{And}"></span> and <span class="math-inline" data-tex="\mathsf{Or}"></span>, once every evaluated child has returned a value the constructor's rule <span class="math-inline" data-tex="\mathcal{R}_K"></span> from the static semantics either yields a value or a rejection code. A rejection discards the entire continuation, staged writes, locals and descriptors; the reported work is the work actually consumed.</p>
+<div class="math-block" data-tex="\frac{\mathcal{R}_K(v_1,\ldots,v_n) = v}{\langle K^{\circ}(v_1,\ldots,v_n),\ w\rangle \to \langle v,\ w\rangle}\ \text{(E-PRIM)}"></div>
+
+<div class="math-block" data-tex="\frac{\mathcal{R}_K(v_1,\ldots,v_n) = \mathtt{code}}{\langle C[K^{\circ}(v_1,\ldots,v_n)],\ w\rangle \to \mathsf{Rejected}(\mathtt{code},\ \mathrm{span}(K),\ \mathrm{path}(K),\ w_0 - w)}\ \text{(E-PRIM-FAIL)}"></div>
+
+<p>Every rejection raised before the first E-ENTER, by admission, schema validation or typing, reports work used 0. A span that is absent, malformed or out of range is reported as the synthetic span <span class="math-inline" data-tex="[0,0)"></span> with the original node path kept; it is never clamped. An isolated pure expression, evaluated outside an action, ends in <span class="math-inline" data-tex="\mathsf{ExpressionValue}(T, v, w)"></span> rather than a statement result.</p>
+<p><strong>Boolean contractions.</strong> After the left operand returns, the four contractions fire at zero cost. A skipped right operand is never entered and produces no work or failure. A selected right operand resumes as the original occurrence at child index 1 with its own span; if it is unentered and <span class="math-inline" data-tex="w = 0"></span>, E-EXHAUSTED applies to it.</p>
+<div class="math-block" data-tex="\begin{array}{rcll}
+\mathsf{And}^{\circ}(\mathsf{false},\ e_2) &amp; \to &amp; \mathsf{false} &amp; \text{(E-AND-F)} \\[2pt]
+\mathsf{And}^{\circ}(\mathsf{true},\ e_2) &amp; \to &amp; e_2 &amp; \text{(E-AND-T)} \\[2pt]
+\mathsf{Or}^{\circ}(\mathsf{true},\ e_2) &amp; \to &amp; \mathsf{true} &amp; \text{(E-OR-T)} \\[2pt]
+\mathsf{Or}^{\circ}(\mathsf{false},\ e_2) &amp; \to &amp; e_2 &amp; \text{(E-OR-F)}
+\end{array}"></div>
+
+<p><strong>Statements.</strong> Statements reduce in lexical order; each returns Unit and advances to the next. A statement's expression operand reduces by the E-rules under the current <span class="math-inline" data-tex="\sigma"></span>, with <span class="math-inline" data-tex="w"></span> threaded through. <span class="math-inline" data-tex="S"></span> is the remaining statement list, <span class="math-inline" data-tex="\oplus"></span> overrides a record by staged writes, and <span class="math-inline" data-tex="D \cdot d"></span> appends a descriptor. <span class="math-inline" data-tex="\mathsf{ReadPre}(\mathsf{post},f)"></span> reads <span class="math-inline" data-tex="\mathit{pre} \oplus W"></span> and is typable only inside an Ensure condition; that view never commits. EMIT also rejects <code>DESCRIPTOR_BOUND</code> when the descriptor list exceeds its aggregate bound, and FINISH rejects <code>VALUE_BOUND</code> when the assembled post-state exceeds its bound.</p>
+<div class="math-block" data-tex="\begin{array}{rcll}
+\langle \mathsf{Require}^{\circ}(\mathsf{true});\ S,\ \sigma,\ w\rangle &amp; \to &amp; \langle S,\ \sigma,\ w\rangle &amp; \text{(S-REQUIRE)} \\[2pt]
+\langle \mathsf{Require}^{\circ}(\mathsf{false});\ S,\ \sigma,\ w\rangle &amp; \to &amp; \mathsf{Rejected}(\mathtt{GUARD\_FAILED},\ldots) &amp; \text{(S-REQUIRE-FAIL)} \\[2pt]
+\langle \mathsf{Let}^{\circ}(x,\ v);\ S,\ \sigma,\ w\rangle &amp; \to &amp; \langle S,\ \sigma[L \mathrel{+}= x \mapsto v],\ w\rangle &amp; \text{(S-LET)} \\[2pt]
+\langle \mathsf{NextWrite}^{\circ}(f,\ v);\ S,\ \sigma,\ w\rangle &amp; \to &amp; \langle S,\ \sigma[W \mathrel{+}= f \mapsto v],\ w\rangle &amp; \text{(S-NEXT)} \\[2pt]
+\langle \mathsf{Emit}^{\circ}(O,\ v);\ S,\ \sigma,\ w\rangle &amp; \to &amp; \langle S,\ \sigma[D \mathrel{:=} D \cdot \mathsf{Operation}_O(v)],\ w\rangle &amp; \text{(S-EMIT)} \\[2pt]
+\langle \mathsf{Ensure}^{\circ}(\mathsf{true});\ S,\ \sigma,\ w\rangle &amp; \to &amp; \langle S,\ \sigma,\ w\rangle &amp; \text{(S-ENSURE)} \\[2pt]
+\langle \mathsf{Ensure}^{\circ}(\mathsf{false});\ S,\ \sigma,\ w\rangle &amp; \to &amp; \mathsf{Rejected}(\mathtt{ENSURES\_FAILED},\ldots) &amp; \text{(S-ENSURE-FAIL)} \\[2pt]
+\langle \varepsilon,\ \sigma,\ w\rangle &amp; \to &amp; \mathsf{ExpressionPrepared}(\mathit{pre} \oplus W,\ D,\ w) &amp; \text{(S-FINISH)}
+\end{array}"></div>
+
+<p><strong>Work.</strong> A successful pure constructor other than And or Or consumes one unit for its entry plus the work of its evaluated operands. With <span class="math-inline" data-tex="C(e)"></span> the work actually consumed by a successful pure expression and <span class="math-inline" data-tex="B(e)"></span> the count of every constructor occurrence including unselected branches:</p>
+<div class="math-block" data-tex="\begin{array}{rcl}
+C(\mathsf{And}(e_1,e_2)) &amp; = &amp; 1 + C(e_1) + [\,e_1 \Downarrow \mathsf{true}\,]\ C(e_2) \\[2pt]
+C(\mathsf{Or}(e_1,e_2)) &amp; = &amp; 1 + C(e_1) + [\,e_1 \Downarrow \mathsf{false}\,]\ C(e_2) \\[2pt]
+B(K(e_1,\ldots,e_n)) &amp; = &amp; 1 + \sum_i B(e_i)
+\end{array}"></div>
+
+<p><span class="math-inline" data-tex="B"></span> is finite under the simultaneous source and Core bounds and conservatively bounds reduction work; it estimates neither validation overhead nor native proof cost.</p>
+<p><strong>Typing judgment.</strong> Admission precedes reduction: structure, schema, whole-action typing and snapshot validation all complete before the first E-ENTER, so a static error anywhere in the action precedes any runtime guard. The judgment is <span class="math-inline" data-tex="\Sigma;\Gamma;\phi \vdash e : T"></span> with <span class="math-inline" data-tex="\Sigma"></span> the bounded acyclic schema registry, <span class="math-inline" data-tex="\Gamma = L \uplus A \uplus O \uplus F"></span> four disjoint namespaces, with F the declared state-field types consulted through the pre and post views, and <span class="math-inline" data-tex="\phi"></span> the phase, <span class="math-inline" data-tex="\mathsf{ensure}"></span> inside an Ensure condition and <span class="math-inline" data-tex="\mathsf{stmt}"></span> elsewhere. Type equality is exact, including every index; there is no subtyping or implicit cast. Four representative rules:</p>
+<div class="math-block" data-tex="\frac{n \in \{64,128\} \qquad 0 \le v &lt; 2^{n}}{\Sigma;\Gamma;\phi \vdash \mathsf{LitUInt}(n,\ v) : \mathsf{UInt}_{n}}\ \text{(L-U)}"></div>
+
+<div class="math-block" data-tex="\frac{F[f] = T \qquad \mathit{view} = \mathsf{pre}\ \lor\ (\mathit{view} = \mathsf{post} \land \phi = \mathsf{ensure})}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadPre}(\mathit{view},\ f) : T}\ \text{(READ-PRE)}"></div>
+
+<div class="math-block" data-tex="\frac{\Sigma;\Gamma;\phi \vdash e_1 : T \qquad \Sigma;\Gamma;\phi \vdash e_2 : T \qquad T \in \{\mathsf{UInt64},\mathsf{UInt128},\mathsf{SInt128}\}}{\Sigma;\Gamma;\phi \vdash \mathsf{Add}(e_1,\ e_2) : T}\ \text{(ARITH-ADD-SCALAR)}"></div>
+
+<div class="math-block" data-tex="\frac{\Sigma;\Gamma;\phi \vdash e_1 : \mathsf{Bool} \qquad \Sigma;\Gamma;\phi \vdash e_2 : \mathsf{Bool}}{\Sigma;\Gamma;\phi \vdash \mathsf{And}(e_1,\ e_2) : \mathsf{Bool}}\ \text{(CMP-AND)}"></div>
+
+<p>A <code>next</code> view rejects <code>TYPE_NEXT_READ</code> and a <code>post</code> view outside Ensure rejects <code>TYPE_POST_SCOPE</code>. ARITH-ADD-SCALAR reduces to the mathematical sum and rejects <code>ARITH_RANGE</code> when the result does not fit <span class="math-inline" data-tex="T"></span>; there is no widening then truncation. Add and Sub also admit two operands of the same indexed type Amount, Shares, Rate or Quantity with exactly equal indices, operating on the underlying quanta or mantissa with the same range check. CMP-AND checks both operands statically regardless of which the contractions later select. The complete rules for all 40 constructors, with every overload and rejection code, are in <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/static-semantics.md">static-semantics.md</a>, mirrored machine-readably in <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/expression-signatures.json">expression-signatures.json</a>.</p>
+<p><strong>Funded composition (TypeScript).</strong> S-FINISH still ends at <span class="math-inline" data-tex="\mathsf{ExpressionPrepared}"></span>. The later funded adapter maps emitted <code>Transfer</code> and <code>Repay</code> descriptors onto the retained repayment kernel, charges expression work E plus kernel action count N, and publishes ordinary <code>post</code> with complete <code>financialPost</code> and effects only after that kernel call succeeds. Ordinary <code>ensures</code> see ordinary post-state. The <code>/3</code> financial reads see the same validated financial pre-state throughout the action, including after <code>emit</code>; descriptors do not mutate that projection. This is executable TypeScript semantics. The earlier bounded K kernel above implements Transfer/Repay on a limited projection. The separate September 17 <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/formal/k/lifecycle-v1.k#L248-L253">K lifecycle definition implements the six PRE-read constructors</a>. A candidate mapping is also recorded in the historical <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/composition-proposal.md">composition proposal</a>; it does not replace the adapter.</p>
+<p><strong>Typed financial reads.</strong> The rules restated here cover /3 PRE reads. The /4 and /5 extensions, including POST reads, Originate and Accrue, are specified in the <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md">source /5 contract</a> and are not restated below. Agreement source <code>/3</code> elaborates six generic reads to Core <code>/2</code> constructors. Each constructor has one declared unit or asset operand and one <code>Text</code> identity expression. Extra generic arguments parse; static checking requires exactly one simple declared symbol (<code>SOURCE_ARITY</code> / <code>SOURCE_TYPE_SHAPE</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Core</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>outstanding&lt;U&gt;(e)</code></td>
+<td><code>ReadOutstanding</code></td>
+<td><code>Quantity&lt;Units&lt;U,1&gt;,0&gt;</code></td>
+</tr>
+<tr>
+<td><code>principal&lt;U&gt;(e)</code></td>
+<td><code>ReadPrincipal</code></td>
+<td><code>Quantity&lt;Units&lt;U,1&gt;,0&gt;</code></td>
+</tr>
+<tr>
+<td><code>accrued&lt;U&gt;(e)</code></td>
+<td><code>ReadAccrued</code></td>
+<td><code>Quantity&lt;Units&lt;U,1&gt;,0&gt;</code></td>
+</tr>
+<tr>
+<td><code>balance&lt;A&gt;(e)</code></td>
+<td><code>ReadBalance</code></td>
+<td><code>Amount&lt;A&gt;</code></td>
+</tr>
+<tr>
+<td><code>allowance_remaining&lt;A&gt;(e)</code></td>
+<td><code>ReadAllowanceRemaining</code></td>
+<td><code>Amount&lt;A&gt;</code></td>
+</tr>
+<tr>
+<td><code>allowance_spent&lt;A&gt;(e)</code></td>
+<td><code>ReadAllowanceSpent</code></td>
+<td><code>Amount&lt;A&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p><span class="math-inline" data-tex="U"></span> is a declared unit and <span class="math-inline" data-tex="A"></span> a declared asset. <span class="math-inline" data-tex="\mathit{id}"></span> is the reduced <code>Text</code> identity. <span class="math-inline" data-tex="\sigma_F"></span> is the immutable admitted financial pre-state; no read or <code>emit</code> writes it.</p>
+<div class="math-block" data-tex="\frac{U \in \Sigma.\mathit{units} \qquad \Sigma;\Gamma;\phi \vdash e : \mathsf{Text}}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadOutstanding}(U,e) : \mathsf{Quantity}(\mathsf{Units}(U,1),0)}\ \text{(READ-OUTST)}"></div>
+
+<div class="math-block" data-tex="\frac{A \in \Sigma.\mathit{assets} \qquad \Sigma;\Gamma;\phi \vdash e : \mathsf{Text}}{\Sigma;\Gamma;\phi \vdash \mathsf{ReadBalance}(A,e) : \mathsf{Amount}(A)}\ \text{(READ-BAL)}"></div>
+
+<p>Principal and accrued use the outstanding rule with their fields. Allowance remaining and spent use the balance rule with the matching allowance metric. Evaluation admits complete kernel state before any expression reduction. Reduction evaluates the identity once, looks up <span class="math-inline" data-tex="\sigma_F"></span>, and leaves <span class="math-inline" data-tex="\sigma_F"></span> unchanged. It rejects <code>INVALID_IDENTIFIER</code> for a non-kernel identifier, <code>MISSING_OBLIGATION</code> / <code>MISSING_BALANCE</code> / <code>MISSING_ALLOWANCE</code> rather than defaulting to zero, <code>NOMINAL_UNIT</code> when an obligation denomination differs from <span class="math-inline" data-tex="U"></span>, and <code>ARITH_RANGE</code> when a Quantity exceeds signed128. Short-circuit <code>and</code> / <code>or</code> / <code>?</code> skips unselected runtime lookups; static checking still visits every branch and action. One read costs one reduction plus its identity child's actual reductions. Successful action work is E + N. These rules are TypeScript executable semantics. The <a href="https://github.com/CharlesHoskinson/Moriarty/blob/main/deliverables/k-lifecycle-execution-2026-09-17/RESULT.md">September 17 K lifecycle results</a> provide finite 104-case lifecycle evidence. The linked K definition implements the reads; general correspondence and exhaustive read coverage remain unestablished.</p>

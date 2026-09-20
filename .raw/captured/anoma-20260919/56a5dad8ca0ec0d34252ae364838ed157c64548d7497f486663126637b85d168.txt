@@ -1,0 +1,512 @@
+Resources
+Copy page
+Resources
+Anoma Pay uses a
+Resource Machine
+model. Instead of updating account balances directly, the protocol creates and consumes discrete
+resources
+— cryptographic objects that each represent a specific token amount owned by a specific user. This page explains what resources are and how to fetch and interpret them.
+What is a resource?
+A resource is an immutable on-chain record with the following fields:
+Field
+Description
+Logic ref
+Identifies the program governing this resource’s validity rules
+Label ref
+Identifies the token type (derived from the forwarder + ERC-20 contract addresses)
+Quantity
+Token amount in the token’s smallest unit (e.g. 1 USDC = 1_000_000)
+Value ref
+Binds the resource to its owner’s keys
+Nullifier key commitment
+The owner’s
+cnk
+, used to prove consumption
+Nonce
+Ensures uniqueness
+Is ephemeral
+Ephemeral resources are transient (used for Permit2 wrapping/unwrapping)
+Resources are stored encrypted on-chain. Only the owner can decrypt them using their
+encryptionKeyPair
+.
+Registering keys with the Indexer
+Before the Indexer can route resources to you, register your discovery key pair once after creating the keyring:
+import
+{ IndexerClient, toHex }
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+indexer
+=
+new
+IndexerClient
+(
+"https://indexer.anoma.money"
+);
+async
+function
+registerKeys
+(
+keyring
+:
+UserKeyring
+) {
+await
+indexer.
+addKeys
+({
+public_key:
+toHex
+(keyring.discoveryKeyPair.publicKey),
+secret_key:
+toHex
+(keyring.discoveryKeyPair.privateKey),
+});
+}
+You only need to do this once per keyring. If the Indexer already has the key, the call is a no-op.
+Fetching encrypted resources
+The Indexer stores encrypted resource payloads tagged to your discovery key. Call
+resources()
+with your discovery private key and the list of contracts to scan:
+import
+{ IndexerClient, toHex }
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+indexer
+=
+new
+IndexerClient
+(
+"https://indexer.anoma.money"
+);
+async
+function
+fetchEncryptedResources
+(
+keyring
+:
+UserKeyring
+) {
+// First, get the list of contracts the Indexer is tracking
+const
+{
+indexed_contracts
+}
+=
+await
+indexer.
+config
+();
+const
+discoveryPrivateKey
+=
+toHex
+(keyring.discoveryKeyPair.privateKey);
+const
+{
+resources
+}
+=
+await
+indexer.
+resources
+(
+discoveryPrivateKey,
+indexed_contracts
+);
+return
+resources;
+}
+Each item in the returned array contains an encrypted
+resource_payload
+blob and the
+transaction_hash
+of the transaction that created it.
+Decrypting resources
+Use
+parseIndexerResourceResponse
+to decrypt the blobs using your encryption private key:
+import
+{
+parseIndexerResourceResponse,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ IndexerResource, UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+async
+function
+decryptResources
+(
+keyring
+:
+UserKeyring
+,
+indexerResources
+:
+IndexerResource
+[]
+) {
+const
+decrypted
+=
+await
+parseIndexerResourceResponse
+(
+keyring.encryptionKeyPair.privateKey,
+indexerResources
+);
+// Each item: { resource, forwarder, erc20TokenAddress, transactionHash }
+return
+decrypted;
+}
+Resources that cannot be decrypted with your key are silently skipped. This handles the case where an encrypted blob belongs to a different user’s key rotation.
+Filtering persistent resources
+The protocol uses
+ephemeral
+resources as transient bookkeeping entries for Permit2 wrap/unwrap operations. Filter them out to get only the spendable, persistent resources:
+import
+{ pickNonEphemeralResources }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+persistent
+=
+pickNonEphemeralResources
+(decrypted);
+Annotating with transaction history
+To determine which resources have been spent (consumed), the SDK cross-references nullifiers against the public nullifier list from Envio. The result enriches each resource with
+createdIn
+and
+consumedIn
+transaction metadata:
+import
+{
+EnvioClient,
+buildTransactionLookup,
+buildAppResources,
+TRANSFER_LOGIC_VERIFYING_KEY,
+NullifierKey,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+envio
+=
+new
+EnvioClient
+(
+"https://envio.anoma.money/v1/graphql"
+);
+async
+function
+buildAvailableResources
+(
+keyring
+:
+UserKeyring
+,
+persistentResources
+:
+Awaited
+<
+ReturnType
+<
+typeof
+import
+(
+"@anomaorg/anoma-app-sdk"
+).parseIndexerResourceResponse>>
+) {
+// Fetch all public nullifiers for this logic
+const
+nullifiers
+=
+await
+envio.
+publicNullifiers
+(
+TRANSFER_LOGIC_VERIFYING_KEY
+);
+const
+lookup
+=
+buildTransactionLookup
+(nullifiers);
+// Wrap the nullifier key in the WASM NullifierKey type
+const
+nullifierKey
+=
+new
+NullifierKey
+(keyring.nullifierKeyPair.nk);
+// Build enriched AppResource entries; pass true to filter to unspent only
+const
+appResources
+=
+await
+buildAppResources
+(
+persistentResources,
+lookup,
+nullifierKey,
+true
+// onlyAvailableResources
+);
+return
+appResources;
+}
+Set
+onlyAvailableResources
+to
+false
+if you want to include already-consumed resources (e.g. for displaying transaction history).
+Putting it all together
+Here is the complete resource-fetching pipeline:
+import
+{
+IndexerClient,
+EnvioClient,
+parseIndexerResourceResponse,
+pickNonEphemeralResources,
+buildTransactionLookup,
+buildAppResources,
+TRANSFER_LOGIC_VERIFYING_KEY,
+NullifierKey,
+toHex,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ AppResource, UserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+indexer
+=
+new
+IndexerClient
+(
+"https://indexer.anoma.money"
+);
+const
+envio
+=
+new
+EnvioClient
+(
+"https://envio.anoma.money/v1/graphql"
+);
+async
+function
+getAvailableResources
+(
+keyring
+:
+UserKeyring
+)
+:
+Promise
+<
+AppResource
+[]> {
+// 1. Fetch encrypted blobs from the Indexer
+const
+{
+indexed_contracts
+}
+=
+await
+indexer.
+config
+();
+const
+{
+resources
+:
+indexerResources
+}
+=
+await
+indexer.
+resources
+(
+toHex
+(keyring.discoveryKeyPair.privateKey),
+indexed_contracts
+);
+// 2. Decrypt resource payloads
+const
+decrypted
+=
+await
+parseIndexerResourceResponse
+(
+keyring.encryptionKeyPair.privateKey,
+indexerResources
+);
+// 3. Keep only persistent (non-ephemeral) resources
+const
+persistent
+=
+pickNonEphemeralResources
+(decrypted);
+// 4. Cross-reference nullifiers to find unspent resources
+const
+nullifiers
+=
+await
+envio.
+publicNullifiers
+(
+TRANSFER_LOGIC_VERIFYING_KEY
+);
+const
+lookup
+=
+buildTransactionLookup
+(nullifiers);
+const
+nullifierKey
+=
+new
+NullifierKey
+(keyring.nullifierKeyPair.nk);
+return
+buildAppResources
+(persistent, lookup, nullifierKey,
+true
+);
+}
+The AppResource type
+Each
+AppResource
+in the result extends the encoded resource fields with additional metadata:
+type
+AppResource
+=
+EncodedResource
+&
+{
+erc20TokenAddress
+:
+Address
+;
+// the ERC-20 contract
+forwarder
+:
+Address
+;
+// the forwarder contract
+createdIn
+?:
+IndexerEVMTransaction
+;
+// transaction that created this resource
+consumedIn
+?:
+IndexerEVMTransaction
+;
+// transaction that spent it (if any)
+}
+EncodedResource
+itself contains
+quantity
+(as
+bigint
+),
+logic_ref
+,
+label_ref
+,
+value_ref
+,
+nonce
+,
+nk_commitment
+, and
+is_ephemeral
+.
+Resource selection
+When building a transfer, you do not need to call
+selectTransferResources
+directly —
+ParametersDraftResolver.build()
+handles it internally. However, you can call it yourself to preview which resources will be selected:
+import
+{
+selectTransferResources,
+getResourcesForToken,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+tokenAddress
+=
+"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+;
+// USDC
+const
+tokenResources
+=
+getResourcesForToken
+(tokenAddress, appResources);
+const
+{
+selected
+,
+remaining
+}
+=
+selectTransferResources
+(tokenResources,
+5_000_000
+n
+);
+The selection algorithm:
+If one resource has exactly the target quantity, use it.
+If a subset of resources sums exactly to the target, use the smallest subset.
+Otherwise, use a resource larger than the target and let
+ParametersDraftResolver
+create a change-back resource for the remainder.
+selectTransferResources
+throws
+InsufficientResourcesError
+if the total available quantity is less than the target.
+Always pass only unspent resources to selectTransferResources and ParametersDraftResolver. Using the onlyAvailableResources = true option in buildAppResources ensures this automatically.
+Last updated on
+April 2, 2026
+Key Management
+Transfers

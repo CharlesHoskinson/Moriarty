@@ -29,7 +29,7 @@ Tasks 1–3 below reflect the merged PR5–PR7 local implementations and their [
 
 ## 4. K agreement
 
-The September 17 offline Source/Core/oracle corpus is preparatory work. Every checkbox below still requires actual K evidence. The historical trace106 compiled artifacts and pinned runtime must be recovered before the specified reproduction can run.
+The [September 17 native K results](../../../deliverables/k-lifecycle-execution-2026-09-17/RESULT.md) supersede the earlier unavailable-runtime statement: a pinned rebuild ran the finite expression/lifecycle corpus and direct probes. Historical binary recovery was not achieved. The checklist below remains open pending exact item-to-evidence reconciliation; finite K agreement does not discharge general theorems or ledger correspondence. No item is newly marked complete by this audit.
 - [ ] 4.1 Pin retained failing case and compiled artifact; admit one bounded reproduction.
 - [ ] 4.2 Resolve the reproduced backend defect without narrowing the accepted language.
 - [ ] 4.3 Implement supported lifecycle rules, loader and complete observations in formal/k/.

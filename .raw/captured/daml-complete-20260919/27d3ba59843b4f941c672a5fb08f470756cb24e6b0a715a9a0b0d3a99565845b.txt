@@ -1,0 +1,661 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet-name-service
+Splice.Ans
+Copy page
+Copy page
+Documentation for Splice.Ans
+Copy page
+Copy page
+​
+Templates
+template
+AnsEntry
+A ans entry that needs to be renewed continuously. Renewal recreates this contract with an updated
+expiresAt
+field.
+Signatory: user, dso
+Field
+Type
+Description
+user
+Party
+dso
+Party
+name
+Text
+url
+Text
+description
+Text
+expiresAt
+Time
+Choice
+AnsEntry_Expire
+Controller: actor
+Returns: AnsEntry_ExpireResult
+Field
+Type
+Description
+actor
+Party
+Choice
+AnsEntry_Renew
+Controller: user, dso
+Returns: AnsEntry_RenewResult
+Field
+Type
+Description
+extension
+RelTime
+Choice
+Archive
+Controller: user, dso
+Returns: ()
+(no fields)
+template
+AnsEntryContext
+Signatory: dso, user
+Field
+Type
+Description
+dso
+Party
+user
+Party
+name
+Text
+url
+Text
+description
+Text
+reference
+ContractId
+SubscriptionRequest
+Reference to the corresponding subscription, note that the contract may already be archived. This is just a tracking id.
+Choice
+AnsEntryContext_CollectEntryRenewalPayment
+Controller: dso
+Returns: AnsEntryContext_CollectEntryRenewalPaymentResult
+Field
+Type
+Description
+paymentCid
+ContractId
+SubscriptionPayment
+entryCid
+ContractId
+AnsEntry
+The currently active entry.
+transferContext
+AppTransferContext
+ansRulesCid
+ContractId
+AnsRules
+Choice
+AnsEntryContext_CollectInitialEntryPayment
+Controller: dso
+Returns: AnsEntryContext_CollectInitialEntryPaymentResult
+Field
+Type
+Description
+paymentCid
+ContractId
+SubscriptionInitialPayment
+transferContext
+AppTransferContext
+ansRulesCid
+ContractId
+AnsRules
+Choice
+AnsEntryContext_RejectEntryInitialPayment
+Controller: dso
+Returns: AnsEntryContext_RejectEntryInitialPaymentResult
+Field
+Type
+Description
+paymentCid
+ContractId
+SubscriptionInitialPayment
+transferContext
+AppTransferContext
+ansRulesCid
+ContractId
+AnsRules
+Choice
+AnsEntryContext_Terminate
+Controller: actor
+Returns: AnsEntryContext_TerminateResult
+Field
+Type
+Description
+actor
+Party
+terminatedSubscriptionCid
+ContractId
+TerminatedSubscription
+Choice
+Archive
+Controller: dso, user
+Returns: ()
+(no fields)
+template
+AnsRules
+The rules governing how users can pay to use the Amulet Name service.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+config
+AnsRulesConfig
+Choice
+AnsRules_CollectEntryRenewalPayment
+Controller: dso, user
+Returns: AnsRules_CollectEntryRenewalPaymentResult
+Field
+Type
+Description
+user
+Party
+entryContext
+ContractId
+AnsEntryContext
+paymentCid
+ContractId
+SubscriptionPayment
+entryCid
+ContractId
+AnsEntry
+The currently active entry.
+transferContext
+AppTransferContext
+Choice
+AnsRules_CollectInitialEntryPayment
+Controller: dso, user
+Returns: AnsRules_CollectInitialEntryPaymentResult
+Field
+Type
+Description
+user
+Party
+entryContext
+ContractId
+AnsEntryContext
+paymentCid
+ContractId
+SubscriptionInitialPayment
+transferContext
+AppTransferContext
+Choice
+AnsRules_RejectEntryInitialPayment
+Controller: dso
+Returns: AnsRules_RejectEntryInitialPaymentResult
+Field
+Type
+Description
+paymentCid
+ContractId
+SubscriptionInitialPayment
+transferContext
+AppTransferContext
+Choice
+AnsRules_RequestEntry
+Controller: user
+Returns: AnsRules_RequestEntryResult
+Field
+Type
+Description
+name
+Text
+url
+Text
+description
+Text
+user
+Party
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+​
+Data Types
+data
+AnsEntryContext_CollectEntryRenewalPaymentResult
+AnsEntryContext_CollectEntryRenewalPaymentResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntry
+subscriptionStateCid
+ContractId
+SubscriptionIdleState
+instance
+GetField “entryCid” AnsEntryContext_CollectEntryRenewalPaymentResult (
+ContractId
+AnsEntry)
+instance
+GetField “subscriptionStateCid” AnsEntryContext_CollectEntryRenewalPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “entryCid” AnsEntryContext_CollectEntryRenewalPaymentResult (
+ContractId
+AnsEntry)
+instance
+SetField “subscriptionStateCid” AnsEntryContext_CollectEntryRenewalPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+AnsEntryContext AnsEntryContext_CollectEntryRenewalPayment AnsEntryContext_CollectEntryRenewalPaymentResult
+instance
+HasFromAnyChoice
+AnsEntryContext AnsEntryContext_CollectEntryRenewalPayment AnsEntryContext_CollectEntryRenewalPaymentResult
+instance
+HasToAnyChoice
+AnsEntryContext AnsEntryContext_CollectEntryRenewalPayment AnsEntryContext_CollectEntryRenewalPaymentResult
+data
+AnsEntryContext_CollectInitialEntryPaymentResult
+AnsEntryContext_CollectInitialEntryPaymentResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntry
+subscriptionStateCid
+ContractId
+SubscriptionIdleState
+instance
+GetField “entryCid” AnsEntryContext_CollectInitialEntryPaymentResult (
+ContractId
+AnsEntry)
+instance
+GetField “subscriptionStateCid” AnsEntryContext_CollectInitialEntryPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “entryCid” AnsEntryContext_CollectInitialEntryPaymentResult (
+ContractId
+AnsEntry)
+instance
+SetField “subscriptionStateCid” AnsEntryContext_CollectInitialEntryPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+AnsEntryContext AnsEntryContext_CollectInitialEntryPayment AnsEntryContext_CollectInitialEntryPaymentResult
+instance
+HasFromAnyChoice
+AnsEntryContext AnsEntryContext_CollectInitialEntryPayment AnsEntryContext_CollectInitialEntryPaymentResult
+instance
+HasToAnyChoice
+AnsEntryContext AnsEntryContext_CollectInitialEntryPayment AnsEntryContext_CollectInitialEntryPaymentResult
+data
+AnsEntryContext_RejectEntryInitialPaymentResult
+AnsEntryContext_RejectEntryInitialPaymentResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” AnsEntryContext_RejectEntryInitialPaymentResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” AnsEntryContext_RejectEntryInitialPaymentResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+AnsEntryContext AnsEntryContext_RejectEntryInitialPayment AnsEntryContext_RejectEntryInitialPaymentResult
+instance
+HasFromAnyChoice
+AnsEntryContext AnsEntryContext_RejectEntryInitialPayment AnsEntryContext_RejectEntryInitialPaymentResult
+instance
+HasToAnyChoice
+AnsEntryContext AnsEntryContext_RejectEntryInitialPayment AnsEntryContext_RejectEntryInitialPaymentResult
+data
+AnsEntryContext_TerminateResult
+AnsEntryContext_TerminateResult
+(no fields)
+instance
+HasExercise
+AnsEntryContext AnsEntryContext_Terminate AnsEntryContext_TerminateResult
+instance
+HasFromAnyChoice
+AnsEntryContext AnsEntryContext_Terminate AnsEntryContext_TerminateResult
+instance
+HasToAnyChoice
+AnsEntryContext AnsEntryContext_Terminate AnsEntryContext_TerminateResult
+data
+AnsEntry_ExpireResult
+AnsEntry_ExpireResult
+(no fields)
+instance
+HasExercise
+AnsEntry AnsEntry_Expire AnsEntry_ExpireResult
+instance
+HasFromAnyChoice
+AnsEntry AnsEntry_Expire AnsEntry_ExpireResult
+instance
+HasToAnyChoice
+AnsEntry AnsEntry_Expire AnsEntry_ExpireResult
+data
+AnsEntry_RenewResult
+AnsEntry_RenewResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntry
+instance
+GetField “entryCid” AnsEntry_RenewResult (
+ContractId
+AnsEntry)
+instance
+SetField “entryCid” AnsEntry_RenewResult (
+ContractId
+AnsEntry)
+instance
+HasExercise
+AnsEntry AnsEntry_Renew AnsEntry_RenewResult
+instance
+HasFromAnyChoice
+AnsEntry AnsEntry_Renew AnsEntry_RenewResult
+instance
+HasToAnyChoice
+AnsEntry AnsEntry_Renew AnsEntry_RenewResult
+data
+AnsRulesConfig
+AnsRulesConfig
+Field
+Type
+Description
+renewalDuration
+RelTime
+entryLifetime
+RelTime
+entryFee
+Decimal
+descriptionPrefix
+Text
+instance
+Eq
+AnsRulesConfig
+instance
+Show
+AnsRulesConfig
+instance
+GetField “config” AnsRules AnsRulesConfig
+instance
+GetField “descriptionPrefix” AnsRulesConfig
+Text
+instance
+GetField “entryFee” AnsRulesConfig
+Decimal
+instance
+GetField “entryLifetime” AnsRulesConfig
+RelTime
+instance
+GetField “renewalDuration” AnsRulesConfig
+RelTime
+instance
+SetField “config” AnsRules AnsRulesConfig
+instance
+SetField “descriptionPrefix” AnsRulesConfig
+Text
+instance
+SetField “entryFee” AnsRulesConfig
+Decimal
+instance
+SetField “entryLifetime” AnsRulesConfig
+RelTime
+instance
+SetField “renewalDuration” AnsRulesConfig
+RelTime
+data
+AnsRules_CollectEntryRenewalPaymentResult
+AnsRules_CollectEntryRenewalPaymentResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntry
+subscriptionStateCid
+ContractId
+SubscriptionIdleState
+instance
+GetField “entryCid” AnsRules_CollectEntryRenewalPaymentResult (
+ContractId
+AnsEntry)
+instance
+GetField “subscriptionStateCid” AnsRules_CollectEntryRenewalPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “entryCid” AnsRules_CollectEntryRenewalPaymentResult (
+ContractId
+AnsEntry)
+instance
+SetField “subscriptionStateCid” AnsRules_CollectEntryRenewalPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+AnsRules AnsRules_CollectEntryRenewalPayment AnsRules_CollectEntryRenewalPaymentResult
+instance
+HasFromAnyChoice
+AnsRules AnsRules_CollectEntryRenewalPayment AnsRules_CollectEntryRenewalPaymentResult
+instance
+HasToAnyChoice
+AnsRules AnsRules_CollectEntryRenewalPayment AnsRules_CollectEntryRenewalPaymentResult
+data
+AnsRules_CollectInitialEntryPaymentResult
+AnsRules_CollectInitialEntryPaymentResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntry
+subscriptionStateCid
+ContractId
+SubscriptionIdleState
+instance
+GetField “entryCid” AnsRules_CollectInitialEntryPaymentResult (
+ContractId
+AnsEntry)
+instance
+GetField “subscriptionStateCid” AnsRules_CollectInitialEntryPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “entryCid” AnsRules_CollectInitialEntryPaymentResult (
+ContractId
+AnsEntry)
+instance
+SetField “subscriptionStateCid” AnsRules_CollectInitialEntryPaymentResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+AnsRules AnsRules_CollectInitialEntryPayment AnsRules_CollectInitialEntryPaymentResult
+instance
+HasFromAnyChoice
+AnsRules AnsRules_CollectInitialEntryPayment AnsRules_CollectInitialEntryPaymentResult
+instance
+HasToAnyChoice
+AnsRules AnsRules_CollectInitialEntryPayment AnsRules_CollectInitialEntryPaymentResult
+data
+AnsRules_RejectEntryInitialPaymentResult
+AnsRules_RejectEntryInitialPaymentResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” AnsRules_RejectEntryInitialPaymentResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” AnsRules_RejectEntryInitialPaymentResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+AnsRules AnsRules_RejectEntryInitialPayment AnsRules_RejectEntryInitialPaymentResult
+instance
+HasFromAnyChoice
+AnsRules AnsRules_RejectEntryInitialPayment AnsRules_RejectEntryInitialPaymentResult
+instance
+HasToAnyChoice
+AnsRules AnsRules_RejectEntryInitialPayment AnsRules_RejectEntryInitialPaymentResult
+data
+AnsRules_RequestEntryResult
+AnsRules_RequestEntryResult
+Field
+Type
+Description
+entryCid
+ContractId
+AnsEntryContext
+requestCid
+ContractId
+SubscriptionRequest
+instance
+GetField “entryCid” AnsRules_RequestEntryResult (
+ContractId
+AnsEntryContext)
+instance
+GetField “requestCid” AnsRules_RequestEntryResult (
+ContractId
+SubscriptionRequest)
+instance
+SetField “entryCid” AnsRules_RequestEntryResult (
+ContractId
+AnsEntryContext)
+instance
+SetField “requestCid” AnsRules_RequestEntryResult (
+ContractId
+SubscriptionRequest)
+instance
+HasExercise
+AnsRules AnsRules_RequestEntry AnsRules_RequestEntryResult
+instance
+HasFromAnyChoice
+AnsRules AnsRules_RequestEntry AnsRules_RequestEntryResult
+instance
+HasToAnyChoice
+AnsRules AnsRules_RequestEntry AnsRules_RequestEntryResult
+data
+ExpectedEntryContext
+ExpectedEntryContext
+Field
+Type
+Description
+dso
+Party
+user
+Party
+reference
+ContractId
+SubscriptionRequest
+instance
+Eq
+ExpectedEntryContext
+instance
+Show
+ExpectedEntryContext
+instance
+GetField “dso” ExpectedEntryContext
+Party
+instance
+GetField “reference” ExpectedEntryContext (
+ContractId
+SubscriptionRequest)
+instance
+GetField “user” ExpectedEntryContext
+Party
+instance
+SetField “dso” ExpectedEntryContext
+Party
+instance
+SetField “reference” ExpectedEntryContext (
+ContractId
+SubscriptionRequest)
+instance
+SetField “user” ExpectedEntryContext
+Party
+data
+ExpectedPayment
+ExpectedPayment
+Field
+Type
+Description
+dso
+Party
+sender
+Party
+instance
+Eq
+ExpectedPayment
+instance
+Show
+ExpectedPayment
+instance
+GetField “dso” ExpectedPayment
+Party
+instance
+GetField “sender” ExpectedPayment
+Party
+instance
+SetField “dso” ExpectedPayment
+Party
+instance
+SetField “sender” ExpectedPayment
+Party
+​
+Functions
+fetchAndValidateInitialPayment
+:
+ContractId
+SubscriptionInitialPayment -> ExpectedPayment ->
+Update
+SubscriptionInitialPayment
+fetchAndValidatePayment
+:
+ContractId
+SubscriptionPayment -> ExpectedPayment ->
+Update
+SubscriptionPayment
+fetchAndValidateEntryContext
+:
+ContractId
+AnsEntryContext -> ExpectedEntryContext ->
+Update
+AnsEntryContext
+validAnsConfig
+: AnsRulesConfig ->
+Bool
+Suggest edits
+Raise issue
+Splice.Ans.AmuletConversionRateFeed
+splice-api-featured-app-v1 docs

@@ -1,0 +1,195 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-token-standard-test
+Splice.Testing.Utils
+Copy page
+Copy page
+Documentation for Splice.Testing.Utils
+Copy page
+Copy page
+Testing utilities to simplify testing token standard usage and implementation.
+​
+Data Types
+data
+Disclosures’
+A set of disclosures. Used to work around the fact that duplicate disclosures for the same contract are not allowed.
+Disclosures’
+Field
+Type
+Description
+disclosures
+Map
+AnyContractId Disclosure
+instance
+Monoid
+Disclosures’
+instance
+Semigroup
+Disclosures’
+instance
+GetField “disclosures” Disclosures’ (
+Map
+AnyContractId Disclosure)
+instance
+GetField “disclosures” (EnrichedFactoryChoice t ch) Disclosures’
+instance
+GetField “disclosures” OpenApiChoiceContext Disclosures’
+instance
+SetField “disclosures” Disclosures’ (
+Map
+AnyContractId Disclosure)
+instance
+SetField “disclosures” (EnrichedFactoryChoice t ch) Disclosures’
+instance
+SetField “disclosures” OpenApiChoiceContext Disclosures’
+data
+EnrichedFactoryChoice t ch
+A choice on a factory contract enriched with an appropriate choice-context and disclosures.
+EnrichedFactoryChoice
+Field
+Type
+Description
+factoryCid
+ContractId
+t
+arg
+ch
+disclosures
+Disclosures’
+instance
+GetField “arg” (EnrichedFactoryChoice t ch) ch
+instance
+GetField “disclosures” (EnrichedFactoryChoice t ch) Disclosures’
+instance
+GetField “factoryCid” (EnrichedFactoryChoice t ch) (
+ContractId
+t)
+instance
+SetField “arg” (EnrichedFactoryChoice t ch) ch
+instance
+SetField “disclosures” (EnrichedFactoryChoice t ch) Disclosures’
+instance
+SetField “factoryCid” (EnrichedFactoryChoice t ch) (
+ContractId
+t)
+data
+FailureStatusCheck
+FailureStatusCheck
+Field
+Type
+Description
+check
+FailureStatus ->
+Optional
+Text
+instance
+Semigroup
+FailureStatusCheck
+instance
+GetField “check” FailureStatusCheck (FailureStatus ->
+Optional
+Text
+)
+instance
+SetField “check” FailureStatusCheck (FailureStatus ->
+Optional
+Text
+)
+data
+OpenApiChoiceContext
+A representation of a ChoiceContext and disclosed contracts as they would be returned by the an OpenAPI endpoint of the token standard.
+OpenApiChoiceContext
+Field
+Type
+Description
+choiceContext
+ChoiceContext
+disclosures
+Disclosures’
+instance
+Semigroup
+OpenApiChoiceContext
+instance
+GetField “choiceContext” OpenApiChoiceContext ChoiceContext
+instance
+GetField “disclosures” OpenApiChoiceContext Disclosures’
+instance
+SetField “choiceContext” OpenApiChoiceContext ChoiceContext
+instance
+SetField “disclosures” OpenApiChoiceContext Disclosures’
+​
+Functions
+emptyExtraArgs
+: ExtraArgs
+Use this to construct an empty ‘ExtraArgs’ record.
+withExtraDisclosures
+: Disclosures’ -> OpenApiChoiceContext -> OpenApiChoiceContext
+Add extra disclosures to an ‘OpenApiChoiceContext’.
+queryDisclosure’
+:
+Template
+t =>
+Party
+->
+ContractId
+t -> Script Disclosures’
+Retrieve a disclosed contract by its contract-id from a specific party’s ACS.
+submitWithDisclosures’
+:
+Party
+-> Disclosures’ -> Commands a -> Script a
+Version of ‘submitWithDisclosures’ that works with the simplified
+Disclosures'
+type.
+submitWithDisclosuresMustFail’
+:
+Party
+-> Disclosures’ -> Commands a -> Script ()
+Version of ‘submitWithDisclosuresMustFail’ that works with the simplified
+Disclosures'
+type.
+allocatePartyExact
+:
+Text
+-> Script
+Party
+Allocate party with a specific name.
+submitWithDisclosuresMustFail”
+:
+Show
+a => FailureStatusCheck ->
+Party
+-> Disclosures’ -> Commands a -> Script ()
+Use this to check that commands fail with the expected ‘FailureStatus’.
+submitMultiMustFail”
+:
+Show
+a => FailureStatusCheck -> [
+Party
+] -> [
+Party
+] -> Commands a -> Script ()
+Use this to check that multi-party submission fails with the expected ‘FailureStatus’.
+expectErrorId
+:
+Text
+-> FailureStatusCheck
+expectMessageContains
+:
+Text
+-> FailureStatusCheck
+expectUnmetRequirement
+:
+Text
+-> FailureStatusCheck
+expectFailureStatus
+: (FailureStatus ->
+Bool
+) -> FailureStatusCheck
+Suggest edits
+Raise issue
+Splice.Testing.TokenStandard.WalletClient
+Splice.Tests.TestAmuletTokenDvP

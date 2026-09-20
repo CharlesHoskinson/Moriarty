@@ -1,0 +1,495 @@
+On this page
+Configure discovery with the CDP SDK
+Validate your endpoint
+Get featured: curation tiers
+Requirements for curation
+Staying curated
+Get discovered checklist
+Troubleshooting discovery
+What to read next
+Seller
+Get discovered (Bazaar)
+Copy page
+Copy page
+Copy page
+Copy page
+Getting discovered makes your endpoint available to tens of thousands of agents through CDP APIs,
+the Bazaar MCP server, and Amazon Bedrock AgentCore, and to people browsing
+agentic.market
+. The x402 Bazaar lists more than 23,000 x402 resources.
+In this guide, you’ll configure discovery metadata, validate your endpoint, and complete the paid
+call that triggers indexing.
+When you build with the CDP SDK’s x402 building blocks, x402 Bazaar support is enabled
+automatically. There is no registration form or separate API call.
+​
+Configure discovery with the CDP SDK
+TypeScript
+Python
+For every route written as
+"METHOD /path"
+,
+createX402Server
+:
+Adds a minimal
+extensions.bazaar
+declaration derived from the method and path.
+Registers the x402 Bazaar resource-server extension.
+Connects the server to the CDP Facilitator.
+You do not need to add a discovery setting. The route key must include a specific HTTP method and
+an absolute path, such as
+GET /report
+. A wildcard method does not contain enough information for
+the SDK to generate discovery metadata.
+​
+Add richer discovery metadata
+The generated declaration is enough for a route without inputs. For any route that accepts query
+parameters, path parameters, or a request body, we strongly recommend adding explicit schemas and
+examples — without them, agents can discover your endpoint but can’t construct a valid call. Use
+declareDiscoveryExtension
+and pass its result as the route’s
+extensions
+value:
+import
+{
+createX402Server
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+declareDiscoveryExtension
+}
+from
+"@x402/extensions/bazaar"
+;
+const
+server
+=
+await
+createX402Server
+({
+routes:
+{
+"GET /weather/:city"
+:
+{
+price:
+"$0.01"
+,
+description:
+"Get current weather conditions for a city"
+,
+extensions:
+{
+...
+declareDiscoveryExtension
+({
+method:
+"GET"
+,
+pathParamsSchema:
+{
+properties:
+{
+city:
+{
+type:
+"string"
+,
+description:
+"City name slug, such as san-francisco"
+,
+},
+},
+required:
+[
+"city"
+],
+},
+output:
+{
+example:
+{
+city:
+"san-francisco"
+,
+conditions:
+"foggy"
+,
+temperature:
+60
+,
+},
+},
+}),
+},
+},
+},
+});
+Your explicit
+bazaar
+declaration replaces the minimal declaration generated for that
+route. Provide accurate examples and JSON Schemas so buyers and agents can construct valid
+requests before paying.
+For a runnable version, see the
+TypeScript Express server example
+(
+APPROACH=3
+loads routes from a config file, the same shape used above). Every route it declares
+through
+createX402Server
+is Bazaar-discoverable automatically. See the
+CDP SDK x402 reference
+for all server configuration
+options.
+The Python CDP SDK does not ship a
+createX402Server
+equivalent, so there is no automatic
+discovery. Instead, build the standard
+x402
+server stack and
+swap in the CDP Facilitator with
+create_facilitator_config
+from the CDP SDK’s
+cdp.x402
+module. Discovery is opt-in: you register the Bazaar resource-server extension and declare
+metadata for each route yourself. See the
+Bazaar extension
+for the extension implementation.
+Because there is no minimal auto-generated declaration, every discoverable route must supply
+its own metadata through
+declare_discovery_extension
+:
+from
+cdp.x402
+import
+create_facilitator_config
+from
+x402.extensions.bazaar
+import
+(
+OutputConfig,
+bazaar_resource_server_extension,
+declare_discovery_extension,
+)
+from
+x402.http
+import
+HTTPFacilitatorClient, PaymentOption
+from
+x402.http.middleware.fastapi
+import
+PaymentMiddlewareASGI
+from
+x402.http.types
+import
+RouteConfig
+from
+x402.mechanisms.evm.exact
+import
+ExactEvmServerScheme
+from
+x402.server
+import
+x402ResourceServer
+# Swap in the CDP Facilitator: create_facilitator_config() reads CDP_API_KEY_ID /
+# CDP_API_KEY_SECRET and authenticates verify/settle against the CDP Facilitator.
+server
+=
+x402ResourceServer(HTTPFacilitatorClient(create_facilitator_config()))
+server.register(
+"eip155:84532"
+, ExactEvmServerScheme())
+# Opt into discovery: register the Bazaar extension, then declare metadata per route.
+server.register_extension(bazaar_resource_server_extension)
+routes
+=
+{
+"GET /weather/:city"
+: RouteConfig(
+accepts
+=
+[
+PaymentOption(
+scheme
+=
+"exact"
+,
+pay_to
+=
+EVM_ADDRESS
+,
+price
+=
+"$0.01"
+,
+network
+=
+"eip155:84532"
+,
+)
+],
+description
+=
+"Get current weather conditions for a city"
+,
+extensions
+=
+declare_discovery_extension(
+path_params_schema
+=
+{
+"properties"
+: {
+"city"
+: {
+"type"
+:
+"string"
+,
+"description"
+:
+"City name slug"
+}
+},
+"required"
+: [
+"city"
+],
+},
+output
+=
+OutputConfig(
+example
+=
+{
+"city"
+:
+"san-francisco"
+,
+"conditions"
+:
+"foggy"
+,
+"temperature"
+:
+60
+}
+),
+),
+),
+}
+app.add_middleware(PaymentMiddlewareASGI,
+routes
+=
+routes,
+server
+=
+server)
+Provide accurate examples and JSON Schemas so buyers and agents can construct valid requests
+before paying. For a runnable version, see the
+Python Bazaar server example
+.
+​
+Validate your endpoint
+After deploying the route to a public HTTPS URL, use the validation endpoint to check that
+it:
+Is reachable.
+Returns
+402 Payment Required
+.
+Advertises a valid
+extensions.bazaar
+block.
+Would be accepted by the CDP Facilitator for indexing.
+curl
+-X
+POST
+https://api.cdp.coinbase.com/platform/v2/x402/validate
+\
+-H
+"Content-Type: application/json"
+\
+-d
+'{
+"resource": "https://api.example.com/report",
+"method": "GET"
+}'
+No API key is required. A successful response has
+valid: true
+and
+simulation.outcome: "accepted"
+. Review
+preflight
+for required failures and advisory
+recommendations, and inspect
+bazaarExtension
+to confirm the metadata served by your
+endpoint.
+For the complete request and response schema, see
+Validate x402 endpoint
+.
+​
+Get featured: curation tiers
+Every validated endpoint is eligible for indexing in the CDP Bazaar after a successful settled
+payment. A hand-selected slice of the highest-quality endpoints is additionally
+curated
+and
+featured to buyers and agents. Curation is how you go from indexed to distributed.
+Curation is separate from ranking. Ranking orders results within the Bazaar based on real
+economic usage and listing quality over a rolling 30-day window; new endpoints rank
+conservatively until usage accrues.
+​
+Requirements for curation
+Meeting these qualifies an endpoint for review — listing remains editorial, based on
+service quality, category coverage, and ecosystem fit.
+Requirement
+Detail
+Live payments
+Accepting live x402 payments on mainnet.
+Availability
+(30-day, platform-measured)
+≥ 99%. Endpoints above 99.5% receive priority placement.
+Health
+Passes the platform health probe. Sustained consecutive failures auto-delist the endpoint (see below).
+Agent-ready metadata
+Complete input schema; a description that tells an agent
+when
+to use the endpoint; per-call pricing, supported networks, and documented error responses.
+Verified
+Passes
+validation
+.
+​
+Staying curated
+Curated endpoints are health-probed on a regular interval. An endpoint that fails
+consecutive probes is first down-ranked and then dropped from the featured tier; it
+remains discoverable in the general Bazaar and is automatically restored once it recovers.
+Endpoints that stop returning
+402 Payment Required
+are eventually removed from the index
+entirely.
+​
+Get discovered checklist
+Complete these steps before you expect your route to appear in the Bazaar:
+Deploy your route to a public HTTPS URL.
+Validate the endpoint
+.
+For routes that accept inputs,
+add schemas and examples
+.
+Complete a successful paid call through the CDP Facilitator.
+​
+Troubleshooting discovery
+How do I tell whether my discovery metadata was accepted?
+The CDP Facilitator reports the outcome on verify and settle responses in an
+EXTENSION-RESPONSES
+header. The value is base64-encoded JSON keyed by extension name, and the
+bazaar
+key carries a
+status
+of
+success
+,
+processing
+, or
+rejected
+:
+Status
+Meaning
+success
+The metadata was validated and cataloged.
+processing
+The metadata was accepted and is being cataloged asynchronously.
+rejected
+The metadata was refused. Read
+rejectedReason
+for the cause.
+Rejections are usually strict JSON Schema validation: your declared
+input
+must validate
+against
+schema.properties.input
+. The settle request also has to carry
+paymentPayload.resource
+, because without it the Bazaar has no resource to attach the
+metadata to.
+Many different URLs collapsed into a single Bazaar entry
+The Bazaar normalizes any path segment that consists entirely of a high-cardinality
+identifier: a UUID, an EVM address, an EVM transaction hash, a Solana address, or a Solana
+transaction hash. Each such segment becomes a generic route template parameter, so
+/data/0xabc.../report
+and
+/data/0x123.../report
+surface as one entry rather than two.
+To keep each resource listed separately, add a prefix or suffix so the segment is not a bare
+identifier, such as
+/user-<uuid>
+instead of
+/<uuid>
+.
+My ranking has not moved since my last payment
+Quality metrics (buyer reach, transaction volume, and recency) are recomputed on a six-hour
+schedule, so a newly settled payment does not change your position right away. Allow up to six
+hours for a ranking change to appear in search results.
+My endpoint dropped out of the Bazaar
+Resources that go 30 days without a settlement are removed from both the catalog and search
+results, so a listed route needs ongoing traffic to stay listed. Availability matters
+separately: see
+Staying curated
+for the health probe behavior that
+down-ranks and then removes endpoints that stop responding.
+My endpoint is indexed but ranks poorly
+Ranking weighs listing quality alongside real usage. Three things are under your control:
+Description.
+Write a natural-language description of what the endpoint does and when to
+call it. Bare endpoint names and placeholder text score zero on metadata quality. Keep it to
+500 characters or fewer, because the CDP Facilitator rejects verify and settle requests
+whose description exceeds that limit.
+Schemas and examples.
+Complete input and output schemas with realistic examples raise
+metadata quality and let an agent construct a valid request without guessing.
+Hosting.
+Resources on shared tunneling domains such as
+ngrok.io
+are weighted below
+those on dedicated domains, and results are capped per domain so no single provider floods
+a query.
+I want a paid route to stay out of the Bazaar
+Only routes that declare Bazaar metadata are indexed. In Python, discovery is opt-in, so a
+route stays unlisted as long as you do not declare metadata for it. In TypeScript,
+createX402Server
+derives a declaration for every route key written as
+"METHOD /path"
+, so
+keeping a paid route unlisted means assembling that server from the
+@x402
+packages directly
+instead.
+How do I test discovery before going to mainnet?
+Run against the CDP Facilitator on Base Sepolia or Solana Devnet. The same discovery endpoints
+surface testnet resources once verify and settle have run through CDP. The
+x402.org facilitator
+maintains its own separate catalog, which
+is not the CDP Bazaar.
+For payment and settlement failures that are not specific to discovery, see
+Troubleshooting
+.
+​
+What to read next
+Learn more about the service that indexes and settles your resource in
+CDP Facilitator
+. Consuming services instead?
+Discover services
+. Agents can also search the same catalog
+over MCP — see
+Discover & pay over MCP
+.
+Was this page helpful?
+Yes
+No
+Quickstart: charge for an endpoint
+Previous
+Charge over MCP
+Next

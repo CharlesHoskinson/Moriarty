@@ -1,0 +1,243 @@
+On this page
+Typeclasses
+Functions
+Splice APIs
+Splice Daml Packages
+splice-util
+Splice.Util
+Copy page
+Copy page
+Documentation for Splice.Util
+Copy page
+Copy page
+Utility functions shared across all splice apps.
+​
+Typeclasses
+class
+(
+Show
+t,
+Eq
+cgid,
+Show
+cgid) => HasCheckedFetch t cgid
+where
+Contracts typically come in groups. For example, all contracts managed by a specific DSO party.
+We aim to always fetch with a specific contract group identifier to ensure that we do not mixup contracts from different groups.
+Note that we are not requiring
+HasFetch
+here, so that we can use this typeclass also for contract groups that are not templates, e.g., interface views.
+contractGroupId
+: t -> cgid
+class
+Patchable a
+where
+A type class for patching values. Used in particular for changing only a subset of fields in a config value.
+patch
+: a -> a -> a -> a
+For records,
+patch new base current
+should set all fields in
+current
+to their value in
+new
+iff their value was changed in
+new
+compared to
+base
+. For other kinds of values that have field-like values (e.g. Maps with keys) the implementation should match the one for records by analogy.
+instance
+Patchable
+Decimal
+instance
+Patchable
+Int
+instance
+Patchable
+Text
+instance
+(
+Ord
+k, Patchable v) => Patchable (
+Map
+k v)
+instance
+Patchable
+Party
+instance
+Patchable
+Time
+instance
+Patchable a => Patchable (
+Optional
+a)
+instance
+(Patchable a,
+Ord
+a) => Patchable (Set a)
+instance
+Patchable
+RelTime
+​
+Functions
+requireMatchingContract
+: (
+Eq
+t,
+Show
+t,
+HasFetch
+t) =>
+ContractId
+t -> t ->
+Update
+()
+Require that a contract-id refers to a specific contract.
+require
+:
+CanAssert
+m =>
+Text
+->
+Bool
+-> m ()
+Check whether a required condition is true. If it’s not, abort the transaction with a message saying that the requirement was not met.
+fetchChecked
+: (
+HasFetch
+t, HasCheckedFetch t cgid) => cgid ->
+ContractId
+t ->
+Update
+t
+Fetch a contract that is part of a specific contract group.
+The group is typically chosen by the caller to match its own group, or a more specific group.
+fetchCheckedInterface
+: (
+HasFetch
+i,
+HasInterfaceView
+i v, HasCheckedFetch v cgid) => cgid ->
+ContractId
+i ->
+Update
+i
+Fetch a contract that is part of a specific contract group defined by its interface view.
+The group is typically chosen by the caller to match its own group, or a more specific group.
+fetchAndArchive
+: (
+HasFetch
+t, HasCheckedFetch t cgid,
+HasArchive
+t) => cgid ->
+ContractId
+t ->
+Update
+t
+Fetch and archive a contract in one go.
+Use this when implementing choices that mutate another contract by fetching, archiving, and then creating the updated contract.
+fetchReferenceData
+: (
+HasFetch
+t, HasCheckedFetch t cgid) => cgid ->
+ContractId
+t ->
+Update
+t
+Fetch a contract that serves as reference data.
+Use this whenever you need to fetch a contract that you do not intend to mutate.
+fetchButArchiveLater
+: (
+HasFetch
+t, HasCheckedFetch t cgid) => cgid ->
+ContractId
+t ->
+Update
+t
+Fetch a contract that is not reference data, and should be archived later in some cases.
+Prefer
+fetchAndArchive
+over this function, as it avoids forgetting to archive the contract.
+fetchPublicReferenceData
+: (HasCheckedFetch t cgid,
+HasExercise
+t ch t) => cgid ->
+ContractId
+t -> ch ->
+Update
+t
+Fetch a contract that offers a choice anybody to be read as reference data.
+fetchUncheckedAndArchive
+: (
+HasFetch
+b,
+HasArchive
+b) =>
+ContractId
+b ->
+Update
+b
+Fetch and archive a contract in one go.
+Use this when implementing choices that mutate another contract by fetching, archiving, and then creating the updated contract.
+fetchUncheckedReferenceData
+:
+HasFetch
+t =>
+ContractId
+t ->
+Update
+t
+Fetch a contract that serves as reference data.
+Use this whenever you need to fetch a contract that you do not intend to mutate.
+fetchUncheckedButArchiveLater
+:
+HasFetch
+t =>
+ContractId
+t ->
+Update
+t
+Fetch a contract that is not reference data, and should be archived later in some cases.
+Prefer
+fetchAndArchive
+over this function, as it avoids forgetting to archive the contract.
+potentiallyUnsafeArchive
+:
+HasArchive
+t =>
+ContractId
+t ->
+Update
+()
+A more appropriately named version of
+archive
+.
+Please justify all its uses, and where possible prefer
+fetchAndArchive
+so that the contract group identifier is surely performed.
+patchScalar
+:
+Eq
+a => a -> a -> a -> a
+patchListAsScalar
+:
+Eq
+a => [a] -> [a] -> [a] -> [a]
+patchListAsSet
+: (Patchable a,
+Ord
+a) => [a] -> [a] -> [a] -> [a]
+deprecatedChoice
+:
+Text
+->
+Text
+->
+Text
+->
+Update
+a
+Suggest edits
+Raise issue
+splice-util docs
+splice-util-batched-markers docs

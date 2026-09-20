@@ -1,0 +1,70 @@
+By: Erik Reppel, Carson Roscoe, Josh Nickerson
+TL;DR: Building on six months of real-world use, x402 V2 expands the protocol beyond single-call, exact payments. It adds wallet-based identity (skip repaying on every call), automatic API discovery, dynamic payment recipients, support for more chains and fiat via CAIP standards, and a fully modular SDK for custom networks and schemes. All aimed at making x402 cleaner, more extensible, and future-proof, enabling unified payment models and wallet-based access for agents and humans alike.
+Note: This update comes after a 2 week community feedback period on the proposed V2 spec. Huge thanks to the builders, researchers, and teams across ecosystems who reviewed early drafts and shared feedback. x402 is stronger because of you. We’re excited to share more updates on the protocol and the launch of the independent
+x402 Foundation
+soon. x402’s reference SDKs are fully backward-compatible with V1.
+Why x402 needed a V2
+x402 launched in May 2025 with a simple idea: embed payments directly into HTTP using the long-dormant 402 status code. In just a few months, it has processed over 100M payments across APIs, apps, and AI agents, powering everything from paid API calls to autonomous agents buying compute and data on-demand.
+V2 evolves the specification based on learnings from 6 months of x402 performing real-world payments:
+Clearer separation between clients, servers, facilitators, and the x402 reference SDK
+Tweaks to the data type declarations to increase clarity, reduce redundancy, and make x402 easier to implement on new chains
+Formalizing the concept of “Extensions” to make it easier to experiment and extend x402 without the need to fork
+Moving all payment data to headers for the HTTP transport, freeing up response body to be used alongside a 402 status code and Payment Required header
+Bottoms up rewrite of the x402 reference SDK for a modular, composable architecture
+Migrating reference SDK to @x402 npm org
+At the same time, the mission of x402 remained constant:
+Enable value to move across the internet as seamlessly as information, whether the actor is a human, an app, or an agent.
+x402 V2 is designed to meet the demands of this next stage of the internet economy. It refactors the protocol to be cleaner, more interoperable, and more future-proof, while preserving everything that made V1 successful.
+What’s New
+V2 is a major upgrade that makes the protocol more universal, more flexible, and easier to extend across networks, transports, identity models, and payment types. The spec is cleaner, more modular, and aligned with modern standards including CAIP and IETF header conventions, enabling a single interface for onchain and offchain payments.
+1. Unified payment interface
+x402 V2 standardizes how networks and assets are identified, creating a single payment format that works across chains and with legacy payment rails.
+Key upgrades:
+Multi-chain by default: Supports stablecoins & tokens across Base, Solana, other chains, and new L2s, with no custom logic required
+Compatible with legacy payment rails: Facilitators for ACH, SEPA, or card networks fit into the same payment model
+Dynamic ‘payTo’ routing: Per-request routing to addresses, roles, or callback-based payout logic – perfect for marketplaces and multi-tenant APIs. This also adds dynamic pricing based on inputs.
+No breaking changes: New ways to evolve functionality in extensions, rather than modifying the spec
+So what: x402 becomes a flexible economic layer with usage-based, subscription-like, prepaid, and multi-step workflows all possible without changing your API architecture or upgrading the core spec.
+2. Extensible architecture & broad compatibility
+V2 introduces a clear separation between the protocol specification, its SDK implementation, and facilitators, making the protocol plug-in-driven and future-proof.
+Key upgrades:
+Stable spec: Adding new chains or payment behaviors requires zero changes to the standard of reference SDKs.
+Plugin-driven SDK: Developers register chains, assets, and payment schemes instead of editing SDK internals.
+Lifecycle hooks: Enable builders to inject custom logic at key points in the payment flow (e.g. before/after sending a payment, before/after settlement verification). This unlocks conditional payment routing, custom metrics, complex failure recovery mechanisms, and more.
+Modernized HTTP headers:
+Removes deprecated X-* headers for improved compatibility
+Uses more modern PAYMENT-SIGNATURE, PAYMENT-REQUIRED, PAYMENT-RESPONSE
+[coming very soon] New SIGN-IN-WITH-X header
+So what: x402 V2 becomes a plug-and-play platform. Anyone can add a new chain, facilitator, or payment model as a standalone package, without the overhead and coordination of modifying the underlying protocol.
+3. Wallet-based access, reusable sessions, and modular paywalls
+V2 refactors key components related to identity and access, setting the stage for more efficient session management and making the server-side architecture highly flexible.
+Key upgrades:
+Modular Paywall Package: The paywall has been completely overhauled and extracted into a dedicated, modular package:
+@x402/paywall
+. This allows developers to easily contribute new payment backends and create custom paywall variations (with built-in support for EVM and Solana).
+Foundation for Reusable Access: The V2 protocol now includes the logic to support wallet-controlled sessions or other forms of identity, allowing clients to skip the full payment flow and the need for onchain interactions for repeated access if the resource was previously purchased.
+Enables Subscription and Session Patterns: This architecture makes subscription-like or session-based access patterns possible for both human users and autonomous agents.
+Note on Sign-In-With-X (SIWx): The full wallet-based identity feature, including the dedicated Sign-In-With-X (SIWx) header (based on CAIP-122), will be an immediate fast-follow launch item. This finalizes the first extensions for proving wallet control to access reusable sessions.
+So what: This combination improves the server-side developer experience and unlocks the core benefits of lower latency, fewer round-trips, and cheaper repeated calls. These efficiencies make x402 viable for high-frequency workloads like LLM inference, multi-call agents, and complex applications where paying per request would be too slow or expensive.
+4. Automatic discovery & dynamic service metadata
+V2’s Discovery extension lets x402-enabled services expose structured metadata that facilitators can crawl.
+Key upgrades:
+Facilitators automatically index available endpoints
+Pricing, routes, and metadata stay up-to-date automatically
+No manual updates or hardcoded catalogs
+So what: The Discovery extension creates a more autonomous ecosystem in which sellers publish their APIs once, and facilitators stay synchronized without developer intervention.
+5. Improved developer experience & multi-facilitator support
+V2 dramatically simplifies configuration while making multi-facilitator support first-class.
+Key upgrades:
+Register supported chains, assets, and payment models; no internal SDK hacking
+Express business preferences (“prefer Solana,” “avoid mainnet,” “only use USDC”)
+Use multiple facilitators simultaneously; the SDK chooses the best match
+Cleaner filtering and selection logic for complex payment environments
+So what: Developers write less glue code and more business logic. The SDK handles the complexity of chain selection, facilitator discovery, payment routing, and scheme selection.
+Try it out
+V2 of the x402 protocol represents the next step in making value move across the internet as easily as information. By expanding compatibility, simplifying the developer experience, and enabling new payment and identity models, V2 turns x402 into a more flexible layer for human, app, and agent-driven payments. We’re excited to see what builders create as the ecosystem grows.
+You can check out the repo
+here
+or
+join the telegram group
+to connect with 600+ other builders.

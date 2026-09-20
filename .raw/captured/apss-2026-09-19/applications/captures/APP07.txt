@@ -1,0 +1,329 @@
+Anoma Specification
+Home
+Changelog
+Protocol Architecture
+Protocol Architecture
+System Architecture
+System Architecture
+Identity Architecture
+State Architecture
+State Architecture
+Resource Machine
+Resource Machine
+Primitive interfaces
+Primitive interfaces
+Set
+List
+Map
+Fixed size type
+Fixed size type
+Fixed Size Type
+Arithmetic
+Hash
+Delta hash
+Proving system
+Proving system
+Proving system
+Delta proving system
+Commitment accumulator
+Nullifier set
+Data structures
+Data structures
+Resource
+Resource
+Resource
+Computable components
+Computable components
+Computable components
+Commitment
+Nullifier
+Kind
+Delta
+Tag
+Compliance unit
+Action
+Action
+Action
+Resource logic proofs
+Resource logic proofs
+Table of contents
+Proving
+Instance
+Witness
+Constraints
+Compliance proofs
+Transaction
+Execution flow
+Notes
+Notes
+Roles and requirements
+Stored data format
+Function formats
+Function formats
+Transaction function
+Applications
+Node Architecture
+Node Architecture
+Basic Types
+Basic Types
+Basics
+Cryptographic Primitives
+Identities
+Messages & Mailboxes
+Engine Types
+Engine Types
+Engine
+Engine
+Engine
+Engine Configuration
+Engine Environment
+Engine Behaviour
+Anoma
+Anoma
+Anoma Message
+Anoma Configuration
+Anoma Environment
+Hardware Component
+Hardware Component
+Local Key Value Storage Engine
+Local Key Value Storage Engine
+Local Key Value Storage Engine
+Local Key Value Storage Messages
+Local Key Value Storage Configuration
+Local Key Value Storage Environment
+Local Key Value Storage Behaviour
+Local Time Series Storage Engine
+Local Time Series Storage Engine
+Local Time Series Storage Engine
+Local Time Series Storage Messages
+Local Time Series Storage Configuration
+Local Time Series Storage Environment
+Local Time Series Storage Behaviour
+Logging Engine
+Logging Engine
+Logging Engine
+Logging Messages
+Logging Configuration
+Logging Environment
+Logging Behaviour
+Wall Clock Engine
+Wall Clock Engine
+Wall Clock Engine
+Wall Clock Messages
+Wall Clock Configuration
+Wall Clock Environment
+Wall Clock Behaviour
+Identity Component
+Identity Component
+Identity Management Engine
+Identity Management Engine
+Identity Management Engine
+Identity Management Messages
+Identity Management Configuration
+Identity Management Environment
+Identity Management Behaviour
+Encryption Engine
+Encryption Engine
+Encryption Engine
+Encryption Messages
+Encryption Configuration
+Encryption Environment
+Encryption Behaviour
+Decryption Engine
+Decryption Engine
+Decryption Engine
+Decryption Messages
+Decryption Configuration
+Decryption Environment
+Decryption Behaviour
+Commitment Engine
+Commitment Engine
+Commitment Engine
+Commitment Messages
+Commitment Configuration
+Commitment Environment
+Commitment Behaviour
+Verification Engine
+Verification Engine
+Verification Engine
+Verification Messages
+Verification Configuration
+Verification Environment
+Verification Behaviour
+Reads For Engine
+Reads For Engine
+Reads For Engine
+Reads For Messages
+Reads For Configuration
+Reads For Environment
+Reads For Behaviour
+Signs For Engine
+Signs For Engine
+Signs For Engine
+Signs For Messages
+Signs For Configuration
+Signs For Environment
+Signs For Behaviour
+Naming Engine
+Naming Engine
+Naming Engine
+Naming Messages
+Naming Configuration
+Naming Environment
+Naming Behaviour
+Network Subsystem
+Network Subsystem
+Router
+Router
+Router Engine
+Router Messages
+Router Configuration
+Router Environment
+Router Behaviour
+Node Proxy
+Node Proxy
+Node Proxy Engine
+Node Proxy Messages
+Node Proxy Configuration
+Node Proxy Environment
+Node Proxy Behaviour
+Transport Protocol
+Transport Protocol
+Transport Protocol Engine
+Transport Protocol Messages
+Transport Protocol Configuration
+Transport Protocol Environment
+Transport Protocol Behaviour
+Transport Connection
+Transport Connection
+Transport Connection Engine
+Transport Connection Messages
+Transport Connection Configuration
+Transport Connection Environment
+Transport Connection Behaviour
+Pub/Sub Topic
+Pub/Sub Topic
+Pub/Sub Topic Engine
+Pub/Sub Topic Messages
+Pub/Sub Topic Configuration
+Pub/Sub Topic Environment
+Pub/Sub Topic Behaviour
+Storage
+Storage
+Storage Engine
+Storage Messages
+Storage Configuration
+Storage Environment
+Storage Behaviour
+Ordering Component
+Ordering Component
+Mempool engines
+Mempool engines
+Worker Engine
+Worker Engine
+Worker Engine
+Worker Messages
+Worker Environment
+Worker Behaviour
+Execution engines
+Execution engines
+None
+Shard
+Shard
+Shard Engine
+Shard Messages
+Shard Environment
+Shard Behaviour
+Executor
+Executor
+Executor Engine
+Executor Messages
+Executor Environment
+Executor Behaviour
+Index of links
+Juvix modules
+Juvix modules
+Prelude
+Module Index
+Tutorials for contributors
+Tutorials for contributors
+Prepare working environment
+Use Git and GitHub
+Updating the changelog
+Versioning
+File naming conventions
+Write Markdown
+Headers and other Markdown formatting conventions
+Use Wiki style links
+Include images in Markdown
+Include code snippets
+Add Juvix code for specification
+Add pending tasks with Todos admonition
+Add literature references
+Add diffs for versioning
+Run pre commit checks
+Engines in Anoma
+Engines in Anoma
+Engine writing conventions
+Examples
+Examples
+Template Engine
+Template Engine
+Template Engine
+Template Messages
+Template Configuration
+Template Environment
+Template Behaviour
+Ticker Engine
+Ticker Engine
+Ticker Engine
+Ticker Messages
+Ticker Configuration
+Ticker Environment
+Ticker Behaviour
+Resource Logic
+¶
+A resource logic is a computable predicate associated with a resource that constrains the creation and consumption of a resource. Each time an action consumes or creates a particular resource, the corresponding resource logic proof is required in order for the action (and thus the transaction) to be valid.
+Every proof has three types of inputs and constraints:
+Architecture-level
+inputs and constraints. This type of inputs and constraints allow to enforce certain resource machine properties and have to be present in each resource logic, no matter in the context of which instantiation and application the resource logic was produced. These contraints ensure basic resource machine properties.
+Instantiation-level
+inputs and constraints. These inputs and constraints must be present in every resource logic compatible with a concrete resource machine instantiation but might not be required by other instantiations. These constraints ensure additional resource machine properties desired by the instantiation.
+Application-level
+(custom) inputs and constraints that are present in every resource logic specified by a concrete application. These constraints define how the application works.
+This specification explicitly defines only the architecture-level inputs and constraints. Only application-level constraints are referred to as custom.
+Proving
+¶
+When proving, resource logics take as input resources created and consumed in the action:
+Instance
+¶
+tag
+— identifies the current resource being checked
+action.consumed
+(possibly excluding the tagged resource, if it is consumed)
+action.created
+(possibly excluding the tagged resource, if it is created)
+action.applicationData
+Witness
+¶
+for consumed resources:
+    1. resource object
+    2.
+nullifierKey
+for created resources:
+    1. resource object
+Application inputs
+Note
+The instance and witness values are expected to correspond to each other: the first tag in the instance corresponds to the first resource object in the witness (and corresponds to the resource being checked), and so on. Note that the tag has to be recomputed from the object to verify that it indeed corresponds to the tag (this condition is included in the constraints)
+Constraints
+¶
+Created commitment integrity:
+r.commitment() = cm
+Consumed nullifier integrity:
+r.nullifier(nullifierKey) = nf
+Application constraints
+2024-12-05
+2024-12-05
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

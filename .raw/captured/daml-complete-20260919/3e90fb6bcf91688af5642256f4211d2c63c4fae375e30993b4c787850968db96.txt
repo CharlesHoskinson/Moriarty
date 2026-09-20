@@ -1,0 +1,559 @@
+On this page
+Availability
+Key changes from v0 to v1
+Party types
+Listing parties
+Offline signing workflow
+Migration reference
+See also
+SDKs
+Wallet SDK
+Using the SDK
+v0 to v1 migration
+Party Namespace
+Copy page
+Copy page
+Migrate party management from Wallet SDK v0 to v1.
+Copy page
+Copy page
+The party namespace provides methods to manage wallet parties on the Canton Network. In v1, the party namespace replaces the stateful party management from v0.
+​
+Availability
+The party namespace is always available as part of the basic SDK interface. It’s initialized automatically when you create an SDK instance and doesn’t require additional configuration via
+extend()
+.
+import
+{ SDK, localNetStaticConfig }
+from
+'@canton-network/wallet-sdk'
+export
+default
+async
+function
+() {
+const
+sdk
+=
+await
+SDK
+.
+create
+({
+auth: global.
+TOKEN_PROVIDER_CONFIG_DEFAULT
+,
+ledgerClientUrl: localNetStaticConfig.
+LOCALNET_APP_USER_LEDGER_URL
+,
+})
+// party namespace is immediately available
+await
+sdk.party.
+list
+()
+}
+​
+Key changes from v0 to v1
+v0 used a stateful approach where you set a party context once with
+sdk.setPartyId()
+. All subsequent operations acted on that party.
+v1 uses an explicit approach where you pass the party ID to each operation. This enables:
+Thread-safe concurrent operations
+Multi-party transactions within the same application
+Clearer code intent
+sdk.
+setPartyId
+(myPartyId)
+const
+result
+=
+await
+sdk.userLedger.
+doSomething
+()
+const
+result
+=
+await
+sdk.ledger
+.
+prepare
+({ partyId: myPartyId,
+...
+})
+.
+sign
+(privateKey)
+.
+execute
+({ partyId: myPartyId })
+Refer to
+Preparing and signing a transaction
+for more information.
+​
+Party types
+Internal parties
+const
+internalParty
+=
+await
+sdk.adminLedger
+!
+.
+allocateInternalParty
+(partyHint)
+// v1 - no state, explicit party ID
+const
+internalParty
+=
+await
+sdk.party.internal.
+allocate
+({
+partyHint:
+'my-service'
+,
+synchronizerId:
+'my-synchronizer-id'
+})
+The below example demonstrates the full usage of the feature:
+Full example: allocate, list, and multi-host parties
+import
+pino
+from
+'pino'
+import
+{ localNetStaticConfig, SDK }
+from
+'@canton-network/wallet-sdk'
+import
+{
+TOKEN_PROVIDER_CONFIG_DEFAULT,
+AMULET_NAMESPACE_CONFIG,
+}
+from
+'./utils/index.js'
+const
+logger
+=
+pino
+({ name:
+'v1-03-parties'
+, level:
+'info'
+})
+const
+userId
+=
+localNetStaticConfig.
+LOCALNET_USER_ID
+const
+sdk
+=
+await
+SDK
+.
+create
+({
+auth:
+TOKEN_PROVIDER_CONFIG_DEFAULT
+,
+ledgerClientUrl: localNetStaticConfig.
+LOCALNET_APP_USER_LEDGER_URL
+,
+amulet:
+AMULET_NAMESPACE_CONFIG
+,
+})
+const
+allocatedParties
+=
+await
+Promise
+.
+all
+(
+[
+'v1-03-alice'
+,
+'v1-03-bob'
+].
+map
+((
+partyHint
+)
+=>
+{
+const
+partyKeys
+=
+sdk.keys.
+generate
+()
+return
+sdk.party.external
+.
+create
+(partyKeys.publicKey, {
+partyHint,
+})
+.
+sign
+(partyKeys.privateKey)
+.
+execute
+()
+})
+)
+logger.
+info
+(allocatedParties,
+'Allocated parties'
+)
+const
+listedParties
+=
+await
+sdk.party.
+list
+()
+logger.
+info
+(listedParties,
+`Obtained parties for ${
+userId
+}`
+)
+const
+allocatedPartiesIds
+=
+new
+Set
+(
+allocatedParties.
+map
+((
+party
+)
+=>
+party.partyId)
+)
+if
+(
+!
+allocatedPartiesIds.
+isSubsetOf
+(
+new
+Set
+(listedParties))) {
+throw
+new
+Error
+(
+"At least some of the allocated parties haven't been listed."
+)
+}
+const
+featuredAppRights
+=
+await
+sdk.amulet.featuredApp.
+grant
+()
+if
+(
+!
+featuredAppRights) {
+throw
+new
+Error
+(
+'Failed to obtain featured app rights for validator operator party'
+)
+}
+else
+{
+logger.
+info
+(
+featuredAppRights,
+'Featured app rights for validator operator party'
+)
+}
+logger.
+info
+(
+'Preparing multi hosted party...'
+)
+const
+participantEndpoints
+=
+[
+{
+url:
+new
+URL
+(
+'http://127.0.0.1:3975'
+),
+tokenProviderConfig:
+TOKEN_PROVIDER_CONFIG_DEFAULT
+,
+},
+]
+const
+charlieKeys
+=
+sdk.keys.
+generate
+()
+const
+charlie
+=
+await
+sdk.party.external
+.
+create
+(charlieKeys.publicKey, {
+partyHint:
+'v1-03-charlie'
+,
+confirmingParticipantEndpoints: participantEndpoints,
+})
+.
+sign
+(charlieKeys.privateKey)
+.
+execute
+()
+logger.
+info
+(charlie,
+'Multi hosted party allocated successfully'
+)
+const
+charliePingCommand
+=
+sdk.utils.ping.
+create
+([
+{ initiator: charlie.partyId, responder: charlie.partyId },
+])
+const
+pingResult
+=
+await
+sdk.ledger
+.
+prepare
+({
+partyId: charlie.partyId,
+commands: charliePingCommand,
+})
+.
+sign
+(charlieKeys.privateKey)
+.
+execute
+({
+partyId: charlie.partyId,
+})
+logger.
+info
+(
+pingResult,
+'Successfully validated party allocation via Canton.Internal.Ping'
+)
+logger.
+info
+(
+'Preparing multi hosted party with observing participant...'
+)
+const
+observingCharlieKeys
+=
+sdk.keys.
+generate
+()
+const
+observingCharlie
+=
+await
+sdk.party.external
+.
+create
+(observingCharlieKeys.publicKey, {
+partyHint:
+'v1-03-observingCharlie'
+,
+observingParticipantEndpoints: participantEndpoints,
+})
+.
+sign
+(observingCharlieKeys.privateKey)
+.
+execute
+()
+logger.
+info
+(
+observingCharlie,
+'Multi hosted party with observing participant allocated successfully'
+)
+const
+observingConradPingCommand
+=
+sdk.utils.ping.
+create
+([
+{
+initiator: observingCharlie.partyId,
+responder: observingCharlie.partyId,
+},
+])
+const
+observingPingResult
+=
+await
+sdk.ledger
+.
+prepare
+({
+partyId: observingCharlie.partyId,
+commands: observingConradPingCommand,
+})
+.
+sign
+(observingCharlieKeys.privateKey)
+.
+execute
+({
+partyId: observingCharlie.partyId,
+})
+logger.
+info
+(
+observingPingResult,
+'Successfully validated observing party allocation via Canton.Internal.Ping'
+)
+See all 134 lines
+External parties
+An external party uses an external key pair for signing. You provide the public key, and the SDK generates the topology. You then sign the topology transaction with your private key and execute it on the ledger.
+const
+party
+=
+await
+sdk.userLedger?.
+signAndAllocateExternalParty
+(
+privateKey,
+partyHint
+)
+const
+party
+=
+await
+sdk.party.external
+.
+create
+(publicKey, { partyHint:
+'my-party'
+})
+.
+sign
+(privateKey)
+.
+execute
+()
+We recommend always providing a
+partyHint
+when creating a party. Refer to
+Choosing a party hint
+for more details.
+​
+Listing parties
+const
+wallets
+=
+await
+sdk.userLedger?.
+listWallets
+()
+const
+partyIds
+=
+await
+sdk.party.
+list
+()
+This method returns all parties where the user has
+CanActAs
+,
+CanReadAs
+, or
+CanExecuteAs
+rights. If the user has admin rights, all local parties are returned.
+​
+Offline signing workflow
+const
+preparedParty
+=
+await
+sdk.userLedger?.
+generateExternalParty
+(
+keyPair.publicKey, partyHint
+)
+const
+allocatedParty
+=
+await
+sdk.userLedger?.
+allocateExternalParty
+(
+signature,
+preparedParty
+)
+const
+party
+=
+await
+sdk.party.external
+.
+create
+(publicKey, options)
+.
+execute
+(signature, executeOptions)
+​
+Migration reference
+v0 method
+v1 method
+sdk.setPartyId(partyId)
+Pass
+partyId
+explicitly to each operation
+sdk.userLedger.listWallets()
+sdk.party.list()
+sdk.userLedger.signAndAllocateExternalParty(privateKey, partyHint)
+sdk.party.external.create(publicKey, {partyHint}).sign(privateKey).execute()
+sdk.topology?.prepareExternalPartyTopology()
+sdk.party.external.create().prepare()
+(implicit on create)
+sdk.topology?.submitExternalPartyTopology()
+sdk.party.external.create().sign().execute()
+​
+See also
+v0 to v1 migration overview
+Migration cheat sheet
+Configuration
+— SDK configuration
+Creating an external party
+— External party onboarding
+Preparing and signing a transaction
+— Transaction lifecycle
+Suggest edits
+Raise issue
+Migration cheat sheet
+Token Namespace

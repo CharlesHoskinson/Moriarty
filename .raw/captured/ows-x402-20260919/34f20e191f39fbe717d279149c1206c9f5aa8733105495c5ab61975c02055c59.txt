@@ -1,0 +1,171 @@
+On this page
+Parameters
+config
+Returns
+Examples
+createX402Server
+Copy page
+Copy page
+Copy page
+Copy page
+function
+createX402Server
+(
+config
+:
+CdpX402ServerConfig
+)
+:
+Promise
+<
+X402Server
+>;
+Defined in:
+server.ts:1139
+Creates and initializes a CDP-powered x402 resource server.
+Returns an
+X402Server
+which
+extends
+x402HTTPResourceServer
+and can
+be passed directly to
+paymentMiddlewareFromHTTPServer
+or any other
+framework adapter.
+All credential fields fall back to environment variables; an empty
+{}
+with a
+routes
+map is sufficient in most environments.
+Pass
+payToConfig: { type: "address", evm: "0x...", solana: "..." }
+to
+provide your own receiver addresses without provisioning a CDP wallet.
+​
+Parameters
+​
+config
+CdpX402ServerConfig
+Credential, wallet, and route configuration. All credential fields
+fall back to environment variables;
+routes
+is the only required field (or
+configPath
+pointing to a JSON file that supplies routes).
+​
+Returns
+Promise
+<
+X402Server
+>
+A fully initialized
+X402Server
+ready to be passed to any framework middleware.
+​
+Examples
+// Set: CDP_API_KEY_ID, CDP_API_KEY_SECRET, CDP_WALLET_SECRET
+const
+server
+=
+await
+createX402Server
+({
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+,
+description:
+"AI-generated report"
+},
+},
+});
+app
+.
+use
+(
+paymentMiddlewareFromHTTPServer
+(
+server
+));
+console
+.
+log
+(
+"EVM receiver:"
+,
+server
+.
+payToEvmAddress
+);
+const
+server
+=
+await
+createX402Server
+({
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+} },
+payToConfig:
+{
+type:
+"address"
+,
+evm:
+"0x1234..."
+,
+solana:
+"ABC..."
+},
+});
+const
+server
+=
+await
+createX402Server
+({
+routes:
+{
+"GET /report"
+:
+{
+accepts:
+{
+scheme:
+"exact"
+,
+price:
+"$0.01"
+,
+network:
+"eip155:8453"
+,
+payTo:
+""
+},
+},
+},
+});
+// x402.config.json: { "routes": { "GET /report": { "price": "$0.01" } } }
+const
+server
+=
+await
+createX402Server
+({
+configPath:
+"./x402.config.json"
+});
+Was this page helpful?
+Yes
+No

@@ -1,0 +1,259 @@
+---
+title: "Simplicity sources and coverage"
+type: research
+status: research-draft
+created: 2026-09-19
+updated: 2026-09-19
+diataxis: reference
+tags: [moriarty, simplicity, research]
+---
+
+# Source inventory and coverage
+
+All 97 official sitemap pages returned HTTP200. Five default-branch repositories are pinned below; tracked trees were acquired without full history, LFS materialization or recursive submodule retrieval. Two PDFs total189 rendered pages; rendering is not reading.
+
+- `SimplicityHL` at `f3fa882e77c221e96e10acde9f0e46e68e69930f`: 239 tracked files, 16 documentation files.
+- `rust-simplicity` at `52936e2462081ac65f39b33b9f47121bc1097bac`: 269 tracked files, 10 documentation files.
+- `simplicity` at `91d89bac54e9411281ee3b6e766a0ea20eb0a3d3`: 316 tracked files, 6 documentation files.
+- `simplicity-contracts` at `86ca1c0278346e5d70d5ebe4c1813bffd50ce562`: 64 tracked files, 4 documentation files.
+- `simplicity-lang-org` at `aa20f1318db9c6c4ea5afb20ca4102ac42284ede`: 181 tracked files, 97 documentation files.
+
+The graph contains extracted document ownership and site hyperlinks; per-repository AST extractions are separate. Macro-related parser warnings and zero-node files are retained in the research graph log. No full-corpus semantic reading, proof execution or live deployment audit is claimed.
+
+## Captured sources
+
+- [src-0c61ea2ce1fcab3002d7](https://docs.simplicity-lang.org/) — Captured only; not fully read.
+- [src-52750200f39beefa0cfc](https://docs.simplicity-lang.org/documentation/execution-model/) — Captured only; not fully read.
+- [src-cc1c4495c105bf5103bd](https://docs.simplicity-lang.org/documentation/jets/) — Captured only; not fully read.
+- [src-9352070ac91d8d80de6c](https://docs.simplicity-lang.org/documentation/modules/) — Captured only; not fully read.
+- [src-95053a365576fdd0a313](https://docs.simplicity-lang.org/documentation/oracle/) — Captured only; not fully read.
+- [src-2638232cf6007d9be61e](https://docs.simplicity-lang.org/documentation/road-to-ecosystem/) — Captured only; not fully read.
+- [src-07d0836db0c0838d8011](https://docs.simplicity-lang.org/documentation/rust-differences/) — Captured only; not fully read.
+- [src-e330c96b995eb238cd7f](https://docs.simplicity-lang.org/documentation/simplex/) — Captured only; not fully read.
+- [src-174eba8d1bdc5a0bb33f](https://docs.simplicity-lang.org/documentation/simplicity-compared/) — Captured only; not fully read.
+- [src-e863610ddf4545d9fc31](https://docs.simplicity-lang.org/documentation/simplicity-for-evm-developers/) — Captured only; not fully read.
+- [src-821577e26746e8217682](https://docs.simplicity-lang.org/documentation/state/) — Captured only; not fully read.
+- [src-fb9505f683b809211641](https://docs.simplicity-lang.org/documentation/stdlib/) — Captured only; not fully read.
+- [src-1946a2669e75903e1856](https://docs.simplicity-lang.org/documentation/timelocks/) — Captured only; not fully read.
+- [src-18098605b14619e78d87](https://docs.simplicity-lang.org/documentation/toolchain/) — Captured only; not fully read.
+- [src-565d2bc20b0215ac8a47](https://docs.simplicity-lang.org/documentation/txmanifest/) — Captured only; not fully read.
+- [src-32456fd46265c5d8f667](https://docs.simplicity-lang.org/documentation/wallet/) — Captured only; not fully read.
+- [src-352b05c0ade13be82822](https://docs.simplicity-lang.org/documentation/witness-format/) — Captured only; not fully read.
+- [src-909479d7350a10066ac4](https://docs.simplicity-lang.org/documentation/witness/) — Captured only; not fully read.
+- [src-782304c20232df31ab06](https://docs.simplicity-lang.org/getting-started/quickstart/) — Captured only; not fully read.
+- [src-e6cc047b8048928886a8](https://docs.simplicity-lang.org/getting-started/try-it/) — Captured only; not fully read.
+- [src-3ece7d52b6c66a4ceaa9](https://docs.simplicity-lang.org/getting-started/welcome-bitcoin/) — Captured only; not fully read.
+- [src-d4581b65ae48403c6456](https://docs.simplicity-lang.org/getting-started/welcome-evm/) — Captured only; not fully read.
+- [src-45b8a4facf02552aa6e7](https://docs.simplicity-lang.org/getting-started/welcome-finance/) — Captured only; not fully read.
+- [src-cbd6d3dc08ffdf4ab60a](https://docs.simplicity-lang.org/glossary/) — Captured only; not fully read.
+- [src-c7f9c6c02e0f4d10dfd6](https://docs.simplicity-lang.org/news/) — Captured only; not fully read.
+- [src-7706f062576a9f922cda](https://docs.simplicity-lang.org/news/2017/10/30/introducing-simplicity/) — Captured only; not fully read.
+- [src-901d2d4ea6e065ecd7eb](https://docs.simplicity-lang.org/news/2018/02/08/simplicity-a-new-language-for-blockchains/) — Captured only; not fully read.
+- [src-c88daaab15805050e178](https://docs.simplicity-lang.org/news/2018/11/25/video-simplicity-programmable-money/) — Captured only; not fully read.
+- [src-d8cae710cdff566d6da8](https://docs.simplicity-lang.org/news/2018/11/28/simplicity-github-repository-now-live/) — Captured only; not fully read.
+- [src-ae13ab23f260f2e8d23b](https://docs.simplicity-lang.org/news/2019/10/15/video-simplicity-high-assurance-smart-contracts/) — Captured only; not fully read.
+- [src-1f43dffab3307f689924](https://docs.simplicity-lang.org/news/2019/11/17/video-simplicity-a-new-language-for-blockchains/) — Captured only; not fully read.
+- [src-6e277ae7e3c79067ff31](https://docs.simplicity-lang.org/news/2020/04/04/simplicity-jets-release/) — Captured only; not fully read.
+- [src-9eb84e4244029d0f2af7](https://docs.simplicity-lang.org/news/2020/07/19/video-simplicity-at-consensus-distributed-2020/) — Captured only; not fully read.
+- [src-5d36e46842fc378dfb9b](https://docs.simplicity-lang.org/news/2020/09/28/disconnecting-simplicity-expressions/) — Captured only; not fully read.
+- [src-392edead68a77deaf421](https://docs.simplicity-lang.org/news/2021/08/03/simplicity-taproot-and-universal-sighashes/) — Captured only; not fully read.
+- [src-4140fc388de91d1b7b46](https://docs.simplicity-lang.org/news/2022/06/15/video-simplicity-bitcoin-script-to-arbitrary-computation/) — Captured only; not fully read.
+- [src-75c6c32b4476af203c95](https://docs.simplicity-lang.org/news/2022/11/21/from-miniscript-to-simplicity/) — Captured only; not fully read.
+- [src-1376a8604f29a49101a2](https://docs.simplicity-lang.org/news/2023/05/12/video-simplicity-going-beyond-miniscript/) — Captured only; not fully read.
+- [src-fec959a40a704576d5e6](https://docs.simplicity-lang.org/news/2023/06/27/simplicity-holes-and-side-effects/) — Captured only; not fully read.
+- [src-8331a9d265276551bb07](https://docs.simplicity-lang.org/news/2023/07/11/building-blocks-of-simplicity-values-and-types/) — Captured only; not fully read.
+- [src-ddcf9b1d81a0f2ce14ca](https://docs.simplicity-lang.org/news/2023/08/01/video-simplicity-bitcoins-last-soft-fork/) — Captured only; not fully read.
+- [src-1f3956cb57a193a47cd6](https://docs.simplicity-lang.org/news/2023/08/11/simplicity-sharing-of-witness-and-disconnect/) — Captured only; not fully read.
+- [src-438447491d965715965d](https://docs.simplicity-lang.org/news/2023/08/28/video-bitcoin-cryptography-and-scripting/) — Captured only; not fully read.
+- [src-36b356a3da653d2edcba](https://docs.simplicity-lang.org/news/2024/03/31/video-christian-lewe-on-simplicity/) — Captured only; not fully read.
+- [src-0918b533c8a8a2a4f5f8](https://docs.simplicity-lang.org/news/2024/10/10/simplicity-arrives-on-the-liquid-testnet/) — Captured only; not fully read.
+- [src-492189883b6bae89fc4d](https://docs.simplicity-lang.org/news/2025/07/31/simplicity-launches-on-liquid-mainnet/) — Captured only; not fully read.
+- [src-e16ef2ca525421af0f6b](https://docs.simplicity-lang.org/news/2025/08/04/building-starks-in-simplicity/) — Captured only; not fully read.
+- [src-42e155dd3588225677fd](https://docs.simplicity-lang.org/news/2025/11/17/delving-simplicity-series/) — Captured only; not fully read.
+- [src-d505a56270d3bbd48678](https://docs.simplicity-lang.org/news/2026/02/20/video-resolvr-astrolabe-demo/) — Captured only; not fully read.
+- [src-f6b5075bd2ddc69144ee](https://docs.simplicity-lang.org/news/2026/03/03/shrincs-quantum-resistant-signature-verification-in-simplicity/) — Captured only; not fully read.
+- [src-4127216f96d5888df2e9](https://docs.simplicity-lang.org/news/2026/07/15/simplicity-community-forum-launched/) — Captured only; not fully read.
+- [src-d2b998fa513020e5c538](https://docs.simplicity-lang.org/news/archive/2017/) — Captured only; not fully read.
+- [src-8ee9455daf83ddf24718](https://docs.simplicity-lang.org/news/archive/2018/) — Captured only; not fully read.
+- [src-328836b0394c4fcf1bf3](https://docs.simplicity-lang.org/news/archive/2019/) — Captured only; not fully read.
+- [src-dc32bd94d6cbfa88ec4f](https://docs.simplicity-lang.org/news/archive/2020/) — Captured only; not fully read.
+- [src-f74eeac0fa9131134761](https://docs.simplicity-lang.org/news/archive/2021/) — Captured only; not fully read.
+- [src-416376ab431d43c41032](https://docs.simplicity-lang.org/news/archive/2022/) — Captured only; not fully read.
+- [src-1790fbbaf0d152660a4b](https://docs.simplicity-lang.org/news/archive/2023/) — Captured only; not fully read.
+- [src-2a149d2d026fb43f4bed](https://docs.simplicity-lang.org/news/archive/2024/) — Captured only; not fully read.
+- [src-8fa9e46c9857de32a563](https://docs.simplicity-lang.org/news/archive/2025/) — Captured only; not fully read.
+- [src-f2fe8333be80da2f871c](https://docs.simplicity-lang.org/news/archive/2026/) — Captured only; not fully read.
+- [src-20e0eb8991be5bb0a75c](https://docs.simplicity-lang.org/news/category/articles/) — Captured only; not fully read.
+- [src-a5cb8779883c1dcee47f](https://docs.simplicity-lang.org/news/category/articles/page/2/) — Captured only; not fully read.
+- [src-1d7475a1ef53d6c97ee3](https://docs.simplicity-lang.org/news/category/videos/) — Captured only; not fully read.
+- [src-63f84b4f3be383af2b0d](https://docs.simplicity-lang.org/news/page/2/) — Captured only; not fully read.
+- [src-7d1a5abc80cd98269cc8](https://docs.simplicity-lang.org/news/page/3/) — Captured only; not fully read.
+- [src-d336aa77766a37017893](https://docs.simplicity-lang.org/office-hours/) — Captured only; not fully read.
+- [src-d0a6bec5398e1c02493a](https://docs.simplicity-lang.org/resources/contribute/) — Captured only; not fully read.
+- [src-0c656c99749e3c25df6c](https://docs.simplicity-lang.org/resources/faq/) — Captured only; not fully read.
+- [src-63b60cadb0621f6f29ba](https://docs.simplicity-lang.org/resources/projects/) — Captured only; not fully read.
+- [src-4800339c7313003669ec](https://docs.simplicity-lang.org/resources/roadmap/) — Captured only; not fully read.
+- [src-9f0beb8bd0f44c02a831](https://docs.simplicity-lang.org/simplicityhl-reference/) — Captured only; not fully read.
+- [src-f36d97cb7da17c6a2a9e](https://docs.simplicity-lang.org/simplicityhl-reference/builtin/) — Captured only; not fully read.
+- [src-827e8bf8574112285689](https://docs.simplicity-lang.org/simplicityhl-reference/context/) — Captured only; not fully read.
+- [src-3b6d41096399835f25a3](https://docs.simplicity-lang.org/simplicityhl-reference/environment/) — Captured only; not fully read.
+- [src-f1e1e187d51a393c27d1](https://docs.simplicity-lang.org/simplicityhl-reference/function/) — Captured only; not fully read.
+- [src-0d9758100544e08e3003](https://docs.simplicity-lang.org/simplicityhl-reference/let_statement/) — Captured only; not fully read.
+- [src-6b33ae05a575e7069c5e](https://docs.simplicity-lang.org/simplicityhl-reference/match_expression/) — Captured only; not fully read.
+- [src-5aeb08c9a95dd37e3918](https://docs.simplicity-lang.org/simplicityhl-reference/modules/) — Captured only; not fully read.
+- [src-79830b104152745260a6](https://docs.simplicity-lang.org/simplicityhl-reference/program/) — Captured only; not fully read.
+- [src-b183e7eb29b5bd7c649d](https://docs.simplicity-lang.org/simplicityhl-reference/translation/) — Captured only; not fully read.
+- [src-e7fceaef9eb3be4a46c3](https://docs.simplicity-lang.org/simplicityhl-reference/type/) — Captured only; not fully read.
+- [src-53276251cca7377d2fb6](https://docs.simplicity-lang.org/simplicityhl-reference/type_alias/) — Captured only; not fully read.
+- [src-99d2385ce90dd7b3bd22](https://docs.simplicity-lang.org/simplicityhl-reference/type_casting/) — Captured only; not fully read.
+- [src-0235d04bf80ac7c0b3c9](https://docs.simplicity-lang.org/tutorial/) — Captured only; not fully read.
+- [src-ad4f108f30e29dbd3ede](https://docs.simplicity-lang.org/tutorial/reading-transaction-data/) — Captured only; not fully read.
+- [src-ad09d6a349eacc992f56](https://docs.simplicity-lang.org/tutorial/your-first-program/) — Captured only; not fully read.
+- [src-c8d5aec718bc16e3df5f](https://docs.simplicity-lang.org/use-cases/) — Captured only; not fully read.
+- [src-73e336acc78eb3c6f2d4](https://docs.simplicity-lang.org/use-cases/cross-chain-atomic-swaps/) — Captured only; not fully read.
+- [src-3f10f04e7e1d6b3255e4](https://docs.simplicity-lang.org/use-cases/crowdfunding/) — Captured only; not fully read.
+- [src-5474321d561febff9da9](https://docs.simplicity-lang.org/use-cases/discreet-log-contracts/) — Captured only; not fully read.
+- [src-7ca464668669aa9420af](https://docs.simplicity-lang.org/use-cases/financial-contracts/) — Captured only; not fully read.
+- [src-fb1ada98e5a205a1d86c](https://docs.simplicity-lang.org/use-cases/insurance-contracts/) — Captured only; not fully read.
+- [src-d46ad65e0d6f70697214](https://docs.simplicity-lang.org/use-cases/lending-protocol/) — Captured only; not fully read.
+- [src-10a0baa596dec70e5931](https://docs.simplicity-lang.org/use-cases/simplicity-dex/) — Captured only; not fully read.
+- [src-04bffaf6eea2caa791c4](https://docs.simplicity-lang.org/use-cases/unchained/) — Captured only; not fully read.
+- [src-d0ff1fee2f6fae3f195a](https://docs.simplicity-lang.org/use-cases/vaults/) — Captured only; not fully read.
+- [src-9022c9ef9445d7decec7](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/.github/ISSUE_TEMPLATE/other-issue.md) — Captured only; not fully read.
+- [src-6a7d938b4fea88c24d71](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/CHANGELOG.md) — Captured only; not fully read.
+- [src-fffd44be3125166c0ac6](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/CONTRIBUTING.md) — Captured only; not fully read.
+- [src-fddf8367e586509d8766](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/README.md) — Captured only; not fully read.
+- [src-9da9a4dee585bebece4a](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/SECURITY.md) — Captured only; not fully read.
+- [src-927ebc31f882f8eb6e85](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/codegen/README.md) — Captured only; not fully read.
+- [src-d40c4fa2de92a1bcda3c](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/AIToolPolicy.md) — Captured only; not fully read.
+- [src-ddf8370c0c6638e66174](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/architecture.md) — Captured only; not fully read.
+- [src-7caca70f8978f1adc46d](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/context.md) — Captured only; not fully read.
+- [src-e77c3d9483f1d8ed5a17](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/environment.md) — Captured only; not fully read.
+- [src-851b455e7ecf6bc84db5](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/translation.md) — Captured only; not fully read.
+- [src-1db03360d15f1a592be1](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/unstable-features.md) — Captured only; not fully read.
+- [src-fd98960ed84a65044587](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/doc/versioning.md) — Captured only; not fully read.
+- [src-c0032f930699ee71125b](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/external-jet-lib-example/README.md) — Captured only; not fully read.
+- [src-ad2157e32519dad33973](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/fuzz/README.md) — Captured only; not fully read.
+- [src-c287fe2829c76e141d0d](https://github.com/BlockstreamResearch/SimplicityHL/blob/f3fa882e77c221e96e10acde9f0e46e68e69930f/src/types/README.md) — Captured only; not fully read.
+- [src-4bcc01f44456cb49ae0a](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/CHANGELOG.md) — Captured only; not fully read.
+- [src-435a384297ebbc28f806](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/CONTRIBUTING.md) — Captured only; not fully read.
+- [src-384a69b34220b66ecf13](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/README.md) — Captured only; not fully read.
+- [src-eebe322967fe6f49ff2a](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/SECURITY.md) — Captured only; not fully read.
+- [src-7e09ff905524eaaaac9a](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/fuzz/README.md) — Captured only; not fully read.
+- [src-4c1590d87eb5a60986f7](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/jets-bench/README.md) — Captured only; not fully read.
+- [src-41061650bac228fb7fd7](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/simplicity-sys/README.md) — Captured only; not fully read.
+- [src-212e8d7a0fa08635e7d3](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/simplicity-sys/depend/simplicity-HEAD-revision.txt) — Captured only; not fully read.
+- [src-ab92ac6d4e2a6e079fed](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/simplicity-sys/depend/simplicity/secp256k1/README.md) — Captured only; not fully read.
+- [src-b3422cec076891a8aebd](https://github.com/BlockstreamResearch/rust-simplicity/blob/52936e2462081ac65f39b33b9f47121bc1097bac/src/human_encoding/README.md) — Captured only; not fully read.
+- [src-3d5cfab44a2ad32b0e32](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/C/CMakeLists.txt) — Captured only; not fully read.
+- [src-cc095e5238d0083424ea](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/C/secp256k1/README.md) — Captured only; not fully read.
+- [src-4c3e0495a85465f0d8e3](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/README.md) — Full README read.
+- [src-ada96c7fc74e3b7a8ad5](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/SECURITY.md) — Captured only; not fully read.
+- [src-427ad6f3f2dc820e55a0](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/Simplicity-TR.tm) — Captured only; not fully read.
+- [src-ab52f2d8796abaf9b9fa](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/spelling.ignore.txt) — Captured only; not fully read.
+- [src-7be07ce5706d189d3dd3](https://github.com/BlockstreamResearch/simplicity-contracts/blob/86ca1c0278346e5d70d5ebe4c1813bffd50ce562/.github/ISSUE_TEMPLATE/other-issue.md) — Captured only; not fully read.
+- [src-cbe33a6b856b8434837d](https://github.com/BlockstreamResearch/simplicity-contracts/blob/86ca1c0278346e5d70d5ebe4c1813bffd50ce562/CONTRIBUTING.md) — Captured only; not fully read.
+- [src-8c7f389a04e208afe1a4](https://github.com/BlockstreamResearch/simplicity-contracts/blob/86ca1c0278346e5d70d5ebe4c1813bffd50ce562/README.md) — Captured only; not fully read.
+- [src-a1230e0059930db89f2a](https://github.com/BlockstreamResearch/simplicity-contracts/blob/86ca1c0278346e5d70d5ebe4c1813bffd50ce562/crates/contracts/README.md) — Captured only; not fully read.
+- [src-b29f13d4692150e8177d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/.claude/rules/contentstyle.md) — Captured only; not fully read.
+- [src-925db4755e252ab921df](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/.claude/rules/diataxis.md) — Captured only; not fully read.
+- [src-386b6174643a92d3f2e7](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/.claude/rules/mkdocsmechanics.md) — Captured only; not fully read.
+- [src-930c217d573771d96633](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/.claude/rules/terminology.md) — Captured only; not fully read.
+- [src-0f0932dcb19641a15da6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/.github/copilot-instructions.md) — Captured only; not fully read.
+- [src-4a62dc11dd40a27128bf](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/AGENTS.md) — Captured only; not fully read.
+- [src-3cc61bcaf47089e0aba7](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/CLAUDE.md) — Captured only; not fully read.
+- [src-17d2b35fe8833573af7e](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/CONTRIBUTING.md) — Captured only; not fully read.
+- [src-63c60bb1179f7f32d551](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/README.md) — Captured only; not fully read.
+- [src-7bcebc9d6d79c064694d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/RUNNABLE_SNIPPETS.md) — Captured only; not fully read.
+- [src-5304283d9af46ce56ca7](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/attic/haskell.md) — Captured only; not fully read.
+- [src-3ddcfa38c3a1bc59b836](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/attic/rust.md) — Captured only; not fully read.
+- [src-ee8b016fe444db9712a4](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/crates/simplicity-runner/README.md) — Captured only; not fully read.
+- [src-f725a18f42ea8e4586db](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/execution-model.md) — Opening execution model and HTLC example inspected.
+- [src-9ca5baf249b433259407](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/jets.md) — Introduction and selected signatures inspected; full generated catalog not read.
+- [src-a46ee89d76cf32dac1cd](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/modules.md) — Captured only; not fully read.
+- [src-8df2a5937a3c115d2efd](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/oracle.md) — Captured only; not fully read.
+- [src-51d38085146caffc5388](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/road-to-ecosystem.md) — Captured only; not fully read.
+- [src-4cb45f9540777ce4e2ca](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/rust-differences.md) — Captured only; not fully read.
+- [src-4f47e67429b04978189d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/simplex.md) — Captured only; not fully read.
+- [src-865a455e335c909a4238](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/simplicity-compared.md) — Captured only; not fully read.
+- [src-a0cedc9a214d42a80121](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/simplicity-for-evm-developers.md) — Captured only; not fully read.
+- [src-000a5c32699ebd4f3ac9](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/state.md) — Covenant example and commitment/state-storage sections inspected.
+- [src-a2daeaf743dcf11468b6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/stdlib.md) — Captured only; not fully read.
+- [src-824d1613322b88409c6a](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/timelocks.md) — Units, enforcement, deprecation and relative-distance workaround inspected.
+- [src-8339b455c3cddb5c17f0](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/toolchain.md) — Captured only; not fully read.
+- [src-5f975ba89ac896458d4f](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/txmanifest.md) — Full page read.
+- [src-782118e8e177312698a3](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/wallet.md) — Captured only; not fully read.
+- [src-b5179b1fe1fe315b9468](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/witness-format.md) — Captured only; not fully read.
+- [src-f9f824e0c70619c51080](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/witness.md) — Full page read.
+- [src-23ee99bb78420e4f9181](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/getting-started/quickstart.md) — Captured only; not fully read.
+- [src-1f304698ef50e30357bb](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/getting-started/try-it.md) — Captured only; not fully read.
+- [src-2bbad657a41034a31975](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/getting-started/welcome-bitcoin.md) — Captured only; not fully read.
+- [src-e1e4dc84634eb646006d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/getting-started/welcome-evm.md) — Captured only; not fully read.
+- [src-3d1cc19bf46b86448af6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/getting-started/welcome-finance.md) — Captured only; not fully read.
+- [src-0a8ba0c7fe45197861bc](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/glossary.md) — Captured only; not fully read.
+- [src-26712b4a1d96cb49cfcc](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/index.md) — Captured only; not fully read.
+- [src-37ede323e8cc427c47a9](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/index.md) — Captured only; not fully read.
+- [src-f38e79f60656e44817fd](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-disconnecting-simplicity-expressions.md) — Captured only; not fully read.
+- [src-e9356c3e1ecc9bde275c](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-github-repository.md) — Captured only; not fully read.
+- [src-2ba9d3dcec206196522b](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-holes-and-side-effects.md) — Captured only; not fully read.
+- [src-54caa8df865697757305](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-introducing-simplicity.md) — Captured only; not fully read.
+- [src-8e095b57d4f34723c224](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-jets-release.md) — Captured only; not fully read.
+- [src-b58171b562526f167462](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-miniscript-to-simplicity.md) — Captured only; not fully read.
+- [src-8b0badcfe5969e0fa2d6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-new-language.md) — Captured only; not fully read.
+- [src-18cb4296bb37b48f00ed](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-shrincs-validation.md) — Captured only; not fully read.
+- [src-e5108504904db5d42bd1](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-simplicity-forum.md) — Captured only; not fully read.
+- [src-7023c7567deb58c24349](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-simplicity-liquid-mainnet.md) — Captured only; not fully read.
+- [src-1ca943418295236e8d1c](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-simplicity-liquid-testnet.md) — Captured only; not fully read.
+- [src-d34eb3d17a2603700179](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-starks-in-simplicity.md) — Captured only; not fully read.
+- [src-1edb718637c9d55c737d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-taproot-and-universal-sighashes.md) — Captured only; not fully read.
+- [src-0ae8cdc5414327fa4968](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-values-and-types.md) — Captured only; not fully read.
+- [src-20c9d42cb8d154a25f67](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/article-witness-and-disconnect.md) — Captured only; not fully read.
+- [src-45df7a6b9d695b5106a2](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/delving-simplicity.md) — Captured only; not fully read.
+- [src-22b4873c4c8ea323b460](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-bitcoin-cryptography-and-scripting.md) — Captured only; not fully read.
+- [src-6424eb0a6a05ef7202fb](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-christian-lewe-on-simplicity.md) — Captured only; not fully read.
+- [src-bca5236a802a5536140d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-last-soft-fork.md) — Captured only; not fully read.
+- [src-f96945c08bbb956462f1](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-resolvr-astrolabe-demo.md) — Captured only; not fully read.
+- [src-0a739d86ee0594a7a27c](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-at-consensus-distributed-2020.md) — Captured only; not fully read.
+- [src-af171b9cb86630232dbb](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-bitcoin-script-to-arbitrary-computation.md) — Captured only; not fully read.
+- [src-b64fc72a8bc40895668f](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-going-beyond-miniscript.md) — Captured only; not fully read.
+- [src-24a62ae98f5336f4fd9d](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-high-assurance-smart-contracts.md) — Captured only; not fully read.
+- [src-a6bae7b41b7ff8ec8dc0](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-new-language-for-blockchains.md) — Captured only; not fully read.
+- [src-2a608b4a3ba42391a463](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/news/posts/video-simplicity-programmable-money.md) — Captured only; not fully read.
+- [src-254246a585de1ddd7cea](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/office-hours.md) — Captured only; not fully read.
+- [src-1a64d9dc0b39870a2f5c](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/resources/contribute.md) — Captured only; not fully read.
+- [src-3a3100823459fa1a3e93](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/resources/faq.md) — Captured only; not fully read.
+- [src-30dbf087f985c9736e06](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/resources/projects.md) — Captured only; not fully read.
+- [src-3e4de621c494957cf810](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/resources/roadmap.md) — Captured only; not fully read.
+- [src-f3ef40b39a2a3a747f04](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/builtin.md) — Captured only; not fully read.
+- [src-8fd87b0d84bc988fbaea](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/context.md) — Captured only; not fully read.
+- [src-172e0b75912417d1f3f3](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/environment.md) — Captured only; not fully read.
+- [src-45748ed0140aaad1a771](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/function.md) — Captured only; not fully read.
+- [src-0cea035bd739e9cb812a](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/index.md) — Captured only; not fully read.
+- [src-5f3987301e9ae4073d31](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/let_statement.md) — Captured only; not fully read.
+- [src-d31ae83bad23586b6289](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/match_expression.md) — Captured only; not fully read.
+- [src-5c4dad5b7c93788e1b70](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/modules.md) — Captured only; not fully read.
+- [src-505a041b571a7378bf10](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/program.md) — Captured only; not fully read.
+- [src-8e5007d0468d4bb893e6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/translation.md) — Full translation page read.
+- [src-0d892a88bcd93510a4de](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/type.md) — Captured only; not fully read.
+- [src-01480b67d8e3c271bba5](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/type_alias.md) — Captured only; not fully read.
+- [src-0c06b94dc63ebcc8e2fd](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/simplicityhl-reference/type_casting.md) — Captured only; not fully read.
+- [src-67b0b6f2fbf56ace76a1](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/tutorial/index.md) — Captured only; not fully read.
+- [src-87d3bf02862f145bee7c](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/tutorial/reading-transaction-data.md) — Captured only; not fully read.
+- [src-37aa038cc7dac1113919](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/tutorial/your-first-program.md) — Captured only; not fully read.
+- [src-d173b209b17767aa6074](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/cross-chain-atomic-swaps.md) — Captured only; not fully read.
+- [src-2ff525be471bb0b4fae7](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/crowdfunding.md) — Captured only; not fully read.
+- [src-d3717f542551234bf05b](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/discreet-log-contracts.md) — Captured only; not fully read.
+- [src-82e7a78d034fa031a6e6](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/financial-contracts.md) — Captured only; not fully read.
+- [src-2570375a5bc0dca7dada](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/index.md) — Captured only; not fully read.
+- [src-c0c0bc988678990d64fa](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/insurance-contracts.md) — Captured only; not fully read.
+- [src-91499db19b3b142c57f0](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/lending-protocol.md) — Captured only; not fully read.
+- [src-8317585c416668cda3a9](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/simplicity-dex.md) — Captured only; not fully read.
+- [src-b4c8bfa76c935695dd8f](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/unchained.md) — Captured only; not fully read.
+- [src-ceaf7563b316e8de59c3](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/use-cases/vaults.md) — Captured only; not fully read.
+- [src-58d3c35d49ba2d52d506](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/requirements.txt) — Captured only; not fully read.
+- [src-ce994961af7dfa29ceb2](https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/tests/ecosystem-documentation-coverage.md) — Captured only; not fully read.
+- [src-772803bf07f2d31701f0](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/C/elements/elementsJets.c) — Selected range 735-774
+- [src-f0c4496a1427ac1e71f5](https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/Coq/Simplicity/BitMachine.v) — Selected range lemma declarations inspected; proofs not rebuilt
+- [src-414de49261a51503b4cf](https://blockstream.com/press-releases/2025-07-31-blockstream-launches-simplicity/) — Announcement read; historical launch statement, not present deployment attestation.
+- [src-5d003cb21e9a7429aa22](https://blockstream.com/simplicity.pdf) — 34 pages rendered; visual page17; text jets section pp17-18 read.
+- [src-f58323bb7106e050e336](https://raw.githubusercontent.com/ElementsProject/simplicity/pdf/Simplicity-TR.pdf) — 155 pages rendered; visual pp59,60,61; selected sections/text inspected. Jets chapter title and blank page are not a completed specification.

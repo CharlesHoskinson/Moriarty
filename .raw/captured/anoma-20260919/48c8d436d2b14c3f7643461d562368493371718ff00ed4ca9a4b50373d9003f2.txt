@@ -1,0 +1,390 @@
+Best Practices
+Copy page
+Best Practices
+Key storage and security
+Never expose private keys
+The keyring contains four private keys. Treat the serialized keyring with the same care as a wallet seed phrase:
+Use
+sessionStorage
+for in-browser apps. Session storage is cleared when the tab closes, minimizing the window during which a stolen key is usable.
+Never put the serialized keyring in
+localStorage
+unencrypted. LocalStorage persists indefinitely and is accessible to any script running on your origin.
+Never transmit the keyring over the network.
+All operations that require private keys (signing, decryption) must happen client-side.
+Consider an encrypted vault.
+For persistent login, encrypt the serialized keyring with a user-derived key (e.g. from a passkey PRF output or a PBKDF2-stretched password) before storing it.
+Prefer passkey derivation
+For browser apps, derive the keyring from a WebAuthn passkey using the PRF extension. This ties key access to the user’s authenticator hardware and avoids storing private key material anywhere:
+import
+{ createUserKeyringFromPasskey }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyringFromPasskey
+(credential);
+// The keyring is derived fresh on each login — nothing is stored
+Separate storage for the discovery key pair
+The discovery key pair is registered with the Indexer and is less sensitive than the signing/nullifier keys, but it is still a private key. Register it once and never re-register unnecessarily — doing so will not break anything but is wasted work.
+WASM initialization
+Initialize once at app startup
+initWasm()
+loads the WebAssembly module. Call it once at application startup before any other SDK calls:
+// e.g. in your React app entry point or _app.tsx
+import
+{ initWasm }
+from
+"@anomaorg/anoma-app-sdk"
+;
+await
+initWasm
+();
+Calling
+initWasm()
+multiple times is safe but unnecessarily reloads the module.
+Initialize
+TransferBuilder
+once and reuse
+TransferBuilder.init()
+also loads the WASM module (it calls
+initWasm
+internally). Create one instance and reuse it across all transfer operations in a session rather than calling
+init()
+per transaction:
+// Instantiate once
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+// Reuse for all transfers
+const
+resolver1
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+const
+resolver2
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+Error handling
+Catch
+ResponseError
+from API clients
+All API clients throw
+ResponseError
+on non-2xx responses. Check
+err.status
+for HTTP status codes that require specific handling (e.g. 429 for rate limiting, 500 for backend errors):
+import
+{ ResponseError, HttpStatus }
+from
+"@anomaorg/anoma-app-sdk"
+;
+try
+{
+await
+backend.
+transfer
+(parameters);
+}
+catch
+(err) {
+if
+(err
+instanceof
+ResponseError
+) {
+if
+(err.status
+===
+HttpStatus.TooManyRequests) {
+// back off and retry
+}
+else
+if
+(err.status
+===
+HttpStatus.ServerError) {
+// show a generic error
+}
+}
+}
+Handle
+InsufficientResourcesError
+selectTransferResources
+(called internally by
+ParametersDraftResolver
+) throws
+InsufficientResourcesError
+when the user does not have enough private balance:
+import
+{ InsufficientResourcesError }
+from
+"@anomaorg/anoma-app-sdk"
+;
+try
+{
+const
+resolved
+=
+resolver.
+build
+(availableResources, forwarderAddress);
+}
+catch
+(err) {
+if
+(err
+instanceof
+InsufficientResourcesError
+) {
+// err.required — the amount the user tried to send
+// err.available — the amount actually available
+showError
+(
+`Insufficient balance. Required: ${
+err
+.
+required
+}, Available: ${
+err
+.
+available
+}`
+);
+}
+}
+Use
+getFirstErrorMessage
+in UI error boundaries
+When surfacing errors to users, use
+getFirstErrorMessage
+to extract a readable string regardless of whether the error is a
+ResponseError
+,
+ZodError
+, or a plain
+Error
+:
+import
+{ getFirstErrorMessage }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+message
+=
+getFirstErrorMessage
+(err)
+??
+"An unexpected error occurred."
+;
+Permit2 nonces
+Permit2 signatures include a nonce to prevent replay attacks. The nonce must be unique per signature. Using
+BigInt(Date.now())
+is acceptable for most apps:
+const
+nonce
+=
+BigInt
+(Date.
+now
+());
+For higher-frequency applications, maintain a monotonically increasing counter stored in
+sessionStorage
+, or use
+crypto.getRandomValues
+to generate a random 128-bit integer.
+Resource polling
+Refresh resources on a fixed interval
+Resources appear on-chain only after their creating transaction is proven and submitted. The SDK constant
+balanceRefetchIntervalInMs
+(10,000 ms) is the recommended polling interval for wallet UIs:
+import
+{ balanceRefetchIntervalInMs }
+from
+"@anomaorg/anoma-app-sdk"
+;
+setInterval
+(()
+=>
+fetchAndUpdateResources
+(), balanceRefetchIntervalInMs);
+Timestamp-filter nullifier queries
+To avoid re-fetching the entire nullifier history on each poll, pass the timestamp of the last known nullifier to
+publicNullifiers
+:
+const
+nullifiers
+=
+await
+envio.
+publicNullifiers
+(
+TRANSFER_LOGIC_VERIFYING_KEY
+,
+lastKnownTimestamp
+);
+This significantly reduces the GraphQL response size for users with long transaction histories.
+Queue load monitoring
+Before prompting the user to confirm a transaction, check the queue load and adjust your UX accordingly:
+import
+{
+isHeavyLoad,
+provingGPUs,
+estimateTransferTimeInSeconds,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+{
+processing
+}
+=
+await
+backend.
+statsQueue
+();
+const
+heavy
+=
+isHeavyLoad
+(processing, provingGPUs);
+const
+estimatedSeconds
+=
+estimateTransferTimeInSeconds
+(parameters);
+if
+(heavy) {
+showWarning
+(
+`The proving queue is under heavy load. Your transaction may take longer than the usual ~${
+estimatedSeconds
+}s.`
+);
+}
+Fee fluctuation tolerance
+Token prices used to compute percentage fees can move between the time you call
+estimateFee
+and the time you submit. The SDK accepts a fee variance of up to 5% (
+FeeFluctuationPercentage
+). This means:
+Show the estimated fee to users as approximate, not exact.
+Do not cache fee estimates for more than a few seconds before display.
+If the backend rejects a transaction due to fee mismatch, re-estimate and re-build.
+Multi-receiver transfers
+When sending to multiple receivers in one transaction, always call
+addReceiver
+for all of them before calling
+build()
+. Adding receivers after
+build()
+has been called requires creating a new
+ParametersDraftResolver
+instance:
+const
+resolver
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+// Add ALL receivers before build()
+resolver.
+addReceiver
+({ type:
+"AnomaAddress"
+, userPublicKeys: keys1, quantity:
+5_000_000
+n
+, token });
+resolver.
+addReceiver
+({ type:
+"AnomaAddress"
+, userPublicKeys: keys2, quantity:
+3_000_000
+n
+, token });
+// Then build once
+const
+resolved
+=
+resolver.
+build
+(availableResources, forwarderAddress);
+The PayloadBuilder.withAuthorization() call signs the Merkle root of all consumed and created resource pairs. If you change the resource set after signing, the signature will be invalid. Always call withAuthorization after build().
+Retry logic
+The backend can occasionally return transient errors (network timeouts, 500s during high load). Use
+retryMutationsCount
+as the recommended retry limit:
+import
+{ retryMutationsCount }
+from
+"@anomaorg/anoma-app-sdk"
+;
+let
+attempts
+=
+0
+;
+while
+(attempts
+<
+retryMutationsCount) {
+try
+{
+const
+result
+=
+await
+backend.
+transfer
+(parameters);
+return
+result;
+}
+catch
+(err) {
+attempts
+++
+;
+if
+(attempts
+>=
+retryMutationsCount)
+throw
+err;
+await
+new
+Promise
+(
+r
+=>
+setTimeout
+(r,
+2_000
+*
+attempts));
+// exponential back-off
+}
+}
+Do not retry transactions that returned
+Unprocessable
+— the parameters are invalid and retrying will always fail. Only retry on network errors or
+500
+responses.
+Last updated on
+April 2, 2026
+API Clients
+Build a Simple App

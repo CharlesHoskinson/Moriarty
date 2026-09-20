@@ -1,0 +1,19 @@
+**Verdict for the final consolidated design: approved.**
+
+The MNR01–MNR08 rows are evidence-grounded refinements of ZR01–ZR16, correctly scoped as specified-only, and do not import the Mina backend. Each row cites retained M/E/D evidence with root-verified hashes and excerpt ranges. The candidate preserves the user's ~March 2027 full native recursion planning assumption, no Lean, and no public permission gate. UNI-017, requirements.md, traceability, ROADMAP.md and the design document reference the MNR rows consistently, and prior consolidation corrections remain intact.
+
+Non-blocking precision corrections, recommended but not required for approval:
+
+- **docs/MORIARTY-BACKEND-REQUIREMENTS.md, MNR03 requirement text.** "domains/chunks/rounds" is Kimchi/IPA-specific vocabulary. Rephrase as backend-neutral proof-shape parameters, for example "domain size, chunking and opening-round or degree limits where the qualified backend uses them." Reasoning: the section states it reuses requirements and failure cases, not Mina artifact formats. Naming IPA rounds as a required binding dimension for a KZG backend reads as a format import and would be vacuous or confusing at U1 qualification.
+
+- **docs/MORIARTY-BACKEND-REQUIREMENTS.md, MNR01 requirement text.** Qualify "cross-field/limb conversion" with "where the qualified backend uses non-native field or cycle representations." Reasoning: the obligation derives from Pasta cycle deferred computation (E15). Midnight's KZG path may have no such mechanism. The contract should require a declared answer, including "not used," rather than presuppose the mechanism.
+
+- **openspec/changes/consolidated-language-kernel/requirements.md, MNR paragraph.** It states MNR owners are recorded in the backend contract. The backend contract records evidence but no owner column; owners appear only in the traceability register. Either add an owner column to the MNR table or change the sentence to "tests in the backend contract and owners in the traceability register." Reasoning: navigation accuracy, consistent with the "working navigation" acceptance item in proposal.md.
+
+- **docs/MORIARTY-BACKEND-REQUIREMENTS.md, MNR08 basis column.** RESULT.md states only physical pages 3, 5 and 6 were visually checked while extracted text of all ten pages was read. The basis cites pp3/5/6/7/8 without distinguishing these. State "extracted text pp3/5/6/7/8; pp3/5/6 visually checked." Reasoning: reading-scope claims must match the retained pdf-processing record.
+
+- **docs/MORIARTY-BACKEND-REQUIREMENTS.md, MNR08 "Refines" column.** ZR14 is listed but no privacy-relevant component appears in the evidence or the requirement text. Either drop ZR14 or add "private-input/commitment binding components" to the traced feature matrix. Reasoning: an unsupported cross-reference weakens the crosswalk that earlier consolidation rounds made explicit.
+
+- **docs/MORIARTY-BACKEND-REQUIREMENTS.md, "Evidence basis and limits."** The sentence "No fresh upstream fetch ... occurred for this list" now precedes a Mina section built on freshly acquired repositories. Scope it to the Midnight/ZKIR pins. Reasoning: avoids an internal contradiction about provenance.
+
+Confirmed non-defects: MNR02's "dummy promoted to parent rejects" is consistent with ZR07's permitted optional inactive parent. MNR01's rejection of semantically material parent reordering is consistent with ZR08's permitted sound order-insensitive batching. Bounded fan-in versus total ancestry in MNR03/MNR07 matches the corrected ZR09 language. Open implementation across all rows is expected and not a defect.

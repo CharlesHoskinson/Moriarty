@@ -34,6 +34,7 @@ export function App() {
               {s.nav}
             </a>
           ))}
+          <a href="docs/requirements.html">Docs</a>
         </nav>
         <ModeSwitch mode={mode} setMode={setMode} />
       </header>

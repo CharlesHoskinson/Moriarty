@@ -1,0 +1,338 @@
+{
+  "schema": "research.independent-review.v1",
+  "reviewer": "near_intents_kernel",
+  "candidate": {
+    "path": "/home/charl/research/simplicity-teardown-2026-09-19/ingest.json",
+    "sha256": "761520926d60b2e45850aa27b4eb2985f76cf4cefbcac640b39a60259db9c4bf",
+    "reviewed_pages": [
+      {
+        "path": "wiki/research/simplicity/index.md",
+        "sha256": "feda5cd32efba03792d563d0a83392724a5c6423694bfc0a8e1e9ffb2c497bfd",
+        "lines": 24,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/simplicity/explanation.md",
+        "sha256": "e0b426b47cb128541b3df663aa0924d1b29194c49df3dc05f05b76478d1e42f2",
+        "lines": 21,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/simplicity/security-findings.md",
+        "sha256": "d7095b579d5a13d6bee5aef2ed66b3baf27296b2458555ab43d04d8aba76c603",
+        "lines": 20,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/simplicity/how-to.md",
+        "sha256": "bc477d1b7009bdc86cae88b1781e022d7500e2af83ea031dae78457c4a29b287",
+        "lines": 21,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/simplicity/tutorial.md",
+        "sha256": "feedc91c37309633ca78ce651a9461a8522ab78d0503452535b8ab25f4bd8445",
+        "lines": 21,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/simplicity/reference.md",
+        "sha256": "56a8d7d827fca572b9ead5432c87df43bb0c12729d87f8f8357050c238dd1c92",
+        "lines": 259,
+        "coverage": "Substantive prose read; reference bibliography inventory sampled, not every cited source independently audited."
+      },
+      {
+        "path": "wiki/research/mplr/MPLR-020.md",
+        "sha256": "844805eb3b2b727f3a4df9161a1cbcdf61d1e5eb9c521bd197edda35ec52935d",
+        "lines": 31,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/mplr/MPLR-021.md",
+        "sha256": "cb0bd6048a22e35288e93f16505ed3826d508301f315a5efec0af85b7d38d800",
+        "lines": 31,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/mplr/MPLR-022.md",
+        "sha256": "208db159c120cb22c2c2be6645a5a88c803672bba2a6bd9004b14cb138fce051",
+        "lines": 31,
+        "coverage": "Full proposed page read."
+      },
+      {
+        "path": "wiki/research/mplr/MPLR-023.md",
+        "sha256": "8dd6553e4e8b1f1f4387817f1434d841529954cba94f99e23649941cc2ca1a62",
+        "lines": 31,
+        "coverage": "Full proposed page read."
+      }
+    ]
+  },
+  "verdict": "accept_as_research_draft",
+  "blockers": [],
+  "resolved_findings": [
+    {
+      "id": "SIMP-REVIEW-01",
+      "severity": "blocker",
+      "path": "wiki/research/simplicity/tutorial.md",
+      "line": 17,
+      "original_problem": "Safety implication was reversed: mandatory predicates imply acceptance does not exclude acceptance with false predicates.",
+      "resolution": "Updated candidate requires acceptance implies every mandatory predicate for the selected authorized branch, and separately requests valid witnesses. Confirmed in the reviewed hash.",
+      "counterexample": "A verifier that always accepts satisfies P implies acceptance yet releases funds when P is false."
+    }
+  ],
+  "nonduplication": {
+    "verdict": "sufficient_as_refinement_specific_drafts",
+    "items": [
+      {
+        "id": "MPLR-020",
+        "relationship": "Specializes MPLR-014 to substituted primitive versions, preconditions, failure and host/target correspondence.",
+        "separating_obligation": "Reference jet semantics are valid but native optimization discards carry or weakens failure."
+      },
+      {
+        "id": "MPLR-021",
+        "relationship": "Adds concrete-artifact static resource-bound soundness to MPLR-009 cumulative fee/reserve accounting.",
+        "separating_obligation": "Accounting has a signed cumulative budget but late-bound code invalidates advertised per-stage bound."
+      },
+      {
+        "id": "MPLR-022",
+        "relationship": "Refines MPLR-014 correspondence and MPLR-018 inspectable intent with distinct commitments and substitution binding.",
+        "separating_obligation": "A proof is valid for a stale program/profile or another stage despite an accurate current UI summary."
+      },
+      {
+        "id": "MPLR-023",
+        "relationship": "Specializes MPLR-003 conditional settlement to control/effect enforcement. MPLR-012 assurance reporting is related, not a direct semantic parent.",
+        "separating_obligation": "Predicate is calculated as false, discarded, and execution still accepts."
+      }
+    ]
+  },
+  "caveats": [
+    {
+      "id": "SIMP-C01",
+      "severity": "nonblocking",
+      "point": "Tutorial now explicitly states that a valid witness establishes non-vacuity and general completeness requires its own quantified argument. This clarification resolves the prose ambiguity; no completeness theorem is claimed."
+    },
+    {
+      "id": "SIMP-C02",
+      "severity": "nonblocking",
+      "point": "PCD relation must specify legitimate base states, well-founded recursive verification, exact predecessor/current public-input matching, per-stage authority, residual obligations and relation/circuit version. Actual ledger consumption or equivalent nullifiers must prevent reuse; recursive proof validity alone does not enforce uniqueness."
+    },
+    {
+      "id": "SIMP-C03",
+      "severity": "nonblocking",
+      "point": "Refund availability after a timeout does not make delivery automatically expire. Simplicity timelocks provide minima; preemption requires a submitted consuming transaction. Alternative-branch exclusion must mean ledger exclusion of conflicting consumption, not unsupported mutual exclusion of branch predicates at all times.",
+      "evidence_path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/timelocks.md",
+      "ranges": [
+        [
+          168,
+          189
+        ]
+      ]
+    },
+    {
+      "id": "SIMP-C04",
+      "severity": "nonblocking",
+      "point": "Turing incompleteness, deterministic validation and honest witness generation do not establish economic correctness, all-adversarial-witness circuit soundness, relational privacy, oracle accuracy or workflow liveness. The draft correctly separates these claims."
+    }
+  ],
+  "coverage_limits": [
+    "No proof builds, target compilation, onchain execution or deployment audit performed.",
+    "Six research pages and four proposed MPLR pages assessed; reference bibliography sampled, not full corpus reread.",
+    "Exact source evidence above supports bounded conclusions; no new exploit asserted.",
+    "Vault read only; no ingestion applied."
+  ],
+  "evidence": [
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/execution-model.md",
+      "sha256": "73273964c29fd071f3cc185a84b77a53c434f9773130b619601a5cb263d73341",
+      "ranges": [
+        [
+          11,
+          29
+        ],
+        [
+          174,
+          229
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/execution-model.md",
+      "supports": "Validator/proposer distinction; check_lock_height versus prose since receipt."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/timelocks.md",
+      "sha256": "96b0629bc76b31e600788c5d6f8e56c6b8b6547b88044f32bfa309eed846b17b",
+      "ranges": [
+        [
+          11,
+          41
+        ],
+        [
+          47,
+          55
+        ],
+        [
+          77,
+          88
+        ],
+        [
+          168,
+          189
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/timelocks.md",
+      "supports": "Typed time domains, consensus boundary, deprecation, and no automatic upper deadline."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity/C/elements/elementsJets.c",
+      "sha256": "c15e0b461d0f94881ea21a884f1ee130fa6b80586c1f3e8a2aa97fbcc449eb2a",
+      "ranges": [
+        [
+          735,
+          774
+        ]
+      ],
+      "commit": "91d89bac54e9411281ee3b6e766a0ea20eb0a3d3",
+      "url": "https://github.com/BlockstreamResearch/simplicity/blob/91d89bac54e9411281ee3b6e766a0ea20eb0a3d3/C/elements/elementsJets.c",
+      "supports": "Pinned broken_do_not_use relative jets and height/time check code."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/jets.md",
+      "sha256": "2f7aa20e63061c9e18cea4114326e91a8d8148659a20cd393c16f1092a36f831",
+      "ranges": [
+        [
+          4,
+          18
+        ],
+        [
+          51,
+          56
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/jets.md",
+      "supports": "Boolean comparisons differ from failure-producing checks."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/witness.md",
+      "sha256": "8238bc9d1702bb0ceaa1b7df8c6151dd8ab52cc7c6e4087d55bdebd790e36486",
+      "ranges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/witness.md",
+      "supports": "Confirmed witness public disclosure."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/txmanifest.md",
+      "sha256": "941f0ef7035842179eb11e149500db79734434577a744d45d19e170ded6f113c",
+      "ranges": [
+        [
+          13,
+          29
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/txmanifest.md",
+      "supports": "Draft format does not verify descriptions; misleading content may cause loss."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/repos/simplicity-lang-org/docs/documentation/state.md",
+      "sha256": "4d7c1b6a875aedebe872fff03b8475d9894f54a6a0a31ab20d0c2daa149d6860",
+      "ranges": [
+        [
+          213,
+          269
+        ],
+        [
+          299,
+          315
+        ]
+      ],
+      "commit": "aa20f1318db9c6c4ea5afb20ca4102ac42284ede",
+      "url": "https://github.com/BlockstreamResearch/simplicity-lang-org/blob/aa20f1318db9c6c4ea5afb20ca4102ac42284ede/docs/documentation/state.md",
+      "supports": "State binding, explicit arithmetic assertion, fees and asset checks need their own constraints."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/papers/simplicity.pdf",
+      "sha256": "809ccf026dd33644c97f26cee15e47201a9cbff045c3de472baeeeb656e8be67",
+      "pdf_pages_1_based": [
+        17,
+        18
+      ],
+      "url": "https://blockstream.com/simplicity.pdf",
+      "coverage": "Extracted page text read in this review; visual reading recorded by original researcher, not independently repeated.",
+      "supports": "Jet reference equality is an implementation obligation; not proof arbitrary host or ZKIR implements it."
+    },
+    {
+      "path": "/home/charl/research/simplicity-teardown-2026-09-19/papers/Simplicity-TR.pdf",
+      "sha256": "1e02644b7749c5bd55a2b902d40c1e8af9479b563c990da045e7aca826a55d0c",
+      "pdf_pages_1_based": [
+        61
+      ],
+      "url": "https://raw.githubusercontent.com/ElementsProject/simplicity/pdf/Simplicity-TR.pdf",
+      "coverage": "Extracted page text read in this review; visual reading recorded by original researcher, not independently repeated.",
+      "supports": "Delegation permits late-bound code and defeats universal commitment-time resource bounds absent policy-specific constraints."
+    },
+    {
+      "path": "/home/charl/Moriarty-aeon-study/wiki/research/mplr/MPLR-003.md",
+      "sha256": "40203266a2a084a391b1fbb868fefc5d91db06a366dfcd12e1f9ffb33cc890e6",
+      "ranges": [
+        [
+          11,
+          34
+        ]
+      ],
+      "supports": "Existing behavioral requirement compared for refinement-specific nonduplication."
+    },
+    {
+      "path": "/home/charl/Moriarty-aeon-study/wiki/research/mplr/MPLR-009.md",
+      "sha256": "ca0b8e6ec21aec5f15864b509d7f77bd624686a7e8e5349ec2faf68fea1c9b13",
+      "ranges": [
+        [
+          11,
+          34
+        ]
+      ],
+      "supports": "Existing behavioral requirement compared for refinement-specific nonduplication."
+    },
+    {
+      "path": "/home/charl/Moriarty-aeon-study/wiki/research/mplr/MPLR-012.md",
+      "sha256": "4bc112c0a6bb41588352af360c7f25c7a3f0b623eb4a358900ce2feecb3bcbfb",
+      "ranges": [
+        [
+          11,
+          34
+        ]
+      ],
+      "supports": "Existing behavioral requirement compared for refinement-specific nonduplication."
+    },
+    {
+      "path": "/home/charl/Moriarty-aeon-study/wiki/research/mplr/MPLR-014.md",
+      "sha256": "4585cb669726f38cbddb9dff5f46a948dd4771c4bef282e8f62b109d68c878a4",
+      "ranges": [
+        [
+          11,
+          34
+        ]
+      ],
+      "supports": "Existing behavioral requirement compared for refinement-specific nonduplication."
+    },
+    {
+      "path": "/home/charl/Moriarty-aeon-study/wiki/research/mplr/MPLR-018.md",
+      "sha256": "ccff36a858ca3483da649550711e50102cab762c0eda317f1f77123ab7fecf73",
+      "ranges": [
+        [
+          11,
+          34
+        ]
+      ],
+      "supports": "Existing behavioral requirement compared for refinement-specific nonduplication."
+    }
+  ],
+  "previous_candidate_sha256": "e5ff7b062c81c380c7a3dbe2a82d82747aa33317e754705d923fbf6b2aa4b22a",
+  "rebind_note": "Checked all ten reviewed note digests: sole changed note is tutorial.md, explicitly distinguishing valid-witness non-vacuity from quantified general completeness. Safety implication retained. Other ingestion metadata outside the reviewed note scope may change."
+}

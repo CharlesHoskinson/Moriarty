@@ -47,6 +47,10 @@ Repair approved behavior within existing scope and limits without another design
 Preserve consequential decision reviews, independent result audits, resource limits and all product acceptance gates.
 These rules govern use of orchestration skills. Do not build more orchestration infrastructure to implement them.
 
+## Permissionless product boundary
+
+The September 19 [product contract](docs/MORIARTY-PRODUCT-CONTRACT.md) controls language scope. Moriarty programs compile to ZKIRv3 and run on Midnight. Project review, campaign and resource controls apply to maintainer-operated work only. They never authorize individual developers or become public compile/prove/deploy prerequisites. Preserve objective financial/proof requirements; supersede administrative program restrictions.
+
 ## Scope and authority
 
 Moriarty is a bounded financial language for Midnight. ACTUS and the DeFi study

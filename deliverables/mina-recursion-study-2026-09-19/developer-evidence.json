@@ -1,0 +1,500 @@
+{
+  "date": "2026-09-19",
+  "pin": {
+    "name": "o1js",
+    "url": "https://github.com/o1-labs/o1js.git",
+    "path": "/home/charl/research/mina-recursion-2026-09-19/repos/o1js",
+    "commit": "bb34e65e74de7ba6f6c46e34b936034d8faa5c18",
+    "branch": "main",
+    "sparse": true,
+    "sparse_status": 0,
+    "submodules": "-228c409a1696669d963425162f12e88d41231c6d src/mina",
+    "dirty": "",
+    "retrieved_at": "2026-09-19T23:00:37.062542+00:00"
+  },
+  "scope": "bounded o1js developer integration source inspection; no build/proof/tests/deployment; no independently acquired repository HEAD compatibility assumed",
+  "claims": [
+    {
+      "id": "D01",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            25,
+            68
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "8e443a6b518469dd2b2b6c6236cc2cba866ee5d026dc49963198b2153f14a90b",
+          "excerpt": "class ProofBase<Input = any, Output = any> {\n  static publicInputType: FlexibleProvable<any> = undefined as any;\n  static publicOutputType: FlexibleProvable<any> = undefined as any;\n  static tag: () => { name: string } = () => {\n    throw Error(\n      `You cannot use the \\`Proof\\` class directly. Instead, define a subclass:\\n` +\n        `class MyProof extends Proof<PublicInput, PublicOutput> { ... }`\n    );\n  };\n  publicInput: Input;\n  publicOutput: Output;\n  proof: Pickles.Proof;\n  maxProofsVerified: 0 | 1 | 2;\n  shouldVerify = Bool(false);\n\n  /**\n   * To verify a recursive proof inside a ZkProgram method, it has to be \"declared\" as part of\n   * the method. This is done by calling `declare()` on the proof.\n   *\n   * Note: `declare()` is a low-level method that most users will not have to call directly.\n   * For proofs that are inputs to the ZkProgram, it is done automatically.\n   *\n   * You can think of declaring a proof as a similar step as witnessing a variable, which introduces\n   * that variable to the circuit. Declaring a proof will tell Pickles to add the additional constraints\n   * for recursive proof verification.\n   *\n   * Similar to `Provable.witness()`, `declare()` is a no-op when run outside ZkProgram compilation or proving.\n   * It returns `false` in that case, and `true` if the proof was actually declared.\n   */\n  declare() {\n    if (!ZkProgramContext.has()) return false;\n    const ProofClass = this.constructor as Subclass<typeof ProofBase>;\n    ZkProgramContext.declareProof({ ProofClass, proofInstance: this });\n    return true;\n  }\n\n  toJSON(): JsonProof {\n    let fields = this.publicFields();\n    return {\n      publicInput: fields.input.map(String),\n      publicOutput: fields.output.map(String),\n      maxProofsVerified: this.maxProofsVerified,\n      proof: Pickles.proofToBase64([this.maxProofsVerified, this.proof]),\n    };\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L25-L68"
+        },
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            125,
+            159
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "ef1d50045b80efd8d183c180b55c8681618f4c8e36130751c0bfd794f48d12cc",
+          "excerpt": "class Proof<Input, Output> extends ProofBase<Input, Output> {\n  /**\n   * Sets the `shouldVerify` flag to `true`\n   * The downstream effect of this is that the proof will be verified when the circuit is run\n   *\n   * @note This method is meant to be called in a circuit.  Executing it outside of a circuit will have no effect.\n   */\n  verify() {\n    this.shouldVerify = Bool(true);\n  }\n  /**\n   * Sets the `shouldVerify` flag to the given condition param\n   * If set to `Bool(true)`, the proof will be verified when the circuit is run\n   * If set to `Bool(false)`, the proof will not be verified when the circuit is run\n   *\n   * @note This method is meant to be called in a circuit.  Executing it outside of a circuit will have no effect.\n   */\n  verifyIf(condition: Bool) {\n    this.shouldVerify = condition;\n  }\n\n  static async fromJSON<S extends Subclass<typeof Proof>>(\n    this: S,\n    {\n      maxProofsVerified,\n      proof: proofString,\n      publicInput: publicInputJson,\n      publicOutput: publicOutputJson,\n    }: JsonProof\n  ): Promise<Proof<InferProvable<S['publicInputType']>, InferProvable<S['publicOutputType']>>> {\n    await initializeBindings();\n    let [, proof] = Pickles.proofOfBase64(proofString, maxProofsVerified);\n    let fields = publicInputJson.map(Field).concat(publicOutputJson.map(Field));\n    return this.provable.fromFields(fields, [[], [], [proof, maxProofsVerified]]) as any;\n  }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L125-L159"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            935,
+            995
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "d5b937727fb71cf51517bb7c3053cac9aed08ef251ce0c19b35079853fc5358d",
+          "excerpt": "    // now all proofs are declared - check that we got as many as during compile time\n    assert(\n      proofs.length === verifiedProofs.length,\n      `Expected ${verifiedProofs.length} proofs, but got ${proofs.length}`\n    );\n\n    // extract proof statements for Pickles\n    let previousStatements = proofs.map(({ proofInstance }): Pickles.Statement<FieldVar> => {\n      let fields = proofInstance.publicFields();\n      let input = MlFieldArray.to(fields.input);\n      let output = MlFieldArray.to(fields.output);\n      return MlPair(input, output);\n    });\n\n    // handle dynamic proofs\n    proofs.forEach(({ ProofClass, proofInstance }) => {\n      if (!(proofInstance instanceof DynamicProof)) return;\n\n      // Initialize side-loaded verification key\n      const tag = ProofClass.tag();\n      const computedTag = SideloadedTag.get(tag.name);\n      const vk = proofInstance.usedVerificationKey;\n\n      if (vk === undefined) {\n        throw new Error('proof.verify() not called, call it at least once in your circuit');\n      }\n\n      if (Provable.inProver()) {\n        Pickles.sideLoaded.inProver(computedTag, vk.data);\n      }\n      const circuitVk = Pickles.sideLoaded.vkToCircuit(() => vk.data);\n\n      // Assert the validity of the auxiliary vk-data by comparing the witnessed and computed hash\n      const hash = inCircuitVkHash(circuitVk);\n      Field(hash).assertEquals(vk.hash, 'Provided VerificationKey hash not correct');\n      Pickles.sideLoaded.inCircuit(computedTag, circuitVk);\n    });\n\n    // if the output is empty, we don't evaluate `toFields(result)` to allow the function to return something else in that case\n    let hasPublicOutput = publicOutputType.sizeInFields() !== 0;\n    let publicOutput = hasPublicOutput ? publicOutputType.toFields(result.publicOutput) : [];\n\n    if (state !== undefined && auxiliaryType !== undefined && auxiliaryType.sizeInFields() !== 0) {\n      Provable.asProver(() => {\n        let { auxiliaryOutput } = result;\n        assert(\n          auxiliaryOutput !== undefined,\n          `${proofSystemTag.name}.${methodName}(): Auxiliary output is undefined even though the method declares it.`\n        );\n        state.setAuxiliaryOutput(Provable.toConstant(auxiliaryType, auxiliaryOutput), methodName);\n      });\n    }\n\n    return {\n      publicOutput: MlFieldArray.to(publicOutput),\n      previousStatements: MlArray.to(previousStatements),\n      previousProofs: MlArray.to(proofs.map((p) => p.proofInstance.proof)),\n      shouldVerify: MlArray.to(\n        proofs.map((proof) => proof.proofInstance.shouldVerify.toField().value)\n      ),\n    };\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L935-L995"
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            103,
+            147
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "211702de67eb49bf49a6ca136972720e8c970160ded0f096906afe29945919da",
+          "excerpt": "/**\n * Initializes Pickles bindings, serializes the input proof and verification key for use in OCaml, then calls into the Pickles verify function and returns the result.\n *\n * @note This function is meant to be called in JavaScript, not for use in a circuit.  The verification key data and hash are not confirmed to match.\n * @param proof Either a `Proof` instance or a serialized JSON proof\n * @param verificationKey Either a base64 serialized verification key or a `VerificationKey` instance which will be base64 serialized for use in the bindings.\n * @returns A promise that resolves to a boolean indicating whether the proof is valid.\n */\nasync function verify(\n  proof: ProofBase<any, any> | JsonProof,\n  verificationKey: Base64VerificationKeyString | VerificationKey\n) {\n  await initializeBindings();\n  let picklesProof: Pickles.Proof;\n  let statement: Pickles.Statement<FieldConst>;\n  if (typeof proof.proof === 'string') {\n    // json proof\n    [, picklesProof] = Pickles.proofOfBase64(proof.proof, proof.maxProofsVerified);\n    let input = MlFieldConstArray.to((proof as JsonProof).publicInput.map(Field));\n    let output = MlFieldConstArray.to((proof as JsonProof).publicOutput.map(Field));\n    statement = MlPair(input, output);\n  } else {\n    // proof class\n    picklesProof = proof.proof;\n    let fields = (proof as ProofBase).publicFields();\n    let input = MlFieldConstArray.to(fields.input);\n    let output = MlFieldConstArray.to(fields.output);\n    statement = MlPair(input, output);\n  }\n  let vk = typeof verificationKey === 'string' ? verificationKey : verificationKey.data;\n  return prettifyStacktracePromise(\n    withThreadPool(() => Pickles.verify(statement, picklesProof, vk))\n  );\n}\n\n/**\n * Serializable representation of a Pickles proof, useful for caching compiled proofs.\n */\ntype JsonProof = {\n  /** Array of string, where each string is a `Field` in the publicInput of this proof */\n  publicInput: string[];\n  /** Array of string, where each string is a `Field` in the publicOutput of this proof */\n  publicOutput: string[];\n  maxProofsVerified: 0 | 1 | 2;\n  proof: Base64ProofString;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L103-L147"
+        },
+        {
+          "path": "src/examples/zkprogram/recursive-program.ts",
+          "lines_inclusive": [
+            3,
+            23
+          ],
+          "file_sha256": "1d20f287b7f7e7958226c31ac6c11dae9130084cd0169ea781343e96e3093532",
+          "git_blob": "0417e4cdb7aae0799b08551889101eea77a0e5f8",
+          "excerpt_sha256": "b7e6c9b267cc465674d452a101f3d6a4a32069e700e8ddbe5fdd07c08af21c7c",
+          "excerpt": "export const RecursiveProgram = ZkProgram({\n  name: 'recursive-program',\n  publicInput: Field,\n\n  methods: {\n    baseCase: {\n      privateInputs: [],\n      async method(input: Field) {\n        input.assertEquals(Field(0));\n      },\n    },\n\n    inductiveCase: {\n      privateInputs: [SelfProof],\n      async method(input: Field, earlierProof: SelfProof<Field, void>) {\n        earlierProof.verify();\n        earlierProof.publicInput.add(1).assertEquals(input);\n      },\n    },\n  },\n});\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/examples/zkprogram/recursive-program.ts#L3-L23"
+        }
+      ]
+    },
+    {
+      "id": "D03",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            204,
+            254
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "bb01e2a2a38438415e642a8b01115f49ef3e6da9128bd62469ece5058def3da8",
+          "excerpt": "/**\n * The `DynamicProof` class enables circuits to verify proofs using in-circuit verification keys.\n * This is opposed to the baked-in verification keys of the `Proof` class.\n *\n * In order to use this, a subclass of DynamicProof that specifies the public input and output types along with the maxProofsVerified number has to be created.\n *\n * ```ts\n * export class SideloadedProgramProof extends DynamicProof<MyStruct, Field> {\n *   static publicInputType = MyStruct;\n *   static publicOutputType = Field;\n *   static maxProofsVerified = 0 as const;\n * }\n * ```\n *\n * The `maxProofsVerified` constant is a product of the child circuit and indicates the maximum number that that circuit verifies itself.\n * If you are unsure about what that is for you, you should use `2`.\n *\n * Any `DynamicProof` subclass can be used as private input to ZkPrograms or SmartContracts along with a `VerificationKey` input.\n * ```ts\n * proof.verify(verificationKey)\n * ```\n *\n * NOTE: In the case of `DynamicProof`s, the circuit makes no assertions about the verificationKey used on its own.\n * This is the responsibility of the application developer and should always implement appropriate checks.\n * This pattern differs a lot from the usage of normal `Proof`, where the verification key is baked into the compiled circuit.\n * @see {@link src/examples/zkprogram/dynamic-keys-merkletree.ts} for an example of how this can be done using merkle trees\n *\n * Assertions generally only happen using the vk hash that is part of the `VerificationKey` struct along with the raw vk data as auxiliary data.\n * When using verify() on a `DynamicProof`, Pickles makes sure that the verification key data matches the hash.\n * Therefore all manual assertions have to be made on the vk's hash and it can be assumed that the vk's data is checked to match the hash if it is used with verify().\n */\nclass DynamicProof<Input, Output> extends ProofBase<Input, Output> {\n  public static maxProofsVerified: 0 | 1 | 2;\n\n  private static memoizedCounter: number | undefined;\n\n  /**\n   * As the name indicates, feature flags are features of the proof system.\n   *\n   * If we want to side load proofs and verification keys, we first have to tell Pickles what _shape_ of proofs it should expect.\n   *\n   * For example, if we want to side load proofs that use foreign field arithmetic custom gates, we have to make Pickles aware of that by defining\n   * these custom gates.\n   *\n   * _Note:_ Only proofs that use the exact same composition of custom gates which were expected by Pickles can be verified using side loading.\n   * If you want to verify _any_ proof, no matter what custom gates it uses, you can use {@link FeatureFlags.allMaybe}. Please note that this might incur a significant overhead.\n   *\n   * You can also toggle specific feature flags manually by specifying them here.\n   * Alternatively, you can use {@link FeatureFlags.fromZkProgram} to compute the set of feature flags that are compatible with a given program.\n   */\n  static featureFlags: FeatureFlags = FeatureFlags.allNone;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L204-L254"
+        },
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            269,
+            296
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "6b60ae6cfb630f5ac38b0d515aa65c308ad74f5cbad328feddf73d5eaf61a91c",
+          "excerpt": "  /**\n   * Sets the `shouldVerify` flag to `true`\n   * The downstream effect of this is that the proof will be verified when the circuit is run\n   *\n   * @param vk The verification key this proof will be verified against\n   *\n   * @note This method is meant to be called in a circuit.  Executing it outside of a circuit will have no effect.\n   * @note The vk parameter will have its auxiliary data checked in the circuit, so the hash must match the data, or else the proof will fail\n   */\n  verify(vk: VerificationKey) {\n    this.shouldVerify = Bool(true);\n    this.usedVerificationKey = vk;\n  }\n  /**\n   * Sets the `shouldVerify` flag to the given condition param\n   * If set to `Bool(true)`, the proof will be verified when the circuit is run\n   * If set to `Bool(false)`, the proof will not be verified when the circuit is run\n   *\n   * @param vk The verification key this proof will be verified against\n   * @param condition The condition to set the shouldVerify flag to\n   *\n   * @note This method is meant to be called in a circuit.  Executing it outside of a circuit will have no effect.\n   * @note The vk parameter will have its auxiliary data checked in the circuit, so the hash must match the data, or else the proof will fail\n   */\n  verifyIf(vk: VerificationKey, condition: Bool) {\n    this.shouldVerify = condition;\n    this.usedVerificationKey = vk;\n  }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L269-L296"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            949,
+            970
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "8f073e0bcc14b3bdd31d27e6cc6876183eb23915212511e46ec6abe1c8d9b6a0",
+          "excerpt": "    // handle dynamic proofs\n    proofs.forEach(({ ProofClass, proofInstance }) => {\n      if (!(proofInstance instanceof DynamicProof)) return;\n\n      // Initialize side-loaded verification key\n      const tag = ProofClass.tag();\n      const computedTag = SideloadedTag.get(tag.name);\n      const vk = proofInstance.usedVerificationKey;\n\n      if (vk === undefined) {\n        throw new Error('proof.verify() not called, call it at least once in your circuit');\n      }\n\n      if (Provable.inProver()) {\n        Pickles.sideLoaded.inProver(computedTag, vk.data);\n      }\n      const circuitVk = Pickles.sideLoaded.vkToCircuit(() => vk.data);\n\n      // Assert the validity of the auxiliary vk-data by comparing the witnessed and computed hash\n      const hash = inCircuitVkHash(circuitVk);\n      Field(hash).assertEquals(vk.hash, 'Provided VerificationKey hash not correct');\n      Pickles.sideLoaded.inCircuit(computedTag, circuitVk);\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L949-L970"
+        },
+        {
+          "path": "src/lib/proof-system/verification-key.ts",
+          "lines_inclusive": [
+            32,
+            44
+          ],
+          "file_sha256": "57d018e61af53af71aae4363f666a6998f3ea741f1accea844bd57282a0e5171",
+          "git_blob": "f7b9852326f1e75c8d0b77e084776cc1a1627658",
+          "excerpt_sha256": "8e16af7dce531afbab5449a6fa6b7c4d5ebfac6e3bc64320b87101b568b242a8",
+          "excerpt": "  static async checkValidity(key: VerificationKey): Promise<boolean> {\n    try {\n      let { runAndCheckSync } = await synchronousRunners();\n\n      runAndCheckSync(() => {\n        let vk = Pickles.sideLoaded.vkToCircuit(() => key.data);\n        let inCircuitHash = inCircuitVkHash(vk);\n        inCircuitHash.assertEquals(key.hash);\n      });\n      return true;\n    } catch {\n      return false;\n    }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/verification-key.ts#L32-L44"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            103,
+            134
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "5083902cbcd3f5762456ea887eda9fdc435824cf83059a46e362e0fb5343ddc6",
+          "excerpt": "/**\n * Initializes Pickles bindings, serializes the input proof and verification key for use in OCaml, then calls into the Pickles verify function and returns the result.\n *\n * @note This function is meant to be called in JavaScript, not for use in a circuit.  The verification key data and hash are not confirmed to match.\n * @param proof Either a `Proof` instance or a serialized JSON proof\n * @param verificationKey Either a base64 serialized verification key or a `VerificationKey` instance which will be base64 serialized for use in the bindings.\n * @returns A promise that resolves to a boolean indicating whether the proof is valid.\n */\nasync function verify(\n  proof: ProofBase<any, any> | JsonProof,\n  verificationKey: Base64VerificationKeyString | VerificationKey\n) {\n  await initializeBindings();\n  let picklesProof: Pickles.Proof;\n  let statement: Pickles.Statement<FieldConst>;\n  if (typeof proof.proof === 'string') {\n    // json proof\n    [, picklesProof] = Pickles.proofOfBase64(proof.proof, proof.maxProofsVerified);\n    let input = MlFieldConstArray.to((proof as JsonProof).publicInput.map(Field));\n    let output = MlFieldConstArray.to((proof as JsonProof).publicOutput.map(Field));\n    statement = MlPair(input, output);\n  } else {\n    // proof class\n    picklesProof = proof.proof;\n    let fields = (proof as ProofBase).publicFields();\n    let input = MlFieldConstArray.to(fields.input);\n    let output = MlFieldConstArray.to(fields.output);\n    statement = MlPair(input, output);\n  }\n  let vk = typeof verificationKey === 'string' ? verificationKey : verificationKey.data;\n  return prettifyStacktracePromise(\n    withThreadPool(() => Pickles.verify(statement, picklesProof, vk))\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L103-L134"
+        }
+      ]
+    },
+    {
+      "id": "D04",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            208,
+            254
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "4bd69dcc407d287a1e6e3d7bd69e786c4426cd1192768d071cf0fe6b0b2aed44",
+          "excerpt": " * In order to use this, a subclass of DynamicProof that specifies the public input and output types along with the maxProofsVerified number has to be created.\n *\n * ```ts\n * export class SideloadedProgramProof extends DynamicProof<MyStruct, Field> {\n *   static publicInputType = MyStruct;\n *   static publicOutputType = Field;\n *   static maxProofsVerified = 0 as const;\n * }\n * ```\n *\n * The `maxProofsVerified` constant is a product of the child circuit and indicates the maximum number that that circuit verifies itself.\n * If you are unsure about what that is for you, you should use `2`.\n *\n * Any `DynamicProof` subclass can be used as private input to ZkPrograms or SmartContracts along with a `VerificationKey` input.\n * ```ts\n * proof.verify(verificationKey)\n * ```\n *\n * NOTE: In the case of `DynamicProof`s, the circuit makes no assertions about the verificationKey used on its own.\n * This is the responsibility of the application developer and should always implement appropriate checks.\n * This pattern differs a lot from the usage of normal `Proof`, where the verification key is baked into the compiled circuit.\n * @see {@link src/examples/zkprogram/dynamic-keys-merkletree.ts} for an example of how this can be done using merkle trees\n *\n * Assertions generally only happen using the vk hash that is part of the `VerificationKey` struct along with the raw vk data as auxiliary data.\n * When using verify() on a `DynamicProof`, Pickles makes sure that the verification key data matches the hash.\n * Therefore all manual assertions have to be made on the vk's hash and it can be assumed that the vk's data is checked to match the hash if it is used with verify().\n */\nclass DynamicProof<Input, Output> extends ProofBase<Input, Output> {\n  public static maxProofsVerified: 0 | 1 | 2;\n\n  private static memoizedCounter: number | undefined;\n\n  /**\n   * As the name indicates, feature flags are features of the proof system.\n   *\n   * If we want to side load proofs and verification keys, we first have to tell Pickles what _shape_ of proofs it should expect.\n   *\n   * For example, if we want to side load proofs that use foreign field arithmetic custom gates, we have to make Pickles aware of that by defining\n   * these custom gates.\n   *\n   * _Note:_ Only proofs that use the exact same composition of custom gates which were expected by Pickles can be verified using side loading.\n   * If you want to verify _any_ proof, no matter what custom gates it uses, you can use {@link FeatureFlags.allMaybe}. Please note that this might incur a significant overhead.\n   *\n   * You can also toggle specific feature flags manually by specifying them here.\n   * Alternatively, you can use {@link FeatureFlags.fromZkProgram} to compute the set of feature flags that are compatible with a given program.\n   */\n  static featureFlags: FeatureFlags = FeatureFlags.allNone;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L208-L254"
+        },
+        {
+          "path": "src/lib/proof-system/feature-flags.ts",
+          "lines_inclusive": [
+            17,
+            32
+          ],
+          "file_sha256": "46fba4653f35d616a619e5617847c610bc01d0deef99279de5b49a37461bf8fe",
+          "git_blob": "8d3ba27178ea6cb46df53444b80ada1262d59369",
+          "excerpt_sha256": "aee26b52bd4d2c99386a26541ae0f08ecf53a767de51c56946ebe3fa9f64548b",
+          "excerpt": "type FeatureFlags = {\n  rangeCheck0: boolean | undefined;\n  rangeCheck1: boolean | undefined;\n  foreignFieldAdd: boolean | undefined;\n  foreignFieldMul: boolean | undefined;\n  xor: boolean | undefined;\n  rot: boolean | undefined;\n  lookup: boolean | undefined;\n  runtimeTables: boolean | undefined;\n};\n/**\n * Feature flags indicate what custom gates are used in a proof of circuit.\n * Side loading, for example, requires a set of feature flags in advance (at compile time) in order to verify and side load proofs.\n * If the side loaded proofs and verification keys do not match the specified feature flag configurations, the verification will fail.\n * Flags specified as `undefined` are considered as `maybe` by Pickles. This means, proofs can be sided loaded that can, but don't have to, use a specific custom gate.\n * _Note:_ `Maybe` feature flags incur a proving overhead.\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/feature-flags.ts#L17-L32"
+        },
+        {
+          "path": "src/lib/proof-system/feature-flags.ts",
+          "lines_inclusive": [
+            67,
+            133
+          ],
+          "file_sha256": "46fba4653f35d616a619e5617847c610bc01d0deef99279de5b49a37461bf8fe",
+          "git_blob": "8d3ba27178ea6cb46df53444b80ada1262d59369",
+          "excerpt_sha256": "d54892c0dc313953e5b3cf5ef06c4afbefbcdf105e43440ba2746193ac51400e",
+          "excerpt": "  /**\n   * Given a ZkProgram, return the feature flag configuration that fits the given program.\n   * This function considers all methods of the specified ZkProgram and finds a configuration that fits all.\n   * Optionally, it accepts a flag indicating whether runtime tables are used in the program (default is false)\n   */\n  fromZkProgram: async (program: AnalysableProgram, withRuntimeTables = false) =>\n    await fromZkProgramList([program], withRuntimeTables),\n\n  /**\n   * Given a list of ZkPrograms, return the feature flag configuration that fits the given set of programs.\n   * This function considers all methods of all specified ZkPrograms and finds a configuration that fits all.\n   */\n  fromZkProgramList,\n};\n\nasync function fromZkProgramList(programs: Array<AnalysableProgram>, withRuntimeTables = false) {\n  let flatMethodIntfs: Array<Awaited<ReturnType<typeof analyzeMethod>>> = [];\n  for (const program of programs) {\n    let methodInterface = await program.analyzeMethods();\n    flatMethodIntfs.push(...Object.values(methodInterface));\n  }\n\n  return featureFlagsfromFlatMethodIntfs(flatMethodIntfs, withRuntimeTables);\n}\n\nasync function featureFlagsfromFlatMethodIntfs(\n  methodIntfs: Array<Awaited<ReturnType<typeof analyzeMethod>>>,\n  runtimeTables = false\n): Promise<FeatureFlags> {\n  // compute feature flags that belong to each method\n  let flags = methodIntfs.map(({ gates }) => {\n    return featureFlagsFromGates(gates, runtimeTables);\n  });\n  if (flags.length === 0)\n    throw Error(\n      'The ZkProgram has no methods, in order to calculate feature flags, please attach a method to your ZkProgram.'\n    );\n\n  // initialize feature flags to all false\n  let globalFlags: Record<string, boolean | undefined> = {\n    rangeCheck0: false,\n    rangeCheck1: false,\n    foreignFieldAdd: false,\n    foreignFieldMul: false,\n    xor: false,\n    rot: false,\n    lookup: false,\n    runtimeTables: false,\n  };\n\n  // if there's only one method that means it defines the feature flags for the entire program\n  if (flags.length === 1) return flags[0];\n\n  // calculating the crossover between all methods, compute the shared feature flag set\n  flags.forEach((featureFlags, i) => {\n    for (const [flagType, currentFlag] of Object.entries(featureFlags)) {\n      if (i === 0) {\n        // initialize first iteration of flags freely\n        globalFlags[flagType] = currentFlag;\n      } else if (globalFlags[flagType] != currentFlag) {\n        // if flags conflict, set them to undefined to account for both cases (true and false) ^= maybe\n        // otherwise side loading couldn't verify some proofs of some method branches!\n        globalFlags[flagType] = undefined;\n      }\n    }\n  });\n  return globalFlags as FeatureFlags;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/feature-flags.ts#L67-L133"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            1004,
+            1018
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "e66232c774b78b82a85a7ef678662d248327c0a1eec16acbe7b4c5ea3ba6b1d4",
+          "excerpt": "  let proofsToVerify = verifiedProofs.map((Proof) => {\n    let tag = Proof.tag();\n    if (tag === proofSystemTag) return { isSelf: true as const };\n    else if (isDynamicProof(Proof)) {\n      let computedTag: unknown;\n      // Only create the tag if it hasn't already been created for this specific Proof class\n      if (SideloadedTag.get(tag.name) === undefined) {\n        computedTag = Pickles.sideLoaded.create(\n          tag.name,\n          Proof.maxProofsVerified,\n          Proof.publicInputType?.sizeInFields() ?? 0,\n          Proof.publicOutputType?.sizeInFields() ?? 0,\n          featureFlagsToMlOption(Proof.featureFlags, withRuntimeTables)\n        );\n        SideloadedTag.store(tag.name, computedTag);\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L1004-L1018"
+        }
+      ]
+    },
+    {
+      "id": "D05",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            218,
+            219
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "d34851fb2b12a8caa311979ba42a19fc7634c42850bcfcdb89e779bfeca217b4",
+          "excerpt": " * The `maxProofsVerified` constant is a product of the child circuit and indicates the maximum number that that circuit verifies itself.\n * If you are unsure about what that is for you, you should use `2`.\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L218-L219"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            998,
+            1018
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "eb74978ddf4f03e18a98f654736a5b4662b04fe7a0beea2d8c6cbcd93e271f6e",
+          "excerpt": "  if (verifiedProofs.length > 2) {\n    throw Error(\n      `${proofSystemTag.name}.${methodName}() has more than two proof arguments, which is not supported.\\n` +\n      `Suggestion: You can merge more than two proofs by merging two at a time in a binary tree.`\n    );\n  }\n  let proofsToVerify = verifiedProofs.map((Proof) => {\n    let tag = Proof.tag();\n    if (tag === proofSystemTag) return { isSelf: true as const };\n    else if (isDynamicProof(Proof)) {\n      let computedTag: unknown;\n      // Only create the tag if it hasn't already been created for this specific Proof class\n      if (SideloadedTag.get(tag.name) === undefined) {\n        computedTag = Pickles.sideLoaded.create(\n          tag.name,\n          Proof.maxProofsVerified,\n          Proof.publicInputType?.sizeInFields() ?? 0,\n          Proof.publicOutputType?.sizeInFields() ?? 0,\n          featureFlagsToMlOption(Proof.featureFlags, withRuntimeTables)\n        );\n        SideloadedTag.store(tag.name, computedTag);\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L998-L1018"
+        }
+      ]
+    },
+    {
+      "id": "D06",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/mina/v1/state.ts",
+          "lines_inclusive": [
+            26,
+            73
+          ],
+          "file_sha256": "e62a7174a666fa4407eb0fdc3d36ae3cd60e751c183effa2540c84bb8b9a5c3a",
+          "git_blob": "00a985bdea6d38583a49b5dcad91e40290daa1be",
+          "excerpt_sha256": "f75f6ecacfa2e0a0a0d001a6fa7304907d41c4cbc594ce090782cdc12730334c",
+          "excerpt": "type State<A> = {\n  /**\n   * Get the current on-chain state.\n   *\n   * Caution: If you use this method alone inside a smart contract, it does not prove that your contract uses the current on-chain state.\n   * To successfully prove that your contract uses the current on-chain state, you must add an additional `.requireEquals()` statement or use `.getAndRequireEquals()`:\n   *\n   * ```ts\n   * let x = this.x.get();\n   * this.x.requireEquals(x);\n   * ```\n   *\n   * OR\n   *\n   * ```ts\n   * let x = this.x.getAndRequireEquals();\n   * ```\n   */\n  get(): A;\n  /**\n   * Get the current on-chain state and prove it really has to equal the on-chain state,\n   * by adding a precondition which the verifying Mina node will check before accepting this transaction.\n   */\n  getAndRequireEquals(): A;\n  /**\n   * Set the on-chain state to a new value.\n   */\n  set(a: A): void;\n  /**\n   * Asynchronously fetch the on-chain state. This is intended for getting the state outside a smart contract.\n   */\n  fetch(): Promise<A | undefined>;\n  /**\n   * Prove that the on-chain state has to equal the given state,\n   * by adding a precondition which the verifying Mina node will check before accepting this transaction.\n   */\n  requireEquals(a: A): void;\n  /**\n   * Require that the on-chain state has to equal the given state if the provided condition is true.\n   *\n   * If the condition is false, this is a no-op.\n   * If the condition is true, this adds a precondition that the verifying Mina node will check before accepting this transaction.\n   */\n  requireEqualsIf(condition: Bool, a: A): void;\n  /**\n   * **DANGER ZONE**: Override the error message that warns you when you use `.get()` without adding a precondition.\n   */\n  requireNothing(): void;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/mina/v1/state.ts#L26-L73"
+        },
+        {
+          "path": "src/lib/mina/v1/state.ts",
+          "lines_inclusive": [
+            328,
+            331
+          ],
+          "file_sha256": "e62a7174a666fa4407eb0fdc3d36ae3cd60e751c183effa2540c84bb8b9a5c3a",
+          "git_blob": "00a985bdea6d38583a49b5dcad91e40290daa1be",
+          "excerpt_sha256": "bf6b9b6a7b7efc7e75218fdedb9631db97ebfbad0760f54ce7adad9600816ddd",
+          "excerpt": "    getAndRequireEquals() {\n      let state = this.get();\n      this.requireEquals(state);\n      return state;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/mina/v1/state.ts#L328-L331"
+        },
+        {
+          "path": "src/lib/mina/v1/state.ts",
+          "lines_inclusive": [
+            422,
+            435
+          ],
+          "file_sha256": "e62a7174a666fa4407eb0fdc3d36ae3cd60e751c183effa2540c84bb8b9a5c3a",
+          "git_blob": "00a985bdea6d38583a49b5dcad91e40290daa1be",
+          "excerpt_sha256": "b014a4f58567b409fec5df35f50ea47612fcbf583e6a69d6498cb226a2ae8363",
+          "excerpt": "function assertStatePrecondition(sc: SmartContract) {\n  try {\n    for (let [key, context] of getStateContexts(sc)) {\n      // check if every state that was read was also constrained\n      if (!context?.wasRead || context.wasConstrained) continue;\n      // we accessed a precondition field but not constrained it explicitly - throw an error\n      let errorMessage = `You used \\`this.${key}.get()\\` without adding a precondition that links it to the actual on-chain state.\nConsider adding this line to your code:\nthis.${key}.requireEquals(this.${key}.get());`;\n      throw Error(errorMessage);\n    }\n  } finally {\n    cleanStatePrecondition(sc);\n  }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/mina/v1/state.ts#L422-L435"
+        },
+        {
+          "path": "src/lib/mina/v1/actions/offchain-state.ts",
+          "lines_inclusive": [
+            437,
+            450
+          ],
+          "file_sha256": "42a37a412cd7bdfd6330ae1640b10b42ef4999ba3cc76437c8016ea982e6dd35",
+          "git_blob": "37fde70734a12ba2e876870f42e62fad3ca120c9",
+          "excerpt_sha256": "13cc5562c89a853064cebb9bde3db7fc5288f96d05c1451558c3fbdd68320cc3",
+          "excerpt": "      async settle(proof: Proof<OffchainStateCommitments, OffchainStateCommitments>) {\n        // verify the proof\n        proof.verify();\n\n        // check that proof moves state forward from the one currently stored\n        let state = getContract().offchainStateCommitments.getAndRequireEquals();\n        Provable.assertEqual(OffchainStateCommitments, state, proof.publicInput);\n\n        // require that proof uses the correct pending actions\n        getContract().account.actionState.requireEquals(proof.publicOutput.actionState);\n\n        // update the state\n        getContract().offchainStateCommitments.set(proof.publicOutput);\n      },\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/mina/v1/actions/offchain-state.ts#L437-L450"
+        }
+      ]
+    },
+    {
+      "id": "D07",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            317,
+            317
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "861193726a93587e29d81f63c51e8222bd10728852f202aa7ec034589d832c2b",
+          "excerpt": "  let doProving = true;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L317-L317"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            392,
+            430
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "90224765e7806cbee8e17481d44b62bde5abf913d58ad69836a370ce77d0453a",
+          "excerpt": "  async function compile({\n    cache = Cache.FileSystemDefault,\n    forceRecompile = false,\n    proofsEnabled = undefined as boolean | undefined,\n    withRuntimeTables = false,\n    lazyMode = false,\n  } = {}) {\n    doProving = proofsEnabled ?? doProving;\n\n    if (doProving) {\n      let methodsMeta = await analyzeMethods();\n      let gates = methodKeys.map((k) => methodsMeta[k].gates);\n      let proofs = methodKeys.map((k) => methodsMeta[k].proofs);\n      maxProofsVerified = computeMaxProofsVerified(proofs.map((p) => p.length));\n\n      let { provers, verify, verificationKey } = await compileProgram({\n        publicInputType,\n        publicOutputType,\n        methodIntfs,\n        methods: methodFunctions,\n        gates,\n        proofs,\n        proofSystemTag: selfTag,\n        cache,\n        forceRecompile,\n        overrideWrapDomain: config.overrideWrapDomain,\n        numChunks: config.numChunks,\n        state: programState,\n        withRuntimeTables,\n        lazyMode,\n      });\n\n      compileOutput = { provers, verify, maxProofsVerified };\n      return { verificationKey };\n    } else {\n      return {\n        verificationKey: VerificationKey.empty(),\n      };\n    }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L392-L430"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            444,
+            470
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "19c66c955e6b425bb5cc571f5d7d42643ab7dd51a9a1a7e430f9edb21e2781ad",
+          "excerpt": "  function toRegularProver<K extends MethodKey>(key: K, i: number): RegularProver_<K> {\n    return async function prove_(inputPublicInput, ...inputArgs) {\n      let publicInput = publicInputType.fromValue(inputPublicInput);\n      let args = zip(inputArgs, privateInputTypes[i]).map(([arg, type]) =>\n        ProvableType.get(type).fromValue(arg)\n      );\n      if (!doProving) {\n        // we step into a ZkProgramContext here to match the context nesting\n        // that would happen if proofs were enabled -- otherwise, proofs declared\n        // in an inner program could be counted to the outer program\n        let id = ZkProgramContext.enter();\n        try {\n          let { publicOutput, auxiliaryOutput } =\n            (hasPublicInput\n              ? await (methods[key].method as any)(publicInput, ...args)\n              : await (methods[key].method as any)(...args)) ?? {};\n\n          let proof = await SelfProof.dummy(\n            publicInput,\n            publicOutput,\n            await getMaxProofsVerified()\n          );\n          return { proof, auxiliaryOutput };\n        } finally {\n          ZkProgramContext.leave(id);\n        }\n      }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L444-L470"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            547,
+            560
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "88417f95056edd4fd8566675fabf8374853236f2ae4f13affdc6a90c3121d609",
+          "excerpt": "  function verify(proof: Proof<PublicInput, PublicOutput>) {\n    if (!doProving) {\n      return Promise.resolve(true);\n    }\n    if (compileOutput?.verify === undefined) {\n      throw Error(\n        `Cannot verify proof, verification key not found. Try calling \\`await program.compile()\\` first.`\n      );\n    }\n    let statement = MlPair(\n      toFieldConsts(publicInputType, proof.publicInput),\n      toFieldConsts(publicOutputType, proof.publicOutput)\n    );\n    return compileOutput.verify(statement, proof.proof);\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L547-L560"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            591,
+            594
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "e298925767e2e5991d2d27af109fcee437528a61065f3fa1345d8ec02a705f4f",
+          "excerpt": "      proofsEnabled: doProving,\n      setProofsEnabled(proofsEnabled: boolean) {\n        doProving = proofsEnabled;\n      },\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L591-L594"
+        }
+      ]
+    },
+    {
+      "id": "D08",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/cache.ts",
+          "lines_inclusive": [
+            10,
+            24
+          ],
+          "file_sha256": "3ce0aaad95ad4b82d52fc37ef7c98b0879ff3f50be68cec43da8cf636a9c034f",
+          "git_blob": "23e09bc4345651c66d0e31540f553a09e6923bd9",
+          "excerpt_sha256": "56866ce9315e01aad86be2ebbde75cd0ff218375b708c5982fdc1d97132e556c",
+          "excerpt": "/**\n * Interface for storing and retrieving values, for caching.\n * `read()` and `write()` can just throw errors on failure.\n *\n * The data that will be passed to the cache for writing is exhaustively described by the {@link CacheHeader} type.\n * It represents one of the following:\n * - The SRS. This is a deterministic lists of curve points (one per curve) that needs to be generated just once,\n *   to be used for polynomial commitments.\n * - Lagrange basis commitments. Similar to the SRS, this will be created once for every power-of-2 circuit size.\n * - Prover and verifier keys for every compiled circuit.\n *\n * Per smart contract or ZkProgram, several different keys are created:\n * - a step prover key (`step-pk`) and verification key (`step-vk`) _for every method_.\n * - a wrap prover key (`wrap-pk`) and verification key (`wrap-vk`) for the entire contract.\n */\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/cache.ts#L10-L24"
+        },
+        {
+          "path": "src/lib/proof-system/cache.ts",
+          "lines_inclusive": [
+            59,
+            114
+          ],
+          "file_sha256": "3ce0aaad95ad4b82d52fc37ef7c98b0879ff3f50be68cec43da8cf636a9c034f",
+          "git_blob": "23e09bc4345651c66d0e31540f553a09e6923bd9",
+          "excerpt_sha256": "d030b0dbb622728ff44a02e68050174fa4d827cfb53cbbadb003de3c984f53df",
+          "excerpt": "const cacheHeaderVersion = 1;\n\ntype CommonHeader = {\n  /**\n   * Header version to avoid parsing incompatible headers.\n   */\n  version: number;\n  /**\n   * An identifier that is persistent even as versions of the data change. Safe to use as a file path.\n   */\n  persistentId: string;\n  /**\n   * A unique identifier for the data to be read. Safe to use as a file path.\n   */\n  uniqueId: string;\n  /**\n   * Specifies whether the data to be read is a utf8-encoded string or raw binary data. This was added\n   * because node's `fs.readFileSync` returns garbage when reading string files without specifying the encoding.\n   */\n  dataType: 'string' | 'bytes';\n};\n\ntype StepKeyHeader<Kind> = {\n  kind: Kind;\n  programName: string;\n  methodName: string;\n  methodIndex: number;\n  hash: string;\n};\ntype WrapKeyHeader<Kind> = { kind: Kind; programName: string; hash: string };\ntype PlainHeader<Kind> = { kind: Kind };\n\nconst LAGRANGE_BASIS_PREFIX = 'lagrange-basis' as const;\n\n/**\n * A header that is passed to the caching layer, to support rich caching strategies.\n *\n * Both `uniqueId` and `programId` can safely be used as a file path.\n */\ntype CacheHeader = (\n  | StepKeyHeader<'step-pk'>\n  | StepKeyHeader<'step-vk'>\n  | WrapKeyHeader<'wrap-pk'>\n  | WrapKeyHeader<'wrap-vk'>\n  | PlainHeader<'srs'>\n  | PlainHeader<typeof LAGRANGE_BASIS_PREFIX>\n) &\n  CommonHeader;\n\nfunction withVersion(\n  header: Omit<CacheHeader, 'version'>,\n  version = cacheHeaderVersion\n): CacheHeader {\n  let uniqueId = `${header.uniqueId}-${version}`;\n  return { ...header, version, uniqueId } as CacheHeader;\n}\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/cache.ts#L59-L114"
+        },
+        {
+          "path": "src/lib/proof-system/cache.ts",
+          "lines_inclusive": [
+            124,
+            150
+          ],
+          "file_sha256": "3ce0aaad95ad4b82d52fc37ef7c98b0879ff3f50be68cec43da8cf636a9c034f",
+          "git_blob": "23e09bc4345651c66d0e31540f553a09e6923bd9",
+          "excerpt_sha256": "760000b8c8f2e0d3b5e476b660f6e4eafc7daf766853d1b96b2ce8999d348ed2",
+          "excerpt": "function readCache<T>(\n  cache: Cache,\n  header: CacheHeader,\n  transform?: (x: Uint8Array) => T\n): T | undefined {\n  try {\n    let result = cache.read(header);\n    if (result === undefined) {\n      if (cache.debug) console.log(`cache miss: ${header.persistentId}`);\n      return undefined;\n    }\n    if (transform === undefined) return result as any as T;\n    return transform(result);\n  } catch (e) {\n    if (cache.debug) console.log('Failed to read cache', e);\n    return undefined;\n  }\n}\n\nfunction writeCache(cache: Cache, header: CacheHeader, value: Uint8Array) {\n  if (!cache.canWrite) return false;\n  try {\n    cache.write(header, value);\n    return true;\n  } catch (e) {\n    if (cache.debug) console.log('Failed to write cache', e);\n    return false;\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/cache.ts#L124-L150"
+        },
+        {
+          "path": "src/lib/proof-system/cache.ts",
+          "lines_inclusive": [
+            173,
+            211
+          ],
+          "file_sha256": "3ce0aaad95ad4b82d52fc37ef7c98b0879ff3f50be68cec43da8cf636a9c034f",
+          "git_blob": "23e09bc4345651c66d0e31540f553a09e6923bd9",
+          "excerpt_sha256": "e9e60f15e4dbf3770dedb7e49daa9cfd028910e2e7ee02c0c3a9ddf60151b48d",
+          "excerpt": "const FileSystem = (cacheDirectory: string, debug?: boolean): Cache => ({\n  read({ persistentId, uniqueId, dataType }) {\n    if (jsEnvironment !== 'node') throw Error('file system not available');\n\n    let headerPath = resolve(cacheDirectory, `${persistentId}.header`);\n    let dataPath = resolve(cacheDirectory, persistentId);\n\n    // read current uniqueId, return data if it matches\n    let currentId: string;\n    try {\n      currentId = readFileSync(headerPath, 'utf8');\n    } catch (error) {\n      if (isErr(error, 'ENOENT')) return undefined;\n      throw error;\n    }\n    if (currentId !== uniqueId) return undefined;\n\n    try {\n      if (dataType === 'string') {\n        let string = readFileSync(dataPath, 'utf8');\n        return new TextEncoder().encode(string);\n      } else {\n        let buffer = readFileSync(dataPath);\n        return new Uint8Array(buffer.buffer);\n      }\n    } catch (error) {\n      if (isErr(error, 'ENOENT')) return undefined;\n      throw error;\n    }\n  },\n  write({ persistentId, uniqueId, dataType }, data) {\n    if (jsEnvironment !== 'node') throw Error('file system not available');\n    mkdirSync(cacheDirectory, { recursive: true });\n    writeFileSync(resolve(cacheDirectory, `${persistentId}.header`), uniqueId, {\n      encoding: 'utf8',\n    });\n    writeFileSync(resolve(cacheDirectory, persistentId), data, {\n      encoding: dataType === 'string' ? 'utf8' : undefined,\n    });\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/cache.ts#L173-L211"
+        },
+        {
+          "path": "src/lib/proof-system/prover-keys.ts",
+          "lines_inclusive": [
+            43,
+            89
+          ],
+          "file_sha256": "bf06afc99851b083f573b67e5f31949f672fee19d9daa9f4cc238ed7728618e0",
+          "git_blob": "9872262aede889c9ec58e84c7793f0e243e266c6",
+          "excerpt_sha256": "17651c4b8b5393b239cec312d98a640c54d10c61f0389a529d21efea812a5b0d",
+          "excerpt": "/**\n * Create `CacheHeader` from a `SnarkKeyHeader` plus some context available to `compile()`\n */\nfunction parseHeader(\n  programName: string,\n  methods: MethodInterface[],\n  header: SnarkKeyHeader\n): CacheHeader {\n  let hash = Pickles.util.fromMlString(header[1][2][6]);\n  switch (header[0]) {\n    case KeyType.StepProvingKey:\n    case KeyType.StepVerificationKey: {\n      let kind = snarkKeyStringKind[header[0]];\n      let methodIndex = header[1][3];\n      let methodName = methods[methodIndex].methodName;\n      let persistentId = sanitize(`${kind}-${programName}-${methodName}`);\n      let uniqueId = sanitize(\n        `${kind}-${programName}-${methodIndex}-${methodName}-${hash}`\n      );\n      return {\n        version: cacheHeaderVersion,\n        uniqueId,\n        kind,\n        persistentId,\n        programName,\n        methodName,\n        methodIndex,\n        hash,\n        dataType: snarkKeySerializationType[header[0]],\n      };\n    }\n    case KeyType.WrapProvingKey:\n    case KeyType.WrapVerificationKey: {\n      let kind = snarkKeyStringKind[header[0]];\n      let dataType = snarkKeySerializationType[header[0]];\n      let persistentId = sanitize(`${kind}-${programName}`);\n      let uniqueId = sanitize(`${kind}-${programName}-${hash}`);\n      return {\n        version: cacheHeaderVersion,\n        uniqueId,\n        kind,\n        persistentId,\n        programName,\n        hash,\n        dataType,\n      };\n    }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/prover-keys.ts#L43-L89"
+        },
+        {
+          "path": "src/lib/proof-system/prover-keys.ts",
+          "lines_inclusive": [
+            124,
+            151
+          ],
+          "file_sha256": "bf06afc99851b083f573b67e5f31949f672fee19d9daa9f4cc238ed7728618e0",
+          "git_blob": "9872262aede889c9ec58e84c7793f0e243e266c6",
+          "excerpt_sha256": "ce77a2f723bc3d9c4d4f59df42363741b92b01a209cec98821caf283259b6303",
+          "excerpt": "/**\n * Decode bytes to a snark key with the help of its header\n */\nfunction decodeProverKey(header: SnarkKeyHeader, bytes: Uint8Array): SnarkKey {\n  switch (header[0]) {\n    case KeyType.StepProvingKey: {\n      let index = wasm.caml_pasta_fp_plonk_index_decode(bytes, Pickles.loadSrsFp());\n      let cs = header[1][4];\n      return [KeyType.StepProvingKey, [0, index, cs]];\n    }\n    case KeyType.StepVerificationKey: {\n      let srs = Pickles.loadSrsFp();\n      let string = new TextDecoder().decode(bytes);\n      let vkWasm = wasm.caml_pasta_fp_plonk_verifier_index_deserialize(srs, string);\n      const rustConversion = getRustConversion(wasm);\n      let vkMl = rustConversion.fp.verifierIndexFromRust(vkWasm);\n      return [KeyType.StepVerificationKey, vkMl];\n    }\n    case KeyType.WrapProvingKey: {\n      let index = wasm.caml_pasta_fq_plonk_index_decode(bytes, Pickles.loadSrsFq());\n      let cs = header[1][3];\n      return [KeyType.WrapProvingKey, [0, index, cs]];\n    }\n    case KeyType.WrapVerificationKey: {\n      let string = new TextDecoder().decode(bytes);\n      let vk = Pickles.decodeVerificationKey(string);\n      return [KeyType.WrapVerificationKey, vk];\n    }\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/prover-keys.ts#L124-L151"
+        }
+      ]
+    },
+    {
+      "id": "D09",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            497,
+            522
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "6e0dcc2f8e883afe05c8be41645935ea0d8126732ccb1273b56cae86c8aa3517",
+          "excerpt": "      let auxiliaryOutputExists = auxiliaryType && auxiliaryType.sizeInFields() !== 0;\n\n      let auxiliaryOutput;\n      if (auxiliaryOutputExists) {\n        auxiliaryOutput = programState.getAuxiliaryOutput(methodIntfs[i].methodName);\n\n        programState.reset(methodIntfs[i].methodName);\n      }\n\n      let [publicOutputFields, proof] = MlPair.from(result);\n\n      let nonPureOutput = programState.getNonPureOutput();\n\n      let publicOutput = fromFieldConsts(publicOutputType, publicOutputFields, nonPureOutput);\n\n      programState.reset('__nonPureOutput__');\n\n      return {\n        proof: new SelfProof({\n          publicInput,\n          publicOutput,\n          proof,\n          maxProofsVerified,\n        }),\n        auxiliaryOutput,\n      };\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L497-L522"
+        },
+        {
+          "path": "src/lib/proof-system/zkprogram.ts",
+          "lines_inclusive": [
+            973,
+            995
+          ],
+          "file_sha256": "ae6bff0e6744abddb3891791f7ba1eccbf6afe732c9e71944e608af20d1a3393",
+          "git_blob": "d870bce517a13faaeb23b10f590fb74bff1e9ada",
+          "excerpt_sha256": "843dba9f447eb03b7b70da804caac871bc5744d3766417f5d309ca3579c310d4",
+          "excerpt": "    // if the output is empty, we don't evaluate `toFields(result)` to allow the function to return something else in that case\n    let hasPublicOutput = publicOutputType.sizeInFields() !== 0;\n    let publicOutput = hasPublicOutput ? publicOutputType.toFields(result.publicOutput) : [];\n\n    if (state !== undefined && auxiliaryType !== undefined && auxiliaryType.sizeInFields() !== 0) {\n      Provable.asProver(() => {\n        let { auxiliaryOutput } = result;\n        assert(\n          auxiliaryOutput !== undefined,\n          `${proofSystemTag.name}.${methodName}(): Auxiliary output is undefined even though the method declares it.`\n        );\n        state.setAuxiliaryOutput(Provable.toConstant(auxiliaryType, auxiliaryOutput), methodName);\n      });\n    }\n\n    return {\n      publicOutput: MlFieldArray.to(publicOutput),\n      previousStatements: MlArray.to(previousStatements),\n      previousProofs: MlArray.to(proofs.map((p) => p.proofInstance.proof)),\n      shouldVerify: MlArray.to(\n        proofs.map((proof) => proof.proofInstance.shouldVerify.toField().value)\n      ),\n    };\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/zkprogram.ts#L973-L995"
+        },
+        {
+          "path": "src/lib/proof-system/proof.ts",
+          "lines_inclusive": [
+            61,
+            68
+          ],
+          "file_sha256": "cf5c0e5e8f4b0a740a3dd62c59d94a9ee2b331ba2f2399178dfa3bd4ff47c8fb",
+          "git_blob": "6c8ea455f64e286cc079e659da3f828f2ff0bd49",
+          "excerpt_sha256": "b79a6f60ea9f4bf88f70ec6afd8cd53d2a535cad166af5fc4f93cb7a4c3ea355",
+          "excerpt": "  toJSON(): JsonProof {\n    let fields = this.publicFields();\n    return {\n      publicInput: fields.input.map(String),\n      publicOutput: fields.output.map(String),\n      maxProofsVerified: this.maxProofsVerified,\n      proof: Pickles.proofToBase64([this.maxProofsVerified, this.proof]),\n    };\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/lib/proof-system/proof.ts#L61-L68"
+        }
+      ]
+    },
+    {
+      "id": "D10",
+      "classification": "source-observation with separately labeled design inference; not executed",
+      "sources": [
+        {
+          "path": "src/examples/zkprogram/side-loading/dynamic-keys-merkletree.ts",
+          "lines_inclusive": [
+            77,
+            131
+          ],
+          "file_sha256": "5873c0a0d9a696dbf2347e7fdd245399118e0fe7bb0deaab49a84e827be83623",
+          "git_blob": "2e42711a4ae5b914bd4b5bd4b5ed5a6beb8fde53",
+          "excerpt_sha256": "918d347ec55dba6ae122e31a8270afac706dc37f48c04546bfebd211a0c4d0ed",
+          "excerpt": "    addSideloadedProgram: {\n      privateInputs: [VerificationKey, MerkleTreeWitness],\n      async method(\n        publicInput: MainProgramState,\n        vk: VerificationKey,\n        merkleWitness: MerkleTreeWitness\n      ) {\n        // In practice, this method would be guarded via some access control mechanism\n        const currentRoot = merkleWitness.calculateRoot(Field(0));\n        publicInput.treeRoot.assertEquals(\n          currentRoot,\n          'Provided merklewitness not correct or leaf not empty'\n        );\n        const newRoot = merkleWitness.calculateRoot(vk.hash);\n\n        return {\n          publicOutput: new MainProgramState({\n            state: publicInput.state,\n            treeRoot: newRoot,\n          }),\n        };\n      },\n    },\n    validateUsingTree: {\n      privateInputs: [SelfProof, VerificationKey, MerkleTreeWitness, SideloadedProgramProof],\n      async method(\n        publicInput: MainProgramState,\n        previous: Proof<MainProgramState, MainProgramState>,\n        vk: VerificationKey,\n        merkleWitness: MerkleTreeWitness,\n        proof: SideloadedProgramProof\n      ) {\n        // Verify previous program state\n        previous.publicOutput.state.assertEquals(publicInput.state);\n        previous.publicOutput.treeRoot.assertEquals(publicInput.treeRoot);\n\n        // Verify inclusion of vk inside the tree\n        const computedRoot = merkleWitness.calculateRoot(vk.hash);\n        publicInput.treeRoot.assertEquals(\n          computedRoot,\n          'Tree witness with provided vk not correct'\n        );\n\n        proof.verify(vk);\n\n        // Compute new state\n        proof.publicInput.assertEquals(publicInput.state);\n        const newState = proof.publicOutput;\n        return {\n          publicOutput: new MainProgramState({\n            treeRoot: publicInput.treeRoot,\n            state: newState,\n          }),\n        };\n      },\n",
+          "url": "https://github.com/o1-labs/o1js/blob/bb34e65e74de7ba6f6c46e34b936034d8faa5c18/src/examples/zkprogram/side-loading/dynamic-keys-merkletree.ts#L77-L131"
+        }
+      ]
+    }
+  ],
+  "comparison_target": "/home/charl/research/moriarty-consolidation-2026-09-19/candidate/docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+  "comparison_target_sha256": "74a102a67bd8b86095ac749cef88dfc1e10a7b69758034498826131f8e7a4f66"
+}

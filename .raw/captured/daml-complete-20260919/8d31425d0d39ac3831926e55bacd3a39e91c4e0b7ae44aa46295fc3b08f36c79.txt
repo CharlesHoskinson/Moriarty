@@ -1,0 +1,295 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Fees
+Copy page
+Copy page
+Documentation for Splice.Fees
+Copy page
+Copy page
+Utility functions for different kinds of fees.
+​
+Data Types
+data
+ExpiringAmount
+ExpiringAmount
+Field
+Type
+Description
+initialAmount
+Decimal
+createdAt
+Round
+ratePerRound
+RatePerRound
+instance
+Eq
+ExpiringAmount
+instance
+Ord
+ExpiringAmount
+instance
+Show
+ExpiringAmount
+instance
+GetField “amount” Amulet ExpiringAmount
+instance
+GetField “createdAt” ExpiringAmount Round
+instance
+GetField “initialAmount” ExpiringAmount
+Decimal
+instance
+GetField “ratePerRound” ExpiringAmount RatePerRound
+instance
+SetField “amount” Amulet ExpiringAmount
+instance
+SetField “createdAt” ExpiringAmount Round
+instance
+SetField “initialAmount” ExpiringAmount
+Decimal
+instance
+SetField “ratePerRound” ExpiringAmount RatePerRound
+data
+FixedFee
+A fixed fee independent of the action being taken. TODO(M3-90): check whether this name matches usage in financial terms, it probably isn’t. Should it be ‘flat-fee’, ‘constantfee’, … ???
+FixedFee
+Field
+Type
+Description
+fee
+Decimal
+instance
+Eq
+FixedFee
+instance
+Ord
+FixedFee
+instance
+Show
+FixedFee
+instance
+GetField “createFee” (TransferConfig unit) FixedFee
+instance
+GetField “fee” FixedFee
+Decimal
+instance
+GetField “lockHolderFee” (TransferConfig unit) FixedFee
+instance
+SetField “createFee” (TransferConfig unit) FixedFee
+instance
+SetField “fee” FixedFee
+Decimal
+instance
+SetField “lockHolderFee” (TransferConfig unit) FixedFee
+instance
+Patchable FixedFee
+data
+RatePerDay
+RatePerDay
+Field
+Type
+Description
+rate
+Decimal
+instance
+Eq
+RatePerDay
+instance
+Ord
+RatePerDay
+instance
+Show
+RatePerDay
+instance
+GetField “rate” RatePerDay
+Decimal
+instance
+SetField “rate” RatePerDay
+Decimal
+data
+RatePerRound
+RatePerRound
+Field
+Type
+Description
+rate
+Decimal
+instance
+Eq
+RatePerRound
+instance
+Ord
+RatePerRound
+instance
+Show
+RatePerRound
+instance
+GetField “holdingFee” (TransferConfig unit) RatePerRound
+instance
+GetField “holdingFee” (TransferConfigV2 unit) RatePerRound
+instance
+GetField “rate” RatePerRound
+Decimal
+instance
+GetField “ratePerRound” ExpiringAmount RatePerRound
+instance
+SetField “holdingFee” (TransferConfig unit) RatePerRound
+instance
+SetField “holdingFee” (TransferConfigV2 unit) RatePerRound
+instance
+SetField “rate” RatePerRound
+Decimal
+instance
+SetField “ratePerRound” ExpiringAmount RatePerRound
+instance
+Patchable RatePerRound
+data
+SteppedRate
+A rate defined as a piecewise linear function, e.g., `SteppedRate 0.01 [(100.0, 0.001), (1000.0, 0.0001), (1000000, 0.00001)] corresponds to 1% of the first 100, 0.1% between 100 and 1000, 0.01% between 1000 and 1000000 and 0.001% for everything above that.
+SteppedRate
+Field
+Type
+Description
+initialRate
+Decimal
+steps
+[(
+Decimal
+,
+Decimal
+)]
+instance
+Eq
+SteppedRate
+instance
+Ord
+SteppedRate
+instance
+Show
+SteppedRate
+instance
+GetField “initialRate” SteppedRate
+Decimal
+instance
+GetField “steps” SteppedRate [(
+Decimal
+,
+Decimal
+)]
+instance
+GetField “transferFee” (TransferConfig unit) SteppedRate
+instance
+SetField “initialRate” SteppedRate
+Decimal
+instance
+SetField “steps” SteppedRate [(
+Decimal
+,
+Decimal
+)]
+instance
+SetField “transferFee” (TransferConfig unit) SteppedRate
+instance
+Patchable SteppedRate
+​
+Functions
+relTimeToMicros
+:
+RelTime
+->
+Decimal
+microsPerDay
+:
+Decimal
+relTimeToDays
+:
+RelTime
+->
+Decimal
+daysToRelTime
+:
+Decimal
+->
+RelTime
+relTimeToSeconds
+:
+RelTime
+->
+Decimal
+chargeRatePerRound
+: RatePerRound -> RelRound ->
+Decimal
+scaleRatePerRound
+:
+Decimal
+-> RatePerRound -> RatePerRound
+Scale a round rate such that
+ALL s r dt. s * chargeRatePerRound r dt = chargeRatePerRound (s
+scaleRatePerRound
+r) dt
+positiveRatePerRound
+: RatePerRound ->
+Bool
+scaleFixedFee
+:
+Decimal
+-> FixedFee -> FixedFee
+positiveFixedFee
+: FixedFee ->
+Bool
+validSteppedRate
+: SteppedRate ->
+Bool
+chargeSteppedRate
+: SteppedRate ->
+Decimal
+->
+Decimal
+goChargeSteppedRate
+: (
+Decimal
+,
+Decimal
+,
+Decimal
+) -> [(
+Decimal
+,
+Decimal
+)] ->
+Decimal
+scaleSteppedRate
+:
+Decimal
+-> SteppedRate -> SteppedRate
+Scale a fixed-plus-variable rate such that
+ALL s r q. s * chargeSteppedRate r (q/s) = chargeSteppedRate (s
+scaleSteppedRate
+r) q
+validExpiringAmount
+: ExpiringAmount ->
+Bool
+expiringAmount
+: RatePerRound ->
+Decimal
+-> Round -> ExpiringAmount
+Smart constructor for an expiring amount.
+getValueAsOfRound0
+: ExpiringAmount ->
+Decimal
+chargeRatePerDay
+: RatePerDay ->
+RelTime
+->
+Decimal
+ratePerRoundToRatePerDay
+: RatePerRound ->
+RelTime
+-> RatePerDay
+Suggest edits
+Raise issue
+Splice.ExternalPartyConfigState
+Splice.Issuance

@@ -10,6 +10,8 @@
 
 ## Global constraints
 
+This is an internal maintainer implementation plan. Reviewer, task-admission and RP03 controls apply only to project-operated development and funded campaigns. Public authoring, compilation, proving and deployment with developer-owned resources require objective language/proof validity and participant authorization, not project records. The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope.
+
 Status: S2, specified-only. [Program rules](README.md) apply to every task.
 
 Full-completion dependencies (not individual task entry gates): SP01. Stage scope: i2. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
@@ -64,7 +66,7 @@ npm --prefix experiments/moriarty-midnight-financial run preview -- --case loan 
 npm --prefix experiments/moriarty-midnight-financial run preview -- --case swap --max-attempts 2
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection rather than a crash or unauthorized effect. Pre-submission logical rejection is atomic; submitted transactions may retain only effects, authority/nonce consumption and fees permitted by the signed phase-specific failure policy. Project-operated proof and public-network campaigns additionally require live RP03 admission; independent public toolchain use does not.
 
 ## Report-informed acceptance refinement
 

@@ -1,0 +1,597 @@
+The Propose and Accept Pattern — Digital Asset’s platform documentation
+Build
+Overview
+TL;DR for new Canton Network developers
+Introduction
+Key concepts
+SDK components
+Canton Network community tools
+Tutorials
+Getting started
+Get started with Canton and the JSON Ledger API
+Get Started with Canton, the JSON Ledger API, TypeScript and WebSockets
+Get Started with Canton, the JSON Ledger API, and TypeScript
+Multi-Synchronizer Operations with the JSON Ledger API and TypeScript
+Get started with Canton Network App Dev Quickstart
+Using the JSON Ledger API
+Deploy Quickstart to DevNet
+Appendix
+Get started with smart contract development
+Basic contracts
+Test templates using Daml scripts
+Build the Daml Archive (.dar) file
+Data types
+Transform contracts using choices
+Add constraints to a contract
+Parties and authority
+Compose choices
+Handle exceptions (Deprecated)
+Work with dependencies
+Functional programming 101
+The Daml standard library
+Test Daml contracts
+Next steps
+Interfaces
+Application development
+External signing
+Onboard External Party
+Onboard Multi-Hosted External Party
+Submit Externally Signed Transactions - Part 1
+Submit Externally Signed Transactions - Part 2
+Externally Signed Topology Transactions
+Query contracts using SQL
+Development how-tos
+Best practices for Canton Network application development
+System design
+Canton Network application architecture design considerations
+Application development
+How to use the Canton Network App Dev Quickstart
+Develop
+How to upload and query Daml packages
+How to allocate and query Daml parties
+Multi-Synchronizer Application Best Practices
+How to Onboard and Use External Parties in Quickstart
+How to work with contracts and transactions in Java
+How to disclose contracts to non-stakeholders
+How to query contracts and transactions using SQL
+Debug
+How to inspect the ledger using Daml Shell
+Observe
+How to trace ledger interactions with OpenTracing
+Secure
+How to authenticate and authorize ledger access
+Harden
+Command Deduplication
+Optimize
+Managing Latency and Throughput
+Managing Active Contract Set (ACS) Size
+Avoid Contention Issues
+Reduce Contention
+Example Application with Techniques for Reducing Contention
+Upgrade
+Architectural considerations for upgrading a Canton Network application
+Smart contract development
+Build
+How to build Daml Archive (.dar) files
+Develop
+Common design patterns
+The Propose and Accept Pattern
+The Multiple Party Agreement Pattern
+The Authorization Pattern
+The Delegation Pattern
+The Locking Pattern
+How To Implement Time Constraints
+Diagram Legends
+Debug
+Common errors
+Upgrade
+How to upgrade existing Daml contracts
+Migration guides
+Migrate from the JSON API v1 to the JSON Ledger API
+Migrate from Canton 3.2
+Migrate from Canton Console
+Component how-tos
+Application development
+Canton Network App Dev Quickstart
+Download and Install the Canton Network Quickstart
+Configure
+Development lifecycle
+Development journey in the CN Quickstart lifecycle
+Keycloak in the CN QS
+Introduction to Splice in CN
+Debugging and troubleshooting with lnav
+Observability and troubleshooting overview
+Upgrades on the Global Synchronizer
+FAQ
+Daml Codegen for Java
+Daml Codegen for JavaScript
+Sandbox
+Daml Shell
+Ledger API client libraries
+Java client libraries
+Participant Query Store
+Download
+Configure
+Secure
+Operate
+Observe
+Optimize
+Optimize payload queries
+Upgrade
+Recover
+Troubleshoot
+Runbooks
+References
+Architecture
+Configuration options
+SQL API
+Sharing of PostgreSQL database with other applications
+Smart contract development
+Digital Asset Package Manager (dpm)
+Configuration
+Manual Installation Instructions
+Unstable Version Manual Installation
+Publishing Components
+Daml Assistant (deprecated)
+Daml Assistant configuration files
+Daml Compiler Flags
+Daml Studio
+Daml Profiler
+Development tooling authors
+How to parse Daml archive files
+Explanations
+Ledger API overview
+The gRPC Ledger API Services
+External signing
+External Signing Hashing Algorithm
+Daml packages and archive (.dar) files
+Parties and users on a Canton Ledger
+References
+Application development
+Ledger API
+gRPC Ledger API reference
+JSON Ledger API references
+JSON Ledger API overview
+JSON Ledger API OpenAPI definition
+JSON Ledger API AsyncAPI definitions (websocket access)
+Daml type conversions
+Daml-LF JSON encoding
+How Daml Types are Translated to Protobuf
+How Daml Types are translated to Daml-LF
+Smart contract development
+Daml language cheat sheet
+Daml language reference
+Overview: Template Structure
+Reference: Templates
+Reference: Choices
+Reference: Updates
+Reference: Data Types
+Reference: Built-in Functions
+Reference: Expressions
+Reference: Functions
+Reference: Daml File Structure
+Reference: Daml Packages
+Reference: Contract Keys
+Reference: Interfaces
+Reference: Exceptions (Deprecated)
+Reference: Serializable
+Fixity, Associativity and Precedence
+Daml standard library
+DA.Action.State.Class
+DA.Action.State
+DA.Action
+DA.Assert
+DA.Bifunctor
+DA.Crypto.Text
+DA.Date
+DA.Either
+DA.Exception
+DA.Fail
+DA.Foldable
+DA.Functor
+DA.Internal.Interface.AnyView.Types
+DA.Internal.Interface.AnyView
+DA.List.BuiltinOrder
+DA.List.Total
+DA.List
+DA.Logic
+DA.Map
+DA.Math
+DA.Monoid
+DA.NonEmpty.Types
+DA.NonEmpty
+DA.Numeric
+DA.Optional
+DA.Record
+DA.Semigroup
+DA.Set
+DA.Stack
+DA.Text
+DA.TextMap
+DA.Time
+DA.Traversable
+DA.Tuple
+DA.Validation
+DA.ContractKeys
+GHC.Show.Text
+GHC.Tuple.Check
+Prelude
+Daml Script
+Daml.Script
+Daml.Script.Internal
+Smart contract upgrading reference
+Glossary of concepts
+We've moved this documentation to a new home. This page will be retired soon - please refer to the new consolidated docs on the
+Canton Network site
+for the latest developer guidance.
+Back to Home
+Overview
+TL;DR for new Canton Network developers
+Introduction
+Key concepts
+SDK components
+Canton Network community tools
+Tutorials
+Getting started
+Get started with Canton and the JSON Ledger API
+Get Started with Canton, the JSON Ledger API, TypeScript and WebSockets
+Get Started with Canton, the JSON Ledger API, and TypeScript
+Multi-Synchronizer Operations with the JSON Ledger API and TypeScript
+Get started with Canton Network App Dev Quickstart
+Using the JSON Ledger API
+Deploy Quickstart to DevNet
+Appendix
+Get started with smart contract development
+Basic contracts
+Test templates using Daml scripts
+Build the Daml Archive (.dar) file
+Data types
+Transform contracts using choices
+Add constraints to a contract
+Parties and authority
+Compose choices
+Handle exceptions (Deprecated)
+Work with dependencies
+Functional programming 101
+The Daml standard library
+Test Daml contracts
+Next steps
+Interfaces
+Application development
+External signing
+Onboard External Party
+Onboard Multi-Hosted External Party
+Submit Externally Signed Transactions - Part 1
+Submit Externally Signed Transactions - Part 2
+Externally Signed Topology Transactions
+Query contracts using SQL
+Development how-tos
+Best practices for Canton Network application development
+System design
+Canton Network application architecture design considerations
+Application development
+How to use the Canton Network App Dev Quickstart
+Develop
+How to upload and query Daml packages
+How to allocate and query Daml parties
+Multi-Synchronizer Application Best Practices
+How to Onboard and Use External Parties in Quickstart
+How to work with contracts and transactions in Java
+How to disclose contracts to non-stakeholders
+How to query contracts and transactions using SQL
+Debug
+How to inspect the ledger using Daml Shell
+Observe
+How to trace ledger interactions with OpenTracing
+Secure
+How to authenticate and authorize ledger access
+Harden
+Command Deduplication
+Optimize
+Managing Latency and Throughput
+Managing Active Contract Set (ACS) Size
+Avoid Contention Issues
+Reduce Contention
+Example Application with Techniques for Reducing Contention
+Upgrade
+Architectural considerations for upgrading a Canton Network application
+Smart contract development
+Build
+How to build Daml Archive (.dar) files
+Develop
+Common design patterns
+The Propose and Accept Pattern
+The Multiple Party Agreement Pattern
+The Authorization Pattern
+The Delegation Pattern
+The Locking Pattern
+How To Implement Time Constraints
+Diagram Legends
+Debug
+Common errors
+Upgrade
+How to upgrade existing Daml contracts
+Migration guides
+Migrate from the JSON API v1 to the JSON Ledger API
+Migrate from Canton 3.2
+Migrate from Canton Console
+Component how-tos
+Application development
+Canton Network App Dev Quickstart
+Download and Install the Canton Network Quickstart
+Configure
+Development lifecycle
+Development journey in the CN Quickstart lifecycle
+Keycloak in the CN QS
+Introduction to Splice in CN
+Debugging and troubleshooting with lnav
+Observability and troubleshooting overview
+Upgrades on the Global Synchronizer
+FAQ
+Daml Codegen for Java
+Daml Codegen for JavaScript
+Sandbox
+Daml Shell
+Ledger API client libraries
+Java client libraries
+Participant Query Store
+Download
+Configure
+Secure
+Operate
+Observe
+Optimize
+Optimize payload queries
+Upgrade
+Recover
+Troubleshoot
+Runbooks
+References
+Architecture
+Configuration options
+SQL API
+Sharing of PostgreSQL database with other applications
+Smart contract development
+Digital Asset Package Manager (dpm)
+Configuration
+Manual Installation Instructions
+Unstable Version Manual Installation
+Publishing Components
+Daml Assistant (deprecated)
+Daml Assistant configuration files
+Daml Compiler Flags
+Daml Studio
+Daml Profiler
+Development tooling authors
+How to parse Daml archive files
+Explanations
+Ledger API overview
+The gRPC Ledger API Services
+External signing
+External Signing Hashing Algorithm
+Daml packages and archive (.dar) files
+Parties and users on a Canton Ledger
+References
+Application development
+Ledger API
+gRPC Ledger API reference
+JSON Ledger API references
+JSON Ledger API overview
+JSON Ledger API OpenAPI definition
+JSON Ledger API AsyncAPI definitions (websocket access)
+Daml type conversions
+Daml-LF JSON encoding
+How Daml Types are Translated to Protobuf
+How Daml Types are translated to Daml-LF
+Smart contract development
+Daml language cheat sheet
+Daml language reference
+Overview: Template Structure
+Reference: Templates
+Reference: Choices
+Reference: Updates
+Reference: Data Types
+Reference: Built-in Functions
+Reference: Expressions
+Reference: Functions
+Reference: Daml File Structure
+Reference: Daml Packages
+Reference: Contract Keys
+Reference: Interfaces
+Reference: Exceptions (Deprecated)
+Reference: Serializable
+Fixity, Associativity and Precedence
+Daml standard library
+DA.Action.State.Class
+DA.Action.State
+DA.Action
+DA.Assert
+DA.Bifunctor
+DA.Crypto.Text
+DA.Date
+DA.Either
+DA.Exception
+DA.Fail
+DA.Foldable
+DA.Functor
+DA.Internal.Interface.AnyView.Types
+DA.Internal.Interface.AnyView
+DA.List.BuiltinOrder
+DA.List.Total
+DA.List
+DA.Logic
+DA.Map
+DA.Math
+DA.Monoid
+DA.NonEmpty.Types
+DA.NonEmpty
+DA.Numeric
+DA.Optional
+DA.Record
+DA.Semigroup
+DA.Set
+DA.Stack
+DA.Text
+DA.TextMap
+DA.Time
+DA.Traversable
+DA.Tuple
+DA.Validation
+DA.ContractKeys
+GHC.Show.Text
+GHC.Tuple.Check
+Prelude
+Daml Script
+Daml.Script
+Daml.Script.Internal
+Smart contract upgrading reference
+Glossary of concepts
+The Propose and Accept Pattern
+¶
+The Propose and Accept pattern demonstrates how to start a bilateral workflow. One party creates a proposal or an invite contract. This gives another party the chance to accept, reject, or renegotiate.
+Motivation
+¶
+It takes two to tango, but one party has to propose. It is no different in the business world. The contractual relationship between two businesses often starts with an invite, a business proposal, a bid offering, etc.
+Invite
+When a market operator wants to set up a market, they need to go through an onboarding process in which they invite participants to sign master service agreements and fulfill different roles in the market. Receiving participants need to evaluate the rights and responsibilities of each role and respond accordingly.
+Propose
+When issuing an asset, an issuer is making a business proposal to potential buyers. The proposal lays out what is expected from buyers, and what they can expect from the issuer. Buyers need to evaluate all aspects of the offering, e.g. price, return, and tax implications, before making a decision.
+The Propose and Accept pattern demonstrates how to write a Daml program to model the initiation of an inter-company contractual relationship. Daml modelers often have to follow this pattern to ensure that no participant is forced into an obligation.
+Implementation
+¶
+The Propose and Accept pattern in general involves two contracts, the proposal contract and the result contract:
+Proposal Contract
+The proposal contract can be created from a role contract or any other point in the workflow. In this example, the proposal contract is the proposal contract
+CoinIssueProposal
+which the issuer created from the master contract
+CoinMaster
+.
+template
+CoinMaster
+with
+issuer
+:
+Party
+where
+signatory
+issuer
+nonconsuming
+choice
+Invite
+:
+ContractId
+CoinIssueProposal
+with
+owner
+:
+Party
+controller
+issuer
+do
+create
+CoinIssueProposal
+with
+coinAgreement
+=
+CoinIssueAgreement
+with
+issuer
+;
+owner
+The
+CoinIssueProposal
+contract has
+Issuer
+as the signatory and
+Owner
+as the controller to the
+Accept
+choice. In its complete form, the
+CoinIssueProposal
+contract should define all choices available to the owner, i.e. Accept, Reject or Counter (re-negotiate terms).
+template
+CoinIssueProposal
+with
+coinAgreement
+:
+CoinIssueAgreement
+where
+signatory
+coinAgreement
+.
+issuer
+observer
+coinAgreement
+.
+owner
+choice
+AcceptCoinProposal
+:
+ContractId
+CoinIssueAgreement
+controller
+coinAgreement
+.
+owner
+do
+create
+coinAgreement
+Result Contract
+Once the owner exercises the
+AcceptCoinProposal
+choice on the proposal contract to express their consent, it returns a result contract representing the agreement between the two parties. In this example, the result contract is of type
+CoinIssueAgreement
+. Note, it has both
+issuer
+and
+owner
+as the signatories, implying they both need to consent to the creation of this contract. Both parties could be controller(s) on the result contract, depending on the business case.
+template
+CoinIssueAgreement
+with
+issuer
+:
+Party
+owner
+:
+Party
+where
+signatory
+issuer
+,
+owner
+nonconsuming
+choice
+Issue
+:
+ContractId
+Coin
+with
+amount
+:
+Decimal
+controller
+issuer
+do
+create
+Coin
+with
+issuer
+;
+owner
+;
+amount
+;
+delegates
+=
+[]
+Propose and Accept pattern diagram
+¶
+Trade-offs
+¶
+Propose and Accept can be quite verbose if signatures from more than two parties are required to progress the workflow.
+Copyright (c) 2025 Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved. Any unauthorized use, duplication or distribution is strictly prohibited. "Digital Asset" and "Daml" are Registered in the U.S. Patent and Trademark Office.
+On this page
+Motivation
+Implementation
+Trade-offs

@@ -1,0 +1,4597 @@
+On this page
+Daml.Script
+Data Types
+data InvalidUserId
+data User
+data UserAlreadyExists
+data UserId
+data UserNotFound
+data UserRight
+data ConcurrentSubmits a
+data PackageId
+data SubmitOptions
+data CryptoErrorType
+data SubmitError
+data UpgradeErrorType
+data Created
+data CreatedIndexPayload t
+data Exercised
+data ExercisedIndexPayload t
+data TransactionTree
+data TreeEvent
+data TreeIndex t
+data AnyContractId
+data ParticipantName
+data PartyDetails
+data PartyIdHint
+type PrivateKeyHex
+data Secp256k1KeyPair
+data AnyContractKey
+data Commands a
+data Disclosure
+data Script a
+Typeclasses
+class IsSubmitOptions options
+class Applicative script => ScriptSubmit script
+Functions
+userIdToText
+validateUserId
+createUser
+createUserOn
+getUser
+getUserOn
+listAllUsers
+listAllUsersOn
+grantUserRights
+grantUserRightsOn
+revokeUserRights
+revokeUserRightsOn
+deleteUser
+deleteUserOn
+listUserRights
+listUserRightsOn
+submitUser
+submitUserOn
+setTime
+sleep
+passTime
+actAs
+readAs
+discloseMany
+disclose
+packagePreference
+prefetchKeys
+concurrently
+submitResultAndTree
+trySubmitResultAndTree
+submitWithError
+submit
+submitWithOptions
+submitTree
+trySubmit
+trySubmitTree
+submitMustFail
+submitMustFailWithOptions
+submitMulti
+submitMultiMustFail
+submitTreeMulti
+trySubmitMulti
+trySubmitConcurrently
+submitWithDisclosures
+submitWithDisclosuresMustFail
+fromTree
+created
+createdN
+exercised
+exercisedN
+fromAnyContractId
+query
+queryFilter
+queryContractId
+queryDisclosure
+queryInterface
+queryInterfaceContractId
+queryByKey
+queryNByKey
+queryAllByKey
+allocateParty
+allocatePartyWithHint
+allocatePartyByHint
+allocatePartyOn
+allocatePartyWithHintOn
+allocatePartyByHintOn
+listKnownParties
+listKnownPartiesOn
+tryToEither
+tryFailureStatus
+secp256k1signWithEcdsaOnly
+secp256k1sign
+secp256k1generatekeypair
+toAnyContractKey
+fromAnyContractKey
+createCmd
+exerciseCmd
+exerciseByKeyCmd
+createAndExerciseWithCidCmd
+createAndExerciseCmd
+createExactCmd
+exerciseExactCmd
+exerciseByKeyExactCmd
+createAndExerciseWithCidExactCmd
+createAndExerciseExactCmd
+archiveCmd
+script
+History
+Daml Script
+Modules
+Daml.Script
+Copy page
+Copy page
+Reference documentation for Daml module Daml.Script.
+Copy page
+Copy page
+Daml module
+​
+Daml.Script
+The Daml Script testing library.
+Daml
+Updated 3.5.2
+​
+Data Types
+​
+data InvalidUserId
+Thrown if text for a user identifier does not conform to the format restriction.
+Constructors:
+InvalidUserId
+​
+m
+Text
+Instances:
+instance
+Eq
+InvalidUserId
+instance
+Show
+InvalidUserId
+instance
+HasFromAnyException
+InvalidUserId
+instance
+HasMessage
+InvalidUserId
+instance
+HasThrow
+InvalidUserId
+instance
+HasToAnyException
+InvalidUserId
+instance
+GetField
+m
+InvalidUserId
+Text
+instance
+GetField
+message
+InvalidUserId
+Text
+instance
+SetField
+m
+InvalidUserId
+Text
+​
+data User
+User-info record for a user in the user management service.
+Constructors:
+User
+​
+userId
+UserId
+​
+primaryParty
+Optional Party
+Instances:
+instance
+IsQuestion
+GetUser
+(
+Optional
+User
+)
+instance
+IsQuestion
+ListAllUsers
+[
+User
+]
+instance
+Eq
+User
+instance
+Ord
+User
+instance
+Show
+User
+instance
+GetField
+primaryParty
+User
+(
+Optional
+Party
+)
+instance
+GetField
+user
+CreateUser
+User
+instance
+GetField
+userId
+User
+UserId
+instance
+SetField
+primaryParty
+User
+(
+Optional
+Party
+)
+instance
+SetField
+user
+CreateUser
+User
+instance
+SetField
+userId
+User
+UserId
+​
+data UserAlreadyExists
+Thrown if a user to be created already exists.
+Constructors:
+UserAlreadyExists
+​
+userId
+UserId
+Instances:
+instance
+Eq
+UserAlreadyExists
+instance
+Show
+UserAlreadyExists
+instance
+HasFromAnyException
+UserAlreadyExists
+instance
+HasMessage
+UserAlreadyExists
+instance
+HasThrow
+UserAlreadyExists
+instance
+HasToAnyException
+UserAlreadyExists
+instance
+GetField
+message
+UserAlreadyExists
+Text
+instance
+GetField
+userId
+UserAlreadyExists
+UserId
+instance
+SetField
+userId
+UserAlreadyExists
+UserId
+​
+data UserId
+Identifier for a user in the user management service.
+Constructors:
+UserId Text
+Instances:
+instance
+Eq
+UserId
+instance
+Ord
+UserId
+instance
+Show
+UserId
+instance
+GetField
+userId
+DeleteUser
+UserId
+instance
+GetField
+userId
+GetUser
+UserId
+instance
+GetField
+userId
+GrantUserRights
+UserId
+instance
+GetField
+userId
+ListUserRights
+UserId
+instance
+GetField
+userId
+RevokeUserRights
+UserId
+instance
+GetField
+userId
+User
+UserId
+instance
+GetField
+userId
+UserAlreadyExists
+UserId
+instance
+GetField
+userId
+UserNotFound
+UserId
+instance
+SetField
+userId
+DeleteUser
+UserId
+instance
+SetField
+userId
+GetUser
+UserId
+instance
+SetField
+userId
+GrantUserRights
+UserId
+instance
+SetField
+userId
+ListUserRights
+UserId
+instance
+SetField
+userId
+RevokeUserRights
+UserId
+instance
+SetField
+userId
+User
+UserId
+instance
+SetField
+userId
+UserAlreadyExists
+UserId
+instance
+SetField
+userId
+UserNotFound
+UserId
+​
+data UserNotFound
+Thrown if a user cannot be located for a given user identifier.
+Constructors:
+UserNotFound
+​
+userId
+UserId
+Instances:
+instance
+Eq
+UserNotFound
+instance
+Show
+UserNotFound
+instance
+HasFromAnyException
+UserNotFound
+instance
+HasMessage
+UserNotFound
+instance
+HasThrow
+UserNotFound
+instance
+HasToAnyException
+UserNotFound
+instance
+GetField
+message
+UserNotFound
+Text
+instance
+GetField
+userId
+UserNotFound
+UserId
+instance
+SetField
+userId
+UserNotFound
+UserId
+​
+data UserRight
+The rights of a user.
+Constructors:
+ParticipantAdmin
+CanActAs Party
+CanReadAs Party
+CanReadAsAnyParty
+Instances:
+instance
+IsQuestion
+GrantUserRights
+(
+Optional
+[
+UserRight
+])
+instance
+IsQuestion
+ListUserRights
+(
+Optional
+[
+UserRight
+])
+instance
+IsQuestion
+RevokeUserRights
+(
+Optional
+[
+UserRight
+])
+instance
+Eq
+UserRight
+instance
+Show
+UserRight
+instance
+GetField
+rights
+CreateUser
+[
+UserRight
+]
+instance
+GetField
+rights
+GrantUserRights
+[
+UserRight
+]
+instance
+GetField
+rights
+RevokeUserRights
+[
+UserRight
+]
+instance
+SetField
+rights
+CreateUser
+[
+UserRight
+]
+instance
+SetField
+rights
+GrantUserRights
+[
+UserRight
+]
+instance
+SetField
+rights
+RevokeUserRights
+[
+UserRight
+]
+​
+data ConcurrentSubmits a
+Applicative that allows for multiple concurrent transaction submissions
+See
+concurrently
+for usage of this type.
+Constructors:
+ConcurrentSubmits
+​
+submits
+[Submission]
+​
+continue
+[Either SubmitError ([CommandResult], TransactionTree)] -> a
+Instances:
+instance
+ScriptSubmit
+ConcurrentSubmits
+instance
+Functor
+ConcurrentSubmits
+instance
+Applicative
+ConcurrentSubmits
+instance
+GetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+GetField
+submits
+(
+ConcurrentSubmits
+a
+) [
+Submission
+]
+instance
+SetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+SetField
+submits
+(
+ConcurrentSubmits
+a
+) [
+Submission
+]
+​
+data PackageId
+Package-id newtype for package preference
+Constructors:
+PackageId Text
+Instances:
+instance
+Eq
+PackageId
+instance
+Show
+PackageId
+instance
+GetField
+sPackagePreference
+Submission
+(
+Optional
+[
+PackageId
+])
+instance
+GetField
+soPackagePreference
+SubmitOptions
+(
+Optional
+[
+PackageId
+])
+instance
+SetField
+sPackagePreference
+Submission
+(
+Optional
+[
+PackageId
+])
+instance
+SetField
+soPackagePreference
+SubmitOptions
+(
+Optional
+[
+PackageId
+])
+​
+data SubmitOptions
+Options to detemine the stakeholders of a transaction, as well as disclosures.
+Intended to be specified using the
+actAs
+,
+readAs
+and
+disclose
+builders, combined using the Semigroup concat
+(<>)
+operator.
+actAs alice <> readAs [alice, bob] <> disclose myContract
+Note that actAs and readAs follows the same party derivation rules as
+signatory
+, see their docs for examples.
+All submissions must specify at least one
+actAs
+party, else a runtime error will be thrown.
+A minimum submission may look like
+actAs alice `submit` createCmd MyContract with party = alice
+For backwards compatibility, a single or set of parties can be provided in place of the
+SubmitOptions
+to
+submit
+, which will represent the
+actAs
+field.
+The above example could be reduced to
+alice `submit` createCmd MyContract with party = alice
+Constructors:
+SubmitOptions
+​
+soActAs
+[Party]
+​
+soReadAs
+[Party]
+​
+soDisclosures
+[Disclosure]
+​
+soPackagePreference
+Optional [PackageId]
+​
+soPrefetchKeys
+[AnyContractKey]
+Instances:
+instance
+IsSubmitOptions
+SubmitOptions
+instance
+Monoid
+SubmitOptions
+instance
+Semigroup
+SubmitOptions
+instance
+GetField
+soActAs
+SubmitOptions
+[
+Party
+]
+instance
+GetField
+soDisclosures
+SubmitOptions
+[
+Disclosure
+]
+instance
+GetField
+soPackagePreference
+SubmitOptions
+(
+Optional
+[
+PackageId
+])
+instance
+GetField
+soPrefetchKeys
+SubmitOptions
+[
+AnyContractKey
+]
+instance
+GetField
+soReadAs
+SubmitOptions
+[
+Party
+]
+instance
+SetField
+soActAs
+SubmitOptions
+[
+Party
+]
+instance
+SetField
+soDisclosures
+SubmitOptions
+[
+Disclosure
+]
+instance
+SetField
+soPackagePreference
+SubmitOptions
+(
+Optional
+[
+PackageId
+])
+instance
+SetField
+soPrefetchKeys
+SubmitOptions
+[
+AnyContractKey
+]
+instance
+SetField
+soReadAs
+SubmitOptions
+[
+Party
+]
+​
+data CryptoErrorType
+Daml Crypto (Secp256k1) related submission errors
+Constructors:
+MalformedByteEncoding
+​
+value
+Text
+MalformedKey
+​
+keyValue
+Text
+MalformedSignature
+​
+signatureValue
+Text
+Instances:
+instance
+Show
+CryptoErrorType
+instance
+GetField
+cryptoErrorType
+SubmitError
+CryptoErrorType
+instance
+GetField
+keyValue
+CryptoErrorType
+Text
+instance
+GetField
+signatureValue
+CryptoErrorType
+Text
+instance
+GetField
+value
+CryptoErrorType
+Text
+instance
+SetField
+cryptoErrorType
+SubmitError
+CryptoErrorType
+instance
+SetField
+keyValue
+CryptoErrorType
+Text
+instance
+SetField
+signatureValue
+CryptoErrorType
+Text
+instance
+SetField
+value
+CryptoErrorType
+Text
+​
+data SubmitError
+Errors that can be thrown by a command submission via
+trySubmit
+Constructors:
+ContractNotFound
+​
+unknownContractIds
+NonEmpty Text
+Provided as text, as we do not know the template ID of a contract if the lookup fails
+​
+additionalDebuggingInfo
+Optional ContractNotFoundAdditionalInfo
+should always be None in Canton’s case, see
+https://github.com/digital-asset/daml/issues/17154
+Contract with given contract ID could not be found, and has never existed on this participant
+When run on Canton, there may be more than one contract ID, and additionalDebuggingInfo is always None
+On the other hand, when run on IDELedger, there is only ever one contract ID, and additionalDebuggingInfo is always Some
+ContractKeyNotFound
+​
+contractKey
+AnyContractKey
+Contract with given contract key could not be found
+UnresolvedPackageName
+​
+packageName
+Text
+No vetted package with given package name could be found
+AuthorizationError
+​
+authorizationErrorMessage
+Text
+Generic authorization failure, included missing party authority, invalid signatories, etc.
+ContractHashingError
+​
+contractId
+AnyContractId
+​
+dstTemplateId
+TemplateTypeRep
+​
+createArg
+AnyTemplate
+​
+errorMessage
+Text
+Failed to hash a contract
+DisclosedContractKeyHashingError
+​
+contractId
+AnyContractId
+​
+expectedKey
+AnyContractKey
+​
+givenKeyHash
+Text
+Given disclosed contract key does not match the contract key of the contract on ledger.
+DuplicateContractKey
+​
+duplicateContractKey
+Optional AnyContractKey
+Canton will often not provide this key, IDELedger will
+Attempted to create a contract with a contract key that already exists
+InconsistentContractKey
+​
+contractKey
+AnyContractKey
+Contract key lookup yielded different results
+UnhandledException
+​
+exc
+Optional AnyException
+Errors more complex than simple records cannot currently be encoded over the grpc status. Such errors will be missing here.
+Unhandled user thrown exception
+UserError
+​
+userErrorMessage
+Text
+Transaction failure due to abort/assert calls pre-exceptions
+TemplatePreconditionViolated
+Failure due to false result from
+ensure
+, strictly pre-exception.
+According to docs, not throwable with LF >= 1.14.
+On LF >= 1.14, a failed
+ensure
+will result in a
+PreconditionFailed
+exception wrapped in
+UnhandledException
+.
+CreateEmptyContractKeyMaintainers
+​
+invalidTemplate
+AnyTemplate
+Attempted to create a contract with empty contract key maintainers
+FetchEmptyContractKeyMaintainers
+​
+failedTemplateKey
+AnyContractKey
+Attempted to fetch a contract with empty contract key maintainers
+WronglyTypedContract
+​
+contractId
+AnyContractId
+Any contract Id of the actual contract
+​
+expectedTemplateId
+TemplateTypeRep
+​
+actualTemplateId
+TemplateTypeRep
+Attempted to exercise/fetch a contract with the wrong template type
+ContractDoesNotImplementInterface
+​
+contractId
+AnyContractId
+​
+templateId
+TemplateTypeRep
+​
+interfaceId
+TemplateTypeRep
+Attempted to use a contract as an interface that it does not implement
+ContractDoesNotImplementRequiringInterface
+​
+contractId
+AnyContractId
+​
+templateId
+TemplateTypeRep
+​
+requiredInterfaceId
+TemplateTypeRep
+​
+requiringInterfaceId
+TemplateTypeRep
+Attempted to use a contract as a required interface that it does not implement
+NonComparableValues
+Attempted to compare values that are not comparable
+ContractIdInContractKey
+(no fields)
+Illegal Contract ID found in Contract Key
+ContractIdComparability
+​
+globalExistingContractId
+Text
+We do not know the template ID at time of comparison.
+Attempted to compare incomparable contract IDs. You’re doing something very wrong.
+Two contract IDs with the same prefix are incomparable if one of them is local and the other non-local
+or if one is relative and the other relative or absolute with a different suffix.
+ValueNesting
+​
+limit
+Int
+Nesting limit that was exceeded
+A value has been nested beyond a given depth limit
+LocalVerdictLockedContracts
+​
+localVerdictLockedContracts
+[AnyContractId]
+Locked contract ids
+The transaction refers to locked contracts which are in the process of being created, transferred, or
+archived by another transaction. If the other transaction fails, this transaction could be successfully retried.
+LocalVerdictLockedKeys
+​
+localVerdictLockedKeys
+[AnyContractKey]
+Locked contract keys
+The transaction refers to locked keys which are in the process of being modified by another transaction.
+UpgradeError
+​
+errorType
+UpgradeErrorType
+​
+errorMessage
+Text
+Upgrade exception
+FailureStatusError
+​
+failureStatus
+FailureStatus
+Exception resulting from call to
+failWithStatus
+CryptoError
+​
+cryptoErrorType
+CryptoErrorType
+​
+cryptoErrorMessage
+Text
+Crypto exceptions
+EffectfulRollbackError
+​
+effectfulRollbackErrorMsg
+Text
+Rollback exceptions
+DevError
+​
+devErrorType
+DevErrorType
+​
+devErrorMessage
+Text
+Development feature exceptions
+UnknownError
+​
+unknownErrorMessage
+Text
+Generic catch-all for missing errors.
+TruncatedError
+​
+truncatedErrorType
+Text
+One of the constructor names of SubmitFailure except DevError, UnknownError, TruncatedError
+​
+truncatedErrorMessage
+Text
+One of the above error types where the full exception body did not fit into the response, and was incomplete.
+Instances:
+instance
+IsQuestion
+Submit
+[
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)]
+instance
+Show
+SubmitError
+instance
+GetField
+actualTemplateId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+additionalDebuggingInfo
+SubmitError
+(
+Optional
+ContractNotFoundAdditionalInfo
+)
+instance
+GetField
+authorizationErrorMessage
+SubmitError
+Text
+instance
+GetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+GetField
+contractId
+SubmitError
+AnyContractId
+instance
+GetField
+contractKey
+SubmitError
+AnyContractKey
+instance
+GetField
+createArg
+SubmitError
+AnyTemplate
+instance
+GetField
+cryptoErrorMessage
+SubmitError
+Text
+instance
+GetField
+cryptoErrorType
+SubmitError
+CryptoErrorType
+instance
+GetField
+devErrorMessage
+SubmitError
+Text
+instance
+GetField
+devErrorType
+SubmitError
+DevErrorType
+instance
+GetField
+dstTemplateId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+duplicateContractKey
+SubmitError
+(
+Optional
+AnyContractKey
+)
+instance
+GetField
+effectfulRollbackErrorMsg
+SubmitError
+Text
+instance
+GetField
+errorMessage
+SubmitError
+Text
+instance
+GetField
+errorType
+SubmitError
+UpgradeErrorType
+instance
+GetField
+exc
+SubmitError
+(
+Optional
+AnyException
+)
+instance
+GetField
+expectedKey
+SubmitError
+AnyContractKey
+instance
+GetField
+expectedTemplateId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+failedTemplateKey
+SubmitError
+AnyContractKey
+instance
+GetField
+failureStatus
+SubmitError
+FailureStatus
+instance
+GetField
+givenKeyHash
+SubmitError
+Text
+instance
+GetField
+globalExistingContractId
+SubmitError
+Text
+instance
+GetField
+interfaceId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+invalidTemplate
+SubmitError
+AnyTemplate
+instance
+GetField
+limit
+SubmitError
+Int
+instance
+GetField
+localVerdictLockedContracts
+SubmitError
+[
+AnyContractId
+]
+instance
+GetField
+localVerdictLockedKeys
+SubmitError
+[
+AnyContractKey
+]
+instance
+GetField
+packageName
+SubmitError
+Text
+instance
+GetField
+requiredInterfaceId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+requiringInterfaceId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+templateId
+SubmitError
+TemplateTypeRep
+instance
+GetField
+truncatedErrorMessage
+SubmitError
+Text
+instance
+GetField
+truncatedErrorType
+SubmitError
+Text
+instance
+GetField
+unknownContractIds
+SubmitError
+(
+NonEmpty
+Text
+)
+instance
+GetField
+unknownErrorMessage
+SubmitError
+Text
+instance
+GetField
+userErrorMessage
+SubmitError
+Text
+instance
+SetField
+actualTemplateId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+additionalDebuggingInfo
+SubmitError
+(
+Optional
+ContractNotFoundAdditionalInfo
+)
+instance
+SetField
+authorizationErrorMessage
+SubmitError
+Text
+instance
+SetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+SetField
+contractId
+SubmitError
+AnyContractId
+instance
+SetField
+contractKey
+SubmitError
+AnyContractKey
+instance
+SetField
+createArg
+SubmitError
+AnyTemplate
+instance
+SetField
+cryptoErrorMessage
+SubmitError
+Text
+instance
+SetField
+cryptoErrorType
+SubmitError
+CryptoErrorType
+instance
+SetField
+devErrorMessage
+SubmitError
+Text
+instance
+SetField
+devErrorType
+SubmitError
+DevErrorType
+instance
+SetField
+dstTemplateId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+duplicateContractKey
+SubmitError
+(
+Optional
+AnyContractKey
+)
+instance
+SetField
+effectfulRollbackErrorMsg
+SubmitError
+Text
+instance
+SetField
+errorMessage
+SubmitError
+Text
+instance
+SetField
+errorType
+SubmitError
+UpgradeErrorType
+instance
+SetField
+exc
+SubmitError
+(
+Optional
+AnyException
+)
+instance
+SetField
+expectedKey
+SubmitError
+AnyContractKey
+instance
+SetField
+expectedTemplateId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+failedTemplateKey
+SubmitError
+AnyContractKey
+instance
+SetField
+failureStatus
+SubmitError
+FailureStatus
+instance
+SetField
+givenKeyHash
+SubmitError
+Text
+instance
+SetField
+globalExistingContractId
+SubmitError
+Text
+instance
+SetField
+interfaceId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+invalidTemplate
+SubmitError
+AnyTemplate
+instance
+SetField
+limit
+SubmitError
+Int
+instance
+SetField
+localVerdictLockedContracts
+SubmitError
+[
+AnyContractId
+]
+instance
+SetField
+localVerdictLockedKeys
+SubmitError
+[
+AnyContractKey
+]
+instance
+SetField
+packageName
+SubmitError
+Text
+instance
+SetField
+requiredInterfaceId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+requiringInterfaceId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+templateId
+SubmitError
+TemplateTypeRep
+instance
+SetField
+truncatedErrorMessage
+SubmitError
+Text
+instance
+SetField
+truncatedErrorType
+SubmitError
+Text
+instance
+SetField
+unknownContractIds
+SubmitError
+(
+NonEmpty
+Text
+)
+instance
+SetField
+unknownErrorMessage
+SubmitError
+Text
+instance
+SetField
+userErrorMessage
+SubmitError
+Text
+​
+data UpgradeErrorType
+SCU related submission errors
+Constructors:
+ValidationFailed
+​
+coid
+AnyContractId
+​
+srcTemplateId
+TemplateTypeRep
+​
+dstTemplateId
+TemplateTypeRep
+​
+srcPackageName
+Text
+​
+dstPackageName
+Text
+​
+originalSignatories
+[Party]
+​
+originalObservers
+[Party]
+​
+originalKeyOpt
+Optional (AnyContractKey, [Party])
+​
+recomputedSignatories
+[Party]
+​
+recomputedObservers
+[Party]
+​
+recomputedKeyOpt
+Optional (AnyContractKey, [Party])
+TranslationFailed
+​
+mCoid
+Optional AnyContractId
+​
+srcTemplateId
+TemplateTypeRep
+​
+dstTemplateId
+TemplateTypeRep
+​
+createArg
+AnyTemplate
+AuthenticationFailed
+​
+coid
+AnyContractId
+​
+srcTemplateId
+TemplateTypeRep
+​
+dstTemplateId
+TemplateTypeRep
+​
+createArg
+AnyTemplate
+Instances:
+instance
+Show
+UpgradeErrorType
+instance
+GetField
+coid
+UpgradeErrorType
+AnyContractId
+instance
+GetField
+createArg
+UpgradeErrorType
+AnyTemplate
+instance
+GetField
+dstPackageName
+UpgradeErrorType
+Text
+instance
+GetField
+dstTemplateId
+UpgradeErrorType
+TemplateTypeRep
+instance
+GetField
+errorType
+SubmitError
+UpgradeErrorType
+instance
+GetField
+mCoid
+UpgradeErrorType
+(
+Optional
+AnyContractId
+)
+instance
+GetField
+originalKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+GetField
+originalObservers
+UpgradeErrorType
+[
+Party
+]
+instance
+GetField
+originalSignatories
+UpgradeErrorType
+[
+Party
+]
+instance
+GetField
+recomputedKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+GetField
+recomputedObservers
+UpgradeErrorType
+[
+Party
+]
+instance
+GetField
+recomputedSignatories
+UpgradeErrorType
+[
+Party
+]
+instance
+GetField
+srcPackageName
+UpgradeErrorType
+Text
+instance
+GetField
+srcTemplateId
+UpgradeErrorType
+TemplateTypeRep
+instance
+SetField
+coid
+UpgradeErrorType
+AnyContractId
+instance
+SetField
+createArg
+UpgradeErrorType
+AnyTemplate
+instance
+SetField
+dstPackageName
+UpgradeErrorType
+Text
+instance
+SetField
+dstTemplateId
+UpgradeErrorType
+TemplateTypeRep
+instance
+SetField
+errorType
+SubmitError
+UpgradeErrorType
+instance
+SetField
+mCoid
+UpgradeErrorType
+(
+Optional
+AnyContractId
+)
+instance
+SetField
+originalKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+SetField
+originalObservers
+UpgradeErrorType
+[
+Party
+]
+instance
+SetField
+originalSignatories
+UpgradeErrorType
+[
+Party
+]
+instance
+SetField
+recomputedKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+SetField
+recomputedObservers
+UpgradeErrorType
+[
+Party
+]
+instance
+SetField
+recomputedSignatories
+UpgradeErrorType
+[
+Party
+]
+instance
+SetField
+srcPackageName
+UpgradeErrorType
+Text
+instance
+SetField
+srcTemplateId
+UpgradeErrorType
+TemplateTypeRep
+​
+data Created
+Constructors:
+Created
+​
+contractId
+AnyContractId
+​
+argument
+AnyTemplate
+Instances:
+instance
+Show
+Created
+instance
+GetField
+argument
+Created
+AnyTemplate
+instance
+GetField
+contractId
+Created
+AnyContractId
+instance
+SetField
+argument
+Created
+AnyTemplate
+instance
+SetField
+contractId
+Created
+AnyContractId
+​
+data CreatedIndexPayload t
+Constructors:
+CreatedIndexPayload
+​
+templateId
+TemplateTypeRep
+​
+offset
+Int
+Instances:
+instance
+GetField
+offset
+(
+CreatedIndexPayload
+t
+)
+Int
+instance
+GetField
+templateId
+(
+CreatedIndexPayload
+t
+)
+TemplateTypeRep
+instance
+SetField
+offset
+(
+CreatedIndexPayload
+t
+)
+Int
+instance
+SetField
+templateId
+(
+CreatedIndexPayload
+t
+)
+TemplateTypeRep
+​
+data Exercised
+Constructors:
+Exercised
+​
+contractId
+AnyContractId
+​
+choice
+Text
+​
+argument
+AnyChoice
+​
+childEvents
+[TreeEvent]
+Instances:
+instance
+Show
+Exercised
+instance
+GetField
+argument
+Exercised
+AnyChoice
+instance
+GetField
+childEvents
+Exercised
+[
+TreeEvent
+]
+instance
+GetField
+choice
+Exercised
+Text
+instance
+GetField
+contractId
+Exercised
+AnyContractId
+instance
+SetField
+argument
+Exercised
+AnyChoice
+instance
+SetField
+childEvents
+Exercised
+[
+TreeEvent
+]
+instance
+SetField
+choice
+Exercised
+Text
+instance
+SetField
+contractId
+Exercised
+AnyContractId
+​
+data ExercisedIndexPayload t
+Constructors:
+ExercisedIndexPayload
+​
+templateId
+TemplateTypeRep
+​
+choice
+Text
+​
+offset
+Int
+​
+child
+TreeIndex t
+Instances:
+instance
+GetField
+child
+(
+ExercisedIndexPayload
+t
+) (
+TreeIndex
+t
+)
+instance
+GetField
+choice
+(
+ExercisedIndexPayload
+t
+)
+Text
+instance
+GetField
+offset
+(
+ExercisedIndexPayload
+t
+)
+Int
+instance
+GetField
+templateId
+(
+ExercisedIndexPayload
+t
+)
+TemplateTypeRep
+instance
+SetField
+child
+(
+ExercisedIndexPayload
+t
+) (
+TreeIndex
+t
+)
+instance
+SetField
+choice
+(
+ExercisedIndexPayload
+t
+)
+Text
+instance
+SetField
+offset
+(
+ExercisedIndexPayload
+t
+)
+Int
+instance
+SetField
+templateId
+(
+ExercisedIndexPayload
+t
+)
+TemplateTypeRep
+​
+data TransactionTree
+Constructors:
+TransactionTree
+​
+rootEvents
+[TreeEvent]
+Instances:
+instance
+IsQuestion
+Submit
+[
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)]
+instance
+Show
+TransactionTree
+instance
+GetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+GetField
+rootEvents
+TransactionTree
+[
+TreeEvent
+]
+instance
+SetField
+continue
+(
+ConcurrentSubmits
+a
+) ([
+Either
+SubmitError
+([
+CommandResult
+],
+TransactionTree
+)] ->
+a
+)
+instance
+SetField
+rootEvents
+TransactionTree
+[
+TreeEvent
+]
+​
+data TreeEvent
+Constructors:
+CreatedEvent Created
+ExercisedEvent Exercised
+Instances:
+instance
+Show
+TreeEvent
+instance
+GetField
+childEvents
+Exercised
+[
+TreeEvent
+]
+instance
+GetField
+rootEvents
+TransactionTree
+[
+TreeEvent
+]
+instance
+SetField
+childEvents
+Exercised
+[
+TreeEvent
+]
+instance
+SetField
+rootEvents
+TransactionTree
+[
+TreeEvent
+]
+​
+data TreeIndex t
+Constructors:
+CreatedIndex (CreatedIndexPayload t)
+ExercisedIndex (ExercisedIndexPayload t)
+Instances:
+instance
+GetField
+child
+(
+ExercisedIndexPayload
+t
+) (
+TreeIndex
+t
+)
+instance
+SetField
+child
+(
+ExercisedIndexPayload
+t
+) (
+TreeIndex
+t
+)
+​
+data AnyContractId
+Constructors:
+AnyContractId
+​
+templateId
+TemplateTypeRep
+​
+contractId
+ContractId ()
+Instances:
+instance
+Eq
+AnyContractId
+instance
+Show
+AnyContractId
+instance
+GetField
+additionalInfoCid
+ContractNotFoundAdditionalInfo
+AnyContractId
+instance
+GetField
+coid
+UpgradeErrorType
+AnyContractId
+instance
+GetField
+contractId
+SubmitError
+AnyContractId
+instance
+GetField
+contractId
+Created
+AnyContractId
+instance
+GetField
+contractId
+Exercised
+AnyContractId
+instance
+GetField
+contractId
+AnyContractId
+(
+ContractId
+())
+instance
+GetField
+localVerdictLockedContracts
+SubmitError
+[
+AnyContractId
+]
+instance
+GetField
+mCoid
+UpgradeErrorType
+(
+Optional
+AnyContractId
+)
+instance
+GetField
+templateId
+AnyContractId
+TemplateTypeRep
+instance
+SetField
+additionalInfoCid
+ContractNotFoundAdditionalInfo
+AnyContractId
+instance
+SetField
+coid
+UpgradeErrorType
+AnyContractId
+instance
+SetField
+contractId
+SubmitError
+AnyContractId
+instance
+SetField
+contractId
+Created
+AnyContractId
+instance
+SetField
+contractId
+Exercised
+AnyContractId
+instance
+SetField
+contractId
+AnyContractId
+(
+ContractId
+())
+instance
+SetField
+localVerdictLockedContracts
+SubmitError
+[
+AnyContractId
+]
+instance
+SetField
+mCoid
+UpgradeErrorType
+(
+Optional
+AnyContractId
+)
+instance
+SetField
+templateId
+AnyContractId
+TemplateTypeRep
+​
+data ParticipantName
+Participant name for multi-participant script runs to address a specific participant
+Constructors:
+ParticipantName
+​
+participantName
+Text
+Instances:
+instance
+GetField
+participantName
+ParticipantName
+Text
+instance
+SetField
+participantName
+ParticipantName
+Text
+​
+data PartyDetails
+The party details returned by the party management service.
+Constructors:
+PartyDetails
+​
+party
+Party
+Party id
+​
+isLocal
+Bool
+True if party is hosted by the backing participant.
+Instances:
+instance
+IsQuestion
+ListKnownParties
+[
+PartyDetails
+]
+instance
+Eq
+PartyDetails
+instance
+Ord
+PartyDetails
+instance
+Show
+PartyDetails
+instance
+GetField
+isLocal
+PartyDetails
+Bool
+instance
+GetField
+party
+PartyDetails
+Party
+instance
+SetField
+isLocal
+PartyDetails
+Bool
+instance
+SetField
+party
+PartyDetails
+Party
+​
+data PartyIdHint
+A hint to the backing participant what party id to allocate.
+Must be a valid PartyIdString (as described in @value.proto@).
+Constructors:
+PartyIdHint
+​
+partyIdHint
+Text
+Instances:
+instance
+GetField
+partyIdHint
+PartyIdHint
+Text
+instance
+SetField
+partyIdHint
+PartyIdHint
+Text
+​
+type PrivateKeyHex
+=
+BytesHex
+A DER formatted private key to be used for ECDSA message signing
+Instances:
+instance
+GetField
+privateKey
+Secp256k1KeyPair
+PrivateKeyHex
+instance
+SetField
+privateKey
+Secp256k1KeyPair
+PrivateKeyHex
+​
+data Secp256k1KeyPair
+Secp256k1 key pair generated by
+secp256k1generatekeypair
+for testing.
+Constructors:
+Secp256k1KeyPair
+​
+privateKey
+PrivateKeyHex
+​
+publicKey
+PublicKeyHex
+Instances:
+instance
+IsQuestion
+Secp256k1GenerateKeyPair
+Secp256k1KeyPair
+instance
+GetField
+privateKey
+Secp256k1KeyPair
+PrivateKeyHex
+instance
+GetField
+publicKey
+Secp256k1KeyPair
+PublicKeyHex
+instance
+SetField
+privateKey
+Secp256k1KeyPair
+PrivateKeyHex
+instance
+SetField
+publicKey
+Secp256k1KeyPair
+PublicKeyHex
+​
+data AnyContractKey
+Existential contract key type that can wrap an arbitrary contract key.
+Instances:
+instance
+Eq
+AnyContractKey
+instance
+Ord
+AnyContractKey
+instance
+GetField
+contractKey
+QueryNByKey
+AnyContractKey
+instance
+GetField
+contractKey
+SubmitError
+AnyContractKey
+instance
+GetField
+duplicateContractKey
+SubmitError
+(
+Optional
+AnyContractKey
+)
+instance
+GetField
+expectedKey
+SubmitError
+AnyContractKey
+instance
+GetField
+failedTemplateKey
+SubmitError
+AnyContractKey
+instance
+GetField
+getAnyContractKey
+AnyContractKey
+LedgerValue
+instance
+GetField
+getAnyContractKeyTemplateTypeRep
+AnyContractKey
+TemplateTypeRep
+instance
+GetField
+key
+QueryByKey
+AnyContractKey
+instance
+GetField
+keyE
+Command
+AnyContractKey
+instance
+GetField
+localVerdictLockedKeys
+SubmitError
+[
+AnyContractKey
+]
+instance
+GetField
+originalKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+GetField
+recomputedKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+GetField
+sPrefetchKeys
+Submission
+[
+AnyContractKey
+]
+instance
+GetField
+soPrefetchKeys
+SubmitOptions
+[
+AnyContractKey
+]
+instance
+SetField
+contractKey
+QueryNByKey
+AnyContractKey
+instance
+SetField
+contractKey
+SubmitError
+AnyContractKey
+instance
+SetField
+duplicateContractKey
+SubmitError
+(
+Optional
+AnyContractKey
+)
+instance
+SetField
+expectedKey
+SubmitError
+AnyContractKey
+instance
+SetField
+failedTemplateKey
+SubmitError
+AnyContractKey
+instance
+SetField
+getAnyContractKey
+AnyContractKey
+LedgerValue
+instance
+SetField
+getAnyContractKeyTemplateTypeRep
+AnyContractKey
+TemplateTypeRep
+instance
+SetField
+key
+QueryByKey
+AnyContractKey
+instance
+SetField
+keyE
+Command
+AnyContractKey
+instance
+SetField
+localVerdictLockedKeys
+SubmitError
+[
+AnyContractKey
+]
+instance
+SetField
+originalKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+SetField
+recomputedKeyOpt
+UpgradeErrorType
+(
+Optional
+(
+AnyContractKey
+, [
+Party
+]))
+instance
+SetField
+sPrefetchKeys
+Submission
+[
+AnyContractKey
+]
+instance
+SetField
+soPrefetchKeys
+SubmitOptions
+[
+AnyContractKey
+]
+​
+data Commands a
+This is used to build up the commands sent as part of
+submit
+.
+If you enable the
+ApplicativeDo
+extension by adding
+{-# LANGUAGE ApplicativeDo #-}
+at the top of your file, you can
+use
+do
+-notation but the individual commands must not depend
+on each other and the last statement in a
+do
+block
+must be of the form
+return expr
+or
+pure expr
+.
+Constructors:
+Commands
+​
+commands
+[CommandWithMeta]
+​
+continue
+[CommandResult] -> a
+Instances:
+instance
+Functor
+Commands
+instance
+Applicative
+Commands
+instance
+GetField
+commands
+(
+Commands
+a
+) [
+CommandWithMeta
+]
+instance
+GetField
+continue
+(
+Commands
+a
+) ([
+CommandResult
+] ->
+a
+)
+instance
+SetField
+commands
+(
+Commands
+a
+) [
+CommandWithMeta
+]
+instance
+SetField
+continue
+(
+Commands
+a
+) ([
+CommandResult
+] ->
+a
+)
+​
+data Disclosure
+Contract disclosures which can be acquired via
+queryDisclosure
+Constructors:
+Disclosure
+​
+templateId
+TemplateTypeRep
+​
+contractId
+ContractId ()
+​
+blob
+Text
+Instances:
+instance
+Eq
+Disclosure
+instance
+Ord
+Disclosure
+instance
+GetField
+blob
+Disclosure
+Text
+instance
+GetField
+contractId
+Disclosure
+(
+ContractId
+())
+instance
+GetField
+sDisclosures
+Submission
+[
+Disclosure
+]
+instance
+GetField
+soDisclosures
+SubmitOptions
+[
+Disclosure
+]
+instance
+GetField
+templateId
+Disclosure
+TemplateTypeRep
+instance
+SetField
+blob
+Disclosure
+Text
+instance
+SetField
+contractId
+Disclosure
+(
+ContractId
+())
+instance
+SetField
+sDisclosures
+Submission
+[
+Disclosure
+]
+instance
+SetField
+soDisclosures
+SubmitOptions
+[
+Disclosure
+]
+instance
+SetField
+templateId
+Disclosure
+TemplateTypeRep
+​
+data Script a
+This is the type of A Daml script.
+Script
+is an instance of
+Action
+,
+so you can use
+do
+notation.
+Constructors:
+Script
+​
+runScript
+() -> Free ScriptF (a, ())
+HIDE
+We use an inlined StateT () to separate evaluation of
+something of type Script from execution and to ensure
+proper sequencing of evaluation. This is mainly so that
+debug
+does something
+slightly more sensible.
+​
+dummy
+()
+HIDE
+Dummy field to make sure damlc does not consider this an old-style
+typeclass.
+Instances:
+instance
+ScriptSubmit
+Script
+instance
+Functor
+Script
+instance
+CanAssert
+Script
+instance
+ActionCatch
+Script
+instance
+ActionThrow
+Script
+instance
+ActionFailWithStatus
+Script
+instance
+CanAbort
+Script
+instance
+HasTime
+Script
+instance
+Action
+Script
+instance
+ActionFail
+Script
+instance
+Applicative
+Script
+instance
+GetField
+dummy
+(
+Script
+a
+) ()
+instance
+GetField
+runScript
+(
+Script
+a
+) (() ->
+Free
+ScriptF
+(
+a
+, ()))
+instance
+SetField
+dummy
+(
+Script
+a
+) ()
+instance
+SetField
+runScript
+(
+Script
+a
+) (() ->
+Free
+ScriptF
+(
+a
+, ()))
+​
+Typeclasses
+​
+class IsSubmitOptions options
+Defines a type that can be transformed into a SubmitOptions
+Methods:
+toSubmitOptions
+:
+options
+->
+SubmitOptions
+Instances:
+instance
+IsSubmitOptions
+SubmitOptions
+instance
+IsSubmitOptions
+Party
+instance
+IsSubmitOptions
+(
+NonEmpty
+Party
+)
+instance
+IsSubmitOptions
+(
+Set
+Party
+)
+instance
+IsSubmitOptions
+[
+Party
+]
+​
+class Applicative script => ScriptSubmit script
+Defines an applicative that can run transaction submissions. Usually this is simply
+Script
+.
+Methods:
+liftSubmission
+:
+HasCallStack
+=>
+ConcurrentSubmits
+a
+->
+script
+a
+Instances:
+instance
+ScriptSubmit
+Script
+instance
+ScriptSubmit
+ConcurrentSubmits
+​
+Functions
+​
+userIdToText
+userIdToText
+:
+UserId
+->
+Text
+Extract the name-text from a user identitifer.
+​
+validateUserId
+validateUserId
+:
+HasCallStack
+=>
+Text
+->
+Script
+UserId
+Construct a user identifer from text. May throw InvalidUserId.
+​
+createUser
+createUser
+:
+HasCallStack
+=>
+User
+-> [
+UserRight
+] ->
+Script
+()
+Create a user with the given rights. May throw UserAlreadyExists.
+​
+createUserOn
+createUserOn
+:
+HasCallStack
+=>
+User
+-> [
+UserRight
+] ->
+ParticipantName
+->
+Script
+()
+Create a user with the given rights on the given participant. May throw UserAlreadyExists.
+​
+getUser
+getUser
+:
+HasCallStack
+=>
+UserId
+->
+Script
+User
+Fetch a user record by user id. May throw UserNotFound.
+​
+getUserOn
+getUserOn
+:
+HasCallStack
+=>
+UserId
+->
+ParticipantName
+->
+Script
+User
+Fetch a user record by user id from the given participant. May throw UserNotFound.
+​
+listAllUsers
+listAllUsers
+:
+Script
+[
+User
+]
+List all users. This function may make multiple calls to underlying paginated ledger API.
+​
+listAllUsersOn
+listAllUsersOn
+:
+ParticipantName
+->
+Script
+[
+User
+]
+List all users on the given participant. This function may make multiple calls to underlying paginated ledger API.
+​
+grantUserRights
+grantUserRights
+:
+HasCallStack
+=>
+UserId
+-> [
+UserRight
+] ->
+Script
+[
+UserRight
+]
+Grant rights to a user. Returns the rights that have been newly granted. May throw UserNotFound.
+​
+grantUserRightsOn
+grantUserRightsOn
+:
+HasCallStack
+=>
+UserId
+-> [
+UserRight
+] ->
+ParticipantName
+->
+Script
+[
+UserRight
+]
+Grant rights to a user on the given participant. Returns the rights that have been newly granted. May throw UserNotFound.
+​
+revokeUserRights
+revokeUserRights
+:
+HasCallStack
+=>
+UserId
+-> [
+UserRight
+] ->
+Script
+[
+UserRight
+]
+Revoke rights for a user. Returns the revoked rights. May throw UserNotFound.
+​
+revokeUserRightsOn
+revokeUserRightsOn
+:
+HasCallStack
+=>
+UserId
+-> [
+UserRight
+] ->
+ParticipantName
+->
+Script
+[
+UserRight
+]
+Revoke rights for a user on the given participant. Returns the revoked rights. May throw UserNotFound.
+​
+deleteUser
+deleteUser
+:
+HasCallStack
+=>
+UserId
+->
+Script
+()
+Delete a user. May throw UserNotFound.
+​
+deleteUserOn
+deleteUserOn
+:
+HasCallStack
+=>
+UserId
+->
+ParticipantName
+->
+Script
+()
+Delete a user on the given participant. May throw UserNotFound.
+​
+listUserRights
+listUserRights
+:
+HasCallStack
+=>
+UserId
+->
+Script
+[
+UserRight
+]
+List the rights of a user. May throw UserNotFound.
+​
+listUserRightsOn
+listUserRightsOn
+:
+HasCallStack
+=>
+UserId
+->
+ParticipantName
+->
+Script
+[
+UserRight
+]
+List the rights of a user on the given participant. May throw UserNotFound.
+​
+submitUser
+submitUser
+:
+HasCallStack
+=>
+UserId
+->
+Commands
+a
+->
+Script
+a
+Submit the commands with the actAs and readAs claims granted to a user. May throw UserNotFound.
+​
+submitUserOn
+submitUserOn
+:
+HasCallStack
+=>
+UserId
+->
+ParticipantName
+->
+Commands
+a
+->
+Script
+a
+Submit the commands with the actAs and readAs claims granted to the user on the given participant. May throw UserNotFound.
+​
+setTime
+setTime
+:
+HasCallStack
+=>
+Time
+->
+Script
+()
+Set the time via the time service.
+This is only supported in Daml Studio and
+dpm test
+as well as
+when running over the gRPC API against a ledger in static time mode.
+Note that the ledger time service does not support going backwards in time.
+However, you can go back in time in Daml Studio.
+​
+sleep
+sleep
+:
+HasCallStack
+=>
+RelTime
+->
+Script
+()
+Sleep for the given duration.
+This is primarily useful in tests
+where you repeatedly call
+query
+until a certain state is reached.
+Note that this will sleep for the same duration in both wall clock and static time mode.
+​
+passTime
+passTime
+:
+RelTime
+->
+Script
+()
+Advance ledger time by the given interval.
+This is only supported in Daml Studio and
+dpm test
+as well as
+when running over the gRPC API against a ledger in static time mode.
+Note that this is not an atomic operation over the
+gRPC API so no other clients should try to change time while this is
+running.
+Note that the ledger time service does not support going backwards in time.
+However, you can go back in time in Daml Studio.
+​
+actAs
+actAs
+:
+IsParties
+parties
+=>
+parties
+->
+SubmitOptions
+Builds a SubmitOptions with given actAs parties.
+Any given submission must include at least one actAs party.
+Note that the parties type is constrainted by
+IsParties
+, allowing for specifying parties as any of the following:
+Party
+[Party]
+NonEmpty Party
+Set Party
+Optional Party
+​
+readAs
+readAs
+:
+IsParties
+parties
+=>
+parties
+->
+SubmitOptions
+Builds a SubmitOptions with given readAs parties.
+A given submission may omit any readAs parties and still be valid.
+Note that the parties type is constrainted by
+IsParties
+, allowing for specifying parties as any of the following:
+Party
+[Party]
+NonEmpty Party
+Set Party
+Optional Party
+​
+discloseMany
+discloseMany
+: [
+Disclosure
+] ->
+SubmitOptions
+Provides many Explicit Disclosures to the transaction.
+​
+disclose
+disclose
+:
+Disclosure
+->
+SubmitOptions
+Provides an Explicit Disclosure to the transaction.
+​
+packagePreference
+packagePreference
+: [
+PackageId
+] ->
+SubmitOptions
+Provide a package id selection preference for upgrades for a submission
+​
+prefetchKeys
+prefetchKeys
+: [
+AnyContractKey
+] ->
+SubmitOptions
+Provide a list of contract keys to prefetch for a submission
+​
+concurrently
+concurrently
+:
+HasCallStack
+=>
+ConcurrentSubmits
+a
+->
+Script
+a
+Allows for concurrent submission of transactions, using an applicative, similar to Commands.
+Concurrently takes a computation in
+ConcurrentSubmits
+, which supports all the existing
+submit
+functions
+that
+Script
+supports. It however does not implement
+Action
+, and thus does not support true binding and computation interdependence
+NOTE: The submission order of transactions within
+concurrently
+is deterministic, this function is not intended to test contention.
+It is only intended to allow faster submission of many unrelated transactions, by not waiting for completion for each transaction before
+sending the next.
+Example:
+exerciseResult <- concurrently $ do
+alice `submit` createCmd ...
+res <- alice `submit` exerciseCmd ...
+bob `submit` createCmd ...
+pure res
+​
+submitResultAndTree
+submitResultAndTree
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+(
+a
+,
+TransactionTree
+)
+Equivalent to
+submit
+but returns the result and the full transaction tree.
+​
+trySubmitResultAndTree
+trySubmitResultAndTree
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+(
+Either
+SubmitError
+(
+a
+,
+TransactionTree
+))
+Equivalent to
+trySubmit
+but returns the result and the full transaction tree.
+​
+submitWithError
+submitWithError
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+SubmitError
+Equivalent to
+submitMustFail
+but returns the error thrown.
+​
+submit
+submit
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+a
+submit p cmds
+submits the commands
+cmds
+as a single transaction
+from party
+p
+and returns the value returned by
+cmds
+.
+The
+options
+field can either be any “Parties” like type (See
+IsParties
+) or
+SubmitOptions
+which allows for finer control over parameters of the submission.
+If the transaction fails,
+submit
+also fails.
+​
+submitWithOptions
+submitWithOptions
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+a
+Deprecated: Daml 2.9 compatibility helper, use ‘submit’ instead
+​
+submitTree
+submitTree
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+TransactionTree
+Equivalent to
+submit
+but returns the full transaction tree.
+​
+trySubmit
+trySubmit
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+(
+Either
+SubmitError
+a
+)
+Submit a transaction and recieve back either the result, or a
+SubmitError
+.
+In the majority of failures, this will not crash at runtime.
+​
+trySubmitTree
+trySubmitTree
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+(
+Either
+SubmitError
+TransactionTree
+)
+Equivalent to
+trySubmit
+but returns the full transaction tree.
+​
+submitMustFail
+submitMustFail
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+()
+submitMustFail p cmds
+submits the commands
+cmds
+as a single transaction
+from party
+p
+.
+See submitWithOptions for details on the
+options
+field
+It only succeeds if the submitting the transaction fails.
+​
+submitMustFailWithOptions
+submitMustFailWithOptions
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+,
+IsSubmitOptions
+options
+) =>
+options
+->
+Commands
+a
+->
+script
+()
+Deprecated: Daml 2.9 compatibility helper, use ‘submitMustFail’ instead
+​
+submitMulti
+submitMulti
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+) => [
+Party
+] -> [
+Party
+] ->
+Commands
+a
+->
+script
+a
+Deprecated: Legacy API, use
+submit
+,
+actAs
+and
+readAs
+separately
+submitMulti actAs readAs cmds
+submits
+cmds
+as a single transaction
+authorized by
+actAs
+. Fetched contracts must be visible to at least
+one party in the union of actAs and readAs.
+Note: This behaviour can be achieved using
+submit (actAs actors <> readAs readers) cmds
+and is only provided for backwards compatibility.
+​
+submitMultiMustFail
+submitMultiMustFail
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+) => [
+Party
+] -> [
+Party
+] ->
+Commands
+a
+->
+script
+()
+Deprecated: Legacy API, use
+submitMustFail
+,
+actAs
+and
+readAs
+separately
+submitMultiMustFail actAs readAs cmds
+behaves like
+submitMulti actAs readAs cmds
+but fails when
+submitMulti
+succeeds and the other way around.
+Note: This behaviour can be achieved using
+submitMustFail (actAs actors <> readAs readers) cmds
+and is only provided for backwards compatibility.
+​
+submitTreeMulti
+submitTreeMulti
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+) => [
+Party
+] -> [
+Party
+] ->
+Commands
+a
+->
+script
+TransactionTree
+Deprecated: Legacy API, use
+submitTree
+,
+actAs
+and
+readAs
+separately
+Equivalent to
+submitMulti
+but returns the full transaction tree.
+Note: This behaviour can be achieved using
+submitTree (actAs actors <> readAs readers) cmds
+and is only provided for backwards compatibility.
+​
+trySubmitMulti
+trySubmitMulti
+: (
+HasCallStack
+,
+ScriptSubmit
+script
+) => [
+Party
+] -> [
+Party
+] ->
+Commands
+a
+->
+script
+(
+Either
+SubmitError
+a
+)
+Deprecated: Legacy API, use
+trySubmit
+,
+actAs
+and
+readAs
+separately
+Alternate version of
+trySubmit
+that allows specifying the actAs and readAs parties.
+Note: This behaviour can be achieved using
+trySubmit (actAs actors <> readAs readers) cmds
+and is only provided for backwards compatibility.
+​
+trySubmitConcurrently
+trySubmitConcurrently
+:
+HasCallStack
+=>
+Party
+-> [
+Commands
+a
+] ->
+Script
+[
+Either
+SubmitError
+a
+]
+Deprecated: Legacy API, use
+concurrent
+and
+trySubmit
+separately
+​
+submitWithDisclosures
+submitWithDisclosures
+:
+HasCallStack
+=>
+Party
+-> [
+Disclosure
+] ->
+Commands
+a
+->
+Script
+a
+Deprecated: Legacy API, use
+trySubmit
+and
+disclosures
+separately
+​
+submitWithDisclosuresMustFail
+submitWithDisclosuresMustFail
+:
+HasCallStack
+=>
+Party
+-> [
+Disclosure
+] ->
+Commands
+a
+->
+Script
+()
+Deprecated: Legacy API, use
+submitMustFail
+and
+disclosures
+separately
+​
+fromTree
+fromTree
+:
+Template
+t
+=>
+TransactionTree
+->
+TreeIndex
+t
+->
+ContractId
+t
+Finds the contract id of an event within a tree given a tree index
+Tree indices are created using the
+created(N)
+and
+exercised(N)
+builders
+which allow building “paths” within a transaction to a create node
+For example,
+exercisedN @MyTemplate1 "MyChoice" 2 $ createdN @MyTemplate2 1
+would find the
+ContractId MyTemplate2
+of the second (0 index) create event under
+the 3rd exercise event of
+MyChoice
+from
+MyTemplate1
+​
+created
+created
+:
+HasTemplateTypeRep
+t
+=>
+TreeIndex
+t
+Index for the first create event of a given template
+e.g.
+created @MyTemplate
+​
+createdN
+createdN
+:
+HasTemplateTypeRep
+t
+=>
+Int
+->
+TreeIndex
+t
+Index for the Nth create event of a given template
+e.g.
+createdN 2 @MyTemplate
+created = createdN 0
+​
+exercised
+exercised
+:
+HasTemplateTypeRep
+t
+=>
+Text
+->
+TreeIndex
+t'
+->
+TreeIndex
+t'
+Index for the first exercise of a given choice on a given template
+e.g.
+exercised @MyTemplate "MyChoice"
+​
+exercisedN
+exercisedN
+:
+HasTemplateTypeRep
+t
+=>
+Text
+->
+Int
+->
+TreeIndex
+t'
+->
+TreeIndex
+t'
+Index for the Nth exercise of a given choice on a given template
+e.g.
+exercisedN @MyTemplate "MyChoice" 2
+exercised c = exercisedN c 0
+​
+fromAnyContractId
+fromAnyContractId
+:
+Template
+t
+=>
+AnyContractId
+->
+Optional
+(
+ContractId
+t
+)
+​
+query
+query
+: (
+Template
+t
+,
+HasEnsure
+t
+,
+IsParties
+p
+) =>
+p
+->
+Script
+[(
+ContractId
+t
+,
+t
+)]
+Query the set of active contracts of the template
+that are visible to the given party.
+​
+queryFilter
+queryFilter
+: (
+Template
+c
+,
+HasEnsure
+c
+,
+IsParties
+p
+) =>
+p
+-> (
+c
+->
+Bool
+) ->
+Script
+[(
+ContractId
+c
+,
+c
+)]
+Query the set of active contracts of the template
+that are visible to the given party and match the given predicate.
+​
+queryContractId
+queryContractId
+: (
+Template
+t
+,
+HasEnsure
+t
+,
+IsParties
+p
+,
+HasCallStack
+) =>
+p
+->
+ContractId
+t
+->
+Script
+(
+Optional
+t
+)
+Query for the contract with the given contract id.
+Returns
+None
+if there is no active contract the party is a stakeholder on.
+WARNING: Over the gRPC backend this performs a linear search over all contracts of
+the same type, so only use this if the number of active contracts is small.
+This is semantically equivalent to calling
+query
+and filtering on the client side.
+​
+queryDisclosure
+queryDisclosure
+: (
+Template
+t
+,
+IsParties
+p
+,
+HasCallStack
+) =>
+p
+->
+ContractId
+t
+->
+Script
+(
+Optional
+Disclosure
+)
+Queries a Disclosure for a given ContractId. Same performance caveats apply as to
+queryContractId
+.
+​
+queryInterface
+queryInterface
+: (
+Template
+i
+,
+HasInterfaceView
+i
+v
+,
+IsParties
+p
+) =>
+p
+->
+Script
+[(
+ContractId
+i
+,
+Optional
+v
+)]
+Query the set of active contract views for an interface
+that are visible to the given party.
+If the view function fails for a given contract id, The
+Optional v
+will be
+None
+.
+​
+queryInterfaceContractId
+queryInterfaceContractId
+: (
+Template
+i
+,
+HasInterfaceView
+i
+v
+,
+IsParties
+p
+,
+HasCallStack
+) =>
+p
+->
+ContractId
+i
+->
+Script
+(
+Optional
+v
+)
+Query for the contract view with the given contract id.
+Returns
+None
+if there is no active contract the party is a stakeholder on.
+Returns
+None
+if the view function fails for the given contract id.
+WARNING: Over the gRPC backend this performs a linear search over all contracts of
+the same type, so only use this if the number of active contracts is small.
+This is semantically equivalent to calling
+queryInterface
+and filtering on the client side.
+​
+queryByKey
+queryByKey
+: (
+HasCallStack
+,
+TemplateKey
+t
+k
+,
+IsParties
+p
+) =>
+p
+->
+k
+->
+Script
+(
+Optional
+(
+ContractId
+t
+,
+t
+))
+Returns
+None
+if there is no active contract with the given key that
+the party is a stakeholder on.
+WARNING: Over the gRPC backend this performs a linear search over all contracts of
+the same type, so only use this if the number of active contracts is small.
+This is semantically equivalent to calling
+query
+and filtering on the client side.
+​
+queryNByKey
+queryNByKey
+: (
+HasCallStack
+,
+TemplateKey
+t
+k
+,
+IsParties
+p
+) =>
+p
+->
+Int
+->
+k
+->
+Script
+[(
+ContractId
+t
+,
+t
+)]
+Returns N contracts matching a key, returns empty list if the key is inactive
+Only available in LF 2.3+
+WARNING: Over the gRPC backend this performs a linear search over all contracts of
+the same type, so only use this if the number of active contracts is small.
+This is semantically equivalent to calling
+query
+and filtering on the client side.
+​
+queryAllByKey
+queryAllByKey
+: (
+HasCallStack
+,
+TemplateKey
+t
+k
+,
+IsParties
+p
+) =>
+p
+->
+k
+->
+Script
+[(
+ContractId
+t
+,
+t
+)]
+Returns all contracts matching a key, returns empty list if the key is inactive
+Only available in LF 2.3+
+WARNING: Over the gRPC backend this performs a linear search over all contracts of
+the same type, so only use this if the number of active contracts is small.
+This is semantically equivalent to calling
+query
+and filtering on the client side.
+​
+allocateParty
+allocateParty
+:
+HasCallStack
+=>
+Text
+->
+Script
+Party
+Allocate a party with the given display name
+using the party management service.
+​
+allocatePartyWithHint
+allocatePartyWithHint
+:
+HasCallStack
+=>
+Text
+->
+PartyIdHint
+->
+Script
+Party
+Deprecated: Daml 3.3 compatibility helper, use ‘allocatePartyByHint’ instead of ‘allocatePartyWithHint’
+​
+allocatePartyByHint
+allocatePartyByHint
+:
+HasCallStack
+=>
+PartyIdHint
+->
+Script
+Party
+Allocate a party with the given id hint
+using the party management service.
+​
+allocatePartyOn
+allocatePartyOn
+:
+Text
+->
+ParticipantName
+->
+Script
+Party
+Allocate a party with the given display name
+on the specified participant using the party management service.
+​
+allocatePartyWithHintOn
+allocatePartyWithHintOn
+:
+Text
+->
+PartyIdHint
+->
+ParticipantName
+->
+Script
+Party
+Deprecated: Daml 3.3 compatibility helper, use ‘allocatePartyByHintOn’ instead of ‘allocatePartyWithHintOn’
+​
+allocatePartyByHintOn
+allocatePartyByHintOn
+:
+PartyIdHint
+->
+ParticipantName
+->
+Script
+Party
+Allocate a party with the given id hint
+on the specified participant using the party management service.
+​
+listKnownParties
+listKnownParties
+:
+HasCallStack
+=>
+Script
+[
+PartyDetails
+]
+List the parties known to the default participant.
+​
+listKnownPartiesOn
+listKnownPartiesOn
+:
+HasCallStack
+=>
+ParticipantName
+->
+Script
+[
+PartyDetails
+]
+List the parties known to the given participant.
+​
+tryToEither
+tryToEither
+: (() ->
+Script
+t
+) ->
+Script
+(
+Either
+AnyException
+t
+)
+Named version of the
+try catch
+behaviour of Daml-Script.
+Note that this is no more powerful than
+try catch
+in daml-script, and will not catch exceptions in submissions.
+(Use
+trySubmit
+for this)
+Input computation is deferred to catch pure exceptions
+​
+tryFailureStatus
+tryFailureStatus
+:
+Script
+a
+->
+Script
+(
+Either
+FailureStatus
+a
+)
+Runs a script for a result. If it fails either by Daml Exceptions or
+failWithStatus
+, returns the
+FailureStatus
+that a Canton Ledger would return.
+​
+secp256k1signWithEcdsaOnly
+secp256k1signWithEcdsaOnly
+:
+HasCallStack
+=>
+PrivateKeyHex
+->
+BytesHex
+->
+Script
+BytesHex
+Using a DER formatted private key (encoded as a hex string) use Secp256k1 to sign a hex encoded string message.
+Note that this implementation uses a random source with a fixed PRNG and seed, ensuring it behaves deterministically during testing.
+For example, CCTP attestation services may be mocked in daml-script code.
+​
+secp256k1sign
+secp256k1sign
+:
+HasCallStack
+=>
+PrivateKeyHex
+->
+BytesHex
+->
+Script
+BytesHex
+Using a DER formatted private key (encoded as a hex string) use Secp256k1 to sign a SHA256 digest of a hex encoded string message.
+Note that this implementation uses a random source with a fixed PRNG and seed, ensuring it behaves deterministically during testing.
+For example, CCTP attestation services may be mocked in daml-script code.
+​
+secp256k1generatekeypair
+secp256k1generatekeypair
+:
+HasCallStack
+=>
+Script
+Secp256k1KeyPair
+Generate DER formatted Secp256k1 public/private key pairs.
+​
+toAnyContractKey
+toAnyContractKey
+: (
+HasTemplateTypeRep
+t
+,
+TemplateKey
+t
+k
+) =>
+k
+->
+AnyContractKey
+Wrap a contract key in
+AnyContractKey
+.
+You must pass the template type
+t
+using an explicit type application.
+For example
+toAnyContractKey @Proposal k
+.
+​
+fromAnyContractKey
+fromAnyContractKey
+: (
+HasTemplateTypeRep
+t
+,
+TemplateKey
+t
+k
+) =>
+AnyContractKey
+->
+Optional
+k
+Extract the underlying key from
+AnyContractKey
+if the template and
+choice types match, or return
+None
+.
+You must pass the template type
+t
+using an explicit type application.
+For example
+fromAnyContractKey @Proposal k
+.
+​
+createCmd
+createCmd
+: (
+Template
+t
+,
+HasEnsure
+t
+) =>
+t
+->
+Commands
+(
+ContractId
+t
+)
+Create a contract of the given template.
+​
+exerciseCmd
+exerciseCmd
+:
+Choice
+t
+c
+r
+=>
+ContractId
+t
+->
+c
+->
+Commands
+r
+Exercise a choice on the given contract.
+​
+exerciseByKeyCmd
+exerciseByKeyCmd
+: (
+TemplateKey
+t
+k
+,
+Choice
+t
+c
+r
+) =>
+k
+->
+c
+->
+Commands
+r
+Exercise a choice on the contract with the given key.
+​
+createAndExerciseWithCidCmd
+createAndExerciseWithCidCmd
+: (
+Template
+t
+,
+Choice
+t
+c
+r
+,
+HasEnsure
+t
+) =>
+t
+->
+c
+->
+Commands
+(
+ContractId
+t
+,
+r
+)
+Create a contract and exercise a choice on it in the same transaction, returns the created ContractId, and the choice result.
+​
+createAndExerciseCmd
+createAndExerciseCmd
+: (
+Template
+t
+,
+Choice
+t
+c
+r
+,
+HasEnsure
+t
+) =>
+t
+->
+c
+->
+Commands
+r
+Create a contract and exercise a choice on it in the same transaction, returns only the choice result.
+​
+createExactCmd
+createExactCmd
+: (
+Template
+t
+,
+HasEnsure
+t
+) =>
+t
+->
+Commands
+(
+ContractId
+t
+)
+Create a contract of the given template, using the exact package ID of the template given - upgrades are disabled.
+​
+exerciseExactCmd
+exerciseExactCmd
+:
+Choice
+t
+c
+r
+=>
+ContractId
+t
+->
+c
+->
+Commands
+r
+Exercise a choice on the given contract, using the exact package ID of the template given - upgrades are disabled.
+​
+exerciseByKeyExactCmd
+exerciseByKeyExactCmd
+: (
+TemplateKey
+t
+k
+,
+Choice
+t
+c
+r
+) =>
+k
+->
+c
+->
+Commands
+r
+Exercise a choice on the contract with the given key, using the exact package ID of the template given - upgrades are disabled.
+​
+createAndExerciseWithCidExactCmd
+createAndExerciseWithCidExactCmd
+: (
+Template
+t
+,
+Choice
+t
+c
+r
+,
+HasEnsure
+t
+) =>
+t
+->
+c
+->
+Commands
+(
+ContractId
+t
+,
+r
+)
+Create a contract and exercise a choice on it in the same transaction, returns the created ContractId, and the choice result.
+Uses the exact package ID of the template given - upgrades are disabled.
+​
+createAndExerciseExactCmd
+createAndExerciseExactCmd
+: (
+Template
+t
+,
+Choice
+t
+c
+r
+,
+HasEnsure
+t
+) =>
+t
+->
+c
+->
+Commands
+r
+Create a contract and exercise a choice on it in the same transaction, returns only the choice result.
+​
+archiveCmd
+archiveCmd
+:
+Choice
+t
+Archive
+() =>
+ContractId
+t
+->
+Commands
+()
+Archive the given contract.
+archiveCmd cid
+is equivalent to
+exerciseCmd cid Archive
+.
+​
+script
+script
+:
+Script
+a
+->
+Script
+a
+Convenience helper to declare you are writing a Script.
+This is only useful for readability and to improve type inference.
+Any expression of type
+Script a
+is a valid script regardless of whether
+it is implemented using
+script
+or not.
+​
+History
+Updated
+3.5.2
+Module declarations or documentation updated.
+Updated
+3.5.1
+Module declarations or documentation updated.
+Updated
+3.4.11
+Module declarations or documentation updated.
+Updated
+3.4.10
+Module declarations or documentation updated.
+Suggest edits
+Raise issue
+Overview
+Daml.Script.Internal

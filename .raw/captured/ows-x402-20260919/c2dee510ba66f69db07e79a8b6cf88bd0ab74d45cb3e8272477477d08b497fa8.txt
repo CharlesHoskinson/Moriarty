@@ -1,0 +1,779 @@
+On this page
+Use CDP with an existing x402 server
+Choose your environment
+Choose a payment scheme
+How each scheme moves money
+Configure non-default schemes
+(Optional) Choose an exact payment flow
+Configure who receives payment
+Accept other tokens
+Add onchain attribution
+Lifecycle hooks
+Handle pending settlements
+What to read next
+Seller
+Production Configuration
+Copy page
+Copy page
+Copy page
+Copy page
+Use this guide to move beyond the
+seller quickstart
+defaults and
+configure your x402 server for production. Choose the sections relevant to your deployment.
+​
+Use CDP with an existing x402 server
+TypeScript
+Python
+Already have an x402 server? Add
+createCdpFacilitatorClient()
+for CDP settlement without
+migrating to
+createX402Server
+. It uses your CDP API key and secret.
+import
+{
+createCdpFacilitatorClient
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+x402ResourceServer
+}
+from
+"@x402/core/server"
+;
+import
+{
+ExactEvmScheme
+}
+from
+"@x402/evm/exact/server"
+;
+const
+facilitator
+=
+createCdpFacilitatorClient
+();
+const
+server
+=
+new
+x402ResourceServer
+(
+facilitator
+).
+register
+(
+"eip155:8453"
+,
+new
+ExactEvmScheme
+(),
+);
+To cover
+exact
+and
+upto
+on Base and Solana, pass
+getCdpDefaultSchemes()
+:
+import
+{
+createCdpFacilitatorClient
+,
+getCdpDefaultSchemes
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+x402ResourceServer
+}
+from
+"@x402/core/server"
+;
+const
+facilitator
+=
+createCdpFacilitatorClient
+();
+const
+server
+=
+new
+x402ResourceServer
+(
+facilitator
+);
+for
+(
+const
+registration
+of
+getCdpDefaultSchemes
+()) {
+server
+.
+register
+(
+registration
+.
+network
+,
+registration
+.
+server
+);
+}
+This works with
+x402HTTPResourceServer
+and
+x402MCPResourceServer
+. See
+server.ts
+for a runnable example.
+Python servers can replace their existing facilitator configuration with
+create_facilitator_config
+from
+cdp.x402
+. The
+Python seller setup
+shows how to pass it to
+HTTPFacilitatorClient
+.
+​
+Choose your environment
+createX402Server
+supports Base and Solana by default:
+"development"
+uses testnets and test funds.
+"production"
+uses mainnets and real funds.
+TypeScript
+Python
+Routes inherit this setting unless they list specific networks. Switching
+environment
+changes
+every inherited route:
+const
+server
+=
+await
+createX402Server
+({
+environment:
+"production"
+,
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+},
+},
+});
+To accept specific networks, list them on the route:
+"GET /report"
+: {
+price:
+"$0.01"
+,
+networks:
+[
+"eip155:8453"
+,
+"eip155:137"
+] },
+Python servers configure each network and payment option explicitly:
+server
+=
+x402ResourceServer(HTTPFacilitatorClient(create_facilitator_config()))
+server.register(
+"eip155:8453"
+, ExactEvmServerScheme())
+server.register(
+"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+, ExactSvmServerScheme())
+routes
+=
+{
+"GET /report"
+: RouteConfig(
+accepts
+=
+[
+PaymentOption(
+scheme
+=
+"exact"
+,
+pay_to
+=
+PAY_TO_EVM
+,
+price
+=
+"$0.01"
+,
+network
+=
+"eip155:8453"
+,
+),
+PaymentOption(
+scheme
+=
+"exact"
+,
+pay_to
+=
+PAY_TO_SVM
+,
+price
+=
+"$0.01"
+,
+network
+=
+"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+,
+),
+],
+mime_type
+=
+"application/json"
+,
+description
+=
+"AI-generated report"
+,
+),
+}
+For the complete chain and token matrix, see the CDP Facilitator’s
+supported networks, tokens, and schemes
+.
+​
+Choose a payment scheme
+A payment scheme defines when the amount is determined and how the payment settles:
+exact
+charges a known price for a synchronous endpoint.
+upto
+authorizes a maximum, then settles the amount used by a synchronous endpoint.
+batch-settlement
+supports repeated, high-throughput payments by redeeming per-request
+commitments later in batches.
+Use
+exact
+unless your endpoint requires usage-based pricing or payment channels.
+​
+How each scheme moves money
+Exact
+Upto
+Batch-settlement
+exact
+moves an exact amount of money from the buyer to the seller.
+upto
+moves an amount of money from the buyer to the seller up to a maximum.
+EVM
+SVM
+On Solana, the CDP Facilitator signs each settlement voucher.
+batch-settlement
+trades per-request transfers for a payment channel, batching payments for high-throughput,
+sub-cent traffic. Five flows make up its lifecycle:
+1. Deposit
+2. Voucher
+3. Claim
+4. Settle
+5. Refund
+The buyer’s first request, or any request after the channel runs dry. It signs a token
+authorization and a voucher together, and settlement opens or tops up the channel onchain.
+The only leg in the lifecycle that pays onchain gas, so it’s also the slowest.
+Every request after the channel is funded. The buyer already knows the price and channel, so it
+attaches a voucher up front instead of waiting for a 402. Your server checks the signature against
+its mirrored channel state and serves the request.
+No facilitator call, no transaction. It only steps in for smart-wallet signers or stale local
+state.
+Checkpoints the vouchers you’ve collected onto the chain. Run it on a fixed interval, once
+unclaimed value crosses a threshold, or as soon as a buyer starts a withdrawal.
+One call can cover many channels. Claim before a buyer’s withdrawal delay elapses, or the
+vouchers stop being claimable.
+Turns claimed accounting into an actual transfer, sweeping everything claimed for one receiver and
+token into a single payment.
+Pair it with your claim job. Funds always land at the channel’s receiver, regardless of who
+triggers it.
+The buyer asks for its unclaimed balance back without waiting out the withdrawal delay, by sending
+a zero-charge voucher. Your server settles the operation but never runs the protected route.
+Refunds are cooperative: they need a receiver-side signature, which your server supplies unless
+that key is delegated to the facilitator. Without one, the buyer falls back to a timed withdrawal.
+For the full channel model, including withdrawal delays and state recovery, see the
+batch-settlement specification
+.
+​
+Configure non-default schemes
+TypeScript
+Python
+exact
+and
+upto
+are registered for Base and Solana.
+exact
+is the default for every route.
+To use
+upto
+, set it on the route:
+"GET /usage"
+: {
+price:
+"$0.10"
+,
+scheme:
+"upto"
+,
+description:
+"Usage-based billing"
+},
+Omitting
+networks
+expands the route to Base and Solana. Pass an explicit
+networks
+list to
+limit which networks the route accepts.
+Your handler must report the final amount. See the
+Express usage-based pricing example
+for the complete flow.
+batch-settlement
+requires the full x402
+RouteConfig
+and direct scheme registration. See the
+x402 batch-settlement guide
+.
+Register every scheme and network pair the server accepts:
+from
+x402.mechanisms.evm.upto
+import
+UptoEvmServerScheme
+from
+x402.mechanisms.evm.batch_settlement.server
+import
+BatchSettlementEvmScheme
+server.register(
+NETWORK
+, UptoEvmServerScheme())
+server.register(
+NETWORK
+, BatchSettlementEvmScheme(
+PAY_TO
+))
+The route’s
+PaymentOption
+must request the same scheme. See the x402 guides for
+usage-based pricing
+and
+batch settlement
+.
+​
+(Optional) Choose an exact payment flow
+EVM and Solana
+exact
+support two payment flows:
+Authorization
+Upfront
+Authorization is the default. The facilitator verifies the payment before your endpoint runs and
+settles it after the work succeeds.
+Upfront settles the payment before your endpoint runs.
+Set
+paymentFlow
+on an
+exact
+route to use Upfront:
+const
+server
+=
+await
+createX402Server
+({
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+,
+paymentFlow:
+"upfront"
+},
+},
+});
+Upfront reduces the risk of completing work without payment and, for long-running Solana
+endpoints, gas-price slippage before settlement. If the work fails, the client has already paid
+and you must handle the refund outside x402.
+Escrow deposits or locks funds before work and distributes or releases them afterward. It is
+defined by schemes such as EVM
+auth-capture
+and Solana
+upto
+; you cannot select it for a scheme
+that does not support it. See section 6.1, “Asset Transfer Methods and Payment Flow Models,” of the
+x402 specification
+for details.
+​
+Configure who receives payment
+Configure an onchain address to receive payments.
+This can be a
+CDP custodial wallet
+, a
+CDP non-custodial wallet
+,
+Coinbase Prime
+,
+Coinbase Business
+, a Coinbase retail
+deposit address, or a wallet you custody yourself. You only need
+CDP_WALLET_SECRET
+if the SDK should provision an
+API Key Wallet
+to receive payments.
+TypeScript
+Python
+By default,
+createX402Server
+provisions an API Key Wallet, which requires
+CDP_WALLET_SECRET
+. Use
+payToConfig
+with
+type: "address"
+to receive at an
+address you already control, with no wallet secret:
+const
+server
+=
+await
+createX402Server
+({
+payToConfig:
+{
+type:
+"address"
+,
+evm:
+"0x..."
+,
+solana:
+"..."
+,
+},
+routes
+,
+});
+To provision a Smart Contract Wallet instead:
+const
+server
+=
+await
+createX402Server
+({
+payToConfig:
+{
+type:
+"smart"
+,
+accountName:
+"x402-receiver"
+,
+ownerAccountName:
+"x402-owner"
+,
+},
+routes
+,
+});
+​
+Resolve the recipient dynamically
+Use the full x402 route format when the receiving address depends on the request:
+const
+server
+=
+await
+createX402Server
+({
+payToConfig:
+{
+type:
+"address"
+},
+routes:
+{
+"GET /report"
+:
+{
+accepts:
+[
+{
+scheme:
+"exact"
+,
+network:
+"eip155:8453"
+,
+price:
+"$0.01"
+,
+payTo
+:
+async
+(
+context
+)
+=>
+resolveRecipient
+(
+context
+),
+},
+],
+},
+},
+});
+Set
+pay_to
+,
+price
+,
+network
+, and
+scheme
+in each
+PaymentOption
+. Pass any
+address that can receive the asset on that network.
+CDP_WALLET_SECRET
+is only
+required if you provision the address with
+CdpClient
+.
+​
+Resolve the recipient dynamically
+Pass a synchronous or asynchronous function to
+pay_to
+when the receiving address depends on the
+request:
+from
+x402.http
+import
+HTTPRequestContext, PaymentOption
+from
+x402.http.types
+import
+RouteConfig
+async
+def
+resolve_recipient
+(
+context
+: HTTPRequestContext) ->
+str
+:
+return
+await
+lookup_recipient(context)
+routes
+=
+{
+"GET /report"
+: RouteConfig(
+accepts
+=
+[
+PaymentOption(
+scheme
+=
+"exact"
+,
+network
+=
+"eip155:8453"
+,
+price
+=
+"$0.01"
+,
+pay_to
+=
+resolve_recipient,
+)
+]
+)
+}
+​
+Accept other tokens
+Routes can accept tokens other than USDC.
+TypeScript
+Python
+Use the full x402
+RouteConfig
+to set the asset for each payment option. Check the CDP
+Facilitator’s
+supported networks and tokens
+first.
+Set the asset on each
+PaymentOption
+. Check the CDP Facilitator’s
+supported networks and tokens
+first.
+​
+Add onchain attribution
+Builder Codes
+attribute the application
+that exposed a paid endpoint. The CDP Facilitator records this code in ERC-8021 Schema 2 calldata
+when it settles an EVM payment.
+TypeScript
+Python
+Pass your Builder Code to
+createX402Server
+:
+const
+server
+=
+await
+createX402Server
+({
+builderCode:
+"my_app"
+,
+routes
+,
+});
+The server advertises the code on every EVM route. Solana-only routes are skipped because Builder
+Code attribution uses EVM calldata.
+Add the standard x402 Builder Code declaration to each route:
+from
+x402.extensions.builder_code
+import
+BUILDER_CODE
+, declare_builder_code_extension
+routes
+=
+{
+"GET /report"
+: RouteConfig(
+accepts
+=
+[
+...
+],
+extensions
+=
+{
+BUILDER_CODE
+: declare_builder_code_extension(
+"my_app"
+),
+},
+),
+}
+Each code must contain 1–32 lowercase letters, numbers, or underscores. Omit the option or
+extension to leave application attribution unset. See the
+builder-code specification
+for the attribution fields and protocol flow.
+​
+Lifecycle hooks
+TypeScript
+Python
+Use resource-server hooks for payment lifecycle events. Available hooks include
+onProtectedRequest
+,
+onBeforeVerify
+,
+onAfterVerify
+,
+onVerifyFailure
+,
+onBeforeSettle
+,
+onAfterSettle
+,
+onSettleFailure
+, and
+onVerifiedPaymentCanceled
+.
+server
+.
+resourceServer
+.
+onAfterSettle
+(
+async
+({
+result
+})
+=>
+{
+console
+.
+info
+(
+"Payment settled"
+, {
+network:
+result
+.
+network
+,
+transaction:
+result
+.
+transaction
+,
+});
+});
+Register Python lifecycle hooks directly on
+server
+:
+def
+log_settlement
+(
+context
+) ->
+None
+:
+print
+(
+"Payment settled"
+,
+{
+"network"
+: context.result.network,
+"transaction"
+: context.result.transaction},
+)
+server.on_after_settle(log_settlement)
+​
+Handle pending settlements
+Resource servers using the CDP SDK or the canonical x402 Foundation packages automatically retry once when the CDP Facilitator broadcasts
+a transaction but cannot confirm it within the synchronous settlement window. If you call the
+Facilitator API directly, or if the automatic retry remains pending, reconcile the original
+transaction before requesting another payment. See
+Settlement Pending and Reconciliation
+for the automatic SDK behavior
+and the manual procedure.
+​
+What to read next
+CDP Facilitator
+for supported chains, tokens, and schemes.
+Charge over MCP
+to protect an MCP tool instead of an HTTP route.
+Was this page helpful?
+Yes
+No
+CDP Facilitator
+Previous
+Quickstart: pay for an API
+Next

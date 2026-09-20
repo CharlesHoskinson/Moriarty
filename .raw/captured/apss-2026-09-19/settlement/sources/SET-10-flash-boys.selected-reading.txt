@@ -1,0 +1,72 @@
+PDF page 16:
+opportunities. In other words, undercutting attacks represent a                     to participate and earn profit for doing so, often a desirable
+present threat in Ethereum, and one that will grow with the                         design goal for the style of permissionless and open interaction
+success of smart contracts that attract OO fees. Other potential                    that lends itself naturally to blockchains. Any on-chain action
+sources of OO fees are mentioned in [15].                                           in the past that could have potentially profited a miner today,
+   Most importantly, our view of arbitrage remains conser-                          including actions that unconditionally earn them ETH in
+vative, and we emphasize that pure revenue opportunities                            the past, are thus potential sources for time-bandit attacks.
+represent a small slice of total ordering fees. There are many                      Because smart contracts are Turing complete scripts and carry
+possible sources of ordering fees payable to miners, includ-                        complex interactions, estimating the size of these opportunities
+ing more sophisticated arbitrage. There are also many other                         is a challenging problem we defer to future work.
+forms of miner-extractable value. Miners can “steal” arbitrage
+                                                                                    Time-bandit attacks in Ethereum: Recent transaction statistics
+opportunities from arbitragers by taking them themselves.
+                                                                                    suggest that Ethereum is vulnerable to time-bandit attacks.
+Additionally, the survey in [18] describes several other sources
+                                                                                    For example, decentralized exchange volumes show a peak of
+of MEV, including the ability to buy into profitable ICOs early
+                                                                                    1.5 billion USD of traded assets on Ethereum’s decentralized
+and the manipulation of games of chance.
+                                                                                    exchanges in July 2018 [23]. While it is hard to gauge the
+   Undercutting attacks can leverage OO fees or any other
+                                                                                    total stealable value in this volume, the current estimated
+MEV from newly generated blocks. The second attack we
+                                                                                    one-month cost of a 51% attack on Ethereum according to
+describe can use MEV from past blocks to subsidize an attack.
+                                                                                    http://crypto51.app/ is approximately 56 million USD, more
+C. Time-bandit attacks                                                              than 25 times lower than this DEX volume.
+   We now describe time-bandit attacks, a new, second attack                           We posit that the OO fees alone that we have described
+vector that can exploit miner-extractable value. They can                           threaten the security of today’s Ethereum network. As Fig-
+exploit MEV from new blocks, but more powerfully, can also                          ures 15 and 16 show, blocks with high OO fees and/or
+use MEV from past blocks via rewinding.                                             arbitrage opportunities can already enable such attacks.
+   Time-bandit attacks are conceptually simple. Suppose a                              More generally and alarmingly, time-bandit attacks can be
+blockchain has a suffix (subchain) [height0 , height1 ], with                       subsidized by a malicious miner’s ability to rewrite profitable
+current block height height1 , in which stealable value exceeds                     trades retroactively, stealing profits from arbitrageurs and
+block rewards. An adversary can rewind to height0 and use                           users while still claiming gas fees on failed transactions that
+the resulting MEV to subsidize a profitable 51% attack that                         attempt execution. The resulting MEV is potentially massive,
+mines a fork up to or past height1 .                                                suggesting a possibly serious threat in Ethereum today.
+   Of course, a time-bandit attack relies on real-time access to                       Of course, a full analysis of the threat would require an
+massive mining resources. As noted in [6], however, “rental                         understanding of how time-bandit attackers might compete
+attacks” are feasible using cloud resources, particularly for sys-                  against one another to harvest MEV—by analogy with PGAs.
+tems such as Ethereum that rely heavily on GPUs, which are                          This is a topic for future research.
+standard cloud commodities. Sites such as http://crypto51.app/
+estimate the costs. We illustrate with an example that relies                              VIII. O PEN Q UESTIONS AND F UTURE W ORK
+on MEV from DEX rewinding.                                                             Our results raise many important questions, some about
+Example 1. Consider a price spike from 1 USD to 3 USD in                            the arbitrage community itself. For example, it would benefit
+a token that trades on an on-chain automated market maker                           arbitrageurs to collude with miners, but we observe no such
+(e.g., Bancor [1]). A miner performing a time-bandit attack                         collusion: Preliminary experiments show that bot transactions
+can now rewrite history such that it is on the buy side of                          are equally distributed across mining pools. Are there incen-
+every trade, accruing a substantial balance in such a token at                      tives to avoid collusion, such as concern about the exogenous
+below market rate—before the price spike.8                                          impact of miner malfeasance coming to light?
+   For example, if the attacker wishes to rewrite 24 hours of                          Other questions arise from PGA modeling. Are PGAs
+history, and 1M USD of volume occurred in exchanges with                            positive- or negative-sum games? In what ways could our
+rewritable history in that token, then the attacker can obtain                      proposed model be helpfully enriched?
+a MEV gross profit of 1 M × (3 USD - 1 USD) = 2M USD.9                                 More broadly, it is important to observe that DEXes are
+   At the time of writing (March 2019), http://crypto51.app/                        just the tip of the iceberg. At the time of writing, IDEX, the
+estimates a 24-hour 51% rental-attack cost on Ethereum of                           largest, is ranked #119 by volume by coinmarketcap.com. It
+about 1.78M USD, implying a net profit of around 220K USD.                          has about 1M USD in 24h volume, compared with 970M USD
+                                                                                    for Binance, the leading centralized exchange. DEX volume
+   We stress that time bandit attacks are not limited to MEV
+                                                                                    is roughly 0.01% that on centralized exchanges.
+from DEXes. A variety of smart contract systems allow anyone
+                                                                                       Malfeasance in centralized exchanges might well be
+   8 The attacker can additionally use new user trades at the market 3 USD
+                                                                                    rampant—possibly even more egregiously so than in
+price in the automated market maker system to offload their tokens into ETH.        DEXes [5]. As activity in such exchanges takes place off-
+   9 More sophisticated reordering strategies stand to profit the miner even
+more. The miner can selectively include orders that manipulate the prices           chain, it is private, and cannot easily be ascertained without
+received by other traders in the past.                                              privileged access. Additionally, while centralized exchange
+
+
+
+                                                                               16

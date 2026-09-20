@@ -25,6 +25,11 @@ sources:
 
 # Wiki log
 
+## [2026-09-19] save | Aeon initial research
+
+Preserved [[wiki/sessions/aeon-integration-2026-09-19|Aeon study conclusions and pending PL review]] at the user’s request. Evidence remains scoped and recommendations provisional.
+
+
 ## [2026-09-10] save | Preserve swap failure and native balance evidence
 
 Updated [[wiki/midnight-readiness-lessons|Midnight lessons]] with reviewed source11 composed rejection tests, the independently reviewed failed swap, two retained new reservations and eight cumulative charges. Native state contains A 1000000/B 2000000 despite an empty indexed map; downstream comparison failure is reproduced under synthetic role bindings. Exact updater cause and live acceptance remain open. Native-balance source repair is under test. Recorded measured Grok review times without waiving review or allocation gates.
@@ -1095,7 +1100,7 @@ Capture `capture-pcd-midnight-native-20260911`; ingest `ingest-pcd-midnight-nati
 
 **Pages.** Added the [[wiki/decisions/pcd-midnight-native-architecture|decision page]] with CLM-0946–CLM-0960, and updated formal assurance, architecture, benchmarks, open questions and contradictions.
 
-**Deliverables.** The [report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md), a [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md) linked from ROADMAP.md, and [evidence](../evidence/pcd-midnight-native-2026-09-11/README.md).
+**Deliverables.** The [report](attachments/historical-evidence/deliverables/pcd-midnight-native-2026-09-11/REPORT.md), a [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md) linked from ROADMAP.md, and [evidence](attachments/historical-evidence/evidence/pcd-midnight-native-2026-09-11/README.md).
 
 **Network activity.** Read-only RPC version calls to Preview, Preprod and Mainnet; GitHub API and documentation reads; literature downloads.
 
@@ -1103,7 +1108,7 @@ Capture `capture-pcd-midnight-native-20260911`; ingest `ingest-pcd-midnight-nati
 
 ## [2026-09-11] planning | PCD roadmap adopted into OpenSpec
 
-**Deliverables.** The [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md), the [PCD change package](../openspec/changes/pcd-ledger-anchored-acceptance/README.md) and the updated [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md).
+**Deliverables.** The [PCD integration amendment](attachments/historical-evidence/openspec/PCD-INTEGRATION-2026-09-11.md), the [PCD change package](attachments/historical-evidence/openspec/changes/pcd-ledger-anchored-acceptance/README.md) and the updated [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md).
 
 **Changes.** Atomic F3 rests on the Stage 0 seam instead of recursive stages. SP04 and SP06 deliver certificates, and `release` still requires them. MC04 and MC05 no longer depend on MC03. CLM-0957 memory figures now match the retained logs.
 
@@ -1132,3 +1137,103 @@ Capture `capture-pcd-midnight-native-20260911`; ingest `ingest-pcd-midnight-nati
 **Decisions.** The specification is layered so its public part names no chain, venue or signing scheme. The application interface is grouped by what a caller is doing, and per-leg dispatch calls moved below the line. Admission tiers became capability classes that are router inputs. Four standing guarantees were found false or unsupported and restated, and a fifth was added for inbound value. Tron reaches observation bare and value movement behind a custody contract; Hyperliquid was downgraded because its signed chain identifier is constant across environments; NEAR delegate actions are refused outright for value.
 
 **Not performed.** No adapter test, finality experiment or benchmark. Forty-two parameters remain unfixed. Nothing was broadcast to any network, and no language change was admitted.
+
+## 2026-09-19 — APSS applications research filing
+
+Filed scoped primary sources, four Diátaxis notes, bibliography and PDF coverage. Operation `ingest-apss-applications-20260919`. Findings remain research, not implementation acceptance.
+
+## 2026-09-19 — APSS permission research filing
+
+Filed scoped primary sources, four Diátaxis notes, bibliography and PDF coverage. Operation `ingest-apss-permission-20260919`. Findings remain research, not implementation acceptance.
+
+## 2026-09-19 — APSS settlement research filing
+
+Filed scoped primary sources, four Diátaxis notes, bibliography and PDF coverage. Operation `ingest-apss-settlement-20260919`. Findings remain research, not implementation acceptance.
+
+## 2026-09-19 — APSS solvers research filing
+
+Filed scoped primary sources, four Diátaxis notes, bibliography and PDF coverage. Operation `ingest-apss-solvers-20260919`. Findings remain research, not implementation acceptance.
+
+## 2026-09-19 — Product scope and certified basis reconciliation
+
+Operation `save-moriarty-audit-final-20260919` records six-expert consensus, APSS relationship map, restored jet workstream and PR17 witness premises. Superseded SDK note retained; current scope is permissionless ZKIRv3 language.
+
+## 2026-09-19 — Research navigation validation
+
+Operation `save-apss-navigation-20260919` adds visible PDF/coverage copies, normalizes new note metadata and repairs archive links. Immutable source captures remain preserved.
+
+## 2026-09-19 — Certified basis provenance
+
+Operation `ingest-certified-basis-20260919` preserves Simplicity/PR17 primary captures, PDF visuals and source records. Source review remains distinct from Agda proof reproduction or deployed circuit certification.
+
+## 2026-09-19 — Research delivery and roadmap revision
+
+Operation `save-roadmap-delivery-20260919` links the [final result](../deliverables/aeon-study-2026-09-19/RESULT.md), current roadmap and requirements. This records research/design completion, not product implementation acceptance.
+
+## 2026-09-19 — MPLR theory log initialized
+
+Operation `save-mplr-initial-20260919` creates [MPLR-001..018](research/mplr/index.md) as research drafts for partial transactions, conditional settlement and related language theory. No implementation status is advanced.
+
+## 2026-09-19 — NEAR source study filed
+
+Operation `ingest-near-teardown-20260919` files six configured expert studies, selected primary captures, Diataxis notes and precise MPLR evidence links. Conditional settlement retains the user definition. Daml is the next study.
+
+## NEAR ingestion verification — 2026-09-19
+
+Completed the NEAR research ingestion. Replaced workspace-absolute expert links with portable links to the preserved deliverable artifacts. Recorded the user-adopted conditional-settlement/programmable-escrow pillar in [terminology](research/near/terminology.md). Full corpus reading and target proof completion are not claimed.
+
+## Restore historical evidence links — 2026-09-19
+
+Preserved eight historical targets from the original Moriarty workspace as visible attachments, retaining exact bytes. This repairs 24 broken links and four stale-index findings. The historical reports remain dated evidence; restoring navigation does not revalidate their empirical claims or adopt their older roadmap as current.
+
+## Daml initial ingestion — 2026-09-19
+
+Saved the first 190 documentation extracts, source ledger, paper and six Diataxis research notes. Added MPLR-019 and refined the MPLR-008 research question. [Research direction](research/daml/research-direction.md) recommends workflow-first study with eight tracks. Acquisition does not imply full reading. Full Daml research remains open.
+
+## Simplicity source study — 2026-09-19
+
+Filed 97 website captures, documentation from five pinned repositories, two rendered PDFs and a source graph. Added MPLR-020..023 and source refinements. [Study](research/simplicity/index.md) separates captured/read/proved coverage and preserves temporal, witness and wallet-description limitations.
+
+Daml full-corpus filing tranche 1, 2026-09-19: captured source payloads and provenance from the remaining current docs, Finance documentation and inspected study evidence. Capture is not full reading.
+
+Daml full-corpus filing tranche 2, 2026-09-19: captured source payloads and provenance from the remaining current docs, Finance documentation and inspected study evidence. Capture is not full reading.
+
+2026-09-19 — Completed Daml comparative filing: three source studies, verified 142 evidence references, security/PCD and federated-kernel direction, MPLR-024..030. Capture and proof status remain distinct.
+
+Daml full-corpus filing tranche 3, 2026-09-19: captured source payloads and provenance from the remaining current docs, Finance documentation and inspected study evidence. Capture is not full reading.
+
+Daml full-corpus filing tranche 4, 2026-09-19: captured source payloads and provenance from the remaining current docs, Finance documentation and inspected study evidence. Capture is not full reading.
+
+Daml completion verification: 63 source-grounded provisional claims linked to immutable captures; repaired heading/index findings.
+
+2026-09-19 — OWS/x402 source filing tranche 1. Sources captured with hashes; reading limited to recorded ranges.
+
+2026-09-19 — OWS/x402 source filing tranche 2. Sources captured with hashes; reading limited to recorded ranges.
+
+2026-09-19 — OWS/x402 source filing tranche 1. Sources captured with hashes; reading limited to recorded ranges.
+
+2026-09-19 — Completed OWS/x402 and four-paper security bank; MPLR-031..034 and AI solver kernel design. No wallet operation or deployed proof claimed.
+
+2026-09-19 — Bounded four-track market study: strong Anoma/Valence and language/platform precedents; no uniqueness claim. Anoma teardown proceeds separately.
+
+2026-09-19 — Anoma source tranche 1: 600 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma source tranche 2: 600 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma source tranche 3: 600 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma source tranche 4: 600 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma source tranche 5: 600 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma source tranche 6: 28 source payload references, pinned hashes; failed acquisition URLs remain in inventory.
+
+2026-09-19 — Anoma 19-repository teardown, three source studies, Diátaxis bank, 45 claims and MPLR-035 filed. Implementation and proof obligations remain open.
+
+2026-09-19 — Anoma filing verified; graphs packaged within the vault workspace, historical audit scopes retained, source hashes checked.
+
+2026-09-19 — User clarified native Midnight proof-stack reuse; Lean is not a Moriarty dependency. Product contract, roadmap and Anoma/MPLR notes now state that boundary while retaining intention-constraint and compilation obligations.
+
+2026-09-19 — Whole-language review filed: integration boundaries, recovery-reserve experiment, finite-lifetime versus finite-stage bounds, PCD and expiry interpretation; MPLR009/021 research refinements. Local tests passed; no native or public execution, no cross-provider approval.
+
+2026-09-19 — Consolidated design/U0–U7 roadmap, six-expert deliberation, explicit next ZKIR/recursion requirements and Mina case study filed. Four pinned shallow sparse repositories; Scrapling10selectedresources; PixelRAG10auditpages rendered/textread and3visualchecks; bounded400-file graph. MPLR020/022/023/027 refined, oldPCDscope superseded explicitly. All implementation exits remain open.

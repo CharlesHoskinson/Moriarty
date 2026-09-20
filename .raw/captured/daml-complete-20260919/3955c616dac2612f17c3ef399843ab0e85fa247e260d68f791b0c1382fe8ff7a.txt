@@ -1,0 +1,664 @@
+On this page
+Overview
+Quick Examples
+Node References
+Running the Console
+Embedded Console
+Remote Console
+Scripting
+Tab Completion
+Related Pages
+CLI Tools
+Canton Console
+Copy page
+Copy page
+Scala REPL for managing Canton nodes, topology, and debugging operational issues.
+Copy page
+Copy page
+The Canton Console is an interactive Scala REPL that connects to Canton nodes for administration, debugging, and automation. It provides direct access to participant, sequencer, and mediator operations through a typed API.
+For full operational documentation, see the
+Global Synchronizer section
+, which covers node setup and management in detail. This page provides a brief orientation to the Console as a development and operations tool.
+​
+Overview
+The Console is bundled with the Canton distribution. When you start a Canton process, the Console is available as an interactive shell. You can also connect a remote Console to a running node.
+For operational guidance — node setup, party management, topology administration, debugging workflows — see the
+Canton Console group under Global Synchronizer
+. This page focuses on the Console as a CLI development tool.
+What you can do with the Console:
+Party management
+— Create parties, list hosted parties, manage party-to-participant mappings
+Package management
+— Upload DAR files, inspect deployed packages, check package dependencies
+Synchronizer connections
+— Connect participants to synchronizers, list connections, manage reconnection
+Topology management
+— View and modify the topology state (key rotations, namespace delegations, party allocations)
+Health monitoring
+— Check node status, view active connections, inspect processing queues
+Debugging
+— Inspect transaction trees, check conflict states, trace command processing
+​
+Quick Examples
+@
+participant1.parties.list()
+res1
+:
+Seq
+[
+ListPartiesResult
+]
+=
+Vector
+(
+ListPartiesResult
+(
+partyResult
+=
+participant1
+::
+12201ff69b1d...,
+participants
+=
+Vector
+(
+ParticipantSynchronizers
+(
+participant
+=
+PAR
+::
+participant1
+::
+12201ff69b1d...,
+synchronizers
+=
+Vector
+(
+SynchronizerPermission
+(synchronizerId
+=
+da
+::
+122032922613
+..., permission
+=
+Submission
+)
+)
+)
+)
+)
+)
+@
+participant1.dars.upload(
+"dars/CantonExamples.dar"
+)
+res2
+:
+String
+=
+"2b4b62a3503e321acd9736013530de57e028d67c9390f3af7c630f60bd816eba"
+@
+participant1.health.status
+res3
+:
+NodeStatus
+[
+ParticipantStatus
+]
+=
+Participant
+id
+:
+PAR
+::
+participant1
+::
+12201ff69b1d24edbf0ee2028a304ea702ee8536790dab1a31e7136e6d90ff6d473c
+Uptime
+:
+19
+.895503s
+Ports
+:
+ledger
+:
+30594
+admin
+:
+30595
+json
+:
+30596
+Connected
+synchronizers
+:
+da
+::
+122032922613
+...
+::
+35
+-
+0
+Unhealthy
+synchronizers
+:
+None
+Active
+:
+true
+Components
+:
+memory_storage
+:
+Ok
+()
+connected
+-
+synchronizer
+:
+Ok
+()
+sync
+-
+ephemeral
+-
+state
+:
+Ok
+()
+sequencer
+-
+client
+:
+Ok
+()
+acs
+-
+commitment
+-
+processor
+:
+Ok
+()
+sequencer
+-
+connection
+-
+pool
+:
+Ok
+()
+sequencer
+-
+subscription
+-
+pool
+:
+Ok
+()
+internal
+-
+sequencer
+-
+connection
+-
+sequencer1
+-
+0
+:
+Ok
+()
+subscription
+-
+sequencer
+-
+connection
+-
+sequencer1
+-
+0
+:
+Ok
+()
+Version
+:
+3.6.0
+-
+SNAPSHOT
+Supported
+protocol version(s)
+:
+34
+,
+35
+@
+participant1.synchronizers.list_connected()
+res4
+:
+Seq
+[
+ListConnectedSynchronizersResult
+]
+=
+Vector
+(
+ListConnectedSynchronizersResult
+(
+synchronizerAlias
+=
+Synchronizer
+'
+da
+'
+,
+physicalSynchronizerId
+=
+da
+::
+122032922613
+...
+::
+35
+-
+0
+,
+healthy
+=
+true
+)
+)
+@
+participant1.parties.enable(
+"Alice"
+)
+res5
+:
+PartyId
+=
+Alice
+::
+12201ff69b1d...
+​
+Node References
+The Console organizes operations by node type. Each node type exposes a different set of commands:
+Validator (participant)
+— The most commonly used reference. The console object is named
+participant
+. Handles party management, package uploads, ledger operations, and synchronizer connections.
+@
+participant1.parties.list()
+res6
+:
+Seq
+[
+ListPartiesResult
+]
+=
+Vector
+(
+ListPartiesResult
+(
+partyResult
+=
+participant1
+::
+12201ff69b1d...,
+participants
+=
+Vector
+(
+ParticipantSynchronizers
+(
+participant
+=
+PAR
+::
+participant1
+::
+12201ff69b1d...,
+synchronizers
+=
+Vector
+(
+SynchronizerPermission
+(synchronizerId
+=
+da
+::
+122032922613
+..., permission
+=
+Submission
+)
+)
+)
+)
+),
+ListPartiesResult
+(
+partyResult
+=
+Alice
+::
+12201ff69b1d...,
+participants
+=
+Vector
+(
+ParticipantSynchronizers
+(
+participant
+=
+PAR
+::
+participant1
+::
+12201ff69b1d...,
+synchronizers
+=
+Vector
+(
+SynchronizerPermission
+(synchronizerId
+=
+da
+::
+122032922613
+..., permission
+=
+Submission
+)
+)
+)
+)
+)
+)
+@
+participant1.dars.upload(
+"dars/CantonExamples.dar"
+)
+res7
+:
+String
+=
+"2b4b62a3503e321acd9736013530de57e028d67c9390f3af7c630f60bd816eba"
+@
+participant1.synchronizers.list_connected()
+res8
+:
+Seq
+[
+ListConnectedSynchronizersResult
+]
+=
+Vector
+(
+ListConnectedSynchronizersResult
+(
+synchronizerAlias
+=
+Synchronizer
+'
+da
+'
+,
+physicalSynchronizerId
+=
+da
+::
+122032922613
+...
+::
+35
+-
+0
+,
+healthy
+=
+true
+)
+)
+Sequencer node
+— Manages message ordering for a synchronizer.
+@
+sequencer1.health.status
+res9
+:
+NodeStatus
+[sequencer1.
+Status
+]
+=
+Sequencer
+id
+: sequencer1
+::
+1220cb0a22fb0aef9243a11f778497d7cacb19f9c4bcc7606776a109983edfaa6b4a
+Synchronizer
+id
+: da
+::
+122032922613929d67857e621fb13e3da49ec13883e24908404520319eee6d31fb4d
+::
+35
+-
+0
+Uptime
+:
+23
+.296422s
+Ports
+:
+public
+:
+30598
+admin
+:
+30599
+Connected
+participants
+:
+PAR
+::
+participant1
+::
+12201ff69b1d...
+Connected
+mediators
+:
+MED
+::
+mediator1
+::
+122009299340
+...
+Sequencer
+:
+SequencerHealthStatus
+(active
+=
+true
+)
+details
+-
+extra
+:
+None
+Components
+:
+memory_storage
+:
+Ok
+()
+sequencer
+:
+Ok
+()
+Accepts
+admin
+changes
+:
+true
+Version
+:
+3.6.0
+-
+SNAPSHOT
+Protocol
+version
+:
+35
+Mediator node
+— Handles transaction confirmation for a synchronizer.
+@
+mediator1.health.status
+res10
+:
+NodeStatus
+[mediator1.
+Status
+]
+=
+Node
+uid
+: mediator1
+::
+12200929934059da3e012af672ee8a5d26a7e4b3e5084920be298f791f7619843c78
+Synchronizer
+id
+: da
+::
+122032922613929d67857e621fb13e3da49ec13883e24908404520319eee6d31fb4d
+::
+35
+-
+0
+Uptime
+:
+23
+.271474s
+Ports
+:
+admin
+:
+30597
+Active
+:
+true
+Components
+:
+memory_storage
+:
+Ok
+()
+sequencer
+-
+client
+:
+Ok
+()
+sequencer
+-
+connection
+-
+pool
+:
+Ok
+()
+sequencer
+-
+subscription
+-
+pool
+:
+Ok
+()
+internal
+-
+sequencer
+-
+connection
+-
+sequencer1
+-
+0
+:
+Ok
+()
+subscription
+-
+sequencer
+-
+connection
+-
+sequencer1
+-
+0
+:
+Ok
+()
+Version
+:
+3.6.0
+-
+SNAPSHOT
+Protocol
+version
+:
+35
+​
+Running the Console
+​
+Embedded Console
+When you start Canton with a configuration file, the Console starts automatically:
+canton
+--config
+my-config.conf
+The Console prompt appears after the node finishes initializing. Node references (
+participant
+,
+sequencer
+,
+mediator
+) are pre-bound based on your configuration.
+​
+Remote Console
+You can connect a Console to a node running elsewhere:
+canton
+remote-console
+--host
+localhost
+--port
+2902
+This is useful for managing nodes in staging or production environments without SSH access to the node machine.
+​
+Scripting
+The Console supports loading Scala scripts for repeatable operations:
+@
+interp.load.module(os.
+Path
+(cantonConsoleDemoScript))
+Scripts have access to the same node references and APIs as the interactive Console. Common uses include:
+Automated party setup for test environments
+Topology configuration for multi-node deployments
+Health check routines that run periodically
+Data export scripts for auditing
+​
+Tab Completion
+The Console provides tab completion for discovering available commands. Type a node reference followed by a period, then press Tab:
+participant.<TAB>
+dars    synchronizers    health    id    keys    parties    topology    ...
+This is the fastest way to explore the API without referring to documentation.
+​
+Related Pages
+Global Synchronizer introduction
+— Operational context for Console use
+Validator roles
+— Understanding the nodes you manage through the Console
+Suggest edits
+Raise issue
+dpm (Daml Package Manager)
+Daml Script

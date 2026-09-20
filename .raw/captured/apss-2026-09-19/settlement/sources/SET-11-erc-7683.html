@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    
+      <title>ERC-7683: Cross Chain Intents</title>
+      <meta property="og:title" content="ERC-7683: Cross Chain Intents" />
+    
+    <meta name="description" content="Programmable solvers for intent protocols." />
+    <meta property="og:description" content="Programmable solvers for intent protocols." />
+    <meta name="twitter:description" content="Programmable solvers for intent protocols." />
+  
+  <meta name="generator" content="Jekyll" />
+  <meta property="og:locale" content="en_US" />
+  <link rel="canonical" href="https://eips.ethereum.org/EIPS/eip-7683" />
+  <meta property="og:url" content="https://eips.ethereum.org/EIPS/eip-7683" />
+  <meta property="og:site_name" content="Ethereum Improvement Proposals" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://eips.ethereum.org/assets/images/eip-og-image.png" />
+  <meta name="twitter:site" content="@" />
+  <script type="application/ld+json">
+    {
+      "@type": "WebSite",
+      "url": "https://eips.ethereum.org",
+      "name": "Ethereum Improvement Proposals",
+      "description": "Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.",
+      "@context": "https://schema.org"
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png" /><link type="application/atom+xml" rel="alternate" href="https://eips.ethereum.org/feed.xml" title="Ethereum Improvement Proposals" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/css/override.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz9ATKxIep9tiCxS/Z9fNfEXiDAYTujMAeBAsjFuCZSmKbSSUnQlmh/jp3" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js" integrity="sha384-Rx+T1VzGupg4BHQYs2gCW9It+akI2MM/mndMCy36UVfodzcJcF0GGLxZIzObiEfa" crossorigin="anonymous"></script>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", (event) => {
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    });
+  </script>
+  <script type="text/javascript">
+    window.MathJax = {
+      loader: {
+        load: ['input/tex-base', 'output/chtml']
+      },
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: false,
+        processRefs: false
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.1/es5/tex-mml-chtml.js" integrity="sha384-/1zmJ1mBdfKIOnwPxpdG6yaRrxP6qu3eVYm0cz2nOx+AcL4d3AqEFrwcqGZVVroG" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/citation-js/0.6.7/citation.min.js" integrity="sha512-N+LDFMa9owHXGS+CyMrBvuxq2QuGl3fiB/7cys3aUEL7K6P1soHGqsS0sjHXZpwNd9Kz0m3R4IPy1HYRi6ROEQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    addEventListener('DOMContentLoaded', async () => {
+      const Cite = window.require('citation-js');
+      const citationElements = document.querySelectorAll('.language-csl-json');
+      for (let citationElement of citationElements) {
+        try {
+          const citation = await Cite.async(citationElement);
+          const template = document.createElement('template');
+          template.innerHTML = citation.format('bibliography', {
+            format: 'html',
+            template: 'apa',
+            lang: 'en-US'
+          });
+          if (citationElement.parentElement && citationElement.parentElement.matches('pre')) {
+            citationElement.parentElement.replaceWith(template.content);
+          } else {
+            citationElement.replaceWith(template.content);
+          }
+        } catch (e) {
+          console.error("unable to render citation", e);
+        }
+      }
+    });
+  </script>
+</head>
+<body><header class="site-header" role="banner">
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Ethereum Improvement Proposals</a><nav class="site-nav d-flex">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger row p-2"><a class="page-link col" href="/all">All</a><a class="page-link col" href="/core">Core</a><a class="page-link col" href="/networking">Networking</a><a class="page-link col" href="/interface">Interface</a><a class="page-link col" href="/erc">ERC</a><a class="page-link col" href="/meta">Meta</a><a class="page-link col" href="/informational">Informational</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="bi-megaphone-fill" fill="currentColor" viewBox="0 0 16 16">
+    <title>Alert</title>
+    <path d="M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0v-11zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25.222 25.222 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56V3.224zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009a68.14 68.14 0 0 1 .496.008 64 64 0 0 1 1.51.048zm1.39 1.081c.285.021.569.047.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a65.81 65.81 0 0 1 1.692.064c.327.017.65.037.966.06z"/>
+  </symbol>
+  <symbol id="bi-code" fill="currentColor" viewBox="0 0 16 16">
+    <title>Source</title>
+    <path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/>
+  </symbol>
+  <svg id="bi-chat" fill="currentColor" viewBox="0 0 16 16">
+    <title>Discuss</title>
+    <path d="M2.678 11.894a1 1 0 0 1 .287.801 10.97 10.97 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8.06 8.06 0 0 0 8 14c3.996 0 7-2.807 7-6 0-3.192-3.004-6-7-6S1 4.808 1 8c0 1.468.617 2.83 1.678 3.894zm-.493 3.905a21.682 21.682 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a9.68 9.68 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105z"/>
+  </svg>
+</svg>
+
+<div class="home">
+  
+  
+  
+ 
+  <span class="h5">
+    
+    
+    
+      <span class="badge text-light bg-warning" data-bs-toggle="tooltip" data-bs-title="This EIP is not yet recommended for general use or implementation, as it is subject to normative (breaking) changes.">⚠️ Draft</span>
+    
+    
+    
+       
+    
+      <a class="badge text-light bg-primary" data-bs-toggle="tooltip" data-bs-title="Application-level standards and conventions, including contract standards such as token standards, name registries, URI schemes, library/package formats, and wallet formats." href="../erc">Standards Track: ERC</a>
+    
+  </span>
+  <h1 class="page-heading">
+    ERC-7683: Cross Chain Intents
+    <a href="https://ethereum-magicians.org/t/erc-cross-chain-intents-standard/19619" class="no-underline">
+      <svg role="img" aria-label="Discuss" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-chat"/>
+      </svg>
+    </a>
+    <a href="https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7683.md" class="no-underline">
+      <svg role="img" aria-label="Source" class="inline-svg" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 16 16">
+        <use xlink:href="#bi-code"/>
+      </svg>
+    </a>
+  </h1>
+  <h3>Programmable solvers for intent protocols.</h3>
+  <table class="table table-borderless preamble">
+    <tbody>
+      <tr>
+        <th scope="row">Authors</th>
+        <td>Francisco Giordano&nbsp;(<a href="https://github.com/frangio">@frangio</a>), Mark Toda&nbsp;(<a href="https://github.com/marktoda">@marktoda</a>), Matt Rice&nbsp;(<a href="https://github.com/mrice32">@mrice32</a>), Nick Pai&nbsp;(<a href="https://github.com/nicholaspai">@nicholaspai</a>), Alexander Lindgren&nbsp;(<a href="https://github.com/reednaa">@reednaa</a>), Mark Gretzke&nbsp;(<a href="https://github.com/mgretzke">@mgretzke</a>), Chris Cashwell&nbsp;(<a href="https://github.com/ccashwell">@ccashwell</a>)</td>
+      </tr>
+      
+        <tr>
+          <th scope="row">Created</th>
+          <td>2024-04-11</td>
+        </tr>
+      
+      
+             
+      
+        <tr>
+          <th scope="row">Discussion Link</th>
+          <td><a href="https://ethereum-magicians.org/t/erc-cross-chain-intents-standard/19619" target="_blank" rel="noopener">https://ethereum-magicians.org/t/erc-cross-chain-intents-standard/19619</a></td>
+        </tr>
+      
+      
+        <tr>
+          <th scope="row">Requires</th>
+          <td>
+
+  <a href="eip-7930">EIP-7930</a>
+
+</td>
+        </tr>
+      
+    </tbody>
+  </table>
+  <br/>
+
+  
+
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ul>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#motivation">Motivation</a></li>
+  <li><a href="#specification">Specification</a>
+    <ul>
+      <li><a href="#key-terms">Key Terms</a></li>
+      <li><a href="#orders">Orders</a></li>
+      <li><a href="#values-and-encoding">Values and Encoding</a></li>
+      <li><a href="#resolvers">Resolvers</a></li>
+    </ul>
+  </li>
+  <li><a href="#rationale">Rationale</a>
+    <ul>
+      <li><a href="#resolver-centric-standardization">Resolver-Centric Standardization</a></li>
+      <li><a href="#general-purpose-building-blocks">General-Purpose Building Blocks</a></li>
+      <li><a href="#execution-instructions">Execution Instructions</a></li>
+      <li><a href="#cross-compatibility">Cross-compatibility</a></li>
+      <li><a href="#previous-draft">Previous Draft</a></li>
+    </ul>
+  </li>
+  <li><a href="#security-considerations">Security Considerations</a></li>
+  <li><a href="#copyright">Copyright</a></li>
+</ul>
+
+  </div>
+
+  <h2 id="abstract">
+      
+      
+        <a href="#abstract" class="anchor-link"></a> Abstract
+      
+      
+    </h2>
+
+<p>This ERC defines a solver-facing interface for intent protocols. A protocol exposes orders as opaque payloads and provides a <em>resolver</em> contract that translates those payloads into a common order representation.</p>
+
+<p>Resolvers are used by solvers, offchain via <code class="language-plaintext highlighter-rouge">eth_call</code>, to obtain the information needed to evaluate and fulfill an order. This enables <em>programmable intent solvers</em> to add support for intent protocols by vetting their resolvers instead of implementing protocol-specific execution logic.</p>
+  
+    <h2 id="motivation">
+      
+      
+        <a href="#motivation" class="anchor-link"></a> Motivation
+      
+      
+    </h2>
+
+<p>An order is an offer of payment in exchange for the fulfillment of a set of requirements. Intent protocols allow users to express desired outcomes as orders, while specialized actors called solvers, also known as fillers, execute the required actions and receive payment. This model is especially useful for cross-chain activity, where execution may require coordinating transactions, liquidity, and settlement across multiple chains, but the same design applies more generally to intent protocols.</p>
+
+<p>In a typical order lifecycle, a user expresses an intent to an application, the application creates an order for a specific protocol, the order is submitted to an order feed, a solver evaluates the order, the solver executes the required steps, and settlement pays the solver.</p>
+
+<p>Without a common solver-facing representation, solver liquidity is fragmented across protocol-specific integrations. Each solver must integrate separately with each protocol’s payload format, execution flow, and payment semantics. This increases integration costs, weakens shared solver networks and order dissemination services, and makes it harder for new protocols to attract competitive execution.</p>
+
+<p>Intent protocols also need room to differ in how users create orders, how funds are authorized, how settlement is verified, how prices are determined, and whether execution is escrow-first, fill-first using resource locks, or auction-based. This ERC does not require protocols to use a common escrow, settlement contract, or fill function.</p>
+
+<p>Instead, this ERC standardizes how orders are consumed by solvers. A resolver translates a protocol-specific payload into general-purpose instructions that solvers can evaluate for safety, profitability, execution, and payment. When safety depends on conditions that a resolver cannot verify, the resolver surfaces those conditions as explicit assumptions for solvers to validate. The result is a path toward protocol-agnostic solvers while preserving flexibility for protocols to innovate in order creation and settlement.</p>
+  
+    <h2 id="specification">
+      
+      
+        <a href="#specification" class="anchor-link"></a> Specification
+      
+      
+    </h2>
+
+<p>The key words “MUST”, “MUST NOT”, “REQUIRED”, “SHALL”, “SHALL NOT”, “SHOULD”, “SHOULD NOT”, “RECOMMENDED”, “MAY”, and “OPTIONAL” in this document are to be interpreted as described in RFC 2119.</p>
+  
+    <h3 id="key-terms">
+      
+      
+        <a href="#key-terms" class="anchor-link"></a> Key Terms
+      
+      
+    </h3>
+
+<ul>
+  <li><strong>Order</strong>: An offer of payment in exchange for the fulfillment of a set of requirements.</li>
+  <li><strong>Solver</strong>: An actor that fulfills order requirements.</li>
+  <li><strong>Payload</strong>: An encoding of an order as a bytestring.</li>
+  <li><strong>Resolver</strong>: A payload decoder and order validator and guarantor.</li>
+  <li><strong>Interoperable address</strong>: An address encoded according to <a href="/EIPS/eip-7930">ERC-7930</a>.</li>
+</ul>
+  
+    <h3 id="orders">
+      
+      
+        <a href="#orders" class="anchor-link"></a> Orders
+      
+      
+    </h3>
+
+<p>An order’s requirements are expressed as a list of <strong>steps</strong> and a list of <strong>variables</strong>.</p>
+
+<p>To fulfill the requirements of an order, each step MUST be executed as specified, and variable values MUST be decided as specified and used consistently.</p>
+
+<p>A step or variable can have <em>hard dependencies</em> on other steps and variables as documented below. Not every mention of a variable is a hard dependency. Hard dependencies MUST be acyclic. Fulfillment MUST proceed in hard-dependency order, i.e., a step MUST NOT execute before its hard dependencies have successfully executed.</p>
+
+<p>A step MAY abort the order. When aborted, requirements are not fulfilled and no payment is offered.</p>
+  
+    <h4 id="step-call">
+      
+      
+        <a href="#step-call" class="anchor-link"></a> Step: <code class="language-plaintext highlighter-rouge">Call</code>
+      
+      
+    </h4>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">target</code>: An interoperable address.</li>
+  <li><code class="language-plaintext highlighter-rouge">selector</code>: A 4-byte function selector.</li>
+  <li><code class="language-plaintext highlighter-rouge">arguments</code>: A list of function arguments, each a constant or a variable.</li>
+  <li><code class="language-plaintext highlighter-rouge">attributes</code>: A list of attributes.</li>
+</ul>
+
+<p>To execute the step a solver MUST evaluate each element of <code class="language-plaintext highlighter-rouge">arguments</code> to a constant, encode them into call data together with <code class="language-plaintext highlighter-rouge">selector</code> (see Values and Encoding), and submit a transaction that makes a call to <code class="language-plaintext highlighter-rouge">target</code> with said data.</p>
+
+<p>The step has a hard dependency on all variables mentioned in <code class="language-plaintext highlighter-rouge">arguments</code>.</p>
+
+<p>Each element of <code class="language-plaintext highlighter-rouge">attributes</code> determines additional requirements or options.</p>
+  
+    <h5 id="attribute-needsstep">
+      
+      
+        <a href="#attribute-needsstep" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">NeedsStep</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">stepIdx</code>: The index of a step in the order.</li>
+</ul>
+
+<p>The call has a hard dependency on the step numbered <code class="language-plaintext highlighter-rouge">stepIdx</code>.</p>
+
+<p>The attribute MAY be omitted if the dependency is implied by a hard dependency on a variable.</p>
+  
+    <h5 id="attribute-needsvariable">
+      
+      
+        <a href="#attribute-needsvariable" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">NeedsVariable</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">varIdx</code>: The index of a variable in the order.</li>
+</ul>
+
+<p>The call has a hard dependency on the variable numbered <code class="language-plaintext highlighter-rouge">varIdx</code>.</p>
+
+<p>The attribute MAY be omitted if the dependency is implied by the call arguments, formulas, or another variable dependency.</p>
+  
+    <h5 id="attribute-spendserc20">
+      
+      
+        <a href="#attribute-spendserc20" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">SpendsERC20</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">token</code>: An interoperable address of an <a href="/EIPS/eip-20">ERC-20</a> token on the chain where the call is made.</li>
+  <li><code class="language-plaintext highlighter-rouge">amountFormula</code>: An amount of the token, as a constant or a variable.</li>
+  <li><code class="language-plaintext highlighter-rouge">spender</code>, <code class="language-plaintext highlighter-rouge">recipient</code>: Interoperable addresses on the chain.</li>
+</ul>
+
+<p>The call MAY transfer tokens from the caller, up to the amount given by <code class="language-plaintext highlighter-rouge">amountFormula</code>, using <code class="language-plaintext highlighter-rouge">transferFrom</code> on <code class="language-plaintext highlighter-rouge">token</code> called from <code class="language-plaintext highlighter-rouge">spender</code>. The tokens SHOULD be transferred to <code class="language-plaintext highlighter-rouge">recipient</code>.</p>
+
+<p>The solver MUST ensure the caller account has balance of <code class="language-plaintext highlighter-rouge">token</code> and allowance for <code class="language-plaintext highlighter-rouge">spender</code> of at least said amount.</p>
+
+<p>The call does not have a hard dependency on the variables in <code class="language-plaintext highlighter-rouge">amountFormula</code>. In particular, the formula MAY depend on step outputs such as inclusion timing (e.g., block timestamp). If the formula depends on timing, the amount SHOULD decrease with time so that a tight upper bound can be estimated by the solver.</p>
+  
+    <h5 id="attribute-spendsgas">
+      
+      
+        <a href="#attribute-spendsgas" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">SpendsGas</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">amountFormula</code>: An amount of gas, as a constant or a variable.</li>
+</ul>
+
+<p>The call MAY consume up to the amount given by <code class="language-plaintext highlighter-rouge">amountFormula</code>.</p>
+
+<p>The solver MUST ensure the call executes with a gas limit of at least said amount of gas.</p>
+
+<p>If this attribute is omitted, the solver MAY estimate gas cost by simulation prior to execution of any other step in the order. If simulation fails due to missing prerequisites, the order SHOULD include this attribute.</p>
+
+<p>The call has a hard dependency on the variables in <code class="language-plaintext highlighter-rouge">amountFormula</code>.</p>
+  
+    <h5 id="attribute-revertpolicy">
+      
+      
+        <a href="#attribute-revertpolicy" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">RevertPolicy</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">policy</code>: An identifier for a policy; <code class="language-plaintext highlighter-rouge">"ignore"</code> or <code class="language-plaintext highlighter-rouge">"abort"</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">expectedReason</code>: A bytestring prefix.</li>
+</ul>
+
+<p>The call MAY revert.</p>
+
+<p>If the call would revert with data that begins with <code class="language-plaintext highlighter-rouge">expectedReason</code>, the solver MUST proceed according to <code class="language-plaintext highlighter-rouge">policy</code>:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">ignore</code>: The step MUST be considered executed. The solver MAY safely skip this action and proceed with fulfillment. An included reverted transaction MUST NOT be required.</li>
+  <li><code class="language-plaintext highlighter-rouge">abort</code>: The entire order MUST be aborted.</li>
+</ul>
+
+<p>A call MUST NOT revert without a matching <code class="language-plaintext highlighter-rouge">RevertPolicy</code> attribute.</p>
+  
+    <h5 id="attribute-timingbounds">
+      
+      
+        <a href="#attribute-timingbounds" class="anchor-link"></a> Attribute: <code class="language-plaintext highlighter-rouge">TimingBounds</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">field</code>: A timing field; <code class="language-plaintext highlighter-rouge">"block.number"</code> or <code class="language-plaintext highlighter-rouge">"block.timestamp"</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">lowerBound</code>: An optional number.</li>
+  <li><code class="language-plaintext highlighter-rouge">upperBound</code>: An optional number.</li>
+</ul>
+
+<p>The call MUST be included onchain such that the value of <code class="language-plaintext highlighter-rouge">field</code> observed when executed is at least <code class="language-plaintext highlighter-rouge">lowerBound</code> and at most <code class="language-plaintext highlighter-rouge">upperBound</code>.</p>
+  
+    <h4 id="variables">
+      
+      
+        <a href="#variables" class="anchor-link"></a> Variables
+      
+      
+    </h4>
+
+<p>An order includes variables as placeholders for values that the solver decides.</p>
+
+<p>Each variable MUST be decided as specified by its variable role. Once a value is decided it MUST be used consistently wherever the variable is referenced.</p>
+  
+    <h5 id="role-paymentrecipient">
+      
+      
+        <a href="#role-paymentrecipient" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">PaymentRecipient</code>
+      
+      
+    </h5>
+
+<p>No parameters.</p>
+
+<p>The variable MUST be assigned to the account where the solver prefers to receive payment.</p>
+  
+    <h5 id="role-paymentchain">
+      
+      
+        <a href="#role-paymentchain" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">PaymentChain</code>
+      
+      
+    </h5>
+
+<p>No parameters.</p>
+
+<p>The variable MUST be assigned to the ID of the chain where the solver prefers to receive payment.</p>
+  
+    <h5 id="role-stepcaller">
+      
+      
+        <a href="#role-stepcaller" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">StepCaller</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">stepIdx</code>: The index of a step in the order.</li>
+</ul>
+
+<p>The variable MUST be assigned to the account used as the caller when executing the step numbered <code class="language-plaintext highlighter-rouge">stepIdx</code>.</p>
+  
+    <h5 id="role-executionoutput">
+      
+      
+        <a href="#role-executionoutput" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">ExecutionOutput</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">field</code>: A field identifier that can be captured from execution; <code class="language-plaintext highlighter-rouge">"block.number"</code>, <code class="language-plaintext highlighter-rouge">"block.timestamp"</code>, or <code class="language-plaintext highlighter-rouge">"receipt.effectiveGasPrice"</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">stepIdx</code>: The index of a step in the order.</li>
+</ul>
+
+<p>The variable MUST be assigned to the value observed in execution. For example, the <code class="language-plaintext highlighter-rouge">"block.number"</code> field must be the block number where the call in a step was included onchain.</p>
+
+<p>The variable has a hard dependency on the step numbered <code class="language-plaintext highlighter-rouge">stepIdx</code>.</p>
+  
+    <h5 id="role-witness">
+      
+      
+        <a href="#role-witness" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">Witness</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">kind</code>: An identifier for a kind of witness.</li>
+  <li><code class="language-plaintext highlighter-rouge">data</code>: A bytestring as expected by the witness kind.</li>
+  <li><code class="language-plaintext highlighter-rouge">variables</code>: A list of indices of variables in the order.</li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">kind</code> MUST identify some offchain procedure by which the solver can obtain a value, as a function of <code class="language-plaintext highlighter-rouge">data</code> and the values of <code class="language-plaintext highlighter-rouge">variables</code>.</p>
+
+<p>The variable MUST be assigned to the result of invoking this procedure.</p>
+
+<p>The variable has a hard dependency on all variables mentioned in <code class="language-plaintext highlighter-rouge">variables</code>.</p>
+  
+    <h5 id="role-query">
+      
+      
+        <a href="#role-query" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">Query</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">target</code>: An interoperable address.</li>
+  <li><code class="language-plaintext highlighter-rouge">selector</code>: A 4-byte function selector.</li>
+  <li><code class="language-plaintext highlighter-rouge">arguments</code>: A list of function arguments, each a constant or a variable.</li>
+  <li><code class="language-plaintext highlighter-rouge">blockNumber</code>: An optional block number.</li>
+</ul>
+
+<p>The solver MUST evaluate each element of <code class="language-plaintext highlighter-rouge">arguments</code> to a constant, encode them into call data together with <code class="language-plaintext highlighter-rouge">selector</code> (see Values and Encoding), and invoke <code class="language-plaintext highlighter-rouge">eth_call</code> to <code class="language-plaintext highlighter-rouge">target</code> with said data.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">blockNumber</code> is omitted, the latest block is used.</p>
+
+<p>The call MUST NOT revert, and the variable MUST be assigned to the value produced by interpreting the value returned by <code class="language-plaintext highlighter-rouge">eth_call</code> as a framed ABI encoding (see Values and Encoding).</p>
+  
+    <h5 id="role-queryevents">
+      
+      
+        <a href="#role-queryevents" class="anchor-link"></a> Role: <code class="language-plaintext highlighter-rouge">QueryEvents</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">emitter</code>: An interoperable address.</li>
+  <li><code class="language-plaintext highlighter-rouge">topic0</code>, <code class="language-plaintext highlighter-rouge">topic1</code>, <code class="language-plaintext highlighter-rouge">topic2</code>, <code class="language-plaintext highlighter-rouge">topic3</code>: Optional 32-byte values.</li>
+  <li><code class="language-plaintext highlighter-rouge">blockNumber</code>: An optional block number.</li>
+</ul>
+
+<p>The solver MUST invoke <code class="language-plaintext highlighter-rouge">eth_getLogs</code> for <code class="language-plaintext highlighter-rouge">emitter</code> at <code class="language-plaintext highlighter-rouge">blockNumber</code> filtered by the provided topics.</p>
+
+<p>If <code class="language-plaintext highlighter-rouge">blockNumber</code> is omitted, the latest block is used.</p>
+
+<p>The variable MUST be assigned to the results of <code class="language-plaintext highlighter-rouge">eth_getLogs</code> as the framed ABI encoding (see Values and Encoding) of an array of the following struct.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">EthLog</span> <span class="p">{</span>
+    <span class="kt">address</span> <span class="n">emitter</span><span class="p">;</span>
+    <span class="kt">bytes32</span><span class="p">[]</span> <span class="n">topics</span><span class="p">;</span>
+    <span class="kt">bytes</span> <span class="n">data</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">blockNumber</span><span class="p">;</span>
+    <span class="kt">bytes32</span> <span class="n">transactionHash</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">transactionIndex</span><span class="p">;</span>
+    <span class="kt">bytes32</span> <span class="n">blockHash</span><span class="p">;</span>
+    <span class="kt">uint256</span> <span class="n">logIndex</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="payments">
+      
+      
+        <a href="#payments" class="anchor-link"></a> Payments
+      
+      
+    </h4>
+
+<p>An order includes a list of payments that will be made.</p>
+  
+    <h5 id="payment-erc20">
+      
+      
+        <a href="#payment-erc20" class="anchor-link"></a> Payment: <code class="language-plaintext highlighter-rouge">ERC20</code>
+      
+      
+    </h5>
+
+<p>Parameters:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">token</code>: An interoperable address of an <a href="/EIPS/eip-20">ERC-20</a> token.</li>
+  <li><code class="language-plaintext highlighter-rouge">sender</code>: An interoperable address.</li>
+  <li><code class="language-plaintext highlighter-rouge">amountFormula</code>: An amount of the token, as a constant or a variable.</li>
+  <li><code class="language-plaintext highlighter-rouge">recipientVarIdx</code>: The index of a <code class="language-plaintext highlighter-rouge">PaymentRecipient</code> variable.</li>
+  <li><code class="language-plaintext highlighter-rouge">onStepIdx</code>: The index of a step in the order.</li>
+  <li><code class="language-plaintext highlighter-rouge">estimatedDelaySeconds</code>: A duration in seconds.</li>
+</ul>
+
+<p>When the step numbered <code class="language-plaintext highlighter-rouge">onStepIdx</code> is executed, a payment MUST be made of at least the amount given by <code class="language-plaintext highlighter-rouge">amountFormula</code> of <code class="language-plaintext highlighter-rouge">token</code> sourced from <code class="language-plaintext highlighter-rouge">sender</code>. The payment MUST be transferred to the address value of the variable numbered <code class="language-plaintext highlighter-rouge">recipientVarIdx</code>, on the chain indicated by <code class="language-plaintext highlighter-rouge">token</code>. The payment SHOULD be delayed by <code class="language-plaintext highlighter-rouge">estimatedDelaySeconds</code> with high confidence.</p>
+  
+    <h3 id="values-and-encoding">
+      
+      
+        <a href="#values-and-encoding" class="anchor-link"></a> Values and Encoding
+      
+      
+    </h3>
+
+<p>Values assigned to variables are untyped and represented only by their ABI encoding and whether they are statically or dynamically sized.</p>
+
+<p>Some contexts that consume values may interpret them as a particular type. For example, the amount formula of <code class="language-plaintext highlighter-rouge">SpendsGas</code> is interpreted as <code class="language-plaintext highlighter-rouge">uint256</code>.</p>
+  
+    <h4 id="framed-abi-encoding">
+      
+      
+        <a href="#framed-abi-encoding" class="anchor-link"></a> Framed ABI Encoding
+      
+      
+    </h4>
+
+<p>In the EVM, values are represented by their <em>framed ABI encoding</em>.</p>
+
+<p>The framed ABI encoding of a value is the canonical ABI encoding of the two-element tuple <code class="language-plaintext highlighter-rouge">("", value)</code>, whose first element is the empty string and whose second element is the value. In Solidity, it is the bytes produced by <code class="language-plaintext highlighter-rouge">abi.encode("", value)</code>.</p>
+
+<p>A framed ABI encoding corresponds to a dynamically sized value exactly when it starts with the 96-byte prefix</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0000000000000000000000000000000000000000000000000000000000000040
+0000000000000000000000000000000000000000000000000000000000000060
+0000000000000000000000000000000000000000000000000000000000000000
+</code></pre></div></div>
+<p>The remaining bytes after the prefix are the ABI encoding of the value on its own.</p>
+
+<p>A framed ABI encoding for a statically sized value begins with a 32-byte prefix and ends with a 32-byte suffix. The remaining bytes in between prefix and suffix are the ABI encoding of the value. The numeric value of the prefix will be exactly 32 plus the length of the value encoding, and the suffix will be the zero word.</p>
+  
+    <h4 id="call-data-encoding">
+      
+      
+        <a href="#call-data-encoding" class="anchor-link"></a> Call Data Encoding
+      
+      
+    </h4>
+
+<p>To encode call data, concatenate the 4-byte function selector with the ABI encoding of the function arguments.</p>
+
+<p>The ABI encoding of the function arguments is like standard ABI encoding. For statically sized values, the head is its ABI encoding, and the tail is empty. For dynamically sized values, the head is the offset to the tail, and the tail is the ABI encoding.</p>
+  
+    <h3 id="resolvers">
+      
+      
+        <a href="#resolvers" class="anchor-link"></a> Resolvers
+      
+      
+    </h3>
+
+<p>An order can be transmitted in the form of a <strong>payload</strong> encoded for a specific <strong>resolver</strong>.</p>
+
+<p>A resolver provides a way to decode the payload as an order (i.e., steps, variables, and payments), validating and guaranteeing that the order is well formed and safe for solvers, except for additional named <strong>assumptions</strong> that the resolver cannot check for itself.</p>
+
+<p>A resolver MUST guarantee that an order may only abort as explicitly specified in revert policies. If no abort policy is triggered, a solver that begins to execute the steps of an order MUST be able to fulfill all requirements and receive all payments.</p>
+
+<p>Liveness and censorship resistance of the underlying chains MAY be implicitly assumed. A particular resolver MAY make and document additional implicit assumptions (e.g., the security of a particular protocol). A solver MUST review all such implicit assumptions before a trusting a resolver.</p>
+
+<p>Liveness and censorship resistance of any tokens used in <code class="language-plaintext highlighter-rouge">SpendsERC20</code> attributes MAY be implicitly assumed.</p>
+  
+    <h4 id="named-assumptions">
+      
+      
+        <a href="#named-assumptions" class="anchor-link"></a> Named Assumptions
+      
+      
+    </h4>
+
+<p>Additional assumptions for a given order must be identified by a name and may be parameterized by data.</p>
+
+<p>A solver MUST validate the assumption (e.g., checking against a whitelist) before fulfilling the order.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">Assumption</span> <span class="p">{</span>
+    <span class="kt">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="kt">bytes</span> <span class="n">data</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h4 id="evm-resolvers">
+      
+      
+        <a href="#evm-resolvers" class="anchor-link"></a> EVM Resolvers
+      
+      
+    </h4>
+
+<p>A resolver can be implemented and deployed as a contract for the EVM with the <code class="language-plaintext highlighter-rouge">IResolver</code> interface.</p>
+
+<div class="language-solidity highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">interface</span> <span class="n">IResolver</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">ResolvedOrder</span> <span class="p">{</span>
+        <span class="c1">/// Array of `IStep` ABI calldata.
+</span>        <span class="kt">bytes</span><span class="p">[]</span> <span class="n">steps</span><span class="p">;</span>
+        <span class="c1">/// Array of `IVariableRole` ABI calldata.
+</span>        <span class="kt">bytes</span><span class="p">[]</span> <span class="n">variables</span><span class="p">;</span>
+        <span class="c1">/// Array of `IPayment` ABI calldata.
+</span>        <span class="kt">bytes</span><span class="p">[]</span> <span class="n">payments</span><span class="p">;</span>
+        <span class="n">Assumption</span><span class="p">[]</span> <span class="n">assumptions</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">struct</span> <span class="n">Assumption</span> <span class="p">{</span>
+        <span class="kt">string</span> <span class="n">name</span><span class="p">;</span>
+        <span class="kt">bytes</span> <span class="n">data</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">function</span> <span class="n">resolve</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">payload</span><span class="p">)</span> <span class="k">external</span> <span class="k">view</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ResolvedOrder</span> <span class="k">memory</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IStep</span> <span class="p">{</span>
+    <span class="c1">/// @param arguments Each element is either an ABI-encoded variable index, or a framed ABI encoding of a value.
+</span>    <span class="c1">/// @param attributes Each element is `IAttribute` ABI calldata.
+</span>    <span class="k">function</span> <span class="n">Call</span><span class="p">(</span>
+        <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">target</span><span class="p">,</span>
+        <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">arguments</span><span class="p">,</span>
+        <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">attributes</span>
+    <span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IVariableRole</span> <span class="p">{</span>
+    <span class="k">function</span> <span class="n">PaymentRecipient</span><span class="p">()</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">PaymentChain</span><span class="p">()</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">StepCaller</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">stepIdx</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">ExecutionOutput</span><span class="p">(</span><span class="kt">string</span> <span class="k">calldata</span> <span class="n">field</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">stepIdx</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">Witness</span><span class="p">(</span><span class="kt">string</span> <span class="k">calldata</span> <span class="n">kind</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">data</span><span class="p">,</span> <span class="kt">uint256</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">variables</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="c1">/// @param arguments Each element is a variable index or a framed ABI encoding.
+</span>    <span class="c1">/// @param blockNumber `uint256(-1)` means none.
+</span>    <span class="k">function</span> <span class="n">Query</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">target</span><span class="p">,</span> <span class="kt">bytes4</span> <span class="nb">selector</span><span class="p">,</span> <span class="kt">bytes</span><span class="p">[]</span> <span class="k">calldata</span> <span class="n">arguments</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">blockNumber</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="c1">/// @param topicMatch Bitmask of topics to filter by; e.g., `0x01` filters by `topic0` only.
+</span>    <span class="c1">/// @param blockNumber `uint256(-1)` means none.
+</span>    <span class="k">function</span> <span class="n">QueryEvents</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">emitter</span><span class="p">,</span> <span class="kt">bytes1</span> <span class="n">topicMatch</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">topic0</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">topic1</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">topic2</span><span class="p">,</span> <span class="kt">bytes32</span> <span class="n">topic3</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">blockNumber</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IPayment</span> <span class="p">{</span>
+    <span class="c1">/// @param amountFormula `IFormula` ABI calldata.
+</span>    <span class="k">function</span> <span class="n">ERC20</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">token</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">sender</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">amountFormula</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">recipientVarIdx</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">onStepIdx</span><span class="p">,</span> <span class="kt">uint256</span> <span class="n">estimatedDelaySeconds</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IAttribute</span> <span class="p">{</span>
+    <span class="c1">/// @param amountFormula `IFormula` ABI calldata.
+</span>    <span class="k">function</span> <span class="n">SpendsERC20</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">token</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">amountFormula</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">spender</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">recipient</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="c1">/// @param amountFormula `IFormula` ABI calldata.
+</span>    <span class="k">function</span> <span class="n">SpendsGas</span><span class="p">(</span><span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">amountFormula</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="c1">/// @param lowerBound Empty, or `IFormula` ABI calldata.
+</span>    <span class="c1">/// @param upperBound Empty, or `IFormula` ABI calldata.
+</span>    <span class="k">function</span> <span class="n">TimingBounds</span><span class="p">(</span><span class="kt">string</span> <span class="k">calldata</span> <span class="n">field</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">lowerBound</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">upperBound</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">NeedsStep</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">stepIdx</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">NeedsVariable</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">varIdx</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">RevertPolicy</span><span class="p">(</span><span class="kt">string</span> <span class="k">calldata</span> <span class="n">policy</span><span class="p">,</span> <span class="kt">bytes</span> <span class="k">calldata</span> <span class="n">expectedReason</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">interface</span> <span class="n">IFormula</span> <span class="p">{</span>
+    <span class="k">function</span> <span class="n">Constant</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">val</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+    <span class="k">function</span> <span class="n">Variable</span><span class="p">(</span><span class="kt">uint256</span> <span class="n">varIdx</span><span class="p">)</span> <span class="k">external</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+  
+    <h2 id="rationale">
+      
+      
+        <a href="#rationale" class="anchor-link"></a> Rationale
+      
+      
+    </h2>
+  
+    <h3 id="resolver-centric-standardization">
+      
+      
+        <a href="#resolver-centric-standardization" class="anchor-link"></a> Resolver-Centric Standardization
+      
+      
+    </h3>
+
+<p>A key consideration is to ensure that a broad range of intent designs can work within the same standard. To enable this, the specification is designed around resolving a protocol-specific payload into a common solver-facing representation. Resolution enables solvers to validate and assess orders without specific knowledge of the protocol-specific payload at hand.</p>
+
+<p>Within this model, implementers of the standard have design flexibility to customize behavior such as:</p>
+
+<ul>
+  <li>Price resolution, e.g. dutch auctions or oracle-based pricing</li>
+  <li>Fulfillment constraints</li>
+  <li>Settlement procedures</li>
+  <li>Ordering of the steps, e.g. a fill could happen before an origin chain action in some settlement systems</li>
+</ul>
+
+<p>The payload allows implementations to take arbitrary specifications for these behaviors while still enabling solvers to parse the resolved requirements of the order.</p>
+
+<p>A compliant intent protocol must implement and deploy a resolver, along with a payload format that encodes orders for that protocol. The resolver contract must validate and interpret order payloads, and produce instructions for solvers to follow.</p>
+
+<p>Resolution happens offchain via <code class="language-plaintext highlighter-rouge">eth_call</code>, even though the resolver is published onchain. Because resolution is not required to be included in an onchain transaction, the payload and translation process are not constrained by onchain gas costs. Resolvers can therefore support semantically rich orders and perform complex decoding, validation, and instruction generation without forcing that complexity into calldata or emitted events.</p>
+
+<p>Publishing the resolver onchain is useful because the resolver is the point of trust. Solver operators can whitelist resolver addresses, and once vetted, the instructions they produce are trusted. Vetting is done through the usual means, such as security audits, bounties, and lindiness. However, neither resolvers nor the resolved order representation are inherently EVM-specific: the EVM resolver interface is only one concrete encoding of the more general model defined by this ERC.</p>
+  
+    <h3 id="general-purpose-building-blocks">
+      
+      
+        <a href="#general-purpose-building-blocks" class="anchor-link"></a> General-Purpose Building Blocks
+      
+      
+    </h3>
+
+<p>A guiding principle of this standard is to use general-purpose building blocks instead of implementation-specific extensions. A solver made of general-purpose building blocks is a programmable solver: it can adapt to a wide variety of intent protocols without prior knowledge of the specific steps required in each case.</p>
+
+<p>This is enabled by defining a common language for solver instructions and delivering those instructions with each order through resolution.</p>
+  
+    <h3 id="execution-instructions">
+      
+      
+        <a href="#execution-instructions" class="anchor-link"></a> Execution Instructions
+      
+      
+    </h3>
+
+<p>An important component of the standard is creating a flexible and robust mechanism for solvers to ensure their executions are valid. For execution to be valid, it typically must satisfy the following constraints:</p>
+
+<ol>
+  <li>It must be executed on the correct chain(s)</li>
+  <li>It must be executed on the correct contract</li>
+  <li>It must include some (not necessarily all) information from the order payload</li>
+  <li>It may require some execution information from earlier steps, e.g. auctions based on inclusion timing</li>
+</ol>
+
+<p>The steps, variables, attributes, and payments in a resolved order are intended to ensure it’s simple for the solver to meet all of these requirements by calling <code class="language-plaintext highlighter-rouge">resolve</code>.</p>
+
+<p>This functionality also makes it feasible for a user, solver, or order distribution system to perform an end-to-end simulation of the order execution to evaluate all resulting state transitions without understanding the nuances of a particular execution system.</p>
+  
+    <h3 id="cross-compatibility">
+      
+      
+        <a href="#cross-compatibility" class="anchor-link"></a> Cross-compatibility
+      
+      
+    </h3>
+
+<p>This standard is intended to be cross-compatible with other ecosystems. It standardizes interfaces and data types on EVM chains, but uses <a href="/EIPS/eip-7930">ERC-7930</a> interoperable addresses so orders can refer to accounts and contracts outside the EVM address space. It also allows for the creation of sibling standards that define compatible interfaces, data types, and flows within other ecosystems. Intents created within these sibling standards should be able to be filled on an EVM chain and vice versa.</p>
+  
+    <h3 id="previous-draft">
+      
+      
+        <a href="#previous-draft" class="anchor-link"></a> Previous Draft
+      
+      
+    </h3>
+
+<p>An earlier draft of this ERC standardized a broader portion of the order lifecycle:</p>
+
+<ul>
+  <li>How orders are encoded (<code class="language-plaintext highlighter-rouge">OnchainCrossChainOrder</code> and <code class="language-plaintext highlighter-rouge">GaslessCrossChainOrder</code>)</li>
+  <li>How orders are published and subscribed to via an onchain feed (<code class="language-plaintext highlighter-rouge">IOriginSettler.open</code>)</li>
+  <li>How the solver escrows funds if an offchain order feed is used (<code class="language-plaintext highlighter-rouge">IOriginSettler.openFor</code>)</li>
+  <li>How the solver learns implementation-agnostic information about orders (<code class="language-plaintext highlighter-rouge">ResolvedCrossChainOrder</code>)</li>
+  <li>How the solver executes the fill (<code class="language-plaintext highlighter-rouge">IDestinationSettler.fill</code>)</li>
+</ul>
+
+<p>Although the earlier draft defined standard data types for orders, these types were parameterized by implementation-specific fields. Because of this field, orders were only superficially standardized. A solver that intended to fill orders under that draft still had to implement support for different protocols’ subtypes, which is not meaningfully different from a situation where each protocol implements an entirely custom interface.</p>
+
+<p>The earlier draft also defined <code class="language-plaintext highlighter-rouge">maxSpent</code> and <code class="language-plaintext highlighter-rouge">minReceived</code> in <code class="language-plaintext highlighter-rouge">ResolvedCrossChainOrder</code> so that solvers could compute whether an order was profitable. However, this only provided a lower bound on profit. If the bound was not tight, orders could incorrectly appear unprofitable and not get filled. In the worst case, protocols could not provide a <code class="language-plaintext highlighter-rouge">maxSpent</code> other than <code class="language-plaintext highlighter-rouge">UINT256_MAX</code>. This can happen when the order signed by the user binds the worst price they are willing to accept, or when a solver’s actual cost depends on a variable chosen during execution, such as priority fees in a Priority Gas Auction.</p>
+
+<p>The earlier draft was also centered on protocols that escrow user funds per order as a necessary step prior to fulfillment. This is not the case in protocols based on resource locks, also referred to as fill-first protocols: if the user funds are under a lock that is trusted by the solver, there is no need to open the order on the origin chain before it can be safely filled.</p>
+
+<p>Finally, the earlier draft imposed gas overhead on protocols by requiring large calldata structs and by emitting the entire resolved order in the <code class="language-plaintext highlighter-rouge">Open</code> event. These costs can impact prices for end users and make a standard-compliant interface less attractive than a protocol-specific interface.</p>
+
+<p>The present design preserves the interoperability goal while moving the standardization boundary to the solver-facing resolution interface. This preserves protocol flexibility for user authorization, order creation, settlement verification, and execution ordering, while still giving solvers a common representation for evaluating and fulfilling orders.</p>
+  
+    <h2 id="security-considerations">
+      
+      
+        <a href="#security-considerations" class="anchor-link"></a> Security Considerations
+      
+      
+    </h2>
+
+<p>This ERC standardizes how a protocol describes an order to solvers; it does not standardize or guarantee the security of the protocol that ultimately settles the order. A resolver can describe the steps, payments, and assumptions for an order, but the safety of following those instructions depends on the resolver implementation, settlement contracts, assets involved, and any offchain or cross-chain systems used by the protocol.</p>
+
+<p>Resolver implementations should document any implicit assumptions they rely on beyond those allowed by this ERC, so solvers and auditors can evaluate them alongside the explicit assumptions included in resolved orders.</p>
+
+<p>Solvers are exposed to risk from the time they commit capital, approvals, or transactions to an order until their expected payment is final and spendable. Security analysis should therefore cover the full execution and settlement window, including adversarial changes to protocol state, chain state, token behavior, oracle values, permissions, or message-delivery paths that could make previously valid instructions or assumptions unsafe.</p>
+
+<p>Audits of resolver and protocol implementations should focus on whether a solver that correctly follows resolver instructions can be led into an insecure position. In particular, they should verify that all requirements needed for solver safety are either enforced by the resolver or protocol or surfaced as assumptions, that execution steps cannot spend solver assets, require solver permissions, or create solver obligations except as disclosed by the resolved order, and that payment paths cannot be invalidated after the solver has incurred costs.</p>
+  
+    <h2 id="copyright">
+      
+      
+        <a href="#copyright" class="anchor-link"></a> Copyright
+      
+      
+    </h2>
+
+<p>Copyright and related rights waived via <a href="/LICENSE">CC0</a>.</p>
+
+  <h2>Citation</h2>
+  <p>Please cite this document as:</p>
+  
+  <p>Francisco Giordano&nbsp;(<a href="https://github.com/frangio">@frangio</a>), Mark Toda&nbsp;(<a href="https://github.com/marktoda">@marktoda</a>), Matt Rice&nbsp;(<a href="https://github.com/mrice32">@mrice32</a>), Nick Pai&nbsp;(<a href="https://github.com/nicholaspai">@nicholaspai</a>), Alexander Lindgren&nbsp;(<a href="https://github.com/reednaa">@reednaa</a>), Mark Gretzke&nbsp;(<a href="https://github.com/mgretzke">@mgretzke</a>), Chris Cashwell&nbsp;(<a href="https://github.com/ccashwell">@ccashwell</a>), "ERC-7683: Cross Chain Intents [DRAFT]," <em>Ethereum Improvement Proposals</em>, no. 7683, April 2024. Available: https://eips.ethereum.org/EIPS/eip-7683.</p>
+</div>
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "TechArticle",
+    "headline": "ERC-7683: Cross Chain Intents [DRAFT]",
+    "name": "ERC-7683: Cross Chain Intents [DRAFT]",
+    "author": "Francisco Giordano (@frangio), Mark Toda (@marktoda), Matt Rice (@mrice32), Nick Pai (@nicholaspai), Alexander Lindgren (@reednaa), Mark Gretzke (@mgretzke), Chris Cashwell (@ccashwell)",
+    "dateCreated": "2024-04-11",
+    "datePublished": "2024-04-11",
+    
+    "discussionUrl": "https://ethereum-magicians.org/t/erc-cross-chain-intents-standard/19619",
+    
+    "inLanguage": "en-US",
+    "license": "#copyright",
+    "copyrightYear": "2024"
+  }
+</script>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Ethereum Improvement Proposals</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Ethereum Improvement Proposals</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/ethereum/EIPs"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">ethereum/EIPs</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>Ethereum Improvement Proposals (EIPs) describe standards for the Ethereum platform, such as core protocol specifications.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

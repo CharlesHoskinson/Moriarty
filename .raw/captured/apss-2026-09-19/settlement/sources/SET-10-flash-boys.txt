@@ -1,0 +1,1645 @@
+                                                            Flash Boys 2.0:
+                                               Frontrunning, Transaction Reordering, and
+                                            Consensus Instability in Decentralized Exchanges
+                                                       Philip Daian          Steven Goldfeder             Tyler Kell                      Yunqi Li               Xueyuan Zhao
+                                                       Cornell Tech         Cornell Tech         Cornell Tech           UIUC               CMU
+                                                    phil@cs.cornell.edu goldfeder@cornell.edu sk3259@cornell.edu yunqil3@illinois.edu xyzhao@cmu.edu
+
+                                                                   Iddo Bentov                     Lorenz Breidenbach                                  Ari Juels
+
+
+
+
+arXiv:1904.05234v1 [cs.CR] 10 Apr 2019
+                                                                    Cornell Tech                       ETH Zürich                                  Cornell Tech
+                                                                 ib327@cornell.edu            lorenz.breidenbach@inf.ethz.ch                      juels@cornell.edu
+
+
+
+
+                                            Abstract—Blockchains, and specifically smart contracts, have           decentralized exchange (or “DEXes”).1 In a DEX, a smart
+                                         promised to create fair and transparent trading ecosystems.               contract (a program executing on a blockchain) or other form
+                                            Unfortunately, we show that this promise has not been met. We          of peer-to-peer network executes exchange functionality.
+                                         document and quantify the widespread and rising deployment of
+                                         arbitrage bots in blockchain systems, specifically in decentralized          At first glance, decentralized exchanges seem ideally de-
+                                         exchanges (or “DEXes”). Like high-frequency traders on Wall               signed. They appear to provide effective price discovery and
+                                         Street, these bots exploit inefficiencies in DEXes, paying high           fair trading, while doing away with the drawbacks of central-
+                                         transaction fees and optimizing network latency to frontrun, i.e.,        ized exchanges. Trades are atomically executed by a smart
+                                         anticipate and exploit, ordinary users’ DEX trades.                       contract and visible on the Ethereum blockchain, providing
+                                            We study the breadth of DEX arbitrage bots in a subset of
+                                                                                                                   the appearance of transparency. Funds cannot be stolen by the
+                                         transactions that yield quantifiable revenue to these bots. We also
+                                         study bots’ profit-making strategies, with a focus on blockchain-         exchange operator, because their custody and exchange logic
+                                         specific elements. We observe bots engage in what we call priority        is processed and guaranteed by the smart contract.
+                                         gas auctions (PGAs), competitively bidding up transaction fees in            Despite their clear benefits, however, many DEXes come
+                                         order to obtain priority ordering, i.e., early block position and
+                                                                                                                   with a serious and fundamental weakness: on-chain, smart-
+                                         execution, for their transactions. PGAs present an interesting
+                                         and complex new continuous-time, partial-information, game-               contract-mediated trades are slow.2 Traders thus may attempt
+                                         theoretic model that we formalize and study. We release an                to take orders that have already been taken or canceled but
+                                         interactive web portal, frontrun.me, to provide the community             appear active due to their views of messages sent on the net-
+                                         with real-time data on PGAs.                                              work. Worse still, adversaries can frontrun orders, observing
+                                            We additionally show that high fees paid for priority transac-         them and placing their own orders with higher fees to ensure
+                                         tion ordering poses a systemic risk to consensus-layer security.
+                                         We explain that such fees are just one form of a general phe-
+                                                                                                                   they are mined first.
+                                         nomenon in DEXes and beyond—what we call miner extractable                   Past work has acknowledged “transaction ordering depen-
+                                         value (MEV)—that poses concrete, measurable, consensus-layer              dence” as an anti-pattern and vector for potential frontrun-
+                                         security risks. We show empirically that MEV poses a realistic            ning [30, 34]. Unfortunately, these analyses have previously
+                                         threat to Ethereum today.
+                                                                                                                   proved overly broad: virtually every smart contract can be said
+                                            Our work highlights the large, complex risks created by
+                                         transaction-ordering dependencies in smart contracts and the              to have some potential dependence on transaction order, the
+                                         ways in which traditional forms of financial-market exploitation          majority of which is benign. As a result, effective practical
+                                         are adapting to and penetrating blockchain economies.                     mitigations for these issues have failed to materialize, and
+                                                                                                                   few deployed smart contracts feature ordering protections.
+                                                                                                                   Other work has focused on systematizing knowledge around
+                                                                I. I NTRODUCTION                                   smart contract frontrunning [18], including citing early public
+                                                                                                                   versions of this work, but has not measured the size of this
+                                            Cryptocurrency exchanges today handle more than $10
+                                                                                                                   economy or formalized its connection to protocol attacks.
+                                         billion in trade volume per day. The vast majority of this
+                                         volume occurs in centralized exchanges, which hold custody
+                                                                                                                     1 “Decentralized” exchange is something of a misnomer, as many such
+                                         of customer assets and settle trades. At best loosely regulated,
+                                         centralized exchanges have experienced scandals ranging from              systems have centralized components; most systems we call “decentralized”
+                                                                                                                   exchanges could more accurately be classified as non-custodial: users trade
+                                         high-profile thefts [38] to malfeasance such as price ma-                 without surrendering control of their funds to a third party in the process.
+                                         nipulation [22]. One popular alternative is what is called a                2 The average Ethereum block time is roughly 15s at the date of writing [19].
+
+
+
+
+                                                                                                               1
+   In this work, we explain that DEX design flaws threaten             require modification once second-layer smart contract systems
+underlying blockchain security. We study a community of ar-            that depend on Bitcoin miners go live [32].
+bitrage bots that has arisen to exploit DEX flaws. We show that           Second, our analysis of PGA games underscores that pro-
+these bots exhibit many similar market-exploiting behaviors—           tocol details (such as miner selection criteria, P2P network
+frontrunning, aggressive latency optimization, etc.—common             composition, and more) can directly impact application-layer
+on Wall Street, as revealed in the popular Michael Lewis               security and the fairness properties that smart contracts offer
+exposé Flash Boys [33]. We explore the DEX design flaws               users. Smart contract security is often studied purely at the
+that spawned arbitrage bots, measure and model these bots’             application layer, abstracting away low-level details like miner
+behavior, and illuminate systemic smart-contract ecosystem             selection and P2P relayers’ behavior in order to make analysis
+risks implied by our observations. Our main focuses are:               tractable (e.g. [9, 25, 50, 51]). Our work shows that serious
+Pure revenue opportunities: A specific sub-category of                 blind spots result. Low-level protocol behaviors pose funda-
+DEX arbitrage representative of broader activity, these are            mental challenges to developing robust smart contracts that
+blockchain transactions that issue multiple trades atomically          protect users against exploitation by profit-maximizing miners
+through a smart contract and profit unconditionally in every           and P2P relayers that may game contracts to subsidize attacks.
+traded asset. We choose these opportunities as a focus because            To illuminate the behaviors explored in this paper, we
+their simplicity makes them especially amenable to study and           release a web dashboard, frontrun.me, that presents PGA data
+measurement. We experimentally determine a lower bound                 in real time. We open-source all associated code and hundreds
+on this economy of over USD 6M to date and describe its                of gigabytes of raw data on the Ethereum PGA economy (with
+participating exchanges and bots.                                      processed data).3
+Priority gas auctions (PGAs): Because pure revenue op-                    We hope our efforts in general offer insight into the broad,
+portunities offer unconditional revenue, arbitrage bots often          application- and consensus-layer risks created by ordering de-
+compete against each other by bidding up transaction fees              pendencies in smart contracts and into the effects of traditional
+(gas) in what we call PGAs. We formally model bot PGA                  financial-market exploitation on blockchain consensus.
+behavior and observe a cooperative equilibrium. We show that
+empirical measurements of the evolution of bot PGA strategies
+                                                                                                  II. BACKGROUND
+validate key features of our model.
+Miner-extractable value (MEV): We introduce the notion of                 We now provide background required to understand PGAs.
+MEV, value that is extractable by miners directly from smart
+contracts as cryptocurrency profits. One particular source of
+                                                                       A. Smart Contracts
+MEV is ordering optimization (OO) fees, which result from a
+miner’s control of the ordering of transactions in a particular           Smart contracts are small computer programs executed
+epoch. PGAs and pure revenue opportunities provide one                 without user intervention, often by a system that allows all
+source of OO fees. We show that MEV creates systemic                   of its participants to verify these programs’ correct execution.
+consensus-layer vulnerabilities.                                       Smart contracts often use a public blockchain network as the
+Fee-based forking attacks: We show that OO fees can incen-             underlying infrastructure for their execution [45, 49].
+tivize miners to mount forking attacks. While fee-based attacks           Ethereum [49] is currently the largest smart contract system
+were previously studied theoretically in Bitcoin [14], we              that is Turing-complete, i.e., allows encoding of arbitrary
+empirically demonstrate a current, realistic threat in Ethereum.       smart-contract functionality. Ethereum smart contracts have
+                                                                       been used or proposed for a range of complex transaction
+Time-bandit attacks: We show that high-MEV regimes
+                                                                       types, including shareholder voting [36], stakeholder-owned
+in general lead to a new attack in which miners rewrite
+                                                                       investment funds and vehicles [11, 16], fair exchange protocols
+blockchain history to steal funds allocated by smart contracts
+                                                                       for goods [51], complex key management solutions [50], video
+in the past. We call these time-bandit attacks. Our experiments
+                                                                       games [26], virtual casinos [39], and more.
+show that MEV from pure revenue profits and PGA bot fees
+                                                                          The most popular smart contracts on Ethereum by daily
+suffice to enable time-bandit attacks on today’s Ethereum.
+                                                                       active users primarily concern virtual sub-currencies called
+  Our results are surprising for two key reasons.                      tokens. These tokens can represent any scarce item, e.g.
+                                                                       collectible resources in a video game [26] or shares in a
+   First, they identify a concrete difference between the              venture [21]. The latter fueled a 12 billion USD token-based
+consensus-layer security model required for blockchain pro-            capital-investment craze called the “ICO boom”. DEXes are a
+tocols securing simple payments and those securing smart               popular type of smart contract that allow users to trade such
+contracts. In a payment system such as Bitcoin, all independent        tokens in a non-custodial manner [48].
+transactions in a block can be seen as executing atomically,
+making ordering generally unprofitable to manipulate. Our                 3 Our Github repository at https://github.com/pdaian/flashboys2 contains all
+work shows that analyses of Bitcoin miner economics fail to            infrastructure, data processing, and visualization code and data, plus code for
+extend to smart contract systems like Ethereum, and may even           our original arbitrage trade bot.
+
+
+
+
+                                                                   2
+B. Gas and Fees in Ethereum                                              limit sell orders. A centralized counterparty, the exchange
+   An Ethereum transaction either sends money to a non-                  operator, matches buyers and sellers, completing transactions
+executing account address or sends input data (and possibly              automatically when there is a sell order on the books with a
+money) to a smart contract address, representing a program               lower price than a buy order on the books. Orders are matched
+stored in the network’s state. Transactions are gossiped to all of       and / or placed on the books continuously by the exchange
+the nodes in the underlying peer-to-peer network to signal their         operator, which processes orders as quickly as possible in the
+availability for inclusion in a future mined block. Transactions         order they are received. As soon as orders match, they are
+can be in one of three states: unconfirmed and not yet mined,            processed by the operator and trigger balance changes.
+confirmed and considered to have been executed, or rejected              D. Decentralized Exchanges (DEXes)
+as invalid by the network of Ethereum peers.
+   Ethereum transactions consume gas, a pseudo-currency                     DEXes manage continuous-limit order books using smart
+reflecting the number of computational steps performed by                contracts. Traders / users hold their assets on chain and the
+a miner (and other network nodes) executing a transaction.               smart contract plays the traditional role of exchange operator.
+Ethereum contracts may contain complex logic, loops, etc., so               Order books are typically maintained off-chain. In some
+their gas consumption can only be determined via execution.              DEX designs, a counterparty selects a fresh order in the
+Ethereum meters gas consumption via a fixed mapping from                 order book and presents it to the smart contract with a
+contract op-codes to units of gas [49].                                  signed counterorder. The smart contract executes the order and
+   Every transaction submitted to the network for mining                 counterorder, clearing the order from the order book. Traders
+specifies a gas price, the per-gas-unit rate the sender will pay         themselves thus perform order matching. This approach is used
+in Ether (ETH). The gas price times the units of gas consumed            by Etherdelta and some applications of the 0x protocol. In
+determines the fee in ETH paid by the transaction sender to              an alternative approach, used by, e.g., IDex and Paradex, the
+the node that ultimately mines the transaction. (Bitcoin fees,           exchange itself performs matching off chain and submits order
+by contrast, depend simply on transaction byte lengths.)                 / counterorder pairs to the smart contract for processing.
+   Transactions must also specify a gas limit, the maximum                  A more radical DEX design, called an automated market
+number of steps a network node should attempt before reject-             maker [3], bypasses order books altogether. The DEX consists
+ing a transaction. The gas limit prevents infinite loops and             of a smart contract that itself holds a reserve of tokens and/or
+other DoS vectors, and allows immediate verification that a              Ether. Consider two assets A and B. The contract allows a
+sender has adequate available funds to pay the transaction               user to trade between A and B at any time using its reserves
+fee—up to gasPrice · gasLimit ETH.                                       as a counterparty, at a set rate. If a user buys A using B, the
+   Clients can also perform what is called a “gas replacement”           price of A denominated in B offered by the smart contract for
+transaction, resubmitting a transaction with a higher transac-           the next trade is increased. If a user instead sells A for B, the
+tion fee (gasPrice · gasLimit) in the hope that miners will more         price decreases. In this way, single parties can trade without
+quickly incorporate the transaction into a block. The mecha-             counterparty discovery or matching. Consequently, constant
+nism for doing this is nonce-based. Each transaction issued on           arbitrage between these and other exchanges is required to
+the network carries a nonce, and valid canonical blockchains             keep the rate offered in lockstep with the market rate for a
+must only include one transaction per (account, nonce) pair on           commodity. Uniswap [46] and Bancor [1] are examples of
+the network. When a user reissues an unconfirmed transaction             such exchanges.
+with the same (account, nonce) pair but a higher gas price, a
+                                                                         E. Frontrunning and Profits through Arbitrage
+miner will prefer the reissued transaction—with its ostensibly
+higher transaction fee—to the replaced one.                                 Traditional exchanges experience a classic form of preda-
+   Note that a higher gas price only corresponds to a higher             tory market behavior called frontrunning [4]. In regulated
+fee if the reissued transaction uses the same amount of gas as           markets, frontrunning is often illegal, and has resulted in
+the replaced one, which may not hold true. Mining software               prosecutions [35] and tarnished the reputations of financial
+assumes this to be the case, in part because computing gas               institutions caught practicing it.
+consumption incurs the computational burden of executing a                  Frontrunning generally exploits information asymmetries
+contract. Arbitrageurs leverage this heuristic to pay reduced            created by power structures within a financial structure, e.g.,
+transaction fees, as we detail in Section V-A.                           brokers having privileged access to user information. Because
+                                                                         there is no single party playing the role of a broker in
+C. Continuous-Limit Exchanges                                            decentralized systems, information asymmetries can arise for
+   Classic exchanges for trading stocks, commodities, and even           actors in advantageous positions in underlying infrastructure.
+cryptocurrencies generally share an accepted and common                     Frontrunning can also occur based on changes in public
+exchange design known as a continuous-limit orderbook. Such              market information (for example, reacting to breaking news
+an orderbook consists of a list of all open offers from buyers           that impacts stock prices). In this form, it is not only legal,
+and sellers in the system. Prospective buyers place a limit              but serves as the basis of a multi-billion-dollar high-frequency
+buy order, which specifies a maximum price at which they                 trading economy. One potential source of profit is price
+are willing to buy an asset; sellers correspondingly place               discrepancies across exchanges trading the same or correlated
+
+
+
+                                                                     3
+assets. Another is information asymmetries in the speed of              on some decentralized exchange, a smart contract executing
+processing or interpreting news.                                        both guarantees a revenue to the arbitrageur of 1 ETH.
+   Automated market bots from high frequency trading firms                 In traditional cross-exchange arbitrage, trades are viewed
+compete to profit from both at extremely high speed. They               probabilistically, as there is a high likelihood that one of two
+regularly build physical networks costing billions of dollars           trades will succeed while the other fails. This makes smart-
+and approaching speed-of-light transmission across consider-            contract-based arbitrage in many ways simpler to observe,
+able distances. Many economists view this behavior as a zero-           analyze, and study than traditional cross-exchange arbitrage,
+sum game that profits exchanges in the long term, and argue             as bot intent is often explicit in order requests.
+formally that the existence of such rents is a fundamental                 In our measurements, we focus on a small subset of these
+limitation of market design that is a natural consequence of            multi-trade arbitrage opportunities, which potentially involve
+arbitrage opportunities across exchanges [8]. This, however,            multiple decentralized exchanges. We restrict our focus to pure
+remains a controversial viewpoint.                                      revenue opportunities. In these opportunities, a single smart-
+   We explore both cases where bots frontrun user orders and            contract based transaction executes multiple trades across one
+cancellations directly, e.g., in the event of a typo or market          or more exchanges, and the transaction generates revenue for
+structure weakness, and cases where bots exploit market                 the trader in every traded asset. A range of more complex and
+inefficiencies to extract rent. We argue that both degrade the          nondeterministic bot behaviors exist, described in Appendix A,
+economic security of the underlying consensus protocol.                 but they are outside the scope of this work.
+
+      III. F ROM D ECENTRALIZATION TO A RBITRAGE                        B. Pure Revenue by Example
+
+   In this section, we take a deep dive into a particular exam-
+ple of frontrunning, arbitrage, and high-frequency automated                                         Free Coin (FREE)
+trading on a decentralized exchange. This concrete example                              0x2f141ce366a2462f02cea3d12cf93e4dca49e4fd
+will provide context for the remainder of our discussions on
+modeling this market and of its impact on the security of the                       1.55496e+08                               1.55e+08
+underlying smart contract systems.                                            Trade #1 (Tokenstore)                       Trade #2 (Tokenstore)
+                                                                              1.09409e+09 FREE/ETH                        1.66667e+08 FREE/ETH
+   One source of potential profit, price differences, seems
+inherent in an environment such as smart-contract-based ex-
+change. Today, blockchains operate with transactions pro-                                         0.142123
+                                                                                                             ETH
+                                                                                                                   0.93
+cessed in discrete batches (blocks). Furthermore, transactions
+are inherently dependent and therefore serial: order failures           Fig. 1. Example pure revenue opportunity observed in Ethereum transaction
+depend on past order attempts, and in some exchanges prices             0xc889bd13594f75e4dd824f04f0c2ad03896cb7ec6518df02455e9560367bb9c4,
+                                                                        exploiting an orderbook cross on the TokenStore DEX. Edges of the same
+depend directly on order history. With multiple exchanges op-           color are generated by a single trade. As a pure revenue opportunity, it
+erating on the same system, it is possible that price differences       generates net profit in both FREE and ETH.
+will occur across exchanges while transactions in a block, and
+therefore trades on exchanges, are executed sequentially.                  Figure 1 shows one example of a pure revenue transaction,
+                                                                        executed on November 15, 2018. In this transaction, two trades
+A. Smart-Contract-Enabled Trade Atomicity                               are executed on a decentralized exchange, TokenStore, which
+                                                                        features a design conceptually similar to that of Etherdelta.
+   Smart contract arbitrage opportunities have an additional,
+                                                                        The first executed trade buys Free Coin, an obscure token.4 By
+distinctive characteristic absent in traditional cross-exchange
+                                                                        inspection, this difference in rates is a clear result of someone
+arbitrage. Because of the atomic batch-based processing of
+                                                                        using the exchange API and committing an off-by-one error,
+transactions, and because transactions can themselves be
+                                                                        offering to buy tokens at 10x the market rate. This created
+initiated by smart contracts, is possible to build bots that
+                                                                        a cross in the order book (sell order at more than a buy
+trade across exchanges through proxy contracts. These proxy
+                                                                        order would pay), which when both executed by the same
+contracts can execute batches of orders sequentially within a
+                                                                        arbitrage counterparty, generates the flow of funds in Figure 1.
+single transaction, reverting previous trades by throwing an
+                                                                        While this opportunity probably arose from a typo, a variety of
+exception if any trade in the batch fails.
+                                                                        revenue sources exist. For example, inconsistent price feeds,
+   This means arbitrageurs have the opportunity to compose
+                                                                        or variance across exchange designs that respond to market
+single transactions that execute multiple trades across multiple
+                                                                        movements at different speeds can also create pure revenue.
+exchanges atomically, with an all-or-nothing failure model.
+                                                                           Note that both orders are executed inside a single Ethereum
+One example of such a transaction is buying an asset for price
+                                                                        contract, and are executed in an atomic batch through a smart
+x and selling it immediately for price x0 > x; if performed
+                                                                        contract proxy. In general, we model each opportunity as a
+atomically, these transactions together generate guaranteed
+                                                                        graph as shown in Figure 1. Edges represent currency flows,
+revenue in the base asset. For example, a smart contract proxy
+could execute a trade buying a type-X token for 2 ETH, and                4 As of writing on Mar 13 2019, Free Coin is listed at currency rank 303
+another selling it for 3 ETH. If both orders are on the books           by market cap https://coinmarketcap.com/currencies/free-coin/.
+
+
+
+
+                                                                    4
+                         ·104                                         Example 2-Bot PGA Visualized
+                    1
+                                           0x6BEc..6542/1453 Bids
+                   0.8
+
+
+
+
+  Gas Bid (gwei)
+                                           0xb8D7..7a3f/1512 Bids
+                   0.6
+                                                Auction Winner
+                   0.4                           Auction Loser
+
+                   0.2
+
+                    0
+                                   0                 2                4            6          8                          10              12               14
+                                                                               Time Since Start (s)
+Seconds
+                    Quantity @ Price Bid     Ethereum Transaction Origin (Public Key Hash)     Nonce                           Transaction Hash
+Elapsed
+  0.000                192085 @ 25.10       0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542         1453    0xd32653ca9694a6d1299335f3c04f74cc159bee48c1d32d3a421db08c638ffc78
+  1.593                231520 @ 25.00       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f         1512    0xb901e6dc2c229fd9105448fcc23eaebdedb476c21b6c6e7ddf8d2df4e838d2c7
+  1.624                231520 @ 28.75       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f         1512    0x9f592504eb71a7452b7a395a7f5ecd34eaa5d090da1162e74221562af54c8f67
+  1.679                227534 @ 28.81       0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542         1453    0x83e2a6774654a9540c3fad8837afcc88b4c932ab2374819254f887305c3a4b22
+    ...                      ...            ...                                                 ...    ...
+  4.949               227534 @ 134.02       0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542         1453    0xc889bd13594f75e4dd824f04f0c2ad03896cb7ec6518df02455e9560367bb9c4
+  5.599               231520 @ 133.76       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f         1512    0xaa86d782328c0c9c422e3f2a3170ff41ae21a27ad395c48db76b0080898f85db
+    ...                      ...            ...                                                 ...    ...
+ 13.383              227534 @ 5834.77       0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542         1453    0xb0dc97140394c5f65332ebc459d5e66f89099dbb4d335c866b32280270102858
+ 13.416              227534 @ 7716.48       0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542         1453    0x1825be6951577e72a1dafc8de564ce1ccfe5d284173e11e77b2e7f6b1b44571c
+ 13.462              231520 @ 7701.08       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f         1512    0xa9823358c99149f0e6343c604c35988468d01d02868437d8251b3cee282dc92b
+m13.759              231520 @ 8856.24       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f         1512    0x366c30a534b5f3d8a6d251f97d401997624d1fe8d3af07ede4d19105dc970942
+Fig. 2. One example PGA that was observed over the Ethereum peer-to-peer network, resulting from the profit opportunity in Figure 1. The top graph shows
+the gas bids of two observed bots over time, while the bottom table details the first and last two bids placed by each bot and the two mined bids (center).
+
+
+
+and nodes are either exchanges nodes (which receive one                                      5.13 USD at the time of the transaction. The associated profit
+currency and output another at the stated exchange rate), or                                 was therefore ≈ .79 − .01518 = .77 ETH, or 267 USD.
+asset nodes (which are either sources or sinks for same-color
+trade subgraphs, depending on whether they are bought or                                     C. PGAs, Ordering Fees, and... HFT?
+sold). We label exchange nodes with the exchange name and
+trade rate, and asset nodes with the asset symbol.                                              Ethereum transactions are routed in a peer-to-peer gossip
+   The net revenue in each traded asset is the sum of in-                                    multicast protocol by client node software. This means that
+flows minus outflows in the corresponding asset node. In                                     all transaction information is available to all participants in
+the trade in Figure 1, the revenue for ETH was therefore                                     this network, but earlier to participants with advantageous
+0.93 ETH − 0.14123 ETH ≈ .79 ETH, or approximately                                           positions in the gossip topology. Additionally, nodes can
+267 USD in equivalent value (at November 15, 2018 prices                                     simulate the outcome of every transaction given the current
+of 338.15 USD per ETH). Approximately 496,000 residual                                       or expected system state. Once an arbitrage transaction is
+FREE was also left in the arbitrageur’s account, although less                               submitted, therefore, the sequence of trades it involves is
+significant and liquid than the ETH revenue.                                                 publicly known by the network’s peer-to-peer nodes.
+   To calculate the transaction profit, we subtract the cost from                               A natural question then arises: how is priority determined
+the revenue, in this case the gas paid by the transaction that                               between arbitrageurs? Because each pure profit opportunity
+was mined for the arbitrageur. Transaction 0xc889...b9c4 paid                                carries some computable profit p and is broadcast globally,
+a gas price of 134.02 Gwei (the canonical unit for representing                              a competitive game naturally ensues among arbitrage bots
+gas rates; 1 Gwei = 10−9 ETH). The transaction used 113, 265                                 to be the first to execute an atomic transaction that exploits
+gas, approximately equivalent to 113, 265 computational steps.                               the opportunity. The mechanics of the system dictate that
+   It is worth noting that transactions that cancel their bids can                           all subsequent transactions in the game will fail. How this
+use less gas, as they pay only for attempted execution (execu-                               particular game plays out depends on the peer-to-peer relay
+tion requires costly computational steps). This will be relevant                             network mechanics of the underlying blockchain, as well
+to later models in Section V-A. Furthermore, complex con-                                    as mining pool strategies and order book designs in the
+ditional transactions, price queries, or other computationally                               underlying exchanges. We present a greatly simplified model
+intensive order preferences will obviously cost more, making                                 of this game formally in Section V-A.
+optimizing for gas consumption important in the development                                     In Ethereum, the PGA game we observe consists of transac-
+of competitive bots. The total cost of this transaction was                                  tions issued with the same (account, nonce) pair, expressing a
+therefore 113265 · 134.02 Gwei = 0.01518 ETH, or around                                      bid to a miner, where the miner is paid gas fees as described
+
+
+
+                                                                                        5
+in Section II-B. We call this interaction of issuing repeated
+                                                                                      Monitoring infra Databases     Python parsing &
+bids a priority gas auction, or PGA.                                                                                 processing scripts
+                                                                                           Ohio
+   To place a bid on an arbitrage opportunity, an arbitrageur
+simply issues a smart contract transaction with associated gas                               Oregon
+                                                                                                          Google
+price g that atomically bundles multiple trades (performing                                              BigQuery
+the arbitrage). If they later wish to increase this bid, either for                        S. Carolina
+strategic reasons or because they notice a higher bid that would                                          Postgres
+eliminate their profit issued on the peer to peer relay network,           Ethereum       Frankfurt      SQL DB
+they simply reissue the transaction with the same nonce and                 network
+                                                                                              Seoul
+a higher gas price g 0 . If two arbitrageurs are bidding against                                       CSVs released         Web          Figures
+each other, what emerges is essentially an auction, as shown                                 Sao Paulo for reproducibility interface   and graphs
+
+in Figure 2. It is in a miner’s interest to order first whichever
+                                                                               Fig. 3. Deployed PGA measurement infrastructure architecture.
+transaction offers the highest price (if the miner does not plan
+on itself arbitraging the market). This approach will encourage
+arbitrageurs to bid each other up for transaction priority.
+                                                                             No tools existed for analysis of unconfirmed and rejected
+   Figure 2 shows the action that occurs in such an auction
+                                                                          transactions, so we wrote our own. We forked the Go-
+from the point of view of the network. Each row in the
+                                                                          Ethereum client to record unconfirmed transaction in the mem-
+associated table is a transaction observed by our Ethereum
+                                                                          pool. We deployed six geodistributed nodes across multiple
+monitor on the peer to peer network, using the experimental
+                                                                          data centers, with timestamps synchronized to the nanosecond
+harness described in Section IV. In this example, we see two
+                                                                          level by NTP. We collected an observation every time one of
+accounts, 0x6BEc...6542 with nonce 1453 and 0xb8D7...7a3f
+                                                                          the ≈ 256 nodes peered with one of our deployed modified
+with nonce 1512, bidding against each other for priority. These
+                                                                          nodes relayed a transaction to us. We collected nine months of
+accounts issue transactions with ever increasing gas prices:
+                                                                          data, amounting to over 300 gigabytes, including 708,385,840
+bot 0x6BEc...6542 issues 42 transactions in 13.4 seconds, and
+                                                                          unique observations of PGA arbitrage bots. Node locations
+0xb8D7...7a3f issues 43 transactions in 12.1 seconds. In 4.94
+                                                                          are shown in Figure 3, although not all nodes were online
+seconds, the auction is over. The transaction that eventually
+                                                                          throughout the experiment. (We ultimately sacrificed timing
+ends up mined with priority is shown with a green star, and is
+                                                                          resolution to reduce prohibitive ongoing costs.)
+transaction 0xc889...b9c4 issued by bot 0x6BEc...6542. This
+bot is considered the winner, and pays the full gas price to                 Because it is technically infeasible to store observations of
+reap the revenue as described in the previous section. The                every Ethereum transaction, we focus on a list of suspected
+transaction was mined in block 6709727 by the mining pool                 arbitrage bot transactions. This list is seeded with accounts
+“MiningPoolHub”. The transaction shown in the red square,                 we observe performing pure revenue transactions on the
+with hash 0xaa86...85db by bot 0xb8D7...7a3f, is also mined               blockchain, and is updated dynamically any time a high-value
+and included in the final block, as each (account, nonce) pair            gas replacement transaction is seen at an order of magnitude
+can include one transaction in the next block to be mined as              over current gas market price. We also built a web interface
+per the protocol. Miners are incentivized to include even failed          to manage the uptime of our nodes and associated bot lists.
+transactions, as these transactions pay for attempted execution.             We supplemented this mempool data we collected on PGAs
+Note that while the winning transaction used 113,265 gas in               with on-chain data sourced from Google’s BigQuery Ethereum
+execution, the losing transaction paid for 33,547 gas units, a far        service (as well as other on-chain metadata, like block times-
+smaller sum. In game theoretic terms, each auction represents             tamps), allowing us to parse logs for successful transactions
+a variant of all pay auction, where instead of paying their full          and determine their profit. We also used daily price data from
+bid, the loser is forced to pay a percentage to the miner.                coinmetrics.io for USD conversions.
+                                                                             We then developed a suite of Python scripts to combine
+  IV. A RBITRAGE P REVALENCE M EASUREMENT S TUDY                          and analyze this data. These scripts use a heuristic to place
+                                                                          all observations on a timeline, identifying a PGA whenever a
+   We now present empirical measurements of the prevalence                high-value gas replacement transaction occurs. All transactions
+of arbitrage. We discuss our methodology (and its limitations).           in a time interval around this observation are then considered
+                                                                          part of the “auction,” and broken down per bot. The scripts also
+A. Experimental Setup                                                     aggregate meta-statistics on PGAs, calculating strategy and
+   We first describe the experimental harness used to observe             latency trends in observed bots. This data is used to generate
+PGA transactions, displayed in Figure 3. On-chain data is                 both our web interface and the figures in this paper. We
+not sufficient to analyze PGAs, as all but the final “winner”             release all source and processed/derived data in CSV format
+transaction are discarded by the network. Furthermore, be-                for further analysis by the community on our Github.
+cause transactions are replaced so quickly and nodes don’t                   1) Instrumentation Limitations: The above instrumentation
+propagate replaced transactions, many transactions are never              has limitations that may affect our data quality. We describe
+even propagated to all Ethereum nodes.                                    them at a high level here, and mention any impact these
+
+
+
+                                                                      6
+limitations may have on our derived results throughout.                                                                   Pure Revenue Per Exchange Since 04/18
+
+
+
+
+                                                                           Cumulative Pure Revenue Captured (ETH)
+   It is possible that a transaction will be replaced before
+reaching our nodes, though this seems unlikely, since each of
+our observed transaction tends to have hundreds of associated                                                       103
+observations. More critically, our time-slicing method for
+identifying PGAs may lump together unrelated bot activity                                                           102
+into a single “auction.” Manual inspection suggests that be-
+cause auctions are relatively infrequent (every few hours), the                                                     101                           Market Total
+majority consist of correlated bot activity. Time-slicing could                                                                                    Etherdelta
+also harvest unrelated transactions from other arbitrage bots                                                       100                                Bancor
+that are not PGA behavior; we prune these in our aggregate                                                                                               0x v1
+statistics by only including bots that have placed at least 4                                                   10−1                               Tokenstore
+“bids” in an observed PGA, and as a result may lack data                                                                                                Kyber
+on bots that place < 4 bids. We also may miss bots whose                                                        10−2                                     0x v2
+addresses are not in our PGA lists, leading to missing bidders
+in certain auctions.                                                                                                      04-18   07-18    10-18  01-19
+   Lastly, our instrumentation calculates pure revenue oppor-                                                                        Date (MM-YY)
+tunities by parsing transaction logs on supported exchanges               Fig. 5. Top exchanges by cumulative pure revenue offered bots since 04/18.
+for transactions that contain more than two trades executed
+by a smart contract. We support only a limited subset of pop-
+ular DEXes, omitting revenue opportunities on unsupported                     in the rest of the work as they display a relatively consistent
+exchanges. Because we aim to establish a lower bound (i.e. a                  distribution, as shown in the figure. USD revenues are more
+potentially too conservative result), we feel this is acceptable.             volatile, as is visible in the market revenue graph discussed in
+Our supported exchanges include the top five DEXes by                         Appendix B-A.
+sustained volume at the time of infrastructure development.                      This distribution is consistent with common understanding
+   This subset still proves sufficient to provide substantial                 of arbitrage as sourced from market structure design, as ETH
+insight on the PGA market not afforded to regular nodes in                    is the most liquid traded token on this market. As seen in
+a blockchain context, highlighting the limits of the “trans-                  this graph, after the initial market development in late 2017, a
+parency” afforded users by these systems.                                     relatively active period of arbitrage occurred during which bots
+B. Observations                                                               often performed over 1,000 daily trades for a daily revenue of
+                                                                              10-100 ETH. Later, the market matured into a more steady
+   We now describe key results of our data gathering.                         and consistent profit distribution, with 1-10 ETH available
+                                                                              for arbitrage daily. Recently, an increasing number of pure
+                                                               # Trades       revenue trades is observed, showing the trend of the DEX
+                 Pure Revenue Market Size (ETH)
+
+
+
+
+ Daily Pure Revenue Captured (ETH)
+                                                                       1000+ market to smaller retail transactions and more efficient market
+      104                                                                     designs, decreasing the average opportunity size but presenting
+                                                                       800    more frequent opportunities to a more efficient bot market. The
+      103                                                                     limitations in our instrumentation mean, however, result in an
+                                                                              underestimate of market size, as described in Section IV-A1.
+         2
+                                                                       600       Interestingly, Figure 4 also highlights the origin story of
+      10
+                                                                              this work. In August 2017, we published a preliminary report
+                                                                       400    on the dangers of decentralized arbitrage and associated bot
+      101
+                                                                              designs in [2]. The date of our blog release is shown as
+                                                                              the vertical line on the graph. As part of this post, we
+      100                                                              200
+                                                                              actively probed the Etherdelta orderbook for pure revenue
+                                                                              opportunities, measuring available profit at 4,472.75 USD /
+    10−1                                                                      day or 1.6M+ USD / year. We executed our own trading bot
+            07-17          01-18         08-18        02-19
+                            Date (MM-YY)                                      to confirm the technical feasibility of profit, observing a total
+                                                                              58% rate of success in capturing pure revenue for our own bots
+Fig. 4. Lower bound size of the observed pure revenue market, ETH. Black      (soon outcompeted by other bots after the release of our post).
+line shows a 14-day moving average of market size, while the dotted orange    We calculated the expected daily profit of an arbitrage bot at
+line plots cumulative market size. Scatter plot colorings/shading indicates   the time, before most decentralized exchanges were online,
+number of daily pure revenue trades. The pink vertical line shows the release
+of [2] associated with early versions of this work becoming public.           at 0.32 ETH/day ·58.3% success ·45 − 0.004 · (1 − 58.3%)
+                                                                              failure cost * 45 observed opportunities = 8.32 ETH (2500
+   Figure 4 shows the size (breadth) of the arbitrage market, USD) daily profit. Note in Figure 6 that the majority of
+denominated in ETH. We choose to use ETH denominations profitable bots today joined shortly after our public release,
+
+
+
+                                                                      7
+                                                                Pure Revenue Profit Per Bot, 14-Day Moving Average
+
+
+
+
+     Daily Pure Revenue Profit (USD)
+                                                                                                                                                     Market Total
+                                        104                                                                                                            0x0000f7..
+                                                                                                                                                       0x44e05b..
+                                                                                                                                                       0xaa2432..
+                                        102                                                                                                           0xb3707d..
+                                                                                                                                                        0xf13ecd..
+                                                                                                                                                       0x5a2896..
+                                        100                                                                                                           0xbb3a8c..
+                                                                                                                                                       0xa53170..
+                                                                                                                                                       0x905451..
+                                       10−2                                                                                                            0x00bd1f..
+                                         07-17 08-17 10-17 11-17 01-18 03-18 04-18 06-18 08-18 09-18 11-18 01-19 02-19 Date (MM-YY)
+Fig. 6. Profit (revenue minus estimated costs) for pure revenue bots over time. We observe that the median profit is 65% of the size of the pure revenue
+opportunity across 138,948 observed pure revenue transactions.
+
+                                              Profitability of Pure Revenue PGA Winners             transaction senders together to consolidate multiple senders
+                                                                                                    operated by a single entity; some heuristics are available for
+                                                                                 Profit             doing this (e.g. monitoring use of similar arbitrage contracts),
+                                       103                                      Revenue             but we leave such aggregation to future work. We focus on
+
+
+
+
+ Number of Observed PGAs
+                                                                                                    USD on this graph, as we believe that most actors use fiat
+                                                                                                    currencies to pay participation costs.
+                                       102                                                             As in the exchange breakdown, this figure suggests an
+                                                                                                    oligopolistic market, with single bots often dominating the
+                                                                                                    profit space for extended time periods (for example, 0xaa24...
+                                       101                                                          dominates the recent pure revenue space, where 0x0000...
+                                                                                                    experienced a long period of dominance through late 2017
+                                                                                                    and early 2018). This diagram also shows the behavior of top
+                                       100                                                          bots exiting the market after failing to update their strategies.
+                                                                                                    For example 0xa53... exits around 03/18, and 0xf13... exits in
+                                         −1      −0.5    0     0.5   1    1.5     2       2.5       late 2017, early in the market. Nonetheless, many bots enjoy
+                                                             Amount (ETH)                           extended runs of profitability, and continue operating for years.
+Fig. 7. Distribution of profit and revenue in competitive PGAs. We focus on
+                                                                                                       Interestingly, the revenue and profit graphs for these bots
+amounts from -1 to 2.5 ETH, which by inspection comprise the majority of                            have nearly identical shapes (the revenue graph is described
+the distribution body. 29 of 2,135 profits fall outside this range.                                 in Appendix B-A). Profit-to-revenue ratios are relatively well
+                                                                                                    distributed, with a median of 65% of the revenue of an
+which inadvertently sparked a thriving cottage bot economy!                                         opportunity captured by the winning bot according to our profit
+   Figure 5 shows the breakdown of the pure revenue market                                          heuristics. Most opportunities are also uncontested, providing
+by exchanges, since 04/18 (the first significant pure revenue                                       the bots a steady stream of income.
+opportunities outside Etherdelta, representing new exchanges                                           Thusfar, we have focused exclusively on pure revenue
+coming online). An oligopolistic pure revenue market is ob-                                         opportunities, which may lead to PGAs or may be claimed by
+served, with Etherdelta generating the majority of observed                                         a single bot uncontested. A natural question becomes whether
+pure revenue. Nonetheless, a range of other exchanges fur-                                          the profitability of opporutnities persists in a competitive
+nishes a growing and relatively consistent distribution of                                          market, or whether competition among bots creates a generally
+opportunities for bots. Because we only support certain ex-                                         unprofitable zero-sum or negative-sum environment.
+changes, unsupported exchanges may be missing from this                                                Figure 7 describes the breakdown between the profit and
+graph, and the market total provides a lower bound only.                                            revenue of observed pure revenue opportunities involved in
+   Figure 6 shows the top ten transaction senders we observe                                        priority gas auctions, indicating that at least one bot placed
+in the competitive pure revenue market, and their associated                                        a competitive gas replacement bid to capture such an oppor-
+profits. The cost we measure for these bots includes only the                                       tunity. While there is a spike around 0 profit, indicating that
+gas fees for the pure revenue transactions they make, and thus                                      many PGA opportunities are zero or negative sum for their
+may underestimate their total fees (e.g. for failed transactions).                                  players, the vast majority of these opportunities see relatively
+We also do not include any bots that do not trade on our                                            insignificant costs, and the profit distribution still provides a
+supported exchanges. Note that we make no effort to group                                           mean profit to winning bots that offers them a majority of
+
+
+
+                                                                                                8
+associated revenue. This confirms our suspicious that bots                               C. User Comments
+may be engaging in uncoordinated cooperation to maintain                                    One unique feature of Ethereum over other market designs
+the profitability of the PGA market at the expense of miners,                            is the public nature of some of its trading data. For example,
+which we model fully in Section V.                                                       the addresses of the arbitrageurs in Figure 6 are known, and
+                                                                                         can link different trades by a single actor. This often allows
+                                                                    Mean Trades/TX       users to see which arbitrage bot targeted a transaction they may
+                              ·105     Gas Trends in Pure Revenue
+                          3                                                              have made, and to comment on bot activity on generic public
+                                                                                         comment pages on blockchain explorers. The top sender in
+                                                                                         Figure 6, for example, appears to often profit off typographical
+
+
+
+
+Mean Gas Used Per Trade
+                                                                            2.8
+                                                                                         errors users make in their decentralized exchange trades.5 One
+                          2                                                              user, “Getcoin Hub Inc.”, pleads with this arbitrage bot, saying
+                                                                            2.6          “This was obviously a mistake transaction - any chance you
+                                                                                         can find it in your heart to send it back?”. Another, Benjamin
+                                                                                         Huffman, pleads with the bot that “I am a single parent trying
+                                                                            2.4
+                          1                                                              to make ends meet at a job I hate. Please have some mercy.”
+                                                                                         Yet another, Alfie, leaves a comment requesting the return of
+                                                                            2.2          their ETH, stating ”Please I ask you to send me the ETH back
+                                                                                         as I really need it to continue my education. I might need to
+                          0                                                 2            sell my car to pay what is already due for this semester.” Worse
+                               07-17       01-18    08-18       02-19                    still, one user, Rajesh Kumar, claims “sir this was error order.
+                                            Date (MM-YY)                                 please give back eth sir. this all of my village rupee I trade
+Fig. 8. Trends in quantity of gas used per trade by observed pure revenue                for them. if i do not receive back eth i will be in the **** sir
+transactions. The vertical line indicates the release date of a gas optimization         please”.
+token by the authors and others as part of this study, described in [7].
+                                                                                            While it is impossible to verify the authenticity of these
+                                                                                         anonymous comments, their existence does point to the effect
+   A final natural question to ask about the market is the
+                                                                                         that exchanges with bad usability properties and flawed market
+extent to which the gas used in a transaction (representing
+                                                                                         designs can have on the guarantees provided their users. The
+the “quantity bid” in a PGA) is an important competitive
+                                                                                         existence of multiple users losing a large chunk of funds
+optimization vector for pure revenue bots. Figure 8 shows
+                                                                                         through such flawed exchange designs embodies the need for
+this optimization over time. Before 04/18, primarily Etherdelta
+                                                                                         carefully considered and formalized guarantees for DEXes.
+trends are observed. As we expect, we see bots optimizing
+their gas costs with a clear downward trend over time, de-                                      V. P RIORITY G AS AUCTION (PGA) M ODELING
+spite relatively consistent execution of primarily pure revenue
+                                                                                            To shed light on the strategies we observe in practice, we
+transactions containing two trades per transaction.
+                                                                                         present a formal model for PGAs in this section. We then
+   The advent of more sophisticated exchanges shows market
+                                                                                         explain the notion of advantage that we use to understand
+maturation, with more complex opportunities executed that re-
+                                                                                         strategies’ effectiveness, and study several classes of observed
+quire more gas per trade. The number of trades per transaction
+                                                                                         strategies in the context of our model.
+has also increased, now averaging well over two trades per
+                                                                                            We provide informal, high-level intuition about the games
+transaction. Part of this trend is due to “liquidity pooling”
+                                                                                         both miners and bots play in Appendix C.
+exchange designs like Kyber, which allow use of an exchange
+contract as a proxy to trade on other exchanges.                                         A. Model properties
+   The dotted orange line on this graph shows the authors’                                 We model a PGA as a sequential game among a set of n
+public release of a token called GasToken [7]. It leverages a                            players {P0 , P1 , . . . , Pn−1 } who bid against one another to
+feature in Ethereum’s incentive model enabling arbitrageurs to                           obtain a payoff of $1.6
+perform gas arbitrage over time, banking gas at below market                               This game has the following properties, which model
+rates and deploying it to win PGAs. The mechanism by which                               blockchain dynamics:
+this gas arbitrage is performed yields a transaction refund
+in the quantity bid to miners, tricking miners into accepting                                 a) Continuous time: Players act in continuous time,
+smaller than expected bids. Because this allows bots to bid                              rather than discrete rounds (as in typical extensive-form
+higher gas prices for less quantity at the same level of cost,                           games). This is because blockchain networks are asyn-
+this token is now a requirement for participating competitively                          chronous.
+in the pure revenue arbitrage market. This is reflected in
+                                                                                           5 These comments were sourced from https://etherscan.io/address/
+our trends graph as a sharp downtrend in gas quantity bots
+demand from miners after release of our token. This anecdote                             0x0000F7F39325076881E5fC566E99595542532aE2#comments,                  though
+                                                                                         similar pages exist for several of the bots in Figure 6 and our data.
+provides unusual insight on consequences of performing active                              6 In this “dollar auction,” $1 represents a normalization of any payoff
+experiments on emerging competitive markets.                                             amount w.l.o.g., and includes gas costs for the winner.
+
+
+
+
+                                                                                     9
+      b) Imperfect information: Players eventually see one              our analyses. We believe that this simplification does not
+another’s bids, but not immediately, a feature modeling                 significantly affect strategy outcomes.
+blockchain network latency. Player Pi observes other players’              Continuous-time, imperfect-information games have seen
+bids after some fixed time ∆i . Players may have differing              only limited study. Most similar to our work is FlipIt, a
+latencies, small ones conferring a competitive advantage.               continuous-time game with imperfect information that models
+   We measure latency as a relative figure to the latency of the        advanced persistent threats (APTs) [47]. We are unaware of
+miners, which are typically the best connected nodes in the             any prior work on such games with random play times or in
+network. Thus ∆i = 0 indicates that Pi has a superior network           general with the structure of PGAs.
+position and observes other player’s bids with no additional
+delay over that of the miners.                                          B. Formal PGA model
+      c) All pay: In PGAs, losing players pay gas costs for                For simplicity, we focus on games where n = 2, i.e., that
+their failed transactions. Our model captures this cost by              involve a pair of players (P0 , P1 ). Our formalism, though,
+having a losing player P pay `($blast ), where $blast is the            can be generalized to any n. The restriction to two players
+last bid made by P and `() is a loss function.7 This type of            is supported by our empirical observations, which shows that
+all-pay auction in which players can submit multiple bids is            most PGAs were played out between two players.
+known as a dollar auction [44], in which not only the winner,              We let b = (t, $b; i) denote a bid by player Pi . Here t is
+but losers pay. In our study, we typically observe auctions that        the time at which the bid is placed, $b is the bid price, and
+are partial all-pay, i.e., `($blast ) < $blast .                        i ∈ {0, 1} is the identity of the bidder.
+      d) Probabilistic auction duration: The auction ter-                  We denote by b∗ the sequence of all bids published to the
+minates at a randomly determined time, namely when the                  network by all players at the current time t∗ , and b the full
+next block is mined. For proof-of-work blockchains such as              sequence of all bids made by all players up to the point at
+Ethereum, we model a block interval as a random variable D,             which the auction ends. We let b[t] denote b at a particular
+which is exponentially distributed.                                     time t. We let bi and its variants (e.g., bi [t]) denote a bid
+      e) Rate-limited bidding: A player cannot raise her own            sequence of player Pi .
+bids continuously, but must wait a short interval δ to do so.              A strategy Si for player Pi is a procedure for participating in
+This reflects throttling that blockchain peer-to-peer networks          a PGA, and may be probabilistic (“mixed,” in game-theoretic
+perform to prevent flooding attacks. As miners are always free          terminology). Si takes the following form, where input t∗ is
+to include the highest paying transaction that they observed,           the current time and σi is the current local state of Pi :
+players can only raise bids, not lower them (a natural auction
+feature that holds in Ethereum PGAs).                                                       (a, tw, σ 0 ) ←$ Si (b∗ , t∗, σ).
+      f) Minimum starting bid: While there is no required
+minimum gas price in Ethereum, in practice PGA participants             The output a is an action by Pi . Either a = b for some bid b,
+will want to start their bid at a price that gives them a good          or else a = ⊥, indicating the player is not placing a bid. The
+chance of getting included in the next block. Put another way,          output σi0 represents an internal state update for the player.
+if one bids too low, then even if nobody else bids against                 Finally, tw≥ t∗ is a wake time. This is the time when Pi
+them, a miner may not include the transaction in their block.           schedules its next execution assuming no bids appear in the
+Thus, although not strictly enforced, we model our auctions             meantime. The use of wake times means that w.l.o.g., we can
+as having a minimum starting bid, s.                                    assume that a player always emits a bid b = (t∗ , $b; i), i.e., for
+      g) Minimum bid increments: Players do not have                    immediate publication. We also assume that when executed at
+freedom to raise bids by arbitrary increments. Instead, there           an emitted wake time, a player always emits a bid; a player
+is a minimum bid raise, ι, measured as a function of the                that chooses not to schedule a bid can set tw= ∞.
+player’s previous bid. This matches Ethereum dynamics in                      a) Game execution: A game between P0 and P1 involves
+which one can replace their transaction with another one, but           an execution Exec(S0 , S1 , [D, `()]) of their respective strate-
+it will only be relayed by the peer-to-peer network if the gas          gies, and accounts for players’ imperfect information due to
+price has increased by a minimum threshold. Parity, the most            their latencies. We specify the procedure for Exec in Figure 19
+common Ethereum node software, enforces a default minimum               in Appendix D.
+increment of 12.5%.                                                           b) Payoffs: Players (bots) compete for financial rewards.
+   Importantly, the bid increment restriction for Pi is entirely        We measure these rewards using the standard game-theoretic
+a function of the Pi ’s previous bid, but there is no enforced          notion of a payoff. An execution Exec(S0 , ∆0 , S1 , ∆1 [D, `()])
+relationship between the bids of competing players. That is,            outputs a pair ($r0 , $r1 ). These are the respective payoffs
+players can outbid one another by arbitrarily small quantities          (profits or losses) of P0 and P1 .
+so long as they are sufficiently raising their own previous bid.           We define the payoff of S0 against S1 as follows:
+In practice, network latencies and transaction-interval times
+are stochastic, but we assume constants ∆i and δ to simplify               POExec
+                                                                             (S0 ,∆0 )(S1 ,∆1 ) [(D, `())] =
+  7 As we explain above, bots use various tricks to reduce `.                 E[$r0 | ($r0 , $r1 ) ←$ Exec(S0 , ∆0 , S1 , ∆1 , [D, `()]).
+
+
+
+                                                                   10
+.                                                                          of unpredictability, though sealed-bid auctions are significantly
+   We refer to a strategy S0 as null-profitable if                         more likely in such systems.
+POExec
+    (S0 ,∆0 )(S∅ ,∅ [(D, `())] > 0 when S∅ is the null strategy            D. What’s a good strategy?
+(i.e., a strategy that never bids and thus its latency is also
+irrelevant).                                                                  Subject to their individual latencies, all players have iden-
+                                                                           tical strategy spaces, and thus we can directly compare strate-
+C. Why repeated bidding?                                                   gies while only considering the latencies of the players that
+                                                                           executed them. We define
+   To understand the significance of our model, it is helpful to
+see why players’ optimal strategies involve placing multiple
+bids over time. To show why, it is helpful by contrast to                    Advexec                            Exec
+                                                                                (S0 ,∆0 ),(S1 ,∆1 ) (D, `()) =PO(S0 ,∆0 ,(S1 ,∆1 )[(D, `())]−
+observe two settings in which players’ optimal strategies                                                    POExec
+                                                                                                               (S1 ,∆1 ),(S0 ,∆0 ) [(D, `())].
+involve placing a single bid.
+      a) Sealed-bid auction: Suppose that instead of the com-                       VI. P RIORITY-G AS -AUCTION S TRATEGIES
+plex game just outlined, a PGA were a standard sealed-bid                     We now report on classes of strategies that we have observed
+auction (either first or second price, with `() = 0) [41]. Players         empirically and examine them within the context of our model.
+bid once and ties are broken randomly.                                     Given the large strategy space, we restrict our focus to the most
+   Players would then be incentivized to cast a single bid as              prevalent PGA strategies that we have observed.
+close as possible to 1, throwing away almost the entirety of                  We thus consider three classes of strategies. The first two
+their potential profit. This behavior is intuitive.                        strategies are blind raising and counterbidding, which are
+   If bids are discrete, with tick sizes (smallest increments) of          often used in competition with one another. We then consider
+, then there is a Nash equilibrium for S0 = S1 , the strategy             a cooperative strategy in which players take turns bidding.
+of bidding 1 − . In this case, POExec                                     While we don’t claim that we are seeing perfect cooperation
+                                      S0 ,S1 [(D, 0)] = /2. Notice
+that since only one bid is cast and its sealed, we omit the                (since if we were there would be no need for on-chain bidding
+latency parameter as it is irrelevant. This is the only Nash               at all), we show the cooperative strategy approximates and
+equilibrium for deterministic strategies, since a deviation that           predicts a large class of behaviors that we have observed on-
+bids an extra  would otherwise be profitable. For randomized              chain. Finally, we show that under conditions consistent with
+strategies, non-cooperative players will converge towards this             the PGAs we are observing on Ethereum, there exist Nash
+equilibrium after playing multiple games in which they study               equilibria for cooperative strategies.
+one another’s behavior.                                                    A. Latency Wars
+      b) Fixed block duration: Returning to our model, when
+                                                                              For all strategies that we consider, our model predicts that
+∆i , ∆j > 0, placing multiple bids is a useful strategy only
+                                                                           players with a lower latency will have an advantage. Validating
+when D is a random variable. The reason is that given a block
+                                                                           this feature of our model, we have observed empirically
+interval of fixed duration d, players can place the equivalent of
+                                                                           that players are consistently and substantially reducing their
+sealed bids in the interval [d − δ, d] after the mining of the last
+                                                                           respective latencies over time (Figure 9).
+block. Thus, in this setting the only reason for repeated bidding
+is on-chain signaling of intent, which is more expensive than              B. Blind raising
+out-of-band communication.                                                    Blind raising is a simple non-adaptive strategy. Player Pi
+      c) Proof-of-stake blockchains: Notably, sealed-bid auc-              raises her own bids under a predetermined schedule, and the
+tions are likely to be the norm on proof-of-stake blockchains,             strategy is invariant to b∗1−i , the history of the other player’s
+due to two reasons. First, in many proof-of-stake protocols the            bids. In PGAs that we have observed, this schedule often
+identity of near future miners is known in advance (perhaps                involves repeated increases by fixed fractional increments
+anonymously, i.e., only the individual miner knows her time                (e.g., 12.5%, 21% or 70%). Basic blind raising is thus also
+slot). This implies that miners can accept bids over secure                deterministic (“pure”). A basic version may be modeled as
+(encrypted and authenticated) out-of-band channels. Second,                follows:
+the block duration is quite predictable in proof-of-stake chains
+– miners forfeit their time slot unless they broadcast their block              Blind raising (S0 ): P0 emits a bid with amount $b0 at
+before a limit (measured according to the local clocks of other                 time τ = 0 and $b0 × (1 + f )k at time kδ.
+miners) is reached. There is some measure of unpredictability:                At first glance, this strategy, and non-adaptive strategies in
+the limit should be generous in order to accommodate propa-                general, seem like a bad idea: They fail to exploit information
+gation delays in the network, and miners may wish to collect               available to the player in b∗ .
+many transactions that pay lucrative fees before broadcasting                 Surprisingly, however, the imperfect information created
+their block. Still, the block duration should behave according             by network latency means that a non-adaptive strategy can
+to statistical patterns that differ greatly from the stochastic            achieve an advantage over natural adaptive strategies. The
+process of PoW blockchains. Our following analysis may thus                intuition is this: By playing non-adaptively, a player can
+apply to proof-of-stake systems with a high enough measure                 publish a bid faster than by waiting to see the opposing
+
+
+
+                                                                      11
+                                                                                   # of Raises           As P0 has interval ≥ δ between bids, reactive counterbid-
+                                                     Bot Latency Evolution
+                                                                                                      ding achieves an interval ≥ δ between the bids of P1 .
+
+
+
+
+Mean Observed Time Between Bids (s)
+                                       1                                                  50+
+                                                                                                         Many consensus algorithms (e.g., Nakamoto consensus)
+                                                                                                      exhibit D exponentially distributed with mean λ. Under the
+                                      0.8                                                 40          simplifying assumption that `($b) = $c, we can show the
+                                                                                                      following two observations, which we prove in Appendix D.
+                                      0.6
+                                                                                          30          Observation 1. Let ∆i               =     0 and $r          =
+                                                                                                      Advexec
+                                                                                                          (S0 ,∆0 ),(S∅ ,∅) (D, $c) be the payoff of null-profitable
+                                      0.4                                                             blind raising strategy S0 against S∅ . Then for
+                                                                                          20
+                                                                                                                                $c
+                                      0.2                                                                                            < e−λδ ,
+                                                                                          10                                 $r + $c
+                                                                                                      as  → 0, reactive counterbidding strategy S1 has positive
+                                       0
+                                            06-18 08-18 10-18 11-18 01-19 03-19                       payoff.
+                                                        Date (MM-YY)
+                                                                                                         We now show, somewhat counterintuitively, that with the
+Fig. 9. Evolution of the PGA bots’ latency strategies over time. Each point                           right parameters—specifically, when ∆1 is high w.r.t. δ —
+is the mean latency of a bot in some observed auction on the plotted date.
+The coloring of dots shows the number of total raises each bot placed in
+                                                                                                      blind raising has an advantage over reactive counterbidding.
+that respective auction. Early in the observed market, the majority of auctions
+contained 0-10 raises per bot. Over time, these auctions increasingly contained                       Observation 2 (Latency Amplification). For ∆1 > δ, there
+more raises and a lower mean latency. We exclude all observed mean latencies                          exists a null-profitable, blind raising strategy, S0 , such that
+that do not fall between 0 and 1 seconds; there are such latencies, which are                         for any pure reactive counterbidding strategy S1 , S0 achieves
+the result of the limitations of our monitoring architecture mentioned in IV-A1.
+The number of opportunities per bot, however, illustrates a trend that is far                         Advexec
+                                                                                                          (S0 ,∆0 ),(S1 ,∆1 ) (D, `()) > 0.
+less vulnerable to instrumentation limitations, as it does not depend on the
+order or precise timing of observed transactions.                                                     D. Cooperation
+               Reactive counterbidding (S1 ) :                                                           We now turn our focus to cooperative strategies, which we
+                                       •    At time τ = 0, P1 bids s.                                 believe to be a close approximation to a common behavioral
+                                       •    Denote the most recent bid by P1 as $b1 . P1              pattern we observe in which players slowly alternate raising
+                                            waits until it sees a bid $b0 > $b1 cast by P0 .          bids. We demonstrate a cooperative Nash Equilibrium for the
+                                            P1 immediately counterbids min(max($b1 × (1 +             PGA game that helps shed light on the most common bidding
+                                            ι), $b1 + ), 1 + `($b1 )).                               behaviors that we observed.
+                                                                                                         Notice that as bids are non-decreasing, with each successive
+                                                                                                      bid that players submit, the maximum profitability of the
+Fig. 10. Reactive counterbidding PGA strategy.  is the minimum bid tick,                             opportunity decreases. Intuitively then, it is beneficial for all
+ι is the minimum bid increment, and s is the minimum starting bid. By                                 players to decrease the total number of bids in the game.
+bidding max($b1 × (1 + ι), P1 ensures that its bid meets the minimum bid
+requirement and is also higher than P0 ’s bid. However, it would never make                              It is natural then to assume that, whenever possible, players
+sense for P1 ’s bid to exceed 1 + `($b1 )) as at this point it is more profitable                     will coordinate out-of-band to split the profits rather than
+to not bid and instead pay `($b1 ).                                                                   decrease their profits by competitively bidding on-chain. How-
+                                                                                                      ever, by the very virtue of us seeing on-chain PGAs, we know
+                                                                                                      that perfect cooperation does not exist.
+player’s bid and reacting to it. We explain below in particular                                          For example, if we consider a repeated game in which the
+how blind raising can achieve an advantage over a natural,                                            same set of players is bidding on multiple (say for simplicity,
+adaptive strategy called reactive counterbidding.                                                     equal value) opportunities, they can coordinate off-chain so
+                                                                                                      that each opportunity only has a single bid on-chain and the
+C. Counterbidding
+                                                                                                      profit for bidders is maximized. Indeed, in our measurement,
+   Counterbidding is a strategy in which a player observes                                            we found many arbitrage opportunities for which there was
+an opponent’s bidding strategy and reacts by placing higher                                           only a single player, and it is entirely possible that off-chain
+opposing bids. A simple example of this strategy is what we                                           coordination is at play here, although by its very nature there
+call reactive counterbidding, an adaptive strategy that a player                                      is insufficient data on chain to confirm this.
+P1 might execute against another player P0 . The strategy is                                             While off-chain cooperation may make sense, particularly
+described formally in Figure 10.                                                                      in a repeated game, it has some drawbacks including lack of
+   Reactive counterbidding can achieve an advantage over a                                            anonymity. We restrict our analysis here to the more interesting
+blind raising strategy—provided, as we shall see, that ∆1 is                                          case of single game instances where players are bidding on-
+small with respect to δ. Counterbidding involves outbidding                                           chain and coordinate their strategies to maximize expected
+P0 as quickly as possible by a small amount, provided that                                            profits Chief among them is that off-chain coordination is
+the bid is raised by the required minimum.                                                            cumbersome and requires participants to identify themselves
+
+
+
+                                                                                                 12
+ Cooperative (Si ) with parameters D, W :                                                                                                                Revenue (ETH)
+                                                                                                                          Raise Strategy Evolution
+      • At time τ = V [2k+i], Pi emits a bid with amount                                                                                                          1+
+
+
+
+
+                                                                          Median Raise Percent Over Own Bid
+                                                                                                                                                      y=15
+        W [2k + i].
+                                                                                                                                                     y=12.5
+      • If Pi observes a bid of value $b at time t such                                                       60                                                  0.8
+        that t < V [2k + i] but $b > W [2k + i − 1], then
+        Pi immediately bids $1 + `($b).
+                                                                                                                                                                 0.6
+                                                                                                              40
+            Fig. 11. Grim-trigger cooperative PGA strategy                                                                                                       0.4
+
+                                                                                                              20
+and sacrifice anonymity. This allows us to gain insight into                                                                                                     0.2
+the on-chain competitive auctions that we have observed.
+   As we will see, the cooperative strategies that we study
+                                                                                                              0                                                  0
+help explain the behaviors in many of the PGAs that we have                                                        06-18 08-18 10-18 11-18 01-19 03-19
+observed. Moreover, we show that under suitable parameters,                                                                    Date (MM-YY)
+there is a Nash Equilibrium for both players to follow a                 Fig. 12. Evolution of the PGA bots’ median raise strategies over time for bots
+cooperative strategy.                                                    with more than 4 bids in pure revenue PGAs. Note the strategy convergence
+   We stress that for our cooperative equilibrium to emerge, it’s        in the iterated game to almost exclusively the 12.5 (minimum raise) and 15%
+                                                                         (deviation from minimum raise) levels. Opportunities below the y = 12.5
+not necessary that players explicitly coordinate out-of-band,            line are likely artifacts of bots emitting multiple transactions from globally
+but this behavior can develop organically on-chain. Indeed, we           distributed nodes; these opportunities correspondingly show a bias towards
+have seen evidence that over time, players have moved closer             high revenue compared to those using the predicted strategies. We trim outliers
+                                                                         and omit points with median raises over 75%; we observe 5 such high-raise
+toward a cooperative equilibrium, which is consistent with well          outliers of 4,007 total observations.
+known results in experimental game theory that participants in
+the wild will converge to an equilibrium over time [40, 13].             depending on the latencies, there may still be sufficient time
+      a) Grim trigger equilibrium: We now describe a partic-             to profit from deviating.
+ular cooperative strategy in which any defection is responded                 b) Minimum bid raises: In a cooperative PGA, the main
+to by immediately bidding the maximum amount, thereby                    function of bidding on-chain is to alternate bids between
+eliminating all profitability from the auction.                          players, but all players are incentivized to keep the actual bid
+   This strategy class is similar to the grim trigger strategy           price as low as possible to maximize profit. The following
+that appears in the game theory literature in the context of re-         observation follows:
+peated games [42]. Notice that since PGAs involve successive
+                                                                         Observation 3. In a grim-trigger cooperative PGA, for all
+opportunities to bid potentially in response to the bids of other
+                                                                         i ≤ imax , the optimal choice for bids is W [0] = s and W [i] =
+players, even a single iteration of our auction has elements of
+                                                                         W [i − 1] × (1 + ι).
+a repeated game.
+   Consider two players who coordinate with the following                   Remarkably as shown in Figure 12, in our observed PGAs,
+strategies: at set intervals, players alternate their bids, each         players converge over time to a minimum bid raise of 12.5%,
+time bidding the minimum increase. If any player deviates                which is the minimum allowed raise in the Parity client. It
+either by bidding too soon or by raising the bid higher than             is known that players in the wild will converge to Nash
+they are supposed to, the other player will respond by raising           Equilibria [13, 40] and this on-chain behavior is consistent
+their bid such that the game is no longer profitable. This               to a convergence toward elements of cooperative equilibrium.
+strategy is characterized by following parameters: V is the                 We stress that we don’t claim that perfect cooperation is
+set of agreed upon times at which bids will be scheduled, and            occurring or even that our exact equilibrium is on play. We
+W is the set of agreed upon bid values, such that that W [i]             do claim, however, that players are converging to a more
+will be bid by the appropriate player at time V [i].                     cooperative state, that is approximated by our model, in which
+   The grim-trigger cooperative strategy is formally described           they allow opportunities for other players in an effort to
+in Figure 11.                                                            maximize their own expected profit over time.
+   Notice that in the second condition, we assume that Pi can                 c) Nash equilibrium: We now present our main result
+determine the time t that the bid was emitted by P1−i . This is          showing that there exist Nash equlibria for a wide range of
+consistent with our model in which the latency of each player            parameters using the grim-trigger cooperative strategy.
+is known. Thus, even though Pi will not observe P1−i ’s bid
+                                                                         Theorem 1. For parameters consistent with Ethereum PGAs,
+until time t + ∆i , it can compute t by subtracting ∆i from the
+                                                                         there exist a grim-trigger Nash equilibria for a 2 player PGA
+time that it first observed the bid.
+                                                                         where both players follow a D, W cooperative strategy.
+   As we will see, the knowledge gap due to latency is an
+important feature when determining if our model has an                     Figure 13 and Figure 14 show the expected payoff of
+equilibrium. All defections will eventually be detected, but             the bidder and non-bidder in a cooperative PGA. The x-axis
+
+
+
+                                                                    13
+                                                                           is larger than the expected payoff upon deviation. Indeed,
+                                                                           the Ethereum parameters that are plotted in Figure 14 show
+                                                                           that the expected non-bidder payoff is always greater than the
+                                                                           expected payoff of deviation. Theorem 1 thus follows.
+                                                                             VII. M INER -E XTRACTABLE VALUE AND B LOCKCHAIN
+                                                                                                  S ECURITY
+                                                                              PGAs and DEX arbitrage may not seem immediately harm-
+                                                                           ful or relevant to the security of an underlying blockchain.
+                                                                           They might simply seem an efficient mechanism for convey-
+                                                                           ing market information among network participants. Unfortu-
+                                                                           nately, we now argue, DEXes in fact present a serious security
+                                                                           risk to the blockchain systems on which they operate, i.e., at
+             Fig. 13. Cooperative PGA with interval t = 2
+                                                                           the consensus layer. In other words, a key result of our work
+                                                                           is that application-layer security poses a current and direct
+                                                                           threat to consensus-layer security.
+                                                                              In a stable blockchain, block rewards incentivize honest
+                                                                           miner behavior. As we show empirically in this section,
+                                                                           though, order optimization (OO) fees, or implicit fees a miner
+                                                                           is able to reap by leveraging their control of a consensus
+                                                                           epoch, can exceed the block reward and instead incentivize
+                                                                           forking attacks. To capture OO fees, a miner can reorder
+                                                                           users’ transactions and potentially insert their own, reaping
+                                                                           profit in Ether directly to their account. For example, a miner
+                                                                           could execute the pure revenue transactions described in this
+                                                                           work themselves, while still claiming the PGA fees for all the
+                                                                           “losing” arbitrage bots attempting to do the same.
+            Fig. 14. Cooperative PGA with interval t = 0.4                    OO fees represent one case of a more general quantifiable
+                                                                           value we call miner-extractable value (MEV). MEV refers to
+                                                                           the total amount of Ether miners can extract from manipulation
+indicates the starting time of the interval, where the expected            of transactions within a given timeframe, which may include
+duration of the game is 1/λ = 15 seconds. The y-axis indicates             multiple blocks’ worth of transactions. In systems with high
+the expected payoff. Note that the players are alternating: if             MEV, the profit available from optimizing for MEV extraction
+Player 1 is the bidder and Player 2 is the non-bidder when the             can subsidize forking attacks of two different forms. The first
+first interval starts, then Player 1 is the non-bidder and Player 2        is a previously shown undercutting attack [14] that forks a
+is the bidder when the second interval starts. These figures also          block with significant MEV. The second is a novel attack,
+display the profitability of deviation, i.e., the expected payoff          called a time-bandit attack, that forks the blockchain retroac-
+of the non-bidder (according to latency parameters) in case                tively based on past MEV.
+she deviates when the interval begins.                                        Undercutting attacks were previously considered a risk
+   If the deviation payoff surpasses the non-bidder payoff at              primarily in the distant future, when block rewards in Bitcoin
+any point (as with the delay=3 plot in Figure 13), then                    are expected diminish below transaction fees. By measuring
+a Nash equalibrium cannot hold for those parameters – a                    the significance and magnitude of OO fees, our work shows
+backward induction argument implies that if it is profitable               that undercutting attacks are a present threat.
+for the non-bidder (say, Player 1) of interval i to deviate, then             Time-bandit attacks are also a present and even larger
+it must also be profitable for the non-bidder (Player 2) of                threat. They can leverage not just OO fees, but any forms of
+interval i − 1 to deviate, and so on.                                      miner-extractable value obtained by rewinding a blockchain.
+   Figure 14 corresponds to the Ethereum parameters per our                Time-bandit attacks’ existence implies that DEXes and many
+empirical measurements: t = 0.4 seconds is the mean interval               other contracts are inherent threats to the stability of PoW
+length and δ = 0.1 seconds is the estimated latency in our                 blockchains, and the larger they grow, the bigger the threat.
+measurements.
+   To prove our main claim, let us recall that each player’s bid           A. OO fees: Measurement study
+increments her previous bid by 12.5%. Given our measure-                      We now lower bound the severity of OO fees in DEXes.
+ments, this implies 17 rounds before the players give the entire              Figure 15 shows the distribution of pure revenue OO fees
+auction’s reward to the miners. We can thus verify that in each            as a fraction of total miner-extractable value in Ethereum. We
+of the few dozens of intervals prior to the end of the game,               conservatively estimate MEV in this context as the sum of
+the expected payoff of adhering to the cooperative strategy                explicit transaction fees and pure revenue OO fees, making
+
+
+
+                                                                      14
+                      Pure Revenue OO Fee Share of Total Transaction Fees                                       Highest Observed Pure Revenue OO Blocks
+                      0.15                                                                                        08-01-19
+                                                                                                                  25-11-17
+                                                                                                                  15-03-19
+                                                                                                                  13-12-17
+                                                                                                                  11-08-18
+                                                                                                                  12-10-17
+                                                                                                                  29-09-17
+                                                                                                                  30-08-17
+                                                                                                                  08-11-17
+                                                                                                                  10-11-17
+                                                                                                                  21-12-17
+                                                                                                                  12-02-18
+                                                                                                                  29-12-17
+                                                                                                                  18-01-18
+                                                                                                                  23-01-18
+                                                                                                                  11-08-18
+                                                                                                                  15-03-19
+                                                                                                                  15-09-18
+                                                                                                                  19-09-17
+                                                                                                                  21-11-17
+
+
+
+
+ Fraction of Blocks
+                                                                                                                      Date of Block (DD-MM-YY)
+
+
+
+
+                                                                                    Miner Revenue (ETH)
+                       0.1                                                                                100                                                100
+
+
+
+                      0.05
+                                                                                                          50                                                 50
+
+
+                         0
+                             0     0.2    0.4    0.6    0.8     1                                                OO fees   Transaction fees   Block reward
+                      Proportion of Transaction Fees from Pure Revenue OO
+                                                                                                           0      7029147
+                                                                                                                  4618363                                    0
+                                                                                                                  7372878
+                                                                                                                  4725889
+                                                                                                                  6129904
+                                                                                                                  4359715
+                                                                                                                  4321329
+                                                                                                                  4218201
+                                                                                                                  4511858
+                                                                                                                  4526402
+Fig. 15. Distribution of pure revenue OO as percentage of block transaction                                       4769615
+                                                                                                                  5074099
+                                                                                                                  4820021
+                                                                                                                  4929936
+                                                                                                                  4956461
+fees in blocks containing such transactions on the Ethereum network, blocks                                       6129903
+                                                                                                                  7372880
+                                                                                                                  6335886
+                                                                                                                  4289436
+                                                                                                                  4597319
+3875490 to 7408826; 133,815 of 3,533,336 contain observed pure revenue
+(3.6%). Since block 7,000,000 (Jan 2 2019), this has increased to 6.3%.                                                      Block Number
+
+                                                                                   Fig. 16. Blocks with the highest pure revenue OO fees observed on Ethereum.
+                                                                                   As is shown here, OO fees in these blocks dominate both block rewards and
+our distribution an underestimate of the share of MEV that                         transaction fees, often by more than an order of magnitude.
+does not come from explicit fee payments in Ethereum. Note
+that PGAs themselves are an indirect mechanism for miners                          of which almost all was taken as pure profit.
+to claim OO fees: if miners instead claimed OO fees directly,                        As with all our analyses, we stress that our measurements
+there would be no incentive to bid in or create a PGA.                             are conservative: They represent lower bounds on arbitrage
+   Of all blocks since block 3,875,490 (the first block we                         behavior. The limitations in our instrumentation harness dis-
+observed with a pure revenue OO fee from decentralized                             cussed in Section IV-A1, lead to potential underestimation.
+exchange arbitrage), approximately 3.6% contain at least one
+pure revenue arbitrage transaction. Of these blocks, 17,897                        B. Undercutting attacks
+blocks contain pure revenue OO profits that are < 1% of                               Undercutting attacks [14] represent one vector of attack that
+the total stealable fees, confirming our earlier conclusions                       can leverage OO fees.
+that the most frequent pure revenue arbitrage opportunities                           It is well known that fixed per-block miner rewards are
+are for small price differences in the course of normal trad-                      a key feature of secure and stable cryptocurrency protocols,
+ing across exchanges. Nonetheless, many blocks do contain                          as originally described in [14]. In that work, the authors
+substantial pure revenue fees. 36,860 observed blocks contain                      analyze the incentives of blockchain miners in a regime where
+pure revenue fees that exceed 20% of total stealable fees,                         transaction fees exceed the inflationary subsidy paid to miners
+12,002 blocks derive the majority (over 50%) of stealable fees                     by a blockchain protocol. They observe that when the block
+from pure revenue, and 2,517 blocks derive more than 80%                           reward is dominated by fees, rewards have high variance. As
+of stealable fees from pure revenue.                                               a result, a miner can fork a high-fee block, holding back some
+   Occasionally, these fees can be substantial and provide                         fees to attract other miners to build on the fork. In extreme
+substantial miner incentives to orphan blocks or otherwise                         cases, incentives to deviate from the protocol may lead to
+deviate from the mining protocol. Figure 16 shows the 20                           disruption in miner strategies for economically rational miners,
+blocks observed on Ethereum with the highest absolute pure                         reducing the security provided by block confirmations.
+revenue OO fees.                                                                      Prior to our work, transaction fees have been viewed as
+   As an example, the highest block, block 7029147 (https:                         the only source of value for undercutting attacks, with [14]
+//etherscan.io/block/7029147), contained an arbitrage trade                        even calling a world in which fees dominate block rewards
+generating a revenue of 101.6 ETH, dwarfing the block reward                       a “transaction-fee regime.” That regime seemed a distant
+of 3 ETH and the insignificant explicit transaction fees of                        prospect. The title of [14], “On the Instability of Bitcoin
+0.022 ETH. In this particular block, one transaction generated                     Without the Block Reward,” refers to Bitcoin block rewards
+all the pure revenue OO fees. This transaction, whose profit                       going to zero, an event anticipated around the year 2140.
+graph is available at https://bit.ly/2D4U57c, saw an exchange of                      Our study shows that OO fees are a form of value that
+Bigbom token (BBO) for ETH on Bancor and Kyber; an error                           sometimes dominates explicit transaction fees today. The tail
+in Bancor’s pricing formula allowed a user to buy BBO at                           of the distribution in Figure 15 (transaction fee proportions >
+rates far under market. The bot’s order size was 101.6 ETH,                        0.5) and all of the example blocks in Figure 16 represent such
+
+
+
+                                                                              15
+opportunities. In other words, undercutting attacks represent a                     to participate and earn profit for doing so, often a desirable
+present threat in Ethereum, and one that will grow with the                         design goal for the style of permissionless and open interaction
+success of smart contracts that attract OO fees. Other potential                    that lends itself naturally to blockchains. Any on-chain action
+sources of OO fees are mentioned in [15].                                           in the past that could have potentially profited a miner today,
+   Most importantly, our view of arbitrage remains conser-                          including actions that unconditionally earn them ETH in
+vative, and we emphasize that pure revenue opportunities                            the past, are thus potential sources for time-bandit attacks.
+represent a small slice of total ordering fees. There are many                      Because smart contracts are Turing complete scripts and carry
+possible sources of ordering fees payable to miners, includ-                        complex interactions, estimating the size of these opportunities
+ing more sophisticated arbitrage. There are also many other                         is a challenging problem we defer to future work.
+forms of miner-extractable value. Miners can “steal” arbitrage
+                                                                                    Time-bandit attacks in Ethereum: Recent transaction statistics
+opportunities from arbitragers by taking them themselves.
+                                                                                    suggest that Ethereum is vulnerable to time-bandit attacks.
+Additionally, the survey in [18] describes several other sources
+                                                                                    For example, decentralized exchange volumes show a peak of
+of MEV, including the ability to buy into profitable ICOs early
+                                                                                    1.5 billion USD of traded assets on Ethereum’s decentralized
+and the manipulation of games of chance.
+                                                                                    exchanges in July 2018 [23]. While it is hard to gauge the
+   Undercutting attacks can leverage OO fees or any other
+                                                                                    total stealable value in this volume, the current estimated
+MEV from newly generated blocks. The second attack we
+                                                                                    one-month cost of a 51% attack on Ethereum according to
+describe can use MEV from past blocks to subsidize an attack.
+                                                                                    http://crypto51.app/ is approximately 56 million USD, more
+C. Time-bandit attacks                                                              than 25 times lower than this DEX volume.
+   We now describe time-bandit attacks, a new, second attack                           We posit that the OO fees alone that we have described
+vector that can exploit miner-extractable value. They can                           threaten the security of today’s Ethereum network. As Fig-
+exploit MEV from new blocks, but more powerfully, can also                          ures 15 and 16 show, blocks with high OO fees and/or
+use MEV from past blocks via rewinding.                                             arbitrage opportunities can already enable such attacks.
+   Time-bandit attacks are conceptually simple. Suppose a                              More generally and alarmingly, time-bandit attacks can be
+blockchain has a suffix (subchain) [height0 , height1 ], with                       subsidized by a malicious miner’s ability to rewrite profitable
+current block height height1 , in which stealable value exceeds                     trades retroactively, stealing profits from arbitrageurs and
+block rewards. An adversary can rewind to height0 and use                           users while still claiming gas fees on failed transactions that
+the resulting MEV to subsidize a profitable 51% attack that                         attempt execution. The resulting MEV is potentially massive,
+mines a fork up to or past height1 .                                                suggesting a possibly serious threat in Ethereum today.
+   Of course, a time-bandit attack relies on real-time access to                       Of course, a full analysis of the threat would require an
+massive mining resources. As noted in [6], however, “rental                         understanding of how time-bandit attackers might compete
+attacks” are feasible using cloud resources, particularly for sys-                  against one another to harvest MEV—by analogy with PGAs.
+tems such as Ethereum that rely heavily on GPUs, which are                          This is a topic for future research.
+standard cloud commodities. Sites such as http://crypto51.app/
+estimate the costs. We illustrate with an example that relies                              VIII. O PEN Q UESTIONS AND F UTURE W ORK
+on MEV from DEX rewinding.                                                             Our results raise many important questions, some about
+Example 1. Consider a price spike from 1 USD to 3 USD in                            the arbitrage community itself. For example, it would benefit
+a token that trades on an on-chain automated market maker                           arbitrageurs to collude with miners, but we observe no such
+(e.g., Bancor [1]). A miner performing a time-bandit attack                         collusion: Preliminary experiments show that bot transactions
+can now rewrite history such that it is on the buy side of                          are equally distributed across mining pools. Are there incen-
+every trade, accruing a substantial balance in such a token at                      tives to avoid collusion, such as concern about the exogenous
+below market rate—before the price spike.8                                          impact of miner malfeasance coming to light?
+   For example, if the attacker wishes to rewrite 24 hours of                          Other questions arise from PGA modeling. Are PGAs
+history, and 1M USD of volume occurred in exchanges with                            positive- or negative-sum games? In what ways could our
+rewritable history in that token, then the attacker can obtain                      proposed model be helpfully enriched?
+a MEV gross profit of 1 M × (3 USD - 1 USD) = 2M USD.9                                 More broadly, it is important to observe that DEXes are
+   At the time of writing (March 2019), http://crypto51.app/                        just the tip of the iceberg. At the time of writing, IDEX, the
+estimates a 24-hour 51% rental-attack cost on Ethereum of                           largest, is ranked #119 by volume by coinmarketcap.com. It
+about 1.78M USD, implying a net profit of around 220K USD.                          has about 1M USD in 24h volume, compared with 970M USD
+                                                                                    for Binance, the leading centralized exchange. DEX volume
+   We stress that time bandit attacks are not limited to MEV
+                                                                                    is roughly 0.01% that on centralized exchanges.
+from DEXes. A variety of smart contract systems allow anyone
+                                                                                       Malfeasance in centralized exchanges might well be
+   8 The attacker can additionally use new user trades at the market 3 USD
+                                                                                    rampant—possibly even more egregiously so than in
+price in the automated market maker system to offload their tokens into ETH.        DEXes [5]. As activity in such exchanges takes place off-
+   9 More sophisticated reordering strategies stand to profit the miner even
+more. The miner can selectively include orders that manipulate the prices           chain, it is private, and cannot easily be ascertained without
+received by other traders in the past.                                              privileged access. Additionally, while centralized exchange
+
+
+
+                                                                               16
+malfeasance might seem not to impact on-chain security,                                            R EFERENCES
+the two are inextricably linked. By altering token trading               [1]   Bancor Network. www . bancor . network. Referenced
+dynamics on-chain, an adversary could manipulate and profit                    March 2019.
+from centralized exchange dynamics. For example, a time-                 [2]   Iddo Bentov et al. The Cost of Decentralization in 0x
+bandit attack could accumulate cheap tokens for offloading in                  and Etherdelta. http://hackingdistributed.com/2017/08/
+a centralized exchange.                                                        13/cost-of-decent/. Aug. 2017.
+   These observations raise several key follow-up questions:             [3]   Henry Berg, Todd A. Proebsting, et al. “Hanson’s auto-
+   • What forms do arbitrage take in centralized exchanges                     mated market maker”. In: Journal of Prediction Markets
+     and at what volumes? And frontrunning?                                    3.1 (2009), pp. 45–59.
+   • Barring direct data access, what techniques can be used             [4]   Dan Bernhardt and Bart Taub. “Front-running dynam-
+     to accurately measure various forms of trading activity in                ics”. In: Journal of Economic Theory 138.1 (2008),
+     centralized exchanges?                                                    pp. 288–296.
+   • What financial incentives do centralized exchanges create           [5]   “Bitfinex’ed in an Exclusive Interview: ‘Someone Must
+     for malfeasances in DEXes? How might they impact                          Warn People About Fraud’”. In: The Bitcoin News (22
+     blockchain stability?                                                     June 2018).
+   • What other insights might our data yield on DEX ar-                 [6]   Joseph Bonneau. “Hostile blockchain takeovers (short
+     bitrage, especially in quantifying opportunities that are                 paper)”. In: International Conference on Financial
+     not pure revenue? How much larger is the full arbitrage                   Cryptography and Data Security. Springer. 2018,
+     economy than executed? Can tight bounds be developed                      pp. 92–100.
+     for the amount of MEV on Ethereum today?                            [7]   Lorenz Breidenbach, Philip Daian, and Florian Tramer.
+                                                                               GasToken. https://gastoken.io/. Mar. 2018.
+                      IX. C ONCLUSION
+                                                                         [8]   Eric Budish, Peter Cramton, and John Shim. “The high-
+   We have reported on a sizable economy of bots profiting                     frequency trading arms race: Frequent batch auctions as
+from opportunities provided by transaction ordering in DEXes.                  a market design response”. In: The Quarterly Journal
+We quantify the breadth of a specific subset of arbitrage,                     of Economics 130.4 (2015), pp. 1547–1621.
+pure revenue opportunities, providing lower bounds on the                [9]   V Buterin. “Schellingcoin: A minimal-trust universal
+profitability of ordering manipulation.                                        data feed”. In: Ethereum Blog (2014).
+   We have also formally modeled the behavior of bots com-              [10]   Vitalik Buterin. Ethereum sharding faq. 2017.
+peting against each other for miner-supplied transaction prior-         [11]   Vitalik Buterin. Hard Fork Completed. https : / / blog .
+ity in priority gas auctions. Our empirical study validates sev-               ethereum.org/2016/07/20/hard- fork- completed/. July
+eral key predictions of our model, including the convergence                   2016.
+of bots on a form of profitable cooperation involving minimal           [12]   Vitalik Buterin and Virgil Griffith. “Casper the friendly
+gas-price increases. We also show that in many concrete cases,                 finality gadget”. In: arXiv preprint arXiv:1710.09437
+bots’ revenue from pure revenue arbitrage alone far exceeds                    (2017).
+the Ethereum block reward and transaction fees.                         [13]   Antonio Cabrales, Rosemarie Nagel, and Roc Armenter.
+   Finally, we argue that miner extractable value, particularly                “Equilibrium selection through incomplete information
+in the form of order optimization fees, implicit fees from                     in coordination games: an experimental study”. In:
+modifying transaction order, threatens blockchain consensus                    Experimental Economics 10.3 (2007), pp. 221–234.
+stability. Such fees are large enough to subsidize serious              [14]   Miles Carlsten et al. “On the instability of bitcoin with-
+attacks on the network. They constitute an economic vulnera-                   out the block reward”. In: ACM CCS. 2016, pp. 154–
+bility that should be a current cause for concern in Ethereum.                 167.
+                    ACKNOWLEDGMENTS                                     [15]   Jeremy Clark et al. “On Decentralizing Prediction Mar-
+                                                                               kets and Order Books”. In: WEIS. 2014.
+   We would like to thank Matt Weinberg for productive
+                                                                        [16]   Phil Daian. Analysis of the DAO exploit. http : / /
+discussions surrounding our model of priority gas auctions.
+                                                                               hackingdistributed . com / 2016 / 06 / 18 / analysis - of - the -
+   This material is based upon work supported by the Na-                       dao-exploit/. June 2016.
+tional Science Foundation Graduate Research Fellowship un-              [17]   Phil Daian, Rafael Pass, and Elaine Shi. “Snow white:
+der Grant No. DGE-1650441, as well as by NSF grants CNS-                       Robustly reconfigurable consensus and applications to
+1514163, CNS-1564102, and CNS-1704615, as well as by                           provably secure proofs of stake”. In: Iacr. 2017, pp. 1–
+ARO grant W911NF16-1-0145.                                                     64.
+   We also thank IC3 industry partners for their support in             [18]   Shayan Eskandari, Seyedehmahsa Moosavi, and
+funding this work.                                                             Jeremy Clark. “SoK: Transparent Dishonesty: front-
+                                                                               running attacks on Blockchain”. In: arXiv preprint
+                                                                               arXiv:1902.05164 (2019).
+
+
+
+
+                                                                   17
+[19]   Etherscan.com. https : / / etherscan . io / chart / blocktime.        [37]   Patrick McCorry et al. “Pisa: Arbitration Outsourc-
+       Referenced Apr. 2018.                                                        ing for State Channels.” In: IACR Cryptology ePrint
+[20]   Ittay Eyal and Emin Gün Sirer. “Majority is not enough:                     Archive 2018 (2018), p. 582.
+       Bitcoin mining is vulnerable”. In: Financial Cryptogra-               [38]   Robert McMillan. “The inside story of Mt. Gox, Bit-
+       phy. Springer. 2014, pp. 436–454.                                            coin’s $460 million disaster”. In: Wired. March 3
+[21]   Gianni Fenu et al. “The ICO phenomenon and its re-                           (2014).
+       lationships with ethereum smart contract environment”.                [39]   Jonathan Meng. “Understanding Gambling Behavior
+       In: 2018 International Workshop on Blockchain Ori-                           and Risk Attitudes Using Massive Online Casino Data”.
+       ented Software Engineering (IWBOSE). IEEE. 2018,                             Dartmouth Univ., 2018.
+       pp. 26–32.                                                            [40]   Rosemarie Nagel. “Unraveling in guessing games: An
+[22]   Neil Gandal et al. “Price manipulation in the Bitcoin                        experimental study”. In: The American Economic Re-
+       ecosystem”. In: Journal of Monetary Economics (2018).                        view 85.5 (1995), pp. 1313–1326.
+[23]   Georgi Georgiev. Decentralized Exchange Trading Vol-                  [41]   Tim Roughgarden. Lecture #2: Mechanism Design Ba-
+       ume Hits All-Time Low. https : / / bitcoinist . com /                        sics. http://theory.stanford.edu/ ∼tim/f16/l/l5.pdf. Sept.
+       decentralized - exchange - trading - volume - low/. Jan.                     2013.
+       2019.                                                                 [42]   Tim Roughgarden. Lecture #5: Incentives in Peer-to-
+[24]   Yossi Gilad et al. “Algorand: Scaling byzantine agree-                       Peer Networks. http://theory.stanford.edu/∼tim/f16/l/l5.
+       ments for cryptocurrencies”. In: Proceedings of the 26th                     pdf. Oct. 2016.
+       Symposium on Operating Systems Principles. ACM.                       [43]   Tuomas Sandholm et al. “Winner determination in com-
+       2017, pp. 51–68.                                                             binatorial auction generalizations”. In: Proceedings of
+[25]   Ari Juels, Ahmed Kosba, and Elaine Shi. “The Ring                            the first international joint conference on Autonomous
+       of Gyges: Investigating the future of criminal smart                         agents and multiagent systems: part 1. ACM. 2002,
+       contracts”. In: ACM CCS. 2016, pp. 283–295.                                  pp. 69–76.
+[26]   Olga Kharif. “CryptoKitties mania overwhelms                          [44]   Martin Shubik. “The dollar auction game: A paradox in
+       Ethereum network’s processing”. In: Bloomberg (4                             noncooperative behavior and escalation”. In: Journal of
+       Dec. 2017).                                                                  conflict Resolution 15.1 (1971), pp. 109–111.
+[27]   Aggelos Kiayias et al. “Ouroboros: A provably se-                     [45]   Nick Szabo. “Formalizing and securing relationships on
+       cure proof-of-stake blockchain protocol”. In: Annual                         public networks”. In: First Monday 2.9 (1997).
+       International Cryptology Conference. Springer. 2017,                  [46]   Uniswap Exchange Protocol. www.uniswap.io. Refer-
+       pp. 357–388.                                                                 enced March 2019.
+[28]   Sunny King and Scott Nadal. PPCoin: Peer-to-Peer                      [47]   Marten Van Dijk et al. “FlipIt: The game of ‘stealthy
+       Crypto-Currency with Proof-of-Stake. 2012.                                   takeover’”. In: Journal of Cryptology 26.4 (2013),
+[29]   Eleftherios Kokoris-Kogias et al. “Omniledger: A se-                         pp. 655–713.
+       cure, scale-out, decentralized ledger via sharding”. In:              [48]   Will Warren and Amir Bandeali. “0x: An open
+       2018 IEEE Symposium on Security and Privacy (SP).                            protocol for decentralized exchange on the
+       IEEE. 2018, pp. 583–598.                                                     Ethereum blockchain”. In: URl: https://github.
+[30]   Ahmed Kosba et al. “Hawk: The blockchain model of                            com/0xProject/whitepaper (2017).
+       cryptography and privacy-preserving smart contracts”.                 [49]   Gavin Wood. Ethereum: A secure decentralised gen-
+       In: IEEE S&P. 2016, pp. 839–858.                                             eralised transaction ledger. 2014. URL: http : / /
+[31]   Jae Kwon. “Tendermint: Consensus without mining”.                            yellowpaper.io/.
+       In: Draft v. 0.6, fall (2014).                                        [50]   Fan Zhang et al. Paralysis Proofs: Secure Dynamic
+[32]   S Demian Lerner. Rootstock: Bitcoin powered smart                            Access Structures for Cryptocurrencies and More. IACR
+       contracts. 2015.                                                             ePrint 2018/096. 2018.
+[33]   Michael Lewis. Flash Boys: a Wall Street revolt.                      [51]   Fan Zhang et al. “Town Crier: An authenticated data
+       W.W. Norton & Company, 2014.                                                 feed for smart contracts”. In: ACM CCS. ACM. 2016,
+[34]   Loi Luu et al. “Making smart contracts smarter”. In:                         pp. 270–282.
+       ACM CCS. ACM. 2016, pp. 254–269.
+[35]   Viktor Manahov. “Front-Running Scalping Strategies                                           A PPENDIX A
+       and Market Manipulation: Why Does High-Frequency                                S MART-C ONTRACT-E NABLED C OMPLEX
+       Trading Need Stricter Regulation?” In: Financial Re-                                      N ONDETERMINISM
+       view 51.3 (2016), pp. 363–402.                                           Although this work often focuses on pure revenue opportu-
+[36]   Patrick McCorry, Siamak F Shahandashti, and Feng                      nities, not all opportunities are pure revenue.
+       Hao. “A smart contract for boardroom voting with                         While arbitrage bots’ intent is often clear by inspection
+       maximum voter privacy”. In: International Conference                  of their transactions, other times, intent may be opaque,
+       on Financial Cryptography and Data Security. Springer.                nondeterministic, or may depend on unpredictable aspects
+       2017, pp. 357–375.                                                    of the Ethereum network state. The smart contract wrappers
+
+
+
+                                                                        18
+                                                 Pure Revenue Market Size (USD)                               B. Pure Revenue, Broken Down by Bots
+
+
+
+
+Daily Pure Revenue Captured (USD)
+                                         7
+                                    10                                                                           Figure 18 shows the size of the full pure revenue opportunity
+                                                                                                              market captured by the top 10 transaction senders; note that
+                                    106                                               103                     the graph is very similar to the graph of the estimated profits
+                                                                                                              we calculate, having a relatively constant offset and almost
+
+
+
+
+                                                                                       ETH Price (USD)
+                                    105                                                                       identical shape for all market players.
+                                                                                                                 This may reflect imperfections in our heuristics for calculat-
+                                                                                                              ing profit; we cannot include, for example, server costs, and it
+                                    104
+                                                                                                              is difficult to tell which on-chain transactions other than a pure
+                                                                                                              revenue transaction may have contributed to a bot’s specific
+                                    103                                                                       costs. We also do not include costs of failing to capture com-
+                                                                                                              petitive pure revenue opportunities, which may be significant;
+                                    102                                               102                     it is difficult to disambiguate these failed transactions from
+                                                                                                              unrelated transactions, as they may never execute or attempt
+                                                                                                              to execute the intended trades. These matters are left to future
+                                             07-17       01-18    08-18       02-19                           work and analyses of the data we publish.
+                                                          Date (MM-YY)
+                                                                                                                                    A PPENDIX C
+               Fig. 17. Size of the pure revenue market in USD as shown in Figure 4 for
+               ETH, displayed with USD/ETH price overlay.                                                               PGA S AND THEIR PARTICIPANTS ’ GAMES
+                                                                                                                 To provide some informal intuition for the modeling we
+                                                                                                              explore in V we now describe the perspective of both bots and
+               through which bots can execute transactions enable more                                        miners participating in PGAs. This also provides the basis for
+               than simple batching of transactions. Such contracts are actu-                                 our later claims that PGAs have the ability to lead to systemic
+               ally atomically-executing programs written in Turing-complete                                  instability in blockchains, degrading their security, a notion
+               scripting languages, and can therefore implement complex                                       we explore fully in Section VII.
+               strategies.
+                  For example, during, before, or after executing a set of                                    A. The miner perspective
+               trades, a wrapper contract can also query prices from and                                         From the point of view of the miner who is eventually going
+               conditionally trade with automated market makers. Because                                      to mine a block, the economic game proceeds as follows.
+               the prices offered by these automated market makers cannot                                     At some point in time (along the approximate objective time
+               be known in advance, and because batches can revert, even                                      axis displayed in Figure 2), the miner takes a snapshot of
+               based on changes in the Ethereum global state and the success                                  all transactions it has seen on the peer to peer network, and
+               of other batches, orders placed through smart contracts can                                    includes the highest fee transactions in a block template that
+               express complex conditional preferences on trade execution.                                    it attempts to solve the proof of work on, converting the block
+               Complex trades can also perform arbitrary computation on                                       template into a block able to be propagated to the network.
+               the Ethereum network. Such complex order types do not have                                        When this snapshot is taken, the highest n transactions
+               analogs in traditional HFT, but are similar to (and more general                               generated by PGA bots are included in the block. n is the
+               than) proposals such as [43].                                                                  number of unique (account, nonce) pairs observed in the epoch
+                                                                                                              and therefore the number of unique eligible bidders: recall
+                                                             A PPENDIX B                                      each (account, nonce) can only be mined once. The highest
+                                                     A DDITIONAL DATA A NALYSES                               paying transaction is included first, and captures the associated
+                                                                                                              revenue of the opportunity. The remaining transactions are
+               A. Pure Revenue USD Market
+                                                                                                              included in descending order of gas price, or marginal cost
+                  Figure 17 shows the ETH price and size of the pure                                          per instruction.
+               revenue market in USD. When compared to the equivalent                                            If all “bids” are competing for the same pure revenue oppor-
+               graph denominated in ETH (Figure 4), some effect of price                                      tunity, transactions after the first receive no revenue. If such
+               reductions on the market size are evident. Opportunities in                                    bids are complex probabilistic orders which are not inherently
+               ETH are relatively consistent and well distributed, as we                                      mutually exclusive, we may expect to see decreasing power-
+               expect from mechanical rents extracted due to exchange design                                  law profits, the lions share of which go to the first arbitrageur.
+               fundamentals. Such USD graphs appear more correlated with                                         Note that in Figure 2, the mined block template was likely
+               the price, showing decreased revenue during price slumps and                                   formed immediately after the winning transaction and before
+               contradicting our other data about the sophistication of the                                   the next transaction with the same (account, nonce) pair;
+               PGA bot market increasing over time.                                                           otherwise, the higher fee transaction would have been included
+                  Because of this and the relevance of ETH to direct protocol                                 by the miner to maximize revenue. This means that the block
+               security analyses, we denominate the majority of our synthe-                                   template that would finally win this game was created by the
+               sized results in ETH.                                                                          miner around second 5. Note also that arbitrageurs continue
+
+
+
+                                                                                                         19
+ Daily Pure Revenue Captured (USD)
+                                                                Pure Revenue Per Bot, 14-Day Moving Average
+                                      105                                                                                                                         Market Total
+                                      104                                                                                                                           0x0000f7..
+                                                                                                                                                                    0x44e05b..
+                                      103                                                                                                                           0xaa2432..
+                                                                                                                                                                   0xb3707d..
+                                      102
+                                                                                                                                                                     0xf13ecd..
+                                      101                                                                                                                           0x5a2896..
+                                                                                                                                                                   0xbb3a8c..
+                                      100                                                                                                                           0xa53170..
+                                     10−1                                                                                                                           0x905451..
+                                                                                                                                                                    0x00bd1f..
+                                     10−2
+                                       07-17 08-17 10-17 11-17 01-18 03-18 04-18 06-18 08-18 09-18 11-18 01-19 02-19 Date (MM-YY)
+
+
+                                            Fig. 18. Pure revenue bot breakdown, as described in Section IV, showing revenue without subtracting transaction costs.
+
+
+
+to bid after this result is locked in, unaware that this pool                                              should also optimize on latency to miners, to make it more
+has formed the template that will eventually constitute a valid                                            likely that at the time when the miners form the template, their
+block, showing their imperfect information with regards to this                                            bid was the last bid received by the miner and therefore reflects
+game. After some delay, the bots learn of the outcome, and                                                 the most market information. We explore the full space of
+stop bidding in the auction.                                                                               bot strategies in Section V. Our model shows that optimizing
+   This picture overview clearly that it is in the miner’s                                                 for latency is profitable for a bot participating in this market,
+best interest to refresh the block templates it is mining on                                               and draws the connection to high frequency (latency-sensitive)
+as quickly as possible. Let us assume the real block was                                                   trading in traditional markets.
+mined after the end of the auction, around second 15. This
+assumption is reasonable, as there is no incentive for the                                                                      A PPENDIX D
+bots we observe to continue bidding after they are made                                                              A DDITIONAL PGA MODELING DETAILS
+aware a block is discovered, and there is also substantial                                                 Proof of Observation 1. S1 counterbids after time δ. Since D
+incentive for miners to optimize propagation latency to the                                                has distribution Exp(λ), the probability that any bid by S0 will
+network (see e.g. [20]. Had the miners instead included                                                    have priority in a mined block is Pr[X < δ], for X a random
+the transactions that bid highest in this action, their total                                              variable with distribution Exp(λ). This holds with probability
+capture profit would be 231520 · 8856.24 Gwei = x ETH for                                                  1 − e−λδ . Thus, the payoff of S1 is positive if:
+bot       0xb8D76f4BC2518F8eb508bf0Ccca76f8F9DD57a3f,
+and 227534 · 7716.48 Gwei             =     y ETH for bot                                                                    e−λδ $r − (1 − e−λδ )$c > 0.
+0x6BEcAb24Ed88Ec13D0A18f20e7dC5E4d5b146542,
+                                                                                                           The observation follows.
+for a total of z ETH gained by an optimal miner. Assuming
+the third bot would have bid similarly to these two bots                                                   Proof of Observation 2. Since ∆i > δ, S0 can schedule its
+and would have contributed equally to the miner’s reward,                                                  bids at intervals less than ∆i . Thus, by the time P1 observes
+MiningPoolHub’s suboptimality in this instance cost q ETH.                                                 a bid $bi , P0 has already cast a new bid $bi+1 . Since S1 is
+   It is obvious to see why substantial arbitrage opportunities                                            pure, P1 can choose a value $bi+1 that outbids S00 s reactive
+then directly alter miner strategies, by incentivizing them to                                             bid to $bi . Thus P1 ’s bids will always maintain the highest
+optimize on template refresh latency as described above. If                                                bid and win the PGA.
+PGA opportunities increase, we expect to see such optimiza-
+tions in practice.                                                                                         Observation 4. There exists a finite number of intervals imax
+                                                                                                           for a cooperative PGA after which bidding is no longer
+B. The PGA bot perspective                                                                                 profitable, even if the block has not yet been mined.
+   From the perspective of the bots competing for block space                                              Proof. Let imax be the greatest value for which the following
+in PGAs, the game looks very different. Bots, like miners, see                                             inequality holds:
+transactions on the public peer to peer network performed by
+their peers. They are able to simulate the execution of these                                                                  s × (1 + ι)imax ≤ 1 + c,
+transactions, read the orderbooks of decentralized exchanges,
+and issue orders. Bots should optimize on latency to other bots                                            where where s is the starting bid and n is the minimum bid
+to gain information more quickly about their actions. Bots                                                 increment as defined in Section V.
+
+
+
+                                                                                                      20
+            Exec(S0 , ∆0 , S1 , ∆1 , [D, `()])
+             1:    b∗ , p, d0 , d1 ← ∅; t∗ , t∗0 , t∗1 ← 0
+             2:    tend ←$ D
+             3:    do
+             4:       if FirstBidTime(p) ≤ min(t∗0 , t∗1 , FirstTime(d0 ), FirstTime(d1 )) then
+             5:          t∗ ← FirstBidTime(p)
+             6:          b = (t̂, $b; i) ← PopFirstBid(p)
+             7:          b∗ ← b∗ ∪ b
+             8:          d1−i ← d1−i ∪ (t̂ + ∆1−i )
+             9:       if for i ∈ {0, 1}, FirstTime(di ) < FirstBidTime(p) and FirstTime(di ) ≤ min(t∗0 , t∗1 , FirstTime(d1−i )) then
+            10 :         t∗ ← PopFirstTime(di )
+            11 :         (a, σi0 , tw,i ) ←$ Si (b∗ [t∗ − ∆i ], σi , t∗ )
+            12 :         σi ← σi0 ; t∗i ← tw,i
+            13 :         if a 6= ⊥ then
+            14 :            p←p ∪ a
+            15 :      if for i ∈ {0, 1}, t∗i < min(FirstBidTime(p), FirstTime(d0 ), FirstTime(d1 )) and t∗i ≤ t∗1−i then
+            16 :         t∗ ← t∗i
+            17 :         (a, σi0 , tw,i ) ←$ Si (b∗ [t∗ − ∆i ], σi , t∗ )
+            18 :         σi ← σi0 ; t∗i ← tw,i
+            19 :         p←p ∪ a
+            20 :   until FirstBidTime(p) > tend
+            21 :   b ← b∗
+            22 :   awin = (twin , $bwin ; i) ← MaxBid(b)
+            23 :   alose = (tlose , $blose ; 1 − i) ← MaxBid(b1−i )
+            24 :   if i = 0
+            25 :      output ($r0 , $r1 ) = ($1 − $bwin , `($blose ))
+            26 :   else
+            27 :      output ($r0 , $r1 ) = (`($blose ), $1 − $bwin )
+
+Fig. 19. Pseudocode for Exec, the execution of a PGA. This procedure maintains a list of pending bids p awaiting transmission. Bids in the pending
+list, p, are added to the current bid list, b∗ , at their scheduled time, but each player will not see them until after their individual latency, ∆i . For each bid
+that is cast by player Pi , a time is added to d1−i that indicates when P1−i will first see the bid. Players are awoken to schedule bids at their specified
+wake time, or earlier if they see a bid cast by the other player. For clarity, we define several functions. FirstBidTime(p) is the time t associated with the
+earliest pending transaction. PopFirstBid(p) pops and outputs the earliest transaction; given two transactions with the same time, it picks one uniformly at
+random. MaxBid(b) outputs the maximum price bid in b; given multiple bids at the same price, it outputs the first in temporal order. FirstTime(di ) outputs
+the earliest time from a list of times; PopFirstBid(di ) pops and outputs the earliest time. Although not specified here, bids must meet the validity rules –
+i.e. must meet the minimum start bid s, minimum raise ι and must be staggered by a minimum time δ.
+
+
+
+   We can equivalently define a latest end time for the PGA                         P0 , P1 adhering to the cooperative strategy with parameters
+tend = V [imax ].                                                                   D, W , the probability that Pb will win the PGA is given by
+
+where V [i] < t0 < V [i + 1].                                                                   iX
+                                                                                                 max
+
+                                                                                                        (1 − ptime (V [i])) × ptime (V [i + 1]),
+Observation 5. Denote by ptime (t) the probability that a PGA                                  i=2k+b
+has ended by some time t. For proof-of-work blockchains,
+ptime (t) = 1 − e−λt .                                                                for k ∈ [0, iend
+                                                                                                    2 ].
+
+Proof. Since the block interval in a proof-of-work blockchain                       Proof. Notice that probability that a player wins a PGA is
+is exponentially distributed, we model the PGA end time as an                       exactly the probability that the PGA terminates during an
+exponential distribution with rate parameter λ. The probability                     interval controlled by that player. This follows since miners
+that the auction has ended by some positive time t is given by                      continuously update their blocks with new more profitable
+the CDF of the exponential distribution:1 − e−λt .                                  transactions and the player in control of the interval will have
+                                                                                    the highest bid during its interval.
+Observation 6. Assume that miners continuously update their                            We can define the probability that the game ends during a
+blocks with the most profitable set of transactions. For players                    given interval as
+
+
+
+                                                                               21
+                                                                         serve identical functions – namely, to delay the other players
+                                                                         response. Thus for simplicity, we define
+     pinterval (i) = (1 − ptime (V [i])) × ptime (V [i + 1]),
+and the probability of Pb winning is the summation of                                              delay(Pb ) = Max[∆1−b , δ].
+pinterval for all intervals that it controls.
+                                                                         Observation 8. If for all i, it holds that delay(Pb ) < W [i +
+   For any interval i < imax , we can now define the expected            1] − W [i], then under the assumption that `($blose ) = −c, the
+payoff for each player during that interval, conditioned on the          expected payoff for P1−b deviating during the ith interval is
+fact that the auction has already reached the interval j ≤ i and         given by
+has not yet terminated. For each interval, we give two expected
+values: one for the “bidder” — i.e., the player whose turn it is             (P )
+                                                                            b
+                                                                         Edeviate (delay(Pb ) , i) = ptime (delay(Pb ) ) × Max(−c, 1 − W [i + 1])
+to bid during that interval and one for the “non-bidder”. The
+bidder’s expected reward is given by:                                                                   + (1 − ptime (delay(Pb ) ) × −c
+                                                                         .
+        Ebidder (i, j) = pinterval (i − j) × (1 − W [i]).
+                                                                         Proof. Since delay(Pb ) < W [i+1]−W [i], then Pb will notice
+   The non-bidder’s expected reward during a given interval is           and be able to react to P1−b ’s deviation during the current
+given by:                                                                (before it issues any other bids). At this point, Pb will react by
+                                                                         bidding 1 + c, making the PGA unprofitable for both players.
+           Enon−bidder (i, j) = pinterval (i − j) × −c.                     Thus, P1−b ’s expected profit is the expected reward that it
+                                                                         makes during the time before the deviation is noticed, and −c
+   Now, we define the expected payoff for each player by
+                                                                         if the auction does not end during that period, which is given
+continuing to follow the cooperative strategy at any point in the
+                                                                         by the above equation.
+game. As in our definition of the strategy, we assume without
+loss of generality that P0 bids first and P1 bids second.                Lemma 1. Let Pbidder and Pnon−bidder respectively denote
+                                                                         the player who is and is not bidding during an interval accord-
+Observation 7. During the jth interval, the expected payoff
+                                                                         ing to the cooperative strategy. The grim-trigger cooperative
+for Pb to continue to cooperate for the rest of the auction is
+                                                                         strategy with parameters D, W will yield a Nash Equilibrium
+given by:
+                                                                         if ∀j,
+    (P )
+                     X
+     b
+  Ecooperate (j) =           Ebidder (2i + j + b, j)+                               (P             )        (P          )
+                                                                                  non−bidder
+                                                                               Ecooperate             non−bidder
+                                                                                             (j) ≥ Edeviate      (delay(Pbidder ),j ).
+                     i=0,∞
+                     X
+                             Enon−bidder (2i + j + (1 − b), j)+          Proof. In order for a Nash equilibrium to hold for the grim-
+                     i=0,∞                                               trigger cooperative strategy, it must be the case that for all
+                   (1 − ptime (V [iend ])) × −c                          points in time, it is more profitable to follow the cooperative
+                                                                         agreement than it is to defect.
+Proof. This follow directly form the previous observation.                  Notice that deviating is most profitable at the beginning of
+Previously, we defined the expected value of a bidder and a              one’s interval since deviating later on will yield at most the
+non-bidder in any interval. If we take an infinite sum of these          same payoff, but conditioned on the game not having ended
+expected values, alternating between bidder and non-bidder               previously. Thus, in order for there to be an equilibrium, it
+corresponding to the intervals in which the respective players           must hold that ∀j, ∀b ∈ {0, 1},
+bid, then we will get the expected payoff for the remainder of
+                                                                                            (P )                 (P )
+the game.                                                                                    b
+                                                                                          Ecooperate          b
+                                                                                                     (j) ≥ Edeviate (delay(Pb ),j ).
+   Next, we show the cost of deviation. For the grim-trigger             Notice that assuming the other player is cooperating, deviating
+cooperative strategy, each player knows that if they defect, the         is only profitable in intervals where one is the non-bidder.
+other player will raise the bid to make the game unprofitable            This is clear as when one already has the top bid, bidding
+– i.e., each player’s payoff will be `($blose .                          again would decrease their own profit. Thus in order for the
+   While intuitively this arrangement (assuming that the other           an equilibrium to hold, it must be true that the non-bidder.
+player will make good on its threat) makes deviation unwise,
+deviation may still be profitable if the auction ends before the
+other player can respond. This can happen due to the other                                           A PPENDIX E
+player’s latency – i.e., if there is some time delay in which                            OO F EES AND OTHER S YSTEM D ESIGNS
+the deviation goes undetected. Additionally, this can occur due             We now discuss high-level consequences of OO fees in the
+to the rate limit – i.e., the deviation was detected, but the            context of different types of blockchain systems being built
+other player is not yet able to place a bid to make good on its          in academia and industry. The complete enumeration of their
+threat. For the sake of this analysis, the latency and rate limit        impact is left to future work.
+
+
+
+                                                                    22
+• Proof-of-stake systems In any proof of stake system                miners can simply participate in exchanges, collecting
+  where forks are allowed (e.g. [17] [28] [27]), similar             old states through public watchtowers, and can selectively
+  incentives as for Proof of Work exist for miner to orphan          publish profitable states in a history rewriting attack that
+  or rewrite history when profitable OO fees exist. Re-              works as above. Thus, it is not necessarily the case that
+  gardless of whether sealed-bid auctions (cf. Section V-C)          the abstraction achieved by Layer 2 exchange systems is
+  are prominent, the next miner may overtake the previous            sufficient to prevent ordering attacks.
+  block and replay its transactions in her block in an
+  optimized order. Some stake-based protocols, on the other
+  hand, attempt to provide a notion of finality, and feature
+  clients which will not revert history regardless of evi-
+  dence presented. For systems in which the finality notion
+  refers to a checkpoint that is done to cement multiple
+  blocks that have already been created (e.g. [12]), all of
+  the concerns remain the same, because rapid bidding
+  wars affect the appeal of short-term (in particular, single
+  block) forks. In blockchains that seek to finalize every
+  block (e.g. [24, 31]), the potential of high profit OO fees
+  implies that the honest (super-)majority assumption of
+  such systems may not coincide with rational behavior.
+• Permissioned       blockchain systems Permissioned
+  blockchains are currently being explored by many
+  large financial institutions, often in use-cases like
+  exchanges. The importance of transaction order in these
+  decentralized exchanges poses a variety of interesting
+  questions for such systems. For example, it is classically
+  claimed that blockchains add auditability to existing
+  workflows, but it is impossible to audit or objectively
+  divine the real order in which a block producer received
+  transactions on an asynchronous network. Furthermore,
+  because OO fees exist even on permissioned chains
+  where on-chain assets are being exchanged, block
+  producers in such chains must be chosen carefully and
+  trusted with correct operation and ordering.
+• Sharded blockchain systems Several sharded blockchain
+  systems have been explored in both academia (e.g. [29])
+  and industry (e.g. [10]). One important consequence of
+  sharding blockchains is the reduced security of each shard
+  over the security of the whole system. Generally, the
+  effects of this reduced security are mitigated through ran-
+  dom sampling from a large pool of potential validators,
+  so an adversary would require substantial control of the
+  pool to have a high chance of adversarially controlling
+  a shard. Unfortunately, as OO fees show, the security
+  needs of shards may not be homogeneuous; a shard that
+  operates a large decentralized exchange must pay miners
+  higher rewards to ensure stability than a shard without
+  such an exchange by the analysis in [14]. Because few
+  sharded based systems are running in practice, substantial
+  future work remains to fully enumerate potential attacks
+  and their mitigations in sharded systems.
+• Other exchange designs In other blockchain-based ex-
+  change designs, it may still be possible for miners of
+  the underlying system to manipulate prices, either in real
+  time or retroactively. This sets up similar incentives as
+  those explored in this work. One example is for channel
+  based networks with public watchtowers such as [37];
+
+
+
+                                                                23
+

@@ -1,0 +1,137 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+State Architecture
+Resource Machine
+Resource Machine
+Primitive interfaces
+Data structures
+Data structures
+Resource
+Compliance unit
+Compliance unit
+Compliance unit
+Compliance proof
+Compliance proof
+Table of contents
+Compliance inputs
+Compliance constraints
+Action
+Transaction
+Execution flow
+Notes
+Shielded resource machine
+Integrations
+Integrations
+Protocol Adapters
+Tutorials
+Tutorials
+Contributor guidelines
+Table of contents
+Compliance inputs
+Compliance constraints
+Home
+System architecture
+State Architecture
+Resource Machine
+Data structures
+Compliance unit
+module
+arch.system.state.resource_machine.data_structures.compliance_unit.compliance_proof
+;
+Compliance proof
+¶
+Compliance proofs are created by
+ComplianceProvingSystem
+and computed over compliance units. Compliance proofs ensure that the provided state transition complies with the resource machine definitions.
+Compliance inputs
+¶
+Instance
+¶
+Name
+Type
+Description
+consumed
+List (nf: Nullifier, root: CMTree.Value, logicVKOuter: LogicVKOuterHash)
+Each entry corresponds to a consumed resource and includes a hash of the resource's
+logicRef
+component
+created
+List (cm: Commitment, logicVKOuter: LogicVKOuterHash)
+Each entry corresponds to a created resource
+unitDelta
+DeltaHash
+Witness
+¶
+for consumed resources:
+1. resource object
+r
+2.
+nullifierKey
+3.
+CMtree
+path to the consumed resource commitment
+4. pre-image of
+logicVKOuter
+5.
+deltaExtraInput
+used to compute resource delta
+for created resources:
+resource object
+r
+pre-image of
+logicVKOuter
+deltaExtraInput
+used to compute resource delta
+Note
+Instance and witness elements are expected to go in the same order: the first element of the instance corresponds to the first (4 for consumed and 2 for created) elements of the witness and so on.
+Compliance constraints
+¶
+Each resource machine compliance proof must check the following:
+Merkle path validity:
+CMTree::Verify(r.commitment(), path, root) = True
+for each resource associated with a nullifier from the
+consumed
+. For ephemeral resources a "fake" relation is checked.
+For each consumed resource
+r
+:
+Nullifier integrity:
+r.nullifier(nullifierKey) is in consumed
+Logic integrity:
+logicVKOuter = logicVKOuterHash(r.logicRef, ...)
+For each created resource
+r
+:
+Commitment integrity:
+r.commitment() is in created
+Logic integrity:
+logicVKOuter = logicVKOuterHash(r.logicRef, ...)
+Delta integrity:
+unitDelta = sum(r.delta(deltaExtraInput(r)) for r in consumed) - sum(r.delta(deltaExtraInput(r)) for r in created)
+where
+deltaExtraInput(r)
+returns
+deltaExtraInput
+associated with resource
+r
+Note
+Kind integrity is checked implicitly in delta integrity
+Note
+[2.3, 3.2]: Combined with checking the logic proofs, logic integrity checks allow to ensure that the logics associated with the resources are satisfied
+Note
+[2.1, 3.1]: To ensure correct binding between the instance and the witness, resource tags have to be recomputed from the witness and compared to what is provided in the instance.
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

@@ -1,5 +1,7 @@
 ## ADDED Requirements
 
+Product predicates govern objective semantics, proofs, participant authorization and ledger validity. Package promotion, reviewer identities and RP01/RP02/RP03 dispatch conditions govern internal maintainer delivery and project-operated resources only. They SHALL NOT be required to author, compile, prove or deploy an independently authored supported program. The [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../../../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope; this correction establishes no new implementation evidence.
+
 ### Requirement: Explicit financial meaning
 The experiment SHALL distinguish contractual denomination, test-token identity, dues, and actual transferred value.
 
@@ -33,16 +35,16 @@ This package SHALL label its transactions uncertified until MC05 enforces all ma
 - **WHEN** network success is offered as evidence of history compliance or compiler correspondence
 - **THEN** the package gate rejects the unsupported proof claim.
 
-### Requirement: Independent audit and provenance
-The package SHALL bind acceptance evidence to exact sources, commands, environment, outputs, and both required audit identities.
+### Requirement: Internal maintainer audit and provenance
+For internal delivery, the package SHALL bind release evidence to exact sources, commands, environment, outputs, and the independent audit identities selected by the current task. Reviewer records SHALL NOT enter public program or transaction validity.
 
 #### Scenario: Audited result
 - **WHEN** deterministic checks pass and both independent reviewers have no unresolved blocking finding
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
-- **THEN** the package remains pending audit and cannot promote dependent acceptance.
+- **WHEN** an independently selected internal reviewer is unavailable or lacks a fresh substantive identity-bound verdict
+- **THEN** the internal package remains pending audit; public validation does not reject a supported program solely because that maintainer audit is absent.
 
 ### Requirement: Failed predicate stops promotion
 The package SHALL remain incomplete if any required positive or rejection predicate fails.
@@ -52,7 +54,7 @@ The package SHALL remain incomplete if any required positive or rejection predic
 - **THEN** verification fails and dependent acceptance remains blocked.
 
 ### Requirement: Scoped financial integration
-After RP01 and RP03 admission, finalized financial effects SHALL be compared independently while the integration contract remains explicitly uncertified until MC05.
+For project-operated integration campaigns, RP01 and RP03 govern resource dispatch; finalized financial effects SHALL be compared independently while the integration contract remains explicitly uncertified until MC05.
 
 #### Scenario: Report requirement omitted
 - **WHEN** a candidate omits the applicable requirement or substitutes an earlier narrower experiment
