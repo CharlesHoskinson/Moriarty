@@ -1,0 +1,3 @@
+# Initial audit disposition
+
+All seven GPT-6 findings accepted for correction by Fable5.1 medium. Candidate01 is not approved. Preserve authenticated effects independently of completion conditions; restrict or identify attempt lifecycle correctly; restore fallback on React render/update failure; discharge failure-free remedy conditions correctly; derive reachable-state narratives accurately; narrow cryptographic evidence claims; add four-judgment explanation. Concrete toy asset identities also need visible treatment. Screen-reader and actual browser-zoom limits remain explicit unless exercised.

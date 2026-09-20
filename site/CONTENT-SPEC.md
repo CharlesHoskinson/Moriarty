@@ -5,6 +5,18 @@ site must trace to this document, and every line here traces to the repository.
 Whoever builds the site must not invent protocol behavior, guarantees, numbers
 or syntax, and if something is needed and is not here, it does not go on the site.
 
+**Precedence note (2026-09-19).** Where this document's older statements about
+a Compact compilation target, one-transition proofs or continuation history
+disagree with the consolidated contract, the contract controls:
+[`docs/MORIARTY-PRODUCT-CONTRACT.md`](../docs/MORIARTY-PRODUCT-CONTRACT.md),
+[`docs/MORIARTY-CONSOLIDATED-DESIGN.md`](../docs/MORIARTY-CONSOLIDATED-DESIGN.md)
+and the published requirements reference. The target is permissionless native
+ZKIRv3 compilation; Compact examples are scoped local evidence. The kernel page
+at `kernel.html` takes its substance from
+[`docs/superpowers/specs/2026-09-19-federated-kernel-interactive-page-design.md`](../docs/superpowers/specs/2026-09-19-federated-kernel-interactive-page-design.md)
+and its accounting fixture from `src/data/kernel-scenarios.mjs`; sections 1 to 9
+below govern the home page only.
+
 Repository: `~/Moriarty`, branch `website`. Primary sources: `README.md`,
 `ROADMAP.md`, `wiki/moriarty-architecture.md`, `wiki/defiformal-taxonomy.md`,
 `wiki/formal-assurance.md`, `wiki/security.md`,
