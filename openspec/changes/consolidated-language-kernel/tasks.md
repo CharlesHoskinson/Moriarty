@@ -12,3 +12,5 @@ All product tasks below remain unchecked. This documentation proposal does not d
 - [ ] U7 — Complete independent public developer flow and every retained release obligation.
 
 For each item, use the [roadmap exit](../../../ROADMAP.md), [EARS](requirements.md), [traceability](traceability.md) and [bounded workflow](workflow.md). P/C/K task lists are supporting detail; do not dispatch them as separate queues.
+
+The [syntax and semantics reconciliation](../../../docs/MORIARTY-LANGUAGE-REQUIREMENTS-ALIGNMENT.md) maps current local profiles to the U0 semantic interfaces and every MPLR/ZR/MNR obligation. It is documentation evidence only; all product tasks above remain open.
