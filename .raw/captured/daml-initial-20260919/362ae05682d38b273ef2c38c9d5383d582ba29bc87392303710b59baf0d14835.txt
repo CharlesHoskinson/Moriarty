@@ -1,0 +1,393 @@
+On this page
+Splice.Api.Token.TransferEventsV2
+Interfaces
+Interface EventLog
+Choice Archive
+Choice EventLog_HoldingsChange
+Method eventLog_holdingsChangeImpl
+Data Types
+data EventLogView
+data EventLog_HoldingsChangeResult
+data TransferLegSide
+data TransferSide
+Functions
+eventLog_holdingsChangeImpl
+Splice APIs
+Splice Daml Packages
+Token Standard v2
+splice-api-token-transfer-events-v2
+Splice.Api.Token.TransferEventsV2
+Copy page
+Copy page
+Reference documentation for Daml module Splice.Api.Token.TransferEventsV2.
+Copy page
+Copy page
+Daml module
+​
+Splice.Api.Token.TransferEventsV2
+Interface to log events for token standard transfers.
+Daml
+​
+Interfaces
+​
+Interface
+EventLog
+An interface for templates that can be used to report token standard v2 events.
+The non-consuming choice of this interface is used by the instrument admin to
+report token transfers. Make sure to only consider events from the instrument
+admin as token transfer events for a token.
+View Type:
+EventLogView
+Choices:
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+​
+Choice
+EventLog_HoldingsChange
+Signal a change in the holdings of an account to the observers.
+Asset admins MUST ensure that these events explain:
+All changes to the holdings of all regular accounts, including holdings that
+were created and archived within a single transaction.
+All incoming and outgoing transfers for all regular accounts.
+Controllers:
+admin
+Returns:
+EventLog_HoldingsChangeResult
+Arguments:
+​
+admin
+Party
+Instrument admin reporting the change in holdings.
+​
+account
+Account
+The account for which the change in holdings occurred.
+​
+inputHoldingCids
+[ContractId Holding]
+The holdings of the account that were consumed.
+They MUST be archived in the same transaction and they MUST be owned
+by the
+account
+specified in this change.
+Note that these MAY include holdings that were created and archived
+within the same transaction. Such holding contract ids will occur
+in both the input and output list of holdings.
+​
+transferLegSides
+[TransferLegSide]
+The transfers that caused the change in holdings.
+Their net balance changes MUST match the change in holdings of the account.
+Both sides of a transfer MUST be reported, and their ids must match.
+Transfer leg ids MUST be unique for different transfer legs.
+Note that the settlement of transfers whose net balance change is
+zero MAY result in events that do have empty input and output
+holdings.
+Note also that merging and splitting of holdings MAY be reported with
+an empty list of transfer legs, as the merge and split actions may not
+be related to a (self-)transfer of tokens.
+​
+outputHoldingCids
+[ContractId Holding]
+The newly created holdings of the account.
+​
+observers
+[Party]
+Parties that should be notified about the change in holdings.
+MUST include at least the account parties.
+​
+extraArgs
+ExtraArgs
+Arguments storing both metadata and additional context information about the event.
+Use
+splice.lfdecentralizedtrust.org/reason
+to explain the reason for the overall change
+in holdings.
+The
+ChoiceContext
+is provided to allow storing extra links to contract-ids, which is
+not possible using
+Metadata
+alone, as contract-ids cannot be stored as
+Text
+.
+Methods:
+​
+Method
+eventLog_holdingsChangeImpl
+Type:
+ContractId
+EventLog
+->
+EventLog_HoldingsChange
+->
+Update
+EventLog_HoldingsChangeResult
+​
+Data Types
+​
+data EventLogView
+View of an
+EventLog
+contract.
+Note that
+EventLog
+contracts do not support public fetching, as they are intended to
+be used by the instrument admin or app provider only.
+Constructors:
+EventLogView
+​
+admin
+Party
+Instrument admin reporting the change in holdings.
+​
+meta
+Metadata
+Additional metadata about the event log, used for extensibility.
+Instances:
+instance
+Eq
+EventLogView
+instance
+Show
+EventLogView
+instance
+HasFromAnyView
+EventLog
+EventLogView
+instance
+HasInterfaceView
+EventLog
+EventLogView
+instance
+GetField
+admin
+EventLogView
+Party
+instance
+GetField
+meta
+EventLogView
+Metadata
+instance
+SetField
+admin
+EventLogView
+Party
+instance
+SetField
+meta
+EventLogView
+Metadata
+​
+data EventLog_HoldingsChangeResult
+Result of logging a change in holdings event. Provided for extensibility
+in a future where interfaces are upgradeable.
+Constructors:
+EventLog_HoldingsChangeResult
+(no fields)
+Instances:
+instance
+HasMethod
+EventLog
+eventLog_holdingsChangeImpl
+(
+ContractId
+EventLog
+->
+EventLog_HoldingsChange
+->
+Update
+EventLog_HoldingsChangeResult
+)
+instance
+HasExercise
+EventLog
+EventLog_HoldingsChange
+EventLog_HoldingsChangeResult
+instance
+HasExerciseGuarded
+EventLog
+EventLog_HoldingsChange
+EventLog_HoldingsChangeResult
+instance
+HasFromAnyChoice
+EventLog
+EventLog_HoldingsChange
+EventLog_HoldingsChangeResult
+instance
+HasToAnyChoice
+EventLog
+EventLog_HoldingsChange
+EventLog_HoldingsChangeResult
+​
+data TransferLegSide
+A side of a transfer of holdings between two parties.
+Used to report transfer events on the affected accounts.
+Constructors:
+TransferLegSide
+​
+transferLegId
+Text
+An identifier for the transfer leg intended to correlate the sender
+and receiver sides.
+​
+side
+TransferSide
+The side of the transfer that this leg refers to.
+​
+otherside
+Account
+The account on the other side of the transfer leg; i.e., the sender
+in case of
+side == ReceiverSide
+, and the receiver in case of
+side == SenderSide
+.
+​
+amount
+Decimal
+The amount to transfer.
+​
+instrumentId
+Text
+The instrument identifier used by the instrument admin.
+​
+meta
+Metadata
+Additional metadata about the transfer leg, used for extensibility.
+Instances:
+instance
+Eq
+TransferLegSide
+instance
+Ord
+TransferLegSide
+instance
+Show
+TransferLegSide
+instance
+GetField
+amount
+TransferLegSide
+Decimal
+instance
+GetField
+instrumentId
+TransferLegSide
+Text
+instance
+GetField
+meta
+TransferLegSide
+Metadata
+instance
+GetField
+otherside
+TransferLegSide
+Account
+instance
+GetField
+side
+TransferLegSide
+TransferSide
+instance
+GetField
+transferLegId
+TransferLegSide
+Text
+instance
+GetField
+transferLegSides
+EventLog_HoldingsChange
+[
+TransferLegSide
+]
+instance
+SetField
+amount
+TransferLegSide
+Decimal
+instance
+SetField
+instrumentId
+TransferLegSide
+Text
+instance
+SetField
+meta
+TransferLegSide
+Metadata
+instance
+SetField
+otherside
+TransferLegSide
+Account
+instance
+SetField
+side
+TransferLegSide
+TransferSide
+instance
+SetField
+transferLegId
+TransferLegSide
+Text
+instance
+SetField
+transferLegSides
+EventLog_HoldingsChange
+[
+TransferLegSide
+]
+​
+data TransferSide
+A side of a transfer.
+Constructors:
+SenderSide
+The outbound side of a transfer, i.e., the sending of assets.
+ReceiverSide
+The inbound direction, i.e., the receipt of assets.
+Instances:
+instance
+Eq
+TransferSide
+instance
+Ord
+TransferSide
+instance
+Show
+TransferSide
+instance
+GetField
+side
+TransferLegSide
+TransferSide
+instance
+SetField
+side
+TransferLegSide
+TransferSide
+​
+Functions
+​
+eventLog_holdingsChangeImpl
+eventLog_holdingsChangeImpl
+:
+EventLog
+->
+ContractId
+EventLog
+->
+EventLog_HoldingsChange
+->
+Update
+EventLog_HoldingsChangeResult
+Suggest edits
+Raise issue
+Overview
+Overview

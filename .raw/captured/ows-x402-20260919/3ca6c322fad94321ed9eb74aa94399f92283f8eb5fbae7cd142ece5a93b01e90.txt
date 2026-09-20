@@ -1,0 +1,116 @@
+On this page
+Parameters
+args?
+Returns
+Throws
+Examples
+createCdpFacilitatorClient
+Copy page
+Copy page
+Copy page
+Copy page
+function
+createCdpFacilitatorClient
+(
+args
+?:
+CdpFacilitatorClientArgs
+)
+:
+HTTPFacilitatorClient
+;
+Defined in:
+facilitator.ts:180
+Creates a CDP-authenticated x402 facilitator client.
+The returned client is pre-configured with the CDP hosted facilitator URL
+and CDP JWT-based authentication. It implements the
+HTTPFacilitatorClient
+interface from
+@x402/core/server
+and can be passed directly to
+x402ResourceServer
+as a drop-in replacement for a self-hosted facilitator.
+Credentials are resolved in order: explicit args →
+CDP_API_KEY_ID
+/
+CDP_API_KEY_SECRET
+environment variables.
+​
+Parameters
+​
+args?
+CdpFacilitatorClientArgs
+Optional credential overrides.
+​
+Returns
+HTTPFacilitatorClient
+A configured
+HTTPFacilitatorClient
+ready for use with
+x402ResourceServer
+.
+​
+Throws
+If neither explicit args nor environment variables provide credentials.
+​
+Examples
+Drop-in replacement for a self-hosted facilitator:
+import
+{
+createCdpFacilitatorClient
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+x402ResourceServer
+}
+from
+"@x402/core/server"
+;
+import
+{
+ExactEvmScheme
+}
+from
+"@x402/evm/exact/server"
+;
+// Set CDP_API_KEY_ID and CDP_API_KEY_SECRET in your environment
+const
+facilitator
+=
+createCdpFacilitatorClient
+();
+const
+server
+=
+new
+x402ResourceServer
+(
+facilitator
+)
+.
+register
+(
+"eip155:8453"
+,
+new
+ExactEvmScheme
+());
+Explicit credentials:
+const
+facilitator
+=
+createCdpFacilitatorClient
+({
+apiKeyId:
+"my-key-id"
+,
+apiKeySecret:
+"my-key-secret"
+,
+});
+Was this page helpful?
+Yes
+No

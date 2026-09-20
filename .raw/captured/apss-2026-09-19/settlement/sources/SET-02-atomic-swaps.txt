@@ -1,0 +1,610 @@
+                                                                                               Atomic Cross-Chain Swaps
+                                                                                                                        Maurice Herlihy
+                                                                                                               Computer Science Department
+                                                                                                                     Brown University
+                                                                                                               Providence, Rhode Island 02912
+                                                                                                                maurice.herlihy@gmail.com
+
+                                         ABSTRACT                                                                                    from Alice to Bob. Timelock t means that if Bob fails to produce
+                                         An atomic cross-chain swap is a distributed coordination task where                         that secret before time t elapses, then the escrowed alt-coins are
+
+
+
+
+arXiv:1801.09515v4 [cs.DC] 18 May 2018
+                                         multiple parties exchange assets across multiple blockchains, for                           refunded to Alice.
+                                         example, trading bitcoin for ether.                                                            Here is a simple protocol for Alice, Bob, and Carol’s three-way
+                                            An atomic swap protocol guarantees (1) if all parties conform to                         swap, illustrated in Figures 1 and 2. Let ∆ be enough time for one
+                                         the protocol, then all swaps take place, (2) if some coalition deviates                     party to publish a smart contract on any of the blockchains, or
+                                         from the protocol, then no conforming party ends up worse off,                              to change a contract’s state, and for the other party to detect the
+                                         and (3) no coalition has an incentive to deviate from the protocol.                         change.
+                                            A cross-chain swap is modeled as a directed graph D, whose
+                                         vertexes are parties and whose arcs are proposed asset transfers. For                             • Alice creates a secret s, h = H (s), and publishes a contract
+                                         any pair (D, L), where D = (V , A) is a strongly-connected directed                                 on the alt-coin blockchain with hashlock h and timelock
+                                         graph and L ⊂ V a feedback vertex set for D, we give an atomic                                      6∆ in the future, to transfer her alt-coins to Bob.
+                                         cross-chain swap protocol for D, using a form of hashed timelock                                  • When Bob confirms that Alice’s contract has been pub-
+                                         contracts, where the vertexes in L generate the hashlocked secrets.                                 lished on the alt-coin blockchain, he publishes a contract
+                                         We show that no such protocol is possible if D is not strongly                                      on the Bitcoin blockchain with the same hashlock h but
+                                         connected, or if D is strongly connected but L is not a feedback                                    with timelock 5∆ in the future, to transfer his bitcoins to
+                                         vertex set. The protocol has time complexity O(diam(D)) and space                                   Carol.
+                                         complexity (bits stored on all blockchains) O(|A| 2 ).                                            • When Carol confirms that Bob’s contract has been pub-
+                                                                                                                                             lished on the Bitcoin blockchain, she publishes a contract
+                                                                                                                                             on the automobile title blockchain with the same hashlock
+                                         1     MOTIVATION                                                                                    h, but with timeout 4∆ in the future, to transfer her Cadil-
+                                         Carol wants to sell her Cadillac for bitcoins. Alice is willing to buy                              lac’s title to Alice.
+                                         Carol’s Cadillac, but she wants to pay in an “alt-coin” cryptocur-                                • When Alice confirms that Carol’s contract has been pub-
+                                         rency. Fortunately, Bob is willing to trade alt-coins for bitcoins.                                 lished on the title blockchain, she sends s to Carol’s con-
+                                         Alice, Bob, and Carol need to arrange a three-way swap: Alice will                                  tract, acquiring the title and revealing s to Carol.
+                                         transfer her alt-coins to Bob, Bob will transfer his bitcoins to Carol,                           • Carol then sends s to Bob’s contract, acquiring the bitcoins
+                                         and Carol will transfer title of her Cadillac to Alice1 . Of course, no                             and revealing s to Bob.
+                                         one trusts anyone else. How can we devise a protocol that ensures                                 • Bob sends s to Alice’s contract, acquiring the alt-coins and
+                                         that if all parties behave rationally, in his or her own self-interest,                             completing the swap.
+                                         then all assets are exchanged, but if some parties behave irrationally,
+                                         then no rational party will end up worse off?                                               What could go wrong? If any party halts while contracts are being
+                                            In many blockchains, assets are transferred under the control                            deployed, then all contracts eventually time out and trigger refunds.
+                                         of so-called smart contracts (or just contracts), scripts published                         If any party halts while contracts are being triggered, then only
+                                         on the blockchain that establish and enforce conditions necessary                           that party ends up worse off. For example, if Carol halts without
+                                         to transfer an asset from one party to another. For example, let                            triggering her contract, then Alice gets the Cadillac and Bob gets a
+                                         H (·) be a cryptographic hash function. Alice might place her alt-                          refund, so Carol’s misbehavior harms only herself.
+                                         coins in escrow by publishing on the alt-coin blockchain a smart                               The order in which contracts are deployed matters. If Carol were
+                                         contract with hashlock h and timelock t. Hashlock h means that if                           to post her contract with Alice before Bob posts his contract with
+                                         Bob sends the contract a value s, called a secret, such that h = H (s),                     Carol, then Alice could take ownership of the Cadillac without
+                                         then the contract irrevocably transfers ownership of those alt-coins                        paying Carol.
+                                         1 Naturally, they live in a state that records automobile titles in a blockchain.              Timelock values matter. If Carol’s contract with Bob were to
+                                                                                                                                     expire at the same time as Bob’s contract with Alice, then Carol
+                                         Permission to make digital or hard copies of part or all of this work for personal or       could reveal s to collect Bob’s bitcoins at the very last moment,
+                                         classroom use is granted without fee provided that copies are not made or distributed
+                                         for profit or commercial advantage and that copies bear this notice and the full citation   leaving Bob no time to collect his alt-coins from Alice.
+                                         on the first page. Copyrights for third-party components of this work must be honored.         What if parties behave irrationally? If Alice (irrationally) reveals
+                                         For all other uses, contact the owner/author(s).
+                                                                                                                                     s before the first phase completes, then Bob can take Alice’s alt-
+                                         PODC’18, Egham, United Kingdom
+                                         © 2018 Copyright held by the owner/author(s). 978-1-4503-5795-1/18/07. . . $15.00           coins, and perhaps Carol can take Bob’s bitcoins, but Alice will not
+                                         DOI: 10.1145/3212734.3212736                                                                get her Cadillac, so only she is worse off.
+                                                    secret ,
+
+
+
+                                     A                                                 A                                       A
+                                 hashlock                                                                                      hashlock
+                                   , 6                                                                                          , 4
+                                                                                      hashlock
+                                                                                        , 5
+                     C                             B                     C                          B               C                         B
+
+
+                                Elapsed: +                                       Elapsed: +2                             Elapsed: +3
+
+
+                                                Figure 1: Atomic cross-chain swap: deploying contracts
+
+                       reveal
+
+
+                                     A                                                 A                                       A
+                                                                                      transfer                                transfer
+                             transfer car                                              bitcoin                                alt‐coin
+
+
+                     C                             B                     C                           B              C                         B
+                                                                             reveal
+                             learn                                                               learn                               reveal
+
+
+
+
+                                Elapsed: 4                                       Elapsed: 5                               Elapsed: 6
+
+
+
+                                                    Figure 2: Atomic cross-chain swap: triggering arcs
+
+
+   A atomic swap protocol guarantees (1) if all parties conform to the                       In a decentralized distributed system, upgrades from one software
+protocol, then all swaps take place, (2) if some parties deviate from                        version to another, or from one data schema to another, could bene-
+the protocol, then no conforming party ends up worse off2 , and (3)                          fit from atomic cross-chain swaps. An atomic swap protocol can be
+no coalition has an incentive to deviate from the protocol. Alice,                           thought of as a trust-free, Byzantine-hardened form of distributed
+Bob, and Carol’s swapping adventure suggests broader questions:                              commitment [26]. An atomic cross-chain swap is a special case
+when are atomic cross-chain swaps possible, how can we implement                             of a distributed atomic transaction [25], although not all atomic
+them, and what do they cost?                                                                 transactions can be expressed as cross-chain swaps.
+   While swapping digital assets is the immediate motivation for                                 Cross-chain swaps are well-known to the blockchain commu-
+this study, atomic cross-chain swap protocols have other possi-                              nity [4, 6, 9, 20, 21, 27], but to our knowledge, this is the first
+ble applications. Sharding [7] splits one blockchain into many for                           systematic analysis of the theory underlying such protocols. We
+better load-balancing and scalability. Most of the time, activities                          make the following contributions. A cross-chain swap is modeled
+on different shards proceed independently. When they cannot, an                              as a directed graph (digraph) D, whose vertexes are parties and
+atomic swap protocol can coordinate needed cross-chain updates.                              whose arcs are proposed asset transfers. For any pair (D, L), where
+                                                                                             D = (V , A) is a strongly-connected digraph and L ⊂ V a feedback
+2 Other than the inconvenience of having assets temporarily locked up.
+vertex set for D, we give an atomic cross-chain swap protocol using                  hacked, or because they profit in ways not foreseen by the protocol
+a form of hashed timelock contracts, where the vertexes in L, called                 designers.
+leaders, generate the hashlocked secrets. (Vertexes that are not lead-                  Blockchain protocols typically require parties to have public and
+ers are followers.) We also show that no such protocol is possible                   private keys. We use sig(x, v) to denote the result of v using its
+if D is not strongly connected, or if D is strongly connected but                    private key to sign x.
+the set of leaders L is not a feedback vertex set. The protocol has
+time complexity O(diam(D)) and communication complexity (bits                        3      SWAP DIGRAPHS AND GAMES
+published on blockchains) O(|A| · |L|).
+                                                                                     A cross-chain swap is given by a digraph D = (V , A), where each
+                                                                                     vertex in V represents a party, and each arc in A represents a pro-
+2 MODEL                                                                              posed asset transfer from the arc’s head to its tail via a shared
+2.1 Digraphs                                                                         blockchain. (We assume without loss of generality that D is con-
+A directed graph (or digraph) D is a pair (V , A), where V is a finite set           nected, because a disconnected digraph can be treated as multiple
+of vertexes, and A is a finite set of ordered pairs of distinct vertexes             swaps.) Henceforth, we use party and vertex, blockchain and arc,
+called arcs. We use V (D) for D’s set of vertexes, and A(D) for its                  interchangeably, depending on whether we emphasize roles or
+set of arcs. An arc (u, v) has head u and tail v. An arc leaves its                  digraph structure.
+head and enters its tail. An arc (u, v) enters a set of vertexes W ⊆ V                  In the terminology of game theory, a swap D is a cooperative
+if u < W and v ∈ W , and similarly for leaving.                                      game, organized so that if all parties follow the protocol, each
+     A digraph C is a subdigraph of D if V (C) ⊆ V (D), A(C) ⊆ A(D)                  transfer on each arc happens. Each possible outcome is given by
+and every arc in A(C) has both its head and tail in V (C).                           a subdigraph E = (V , A0 ) of D. If a proposed transfer (u, v) ∈ A is
+     A path p in D is a sequence of vertexes (u 0 , . . . , u ` ) such that          also in (u, v) ∈ A0 , then that transfer happened. For short, we say
+u 0 , . . . , u `−1 are distinct. Path p has length `, denoted by |p|. If v          arc (u, v) was triggered.
+is a vertex, and (u 0 , . . . , u ` ) a path that does not include the arc              A protocol is a strategy for playing a game: a set of rules that
+(v, u 0 ), then v +p denotes the path (v, u 0 , . . . , u ` ). For vertexes u, v,    determines which step a party takes at any stage of a game. To
+D(u, v) is the length of the longest path from u to v in D.                          model real-world situations where multiple parties are secretly
+     A path (u 0 , . . . , u ` ) is a cycle if u 0 = u ` . A digraph is acyclic if   controlled by a single adversary, the swap game is cooperative:
+it has no cycles. Vertex v is reachable from vertex u if there is a                  parties can form coalitions where coalition members commit to a
+path from u to v. D’s diameter diam(D) is the length of the longest                  common strategy.
+path from any vertex to any other. D is connected if its underlying
+graph is connected, and strongly connected if, for every pair u, v
+                                                                                                                    Discount
+of distinct vertexes in D, u is reachable from v and v is reachable
+from u. A feedback vertex set is a subset of V whose deletion leaves
+D acyclic.
+     The transpose DT is the digraph obtained from D by reversing                                       FreeRide                    Deal
+all arcs. If D is strongly connected, so is DT , and any feedback
+vertex set for D is also a feedback vertex set for DT .
+                                                                                                                       NoDeal          worse           better
+2.2     Blockchains and Smart Contracts                                                   acceptable
+
+For our purposes, a blockchain is a distributed service that allows                      unacceptable
+clients to publish transactions to a publicly-readable, tamper-proof
+                                                                                                                    Underwater
+distributed ledger. Our analysis is independent of the particular
+blockchain algorithm. We assume a timing model where there is a
+known duration ∆ long enough for one party to publish a contract                                  Figure 3: Partial order of protocol outcomes
+to a blockchain, and for a second party to confirm that the contract
+has been published.
+   The owner of an asset (such as a unit of cryptocurrency or an                        Here are the outcomes for a party v, organized into classes, For
+automobile title) can create a smart contract to transfer ownership                  brevity, each class has a shorthand name.
+of that asset to a counterparty if specified conditions are met. A                            • The party acquires assets without paying: at least one arc
+contract is published when its creator places it on a blockchain                                entering v is triggered, but no arc leaving v is triggered
+ledger. Once a contract is published, it is irrevocable: neither the                            (FreeRide).
+contract’s creator nor any other party can remove the contract nor                            • The party acquires assets while paying less than expected:
+tamper with its terms.                                                                          all arcs entering v are triggered, but at least one arc leaving
+   A rational party acts in its own self-interest, deviating from a                             v is not triggered (Discount).
+protocol only if it is profitable to do so. Rational parties can collude                      • The party swaps assets as expected: all arcs entering and
+with one another to disadvantage other parties. An irrational party                             leaving v are triggered (Deal).
+may deviate from a protocol even if it is not profitable to do so.                            • No assets change hands: no arc entering or leaving v is
+Parties may behave irrationally out of spite, because they were                                 triggered (NoDeal).
+       • The party pays without acquiring all expected assets: at                Let (c, v) be an untriggered arc leaving C. Since v is conforming,
+           least one arc entering v is not triggered, and at least one       every arc leaving v is untriggered. Because D is strongly connected,
+           arc leaving v is triggered (Underwater).                          there is a path (v, v 0 ), (v 1 , v 2 ), . . . , (vk , c 0 ) where each vi < C, and
+Payoffs for a coalition C ⊂ V are defined by replacing v with C in           c 0 ∈ C. By a simple inductive argument, each arc in this path is
+the definitions above.                                                       untriggered, so the arc (vk , c 0 ) that enters C is untriggered, so every
+    The protocol design incorporates certain conservative assump-            arc leaving C must be untriggered, and some arc entering C must
+tions about parties’ preferences. The protocol’s preferred outcome           be triggered.
+is for all conforming parties to end with outcome Deal. In the pres-             Let (v, c) be a triggered arc entering C. Since v is conforming,
+ence of failures or deviation, however, it is acceptable for conform-        every arc entering v is triggered. Because D is strongly connected,
+ing parties to end with outcome NoDeal, the status quo, rendering            there is a path (c 1 , v 0 ), (v 0 , v 1 ), . . . , (vk , c) where each vi < C, and
+them no worse off. Furthermore, each party is assumed to prefer              c 1 ∈ C. By a simple inductive argument, each arc in this path is
+Deal to NoDeal, because otherwise it would not have agreed to                triggered, so the arc (c 1 , v 0 ) leaving C is triggered, contradicting
+the swap in the first place. It follows that each party prefers any          the fact that every arc leaving C is untriggered.                                 
+FreeRide outcome to NoDeal, because it acquires additional assets               Lemma 3.4. If D is not strongly connected, then no uniform swap
+“for free”, without relinquishing any assets of its own. Similarly,          protocol is atomic.
+each party prefers any Discount outcome to Deal, since that party
+acquires the same assets in both outcomes, but relinquishes fewer                Proof. Because D is not strongly connected, it contains ver-
+in Discount outcomes. For these reasons, Deal, NoDeal, Dis-                  texes x, y such that y is reachable from x, but not vice-versa. Let Y
+count, and FreeRide are all considered acceptable outcomes for               be the set of vertexes reachable from y, and X the rest: X = V \ Y .
+conforming parties if the protocol execution is unable to complete           X is non-empty because it contains x. Because y is reachable from
+because of failures or adversarial behavior.                                 x, there is at least one arc from X to Y , but no arcs from Y to X .
+    We consider the remaining Underwater outcomes to be unac-                    Coalition X can improve its payoff by triggering all arcs between
+ceptable to conforming parties. It is possible that in some idiosyn-         vertexes in X , but no arcs from X to Y , yielding payoff FreeRide for
+cratic cases, a party may actually prefer particular Underwater              X , since it triggers strictly fewer arcs leaving X , without affecting
+outcomes to NoDeal. For example, a party with three entering arcs            any arcs entering X . In fact, the payoff for each individual vertex
+and one leaving arc may be be willing to relinquish its asset in re-         in X is either the same or better than Deal.                          
+turn for acquiring only two out of three of the entering arcs’ assets.
+                                                                                We have just proved:
+We leave the design of protocols that make such fine distinctions
+to future work.                                                                 Theorem 3.5. A uniform swap protocol for D is atomic if and
+                                                                             only if D is strongly connected.
+   Definition 3.1. A swap protocol P is uniform if it satisfies:
+      • If all parties follow P, they all finish with payoff Deal.               Informally, if D is not strongly connected, then rational parties
+      • If any coalition cooperatively deviates from P, no conform-          will deviate from any uniform protocol. In practice, such a swap
+         ing party finishes with payoff Underwater.                          would never be proposed, because the parties in X would never
+                                                                             agree to a swap with the free riders in Y . Henceforth, D is assumed
+    A uniform protocol is not useful if rational parties will not follow     strongly connected.
+it. A swap protocol is a strong Nash equilibrium strategy if no coali-           We remark that Theorem 3.5 relies on the implicit technical
+tion improves its payoff when its members cooperatively deviate              assumption that all value transfers are explicitly represented on
+from that protocol.                                                          some blockchain. This theorem would be falsified, for example, if
+  Definition 3.2. A swap protocol P is atomic if it is both uniform          Carol responds to learning Alice’s secret by sending a large drone
+and a strong Nash equilibrium strategy.                                      to drop her Cadillac in the middle of Alice’s driveway, without ever
+                                                                             recording that transfer in a shared blockchain. We will assume that
+   This definition formalizes the notion that if all parties are rational,   if swaps have off-chain consequences, as they typically do, that
+all swaps happen, but if some parties are irrational, the rational           those consequences are explicitly recorded in the form of blockchain
+parties will never end up worse off. Recall that a conforming party          updates.
+follows the protocol, while a deviating party does not.
+   Lemma 3.3. If D is strongly connected, then any uniform swap              4 AN ATOMIC SWAP PROTOCOL
+protocol P is atomic.                                                        4.1 Hashlocks and Hashkeys
+    Proof. If a deviating coalition C ⊂ V achieves a better payoff           In a simple two-party swap, each party publishes a contract that
+than Deal, then that payoff is either in FreeRide or Discount.               assumes temporary control of that party’s asset. This hashed time-
+It follows that some arc that enters C is triggered, and some arc            lock contract [5] stores a pair (h, t), and ensures that if the contract
+that leaves C is untriggered. Moreover, if any arc that enters C is          receives the matching secret s, h = H (s), before time t has elapsed,
+untriggered, then all arcs that leave C are untriggered.                     then the contract is triggered, irrevocably transferring ownership
+    A conforming party v < C cannot end up Underwater, so if                 of the asset to the counterparty. If the contract does not receive the
+an arc entering v is untriggered, then every arc leaving v must be           matching secret before time t has elapsed, then the asset is refunded
+untriggered, and if an arc leaving v is triggered, then every arc            to the original owner. For multi-party cross-chain swaps, we will
+entering v must be triggered.                                                need to extend these notions in several ways.
+1    contract Swap {
+2      Asset asset ;               /∗ asset to be transferred or refunded ∗/
+3      Digraph digraph;            /∗ swap digraph ∗/
+4      address[] leaders ;         /∗ leaders ∗/
+5      address party ;             /∗ transfer asset from ∗/
+6      address counterparty ;      /∗ transfer asset to ∗/
+7      uint [] timelock ;          /∗ vector of timelocks ∗/
+8      uint [] hashlock;           /∗ vector of hashlocks ∗/
+9      bool [] unlocked;           /∗ which hashlocks unlocked? ∗/
+10     uint    start ;             /∗ protocol starting time ∗/
+11     /∗ constructor ∗/
+12     function Swap (Asset asset ; /∗ asset to be transferred or refunded ∗/
+13                     Digraph   digraph ;     /∗ swap digraph ∗/
+14                     address[] leaders ;     /∗ leaders ∗/
+15                     address   party ;       /∗ transfer asset from ∗/
+16                     address   counterparty ; /∗ transfer asset to ∗/
+17                      uint []  timelock ;    /∗ vector of timelocks ∗/
+18                      uint []  hashlock ;    /∗ vector of hashlocks ∗/
+19                      uint     start         /∗ protocol starting time ∗/
+20                      ) {
+21       asset = asset ;                                  /∗ copy ∗/
+22       party = party ; counterparty = counterparty ; /∗ copy ∗/
+23       timelock = timelock ; hashlock = hashlock ;      /∗ copy ∗/
+24       unlocked = [ false , …, false ];                 /∗ all unlocked ∗/
+25     }
+
+                                                              Figure 4: Swap contract (part one)
+
+
+        In the three-way swap recounted earlier, each arc had a single             is the leader who generated s, and
+     hashlock and a single timeout. Timeouts were assigned so that the
+     timeout on each arc entering a follower v was later by at least ∆
+                                                                                                        σ = sig(· · · sig(s, uk ), . . . , u 0 ),
+     than the timeout on each arc leaving v. This gap ensures that if any
+     arc leaving v is triggered, then v has time to trigger every entering
+     arc.                                                                          the result of having each party in the path sign s. A hashkey (s, p, σ )
+        If a swap digraph has only one leader, v̂, then the subdigraph             times out at time (diam(D) + |p|) · ∆ after the start of the protocol.
+     of its followers is acyclic. As in our three-way swap example, the            That hashkey unlocks h on (u, v) if it is presented before it times
+     hashlock on arc (u, v) can be given timeout (diam(D) + D(v, v̂) +             out. An arc is triggered when all of its hashlocks are unlocked. A
+     1) · ∆, where D(v, v̂) is the length of the longest path from v to the        hashlock has timed out on an arc when all of its hashkeys on that arc
+     unique leader v̂. (See left-hand side of Figure 6.)                           have timed out. Figure 7 shows partial hashkeys for a two-leader
+        This formula does not work if a swap digraph has more than one             swap digraph.
+     leader, because the subdigraph of any leader’s followers has a cycle,
+     and it is not possible to assign timeouts across a cycle in a way that
+                                                                                   4.2     Market Clearing
+     guarantees a gap of at least ∆ between entering and leaving arcs.
+     (See right-hand side of Figure 6.)                                            For simplicity, assume the swap digraph is constructed by a (pos-
+        Instead, for general digraphs, we must replace timed hashlocks             sibly centralized) market-clearing service, which perhaps commu-
+     with a more general mechanism, one that assigns different timeouts            nicates with the parties through its own blockchain. The clearing
+     to different paths. Pick a set L = {v 0 , . . . , v ` } of vertexes, called   service is not a trusted party, because the parties can check the
+     leaders, forming a feedback vertex set for D. Each leader vi gener-           consistency of the clearing service’s responses.
+     ates a secret si and hashlock value hi = H (si ), yielding a hashlock            Each party creates a secret s and matching hashlock h = H (s). It
+     vector (h 0 , . . . , h ` ), which is assigned to every arc.                  sends the clearing service its hashlock, along with an offer charac-
+        A hashkey for h on arc (u, v) is a triple (s, p, σ ), where s is the       terizing the swaps it is willing to make. The service combines these
+     secret h = H (s), p is a path (u 0 , . . . , uk ) in D where u 0 = v and uk   offers, and publishes a swap digraph D = (V , A), a vector L ⊂ V
+                                                                                   of leaders forming a feedback vertex set, a vector of those leaders’
+                                                                                   hashlocks h 0 , . . . , h ` , and a starting time T , at least ∆ in the future.
+26   function unlock ( int i , uint s , Path path, Sig sig ) {
+27       require (msg.sender == counterparty ); /∗ only from counterparty ∗/
+28       if (now < start + (diam(digraph) + |path |) ∗ ∆ /∗ hashkey still valid ? ∗/
+29           && hashlock[i] == H(s)                /∗ secret correct ? ∗/
+30           && isPath(path, digraph, leader [ i ], counterparty) /∗ path valid ? ∗/
+31           && verifySigs ( sig , s , path) { /∗ signatures valid ? ∗/
+32         unlocked[i ] = true;
+33       }
+34     }
+35     function refund () {
+36       require (msg.sender == party ); /∗ only from party ∗/
+37       if (any hashlock unlocked and timed out) {
+38         transfer asset to party ;
+39         halt ;
+40       }
+41     }
+42     function claim () {
+43       require (msg.sender == counterparty ); /∗ only from counterparty ∗/
+44       if (every hashlock unlocked) {
+45         transfer asset to counterparty ;
+46         halt ;
+47       }
+48     }
+49   }
+
+                                                         Figure 5: Swap contract (part two)
+
+
+
+
+                                                      secret   ,                                         secret    ,
+
+
+
+
+                      4
+                                         A                4                   4
+                                                                                               A              4
+
+
+
+
+                                    6       6                                           6       6
+
+                           C                          B                             C         5
+                                                                                                         B
+                                     5
+
+                                                                                                        ???
+
+
+
+     Figure 6: A is the leader, B and C followers. Timeouts can be assigned when the follower subdigraph is acyclic (left) but not
+     when it is cyclic (right)
+
+
+       If all parties conform to the protocol, all contracts will be trig-
+     gered before T + 2 · diam(D) · ∆, but if some parties deviate, the
+     conforming parties’ assets will be refunded by then.
+                                                                                       secret     ,
+
+                                                     ,CA
+                                                     ,CBA                                                 ,BA
+                                                     ,CB
+                                                     ,CAB                   A                             ,BCA
+                                                                                                          ,B
+
+
+                                              ,A                                                           ,A
+                                              ,AB                                                          ,AB
+                                              ,ACB                                                         ,ACB
+                                                            C                             B
+                                                                                                             secret   ,
+                                                                                           ,CA
+                                                                 ,BA
+                                                                                           ,CBA
+                                                                 ,BCA
+                                                                                           ,CB
+                                                                 ,B
+                                                                                           ,CAB
+
+
+                                                  Figure 7: Hashkey paths for arcs of two-leader digraph
+
+
+
+                                                  secret    ,
+
+
+
+
+                                      A                                               A                                      A
+
+
+                        C                             B               C                               B           C                       B
+
+                                    secret    ,                           my entering arcs
+                                                                          all have contracts
+
+
+
+                                         Figure 8: Concurrent contract propagation for two-leader digraph
+
+
+4.3     Contracts                                                                         counterparty receiving the asset (Line 6), a vector of timelocks
+Figures 4 and 5 show pseudocode3 for a hashed timelock swap                               (Line 7), a vector of hashlocks (Line 8), and a Boolean unlocked
+contract. A smart contract resembles an object in an object-oriented                      vector marking which hashlocks have been unlocked (Line 9).
+programming language, providing long-lived state (Lines 2-9), a                              When the contract is initialized, its constructor copies the fields
+constructor to initialize that state (Lines 12-25), and one or more                       provided into the contract’s long-lived state (Lines 21-23) and sets
+functions to manage that state (Lines 26-48).                                             each entry in unlocked to false (Line 24).
+   The contract’s long-lived state records the asset to be transferred                       The unlock () function (Line 26), callable only by the counterparty
+or refunded (Line 2), the digraph D (Line 3), the digraph’s set                           (Line 27), takes an index i, a secret si , a path p, and the signature
+of leaders (Line 4), the party transferring the asset (Line 5), the                       sig. The hashlock hi is unlocked if
+
+3 This pseudocode is based loosely on the popular Solidity programming language for             • the current time is less than T +(diam(D)+ |p|)·∆ (Line 28),
+smart contracts [24].                                                                           • hi = H (si ) (Line 29),
+      • p is a path in D from the counterparty to the leader who                  For the eager game, it is enough to observe that in each interval
+        generated si (Line 30), and                                            of time ∆, for every vertex v, the number of unpebbled vertexes
+      • the signature is the result of signing si by the parties in p          in every path from z to w shrinks by one. Because D is strongly
+        (Line 31)                                                              connected, such a path always exists.                             
+   The refund () function (Line 35), callable only by the party, re-
+funds the asset to the party if any unlocked hashlock has timed out.             Corollary 4.4. Under the stated timing assumptions, for both
+The claim () function (Line 42), callable only by the counterparty             games, every arc has a pebble within time diam(D) · ∆.
+(Line 36), transfers the asset to the counterparty if all hashlocks
+have been unlocked.                                                            4.5     The Protocol
+                                                                               There are two phases. In Phase One, instances of the Swap contract
+4.4    Pebble Games                                                            (Figures 4 and 5) are propagated through D, starting at the leaders.
+We analyze the protocol using two variations on a simple pebble                Each time a party observes that a contract has been published on
+game. We are given a strongly-connected digraph D = (V , A), and               an entering arc, it verifies that contract is a correct swap contract,
+a vertex feedback set L ⊂ V of leaders.                                        and abandons the protocol otherwise.
+   In the lazy pebble game, start by placing pebbles on the arcs                  Here is the Phase-One protocol for leaders:
+leaving each leader. Place new pebbles on the arcs leaving vertex v                  (1) Publish a contract on every arc leaving the leader, then
+when there is a pebble on every arc entering v.                                      (2) wait until contracts have been published on all arcs enter-
+   In the eager pebble game, start by placing a single pebble on one                     ing the leader.
+vertex z. Place new pebbles on the arcs leaving v when there is a
+                                                                               Here is the protocol for followers:
+pebble on any arc entering v. Both games continue until no more
+pebbles can be placed.                                                               (1) wait until correct contracts have been published on all arcs
+                                                                                         entering the vertex, then
+  Lemma 4.1. In the lazy game, every arc in D eventually has a                       (2) publish a contract on every arc leaving the vertex.
+pebble.
+                                                                               Figure 7 shows how contracts are propagated in a swap digraph
+   Proof. Suppose by way of contradiction, the game stops in a                 with two leaders.
+state where an arc (u, v) has no pebble. There must be a pebble-                  In Phase Two, the parties disseminate secrets via hashkeys.
+free arc (u 0, u) entering u, because otherwise the game would have            While contracts propagate in the direction of the arcs, from party to
+placed a pebble on (u, v). Continuing in this way, build a longer              counterparty, hashkeys propagate in the opposite direction, from
+and longer pebble-free path until it becomes a pebble-free cycle.              counterparty to party. Informally, each party is motivated to trigger
+But leaders form a feedback vertex set, so every cycle in D includes           the contracts on entering arcs to acquire the assets controlled by
+a leader, and the arcs leaving that leader have pebbles placed in the          those contracts.
+first step.                                                                      We now trace how the secret si generated by leader vi is propa-
+                                                                               gated. At the start of the phase, vi calls unlock(si , vi , sig(si , vi )) at
+  Lemma 4.2. In the eager game, every arc in D eventually has a
+                                                                               each entering arc’s contract (here, the function’s arguments are the
+pebble.
+                                                                               hashkey, and vi is a degenerate path). The first time any other party
+   Proof. Suppose by way of contradiction, the game stops in                   v observes that hashlock hi on a leaving arc’s contract has been un-
+a state where an arc (u, v) has no pebble. Because G is strongly               locked by a call to unlock(si , p, σ ), it calls unlock(si , v +p, sig(σ , v))
+connected, there is a path from z to v. Since z has a pebble and               at each entering arc’s contract. The propagation of si is complete
+v does not, there is an arc (w, w 0 ) on that path where w has a               when hi has either timed out or has been unlocked on all arcs.
+pebble but w 0 does not, so w 0 will get a pebble in the next step,
+contradicting the hypothesis that the game has stopped.                         Lemma 4.5. If all parties conform to the protocol, then every arc
+                                                                               has a contract within time diam(D) · ∆ of when the protocol started.
+   Suppose there is a worst-case delay ∆ between when the last
+pebble is placed on any arc entering v, and when the last pebble is               Proof. Phase One is an instance of the lazy pebble game on D,
+placed on any arc leaving v.                                                   so the claim follows from Lemmas 4.1 and 4.3.                 
+   Lemma 4.3. In both pebble games, every arc will have a pebble in
+                                                                                  Lemma 4.6. If all parties conform to the protocol, then every arc’s
+time at most diam(D) · ∆ from when the game started.
+                                                                               contract is triggered within time 2 · diam(D) · ∆ of when the protocol
+   Proof. For the lazy game, it is enough to show that in each                 started.
+interval of time ∆, the longest pebble-free path shrinks by one. At
+any time after the first step, let a 0 , . . . , ak be a pebble-free path of     Proof. Each secret’s dissemination is an instance of the eager
+maximal length. That path cannot be a cycle, because then it would             pebble games on DT , the transpose digraph. The secrets are dis-
+include a leader, who would have placed a pebble on a 0 in the first           seminated in parallel.                                        
+step. It follows that every arc entering the head of a 0 must have a
+pebble, because otherwise we could construct a longer pebble-free                 Theorem 4.7. If all parties conform to the protocol, then every
+path. By hypothesis, within time ∆, a 0 will have a pebble, and the            contract is triggered within time 2 · diam(D) · ∆ of when the protocol
+path will have shrunk by one.                                                  started.
+   The deadline 2 · diam(D) · ∆ bounds the time assets can be held            Theorem 4.12. In any uniform swap protocol based on hashed
+in escrow when things go wrong. In practice, one would expect              timelocks, the set L of leaders is a feedback vertex set in D.
+actual running times to be shorter.
+   There is a simple optimization that ensures that Phase Two com-            Proof. Suppose, instead, there is a uniform swap protocol where
+pletes in constant time when all parties conform to the protocol. We       the leaders do not form a vertex feedback set.
+use a shared blockchain, perhaps that of the market-clearing service,         At any step in the protocol, the waits-for digraph W is the subdi-
+as a broadcast medium. Each leader vi publishes its secret si on           graph of DT where (v, u) is an arc of W if (u, v) has no published
+the shared blockchain, and each follower monitors that blockchain,         contract. Informally, Lemma 4.11 implies that v must be waiting for
+triggering its entering arcs when it learns the secret. (Logically, we     u to publish a contract on (u, v) before u can publish any contracts
+create an arc from each follower directly to that leader.) Unfortu-        on its own outgoing arcs. In the initial state, if D \ L contains a
+nately, while this broadcasting blockchain can “short-circuit” the         cycle, so does W . At each protocol step, a follower v can publish a
+Phase Two protocol, it cannot replace it, because a deviating leader       contract on a leaving arc only if v has indegree zero in the current
+might refrain from publishing the secret on that blockchain, but           waits-for digraph. But no vertex on a cycle in the waits-for digraph
+publish it on others. (Miller et al. [18] propose a similar optimization   will ever have indegree zero, a contradiction.                     
+for the Lightning network.)
+                                                                           4.6    Single-Leader Digraphs
+   Lemma 4.8. If hashlock h times out on any arc entering a conform-
+                                                                           As noted, in the common special case where a swap digraph needs
+ing v, then h must have timed out on every arc leaving v.
+                                                                           only one leader, we can replace hashkeys with simple timeouts,
+    Proof. Suppose h was triggered on (v, w) by hashkey (s, p, σ ).        reducing message sizes and eliminating the need for digital signa-
+If v does not appear in p, then v + p is a path from v to the leader,      tures. In the following, let D be a swap digraph with a single leader
+and v can immediately trigger h on (u, v) using the hashkey (s, v +        v̂ with hashlock h.
+p, sig(σ , v)), which has not timed out. If v appears in p, then v has         Lemma 4.13. If each arc (u, v) has timeout (diam(D) + D(v, v̂) +
+already received (and signed) a hashkey that triggers h on (u, v).        1) · ∆, then for every conforming v , v̂, the timeout on each arc (u, v)
+   Theorem 4.9. No conforming party ends up Underwater.                    is later by at least ∆ than the timeout on each arc (v, w).
+
+   Proof. Assume by way of contradiction that some conforming                 Proof. Let p be the longest path from w to the leader v̂. Because
+party v ends up Underwater: a leaving arc (v, w) has a triggered           the subdigraph of followers is acyclic, v + p is a path of length
+contract, but an entering arc (u, v) does not and will not.                D(w, v̂) + 1 from v to v̂, so D(v, v̂) ≥ D(w, v̂) + 1.            
+   First, arc (u, v) must have a contract. Suppose v is a leader.
+                                                                              Lemma 4.14. For a single-leader digraph using timeouts, if hashlock
+Since (v, w) has been triggered, v has revealed its secret through a
+                                                                           h times out on any arc entering a conforming v, then h must have
+hashkey. But a leader issues hashkeys in Phase Two only after a
+                                                                           timed out on every arc leaving v.
+contract has been published on every entering arc during Phase One.
+Suppose instead v is a follower. Since (v, w) has been triggered, one         Proof. By Lemma 4.14, once h is triggered on (v, w), v has time
+of the arcs leaving v has a contract. But in Phase One, a follower         at least ∆ to trigger (u, v).                                    
+publishes a contract on a leaving arc only after contracts have been
+published on all of its incoming arcs.                                        From this point on, the bounds on running time and proofs of
+   Since (u, v) has a contract, one of that arc’s hashlocks must have      safety for the single-leader-using-timeouts protocol are essentially
+timed out. By Lemma 4.8, the arc (v, w) must also have timed out,          the same as for the general protocol.
+a contradiction.                                                    
+                                                                           5     REMARKS
+   Theorem 4.10. For D = (V , A) with leaders L ⊂ V , the space
+complexity, measured as the number of bits stored on all blockchains,      We have seen that single-leader swap digraphs do not require
+is O(|A| 2 ).                                                              hashkeys and digital signatures, only timeouts. Is there a way
+                                                                           to reduce the use of digital signatures in the general case?
+  Proof. There are |A| contracts, one on each arc, each with a                Finding a minimal feedback vertex set for D is NP-complete [15],
+copy of the digraph D, which requires O(|A|) storage.                     although there exists an efficient 2-approximation [3].
+                                                                              The protocol is easily extended to a model where there may be
+   Finally, any atomic cross-chain swap protocol using hashed time-        more than one arc from one vertex to another, so-called directed
+locks must assign secrets to a feedback vertex set.                        multi-graphs [2], reflecting the situation where Alice wants to trans-
+   Lemma 4.11. In any uniform hashed timelock swap protocol, no            fer assets on distinct blockchains to Bob.
+follower v can publish a contract on an arc leaving v before contracts        The swap protocol is still vulnerable to a weak denial-of-service
+have been published on all arcs entering v.                                attack where an adversarial party repeatedly proposes an attractive
+                                                                           swap, and then fails to complete the protocol, triggering refunds,
+   Proof. If follower v has has a contract on arc (v, w) but no            but temporarily rendering assets inaccessible. We leave for future
+contract on arc (u, v), then the parties other than v could collude to     work the question whether one could require parties to post bonds,
+trigger the contract on (v, w), while refusing to publish a contract       and following a failed swap. examine the blockchains to determine
+on (u, v), leaving v Underwater.                                          who was at fault (by failing to execute an enabled transition).
+   An interesting open problem is the extent to which this swap         A better understanding of atomic cross-chain transactions is the
+protocol can be modified to provide better privacy, analogous to        subject of future work.
+the way the Bolt network [12] improves on Lightning.
+   As noted, some parties may be willing to accept certain Un-          REFERENCES
+derwater outcomes rejected by the swap protocol presented here.          [1] D. J. Abraham, A. Blum, and T. Sandholm. Clearing algorithms for barter ex-
+                                                                             change markets: Enabling nationwide kidney exchanges. In Proceedings of the
+Future work might investigate protocols where parties are endowed            8th ACM Conference on Electronic Commerce, EC ’07, pages 295–304, New York,
+with customized objective functions to provide finer-grained con-            NY, USA, 2007. ACM.
+trol which outcomes are acceptable.                                      [2] J. Bang-Jensen and G. Gutin. Digraphs: Theory, Algorithms, and Applications.
+                                                                             Monographs in Mathematics. Springer, 2001.
+   The swap protocol can be made recurrent by having the leaders         [3] A. Becker and D. Geiger. Optimization of pearl’s method of conditioning and
+distribute the next round’s hashlocks in Phase Two of the previous           greedy-like approximation algorithms for the vertex feedback set problem. Arti-
+round. If swaps are recurrent, then it would be useful to conduct            ficial Intelligence, 83(1):167 – 188, 1996.
+                                                                         [4] bitcoinwiki. Atomic cross-chain trading. https://en.bitcoin.it/wiki/Atomic
+swaps off-chain as much as possible, similar to the way that Light-          cross-chain trading. As of 9 January 2018.
+ning [22] and Raiden [19] networks support off-chain transactions        [5] bitcoinwiki. Hashed timelock contracts. https://en.bitcoin.it/wiki/Hashed
+                                                                             Timelock Contracts. As of 8 January 2018.
+for bitcoin and ERC20 tokens.                                            [6] S. Bowe and D. Hopwood. Hashed time-locked contract transactions. https:
+   One limitation of the swap protocol presented here is the as-             //github.com/bitcoin/bips/blob/master/bip-0199.mediawiki. As of 9 January 2018.
+sumption that the swap digraph, its leaders, and their hashlocks are     [7] V. Buterin. On sharding blockchains. https://github.com/ethereum/wiki/wiki/
+                                                                             Sharding-FAQ. As of 8 January 2018.
+common knowledge among the participants. Future work might               [8] C. Decker and R. Wattenhofer. A fast and scalable payment network with bitcoin
+address constructing and propagating this information dynamically.           duplex micropayment channels. In A. Pelc and A. A. Schwarzmann, editors,
+                                                                             Stabilization, Safety, and Security of Distributed Systems, pages 3–18, Cham, 2015.
+                                                                             Springer International Publishing.
+                                                                         [9] DeCred. Decred cross-chain atomic swapping. https://github.com/decred/
+6   RELATED WORK                                                             atomicswap. As of 8 January 2018.
+                                                                        [10] J. P. Dickerson, D. F. Manlove, B. Plaut, T. Sandholm, and J. Trimble. Position-
+The use of hashed timelock contracts for two-party cross-chain               indexed formulations for kidney exchange. CoRR, abs/1606.01623, 2016.
+swaps is believed to have emerged from an on-line discussion fo-        [11] M. K. Franklin and G. Tsudik. Secure group barter: Multi-party fair exchange
+rum in 2016 [4, 20]. There is open-source code [6, 9, 21] for two-           with semi-trusted neutral parties. In Financial Cryptography, 1998.
+                                                                        [12] M. Green and I. Miers. Bolt: Anonymous payment channels for decentralized
+party cross-chain swap protocols between selected currencies, and            currencies. Cryptology ePrint Archive, Report 2016/701, 2016. https://eprint.iacr.
+proposals for applications using swaps [27].                                 org/2016/701.
+                                                                        [13] Z. Jia, P. Tang, R. Wang, and H. Zhang. Efficient near-optimal algorithms for
+    Off-chain payment networks [8, 12, 19, 22] circumvent the scala-         barter exchange. In Proceedings of the 16th Conference on Autonomous Agents
+bility limits of existing blockchains by conducting multiple transac-        and MultiAgent Systems, AAMAS ’17, pages 362–370, Richland, SC, 2017. Inter-
+tions off the blockchain, eventually resolving final balances through        national Foundation for Autonomous Agents and Multiagent Systems.
+                                                                        [14] R. M. Kaplan. An improved algorithm for multi-way trading for exchange and
+a single on-chain transaction. The Revive network [16] rebalances            barter. Electronic Commerce Research and Applications, 10(1):67 – 74, 2011. Special
+off-chain networks in a way that ensures that compliant parties do           Section: Service Innovation in E-Commerce.
+not end up worse off. These algorithms also use hashed timelock         [15] R. M. Karp. Reducibility among combinatorial problems. In Proceedings of a
+                                                                             symposium on the Complexity of Computer Computations, held March 20-22, 1972,
+contracts, but they address a different set of problems.                     at the IBM Thomas J. Watson Research Center, Yorktown Heights, New York., pages
+    Multi-party swaps arise when matching kidney donors and re-              85–103, 1972.
+                                                                        [16] R. Khalil and A. Gervais. Revive: Rebalancing off-blockchain payment net-
+cipients. A transplant recipient with an incompatible donor can              works. In Proceedings of the 2017 ACM SIGSAC Conference on Computer and
+swap donors to ensure that each recipient obtains a compatible               Communications Security, CCS ’17, pages 439–453, New York, NY, USA, 2017.
+organ. A number of algorithms [1, 10, 13] have been proposed for             ACM.
+                                                                        [17] S. Micali. Simple and fast optimistic protocols for fair electronic exchange. In
+matching donors and recipients. Shapley and Scarf [23] consider              Proceedings of the Twenty-second Annual Symposium on Principles of Distributed
+the circumstances under which certain kinds of swap markets have             Computing, PODC ’03, pages 12–19, New York, NY, USA, 2003. ACM.
+strong equilibriums. Kaplan [14] describes a polynomial-time algo-      [18] A. Miller, I. Bentov, R. Kumaresan, and P. McCorry. Sprites: Payment channels
+                                                                             that go faster than lightning. CoRR, abs/1702.05812, 2017.
+rithm that given a set of proposed swaps, constructs a swap digraph     [19] R. Network. What is the raiden network? https://raiden.network/101.html. As
+if one exists. These papers and many others focus on “the clearing           of 26 January 2018.
+                                                                        [20] T. Nolan. Atomic swaps using cut and choose. https://bitcointalk.org/index.php?
+problem”, roughly analogous to constructing a swap digraph, but              topic=1364951. As of 9 January 2018.
+not on how to execute those swaps on blockchains.                       [21] T. K. Organization. The barterdex whitepaper: A decentralized, open-source cryp-
+    The fair exchange problem [11, 17] is a precursor to the atomic          tocurrency exchange, powered by atomic-swap technology. https://supernet.org/
+                                                                             en/technology/whitepapers/BarterDEX-Whitepaper-v0.4.pdf. As of 9 January
+cross-chain swap problem. Alice has a digital asset Bob wants, and           2018.
+vice-versa, and at the end of the protocol, either Alice and Bob have   [22] J. Poon and T. Dryja. The bitcoin lightning network: Scalable off-chain instant
+exchanged assets, or they both keep their assets. In the absence of          payments. https://lightning.network/lightning-network-paper.pdf, Jan. 2016.
+                                                                             As of 29 December 2017.
+blockchains, trusted, or semi-trusted third parties are required, but   [23] L. Shapley and H. Scarf. On cores and indivisibility. Journal of Mathematical
+roles of those trusted parties can be minimized in clever ways.              Economics, 1(1):23–37, 1974.
+                                                                        [24] Solidity documentation. http://solidity.readthedocs.io/en/latest/index.html.
+    A atomic cross-chain transaction is a distributed task where a      [25] G. Weikum and G. Vossen. Transactional Information Systems: Theory, Algo-
+sequence of exchanges occurs at each blockchain. An atomic cross-            rithms, and the Practice of Concurrency Control and Recovery. Morgan Kaufmann
+chain swap is an atomic cross-chain transaction, but not vice-versa,         Publishers Inc., San Francisco, CA, USA, 2001.
+                                                                        [26] Wikipedia. Two-phase commit protocol. https://en.wikipedia.org/wiki/
+because not all transactions can be expressed as swaps. In our               Two-phase commit protocol. As of 18 May 2018.
+original example, Alice could not borrow bitcoins from Bob to           [27] G. Zyskind, C. Kisagun, and C. FromKnecht. Enigma catalyst: a machine-based
+pay Carol, because then Alice would have to execute two steps in             investing platform and infrastructure for crypto-assets. https://www.enigma.co/
+                                                                             enigma catalyst.pdf. As of 25 January 2018.
+sequence (borrow, then spend) instead of executing a single swap.
+

@@ -1,0 +1,132 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Schedule
+Copy page
+Copy page
+Documentation for Splice.Schedule
+Copy page
+Copy page
+​
+Data Types
+data
+Schedule t a
+A schedule of values that change over time.
+Schedule
+Field
+Type
+Description
+initialValue
+a
+Initial value to use until the future values come into effect.
+futureValues
+[(t, a)]
+sorted in ascending order
+instance
+Functor
+(Schedule t)
+instance
+(
+Eq
+a,
+Eq
+t) =>
+Eq
+(Schedule t a)
+instance
+(
+Show
+a,
+Show
+t) =>
+Show
+(Schedule t a)
+instance
+GetField “configSchedule” AmuletRules (Schedule
+Time
+(AmuletConfig USD))
+instance
+GetField “futureValues” (Schedule t a) [(t, a)]
+instance
+GetField “initialValue” (Schedule t a) a
+instance
+GetField “issuanceCurve” (AmuletConfig unit) (Schedule
+RelTime
+IssuanceConfig)
+instance
+SetField “configSchedule” AmuletRules (Schedule
+Time
+(AmuletConfig USD))
+instance
+SetField “futureValues” (Schedule t a) [(t, a)]
+instance
+SetField “initialValue” (Schedule t a) a
+instance
+SetField “issuanceCurve” (AmuletConfig unit) (Schedule
+RelTime
+IssuanceConfig)
+instance
+(Patchable t, Patchable a,
+Ord
+t,
+Eq
+a) => Patchable (Schedule t a)
+​
+Functions
+getValueAsOf
+:
+Ord
+t => t -> Schedule t a -> a
+Get the value as of a specific time
+getValueAsOfLedgerTime
+: Schedule
+Time
+a ->
+Update
+a
+Variant of
+getValueAsOf
+that communicates workflow-level bounds.
+validSchedule
+:
+Ord
+t => Schedule t a -> (a ->
+Bool
+) ->
+Bool
+Check the validity of a schedule given a function to check the validity of its values
+allValues
+: Schedule t a -> [a]
+nextChangeScheduledAt
+: Schedule t a ->
+Optional
+t
+prune
+:
+Ord
+t => t -> Schedule t a -> Schedule t a
+splitAtTime
+:
+Ord
+t => [(t, a)] -> t -> ([(t, a)],
+Optional
+(t, a), [(t, a)])
+insert
+:
+Ord
+t => (t, a) -> Schedule t a -> Schedule t a
+remove
+:
+Ord
+t => t -> Schedule t a -> Schedule t a
+update
+:
+Ord
+t => (t, a) -> Schedule t a -> Schedule t a
+Suggest edits
+Raise issue
+Splice.Round
+Splice.Types

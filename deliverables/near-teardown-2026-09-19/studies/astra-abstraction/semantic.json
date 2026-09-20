@@ -1,0 +1,429 @@
+{
+  "nodes": [
+    {
+      "id": "A-keys",
+      "label": "Function-call keys bind receiver, optional method names and gas allowance, prohibit attached NEAR, and remain distinct from full-access keys.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/docs/protocol/accounts-contracts/access-keys.mdx",
+      "source_location": "L17-L55",
+      "source_url": "https://github.com/near/docs/blob/c06865496870cdf8fa985424eca2b13ee2ac6ecf/protocol/accounts-contracts/access-keys.mdx#L17-L55",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-meta",
+      "label": "Meta transactions bind sender, receiver, action list, public key, nonce and maximum block height before signing.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/near-api-js/src/accounts/account.ts",
+      "source_location": "L300-L379",
+      "source_url": "https://github.com/near/near-api-js/blob/2546c85354ab888dc1f559b0e54cfac51f03b484/src/accounts/account.ts#L300-L379",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-payload",
+      "label": "DefusePayload binds signer_id, verifying_contract, deadline, nonce and flattened intent content; the source contains a TODO to add version and calls SignedPayload an internal unstable API.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/mod.rs",
+      "source_location": "L18-L68",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/mod.rs#L18-L68",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-multi",
+      "label": "MultiPayload uses a standard tag for seven supported wallet signature formats and extracts a shared DefusePayload.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/multi.rs",
+      "source_location": "L19-L114",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/multi.rs#L19-L114",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-nepadapter",
+      "label": "NEP-413 extraction takes signer and deadline from message JSON, verifying contract from envelope recipient, and nonce from envelope nonce.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/nep413.rs",
+      "source_location": "L17-L95",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/nep413.rs#L17-L95",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-ercadapter",
+      "label": "ERC-191 carries a payload string and recoverable signature; public key is recovered, and DefusePayload is parsed directly from the string.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/erc191.rs",
+      "source_location": "L9-L47",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/erc191.rs#L9-L47",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-nephash",
+      "label": "NEP-413 hashes Borsh encoding of the offchain prefix tag and message/32-byte nonce/recipient/optional callback URL using SHA-256; tag is 2147484061.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/crates/signatures/nep413/src/lib.rs",
+      "source_location": "L16-L81",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/crates/signatures/nep413/src/lib.rs#L16-L81",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-erchash",
+      "label": "ERC-191 prehash is Keccak256 of Ethereum signed-message prefix, decimal byte length, and exact message bytes.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/crates/signatures/erc191/src/lib.rs",
+      "source_location": "L9-L39",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/crates/signatures/erc191/src/lib.rs#L9-L39",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-engine",
+      "label": "The engine verifies signature, extracts payload, checks verifying contract/deadline/key membership, validates and commits nonce, executes intents and finalizes accounting.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+      "source_location": "L32-L117",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L117",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-diff",
+      "label": "TokenDiff encodes exact signed i128 deltas as strings, applies them to signer balances, computes fees on negative deltas and credits the fee collector.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/token_diff.rs",
+      "source_location": "L18-L103",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/token_diff.rs#L18-L103",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-balance",
+      "label": "TransferMatcher finalization rejects nonempty unmatched per-token deltas and overflow.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/state/deltas.rs",
+      "source_location": "L260-L284",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/state/deltas.rs#L260-L284",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-mpcsign",
+      "label": "sign validates domain/protocol and payload, binds predecessor and derivation path, queues a yield; respond checks an attested signer and cryptographic response; private callback distinguishes signature from timeout.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+      "source_location": "L24-L223",
+      "source_url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L24-L223",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-mpcwire",
+      "label": "Current sign args serialize path,payload_v2,domain_id; legacy payload/key_version aliases are accepted separately, and conflicting old/new fields reject. Derived tweak uses predecessor_id and path.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/near-mpc-crypto-types/src/sign.rs",
+      "source_location": "L19-L126",
+      "source_url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/near-mpc-crypto-types/src/sign.rs#L19-L126",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-mpcpayload",
+      "label": "Payload distinguishes hex-encoded Ecdsa fixed-length bytes from bounded Eddsa message bytes.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/near-mpc-crypto-types/src/primitives.rs",
+      "source_location": "L70-L127",
+      "source_url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/near-mpc-crypto-types/src/primitives.rs#L70-L127",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-callback",
+      "label": "SDK example composes asynchronous calls with and/then and passes explicit Result<T,PromiseError> to private callbacks, distinct from callback_unwrap.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/near-sdk-rs/examples/callback-results/src/lib.rs",
+      "source_location": "L11-L87",
+      "source_url": "https://github.com/near/near-sdk-rs/blob/4ba939119ea3f9a559d6d45e82859419f5a09a20/examples/callback-results/src/lib.rs#L11-L87",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-quoteold",
+      "label": "The checked-out Rust SDK quote schema distinguishes exact input/output, assets, slippage, deposit/refund/recipient types, deadline and app fees; it lists only ORIGIN_CHAIN and INTENTS deposit types.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/one-click-sdk-rs/docs/QuoteRequest.md",
+      "source_location": "L7-L21",
+      "source_url": "https://github.com/defuse-protocol/one-click-sdk-rs/blob/f9741c3dcfe406dba2ce8c2ae73a6e025dbaafd9/docs/QuoteRequest.md#L7-L21",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-overview",
+      "label": "Overview describes broad desired outcomes and solver quote approval followed by verifier settlement; it does not specify a universal proof relation.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/docs/chain-abstraction/intents/overview.mdx",
+      "source_location": "L8-L31",
+      "source_url": "https://github.com/near/docs/blob/c06865496870cdf8fa985424eca2b13ee2ac6ecf/chain-abstraction/intents/overview.mdx#L8-L31",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-signed1click",
+      "label": "Current 1Click docs distinguish origin-chain deposits from INTENTS/CONFIDENTIAL_INTENTS wallet-signed execution using generate-intent and submit-intent; partner authentication is separate from user signedData.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/0166ea91ec53cb60a9d1.md",
+      "source_location": "L8-L396",
+      "source_url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/quickstart/signed-intent-execution",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-quotesig",
+      "label": "1Click quote signature authenticates origin and field integrity using a Base58 SHA-256 hash of stable-key JSON combining quote request, response and timestamp.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/44cf85c3e91dda069045.md",
+      "source_location": "L8-L107",
+      "source_url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/verify-quote-signature",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-signingdocs",
+      "label": "Current signing docs specify key/signature sizes, uncompressed ECDSA coordinates, raw concatenated signatures, NEP-413 base64 nonce, and ERC-191 recovery-byte normalization.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/2cfc74918b0fd3cbdfcc.md",
+      "source_location": "L8-L175",
+      "source_url": "https://docs.near-intents.org/integration/verifier-contract/signing-intents",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-oneclick",
+      "label": "1Click docs describe quote collection, construction, status, retries and refunds behind a REST API; its no-custody statement is documentation, not an independently verified property here.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/e6224a57576d428df3b5.md",
+      "source_location": "L8-L24",
+      "source_url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/about-1click-api",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-auth",
+      "label": "Current docs distinguish unauthenticated quotes and authenticated partner fee schedules; partner JWT is sent in X-API-Key or Authorization Bearer.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/2f3150b9d3602fdeba0f.md",
+      "source_location": "L8-L24",
+      "source_url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/authentication",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-bus",
+      "label": "Docs explicitly permit any quoting mechanism and direct chain indexing without Message Bus; bus bundles matching signed intents for verifier settlement.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/bd2e229d604db97cbe26.md",
+      "source_location": "L8-L25",
+      "source_url": "https://docs.near-intents.org/integration/market-makers/message-bus/introduction",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-busrpc",
+      "label": "Hosted solver-relay-v2 RPC requires partner JWT; quote takes asset identities, exactly one input/output amount and minimum deadline.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/0a3283118d29be374f6a.md",
+      "source_location": "L8-L62",
+      "source_url": "https://docs.near-intents.org/integration/market-makers/message-bus/rpc",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "A-screening",
+      "label": "Current docs describe compliance screening on integrated quote flows, with coverage varying by flow and integration path.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/6c64b0ebfee7171bb4d2.md",
+      "source_location": "L20-L33",
+      "source_url": "https://docs.near-intents.org/security-compliance/risk-and-compliance",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-entry",
+      "label": "execute_intents is pausable and panics on engine/final accounting errors; simulation uses a cached state. Neither entrypoint is a universal proof checker.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+      "source_location": "L24-L63",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L63",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-detached",
+      "label": "Contract State adapters detach withdrawals, notifications and auth calls; successful engine execution is not evidence that those asynchronous effects have settled.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+      "source_location": "L216-L367",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L216-L367",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-deposit",
+      "label": "NEP141 deposit execution selects inline execute_intents when refund_if_fails is true and a detached self-call otherwise. The choice changes the receipt boundary and recovery behavior.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/deposit.rs",
+      "source_location": "L35-L80",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/deposit.rs#L35-L80",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-ftresolve",
+      "label": "FT resolver treats failed ft_transfer as zero used but failed ft_transfer_call as fully used to avoid unsafe refund after possible downstream effects; malformed successful transfer-call JSON is a separate zero-used branch.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+      "source_location": "L154-L194",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-implicit",
+      "label": "Intents key membership supports an implicit account/key identity for an absent stored account; explicit prior key registration is not universally necessary.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+      "source_location": "L46-L55",
+      "source_url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L46-L55",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-fanout",
+      "label": "MPC duplicate request keys can have multiple queued yields. get_pending_request returns an arbitrary representative for presence only; timeout removes one FIFO slot, leaving siblings pending.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+      "source_location": "L165-L223",
+      "source_url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L165-L223",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-builder",
+      "label": "SDK builder binds verifying contract, signer, ISO deadline, versioned nonce and intents. Its atomicity comment must be scoped to synchronous acceptance because contract state adapters schedule detached external work.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/intents-sdk/src/intents/intent-payload-builder.ts",
+      "source_location": "L84-L240",
+      "source_url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/intents-sdk/src/intents/intent-payload-builder.ts#L84-L240",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-quotecheck",
+      "label": "SDK getQuote rejects replies with wrong asset identities or wrong fixed input/output amount and uses BigInt to rank admissible candidates; this is proposal checking rather than settlement proof.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/internal-utils/src/solverRelay/getQuote.ts",
+      "source_location": "L37-L139",
+      "source_url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/internal-utils/src/solverRelay/getQuote.ts#L37-L139",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-refunddeadline",
+      "label": "1Click detailed quote API defines deadline as the timestamp when refund begins if the swap is incomplete, unlike quickstart wording calling it quote expiration. Dry quotes omit execution fields.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c064901208ed4d8acbae.md",
+      "source_location": "L524-L747",
+      "source_url": "https://docs.near-intents.org/api-reference/oneclick/request-a-swap-quote",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-generate",
+      "label": "Current generate-intent docs describe target-state and conditional caller-ownership checks; swap_transfer takes depositAddress, signerId and standard. They do not specify a duplicate-request idempotency guarantee.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/ad19014e08660b689471.md",
+      "source_location": "L1-L275",
+      "source_url": "https://docs.near-intents.org/api-reference/oneclick/generate-an-intent-for-signing",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-submit",
+      "label": "Current submit-intent docs return intentHash and correlationId upon successful submission; the sampled API does not specify duplicate submission semantics or establish destination settlement at that response.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c4a08af2366665240b2b.md",
+      "source_location": "L1-L258",
+      "source_url": "https://docs.near-intents.org/api-reference/oneclick/submit-a-signed-intent",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-types",
+      "label": "Current quote API supports FLEX_INPUT partial deposits with lower bounds and ANY_INPUT restricted to authorized partners; route availability is service policy.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c064901208ed4d8acbae.md",
+      "source_location": "L541-L615",
+      "source_url": "https://docs.near-intents.org/api-reference/oneclick/request-a-swap-quote",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-requote",
+      "label": "Message Bus publish_intents prose promises retries but its requote field defaults false and describes retry when true. Treat automatic retry as conditional and preserve this documentation inconsistency.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/0a3283118d29be374f6a.md",
+      "source_location": "L550-L576",
+      "source_url": "https://docs.near-intents.org/integration/market-makers/message-bus/rpc",
+      "evidence": "EXTRACTED"
+    },
+    {
+      "id": "AA-status",
+      "label": "1Click origin deposit notification is optional; tracking uses deposit address. SUCCESS means delivered according to the service documentation; FAILED is distinct from REFUNDED.",
+      "source_file": "/home/charl/research/near-teardown-2026-09-19/docs/captures/000cd4cbfe5d62044d0b.md",
+      "source_location": "L323-L436",
+      "source_url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/quickstart/making-a-request",
+      "evidence": "EXTRACTED"
+    }
+  ],
+  "edges": [
+    {
+      "source": "A-multi",
+      "target": "A-engine",
+      "relation": "normalizes authenticated wallet formats for",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "A-nepadapter",
+      "target": "A-payload",
+      "relation": "extracts",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "A-engine",
+      "target": "AA-detached",
+      "relation": "calls concrete state adapters with",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-entry",
+      "target": "A-engine",
+      "relation": "invokes",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-deposit",
+      "target": "AA-entry",
+      "relation": "chooses inline versus detached execution of",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-detached",
+      "target": "AA-ftresolve",
+      "relation": "requires separate resolution via",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "A-mpcsign",
+      "target": "AA-fanout",
+      "relation": "maintains queued continuations described by",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "A-signed1click",
+      "target": "AA-generate",
+      "relation": "uses",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-generate",
+      "target": "AA-submit",
+      "relation": "provides unsigned payload for",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-submit",
+      "target": "AA-status",
+      "relation": "requires separate settlement tracking described by",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "A-bus",
+      "target": "A-busrpc",
+      "relation": "separates optional protocol transport from hosted credential in",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-refunddeadline",
+      "target": "A-engine",
+      "relation": "uses a different deadline scope from",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    },
+    {
+      "source": "AA-builder",
+      "target": "AA-detached",
+      "relation": "atomicity wording must be scoped against",
+      "evidence": "INFERRED",
+      "confidence": 0.95,
+      "reason": "source-comparison interpretation; not an AST call proof"
+    }
+  ],
+  "hyperedges": [],
+  "provenance": {
+    "author": "gpt-6-astra",
+    "requested_effort": "medium",
+    "basis": "independent extraction of reviewed claims",
+    "token_usage": null
+  }
+}

@@ -1,0 +1,455 @@
+On this page
+DA.Logic
+Data Types
+data Formula t
+Functions
+&&&
+|||
+true
+false
+neg
+conj
+disj
+fromBool
+toNNF
+toDNF
+traverse
+zipFormulas
+substitute
+reduce
+isBool
+interpret
+substituteA
+interpretA
+Orphan Typeclass Instances
+Daml Standard Library
+Modules
+DA.Logic
+Copy page
+Copy page
+Reference documentation for Daml module DA.Logic.
+Copy page
+Copy page
+Daml module
+​
+DA.Logic
+Logic - Propositional calculus.
+Daml
+​
+Data Types
+​
+data Formula t
+A
+Formula t
+is a formula in propositional calculus with
+propositions of type t.
+Constructors:
+Proposition t
+Proposition p
+is the formula p
+Negation (Formula t)
+For a formula f,
+Negation f
+is ¬f
+Conjunction [Formula t]
+For formulas f1, …, fn,
+Conjunction [f1, ..., fn]
+is f1 ∧ … ∧ fn
+Disjunction [Formula t]
+For formulas f1, …, fn,
+Disjunction [f1, ..., fn]
+is f1 ∨ … ∨ fn
+Instances:
+instance
+Action
+Formula
+instance
+Applicative
+Formula
+instance
+Functor
+Formula
+instance
+Eq
+t
+=>
+Eq
+(
+Formula
+t
+)
+instance
+Ord
+t
+=>
+Ord
+(
+Formula
+t
+)
+instance
+Show
+t
+=>
+Show
+(
+Formula
+t
+)
+​
+Functions
+​
+&&&
+&&&
+:
+Formula
+t
+->
+Formula
+t
+->
+Formula
+t
+&&&
+is the ∧ operation of the boolean algebra of formulas, to
+be read as “and”
+​
+|||
+|||
+:
+Formula
+t
+->
+Formula
+t
+->
+Formula
+t
+|||
+is the ∨ operation of the boolean algebra of formulas, to
+be read as “or”
+​
+true
+true
+:
+Formula
+t
+true
+is the 1 element of the boolean algebra of formulas,
+represented as an empty conjunction.
+​
+false
+false
+:
+Formula
+t
+false
+is the 0 element of the boolean algebra of formulas,
+represented as an empty disjunction.
+​
+neg
+neg
+:
+Formula
+t
+->
+Formula
+t
+neg
+is the ¬ (negation) operation of the boolean algebra of
+formulas.
+​
+conj
+conj
+: [
+Formula
+t
+] ->
+Formula
+t
+conj
+is a list version of
+&&&
+, enabled by the associativity
+of ∧.
+​
+disj
+disj
+: [
+Formula
+t
+] ->
+Formula
+t
+disj
+is a list version of
+|||
+, enabled by the associativity
+of ∨.
+​
+fromBool
+fromBool
+:
+Bool
+->
+Formula
+t
+fromBool
+converts
+True
+to
+true
+and
+False
+to
+false
+.
+​
+toNNF
+toNNF
+:
+Formula
+t
+->
+Formula
+t
+toNNF
+transforms a formula to negation normal form
+(see
+https://en.wikipedia.org/wiki/Negation_normal_form
+).
+​
+toDNF
+toDNF
+:
+Formula
+t
+->
+Formula
+t
+toDNF
+turns a formula into disjunctive normal form.
+(see
+https://en.wikipedia.org/wiki/Disjunctive_normal_form
+).
+​
+traverse
+traverse
+:
+Applicative
+f
+=> (
+t
+->
+f
+s
+) ->
+Formula
+t
+->
+f
+(
+Formula
+s
+)
+An implementation of
+traverse
+in the usual sense.
+​
+zipFormulas
+zipFormulas
+:
+Formula
+t
+->
+Formula
+s
+->
+Formula
+(
+t
+,
+s
+)
+zipFormulas
+takes to formulas of same shape, meaning only
+propositions are different and zips them up.
+​
+substitute
+substitute
+: (
+t
+->
+Optional
+Bool
+) ->
+Formula
+t
+->
+Formula
+t
+substitute
+takes a truth assignment and substitutes
+True
+or
+False
+into the respective places in a formula.
+​
+reduce
+reduce
+:
+Formula
+t
+->
+Formula
+t
+reduce
+reduces a formula as far as possible by:
+Removing any occurrences of
+true
+and
+false
+;
+Removing directly nested Conjunctions and Disjunctions;
+Going to negation normal form.
+​
+isBool
+isBool
+:
+Formula
+t
+->
+Optional
+Bool
+isBool
+attempts to convert a formula to a bool. It satisfies
+isBool true == Some True
+and
+isBool false == Some False
+.
+Otherwise, it returns
+None
+.
+​
+interpret
+interpret
+: (
+t
+->
+Optional
+Bool
+) ->
+Formula
+t
+->
+Either
+(
+Formula
+t
+)
+Bool
+interpret
+is a version of
+toBool
+that first substitutes using
+a truth function and then reduces as far as possible.
+​
+substituteA
+substituteA
+:
+Applicative
+f
+=> (
+t
+->
+f
+(
+Optional
+Bool
+)) ->
+Formula
+t
+->
+f
+(
+Formula
+t
+)
+substituteA
+is a version of
+substitute
+that allows for truth
+values to be obtained from an action.
+​
+interpretA
+interpretA
+:
+Applicative
+f
+=> (
+t
+->
+f
+(
+Optional
+Bool
+)) ->
+Formula
+t
+->
+f
+(
+Either
+(
+Formula
+t
+)
+Bool
+)
+interpretA
+is a version of
+interpret
+that allows for truth
+values to be obtained form an action.
+​
+Orphan Typeclass Instances
+instance
+Eq
+t
+=>
+Eq
+(
+Formula
+t
+)
+instance
+Ord
+t
+=>
+Ord
+(
+Formula
+t
+)
+instance
+Show
+t
+=>
+Show
+(
+Formula
+t
+)
+instance
+Functor
+Formula
+instance
+Applicative
+Formula
+instance
+Action
+Formula
+Suggest edits
+Raise issue
+DA.List.Total
+DA.Map

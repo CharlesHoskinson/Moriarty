@@ -1,0 +1,352 @@
+{
+  "study": "recursion-semantics",
+  "scope": "bounded read-only source study; no build/proof/test/deployment",
+  "pins": {
+    "mina": {
+      "name": "mina",
+      "url": "https://github.com/MinaProtocol/mina.git",
+      "path": "/home/charl/research/mina-recursion-2026-09-19/repos/mina",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "branch": "compatible",
+      "sparse": true,
+      "sparse_status": 0,
+      "submodules": "-818fbf6fa38f20f976657ea1d9705b7a29bd3a38 src/lib/crypto/kimchi_bindings/stubs/kimchi-stubs-vendors\n-886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c src/lib/crypto/proof-systems\n-9f55ef7c2f2570365aeb24b6ddfc713f48be3117 src/lib/snarky",
+      "dirty": "",
+      "retrieved_at": "2026-09-19T23:00:45.392478+00:00"
+    },
+    "proof-systems": {
+      "name": "proof-systems",
+      "url": "https://github.com/o1-labs/proof-systems.git",
+      "path": "/home/charl/research/mina-recursion-2026-09-19/repos/proof-systems",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "branch": "master",
+      "sparse": true,
+      "sparse_status": 0,
+      "submodules": "-4a487b8920daa9dc4b496d691d5f283f9bb659b1 o1vm/ethereum-optimism",
+      "dirty": "",
+      "retrieved_at": "2026-09-19T23:00:38.067476+00:00"
+    }
+  },
+  "evidence": [
+    {
+      "id": "E01",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/step_main.ml",
+      "file_sha256": "3d39a9ca699f1970859b42c684db219eb12f5a680adf76df9a2b35e00c8e599d",
+      "ranges": [
+        {
+          "start_line": 17,
+          "end_line": 42,
+          "excerpt": "  let verify_one ~srs\n      ({ app_state\n       ; wrap_proof\n       ; proof_state\n       ; prev_proof_evals\n       ; prev_challenges\n       ; prev_challenge_polynomial_commitments\n       } :\n        _ Per_proof_witness.t ) (d : _ Types_map.For_step.t)\n      (messages_for_next_wrap_proof : Digest.t) (unfinalized : Unfinalized.t)\n      (must_verify : B.t) : _ Vector.t * B.t =\n    Boolean.Assert.( = ) unfinalized.should_finalize must_verify ;\n    let deferred_values = proof_state.deferred_values in\n    let finalized, chals =\n      with_label __LOC__ (fun () ->\n          let sponge_digest = proof_state.sponge_digest_before_evaluations in\n          let sponge =\n            let open Step_main_inputs in\n            let sponge = Sponge.create sponge_params in\n            Sponge.absorb sponge (`Field sponge_digest) ;\n            sponge\n          in\n          (* TODO: Refactor args into an \"unfinalized proof\" struct *)\n          Step_verifier.finalize_other_proof d.max_proofs_verified\n            ~step_domains:d.step_domains ~zk_rows:d.zk_rows ~sponge\n            ~prev_challenges deferred_values prev_proof_evals )\n",
+          "excerpt_sha256": "4ea5369dd8a0ea676d8f828e5b30fb6b78e411a8ad06cc3aeb26ca3d62684405"
+        },
+        {
+          "start_line": 85,
+          "end_line": 117,
+          "excerpt": "      with_label __LOC__ (fun () ->\n          Step_verifier.verify ~srs\n            ~feature_flags:(Plonk_types.Features.of_full d.feature_flags)\n            ~lookup_parameters:\n              { use = d.feature_flags.uses_lookups\n              ; zero =\n                  { var =\n                      { challenge = Field.zero\n                      ; scalar = Shifted_value Field.zero\n                      }\n                  ; value =\n                      { challenge = Limb_vector.Challenge.Constant.zero\n                      ; scalar =\n                          Shifted_value.Type1.Shifted_value Field.Constant.zero\n                      }\n                  }\n              }\n            ~proofs_verified:d.max_proofs_verified ~wrap_domain:d.wrap_domain\n            ~is_base_case:(Boolean.not must_verify) ~sponge_after_index\n            ~sg_old:prev_challenge_polynomial_commitments ~proof:wrap_proof\n            ~wrap_verification_key:d.wrap_key statement unfinalized )\n    in\n    if debug then\n      as_prover\n        As_prover.(\n          fun () ->\n            let finalized = read Boolean.typ finalized in\n            let verified = read Boolean.typ verified in\n            let must_verify = read Boolean.typ must_verify in\n            printf \"finalized: %b\\n%!\" finalized ;\n            printf \"verified: %b\\n%!\" verified ;\n            printf \"must_verify: %b\\n\\n%!\" must_verify) ;\n    (chals, Boolean.(verified &&& finalized ||| not must_verify))\n",
+          "excerpt_sha256": "5c6e5f9dad37a1f19847fea03631856ce83a88ed186bebda54c002ec264345e0"
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/step_main.ml",
+      "file_sha256": "3d39a9ca699f1970859b42c684db219eb12f5a680adf76df9a2b35e00c8e599d",
+      "ranges": [
+        {
+          "start_line": 505,
+          "end_line": 531,
+          "excerpt": "                          []\n                      | tag :: tags, optional_wrap_key :: optional_wrap_keys ->\n                          let data =\n                            match Type_equal.Id.same_witness self.id tag.id with\n                            | None -> (\n                                match tag.kind with\n                                | Compiled ->\n                                    Types_map.For_step\n                                    .of_compiled_with_known_wrap_key\n                                      (Option.value_exn optional_wrap_key)\n                                      (Types_map.lookup_compiled tag.id)\n                                | Side_loaded ->\n                                    Types_map.For_step.of_side_loaded\n                                      (Types_map.lookup_side_loaded tag.id) )\n                            | Some T ->\n                                self_data\n                          in\n                          data :: go tags optional_wrap_keys\n                    in\n                    go rule.prevs known_wrap_keys\n                  in\n                  go proof_witnesses datas messages_for_next_wrap_proofs\n                    unfinalized_proofs previous_proof_statements proofs_verified\n                    ~actual_wrap_domains\n                in\n                Boolean.Assert.all vs ; chalss )\n          in\n",
+          "excerpt_sha256": "25e3baee03c30df55c1a29787d9ed5054f2bbb253c0075e4ec87493a50dbd46b"
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/step_verifier.ml",
+      "file_sha256": "d5d568f83965f8d89b1a0326e79af315ade9f5b1711d580c7437b6b8f39a4d6e",
+      "ranges": [
+        {
+          "start_line": 986,
+          "end_line": 1004,
+          "excerpt": "    sponge.state <- sponge_state ;\n    (* == Step 8: Challenge sampling and verification ==\n       Squeeze xi and r challenges from the sponge. These must match\n       the challenges the prover used. *)\n    let squeeze () = squeeze_challenge sponge in\n    let xi_actual = squeeze () in\n    let r_actual = squeeze () in\n    (* 8a: Verify xi was sampled correctly *)\n    let xi_correct =\n      Field.equal xi_actual\n        (match xi with { Import.Scalar_challenge.inner = xi } -> xi)\n    in\n    (* 8b: Convert scalar challenges to field elements for subsequent\n       computations. Uses the curve endomorphism for efficiency. *)\n    let xi = scalar xi in\n    let r = scalar (Import.Scalar_challenge.create r_actual) in\n    (* == Step 9: PlonK minimal form and combined evaluations ==\n       Convert plonk values to minimal form and combine chunked evaluations\n       into single values using powers of the evaluation point. *)\n",
+          "excerpt_sha256": "a9343cfe290964394e6a9c147ea40498810437623c5a78db6bb01d230f99881e"
+        },
+        {
+          "start_line": 1125,
+          "end_line": 1168,
+          "excerpt": "       Verify the b value, which is the evaluation of the challenge polynomial\n       at the combined evaluation point: b = h(zeta) + r * h(zetaw)\n       where h is the challenge polynomial from new bulletproof challenges. *)\n    let bulletproof_challenges =\n      compute_challenges ~scalar bulletproof_challenges\n    in\n    let b_correct =\n      with_label \"b_correct\" (fun () ->\n          let challenge_poly =\n            unstage\n              (challenge_polynomial (Vector.to_array bulletproof_challenges))\n          in\n          let b_actual =\n            challenge_poly plonk.zeta + (r * challenge_poly zetaw)\n          in\n          let b_used =\n            Shifted_value.Type1.to_field (module Field) ~shift:shift1 b\n          in\n          equal b_used b_actual )\n    in\n    (* == Step 13: PlonK relation checks ==\n       Verify the PlonK arithmetic constraints are satisfied. This checks\n       that the polynomial evaluations satisfy the PlonK relation, which\n       encodes the circuit constraints. *)\n    let plonk_checks_passed =\n      with_label \"plonk_checks_passed\" (fun () ->\n          Plonk_checks.checked\n            (module Impl)\n            ~env ~shift:shift1 plonk combined_evals )\n    in\n    (* == Step 14: Combine all checks and return ==\n       All checks must pass for the deferred values to be valid. *)\n    print_bool \"xi_correct\" xi_correct ;\n    print_bool \"combined_inner_product_correct\" combined_inner_product_correct ;\n    print_bool \"plonk_checks_passed\" plonk_checks_passed ;\n    print_bool \"b_correct\" b_correct ;\n    ( Boolean.all\n        [ xi_correct (* Challenge sampling was correct *)\n        ; b_correct (* Challenge polynomial evaluation was correct *)\n        ; combined_inner_product_correct (* Bulletproof inner product correct *)\n        ; plonk_checks_passed (* PlonK relation satisfied *)\n        ]\n    , bulletproof_challenges )\n\n",
+          "excerpt_sha256": "8e6dac576ede5bcf74025d21d24fa8236a6d81265a781262c0d30f399a43bc83"
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/wrap_main.ml",
+      "file_sha256": "e63ad8f4afa6b3dbd8d64bb69ea3f36f4965a57b8a3371e314571ad81986f1ec",
+      "ranges": [
+        {
+          "start_line": 370,
+          "end_line": 420,
+          "excerpt": "                    [ (* This is padded to max_proofs_verified for the benefit of wrapping with dummy unfinalized proofs *)\n                      prev_proof_state.unfinalized_proofs\n                    ; old_bp_chals\n                    ; evals\n                    ; wrap_domains\n                    ]\n                    ~f:(fun\n                         [ { deferred_values\n                           ; sponge_digest_before_evaluations\n                           ; should_finalize\n                           }\n                         ; old_bulletproof_challenges\n                         ; evals\n                         ; wrap_domain\n                         ]\n                       ->\n                      let sponge =\n                        let s = Sponge.create sponge_params in\n                        Sponge.absorb s sponge_digest_before_evaluations ;\n                        s\n                      in\n\n                      (* the type of the local max proofs-verified depends on\n                         which kind of step proof we are wrapping. *)\n                      (* For each i in [0..max_proofs_verified-1], we have\n                         max_local_max_proofs_verified, which is the largest\n                         Local_max_proofs_verified which is the i^th inner proof of a step proof.\n\n                         Need to compute this value from the which_branch.\n                      *)\n                      let (T\n                            ( _max_local_max_proofs_verified\n                            , old_bulletproof_challenges ) ) =\n                        old_bulletproof_challenges\n                      in\n                      let old_bulletproof_challenges =\n                        Wrap_hack.Checked.pad_challenges\n                          old_bulletproof_challenges\n                      in\n                      let finalized, chals =\n                        with_label __LOC__ (fun () ->\n                            Wrap_verifier.finalize_other_proof\n                              (module Wrap_hack.Padded_length)\n                              ~domain:\n                                (wrap_domain :> _ Plonk_checks.plonk_domain)\n                              ~sponge ~old_bulletproof_challenges\n                              deferred_values evals )\n                      in\n                      Boolean.(Assert.any [ finalized; not should_finalize ]) ;\n                      chals )\n                in\n",
+          "excerpt_sha256": "f12088020fc8efc8dbf5a00303dc70a66cb723a1f4c78b9e33c2152b9015c7ee"
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/wrap_main.ml",
+      "file_sha256": "e63ad8f4afa6b3dbd8d64bb69ea3f36f4965a57b8a3371e314571ad81986f1ec",
+      "ranges": [
+        {
+          "start_line": 156,
+          "end_line": 212,
+          "excerpt": "          let which_branch' =\n            exists\n              (Typ.transport Field.typ ~there:Field.Constant.of_int\n                 ~back:(fun _ -> failwith \"unimplemented\") )\n              ~request:(fun () -> Req.Which_branch)\n          in\n          let which_branch =\n            Wrap_verifier.One_hot_vector.of_index which_branch' ~length:branches\n          in\n          let actual_proofs_verified_mask =\n            Util.Wrap.ones_vector\n              ~first_zero:\n                (Wrap_verifier.Pseudo.choose\n                   (which_branch, step_widths)\n                   ~f:Field.of_int )\n              Max_proofs_verified.n\n            |> Vector.rev\n          in\n          let domain_log2 =\n            Wrap_verifier.Pseudo.choose\n              ( which_branch\n              , Vector.map ~f:(fun ds -> Domain.log2_size ds.h) step_domains )\n              ~f:Field.of_int\n          in\n          let () =\n            with_label __LOC__ (fun () ->\n                (* Check that the branch_data public-input is correct *)\n                Branch_data.Checked.Wrap.pack\n                  { proofs_verified_mask =\n                      Vector.extend_front_exn actual_proofs_verified_mask\n                        Nat.N2.n Boolean.false_\n                  ; domain_log2\n                  }\n                |> Field.Assert.equal branch_data )\n          in\n          let prev_proof_state =\n            with_label __LOC__ (fun () ->\n                let open Types.Step.Proof_state in\n                let typ =\n                  wrap_typ\n                    ~assert_16_bits:(Wrap_verifier.assert_n_bits ~n:16)\n                    (Vector.init Max_proofs_verified.n ~f:(fun _ ->\n                         Plonk_types.Features.none ) )\n                    (Shifted_value.Type2.wrap_typ Field.typ)\n                in\n                exists typ ~request:(fun () -> Req.Proof_state) )\n          in\n          let step_plonk_index =\n            with_label __LOC__ (fun () ->\n                Wrap_verifier.choose_key which_branch\n                  (Vector.map step_keys\n                     ~f:\n                       (Plonk_verification_key_evals.Step.map\n                          ~f:(Array.map ~f:Inner_curve.constant)\n                          ~f_opt:(function\n                         | None ->\n                             Opt.nothing\n",
+          "excerpt_sha256": "a25373fe725a1d773ecdb0f9478e41cb8e48ce05ab742f3f9197de08f85b5fc5"
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/side_loaded_verification_key.ml",
+      "file_sha256": "31cb7dab469d0b24f0d51642baeab897f2d68c8c7538d1bd5405780585881a3b",
+      "ranges": [
+        {
+          "start_line": 1,
+          "end_line": 24,
+          "excerpt": "(** A verification key for a pickles proof, whose contents are not fixed within\n    the verifier circuit.\n    This is used to verify a proof where the verification key is determined by\n    some other constraint, for example to use a verification key provided as\n    input to the circuit, or loaded from an account that was chosen based upon\n    the circuit inputs.\n\n    Here and elsewhere, we use the terms\n    * **width**:\n      - the number of proofs that a proof has verified itself;\n      - (equivalently) the maximum number of proofs that a proof depends upon\n        directly.\n      - NB: This does not include recursively-verified proofs, this only refers\n        to proofs that were provided directly to pickles when the proof was\n        being generated.\n    * **branch**:\n      - a single 'rule' or 'circuit' for which a proof can be generated, where\n        a verification key verifies a proof for any of these branches.\n      - It is common to have a 'base' branch and a 'recursion' branch. For\n        example, the transaction snark has a 'transaction' proof that evaluates\n        a single transaction and a 'merge' proof that combines two transaction\n        snark proofs that prove sequential updates, each of which may be either\n        a 'transaction' or a 'merge'.\n*)\n",
+          "excerpt_sha256": "00abda2d7bfdc134c96a065e265d37864983f7c7e8af20dbcb5e6f468da4a0f9"
+        },
+        {
+          "start_line": 55,
+          "end_line": 65,
+          "excerpt": "    val to_bits : t -> Boolean.var list\n  end\n\n  val typ : (Checked.t, t) Typ.t\n\n  module Max = Nat.N2\n\n  module Max_vector : Vector.With_version(Max).S\n\n  module Max_at_most : sig\n    [%%versioned:\n",
+          "excerpt_sha256": "60b1c9c71955a6ce55db217d0b2ada05755a455942bc4cc9bd49f472c002eba1"
+        },
+        {
+          "start_line": 351,
+          "end_line": 384,
+          "excerpt": "\n  type t =\n    { max_proofs_verified : Pickles_base.Proofs_verified.One_hot.Checked.t\n          (** The maximum of all of the [step_widths]. *)\n    ; actual_wrap_domain_size : Pickles_base.Proofs_verified.One_hot.Checked.t\n          (** The actual domain size used by the wrap circuit. *)\n    ; wrap_index : Inner_curve.t Plonk_verification_key_evals.t\n          (** The plonk verification key for the 'wrapping' proof that this key\n              is used to verify.\n          *)\n    }\n  [@@deriving hlist, fields]\n\n  let to_input =\n    let open Random_oracle_input.Chunked in\n    fun { max_proofs_verified; actual_wrap_domain_size; wrap_index } :\n        _ Random_oracle_input.Chunked.t ->\n      let max_proofs_verified =\n        Pickles_base.Proofs_verified.One_hot.Checked.to_input\n          max_proofs_verified\n      in\n      let actual_wrap_domain_size =\n        Pickles_base.Proofs_verified.One_hot.Checked.to_input\n          actual_wrap_domain_size\n      in\n      List.reduce_exn ~f:append\n        [ max_proofs_verified\n        ; actual_wrap_domain_size\n        ; wrap_index_to_input\n            (Fn.compose Array.of_list Inner_curve.to_field_elements)\n            wrap_index\n        ]\nend\n\n",
+          "excerpt_sha256": "5bc57aad71f96bbdaf2e276cd0debfecb83f354440d9b88fb3f970d015eee763"
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "book/docs/pickles/overview.md",
+      "file_sha256": "12b50ed1ebc321fb8eda8d4e4a34fd39571af307306ab94bfd07e34355d136bc",
+      "ranges": [
+        {
+          "start_line": 1,
+          "end_line": 44,
+          "excerpt": "# Overview of Pickles\n\nPickles is a recursion layer built on top of Kimchi. The complexity of pickles\nas a protocol lies in specifying how to verify previous kimchi inside of the\ncurrent ones. Working over two curves requires us to have different circuits and\na \"mirrored\" structure, some computations are deferred for efficiency, and one\nneeds to carefully keep track of the accumulators. In this section we provide a\ngeneral overview of pickles, while next sections in the same chapter dive into\nthe actual implementation details.\n\nPickles works over [Pasta](../specs/pasta.md), a cycle of curves consisting of\nPallas and Vesta, and thus it defines two generic circuits, one for each curve.\nEach can be thought of as a parallel instantiation of a kimchi proof systems.\nThese circuits are not symmetric and have somewhat different function:\n\n- **Step circuit**: this is the main circuit that contains application logic.\n  Each step circuit verifies a statement and potentially several (at most 2)\n  other wrap proofs.\n- **Wrap circuit**: this circuit merely verifies the step circuit, and does not\n  have its own application logic. The intuition is that every time an\n  application statement is proven it's done in Step, and then the resulting\n  proof is immediately wrapped using Wrap.\n\n#### General Circuit Structure\n\nBoth Step and Wrap circuits additionally do a lot of recursive verification of\nthe previous steps. Without getting too technical, Step (without lost of\ngenerality) does the following:\n\n1. Execute the application logic statement (e.g. the mina transaction is valid)\n2. Verify that the previous Wrap proof is (first-)half-valid (perform only main\n   checks that are efficient for the curve)\n3. Verify that the previous Step proof is (second-)half-valid (perform the\n   secondary checks that were inefficient to perform when the previous Step was\n   Wrapped)\n4. Verify that the previous Step correctly aggregated the previous accumulator,\n   e.g.\n   $\\mathsf{acc}_2 = \\mathsf{Aggregate}(\\mathsf{acc}_1, \\pi_{\\mathsf{step},2})$.\n\nThe diagram roughly illustrates the interplay of the two kimchi instances.\n\n![Overview](/img/pickles/pickles_structure_overview.svg)\n\nWe note that the Step circuit may repeat items 2-3 to handle the following case:\n",
+          "excerpt_sha256": "373982b9fa404778ea51ad3ca22e397311075ce175dd0424045032a75c0f3d5b"
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/verify.ml",
+      "file_sha256": "e1a085dc4fb267024437d8a75ef3aee7f38ec49c81c1ca9ca96dd0bfd4e98848",
+      "ranges": [
+        {
+          "start_line": 20,
+          "end_line": 48,
+          "excerpt": "let verify_heterogenous (ts : Instance.t list) =\n  let module Tick_field = Backend.Tick.Field in\n  let logger = Context_logger.get () in\n  [%log internal] \"Verify_heterogenous\"\n    ~metadata:[ (\"count\", `Int (List.length ts)) ] ;\n  let tick_field : _ Plonk_checks.field = (module Tick_field) in\n  let check, result =\n    let r = ref [] in\n    let result () =\n      match !r with\n      | [] ->\n          Ok ()\n      | _ ->\n          Error\n            ( Error.tag ~tag:\"Pickles.verify\"\n            @@ Error.of_list\n            @@ List.map !r ~f:(fun lab -> Error.of_string (Lazy.force lab)) )\n    in\n    ((fun (lab, b) -> if not b then r := lab :: !r), result)\n  in\n  let lr_lengths_ok =\n    let rounds = Nat.to_int Backend.Tock.Rounds.n in\n    List.for_all ts ~f:(fun (T (_, _, _, _, _, T { proof; _ })) ->\n        Array.length proof.bulletproof.lr = rounds )\n  in\n  if not lr_lengths_ok then (\n    (* A wrap proof's bulletproof lr must match the wrap round count. *)\n    check (lazy \"bulletproof lr length\", false) ;\n    Promise.return (result ()) )\n",
+          "excerpt_sha256": "ac4a813a258e789c1d6cd45e0821cb3150af1231935c4a1d62cc674fdf4cfd89"
+        },
+        {
+          "start_line": 71,
+          "end_line": 114,
+          "excerpt": "          let non_chunking, expected_num_chunks =\n            let expected_num_chunks =\n              Option.value_map ~default:Plonk_checks.num_chunks_by_default\n                chunking_data ~f:(fun x -> x.Instance.num_chunks)\n            in\n            let exception Is_chunked in\n            match\n              Pickles_types.Plonk_types.Evals.map evals.evals.evals\n                ~f:(fun (x, y) ->\n                  if\n                    Array.length x > expected_num_chunks\n                    || Array.length y > expected_num_chunks\n                  then raise Is_chunked )\n            with\n            | exception Is_chunked ->\n                (false, expected_num_chunks)\n            | _unit_evals ->\n                (* we do not care about _unit_evals, if we reached this point, we\n                   know all evals have length 1 for they cannot have length 0 *)\n                (true, expected_num_chunks)\n          in\n          check\n            ( lazy (sprintf \"only uses %i chunks\" expected_num_chunks)\n            , non_chunking ) ;\n          check\n            ( lazy \"feature flags are consistent with evaluations\"\n            , Pickles_types.Plonk_types.Evals.validate_feature_flags\n                ~feature_flags:proof_state.deferred_values.plonk.feature_flags\n                evals.evals.evals ) ;\n          Timer.start __LOC__ ;\n          let open Types.Wrap.Proof_state in\n          let step_domain =\n            Branch_data.domain proof_state.deferred_values.branch_data\n          in\n          let expected_domain_size =\n            match chunking_data with\n            | None ->\n                Nat.to_int Backend.Tick.Rounds.n\n            | Some { domain_size; _ } ->\n                domain_size\n          in\n          check\n            ( lazy \"domain size is small enough\"\n            , Domain.log2_size step_domain <= expected_domain_size ) ;\n",
+          "excerpt_sha256": "89feb9b0c69bdba13256ba8466e81f9a58d6d787dc012be14aa7e1c590c5e3ab"
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/verify.ml",
+      "file_sha256": "e1a085dc4fb267024437d8a75ef3aee7f38ec49c81c1ca9ca96dd0bfd4e98848",
+      "ranges": [
+        {
+          "start_line": 164,
+          "end_line": 177,
+          "excerpt": "    let open Promise.Let_syntax in\n    [%log internal] \"Accumulator_check\" ;\n    let%bind accumulator_check =\n      Ipa.Step.accumulator_check\n        (List.map ts ~f:(fun (T (_, _, _, _, _, T t)) ->\n             ( t.statement.proof_state.messages_for_next_wrap_proof\n                 .challenge_polynomial_commitment\n             , Ipa.Step.compute_challenges\n                 t.statement.proof_state.deferred_values.bulletproof_challenges\n             ) ) )\n    in\n    [%log internal] \"Accumulator_check_done\" ;\n    Common.time \"batch_step_dlog_check\" (fun () ->\n        check (lazy \"batch_step_dlog_check\", accumulator_check) ) ;\n",
+          "excerpt_sha256": "88cb25223e85559494c40a2096630149c1d818dba46b7bb3b810589aba248077"
+        },
+        {
+          "start_line": 180,
+          "end_line": 253,
+          "excerpt": "      List.map2_exn ts deferred_values\n        ~f:(fun\n             (T\n               ( (module Max_proofs_verified)\n               , (module A_value)\n               , _chunking_data\n               , key\n               , app_state\n               , T t ) )\n             deferred_values\n           ->\n          let prepared_statement : _ Types.Wrap.Statement.In_circuit.t =\n            { messages_for_next_step_proof =\n                Common.hash_messages_for_next_step_proof\n                  ~app_state:A_value.to_field_elements\n                  (Reduced_messages_for_next_proof_over_same_field.Step.prepare\n                     ~dlog_plonk_index:\n                       (Plonk_verification_key_evals.map\n                          ~f:(fun x -> [| x |])\n                          key.commitments )\n                     { t.statement.messages_for_next_step_proof with app_state } )\n            ; proof_state =\n                { deferred_values =\n                    { plonk = deferred_values.plonk\n                    ; combined_inner_product =\n                        deferred_values.combined_inner_product\n                    ; b = deferred_values.b\n                    ; xi = deferred_values.xi\n                    ; bulletproof_challenges =\n                        deferred_values.bulletproof_challenges\n                    ; branch_data = deferred_values.branch_data\n                    }\n                ; sponge_digest_before_evaluations =\n                    t.statement.proof_state.sponge_digest_before_evaluations\n                ; messages_for_next_wrap_proof =\n                    Wrap_hack.hash_messages_for_next_wrap_proof\n                      (Reduced_messages_for_next_proof_over_same_field.Wrap\n                       .prepare\n                         t.statement.proof_state.messages_for_next_wrap_proof )\n                }\n            }\n          in\n          let input =\n            tock_unpadded_public_input_of_statement\n              ~feature_flags:Plonk_types.Features.Full.maybe prepared_statement\n          in\n          let message =\n            Wrap_hack.pad_accumulator\n              (Vector.map2\n                 ~f:(fun g cs ->\n                   { Challenge_polynomial.challenges =\n                       Vector.to_array (Ipa.Wrap.compute_challenges cs)\n                   ; commitment = g\n                   } )\n                 (Vector.extend_front_exn\n                    t.statement.messages_for_next_step_proof\n                      .challenge_polynomial_commitments Max_proofs_verified.n\n                    (Lazy.force Dummy.Ipa.Wrap.sg) )\n                 t.statement.proof_state.messages_for_next_wrap_proof\n                   .old_bulletproof_challenges )\n          in\n          ( key.index\n          , { proof = Wrap_wire_proof.to_kimchi_proof t.proof\n            ; public_evals = None\n            }\n          , input\n          , Some message ) )\n    in\n    [%log internal] \"Compute_batch_verify_inputs_done\" ;\n    [%log internal] \"Dlog_check_batch_verify\" ;\n    let%map dlog_check = batch_verify batch_verify_inputs in\n    [%log internal] \"Dlog_check_batch_verify_done\" ;\n    Common.time \"dlog_check\" (fun () -> check (lazy \"dlog_check\", dlog_check)) ;\n    result () )\n",
+          "excerpt_sha256": "a0e6a2fdf47e6b54caeb04eaf6545333b298559a80c2c6c165af1536469cec5e"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "kimchi/src/verifier.rs",
+      "file_sha256": "49a8430da928ee8edd38891780f1a393dcd2cabb1ecdb32a0dcd15b691910ad4",
+      "ranges": [
+        {
+          "start_line": 155,
+          "end_line": 177,
+          "excerpt": "\n        //~ 1. Setup the Fq-Sponge. This sponge mostly absorbs group\n        // elements (points as tuples over the base field), but it\n        // squeezes out elements of the group's scalar field.\n        let mut fq_sponge = EFqSponge::new(G::other_curve_sponge_params());\n\n        //~ 1. Absorb the digest of the VerifierIndex.\n        let verifier_index_digest = index.digest::<EFqSponge>();\n        fq_sponge.absorb_fq(&[verifier_index_digest]);\n\n        //~ 1. Absorb the commitments of the previous challenges with the Fq-sponge.\n        for RecursionChallenge { comm, .. } in &self.prev_challenges {\n            absorb_commitment(&mut fq_sponge, comm);\n        }\n\n        //~ 1. Absorb the commitment of the public input polynomial with the Fq-Sponge.\n        absorb_commitment(&mut fq_sponge, public_comm);\n\n        //~ 1. Absorb the commitments to the registers / witness columns with the Fq-Sponge.\n        self.commitments\n            .w_comm\n            .iter()\n            .for_each(|c| absorb_commitment(&mut fq_sponge, c));\n",
+          "excerpt_sha256": "7c527c2b342d4a9f00fd597522dd38770d2bac03335b8dce5a44070282822123"
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "kimchi/src/verifier.rs",
+      "file_sha256": "49a8430da928ee8edd38891780f1a393dcd2cabb1ecdb32a0dcd15b691910ad4",
+      "ranges": [
+        {
+          "start_line": 280,
+          "end_line": 325,
+          "excerpt": "        // the previous recursion round), and squeezes scalar elements\n        // of the field. The squeeze result is the same as with the\n        // `fq_sponge`.\n        let digest = fq_sponge.clone().digest();\n        let mut fr_sponge = EFrSponge::from(G::sponge_params());\n\n        //~ 1. Squeeze the Fq-sponge and absorb the result with the Fr-Sponge.\n        fr_sponge.absorb(&digest);\n\n        //~ 1. Absorb the previous recursion challenges.\n        let prev_challenge_digest = {\n            // Note: we absorb in a new sponge here to limit the scope in which we need the\n            // more-expensive 'optional sponge'.\n            let mut fr_sponge = EFrSponge::from(G::sponge_params());\n            for RecursionChallenge { chals, .. } in &self.prev_challenges {\n                fr_sponge.absorb_multiple(chals);\n            }\n            fr_sponge.digest()\n        };\n        fr_sponge.absorb(&prev_challenge_digest);\n\n        // prepare some often used values\n        let zeta1 = zeta.pow([n]);\n        let zetaw = zeta * index.domain.group_gen;\n        let evaluation_points = [zeta, zetaw];\n        let powers_of_eval_points_for_chunks = PointEvaluations {\n            zeta: zeta.pow([index.max_poly_size as u64]),\n            zeta_omega: zetaw.pow([index.max_poly_size as u64]),\n        };\n\n        //~ 1. Compute evaluations for the previous recursion challenges.\n        let polys: Vec<(PolyComm<G>, _)> = self\n            .prev_challenges\n            .iter()\n            .map(|challenge| {\n                let evals = challenge.evals(\n                    index.max_poly_size,\n                    &evaluation_points,\n                    &[\n                        powers_of_eval_points_for_chunks.zeta,\n                        powers_of_eval_points_for_chunks.zeta_omega,\n                    ],\n                );\n                let RecursionChallenge { chals: _, comm } = challenge;\n                (comm.clone(), evals)\n            })\n",
+          "excerpt_sha256": "16ae4c3845e23a7d312625859143ae08ad2e6b27c0a7061682a7510dc7b68617"
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "kimchi/src/verifier.rs",
+      "file_sha256": "49a8430da928ee8edd38891780f1a393dcd2cabb1ecdb32a0dcd15b691910ad4",
+      "ranges": [
+        {
+          "start_line": 803,
+          "end_line": 831,
+          "excerpt": "    //~ For every proof we want to verify, we defer the proof opening to the very end.\n    //~ This allows us to potentially batch verify a number of partially verified proofs.\n    //~ Essentially, this steps verifies that $f(\\zeta) = t(\\zeta) * Z_H(\\zeta)$.\n    //~\n\n    let zk_rows = verifier_index.zk_rows;\n\n    if proof.prev_challenges.len() != verifier_index.prev_challenges {\n        return Err(VerifyError::IncorrectPrevChallengesLength(\n            verifier_index.prev_challenges,\n            proof.prev_challenges.len(),\n        ));\n    }\n    if public_input.len() != verifier_index.public {\n        return Err(VerifyError::IncorrectPubicInputLength(\n            verifier_index.public,\n        ));\n    }\n\n    //~ 1. Check the length of evaluations inside the proof.\n    let chunk_size = {\n        let d1_size = verifier_index.domain.size();\n        if d1_size < verifier_index.max_poly_size {\n            1\n        } else {\n            d1_size / verifier_index.max_poly_size\n        }\n    };\n    check_proof_evals_len(proof, chunk_size)?;\n",
+          "excerpt_sha256": "b47d97964b6e10f742f8fee09c10fa3fe5db0db5628d3a44f0d224f5e5dae967"
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "kimchi/src/verifier.rs",
+      "file_sha256": "49a8430da928ee8edd38891780f1a393dcd2cabb1ecdb32a0dcd15b691910ad4",
+      "ranges": [
+        {
+          "start_line": 1330,
+          "end_line": 1373,
+          "excerpt": "    //~ Below, we define the steps to verify a number of proofs\n    //~ (each associated to a [verifier index](#verifier-index)).\n    //~ You can, of course, use it to verify a single proof.\n    //~\n\n    //~ 1. If there's no proof to verify, the proof validates trivially.\n    if proofs.is_empty() {\n        return Ok(());\n    }\n\n    //~ 1. Ensure that all the proof's verifier index have a URS of the same length. (TODO: do they have to be the same URS though? should we check for that?)\n    // TODO: Account for the different SRS lengths\n    let srs = proofs[0].verifier_index.srs();\n    for &Context { verifier_index, .. } in proofs {\n        if verifier_index.srs().max_poly_size() != srs.max_poly_size() {\n            return Err(VerifyError::DifferentSRS);\n        }\n    }\n\n    //~ 1. Validate each proof separately following the [partial verification](#partial-verification) steps.\n    let mut batch = vec![];\n    for context in proofs {\n        let Context {\n            verifier_index,\n            proof,\n            public_input,\n        } = context;\n\n        batch.push(to_batch::<\n            FULL_ROUNDS,\n            G,\n            EFqSponge,\n            EFrSponge,\n            OpeningProof,\n        >(verifier_index, proof, public_input)?);\n    }\n\n    //~ 1. Use the [`PolyCom.verify`](#polynomial-commitments) to verify the partially evaluated proofs.\n    if OpeningProof::verify(srs, group_map, &mut batch, rng) {\n        Ok(())\n    } else {\n        Err(VerifyError::OpenProof)\n    }\n}\n",
+          "excerpt_sha256": "8736eff3012d80d057168fa39c409ad6bfe8631cf3b82bb84bc830e7b5c47384"
+        }
+      ]
+    },
+    {
+      "id": "E14",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "poly-commitment/src/ipa.rs",
+      "file_sha256": "0a93181df7f3bd72d7dffd63aeb61fecede12d1eec6e45e95ded5d5f9646dfbb",
+      "ranges": [
+        {
+          "start_line": 305,
+          "end_line": 359,
+          "excerpt": "            G,\n            EFqSponge,\n            OpeningProof<G, FULL_ROUNDS>,\n            FULL_ROUNDS,\n        >],\n        rng: &mut RNG,\n    ) -> bool\n    where\n        EFqSponge: FqSponge<G::BaseField, G, G::ScalarField, FULL_ROUNDS>,\n        RNG: RngCore + CryptoRng,\n        G::BaseField: PrimeField,\n    {\n        // Verifier checks for all i,\n        // c_i Q_i + delta_i = z1_i (G_i + b_i U_i) + z2_i H\n        //\n        // if we sample evalscale at random, it suffices to check\n        //\n        // 0 == sum_i evalscale^i (c_i Q_i + delta_i - ( z1_i (G_i + b_i U_i) + z2_i H ))\n        //\n        // and because each G_i is a multiexp on the same array self.g, we\n        // can batch the multiexp across proofs.\n        //\n        // So for each proof in the batch, we add onto our big multiexp the\n        // following terms\n        // evalscale^i c_i Q_i\n        // evalscale^i delta_i\n        // - (evalscale^i z1_i) G_i\n        // - (evalscale^i z2_i) H\n        // - (evalscale^i z1_i b_i) U_i\n\n        // We also check that the sg component of the proof is equal to the\n        // polynomial commitment to the \"s\" array\n\n        let nonzero_length = self.g.len();\n\n        let max_rounds = math::ceil_log2(nonzero_length);\n\n        let padded_length = 1 << max_rounds;\n\n        let (_, endo_r) = endos::<G>();\n\n        // TODO: This will need adjusting\n        let padding = padded_length - nonzero_length;\n        let mut points = vec![self.h];\n        points.extend(self.g.clone());\n        points.extend(vec![G::zero(); padding]);\n\n        let mut scalars = vec![G::ScalarField::zero(); padded_length + 1];\n        assert_eq!(scalars.len(), points.len());\n\n        // sample randomiser to scale the proofs with\n        let rand_base = G::ScalarField::rand(rng);\n        let sg_rand_base = G::ScalarField::rand(rng);\n\n        let mut rand_base_i = G::ScalarField::one();\n",
+          "excerpt_sha256": "dbea2ff433bb001296c6f3caf92fd83353e55672f0b6af80b2a9b1fa395c3063"
+        },
+        {
+          "start_line": 372,
+          "end_line": 425,
+          "excerpt": "            sponge.absorb_fr(&[shift_scalar::<G>(*combined_inner_product)]);\n\n            let u_base: G = {\n                let t = sponge.challenge_fq();\n                let (x, y) = group_map.to_group(t);\n                G::of_coordinates(x, y)\n            };\n\n            let Challenges { chal, chal_inv } = opening.challenges::<EFqSponge>(&endo_r, sponge);\n\n            sponge.absorb_g(&[opening.delta]);\n            let c = ScalarChallenge::new(sponge.challenge()).to_field(&endo_r);\n\n            // Evaluate the challenge polynomial b(X) at each evaluation point and combine.\n            // This computes: b0 = sum_i evalscale^i * b(evaluation_point[i])\n            // where b(X) = prod_{j=0}^{k-1} (1 + u_{k-j} * X^{2^j}) is the challenge polynomial\n            // reconstructed from the IPA challenges `chal`.\n            let b0 = {\n                let mut scale = G::ScalarField::one();\n                let mut res = G::ScalarField::zero();\n                for &e in evaluation_points.iter() {\n                    let term = b_poly(&chal, e);\n                    res += &(scale * term);\n                    scale *= *evalscale;\n                }\n                res\n            };\n\n            // Compute the 2^k coefficients of the challenge polynomial b(X).\n            // These are used in the MSM <s, G> to verify the accumulated commitment.\n            let s = b_poly_coefficients(&chal);\n\n            let neg_rand_base_i = -rand_base_i;\n\n            // TERM\n            // - rand_base_i z1 G\n            //\n            // we also add -sg_rand_base_i * G to check correctness of sg.\n            points.push(opening.sg);\n            scalars.push(neg_rand_base_i * opening.z1 - sg_rand_base_i);\n\n            // Here we add\n            // sg_rand_base_i * ( < s, self.g > )\n            // =\n            // < sg_rand_base_i s, self.g >\n            //\n            // to check correctness of the sg component.\n            {\n                let terms: Vec<_> = o1_utils::cfg_iter!(s).map(|s| sg_rand_base_i * s).collect();\n\n                for (i, term) in terms.iter().enumerate() {\n                    scalars[i + 1] += term;\n                }\n            }\n",
+          "excerpt_sha256": "35ad6ef20c421d06de4b5590a9d300824dce01823af2dceac09b16ea3b2f263f"
+        },
+        {
+          "start_line": 465,
+          "end_line": 502,
+          "excerpt": "            scalars.push(rand_base_i);\n            points.push(opening.delta);\n\n            rand_base_i *= &rand_base;\n            sg_rand_base_i *= &sg_rand_base;\n        }\n\n        // Verify the equation in two chunks, which is optimal for our SRS size.\n        // (see the comment to the `benchmark_msm_parallel_vesta` MSM benchmark)\n        let msm_res = {\n            #[cfg(feature = \"parallel\")]\n            {\n                let chunk_size = points.len() / 2;\n                points\n                    .into_par_iter()\n                    .chunks(chunk_size)\n                    .zip(scalars.into_par_iter().chunks(chunk_size))\n                    .map(|(bases, coeffs)| {\n                        let coeffs_bigint = coeffs\n                            .into_iter()\n                            .map(ark_ff::PrimeField::into_bigint)\n                            .collect::<Vec<_>>();\n                        G::Group::msm_bigint(&bases, &coeffs_bigint)\n                    })\n                    .reduce(G::Group::zero, |mut l, r| {\n                        l += r;\n                        l\n                    })\n            }\n            #[cfg(not(feature = \"parallel\"))]\n            {\n                let scalars_bigint: Vec<_> = scalars.iter().map(|x| x.into_bigint()).collect();\n                G::Group::msm_bigint(&points, &scalars_bigint)\n            }\n        };\n\n        msm_res == G::Group::zero()\n    }\n",
+          "excerpt_sha256": "4864fb8f440a386aee8ef60326f33feb8143fa1863e1e4983d660bcad2245241"
+        }
+      ]
+    },
+    {
+      "id": "E15",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "proof-systems",
+      "remote": "https://github.com/o1-labs/proof-systems.git",
+      "commit": "886b5c1ca13cd2e2c634e4393ff5ff1efa5a3d3c",
+      "path": "book/docs/pickles/deferred.md",
+      "file_sha256": "1b2dbf8b235e43828221281788eb1bab46906e02d6b3a23e4f9c2a9fdb2964b3",
+      "ranges": [
+        {
+          "start_line": 1,
+          "end_line": 132,
+          "excerpt": "# Deferred Computation\n\nLet $\\mathbb{F}_p$ and $\\mathbb{F}_q$ be the two fields, with\n$|\\mathbb{E}_p(\\mathbb{F}_q)| = p$, $|\\mathbb{E}_q(\\mathbb{F}_p)| = q$ for\nElliptic curves $\\mathbb{E}_p(\\mathbb{F}_q)$ and $\\mathbb{E}_q(\\mathbb{F}_p)$.\nAssume $q > p$. We have a proof system (Kimchi) over $\\mathbb{F}_p$ and\n$\\mathbb{F}_q$, where commitments to public inputs are:\n\n$$\nP_p = \\langle \\vec{e}, \\vec{H} \\rangle \\in \\mathbb{E}_p(\\mathbb{F}_q) \\\\\nP_q = \\langle \\vec{e}, \\vec{G} \\rangle \\in \\mathbb{E}_q(\\mathbb{F}_p)\n$$\n\nRespectively. See [Pasta Curves](../specs/pasta) for more details.\n\nWhen referring to the $\\mathbb{F}_q$-side we mean the proof system for circuit\nover the field $\\mathbb{F}_q$.\n\n## Public Inputs / Why Passing\n\nIn pickles-rs we have the notion of \"passing\" a variable (including the\ntranscript) from one side to the other. e.g. when a field element\n$\\alpha \\in \\mathbb{F}_p$ needs to be used as a scalar on $\\mathbb{F}_q$.\n\nThis document explains what goes on \"under the hood\". Let us start by\nunderstanding why:\n\nLet $v \\in \\mathbb{F}_q$ be a scalar which we want to use to do both:\n\n1. Field arithmetic in $\\mathbb{F}_q$\n2. Scalar operations on $\\mathbb{E}_q(\\mathbb{F}_p)$\n\nIn order to do so efficiently, we need to split these operations across two\ncircuits (and therefore proofs) because:\n\n1. Emulating $\\mathbb{F}_q$ arithmetic in $\\mathbb{F}_p$ is very expensive, e.g.\n   computing $v \\cdot w$ requires $O(\\log(q)^2)$ multiplications over\n   $\\mathbb{F}_p$: 100's of gates for a single multiplication.\n2. Since $\\mathbb{E}_q(\\mathbb{F}_p) \\subseteq \\mathbb{F}_p \\times \\mathbb{F}_p$\n   we cannot compute $[v] \\cdot H \\in \\mathbb{E}_q(\\mathbb{F}_p)$ over\n   $\\mathbb{F}_q$ efficiently, because, like before, emulating $\\mathbb{F}_p$\n   arithmetic in $\\mathbb{F}_q$ is very expensive...\n\n### Solution\n\nThe solution is to \"pass\" a value $v$ between the two proofs, in other words to\nhave two values $\\tilde{v} \\in \\mathbb{F}_p$ and $v \\in \\mathbb{F}_q$ which are\nequal as integers i.e. $\\text{lift}(v) = \\text{lift}(\\tilde{v}) \\in \\mathbb{Z}$:\nthey represent \"the same number\". A naive first attempt would be to simply add\n$\\tilde{v} \\in \\mathbb{F}_p$ to the witness on the $\\mathbb{F}_p$-side, however\nthis has two problems:\n\n**Insufficient Field Size:** $p < q$ hence $v$ cannot fit in $\\mathbb{F}_p$.\n\n**No Binding:** More concerning, there is _no binding_ between the $\\tilde{v}$\nin the $\\mathbb{F}_p$-witness and the $v$ in the $\\mathbb{F}_q$-witness: a\nmalicious prover could choose completely unrelated values. This violates\nsoundness of the overall $\\mathbb{F}_q/\\mathbb{F}_q$-relation being proved.\n\n#### Problem 1: Decompose\n\nThe solution to the first problem is simple:\n\nIn the $\\mathbb{F}_q$-side decompose $v = 2 \\cdot h + l$ with\n$h \\in [0, 2^{\\lfloor \\log p \\rfloor})$ (high bits) and $l \\in \\{ 0, 1 \\}$ (low\nbit). Note $l, h < p$ since $2 p > q$; always the case for any cycle of curves,\n$p$ is only $\\approx \\sqrt{q}$ smaller than $q$, by Hasse. Now \"$\\tilde{v}$\" is\n\"represented\" by the two values $\\tilde{h}, \\tilde{l} \\in \\mathbb{F}_p$.\n\nNote that no decomposition is necessary if the \"original value\" $v$ was in\n$\\mathbb{F}_p$, since $\\mathbb{F}_q$ is big enough to hold the lift of any\nelement in $\\mathbb{F}_p$.\n\n#### Problem 2: Compute Commitment to the Public Input of other side\n\nTo solve the binding issue we will add $l, h$ to the public inputs on the\n$\\mathbb{F}_p$-side, for simplicity we will describe the case where $l, h$ are\nthe only public inputs in the $\\mathbb{F}_p$-side, which means that the\ncommitment $P_p \\in \\mathbb{E}_p(\\mathbb{F}_q)$ to the public inputs on the\n$\\mathbb{F}_p$ side is:\n\n$$\nP_p = [h] \\cdot G_h + [l] \\cdot G_l \\in \\mathbb{E}_p(\\mathbb{F}_q)\n$$\n\nAt this point it is _important to note_ that $\\mathbb{E}_p$ is defined over\n$\\mathbb{F}_q$!\n\nWhich means that we can compute $P_p \\in \\mathbb{E}_p(\\mathbb{F}_q)$\n**efficiently** on the $\\mathbb{F}_q$-side!\n\nTherefore to enforce the binding, we:\n\n1. Add a sub-circuit which checks:\n   $$\n   P_p = [h] \\cdot G_h + [l] \\cdot G_l \\in \\mathbb{E}_p(\\mathbb{F}_q), \\\\\n   |h| = \\lfloor \\log p \\rfloor \\\\\n   |l| = 1\n   $$\n2. Add $P_p = (x, y) \\in \\mathbb{F}_q \\times \\mathbb{F}_q$ to the public input\n   on the $\\mathbb{F}_q$-side.\n\n### We recurse onwards...\n\nAt this point the statement of the proof in $\\mathbb{F}_q$-side is: the\n$\\mathbb{F}_q$-proof is sound, **condition** on providing an opening of $P_p$\nthat satisfies the $\\mathbb{F}_p$-relation.\n\nAt this point you can stop and verify the proof (in the case of a \"step proof\"\nyou would), by recomputing $P_p$ outside the circuit while checking the\n$\\mathbb{F}_p$-relation manually \"in the clear\".\n\nHowever, when recursing (e.g. wrapping in a \"wrap proof\") we need to \"ingest\"\nthis public input $P_p$; after all, to avoid blowup in the proof size everything\n(proofs/accumulators/public inputs etc.) must eventually become part of the\nwitness and every computation covered by a circuit...\n\nTo this end, the wrap proof is a proof for the $\\mathbb{F}_p$-relation with the\npublic input $P_p$ which additionally verifies the $\\mathbb{F}_q$-proof.\n\nThe next \"step\" proof then verifies this wrap proof which means that $P_p$ then\nbecomes part of the witness!\n\n### In Pickles\n\nWe can arbitrarily choose which side should compute the public input of the\nother, in pickles we let \"wrap\" compute the commitment to the public input.\n\n## Enforcing Equality\n\nEnforces that the public input of the proof verified on the Fr side is equal to\nthe Fp input computed on Fr side.\n",
+          "excerpt_sha256": "1b2dbf8b235e43828221281788eb1bab46906e02d6b3a23e4f9c2a9fdb2964b3"
+        }
+      ]
+    },
+    {
+      "id": "E16",
+      "classification": "source observation; not executed or a security theorem",
+      "repo": "mina",
+      "remote": "https://github.com/MinaProtocol/mina.git",
+      "commit": "72333b33898cc092675c97d205229982cf79e7ac",
+      "path": "src/lib/crypto/pickles/wrap_verifier.ml",
+      "file_sha256": "eecd85ae7a2ad9217b4a93a604c5c130b2e6320c61c2fc30d749a80b27a8e435",
+      "ranges": [
+        {
+          "start_line": 1755,
+          "end_line": 1785,
+          "excerpt": "          equal\n            (Shifted_value.Type2.to_field (module Field) ~shift:shift2 b)\n            b_actual )\n    in\n    (* == Step 10: Verify PlonK relation ==\n       Check that the PlonK arithmetic constraints are satisfied.\n       This is a wrap proof, so no optional features need consideration. *)\n    let plonk_checks_passed =\n      with_label __LOC__ (fun () ->\n          Plonk_checks.checked\n            (module Impl)\n            ~env ~shift:shift2\n            (Composition_types.Step.Proof_state.Deferred_values.Plonk.In_circuit\n             .to_wrap ~opt_none:Pickles_types.Opt.nothing ~false_:Boolean.false_\n               plonk )\n            combined_evals )\n    in\n    (* == Step 11: Combine all checks and return == *)\n    print_bool \"xi_correct\" xi_correct ;\n    print_bool \"combined_inner_product_correct\" combined_inner_product_correct ;\n    print_bool \"plonk_checks_passed\" plonk_checks_passed ;\n    print_bool \"b_correct\" b_correct ;\n    ( Boolean.all\n        [ xi_correct (* Challenge was sampled correctly *)\n        ; b_correct (* Challenge polynomial evaluation correct *)\n        ; combined_inner_product_correct (* Bulletproof inner product correct *)\n        ; plonk_checks_passed (* PlonK relation satisfied *)\n        ]\n    , bulletproof_challenges )\nend\n\n",
+          "excerpt_sha256": "5b5b65976c9b2ffdead4925c292852b64be2fb9f62146da208d24e73093afb11"
+        }
+      ]
+    }
+  ]
+}

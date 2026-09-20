@@ -1,0 +1,885 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-wallet-payments
+Splice.Wallet.Subscriptions
+Copy page
+Copy page
+Documentation for Splice.Wallet.Subscriptions
+Copy page
+Copy page
+​
+Templates
+template
+Subscription
+Main subscription object.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscriptionData
+SubscriptionData
+reference
+ContractId
+SubscriptionRequest
+Reference to the subscription request, note that the contract will no longer be active so this just acts as a tracking id.
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+Choice
+Subscription_Archive
+Controller: signatory this
+Returns: Subscription_ArchiveResult
+(no fields)
+template
+SubscriptionIdleState
+The base state in our subscription flow. Here, we are typically waiting for the time for the next payment to arrive. If that time has passed, we are waiting for someone to expire the subscription.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscription
+ContractId
+Subscription
+The subscription this belongs to.
+subscriptionData
+SubscriptionData
+Copy of the subscription contract for easier access to its field.
+payData
+SubscriptionPayData
+Payment-related properties.
+nextPaymentDueAt
+Time
+After which time the next payment can and should be paid.
+reference
+ContractId
+SubscriptionRequest
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+Choice
+SubscriptionIdleState_CancelSubscription
+Controller: (DA.Internal.Record.getField @“sender” subscriptionData)
+Returns: SubscriptionIdleState_CancelSubscriptionResult
+(no fields)
+Choice
+SubscriptionIdleState_ExpireSubscription
+Controller: actor
+Returns: SubscriptionIdleState_ExpireSubscriptionResult
+Field
+Type
+Description
+actor
+Party
+Choice
+SubscriptionIdleState_MakePayment
+Controller: (DA.Internal.Record.getField @“sender” subscriptionData), walletProvider
+Returns: SubscriptionIdleState_MakePaymentResult
+Field
+Type
+Description
+inputs
+[TransferInput]
+context
+PaymentTransferContext
+walletProvider
+Party
+template
+SubscriptionInitialPayment
+The initial payment on a subscription. Implicitly, this is also the “accept” of the preceding
+SubscriptionRequest
+. Collecting this payments creates the subscription and thereby enables all follow-up payments.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscriptionData
+SubscriptionData
+payData
+SubscriptionPayData
+targetAmount
+Decimal
+Exact amount in Amulet that the receiver will get.
+lockedAmulet
+ContractId
+LockedAmulet
+round
+Round
+The round in which the locked amulet was created, added as an extra field so we can avoid ingesting locked amulets.
+reference
+ContractId
+SubscriptionRequest
+Reference to the subscription request, note that the contract will no longer be active so this just acts as a tracking id.
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+Choice
+SubscriptionInitialPayment_Collect
+Controller: signatory this
+Returns: SubscriptionInitialPayment_CollectResult
+Field
+Type
+Description
+transferContext
+AppTransferContext
+Choice
+SubscriptionInitialPayment_Expire
+Controller: actor
+Returns: SubscriptionInitialPayment_ExpireResult
+Field
+Type
+Description
+actor
+Party
+transferContext
+AppTransferContext
+Choice
+SubscriptionInitialPayment_Reject
+Controller: (DA.Internal.Record.getField @“receiver” subscriptionData)
+Returns: SubscriptionInitialPayment_RejectResult
+Field
+Type
+Description
+transferContext
+AppTransferContext
+template
+SubscriptionPayment
+An in-flight (yet to be collected) payment on an existing subscription. Doubles as a “payment in progress” state.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscription
+ContractId
+Subscription
+The subscription this belongs to.
+subscriptionData
+SubscriptionData
+Copy of the base subscription properties; for convenience.
+payData
+SubscriptionPayData
+Payment-related properties.
+thisPaymentDueAt
+Time
+After which time the next payment can and should be paid.
+targetAmount
+Decimal
+lockedAmulet
+ContractId
+LockedAmulet
+round
+Round
+The round in which the locked amulet was created, added as an extra field so we can avoid ingesting locked amulets.
+reference
+ContractId
+SubscriptionRequest
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+Choice
+SubscriptionPayment_Collect
+Controller: signatory this
+Returns: SubscriptionPayment_CollectResult
+Field
+Type
+Description
+transferContext
+AppTransferContext
+Choice
+SubscriptionPayment_Expire
+Controller: actor
+Returns: SubscriptionPayment_ExpireResult
+Field
+Type
+Description
+actor
+Party
+transferContext
+AppTransferContext
+Choice
+SubscriptionPayment_Reject
+Controller: (DA.Internal.Record.getField @“receiver” subscriptionData)
+Returns: SubscriptionPayment_RejectResult
+Field
+Type
+Description
+transferContext
+AppTransferContext
+template
+SubscriptionRequest
+A request for establishing a subscription.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscriptionData
+SubscriptionData
+payData
+SubscriptionPayData
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+Choice
+SubscriptionRequest_AcceptAndMakePayment
+Controller: (DA.Internal.Record.getField @“sender” subscriptionData), walletProvider
+Returns: SubscriptionRequest_AcceptAndMakePaymentResult
+Field
+Type
+Description
+inputs
+[TransferInput]
+context
+PaymentTransferContext
+walletProvider
+Party
+Choice
+SubscriptionRequest_Reject
+Controller: (DA.Internal.Record.getField @“sender” subscriptionData)
+Returns: SubscriptionRequest_RejectResult
+(no fields)
+Choice
+SubscriptionRequest_Withdraw
+Controller: (DA.Internal.Record.getField @“receiver” subscriptionData)
+Returns: SubscriptionRequest_WithdrawResult
+(no fields)
+template
+TerminatedSubscription
+An aborted subscription. Subscriptions should usually be archived together with the context contract of the app that makes the subscription, e.g., AnsEntryContext. To achieve that, we don’t archive subscriptions directly but instead create TerminatedSubscription contracts that are then archived as part of the surrounding workflows.
+Signatory: subscriptionSignatories subscriptionData
+Field
+Type
+Description
+subscriptionData
+SubscriptionData
+reference
+ContractId
+SubscriptionRequest
+Choice
+Archive
+Controller: subscriptionSignatories subscriptionData
+Returns: ()
+(no fields)
+​
+Data Types
+data
+SubscriptionData
+SubscriptionData
+Field
+Type
+Description
+sender
+Party
+The party that pays.
+receiver
+Party
+The party that receives payment.
+provider
+Party
+The app provider.
+dso
+Party
+description
+Text
+instance
+Eq
+SubscriptionData
+instance
+Show
+SubscriptionData
+instance
+GetField “description” SubscriptionData
+Text
+instance
+GetField “dso” SubscriptionData
+Party
+instance
+GetField “provider” SubscriptionData
+Party
+instance
+GetField “receiver” SubscriptionData
+Party
+instance
+GetField “sender” SubscriptionData
+Party
+instance
+GetField “subscriptionData” Subscription SubscriptionData
+instance
+GetField “subscriptionData” SubscriptionIdleState SubscriptionData
+instance
+GetField “subscriptionData” SubscriptionInitialPayment SubscriptionData
+instance
+GetField “subscriptionData” SubscriptionPayment SubscriptionData
+instance
+GetField “subscriptionData” SubscriptionRequest SubscriptionData
+instance
+GetField “subscriptionData” TerminatedSubscription SubscriptionData
+instance
+SetField “description” SubscriptionData
+Text
+instance
+SetField “dso” SubscriptionData
+Party
+instance
+SetField “provider” SubscriptionData
+Party
+instance
+SetField “receiver” SubscriptionData
+Party
+instance
+SetField “sender” SubscriptionData
+Party
+instance
+SetField “subscriptionData” Subscription SubscriptionData
+instance
+SetField “subscriptionData” SubscriptionIdleState SubscriptionData
+instance
+SetField “subscriptionData” SubscriptionInitialPayment SubscriptionData
+instance
+SetField “subscriptionData” SubscriptionPayment SubscriptionData
+instance
+SetField “subscriptionData” SubscriptionRequest SubscriptionData
+instance
+SetField “subscriptionData” TerminatedSubscription SubscriptionData
+data
+SubscriptionIdleState_CancelSubscriptionResult
+SubscriptionIdleState_CancelSubscriptionResult
+Field
+Type
+Description
+terminatedSubscription
+ContractId
+TerminatedSubscription
+instance
+GetField “terminatedSubscription” SubscriptionIdleState_CancelSubscriptionResult (
+ContractId
+TerminatedSubscription)
+instance
+SetField “terminatedSubscription” SubscriptionIdleState_CancelSubscriptionResult (
+ContractId
+TerminatedSubscription)
+instance
+HasExercise
+SubscriptionIdleState SubscriptionIdleState_CancelSubscription SubscriptionIdleState_CancelSubscriptionResult
+instance
+HasFromAnyChoice
+SubscriptionIdleState SubscriptionIdleState_CancelSubscription SubscriptionIdleState_CancelSubscriptionResult
+instance
+HasToAnyChoice
+SubscriptionIdleState SubscriptionIdleState_CancelSubscription SubscriptionIdleState_CancelSubscriptionResult
+data
+SubscriptionIdleState_ExpireSubscriptionResult
+SubscriptionIdleState_ExpireSubscriptionResult
+Field
+Type
+Description
+terminatedSubscription
+ContractId
+TerminatedSubscription
+instance
+GetField “terminatedSubscription” SubscriptionIdleState_ExpireSubscriptionResult (
+ContractId
+TerminatedSubscription)
+instance
+SetField “terminatedSubscription” SubscriptionIdleState_ExpireSubscriptionResult (
+ContractId
+TerminatedSubscription)
+instance
+HasExercise
+SubscriptionIdleState SubscriptionIdleState_ExpireSubscription SubscriptionIdleState_ExpireSubscriptionResult
+instance
+HasFromAnyChoice
+SubscriptionIdleState SubscriptionIdleState_ExpireSubscription SubscriptionIdleState_ExpireSubscriptionResult
+instance
+HasToAnyChoice
+SubscriptionIdleState SubscriptionIdleState_ExpireSubscription SubscriptionIdleState_ExpireSubscriptionResult
+data
+SubscriptionIdleState_MakePaymentResult
+SubscriptionIdleState_MakePaymentResult
+Field
+Type
+Description
+subscriptionPayment
+ContractId
+SubscriptionPayment
+senderChange
+Optional
+(
+ContractId
+Amulet)
+instance
+GetField “senderChange” SubscriptionIdleState_MakePaymentResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+GetField “subscriptionPayment” SubscriptionIdleState_MakePaymentResult (
+ContractId
+SubscriptionPayment)
+instance
+SetField “senderChange” SubscriptionIdleState_MakePaymentResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+SetField “subscriptionPayment” SubscriptionIdleState_MakePaymentResult (
+ContractId
+SubscriptionPayment)
+instance
+HasExercise
+SubscriptionIdleState SubscriptionIdleState_MakePayment SubscriptionIdleState_MakePaymentResult
+instance
+HasFromAnyChoice
+SubscriptionIdleState SubscriptionIdleState_MakePayment SubscriptionIdleState_MakePaymentResult
+instance
+HasToAnyChoice
+SubscriptionIdleState SubscriptionIdleState_MakePayment SubscriptionIdleState_MakePaymentResult
+data
+SubscriptionInitialPayment_CollectResult
+SubscriptionInitialPayment_CollectResult
+Field
+Type
+Description
+subscription
+ContractId
+Subscription
+subscriptionState
+ContractId
+SubscriptionIdleState
+amulet
+ContractId
+Amulet
+instance
+GetField “amulet” SubscriptionInitialPayment_CollectResult (
+ContractId
+Amulet)
+instance
+GetField “subscription” SubscriptionInitialPayment_CollectResult (
+ContractId
+Subscription)
+instance
+GetField “subscriptionState” SubscriptionInitialPayment_CollectResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “amulet” SubscriptionInitialPayment_CollectResult (
+ContractId
+Amulet)
+instance
+SetField “subscription” SubscriptionInitialPayment_CollectResult (
+ContractId
+Subscription)
+instance
+SetField “subscriptionState” SubscriptionInitialPayment_CollectResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+SubscriptionInitialPayment SubscriptionInitialPayment_Collect SubscriptionInitialPayment_CollectResult
+instance
+HasFromAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Collect SubscriptionInitialPayment_CollectResult
+instance
+HasToAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Collect SubscriptionInitialPayment_CollectResult
+data
+SubscriptionInitialPayment_ExpireResult
+SubscriptionInitialPayment_ExpireResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” SubscriptionInitialPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” SubscriptionInitialPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+SubscriptionInitialPayment SubscriptionInitialPayment_Expire SubscriptionInitialPayment_ExpireResult
+instance
+HasFromAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Expire SubscriptionInitialPayment_ExpireResult
+instance
+HasToAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Expire SubscriptionInitialPayment_ExpireResult
+data
+SubscriptionInitialPayment_RejectResult
+SubscriptionInitialPayment_RejectResult
+Field
+Type
+Description
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” SubscriptionInitialPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “amuletSum” SubscriptionInitialPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+HasExercise
+SubscriptionInitialPayment SubscriptionInitialPayment_Reject SubscriptionInitialPayment_RejectResult
+instance
+HasFromAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Reject SubscriptionInitialPayment_RejectResult
+instance
+HasToAnyChoice
+SubscriptionInitialPayment SubscriptionInitialPayment_Reject SubscriptionInitialPayment_RejectResult
+data
+SubscriptionPayData
+Payment-related properties. Expected to be mutated rarely.
+SubscriptionPayData
+Field
+Type
+Description
+paymentAmount
+PaymentAmount
+What amount of amulet is due on each interval.
+paymentInterval
+RelTime
+At which intervals payments should be made.
+paymentDuration
+RelTime
+The time available to the sender to initiate a payment; they can initiate the payment this much before the end of the current interval.
+instance
+Eq
+SubscriptionPayData
+instance
+Show
+SubscriptionPayData
+instance
+GetField “payData” SubscriptionIdleState SubscriptionPayData
+instance
+GetField “payData” SubscriptionInitialPayment SubscriptionPayData
+instance
+GetField “payData” SubscriptionPayment SubscriptionPayData
+instance
+GetField “payData” SubscriptionRequest SubscriptionPayData
+instance
+GetField “paymentAmount” SubscriptionPayData PaymentAmount
+instance
+GetField “paymentDuration” SubscriptionPayData
+RelTime
+instance
+GetField “paymentInterval” SubscriptionPayData
+RelTime
+instance
+SetField “payData” SubscriptionIdleState SubscriptionPayData
+instance
+SetField “payData” SubscriptionInitialPayment SubscriptionPayData
+instance
+SetField “payData” SubscriptionPayment SubscriptionPayData
+instance
+SetField “payData” SubscriptionRequest SubscriptionPayData
+instance
+SetField “paymentAmount” SubscriptionPayData PaymentAmount
+instance
+SetField “paymentDuration” SubscriptionPayData
+RelTime
+instance
+SetField “paymentInterval” SubscriptionPayData
+RelTime
+data
+SubscriptionPayment_CollectResult
+SubscriptionPayment_CollectResult
+Field
+Type
+Description
+subscriptionState
+ContractId
+SubscriptionIdleState
+amulet
+ContractId
+Amulet
+instance
+GetField “amulet” SubscriptionPayment_CollectResult (
+ContractId
+Amulet)
+instance
+GetField “subscriptionState” SubscriptionPayment_CollectResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “amulet” SubscriptionPayment_CollectResult (
+ContractId
+Amulet)
+instance
+SetField “subscriptionState” SubscriptionPayment_CollectResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+SubscriptionPayment SubscriptionPayment_Collect SubscriptionPayment_CollectResult
+instance
+HasFromAnyChoice
+SubscriptionPayment SubscriptionPayment_Collect SubscriptionPayment_CollectResult
+instance
+HasToAnyChoice
+SubscriptionPayment SubscriptionPayment_Collect SubscriptionPayment_CollectResult
+data
+SubscriptionPayment_ExpireResult
+SubscriptionPayment_ExpireResult
+Field
+Type
+Description
+subscriptionState
+ContractId
+SubscriptionIdleState
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” SubscriptionPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “subscriptionState” SubscriptionPayment_ExpireResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “amuletSum” SubscriptionPayment_ExpireResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “subscriptionState” SubscriptionPayment_ExpireResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+SubscriptionPayment SubscriptionPayment_Expire SubscriptionPayment_ExpireResult
+instance
+HasFromAnyChoice
+SubscriptionPayment SubscriptionPayment_Expire SubscriptionPayment_ExpireResult
+instance
+HasToAnyChoice
+SubscriptionPayment SubscriptionPayment_Expire SubscriptionPayment_ExpireResult
+data
+SubscriptionPayment_RejectResult
+SubscriptionPayment_RejectResult
+Field
+Type
+Description
+subscriptionState
+ContractId
+SubscriptionIdleState
+amuletSum
+AmuletCreateSummary (
+ContractId
+Amulet)
+instance
+GetField “amuletSum” SubscriptionPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+GetField “subscriptionState” SubscriptionPayment_RejectResult (
+ContractId
+SubscriptionIdleState)
+instance
+SetField “amuletSum” SubscriptionPayment_RejectResult (AmuletCreateSummary (
+ContractId
+Amulet))
+instance
+SetField “subscriptionState” SubscriptionPayment_RejectResult (
+ContractId
+SubscriptionIdleState)
+instance
+HasExercise
+SubscriptionPayment SubscriptionPayment_Reject SubscriptionPayment_RejectResult
+instance
+HasFromAnyChoice
+SubscriptionPayment SubscriptionPayment_Reject SubscriptionPayment_RejectResult
+instance
+HasToAnyChoice
+SubscriptionPayment SubscriptionPayment_Reject SubscriptionPayment_RejectResult
+data
+SubscriptionRequest_AcceptAndMakePaymentResult
+SubscriptionRequest_AcceptAndMakePaymentResult
+Field
+Type
+Description
+subscriptionPayment
+ContractId
+SubscriptionInitialPayment
+senderChange
+Optional
+(
+ContractId
+Amulet)
+instance
+GetField “senderChange” SubscriptionRequest_AcceptAndMakePaymentResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+GetField “subscriptionPayment” SubscriptionRequest_AcceptAndMakePaymentResult (
+ContractId
+SubscriptionInitialPayment)
+instance
+SetField “senderChange” SubscriptionRequest_AcceptAndMakePaymentResult (
+Optional
+(
+ContractId
+Amulet))
+instance
+SetField “subscriptionPayment” SubscriptionRequest_AcceptAndMakePaymentResult (
+ContractId
+SubscriptionInitialPayment)
+instance
+HasExercise
+SubscriptionRequest SubscriptionRequest_AcceptAndMakePayment SubscriptionRequest_AcceptAndMakePaymentResult
+instance
+HasFromAnyChoice
+SubscriptionRequest SubscriptionRequest_AcceptAndMakePayment SubscriptionRequest_AcceptAndMakePaymentResult
+instance
+HasToAnyChoice
+SubscriptionRequest SubscriptionRequest_AcceptAndMakePayment SubscriptionRequest_AcceptAndMakePaymentResult
+data
+SubscriptionRequest_RejectResult
+SubscriptionRequest_RejectResult
+Field
+Type
+Description
+terminatedSubscription
+ContractId
+TerminatedSubscription
+instance
+GetField “terminatedSubscription” SubscriptionRequest_RejectResult (
+ContractId
+TerminatedSubscription)
+instance
+SetField “terminatedSubscription” SubscriptionRequest_RejectResult (
+ContractId
+TerminatedSubscription)
+instance
+HasExercise
+SubscriptionRequest SubscriptionRequest_Reject SubscriptionRequest_RejectResult
+instance
+HasFromAnyChoice
+SubscriptionRequest SubscriptionRequest_Reject SubscriptionRequest_RejectResult
+instance
+HasToAnyChoice
+SubscriptionRequest SubscriptionRequest_Reject SubscriptionRequest_RejectResult
+data
+SubscriptionRequest_WithdrawResult
+SubscriptionRequest_WithdrawResult
+Field
+Type
+Description
+terminatedSubscription
+ContractId
+TerminatedSubscription
+instance
+GetField “terminatedSubscription” SubscriptionRequest_WithdrawResult (
+ContractId
+TerminatedSubscription)
+instance
+SetField “terminatedSubscription” SubscriptionRequest_WithdrawResult (
+ContractId
+TerminatedSubscription)
+instance
+HasExercise
+SubscriptionRequest SubscriptionRequest_Withdraw SubscriptionRequest_WithdrawResult
+instance
+HasFromAnyChoice
+SubscriptionRequest SubscriptionRequest_Withdraw SubscriptionRequest_WithdrawResult
+instance
+HasToAnyChoice
+SubscriptionRequest SubscriptionRequest_Withdraw SubscriptionRequest_WithdrawResult
+data
+Subscription_ArchiveResult
+Subscription_ArchiveResult
+Field
+Type
+Description
+terminatedSubscription
+ContractId
+TerminatedSubscription
+instance
+GetField “terminatedSubscription” Subscription_ArchiveResult (
+ContractId
+TerminatedSubscription)
+instance
+SetField “terminatedSubscription” Subscription_ArchiveResult (
+ContractId
+TerminatedSubscription)
+instance
+HasExercise
+Subscription Subscription_Archive Subscription_ArchiveResult
+instance
+HasFromAnyChoice
+Subscription Subscription_Archive Subscription_ArchiveResult
+instance
+HasToAnyChoice
+Subscription Subscription_Archive Subscription_ArchiveResult
+​
+Functions
+subscriptionSignatories
+: SubscriptionData -> [
+Party
+]
+payDataIsValid
+: SubscriptionPayData ->
+Bool
+lockAndMakeChange
+: PaymentTransferContext -> SubscriptionData -> SubscriptionPayData -> [TransferInput] ->
+Time
+->
+Party
+->
+Update
+(
+ContractId
+LockedAmulet,
+Optional
+(
+ContractId
+Amulet),
+Decimal
+, Round)
+unlockAndTransfer
+: AppTransferContext -> SubscriptionData ->
+Decimal
+->
+ContractId
+LockedAmulet ->
+Update
+(
+ContractId
+Amulet)
+mkTransferOutput
+:
+Party
+->
+Decimal
+-> TransferOutput
+Suggest edits
+Raise issue
+Splice.Wallet.Payment
+/readyz

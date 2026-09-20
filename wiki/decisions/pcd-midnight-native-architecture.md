@@ -2,7 +2,7 @@
 id: moriarty.pcd.midnight-native-decision
 type: decision
 title: Midnight-native PCD architecture decision
-status: active
+status: superseded
 updated_at: 2026-09-11T21:15:54Z
 created: 2026-09-11
 updated: 2026-09-11
@@ -19,14 +19,16 @@ sources:
 
 # Midnight-native PCD architecture decision
 
+**Scope supersession, 2026-09-19:** The [consolidated design](../../docs/MORIARTY-CONSOLIDATED-DESIGN.md) now controls target scope. Comprehensive native recursion, private handoff and bounded multi-parent composition are planned for the user-assumed approximately March2027 horizon. The earlier categorical rejection of DAG/recursive history below is historical, not an active restriction. Ledger induction remains a distinct evidence mode and cannot close MC03/MC06. Source observations and measurements below retain their original dates/pins; none asserts current release support. Original claim IDs and raw receipts remain unchanged.
+
 This page records the September 11 decision on how Moriarty implements mandatory proof-carrying financial transactions on Midnight.
 
 | Artifact | Location |
 |---|---|
-| Full analysis | [decision report](../../deliverables/pcd-midnight-native-2026-09-11/REPORT.md) |
-| Staged plan | [PCD roadmap](../../openspec/PCD-ROADMAP-2026-09-11.md) |
-| Measurements | [reproduced measurements](../../evidence/pcd-midnight-native-2026-09-11/README.md) |
-| Captures | [primary captures](../../raw/sources/pcd-midnight-native-2026-09-11/receipts.jsonl) |
+| Full analysis | [decision report](../attachments/historical-evidence/deliverables/pcd-midnight-native-2026-09-11/REPORT.md) |
+| Staged plan | [PCD roadmap](../attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md) |
+| Measurements | [reproduced measurements](../attachments/historical-evidence/evidence/pcd-midnight-native-2026-09-11/README.md) |
+| Captures | [primary captures](../attachments/historical-evidence/raw/sources/pcd-midnight-native-2026-09-11/receipts.jsonl) |
 
 **Sources.**
 
@@ -34,7 +36,7 @@ This page records the September 11 decision on how Moriarty implements mandatory
 - SRC-0112: cryptographic literature.
 - SRC-0113: local measurements.
 
-The [PCD integration amendment](../../openspec/PCD-INTEGRATION-2026-09-11.md) adopted the roadmap into OpenSpec planning on 2026-09-11 as specified-only work. Atomic F3 rests on the Stage 0 seam, SP04 and SP06 deliver certificates, and verification-enabled mandatory Preview acceptance remains the hard gate. Six design defaults await the user's confirmation, and the certificate k bound needs a user-approved resource amendment.
+The [PCD integration amendment](../attachments/historical-evidence/openspec/PCD-INTEGRATION-2026-09-11.md) adopted the roadmap into OpenSpec planning on 2026-09-11 as specified-only work. Atomic F3 rests on the Stage 0 seam, SP04 and SP06 deliver certificates, and verification-enabled mandatory Preview acceptance remains the hard gate. Six design defaults await the user's confirmation, and the certificate k bound needs a user-approved resource amendment.
 
 ## Decision
 
@@ -191,4 +193,4 @@ All three measurements were made on one machine: Intel Core Ultra 7 365, 6 cores
 
 ## What stays open
 
-These claims establish no Moriarty proof, ledger acceptance or financial settlement. The five ordered experiments in the [PCD roadmap](../../openspec/PCD-ROADMAP-2026-09-11.md) decide the core and certificate routes. Verification-enabled Preview acceptance remains the hard gate. Return to [[wiki/index|the research index]].
+These claims establish no Moriarty proof, ledger acceptance or financial settlement. The five ordered experiments in the [PCD roadmap](../attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md) decide the core and certificate routes. Verification-enabled Preview acceptance remains the hard gate. Return to [[wiki/index|the research index]].

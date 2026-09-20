@@ -1,0 +1,99 @@
+Overview
+Copy page
+Anoma App SDK
+The
+@anomaorg/anoma-app-sdk
+is a TypeScript SDK for building private applications on any chain, powered by the
+Anoma Distributed Operating System (DOS)
+and the Anoma Resource Machine (ARM). It gives you everything needed to integrate shielded operations into a web application: key generation, resource management, transfer orchestration, and backend API clients — all with strong TypeScript types.
+What you can build
+Private wallets
+— let users hold token balances that are invisible on-chain.
+Shielded payment flows
+— send tokens between users without revealing amounts or participants.
+Deposit / withdrawal UIs
+— bridge ERC-20 tokens in and out of the shielded pool.
+Multi-receiver transfers
+— batch multiple recipients into a single atomic transaction.
+Architecture
+The SDK is organized into four main areas:
+Domain
+The
+domain
+module contains the business logic of the protocol. It has three submodules:
+keys
+— Creates and manages the four-key cryptographic hierarchy that identifies a user. Provides serialization helpers and support for passkey-based derivation.
+resources
+— Decrypts and interprets the encrypted resource objects fetched from the Indexer. Handles resource selection when building transfers.
+transfer
+— Orchestrates the creation of mint, transfer, and burn transactions.
+ParametersDraftResolver
+selects resources and builds the payload;
+PayloadBuilder
+signs and serializes it.
+queue
+— Helpers for monitoring the proving queue load.
+API
+The
+api
+module provides typed HTTP clients for the four backend services:
+TransferBackendClient
+— submits transactions and queries status and fees.
+IndexerClient
+— registers keys and fetches encrypted resource blobs.
+EnvioClient
+— queries spent nullifiers via GraphQL to determine which resources have been consumed.
+FeedbackClient
+— submits in-app feedback.
+Lib
+The
+lib
+module contains utility functions for encoding, formatting, address handling, Permit2 signing, and more.
+WASM
+The
+wasm
+module wraps the Rust cryptographic primitives compiled to WebAssembly: secp256k1 key operations, Merkle trees, resource creation and encoding, and hash functions.
+Key concepts
+Resources
+are the unit of value in the protocol. Each resource represents a specific ERC-20 token amount owned by a specific user. They are encrypted on-chain and only decryptable by the owner’s key.
+Pay Addresses
+encode a user’s four public keys into a single shareable string. To receive tokens, a user shares their Pay Address; the sender decodes it to encrypt a new resource for the receiver.
+Transfers
+are built as pairs of consumed and created resources. The backend generates a zero-knowledge proof for each pair before submitting the transaction on-chain.
+Package exports
+import
+{ createUserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+// domain
+import
+{ TransferBackendClient }
+from
+"@anomaorg/anoma-app-sdk/api"
+;
+import
+{ allSupportedChains }
+from
+"@anomaorg/anoma-app-sdk/constants"
+;
+import
+{ selectTransferResources }
+from
+"@anomaorg/anoma-app-sdk/domain"
+;
+import
+{ encodePayAddress, toHex }
+from
+"@anomaorg/anoma-app-sdk/lib"
+;
+import
+{ Resource, NullifierKey }
+from
+"@anomaorg/anoma-app-sdk/wasm"
+;
+The root import re-exports everything from all submodules and is sufficient for most use cases.
+Last updated on
+April 2, 2026
+The Anoma Protocol Adapter
+Getting Started

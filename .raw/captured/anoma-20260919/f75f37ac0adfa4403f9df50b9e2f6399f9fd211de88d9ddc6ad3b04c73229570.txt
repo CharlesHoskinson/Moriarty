@@ -1,0 +1,146 @@
+Generic Calls
+Copy page
+Generic Calls
+Generic calls are the Anoma Resource Machine’s mechanism for composing shielded state changes with arbitrary EVM execution. A transaction can unwrap value from the shielded pool, execute a pre-committed sequence of contract calls (a DEX trade, an approval, any on-chain interaction), and wrap the proceeds back into the pool, all atomically. If any step fails, the entire transaction reverts.
+The mechanism has two halves that only make sense together:
+the
+Generic Call Resource
+: an ARM resource that
+commits
+to what will be executed, and
+the
+Generic Call Forwarder
+: an EVM contract that
+executes
+exactly that commitment.
+Swaps
+were the first application built on generic calls;
+Earn
+is the second.
+The Generic Call Resource
+A generic call is carried by an ephemeral resource inside an ARM action. Its resource commitments bind the execution completely:
+Commitment
+Binds
+Label
+The hash of the forwarder contract’s address,
+where
+the calls execute
+Value
+The hash of the ABI-encoded call array,
+exactly what
+executes: every target, amount, and byte of calldata
+The resource logic proves these bindings and exposes the encoded calls as an external payload for the protocol adapter to execute. Because the resource sits in the signed action tree, the user’s authorization signature covers the full call sequence. Nothing about the execution (targets, order, calldata) can change after signing without invalidating the whole transaction.
+The following establishes the Generic Call-specific naming conventions, not to be mistaken with the aforementioned ARM conventions.
+Each call is a triple:
+///
+@notice
+A struct containing data for a generic call to be executed as part of a forwarded call.
+///
+@param
+to
+The address to call.
+///
+@param
+value
+The native token value to be sent with the call.
+///
+@param
+data
+The bytes-encoded function selector and calldata for the call.
+struct
+Call
+{
+address
+to;
+uint256
+value;
+bytes
+data;
+}
+The Generic Call Forwarder
+Each supported chain has a
+GenericCallForwarder
+contract, pinned at deployment to its protocol adapter and to the generic-call resource logic:
+function
+forwardCall
+(
+bytes32
+logicRef
+,
+bytes
+calldata
+input
+)
+external
+nonReentrant
+onlyProtocolAdapter
+onlyLogicRef
+(
+logicRef
+)
+returns
+(
+bytes
+memory
+output
+);
+Only the protocol adapter
+can invoke it, and only while executing a resource whose logic reference matches the one fixed in the forwarder’s constructor. There is no other path to
+forwardCall
+.
+The input is decoded as a
+Call[]
+and executed
+in order
+. A call with calldata is a contract call; a call with only a value transfers native tokens; an empty call reverts. There are no restrictions on targets or function selectors. The authorization model is that the signed action tree, not the contract, decides what runs.
+Nested
+forwardCall
+s are blocked by the reentrancy guard, but a single transaction may contain several sequential generic calls.
+The protocol adapter verifies the returned bytes against an expected output committed in the transaction, so even the call results are covered by the commitment scheme.
+Signature validation by commitment
+The forwarder implements
+ERC-1271
+with a validation function that always returns the success magic value. Contracts like
+Permit2
+can pull tokens
+from
+the forwarder using a placeholder signature, because the real authorization already happened. The pull is part of a call sequence (or resource wrap) that the user signed into the action tree and that a validity proof covers. The EVM-level signature is never the security boundary; the action tree is.
+Transient custody
+The forwarder is a conduit, not a vault. Funds flow through it within a single atomic transaction, unwrapped in, traded, and pulled back out before the transaction ends. The contract itself documents the consequence:
+Because any caller can forward and execute arbitrary calls through this contract, funds and other state held by it are only under a given user’s control transiently, during the atomic execution of the transaction. Any funds or state remaining after the action may be modified by subsequent callers.
+In addition, the forwarder exposes a permissionless
+sweep(token, to)
+that transfers its
+entire balance
+of any token (or native currency) to any address, so residual balances should be treated as donated to the public.
+A well-formed generic call must leave zero residual balance in the forwarder. Anything left behind after the transaction (over-delivered swap output, unused approvals’ underlying funds, stray transfers to the forwarder address) is claimable by anyone.
+Deployments
+Chain
+Address
+Ethereum
+0x4220bcB4A9c755aeE676c675cCc8a113e2A48274
+Arbitrum
+0x24843B8F3F5eC2D557217148d6d4E2108497C404
+Base
+0x24843B8F3F5eC2D557217148d6d4E2108497C404
+Optimism
+0x24843B8F3F5eC2D557217148d6d4E2108497C404
+BNB Smart Chain
+0xee4b283fA62AE445DcfDf9a34a7569a8Bc6Ba7D5
+The canonical, up-to-date list ships with the
+anoma-generic-call-forwarder-bindings
+release artifacts. Applications should always resolve the forwarder address from the backend’s network configuration rather than hard-coding it.
+An example pattern
+A generic-call application can have the following three-leg shape:
+unwrap (shielded → forwarder) → execute Call[] → wrap (forwarder → shielded)
+The amounts on both shielded legs are fixed in the signed action tree ahead of time, so the pattern fits interactions whose outcomes are known or guaranteed when the transaction is built.
+Swaps
+apply it with a firm RFQ quote. The guaranteed minimum buy amount is committed as the wrap amount, and the venue’s exact fill satisfies it precisely.
+Earn
+applies the same pattern to ERC-4626 vaults, where the outcome is
+predictable
+rather than fixed: a vault’s share price keeps moving while the transaction is proven. The wrap amount is therefore committed slightly below the quoted output, a worked example of the residual-balance property above.
+Last updated on
+January 13, 2026
+The Anoma Protocol Adapter
+Anoma Explorer

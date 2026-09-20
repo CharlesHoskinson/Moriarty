@@ -1,0 +1,116 @@
+Open Wallet Standard v1.3.2
+An open standard for local wallet storage, delegated agent access, and policy-gated signing.
+Abstract
+The Open Wallet Standard (OWS) defines how cryptographic wallets are stored on a local filesystem, how agents and CLI tools access them through a unified interface, and how policy-based controls govern what operations are permitted. Current implementations keep key material encrypted at rest, apply policy checks before signing, and use in-process hardening during decryption and signing.
+As AI agents become first-class participants in blockchain ecosystems — executing trades, paying for services, managing treasuries — they need a standardized, secure way to access wallets locally. Today, every tool rolls its own approach: environment variables with raw private keys, proprietary cloud APIs, bespoke keystore formats. OWS replaces this fragmentation with a single open standard.
+Core Types
+All types use
+CAIP
+identifiers and are defined in TypeScript for clarity. Implementations may use any language.
+// === Identifiers ===
+
+/** CAIP-2 chain identifier */
+type ChainId = `${string}:${string}`;
+// e.g. "eip155:1", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+
+/** CAIP-10 account identifier */
+type AccountId = `${ChainId}:${string}`;
+// e.g. "eip155:1:0xab16a96d..."
+
+/** Wallet identifier (UUID v4) */
+type WalletId = string;
+// === Wallet Descriptor ===
+
+interface WalletDescriptor {
+  id: WalletId;
+  name: string;
+  createdAt: string;                 // ISO 8601
+  chainType: ChainType;
+  accounts: AccountDescriptor[];
+  metadata: Record<string, unknown>;
+}
+
+interface AccountDescriptor {
+  accountId: AccountId;              // CAIP-10
+  address: string;                   // chain-native
+  derivationPath: string;            // BIP-44 path
+  chainId: ChainId;                  // CAIP-2
+}
+
+// === API Keys ===
+
+interface ApiKey {
+  id: string;                        // UUID v4
+  name: string;                      // human-readable label
+  tokenHash: string;                 // SHA-256 of raw token
+  createdAt: string;                 // ISO 8601
+  walletIds: WalletId[];             // wallets this key can access
+  policyIds: string[];               // policies evaluated per request
+  expiresAt?: string;                // optional expiry
+}
+// === Operations ===
+
+interface SignRequest {
+  walletId: WalletId;
+  chainId: ChainId;
+  transaction: SerializedTransaction;
+  simulate?: boolean;                // default: true
+}
+
+interface SignAndSendRequest extends SignRequest {
+  maxRetries?: number;
+  confirmations?: number;
+}
+
+interface SignMessageRequest {
+  walletId: WalletId;
+  chainId: ChainId;
+  message: string | Uint8Array;
+  encoding?: "utf8" | "hex";
+}
+// === Policy ===
+
+interface Policy {
+  id: string;
+  name: string;
+  executable: string;                  // absolute path to policy executable
+  config?: Record<string, unknown>;    // static config passed to executable
+  action: "deny" | "warn";
+}
+
+interface PolicyContext {
+  transaction: SerializedTransaction;
+  chainId: ChainId;
+  wallet: WalletDescriptor;
+  simulation?: SimulationResult;
+  timestamp: string;
+  apiKeyId: string;                  // the API key making this request
+}
+
+interface PolicyResult {
+  allow: boolean;
+  reason?: string;
+}
+Specification Documents
+Document
+Description
+01 — Storage Format
+Encrypted keystore format, file layout, and vault structure
+02 — Signing Interface
+The core sign, signAndSend, signMessage, and simulate operations
+03 — Policy Engine
+Policy types, evaluation, and enforcement model
+04 — Agent Access
+MCP server, REST API, and SDK interface for agents
+05 — Key Isolation
+Current in-process hardening, future enclave options, and threat model
+06 — Wallet Lifecycle
+Creation, import, export, backup, recovery, and migration
+07 — Supported Chains
+Chain families, CAIP identifiers, derivation paths, RPC endpoints, and asset identification
+License
+This specification is released under the
+MIT License
+.
+Next
+01 — Storage Format →

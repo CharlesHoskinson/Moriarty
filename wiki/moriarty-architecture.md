@@ -147,7 +147,7 @@ for a high-assurance kernel. A later composition layer can use signed capability
 manifests and hash allowlists without claiming that external code inherits
 Moriarty proofs.
 
-**Superseded in part, 2026-09-11.** For `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim` only, the [PCD integration amendment](../openspec/PCD-INTEGRATION-2026-09-11.md) allows claimed cross-contract calls between Moriarty contracts from Compact 0.33 on ledger 9, pending the user's confirmation (decision PD4). External non-Moriarty calls stay excluded.
+**Superseded in part, 2026-09-11.** For `Release`, `JoinFrom`, `Migrate`, `ImportFrom` and `Reclaim` only, the [PCD integration amendment](attachments/historical-evidence/openspec/PCD-INTEGRATION-2026-09-11.md) allows claimed cross-contract calls between Moriarty contracts from Compact 0.33 on ledger 9, pending the user's confirmation (decision PD4). External non-Moriarty calls stay excluded.
 
 ## DeFi product architecture
 
@@ -220,4 +220,4 @@ The [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]] places the 
 - Every head write reads the head or its absence.
 - Read, write and native effects share one transcript section with no checkpoint between them (CLM-0949).
 
-See the [report](../deliverables/pcd-midnight-native-2026-09-11/REPORT.md) §§10–12 and the [PCD roadmap](../openspec/PCD-ROADMAP-2026-09-11.md). S2 proposal; not implemented.
+See the [report](attachments/historical-evidence/deliverables/pcd-midnight-native-2026-09-11/REPORT.md) §§10–12 and the [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md). S2 proposal; not implemented.

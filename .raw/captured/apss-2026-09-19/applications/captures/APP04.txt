@@ -1,0 +1,1218 @@
+                                                  Certifying Findel Derivatives for Blockchain
+
+                                                                             Andrei Arusoaie
+                                                                   Alexandru Ioan Cuza University of Iaşi
+                                                                         andrei.arusoaie@uaic.ro
+
+
+
+
+arXiv:2005.13602v1 [cs.LO] 27 May 2020
+                                         Abstract
+                                         Derivatives are a special type of financial contracts used to hedge risks or to spec-
+                                         ulate on the market fluctuations. In order to avoid ambiguities and misinterpre-
+                                         tations, several domain specific languages (DSLs) for specifying such derivatives
+                                         have been proposed. The recent development of the blockchain technologies en-
+                                         ables the automatic execution of financial derivatives. Once deployed on the
+                                         blockchain, a derivative cannot be modified. Therefore, more caution should be
+                                         taken in order to avoid undesired situations.
+                                             In this paper, we address the formal verification of financial derivatives writ-
+                                         ten in a DSL for blockchain, called Findel. We identify a list of properties that,
+                                         once proved, they exclude several security vulnerabilities (e.g., immutable bugs,
+                                         money losses). We develop an infrastructure that provides means to interac-
+                                         tively formalize and prove such properties. To provide a higher confidence, we
+                                         also generate proof certificates. We use our infrastructure to certify non-trivial
+                                         examples that cover the most common types of derivatives (forwards/futures,
+                                         swaps, options).
+                                         Keywords:
+                                         financial derivatives, certification, blockchain, smart contracts, Coq, Findel
+
+
+                                         1. Introduction
+
+                                             Financial derivatives [1, 2, 3, 4] play an important role in finance. A financial
+                                         derivative is a contract between two or more parties whose value is based on
+                                         underlying financial assets (e.g., bonds, commodities, etc.). The term derivative
+                                         captures the idea that the contract derives its value from fluctuations in the
+                                         underlying asset. For instance, a car insurance contract derives its value from
+                                         an insurance index and related events (e.g., an accident may change its value).
+                                             Derivatives are often used to express complex agreements. Suppose that
+                                         John is a cereal manufacturer and Tom is a farmer who produces wheat and
+                                         corn. Since the price of cereals fluctuates a lot, John believes that it would be a
+                                         very good idea to have an agreement with Tom at the beginning of the year: he
+                                         computes a convenient price and makes an offer to Tom for buying his products
+                                         in advance. If Tom agrees, then John will not be affected by a rise in the price
+                                         at the end of the year. If the price drops, then Tom will have an advantage.
+
+
+                                         Preprint submitted to Elsevier                                          May 29, 2020
+Should John and Tom decide to accept this agreement, they can make accurate
+predictions for the future.
+   Typically, financial derivatives are expressed using natural language on a
+written document which is authorized by a trusted third party. However, natural
+language is often ambiguous and lacks precision. This might cause disputes
+between the parties involved, even in the presence of a trusted authority.
+
+                                      Ethereum Smart Contract for Findel
+
+                                                                              Step 2: Tom joins John's
+  An Ethereum smart contract                                                issued derivative through the
+  manages Findel derivatives.                                              same smart contract for Findel
+  Users can register, issue, and
+  join Findel derivatives using the
+  functionalities exposed by this
+  smart contract.
+
+
+
+
+                                                                                       Step 3: The Findel
+                                                                                     derivative is executed
+                                                                                     by mining nodes in the
+   Step 1: John issues a Findel                                                        Ethereum network
+     derivative by calling the
+    Ethreum smart contract for
+              Findel                  Ethereum Blockchain Environment
+
+
+
+
+Figure 1: Findel derivatives are managed by an Ethereum smart contract [5] implemented
+in Solidity [6]. Scenario: John issues a derivative using the Ethereum smart contract; the
+derivative is now available and anyone can join it. Here, Tom joins the derivative issued by
+John through the same smart contract. Tom becomes the owner of the derivative and the
+derivative is executed by the miners in the network.
+
+
+Domain Specific Languages for financial derivatives. In order to avoid disputes,
+researchers have proposed simple, non-ambiguous, and executable domain spe-
+cific languages (DSLs) for describing financial derivatives. Jones et al. [7]
+proposed such a language which was implemented as a combinator library in
+Haskell. They have defined a minimal and expressive set of primitives, which
+are then used to create complex derivatives. An example is One(EUR) - a primi-
+tive for transferring one unit of currency (EUR) from one party to another. New
+derivatives can be created from basic ones: e.g., Scale(k, One(EUR)) multi-
+plies by k the amount to be transferred. Derivatives expressed using primitives
+are composable. For example, And(c1 ,c2 ) processes the derivatives c1 and c2
+sequentially. Jones et al. [7] were able to compute the value of a derivative by
+giving a valuation semantics to their Haskell combinators.
+     Another language in the same family has been proposed by Gaillourdet [8].
+It uses similar primitives as in Jones et al. [7] and has a denotational semantics.
+One of the design goals was to enable standard mathematical analysis, i.e., study
+whether sequences of payments are consistent with the contract descriptions.
+     The blockchain technology enables automatic processing of financial deriva-
+tives via smart contracts. In this context, new DSLs for derivatives have emerged:
+
+
+                                                2
+Findel [9], Marlowe [10], and a contract language introduced by Egelund-Müller
+et al. [11].
+
+Blockchain. The blockchain technology is used mainly by cryptocurrencies such
+as Bitcoin [12]. It involves a peer-to-peer network of nodes that communicate
+with the purpose of contributing to a distributed ledger. This ledger is a chain
+of blocks of transactions. Only a special category of nodes, called miners, con-
+tribute to the creation of blocks. Their role is to arrange transactions in blocks
+in a way that requires computing power. Miners receive a reward as incentive.
+A block is added to the main ledger by a consensus algorithm. The consensus
+algorithm ensures that it is not convenient to change the existing ledger, but
+only to add new blocks to it. This is why the blockchain is said to be immutable.
+Various blockchain platforms such as Ethereum [13, 14] or Cardano [15] allow
+users to create smart contracts, i.e., programs that typically handle transactions
+involving cryptocurrency, but they can also encode complex logic like regular
+programs. Miners are incentivised by an execution fee.
+
+Vulnerabilities in Findel. In this paper we focus on Findel, a DSL based on a
+set of primitives which is very similar with the set proposed by Jones et al. [7]
+and Gaillourdet [8]. The main difference is that Findel derivatives can be auto-
+matically executed in Ethereum (Figure 1). Findel can be regarded as a smart
+contracts language for financial derivatives. Therefore, Findel inherits several
+vulnerabilities of smart contracts. A comprehensive taxonomy of vulnerabilities
+of smart contracts can be found in [16]. We recall here the vulnerabilties that
+are relevant for Findel:
+   • Immutable bugs. Due to the immutability of the blockchain, deployed
+     Findel code cannot be modified. This is consistent with the principles of
+     Ethereum, where code is law. If the Findel code contains a bug, there is
+     no direct way to fix it.
+   • Money lost in transfer. When sending money, one has to specify the
+     correct recipient address. Money sent to wrong addresses are lost forever.
+   • Time constraints. In Findel, time constraints are part of the language: a
+     contract issuer can specify time intervals when contracts can be joined. If
+     an interested owner fails to join in time, then the owner may lose money
+     or other contracts.
+    Programming smart contracts is a tricky task and developers need tools to
+verify whether their programs are more secure. In this context, formal verifica-
+tion of smart contracts has started to be a very active field [17, 18, 19, 20, 21].
+Most of the tools based on formal verification focus on verifying general security
+properties of the Ethereum bytecode (e.g., [22]).
+
+Handling vulnerabilities in Findel. Many vulnerabilities are caused by a mis-
+alignment between the intuition of the programmer and the semantics of the lan-
+guage. The main sources of vulnerabilities in Findel are two statements that (1)
+
+
+                                        3
+ allow participants to swap the parties (issuer and owner) and (2) generate new
+ contracts. We show here a list of properties that, once verified, could exclude
+ certain vulnerabilities (e.g., immutable bugs, money losses) for the derivative in
+ question:
+
+(CM) Derivatives should be free of calculation mistakes. This is a typical bug in
+     financial contracts where mistakes in mathematical formulas could lead to
+     wrong amounts of money to be transferred. In the real world, this is can
+     be corrected. Unfortunately, a bug in a deployed Findel derivative cannot
+     be fixed at all, due to immutability of the blockchain.
+(ES) Errors caused by external sources should be handled properly. Findel al-
+     lows users to retrieve data from external sources using gateways. A simple
+     example is a Findel currency exchange contract, where the exchange rate
+     is provided by an external source. Suppose that Charlie wants to ex-
+     change $10 into euros. So, he joins the issued contract and pays the $10.
+     If the external source fails to provide an exchange rate and the Findel code
+     does not handle such situations properly, then Charlie receives nothing in
+     exchange, and losses the $10.
+(AS) Accidental swaps should be avoided. This property ensures that the gener-
+     ated transactions and contracts have the intended issuer and the intended
+     owner. Although this may seem easy to check, sometimes this is quite
+     difficult to detect when statements (1) and (2) are combined. In Findel,
+     the execution of a contract is triggered when someone joins an issued con-
+     tract. Moreover, you cannot force someone to join. Suppose that John
+     issues c1 which specifies that: (a) he pays in advance for cereals, and (b) a
+     new contract c2 with John as issuer is generated (by c1 ), where c2 specifies
+     that John must receive cereals in exchange. If Tom joins c1 , then Tom
+     receives the payment and he is expected to join c2 . However, if Tom is
+     dishonest and he does not join c2 , then John never gets the cereals! The
+     problem is that the execution of c2 depends on Tom, and he might not be
+     interested in joining it.1 .
+
+     In this paper we tackle the formal verification of this kind of properties
+ for Findel contracts. We develop an infrastructure implemented in Coq [23]2 ,
+ that provides means to execute Findel derivatives, and to formalize, prove, and
+ certify properties about them.
+     Compared to the other formal verification approaches, these are mostly fo-
+ cused on formalizing and proving generic security properties of Ethereum byte-
+ code [18, 21], and only a few actually certify these properties [22, 19].
+     Compared to the other DSLs [7, 8] in the same family as Findel, none of
+ them are designed to be executed on the blockchain. They are mostly focused
+
+   1 In Section 2.1.1 we discuss this particular issue in detail.
+    2 The source code       is   available   online:     https://github.com/andreiarusoaie/
+ findel-semantics-coq
+
+
+                                                4
+on computing derivatives values or performing conformance analyses. Here we
+focus is different: we prove properties that make sense when such derivatives
+are executed in the blockchain.
+
+Contributions. The contributions of this paper are:
+  1. A formal semantics of Findel in Coq [23].
+  2. An infrastructure that can be used to certify security properties for the
+     most common types of derivatives (futures/forwards, swaps, options).
+  3. A list of examples that highlight the various security properties that
+     derivatives have. We use our infrastructure to prove these properties.
+     When a proof of a security property cannot be completed, we show how
+     to detect the source of the problem.
+  4. A practical method for developing proofs for complex derivatives. Since
+     Findel is composable, proofs can be divided into smaller manageable
+     pieces. We show that proofs of complex derivatives can be done by com-
+     posing smaller proofs.
+
+Paper organisation. Section 2 introduces the syntax and the informal semantics
+of Findel from [9]. Section 2.1.1 contains a motivating example and we discuss
+what properties are violated by this example. The Coq encoding of Findel is
+shown in Section 3. Using the Coq semantics we encode several Findel deriva-
+tives and then we prove their expected properties in Section 4. We also include
+a credit default swap - a very popular type of derivative - and we show how its
+proofs can be developed incrementally in Section 4.5. We conclude in Section 5.
+
+2. Findel: a DSL for financial derivatives
+
+    The syntax and the informal semantics of the Findel language are both
+described in Biryukov et al. [9]. Details can be found in the implementation
+available at https://github.com/cryptolu/findel. In this section we use
+both sources in order to make a complete description of the language. We do
+not improve Findel here, we only to formalise its existing semantics.
+    A Findel contract is a tuple with three components: a description, an issuer
+and an owner. The issuer and the owner are the parties of the given contract.
+In the implementation, the issuer and the owner are represented as 20-byte val-
+ues (i.e., size of an Ethereum account address), and contracts have an additional
+component called proposed owner which is also a 20-byte value. This new com-
+ponent is used to propose a specific owner when issuing a new contract. If the
+proposed owner field is 0x0 (default value), then anyone can join the contract.
+    A Findel description is essentially a tree with basic primitives as leaves and
+composite primitives as internal nodes. The list of available primitives and their
+informal semantics is shown in Table 1.
+Example 2.1. And is a primitive that executes two (sub)contracts, c1 and c2 ,
+sequentially. If at least one of them fails then the changes are reverted. Here is
+a fixed-rate currency exchange derivative in Findel:
+
+
+                                        5
+           Primitive                  Informal semantics
+           Zero                       Do nothing.
+           One(currency)              Transfer 1 unit of currency from
+                                      the issuer to the owner.
+           Scale(k, c)                Multiply all payments of c by a
+                                      constant factor of k.
+           ScaleObs(a, c)             Multiply all payments of c by a
+                                      factor obtained from address a.
+           Give(c)                    Swap parties of c.
+           And(c1 , c2 )              Execute c1 and then c2 .
+           Or(c1 , c2 )               Give the owner the right to execute
+                                      either c1 or c2 but not both
+           If(a, c1 , c2 )            If b is true, execute c1 , else execute
+                                      c2 , with b obtained from address a.
+           Timebound(t0 , t1 , c)     Execute c, if the current timestamp
+                                      is within [t0 , t1 ].
+
+                    Table 1: The informal semantics of Findel [9].
+
+            Additional syntax          Desugared syntax
+            At(t0 , c)                 Timebound(t0 − δ, t0 + δ, c),
+                                       where δ is just a constant used
+                                       to handle the imperfect precision
+                                       of time signals in the network
+            Before(t0 , c)             Timebound(now, t0 , c),
+                                       where now is the current time
+            After(t0 , c)              Timebound(t0 , ∞, c).
+
+                              Table 2: Additional primitives
+
+
+                           And(Give(Scale(11, One(USD))),
+                                Scale(10, One(EUR))).
+
+   To increase the expressivity of Findel, the language is extended with some
+sugar syntax as shown in Table 2.
+Example 2.2. A zero-coupon bond (ZCB) can be encoded using At:
+      And(Give(Scale(10, One(USD))),
+            At(now +t, Scale(11, One(USD))))
+
+   The execution model of a Findel contract is given by these steps [9]:
+  1. The first party issues a contract. This is a mere declaration of the issuer’s
+     desire to conclude an agreement and entails no obligations.
+  2. The second party joins the contract and becomes its owner. As a conse-
+     quence, both parties accept the specified rights and obligations.
+  3. The contract is executed immediately:
+      (a) Let the current node be the root of the contract description. If the
+          current node is either Or or Timebound with t0 > now , postpone
+
+
+                                            6
+          the execution: issue a new contract, with the same parties and the
+          current node as root. The owner can demand later its execution.
+      (b) Otherwise, execute all sub-nodes recursively.
+      (c) Delete the contract.
+Example 2.3. A step by step execution of the contract in Example 2.1, where
+Alice issues and Bob is the owner:
+  1. Alice issues the contract and Bob joins it, becoming the contract owner:
+                $    e    is owner of
+       Alice   100   50   -
+       Bob     20    30   And(Give(
+                               Scale(11, One(USD)))
+                              Scale(10, One(EUR)))
+  2. And executes and Bob is now the owner of two (sub)contracts:
+                $    e    is owner of
+       Alice   100   50   -
+       Bob     20    30   Give(Scale(11, One(USD)))
+                          Scale(10, One(EUR))
+  3. Give executes and Alice becomes an owner:
+                $    e    is owner of
+       Alice   100   50   Scale(11, One(USD))
+       Bob     20    30   Scale(10, One(EUR))
+  4. Alice receives 11 USD from Bob:
+                $    e    is owner of
+       Alice   111   50   -
+       Bob      9    30   Scale(10, One(EUR))
+  5. Finally, Bob receives 10 EUR from Alice:
+                $    e    is owner of
+       Alice   111   40   -
+       Bob      9    40   -
+
+   The implementation of Findel does not enforce any constraints on the bal-
+ances of the users that prevents them from building up debt.
+
+2.1. Limitations of Findel
+    Findel has several major limitations. First, there is no way to encode repet-
+itive behavior in contracts - there are no loops. This is a limitation when one
+wants to specify a contract should be executed repeatedly for 10 years.
+    Second, by design, Findel is not able to express agreements for more than
+two parties. One can access external gateways to simulate multiple parties, but
+this is a very limited workaround.
+
+2.1.1. A motivating example
+    Recall our cereal manufacturer example from Section 1. Suppose that John
+issues the following option derivative (here, wheat is represented by USD and
+corn by EUR):
+
+
+                                        7
+     ∆
+ OPT =     And
+                  Before(t,Or(Give(One USD),
+                              Give(One EUR)))    
+                  After(t+2, Scale(1, (One GBP)))
+John wants to acquire a contract before moment t that gives him a later choice
+(between wheat and corn). He pays back 1 GBP as incentive for eventual owners
+after t+2. Unfortunately, John issues a contract with bugs.
+    Suppose that a dishonest participant, Mallory, joins the contract and triggers
+the execution of And. First, Before is executed and its enclosed contract (i.e.,
+Or) produces a new contract - a future option - whose execution can be triggered
+later by Mallory. Second, the After primitive gets executed, and John will pay
+1 GBP after moment t+2.
+    The contract generated by After has all the aforementioned properties:
+(CM), (ES), and (AS). Mallory is able to request 1 GBP from John after t+2,
+and John cannot deny or retract from that.
+    Unfortunately, the future option contract generated by Or violates (AS):
+because Mallory is the owner of this contract, she decides not to join that
+contract. So, John cannot claim anything from Mallory and losses money.
+    In Section 4, we show a possible fix of OPT and we prove that in the fixed
+contract John has the option to choose the products.
+
+
+3. A formal semantics of Findel in Coq
+
+3.1. Syntax
+   The syntax of Findel is fairly small in size and it is encoded in Coq using
+Inductive (Figure 2):
+
+              Inductive Primitive :=
+              (* basic primitives *)
+              | Zero     :                                  -> Primitive
+              | One      :Currency                          -> Primitive
+              (* composite primitives *)
+              | Scale    :nat -> Primitive                  -> Primitive
+              | ScaleObs :Address -> Primitive              -> Primitive
+              | Give     :Primitive                         -> Primitive
+              | And      :Primitive -> Primitive            -> Primitive
+              | Or       :Primitive -> Primitive            -> Primitive
+              | If       :Address -> Primitive -> Primitive -> Primitive
+              | Timebound :nat->nat -> Primitive            -> Primitive.
+                        Figure 2: The syntax of Findel in Coq.
+
+
+
+   Currencies are defined using Inductive as well:
+
+
+
+
+                                          8
+                      Inductive Currency :=
+                      | USD : Currency
+                      | EUR : Currency
+                      | GBP : Currency
+                      | JPY : Currency
+                      | CNY : Currency
+                      | SGD : Currency
+                      | NONE : Currency.
+
+The additional primitives At, Before, After, and Sell are simple definitions:
+   Definition At (t:nat) (p:Primitive) := Timebound (t - δ) (t + δ) p.
+   Definition Before (t:nat) (p:Primitive) :=Timebound 0 t p.
+   Definition After (t:nat) (p:Primitive) :=Timebound t INF p.
+
+δ is a just parameter which is used to adjust intervals for accepting transactions.
+The infinite is axiomatised in Coq as follows:
+   Parameter INF : nat.
+   Axiom infinite : forall n, n < INF.
+Example 3.1. When written in Coq, contracts look very similar to what they
+looked before. The contract shown in Section 2.1.1, is encoded in Coq as follows:
+         ∆
+     OPT =     (And
+                       (Before t (Or (Give (One USD),
+                                   (Give (One EUR))))
+                       (At t+2 (Scale 1 (One GBP))))
+
+3.2. The semantics of Findel primitives
+    As mentioned in [9], contracts are executed recursively. In [5], a function
+called execute calls an internal function executeRecursive that actually exe-
+cutes the contract recursively. The Or primitive needs an extra-argument pro-
+vided by the owner, and this is handled by yet another function executeOr
+which calls execute on the primitives specified by the extra-argument.
+
+Addresses. Time. Balance. An address in Findel is represented by a 20-byte
+value. From our perspective, these are just numbers, and this is why we model
+addresses as naturals. We make the following convention: 0 is treated as the
+constant 0x0, i.e, 0 is the default address. The time is represented as the number
+of seconds that passed since a given timestamp. The balance is a function which
+takes an address and a currency, and returns an integer value representing the
+amount of tokens of the specified currency. An update function for balance
+is also provided: it takes an existing balance, an address, a currency and an
+amount, and produces a new balance.
+
+Gateway. Gateways are the solution that the designers of Findel found to model
+interactions with external data providers. Gateways are smart contracts that
+provide a value, a timestamp, and a proof of authenticity. Before executing a
+contract, the gateway should be always updated [9]. In Coq, a gateway is a
+
+
+                                        9
+triple holding an address, a value and a timestamp:
+   Record Gateway :=
+     gateway {
+          gtw_addr : Address;
+          gtw_value : nat;
+          gtw_timestamp : nat
+       }.
+Contracts have access to a list of such triples. When a contract queries an
+address, the address is searched in the list, and the corresponding value and
+timestamp are returned. If the address is not found, then the execution of the
+contract fails. This functionality is provided by a Coq function called query.
+This function also checks for the freshness of the given data, and fails if the
+difference between the current time and the provided timestamp is less than
+a threshold3 . The proof of authenticity mechanism is not yet implemented
+in Tikhomirov [5] and we do not handle it in Coq either.
+
+Transactions. For every transfer of tokens a transaction is registered in a ledger.
+A transaction is a uniquely identified tuple containing: the id of the contract
+which generated the transfer, the addresses of the participants, the amount of
+currency transferred, and a timestamp:
+   Definition Id := nat.
+   Record Transaction :=
+     transaction {
+          tr_id : Id;
+          tr_ctr_id : nat;
+          tr_from: Address;
+          tr_to : Address;
+          tr_amount : nat;
+          tr_currency : Currency;
+          tr_timestamp : Time
+       }.
+
+Notation 3.1. We use { tx : I → O ; V C ; c } to denote a transaction tx where
+(tr from tx ) = I, (tr to tx ) = O, (tr amount tx ) = V , (tr currency tx ) = C,
+and (tr ctr id tx ) = id (c), where c generated tx .
+
+Contract descriptions vs. Findel contracts. Contract descriptions are separate
+from contract instances. A description only defines what a contract is, not how
+it is executed [9]. In Coq, a contract description has a unique id, and contains
+the code (a tree of primitives), a scale factor, a gateway, and a time interval
+specifying when this description is valid:
+
+
+  3 In [5] this threshold is 30 seconds.
+
+
+
+
+                                           10
+   Record ContractDescription :=
+     description {
+          dsc_id : Id;
+          dsc_prim : Primitive;
+          dsc_scale : nat;
+          dsc_gateway_of : list Gateway;
+          dsc_valid_from : Time;
+          dsc_valid_until : Time;
+       }.
+Notation 3.2. Let us consider that d is a contract description. In the rest
+                                                     ∆                     ∆
+of the section we use the following notations id (d) = (dsc id d), prim(d) =
+                   ∆                            ∆
+(dsc prim d), G(d) = (dsc gateway of d), sc(d) = (dsc scale d), vfrom(d) =
+(dsc valid fromd), vuntil (d) = (dsc valid untild).
+   According to [9], Findel contracts are tuples consisting of a description and
+two addresses (the issuer and the owner). However, for execution, we need more
+ingredients, as indicated by the implementation in [5]:
+   Record FinContract :=
+     finctr {
+          ctr_id : Id;
+          ctr_desc_id : Id;
+          ctr_primitive : Primitive;
+          ctr_issuer : Address;
+          ctr_owner : Address;
+          ctr_proposed_owner : Address;
+          ctr_scale : nat;
+       }.
+When a Findel contract is issued, the description id, the code and the scale
+are initialised with the corresponding fields from the description. The proposed
+owner is either the default value or it is set to a particular address.
+                                                                             ∆
+Notation 3.3. Let c be a contract. We use the following notations id (c) =
+                   ∆                          ∆                               ∆
+(ctr id c), dsc(c) = (ctr desc id c), prim(c) = (ctr primitive c), issuer (c) =
+                           ∆                       ∆
+(ctr issuer c), owner (c) = (ctr owner c), po(c) = (ctr proposed owner c),
+      ∆
+sc(c) = (ctr scale c).
+Notation 3.4. We use h c : I → O ; P i to denote a contract c where
+issuer (c) = I, po(c) = O, and prim(c) = P .
+
+Results. A result stores the outcome of the execution of a contract. It contains
+the updated balance, the issued contracts, the next available id, and the up-
+dated ledger:
+   Record Result :=
+     result {
+          res_balance : Balance;
+          res_contracts : list FinContract;
+          res_next : Id;
+          res_ledger : list Transaction
+       }.
+
+
+                                      11
+3.2.1. The execute function.
+    The code of a Findel contract is executed recursively. In Coq we define a
+function called execute which corresponds to the executeRecursive function
+from [5]. The inputs of execute are:
+
+   • the primitive to be executed;
+   • the scale factor;
+   • the addresses of the issuer and the owner;
+   • the balance of the participants;
+   • the current time (received from the network);
+   • the list of available gateways;
+   • the contract id and the description id;
+   • the next available fresh identifier - which is used to assign identifiers to
+     the generated contracts, if any;
+   • the ledger, i.e., a list of transactions.
+    The output of execute is of type Result. The execution of a contract can
+produce a new balance, can generate new contracts, can compute new fresh
+ids, and can register new transactions in the ledger. The fresh id generation
+mechanism is quite simple: execute takes a fresh id as input and uses it as
+a seed for generating unique identifiers for new contracts. In Section 3.4 we
+prove that our id generation mechanism is consistent, i.e., the generated ids are
+unique.
+    The execute function is recursive on P:
+match P with
+
+   • if P is Zero, then nothing changes:
+     | Zero => Some (result balance [] n ledger)
+
+   • if P is One, the balance of the participants is updated, new transactions
+     are added to the ledger, a new fresh id is generated:
+     | One currency => Some
+        (result
+          (update
+            (update balance I currncy
+              ((balance I crncy)-(Z_of_nat scale))
+            )
+            O currency
+            ((balance O crncy)+(Z_of_nat scale))
+          ) [] (S nextId)
+          ((transaction nextId ctr_id I O scale
+                        crncy time) :: ledger)
+         )
+
+
+
+                                         12
+• if P is Scale, then scale the value of the contract:
+  | Scale k c =>
+      (execute c (scale * k) I O balance time
+               gtw ctr_id dsc_id n ledger)
+
+• if P is ScaleObs, then the scale for the contract is updated only if the
+  gateway query does not fail:
+  | ScaleObs addr c =>
+      match (query gtw addr time) with
+      | None => None
+      | Some k =>
+        (execute c (scale * k) I O balance time
+                 gtw ctr_id dsc_id n ledger)
+      end
+
+• if P is Give, then swap the issuer and the owner:
+  | Give c =>
+      (execute c scale O I balance time
+               gtw ctr_id dsc_id n ledger)
+
+• if P is And, then execute the contracts sequentially; And fails if at least one
+  of its subcontracts fails:
+  | And c1 c2 =>
+     match (execute c1 scale I O balance time
+              gtw ctr_id dsc_id n ledger)
+     with
+     | None => None
+     | Some (result bal1 Is1 n1 ledger1) =>
+       match (execute c2 scale I O bal1 time
+                gtw ctr_id dsc_id n1 ledger1)
+       with
+       | None => None
+       | Some (result bal2 Is2 n2 ledger2) =>
+         Some
+         (result bal2 (Is1 ++ Is2) n2 ledger2)
+       end
+     end
+
+• if P is If, then the execution is determined by the gateway: if the gateway
+  query fails, then the execution fails; if the value is 0 then execute the
+  second contract; otherwise, execute the first contract.
+
+
+
+
+                                     13
+      | If addr c1 c2 =>
+         match (query gtw addr time) with
+         | None => None
+         | Some v =>
+           if beq_nat v 0
+           then (execute c2 scale I O balance time
+                   gtw ctr_id dsc_id n ledger)
+           else (execute c1 scale I O balance time
+                   gtw ctr_id dsc_id n ledger)
+         end
+
+   • if P is Timebound, then execute the contract only if the current time is in
+     the time interval; if the current time is less than the inferior limit of the
+     interval, then a new contract is issued and added to the list of generated
+     contracts; otherwise, the execution fails:
+      | Timebound t0 t1 p =>
+        if (t1 <? time)
+        then None
+        else
+         if (t0 <? time)
+         then (execute p scale I O balance time
+                 gtw ctr_id dsc_id n ledger)
+         else Some
+         (result balance
+          [(finctr (S n) dsc_id (Timebound t0 t1 p)
+                   I O O scale)]
+          (S (S n)) ledger)
+
+
+   • if P is Or, then a new contract is issued with Or as root; the owner can
+     later demands its execution.
+      | Or c1 c2 => Some
+        (result balance
+                [(finctr (S n) dsc_id (Or c1 c2)
+                         I O O scale)]
+                (S (S n)) ledger)
+
+
+3.3. Execution model
+    The execution of a Findel contract may generate new contracts. We need
+to model a ledger of transactions, the balance of the users, an other compo-
+nents needed to run contracts. We define a general system state as a tuple
+hC, D, B, t, G, i, L, Ei, which holds: the list of issued contracts C, the list of avail-
+able contract descriptions D, the balance for each user B, the current global
+time t, a list of available gateways G, the next fresh identifier i, a ledger L and
+a list of events E. In Coq, a state is represented as follows:
+
+
+
+
+                                           14
+    Record State :=
+      state {
+           m_contracts : list FinContract;
+           m_descriptions : ContractDescriptions;
+           m_balance : Balance;
+           m_global_time : Time;
+           m_gateway : list Gateway;
+           m_fresh_id : Id;
+           m_ledger : list Transaction;
+           m_events : list Event
+        }.
+
+                                                                            ∆
+Notation 3.5. We use the following notations (where s a State. ): C(s) =
+                        ∆                           ∆                       ∆
+(m contracts s), D(s) = (m descriptions s), B(s) = (m balance s), E(s) =
+                   ∆                    ∆
+(m events s), L(s) = (m ledger s), G(s) = (m gateway s), fresh(s) = (m fresh id s),
+time(s) = (m global time(s)).
+    The State is essentially holding all the ingredients of an online marketplace
+for Findel derivatives. The marketplace evolves as specified by the following
+rules:
+
+[Issue] When issued, a contract c is added to the list of issued contracts having
+a unique id i. Initially, the owner field contains the address of the issuer, while
+the proposed owner field contains the address of the intended owner. If the value
+of the proposed owner field is 0, then anyone can join this contract. prim(c) is
+initialised from an existing description. Also an event IssuedFor is triggered,
+and the global fresh id is incremented:
+
+                               hC, D, B, t, G, i, L, Ei
+                                                                  d ∈D
+               hc : C, D, B, t, G, i + 1, L, (IssuedFor O i) : Ei      ,
+
+where c is a contract with id (c) = i, dsc(c) = id (d), prim(c) = prim(d),
+issuer (c) = I, owner (c) = I, po(c) = O, sc(c) = sc(d). The rule essentially
+says that the state above the line changes into the state below the line. Also,
+there is a side condition d ∈ D which needs to be fulfilled in order for the rule
+to apply. We used ‘:’ to denote the cons list constructor, i.e., c is added in front
+of the list of contracts C.
+
+[Join] Joining a contract c is the most complex operation and requires several
+conditions. First, (A) the owner O who wants to join is either the proposed
+owner, that is, po(c) = O, or anyone can join, that is, po(c) = 0. Second,
+(B) the root node of the contract primitive should not be an Or: prim(c) 6=
+(Or ). Third, (C) the execution of c is limited within a time interval given
+by its corresponding description d: vfrom(d) ≤ t ≤ vuntil (d). Here, t is the
+current time. Finally, (D) the execution of the associated primitive should be
+successful, that is, execute(prim(c), id (c), dsc(c), c(c), issuer (c), O, t, G, L, i)
+= hB 0 , C 0 , i0 , L0 i. The tuple hB 0 , C 0 , i0 , L0 i is a Result, where B 0 is the updated
+
+
+                                              15
+balance, C 0 is the list of contracts generated by the primitive, i0 is the new fresh
+identifier, and L0 is the updated ledger. The rule for joining a contract is shown
+below; note that E is enriched with event e = Executed id (c):
+
+                     hc ∈ C, D, B, t, G, i, L, Ei
+                                                                   (A), (B), (C), (D)
+               hC \ {c} ∪ C 0 , D, B 0 , t, G 0 , i0 , L0 , e : Ei
+
+Note that we use c ∈ C to denote that c is in the list of contracts, and C \ {c}
+to denote that c is removed from C.
+
+[Join OR] This rule handles the case when (B 0 ) prim(c) = (Or c1 c2 ). In this
+case, the owner can execute either c1 or c2 . Let  be a placeholder variable which
+can be either c1 or c2 . If the execution is successful, that is, (D0 ) execute(,
+id (c), dsc(c), c(c), issuer (c), O, t, G, L, i) = hB 0 , C 0 , i0 , L0 i, then the rule below
+applies:
+
+                    hc ∈ C, D, B, t, G, i, L, Ei
+                                                                  (A), (B 0 ), (C), (D0 )
+              hC \ {c} ∪ C 0 , D, B 0 , t, G 0 , i0 , L0 , e : Ei
+
+Note that the conditions (A) and (C) need to be satisfied here as well. Again,
+e = Executed id (c).
+
+[Fail] If the execution of a contract fails, that is, (D00 ) execute(, id (c), dsc(c),
+c(c), issuer (c), O, t, G, L, i) = ⊥, then the event e0 = Deleted id (c) is triggered:
+
+                        hc ∈ C, D, B, t, G, i, L, Ei
+                                                         (A), (C), (D00 ).
+                     hC \ {c}, D, B, t, G, i, L, e0 : Ei
+
+[Tick] The tick rule increments the global time t:
+
+                                  hC, D, B 0 , t, G 0 , i0 , L0 , Ei
+                                hC, D, B 0 , t + 1, G 0 , i0 , L0 , Ei
+    The rules [Join], [Join OR], and [Fail] cannot be applied in the same time
+because their side conditions exclude each other. On the other hand, the rules
+[Issue] and [Tick] can be applied any time. Also, note that [Join], [Join OR],
+and [Fail] are the only rules that actually execute contracts and may produce
+modifications in the balance, the ledger, and the list of events.
+Definition 3.1. The rules above define a relation between states. By s y s0
+we denote that there is a step (given by one of the rules [Issue], [Join], [Join
+OR], [Fail], or [Tick]) from the state s to the state s0 . We also use s    s0 to
+denote the reflexive and transitive closure of y.
+
+3.4. Metaproperties
+State consistency. We start by defining what conditions need to be satisfied for
+a state to be consistent.
+
+
+                                                  16
+Definition 3.2. A state s is consistent if:
+  1. ∀c . c ∈ C(s) → fresh(s) > id (c);
+  2. ∀i . (Executed i) ∈ E(s) ∨ (Deleted i) ∈ E(s) → fresh(s) > i;
+  3. ∀c . c ∈ C(s) → ((Executed id (c)) 6∈ E(s) ∧ (Deleted id (c)) 6∈ E(s));
+  4. ∀i . ¬((Executed i) ∈ E(s) ∧ (Deleted i) ∈ E(s)).
+    The first two conditions capture the fact that the id field of the state is
+always fresh, i.e., it always strictly greater than all the other identifiers. Since
+we do not use hash functions to compute unique identifiers, we have ensure that
+our unique identifier generation approach is consistent. The last two conditions
+of Definition 3.2 capture the consistency of the generated events. Condition 3
+ensures that an issued contract cannot be executed or deleted, while condition 4
+ensures that a contract cannot be both executed and deleted in the same time.
+    The first important metaproperty that we prove is that the        relation pre-
+serves state consistency:
+
+Theorem 3.1. For all states s, s0 , such that s is consistent, if s       s0 then s0
+is consistent.
+The Coq proof of this theorem is based on several lemmas which correspond to
+each item in Definition 3.2. These lemmas are proved by induction on y.
+
+Ledger consistency. One important property of the ledger is that the registered
+transactions cannot be removed or modified. In Coq, we are able to prove this
+for our semantics as well:
+
+Theorem 3.2. For all states s and s0 , and for all transactions t, if s        s0 and
+t ∈ L(s) then t ∈ L(s0 ).
+The proof is based on the fact that the execute function only appends transac-
+tions to the ledger, and it never modifies the existing transactions in the ledger.
+
+Events consistency. The y relation triggers several events: Executed, Deleted,
+and IssuedFor. These events correspond to actions and once an event is trig-
+gered it means that some action has been performed. For instance, when a
+contract is issued an IssuedFor event is triggered, and a potential owner can
+check whether a contract has been issued for him. This action cannot be re-
+tracted. In Coq, we prove that triggered events cannot be retracted:
+Theorem 3.3. For all states s and s0 , and for all events e, if s            s0 and
+e ∈ E(s) then e ∈ E(s0 ).
+
+The proof is based on the fact that the execute function only generates new
+events, and it never modifies the existing list of events.
+
+
+
+
+                                        17
+Other metaproperties. A very useful property that we intensively use in our Coq
+proofs is given by the following lemma:
+Lemma 3.1. For all states s and s0 , and for all contracts c, if s y s0 and
+c ∈ C(s) then c ∈ C(s0 ) or (Executed id (c)) ∈ E(s0 ) or (Deleted id (c) ∈ E(s0 ).
+
+The lemma essentially enumerates the possible outcomes of a step from s to s0 :
+either a contract is not executed and it remains available in the contracts of
+s0 , or it is executed and a corresponding event was triggered. The proof is by
+induction on y.
+     Another property that we prove in Coq is that the time cannot go backwards
+when performing steps:
+
+Lemma 3.2. For all s and s0 , if s       s0 then t(s) ≤ t(s0 ).
+The proof is by induction on both       and y.
+
+
+4. Verifying properties of Findel derivatives
+
+    In this section we verify the properties (CM), (ES), and (AS) for several
+Findel derivatives. Sometimes, proofs cannot be completed. In this case we
+prove a proposition that indicates a vulnerability.
+    All the subsequent properties are formalized and certified in Coq. The full
+Coq codebase is available online at https://github.com/andreiarusoaie/
+findel-semantics-coq. Since everything is already proved and verified in
+Coq, we do not show any proofs in this section4 .
+    For convenience, in the rest of this section, we assume that I is always the
+issuer and O is always the owner. We explicitly mention when their roles change.
+We also introduce some useful notations and definitions:
+Notation 4.1. If P is a primitive, then we denote by cP the contract where
+prim(cP ) = P, issuer (cP ) = I, owner (cP ) = O, and id (cP ) = id (P).
+
+Definition 4.1. A contract c is executed between s1 and s2 at time t if c ∈
+C(s1 ), Executed id (c) ∈ E(s2 ), time(s1 ) = t and s1 y s2 .
+Definition 4.2. A contract c is deleted between s1 and s2 at time t if c ∈ C(s1 ),
+Deleted id (c) ∈ E(s2 ), time(s1 ) = t and s1 y s2 .
+
+Definition 4.3. An owner O joins a contract c between states s1 and s2 at
+time t if there are states s and s0 such that s1 s, s0 s2 and c is executed
+                            0
+or deleted between s and s at time t.
+
+  4 Most of the proofs are by induction on y or   , and can be found in the indicated
+codebase.
+
+
+
+
+                                        18
+4.1. Fixed-rate currency exchange
+   Recall the fixed-rate currency exchange (FRCE ) shown in Example 2.1. We
+prove in Coq that I receives 11 dollars from O, while O receives 10 euros from
+I:
+Proposition 4.1. For all s, s0 , with s consistent, if O joins cFRCE between s
+and s0 then there exists tx 1 such that { tx 1 : I → O ; 10 USD ; id (cFRCE ) }
+∈ L(s0 ).
+Proposition 4.2. For all s, s0 , with s consistent, if O joins cFRCE between s
+and s0 then there exists tx 2 such that { tx 2 : O → I ; 11 USD ; id (cFRCE ) }
+∈ L(s0 ).
+   In Coq, we actually prove a more general version of these properties, where
+the amounts are multiplied by the scale of the contract. These propositions
+guarantee the (CM) and (AS) properties. (ES) does not make sense here be-
+cause no external sources are used.
+
+4.2. External rate currency exchange
+   A more interesting example is a currency exchange derivative where the
+exchange rate is provided by an external source, i.e., a gateway:
+     ∆
+ERCE = And (Give (Scale n (One USD)))
+                                     (ScaleObs addr (Scale n (One EUR)))
+An interesting question is what happens if the gateway fails to provide an ex-
+change rate r? First, we prove that the expected transactions are generated if
+the gateway successfully provides an exchange rate r:
+
+Proposition 4.3. For all s, s0 , with s consistent, if O joins cERCE between s
+and s0 , and query G(s) addr t = r then there exists tx 1 such that { tx 1 : I →
+O ; sc(cERCE ) ∗ r USD ; id (cERCE ) } ∈ L(s0 ).
+Proposition 4.4. For all s, s0 , with s consistent, if O joins cERCE between s
+and s0 , and query G(s) addr t = r then there exists tx 2 such that { tx 2 : O →
+I ; sc(cERCE ) EUR ; id (cERCE ) } ∈ L(s0 ).
+   Second, if the gateway query fails, we prove that the ledger remains un-
+changed, that is, (ES):
+Proposition 4.5. For all s, s0 , with s consistent, if cERCE is executed (or
+deleted) between s and s0 and query G(s) addr t(s) = None then L(s) = L(s0 ).
+Thus, no transaction has been performed, and the balance of the users is not
+affected by the gateway failure.
+    All the propositions in this section guarantee (CM), (ES), and (AS) for this
+Findel derivative.
+
+
+
+
+                                       19
+4.3. Zero-coupon bond
+    Our next case study is the zero-coupon bond (Example 2.2), where the issuer
+sells a zero-coupon bond that pays 11 USD in one year for 10 USD:
+    ∆
+ZCB =      And
+                 (Give (Scale (One USD) 10))      
+                 (At (now+t) (Scale (One USD) 11))
+First, we are concerned about the rights of the issuer:
+Proposition 4.6. For all s, s0 , with s consistent, if O joins cZCB between s
+and s0 then there is a transaction tx2 such that { tx2 : O → I ; sc(cZCB ) ∗ 10
+USD ; id (cZCB ) } ∈ L(s0 ).
+    At generates a new contract which can be executed between now + t − δ
+and now + t + δ (cf. Table 2). The owner gets paid only if he joins in this time
+interval:
+Proposition 4.7. For all s, s0 , now, t, with s consistent, if O joins cZCB
+between s and s0 , and O joins the contract cOR generated by cZCB at t0 ∈
+[now + t − δ, now + t + δ] then there is tx1 such that { tx1 : I → O ; sc(cOR )∗11
+USD ; id (cOR ) } ∈ L(s0 ).
+The hypotheses of the above proposition should be carefully considered: if O
+does not join in time, the he does not receive 11 USD. The next proposition
+reveals a security vulnerability (time constraints) that affects O:
+
+Proposition 4.8. For all s, s0 , now, t, with s consistent, if O joins cZCB
+between s and s0 and O joins the contract cOR generated by cZCB at t0 >
+now + t + δ then Deleted id (cOR ) ∈ E(s0 ).
+Deleted is generated by the [Fail] rule, so the ledger remains unchanged and
+the owner does not get paid. So, for ZCB only the properties (CM) and (AS)
+hold.
+
+4.4. An option derivative
+   Recall the option derivative OPT from Section 2.1.1:
+     ∆
+ OPT =      And
+                  (Before t (Or (Give (One USD)),
+                                 (Give (One EUR)))
+                  (After t+2 (Scale 1 (One GBP)))
+   We explained in Section 2.1.1 that Mallory requests and receives 1 GBP after
+t+2. This is proved by the next proposition:
+Proposition 4.9. For all s, s0 , t, with s consistent, if O joins cOPT between
+s and s0 before t, and then O joins the contract cAfter generated by cOPT at t0
+where t0 > t + 2, then there is tx1 such that { tx1 : I → O ; sc(cAfter ) GBP ;
+id (cAfter ) } ∈ L(s0 ).
+
+
+
+                                       20
+  This proposition ensures partially (only for the owner) the (CM) property.
+However, it violates (AS):
+Proposition 4.10. For all s, s0 , with s consistent before t, if O joins cOPT
+between s and s0 then O is the owner of any contract generated by cOPT .
+
+So I is not the owner of the generated option derivative, and thus, O is the one
+who decides whether or not to join the option contract. If O is honest then we
+can prove:
+Proposition 4.11. For all s, s0 , with s consistent, if O joins cOPT between s
+and s0 before t, and then O joins the contract cOr generated by cOPT after t,
+then there is tx2 such that { tx2 : O → I ; sc(cOr )  ; id (cOr ) } ∈ L(s0 ),
+where  ∈ {EUR, USD}.
+    Indeed, it is not acceptable for I to depend on O’s choice. A possible solu-
+tion for fixing OPT is to replace (Or (Give (One USD)) (Give (One EUR))) with
+(Give (Or (One USD) (One EUR))). Since the Give primitive swaps the roles of
+the participants for the enclosed contracts, I becomes the owner, O becomes the
+issuer, and thus, I can request the payment from O. With this change we can
+prove the next propositions that ensure (CM), (AS), and (ES) for this contract:
+Proposition 4.12. For all s, s0 , with s consistent, if O joins cOPT 0 between
+s and s0 before t, then I is the owner of the contract cOr generated by cOPT 0
+whose primitive is (Or (One USD) (One EUR)) and its issuer is O.
+Proposition 4.13. For all s, s0 , with s consistent, if O joins cOPT 0 between s
+and s0 before t, and then I joins cOr generated by cOPT 0 , then there is tx1 such
+that { tx1 : O → I ; sc(cOr )  ; id (cOr ) } ∈ L(s0 ), where  ∈ {EUR, USD}.
+
+4.5. Credit Default Swap
+    In this section we prove the properties (CM), (ES), and (AS) for a very
+popular and real-life financial derivative type: credit default swap (CDS). This
+type of derivative enables investors to swap credit risk with another investor.
+Suppose that Alice buys a financial bond of value price from Bob. The maturity
+of the bond is 3 years. Every year, Bob has to pay Alice a fee FY, and price
+when maturity is reached. Alice wants to protect her investment: she joins a
+CDS issued by a seller C with a better credit rating than Bob. For this, Alice
+pays an yearly fee F to C. If Bob defaults, then C will pay to Alice the price
+and the remaining fees:
+
+
+
+
+                                       21
+     ∆
+ CDS = (And
+         (* first year *)
+         (And
+            (Give (Scale F (One USD)))
+            (pay at t (now+1yr) addr
+                      (price + (2 * FY)))
+         )
+         (And
+              (* second year *)
+              (yearly check (now+1yr)(now+2yrs)
+                             addr price FY F 1)
+              (* third year *)
+              (yearly check (now+2yrs)(now+3yrs)
+                             addr price FY F 0)
+         )
+       )
+Since Findel does not allow contracts with three parties, we use a gateway
+available at address addr that can tell whether Bob defaulted or not. Here we
+take advantage of the compositionality of Findel: pay at t and yearly check
+are Findel contracts as well. First, pay at t pays sum at time t if Bob defaulted:
+             ∆
+    pay at t = (At t (If addr (Scale sum (One USD)) Zero))
+We prove that pay at t has the following property:
+Proposition 4.14. If Bob defaults at time t then the issuer of pay at t pays
+sum to the owner. Otherwise, no transaction between the involved parties is
+generated by contract pay at t.
+   Second, yearly check is more complex:
+              ∆
+ yearly check = At t (If addr Zero
+                     (And (Give (Scale F (One USD)))
+                          (pay at t t’ addr (price + i * FY))))
+
+The contract describes the obligations that parties have at time t: if Bob de-
+faulted at t, nothing happens. Otherwise, Alice pays F to C, and C pays price
++ i * FY at t’ if Bob defaults. The contract is intended to be used inside CDS:
+at now + 1 year, Alice pays F to C, and at t’ = now + 2 years C pays price
++ 1 * FY to Alice if Bob defaulted at t’. We prove that in Coq:
+Proposition 4.15. If Bob defaults at time t, then yearly check does not
+generate any transactions. If Bob does not default at t then the issuer receives
+fee F from the owner and a pay at at t’ (price + i * FY) contract with
+the same owner is generated.
+Here, i is the number of fees left to be paid until maturity is reached. For
+instance, if Bob defaults at now + 1 year then C pays to Alice price+2*FY.
+    The financial obligations of C to Alice when Bob defaults are summarized
+by Table 4.5. The same table lists the financial obligations of Alice to C. In Coq
+we prove that the Findel specification of CDS ensures that these obligations are
+
+
+                                       22
+               Bob defaults at        Obligations of C to Alice
+                 now + 1 year              price + 2 * FY
+                now + 2 years              price + 1 * FY
+                now + 3 years                   price
+                  Timestamp           Obligations of Alice to C
+                     now                          F
+                 now + 1 year                     F
+                now + 2 years                     F
+
+                   Table 3: The financial obligations of the parties.
+
+
+fullfilled by the parties. Moreover, we prove that no other finacial obligation is
+generated by CDS.
+    The compositional nature of Findel contracts allows us to develop incremen-
+tal proofs for CDS. In our proofs for CDS we reuse Propositions 4.14 and 4.15.
+The proofs are broken into smaller pieces, and they become less difficult and
+easier to manage.
+
+
+5. Conclusions
+
+    The recent developments in the blockchain technologies, especially the sup-
+port for smart contracts, are a perfect match for financial agreements. In partic-
+ular, it makes sense to have DSLs for financial derivatives that run directly on
+the blockchain, and thus, they are automatically processed by a decentralized
+network. These languages are specially designed for people in finance. They can
+focus on the specification rather than learning how to program smart contracts.
+Expressing financial derivatives in a specialized DSL may be more precise and
+less error prone than specifying them in a general purpose smart contracts lan-
+guage [16]. Either way, mistakes in contracts can happen.
+    Our work is complementary to the efforts in previous research like [7] or [8],
+where DSLs based on similar primitives as Findel were formalised only with
+the purpose of making various analyses or estimating derivatives values. Findel
+derivatives are executed in the blockchain, making derivatives susceptible of
+several known vulnerabilities of smart contracts. Our infrastructure is meant to
+help users to discover such vulnerabilities in their financial derivatives.
+
+Future work. The main disadvantage of Coq is the fact that it is not fully
+automatic. Other tools, like K [24], can help with automation. However, these
+are not yet capable to generate certificates. On the other hand it is worth
+investigating whether these tools are more practical than Coq.
+   Automation of proofs remains a challenge for our approach. Coq allows users
+to define the so-called tactics which helps with improving the proof language.
+Here we define several tactics that we use to discharge very common proof goals.
+However, a deeper investigation on how to define specific tactics is required.
+
+
+
+                                          23
+   Another piece of future work is an investigation on other financial DSLs
+that run on the blockchain, where proving correctness of the encoded financial
+agreements could help with finding security vulnerabilities.
+
+Acknowledgements. This work was supported by a research grant of the “Alexan-
+dru Ioan Cuza”, University of Iaşi, within the Research Grants program, Grant
+UAIC, ctr. no. 6/03.01.2018, code GI-UAIC-2017-08.
+
+References
+
+ [1] A. Steinherr. Derivatives: The Wild Beast of Finance. Wiley, 1998. ISBN
+     9780471965442.
+ [2] J. Hull. Options, Futures and Other Derivatives. Options, Futures and
+     Other Derivatives. Pearson/Prentice Hall, 2009. ISBN 9780136015864.
+ [3] A.M. Chisholm. Derivatives Demystified: A Step-by-Step Guide to For-
+     wards, Futures, Swaps and Options. The Wiley Finance Series. Wiley,
+     2010. ISBN 9780470972953.
+ [4] A. Gottesman. Derivatives Essentials: An Introduction to Forwards,
+     Futures, Options and Swaps.   Wiley Finance. Wiley, 2016.    ISBN
+     9781119163497.
+ [5] S. Tikhomirov.   Github findel, 2019.       URL https://github.com/
+     cryptolu/findel.
+ [6] Solidity docs, 2020. URL https://solidity.readthedocs.io/.
+ [7] SL Peyton Jones, J-M Eber, J Seward, and Simon Peyton Jones. Com-
+     posing contracts: an adventure in financial engineering. In ACM SIG-
+     PLAN International Conference on Functional Programming (ICFP’00),
+     pages 280–292. ACM Press, September 2000.
+ [8] J.M. Gaillourdet. A software language approach to derivative contracts in
+     finance. CEUR Workshop Proceedings, 750, 01 2011.
+ [9] A. Biryukov, D. Khovratovich, and S. Tikhomirov. Findel: Secure deriva-
+     tive contracts for ethereum. In Financial Cryptography Workshops, volume
+     10323 of LNCS, pages 453–467, 2017.
+[10] P. Lamela Seijas and S. Thompson. Marlowe: Financial contracts on
+     blockchain. In Tiziana M. and Bernhard S., editors, Leveraging Applica-
+     tions of Formal Methods, Verification and Validation. Industrial Practice,
+     pages 356–375, Cham, 2018. Springer International Publishing. ISBN 978-
+     3-030-03427-6.
+[11] B. Egelund-Müller, M. Elsman, F. Henglein, and O. Ross. Automated
+     execution of financial contracts on blockchains. Business & Information
+     Systems Engineering, 59(6):457–467, Dec 2017. ISSN 1867-0202.
+
+
+                                      24
+[12] S. Nakamoto. Bitcoin: A peer-to-peer electronic cash system, 2009. URL
+     http://www.bitcoin.org/bitcoin.pdf.
+[13] G. Wood. Ethereum: a secure decentralised generalised transaction ledger.
+     https://gavwood.com/paper.pdf, 2014.
+[14] V. Buterin. Ethereum : A next-generation smart contract and decentralized
+     application platform, 2013.
+[15] C. Hoskinson. Why we are building Cardano, 2017.           URL https://
+     whycardano.com/.
+[16] N. Atzei, M. Bartoletti, and T. Cimoli. A survey of attacks on ethereum
+     smart contracts sok. In Proceedings of the 6th International Conference on
+     Principles of Security and Trust - Vol 10204, pages 164–186, New York,
+     NY, USA, 2017. Springer-Verlag New York, Inc. ISBN 978-3-662-54454-9.
+[17] V. Dwivedi, V. Deval, A. Dixit, and A. Norta. Formal-verification of
+     smart-contract languages: A survey. In M. Singh, P.K. Gupta, V. Tyagi,
+     J. Flusser, T. Ören, and R. Kashyap, editors, Advances in Computing and
+     Data Sciences, pages 738–747, 2019. ISBN 978-981-13-9942-8.
+[18] Y. Wang, S. Lahiri, S. Chen, R. Pan, I. Dillig, C. Born, and I. Naseer. For-
+     mal specification and verification of smart contracts for azure blockchain,
+     April 2019. URL https://arxiv.org/abs/1812.08829.
+[19] K. Bhargavan, A. Delignat-Lavaud, C. Fournet, A. Gollamudi, G. Gonthier,
+     N. Kobeissi, N. Kulatova, A. Rastogi, T. Sibut-Pinote, N. Swamy, and
+     S. Zanella-Béguelin. Formal verification of smart contracts: Short paper.
+     In Proceedings of the 2016 ACM Workshop on Programming Languages
+     and Analysis for Security, pages 91–96, New York, NY, USA, 2016. ACM.
+     ISBN 978-1-4503-4574-3.
+[20] K. Sukrit, G. Seep, D. Mohan, and S. Subodh. ZEUS: analyzing safety of
+     smart contracts. In 25th Annual Network and Distributed System Security
+     Symposium, NDSS, San Diego, California, USA, February 18-21, 2018,
+     page 15, 2018.
+[21] P. Tsankov, A. Dan, D. Drachsler-Cohen, A. Gervais, F. Bünzli, and
+     M. Vechev. Securify: Practical security analysis of smart contracts. In
+     Proceedings of the 2018 ACM SIGSAC Conference on Computer and Com-
+     munications Security, pages 67–82, New York, NY, USA, 2018. ACM. ISBN
+     978-1-4503-5693-0.
+[22] I. Grishchenko, M. Maffei, and C. Schneidewind. A semantic framework
+     for the security analysis of ethereum smart contracts. In L. Bauer and
+     R. Küsters, editors, Principles of Security and Trust, pages 243–269, Cham,
+     2018. Springer. ISBN 978-3-319-89722-6.
+[23] Coq. The coq proof assistant. URL https://coq.inria.fr/.
+
+
+                                       25
+[24] T.F. Serbanuta, A. Arusoaie, D. Lazar, C. Ellison, D. Lucanu, and G. Roşu.
+     The K primer (version 3.3). Electr. Notes Theor. Comput. Sci., 304:57–80,
+     2014.
+
+
+
+
+                                      26
+

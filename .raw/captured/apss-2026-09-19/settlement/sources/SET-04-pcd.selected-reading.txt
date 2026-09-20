@@ -1,0 +1,153 @@
+PDF page 13:
+                                              A. CHIESA AND E. TROMER
+
+
+
+bility) eﬃciently ﬁnd a valid witness for the instance              bits. Indeed, our constructions do not require the
+output by P among the queries of P to O, which is                 randomness from the token to be fresh for repeated
+the main ingredient of the proof of correctness of the              queries with the same input, and security holds even
+list extractor LE.                                                  if the randomness comes from a pseudorandom func-
+                                                                    tion. Intuitively, this holds since even with a random-
+3.6    Realizability of an Assisted Prover                          ized oracle, adversaries can replay old answers.
+   Our construction attain APHA systems (and
+eventually PCD systems) assuming black-box ac-                      4     Proof-Carrying Data Systems
+cess to single, ﬁxed functionality: signed-input-and-
+randomness. This functionality is stateless, and is                    We deﬁne and construct proof-carrying data (PCD)
+parametrized by a single concise secret (the signing                systems, which realize the framework of proof-
+key sk).                                                            carrying data. The following subsections are orga-
+                                                                    nized as follows: in Section 4.1, we deﬁne the notion
+Communication. The communication between the
+                                                                    of compliance for distributed computation; in Sec-
+prover and the oracle O is as low as one could hope
+                                                                    tion 4.2, we deﬁne PCD systems and discuss their
+for given our approach to knowledge extraction (see
+                                                                    properties; in Section 4.3, we construct a PCD sys-
+Section 3.2): linear in the witness size |w|, and poly-
+                                                                    tem, and, in Section 4.4, we sketch its correctness.
+nomial in the instance |y| and security parameter κ.
+Moreover, only four queries are needed. Note that the               4.1    Compliance of Computation
+total communication is linear in the length of the orig-              We begin by specifying our notion of distributed
+inal witness w for the statement y = (M, x, t) ∈ SU ,               computation.
+rather than (as in non-interactive CS proofs) a much
+longer PCP witness which contains the whole t-step                  Deﬁnition 3 (Distributed computation transcript).
+execution of M (x, w).                                              A distributed computation transcript (abbreviated
+Computation. Using the hash-then-sign approach,                     transcript) is a triple DC = (G, code, data) represent-
+and typical hash function constructions, the computa-               ing a directed acyclic multi-graph G = (V, E) with
+tional complexity of the signed-input-and-randomness                labels code on the vertices and labels data on the
+functionality is essentially linear in its communication            edges. Vertices represent the computation of pro-
+complexity size and polynomial in the security param-               grams, and edges represent messages sent between
+eter.                                                               these programs. Each non-source vertex v is with la-
+                                                                    beled its program code, denoted code(v). Each edge
+Realization. How would such an oracle be pro-
+                                                                    (u, v) is labeled by data(u, v), which is the data that
+vided in reality? As noted earlier, similar requisites
+                                                                    is (allegedly) output by the program of u and is given
+arose in related works [39][42][54][17][25][50]. One
+                                                                    as input to the program of v. Each source vertex
+well-studied option is to use a secure hardware token
+                                                                    has a single outgoing edge, carrying an input of the
+that is tamper-proof and leak-proof. Indeed, simi-
+                                                                    distributed computation; there are no programs at
+lar signing tokens are already prescribed by German
+                                                                    sources, so we set their label to ⊥. The ﬁnal output of
+law [28]. Similarly, the functionality can be embed-
+                                                                    the distributed computation is the data carried along
+ded in cryptographic coprocessors, TPM chips, and
+                                                                    edges going into sinks.
+general-purpose smartcard such as TEMs [24]. Alter-
+                                                                       An augmented distributed computation transcript
+natively, one may hope that this speciﬁc functionality
+                                                                    (abbreviated augmented transcript) is a quadruple
+can be obfuscated, either in the strict virtual-box-box
+                                                                    ADC = (G, code, data, proof) such that (G, code, data)
+sense [7] or (for real-world security applications) in
+                                                                    is a transcript, and proof is an additional labeling on
+some heuristic sense. Lastly, the functionality can be
+                                                                    the edges of G, specifying proof strings carried along
+realized via standard MPC techniques between multi-
+                                                                    those edges. (See Figure 5.)
+ple parties, tokens, or services, if the requisite fraction
+                                                                       Given a transcript DC = (G, code, data), at times
+of honest participants is available.
+                                                                    we need to consider the part of the distributed com-
+Removing randomness. The randomness of the                          putation up to a certain point. For an edge (u, v) ∈ E,
+signed-input-and-randomness functionality is not es-                we deﬁne the transcript of DC up to (u, v), denoted
+sential: one could replace the fresh random bits with               DC|(u,v) = (G , code , data ), to be the labeled sub-
+pseudorandom bits obtained by a pseudorandom func-                  graph induced by the subset of vertices consisting of
+tion, applied to the input, whose seed is kept secret.              v, u and all ancestors of u.
+In this way, one only has to trust the token to hide
+its secret bits (the signing key and the seed) and to                  A transcript captures the propagation of informa-
+operate correctly, but not to also generate random                  tion via messages in the distributed computation, and
+                                                              322
+
+PDF page 14:
+               PROOF-CARRYING DATA AND HEARSAY ARGUMENTS FROM SIGNATURE CARDS
+
+
+
+                                                                                zd , πd
+                                             zb , πb
+                                      prgb                        prgd                           prgf
+           input               πa
+          zin , πin prg   z a,                 zb 
+                                                      ,π                        zd , πd
+     ⊥                  a                              b     ze , πe                            zf , πf
+                         za 
+                                ,π           zc , πc                           ze , πe              z ,π
+                                 a
+                                      prgc                        prge                            prgg out out
+                                                                                                           output
+  Figure 5: Example of an augmented distributed computation transcript. Programs are denoted by prg’s, data by
+  z’s, and proof strings by π’s. The corresponding (non-augmented) distributed computation transcript is with the
+  proof strings omitted.
+
+
+thus the graph is acyclic by deﬁnition. A party per-              4.2     Deﬁnition of PCD Systems
+forming several steps of computations on diﬀerent in-                We proceed to deﬁne proof-carrying data systems,
+puts at diﬀerent times is represented by distinct cor-            starting with their structure and an informal descrip-
+responding vertices.                                              tion of their properties.
+  Next, we deﬁne what we mean for a distributed
+computation to be compliant, which is our notion                  4.2.1     Structure of PCD systems
+of “correctness with respect to some speciﬁcation”.                 A PCD system consists of a triple of machines,
+We capture compliance via an eﬃciently computable                 (GPCD , PPCD , VPCD ), that works as follows:
+predicate C that is required to hold true at each ver-            • The PCD oracle generator GPCD : for a security
+tex, when given the program of the vertex together                  parameter κ, GPCD (1κ ) outputs the description of
+with its inputs and (alleged) outputs.                              a probabilistic10 stateless oracle O, together with
+                                                                    O’s veriﬁcation key vk.
+                                                                  • The PCD prover PPCD : Let vk be a veriﬁca-
+Deﬁnition 4 (C-compliance). A compliance pred-
+                                                                    tion key, let C be a compliance predicate, and
+icate C is a polynomial-time computable pred-
+                                                                    let prg be a program with (alleged) output zout
+icate on strings.       A distributed computation
+                                                                    and two inputs zin1 and zin2 with correspond-
+transcript DC = (G, code, data) is C-compliant
+                                                                    ing proof strings πin1 and πin2 (see Figure 6).
+if  for every vertex v ∈ V  it holds that                                  O
+                                                                    Then PPCD   (vk, C, zout , prg, zin1 , πin1 , zin2 , πin2 ) out-
+C data(in(v)), code(v), data(out(v))    = 1 (where
+                                                                    puts a proof string πout for the claim that zout is an
+data(in(v)) denotes the list of data labels on v’s par-
+                                                                    output consistent with a C-compliant transcript.11
+ents, and analogously for data(out(v))).
+                                                                  • The PCD veriﬁer VPCD : for a veriﬁcation key vk,
+                                                                    a compliance predicate C, an output zout , and a
+                                                                    proof string πout , VPCD (vk, C, zout , πout ) accepts if
+Alternatives. One may consider stronger forms of                    πout convinces him that zout is an output consistent
+compliance. For example, the compliance predicate                   with a C-compliant transcript.
+could get as extra inputs the graph G and the iden-
+tity of the vertex v (so that the compliance pred-                   Using these algorithms, a distributed computation
+icate “knows” which vertex in the graph it is ex-                 transcript is dynamically compiled into an augmented
+amining). Stronger still, the compliance predicate                distributed computation transcript by adding a proof
+could be global, and get as input the whole transcript            string to each edge (see Figure 5). The process of gen-
+DC = (G, code, data). However, our goal is to real-               erating proof strings is deﬁned inductively, by having
+ize PCD in a dynamic setting, where future compu-                 each (internal) vertex v in DC use PPCD to produce
+tations have not happened yet (and might even be                  a new proof string πout for its output zout (given its
+unknown) and past computations have been long for-                inputs, their inductively generated proof strings, its
+gotten, so that compliance must indeed be decided                 program, and output).
+locally. Therefore, we choose a local compliance pred-              10 The oracle can be derandomized; see Section 3.6.
+icate, which only gets as input the information that is             11 Without loss of generality, we restrict our attention to tran-
+locally available at a vertex, i.e., the program of the           scripts for which programs have exactly two inputs and one
+vertex together with its inputs and (alleged) outputs.            output.
+
+                                                            323

@@ -1,5 +1,7 @@
 # Moriarty completion sprints
 
+The [product contract](../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [P0–P7 reconciliation](../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control current scope. All campaign/reviewer gates here are internal project delivery controls; objective proof, financial and ledger requirements remain mandatory.
+
 Status: S2, specified-only. These delivery plans implement the [user's sprint request](../../raw/assignments/moriarty-sprint-planning-2026-09-07.md). They schedule the existing [MC01-MC08 contracts](../MORIARTY-COMPLETION-PROGRAM.md), [RP01-RP03 gates](../REPORT-RECONCILIATION-2026-09-07.md) and [language design amendment](../DEFI-LANGUAGE-DESIGN-2026-09-07.md). Package acceptance remains in the [program register](../moriarty-completion-program.json). [sprints.json](sprints.json) is navigation, not a second acceptance authority.
 
 Moriarty is a bounded financial language for Midnight. Completion means a developer can author an agreement, inspect its effects, sign an intent, prove compliant execution and settle it with mandatory proof verification. The program must cover the required ACTUS and DeFi behavior, including private continuation and composition.

@@ -1,0 +1,245 @@
+On this page
+Example
+Properties
+maxAmountPerPayment?
+maxCumulativeSpend?
+maxCumulativeSpendWindow?
+allowedNetworks?
+allowedAssets?
+allowedPayees?
+onApproachingLimit()?
+Parameters
+Returns
+approachingLimitThresholds?
+maxLedgerEntries?
+store?
+SpendControls
+Copy page
+Copy page
+Copy page
+Copy page
+type
+SpendControls
+=
+{
+maxAmountPerPayment
+?:
+Amount
+;
+maxCumulativeSpend
+?:
+Amount
+;
+maxCumulativeSpendWindow
+?:
+Duration
+;
+allowedNetworks
+?:
+Network
+[];
+allowedAssets
+?:
+Asset
+[];
+allowedPayees
+?:
+Address
+[];
+onApproachingLimit
+?:
+(
+spent
+:
+Amount
+,
+limit
+:
+Amount
+)
+=>
+void
+;
+approachingLimitThresholds
+?:
+number
+[];
+maxLedgerEntries
+?:
+number
+;
+store
+?:
+SpendStore
+;
+};
+Defined in:
+guardrails/types.ts:153
+Configuration for spend controls. All fields are optional.
+​
+Example
+const
+USDC_BASE
+=
+"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+;
+const
+controls
+:
+SpendControls
+=
+{
+maxAmountPerPayment:
+{
+atomic:
+10_000
+n
+,
+asset:
+USDC_BASE
+},
+maxCumulativeSpend:
+{
+atomic:
+50_000
+n
+,
+asset:
+USDC_BASE
+},
+maxCumulativeSpendWindow:
+"24h"
+,
+allowedNetworks:
+[
+"eip155:8453"
+],
+};
+​
+Properties
+​
+maxAmountPerPayment?
+optional
+maxAmountPerPayment
+:
+Amount
+;
+Defined in:
+guardrails/types.ts:160
+Hard per-payment cap. If
+asset
+is set the cap only applies to payments in
+that asset — payments in any other asset are left uncapped by this field
+(atomic units are not comparable across assets with different decimals).
+Omit
+asset
+to cap every payment by raw atomic amount.
+​
+maxCumulativeSpend?
+optional
+maxCumulativeSpend
+:
+Amount
+;
+Defined in:
+guardrails/types.ts:166
+Rolling cumulative cap. Unlike
+maxAmountPerPayment
+,
+asset
+is required
+(enforced when spend controls are applied) because cross-asset atomic units
+cannot be summed.
+​
+maxCumulativeSpendWindow?
+optional
+maxCumulativeSpendWindow
+:
+Duration
+;
+Defined in:
+guardrails/types.ts:167
+​
+allowedNetworks?
+optional
+allowedNetworks
+:
+Network
+[];
+Defined in:
+guardrails/types.ts:168
+​
+allowedAssets?
+optional
+allowedAssets
+:
+Asset
+[];
+Defined in:
+guardrails/types.ts:169
+​
+allowedPayees?
+optional
+allowedPayees
+:
+Address
+[];
+Defined in:
+guardrails/types.ts:170
+​
+onApproachingLimit()?
+optional
+onApproachingLimit
+: (
+spent
+:
+Amount
+,
+limit
+:
+Amount
+)
+=>
+void
+;
+Defined in:
+guardrails/types.ts:171
+​
+Parameters
+spent
+Amount
+limit
+Amount
+​
+Returns
+void
+​
+approachingLimitThresholds?
+optional
+approachingLimitThresholds
+:
+number
+[];
+Defined in:
+guardrails/types.ts:172
+​
+maxLedgerEntries?
+optional
+maxLedgerEntries
+:
+number
+;
+Defined in:
+guardrails/types.ts:173
+​
+store?
+optional
+store
+:
+SpendStore
+;
+Defined in:
+guardrails/types.ts:174
+Was this page helpful?
+Yes
+No

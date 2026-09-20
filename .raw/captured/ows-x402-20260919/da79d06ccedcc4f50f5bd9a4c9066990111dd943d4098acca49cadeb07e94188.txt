@@ -1,0 +1,295 @@
+On this page
+Discover with the Bazaar MCP server
+The payment loop over MCP
+Pay for tool calls
+Reference
+What to read next
+Buyer
+Discover & pay over MCP
+Copy page
+Copy page
+Copy page
+Copy page
+Discover services
+and the
+buyer quickstart
+cover finding and paying for services over HTTP. If
+your agent speaks
+Model Context Protocol
+instead, it can do
+both jobs as tool calls: search CDP’s hosted Bazaar MCP server for a service, then pay for it
+through the same x402 loop, carried in MCP’s wire format rather than HTTP headers.
+​
+Discover with the Bazaar MCP server
+The Bazaar exposes an MCP server so any MCP-compatible agent can search and call paid x402
+endpoints:
+https://api.cdp.coinbase.com/platform/v2/x402/discovery/mcp
+Discovery is public. The endpoint is unauthenticated, so no CDP API key is required to connect
+or search.
+It exposes three tools:
+Tool
+Does
+search_resources
+Semantic search over the Bazaar catalog — same index and filters as the
+HTTP search endpoint
+, returned as MCP tool results instead of JSON over REST.
+proxy_tool_call
+Calls a discovered resource by
+toolName
+and arguments. If the resource requires payment, it returns a payment-required tool result instead of the resource, which your client resolves using the loop below.
+validate_endpoint
+Read-only diagnostics for an x402 URL: whether it’s reachable, returns
+402
+, and advertises a valid discovery block. Makes no payment.
+Searching is free. Only
+proxy_tool_call
+against a paid resource triggers a payment, and it does
+so with the standard x402 MCP transport rather than a Bazaar-specific mechanism, so the client
+setup below covers it.
+​
+The payment loop over MCP
+The full wire-level detail lives in the x402 Foundation’s
+MCP transport spec
+;
+this is the short version:
+The client calls a paid tool with no payment attached.
+The server returns a tool result with
+isError: true
+and a
+PaymentRequired
+payload — MCP’s
+equivalent of an HTTP 402 status and
+PAYMENT-REQUIRED
+header.
+The client builds a payment payload and retries the same tool call, this time with it attached
+at
+_meta["x402/payment"]
+— MCP’s equivalent of
+PAYMENT-SIGNATURE
+.
+The server verifies and settles the payment, then returns the tool’s real result with
+settlement info attached at
+_meta["x402/payment-response"]
+— MCP’s equivalent of
+PAYMENT-RESPONSE
+.
+​
+Pay for tool calls
+Wrap your MCP client so this loop runs transparently around tool calls, paired with a CDP-managed
+wallet — no private keys or manual scheme registration. The same wrapped client works against any
+x402 MCP server, including the Bazaar’s
+proxy_tool_call
+.
+TypeScript
+Python
+npm
+install
+@coinbase/cdp-sdk
+@modelcontextprotocol/sdk
+@x402/core
+@x402/evm
+@x402/mcp
+@x402/mcp
+’s
+wrapMCPClientWithPayment
+wraps any MCP SDK
+Client
+; every other method stays a
+direct passthrough.
+CdpX402Client
+from the CDP SDK provisions its wallet lazily and signs
+payments automatically.
+import
+{
+Client
+}
+from
+"@modelcontextprotocol/sdk/client/index.js"
+;
+import
+{
+SSEClientTransport
+}
+from
+"@modelcontextprotocol/sdk/client/sse.js"
+;
+import
+{
+CdpX402Client
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+wrapMCPClientWithPayment
+}
+from
+"@x402/mcp"
+;
+const
+payment
+=
+new
+CdpX402Client
+({
+environment:
+"development"
+,
+// Bound what this agent can spend — see [Set spend limits](/x402/buyer/client-configuration#set-spend-limits).
+spendControls:
+{},
+});
+const
+mcp
+=
+wrapMCPClientWithPayment
+(
+new
+Client
+({
+name:
+"my-agent"
+,
+version:
+"1.0.0"
+}, {
+capabilities:
+{} }),
+payment
+,
+// autoPayment: true pays and retries automatically on a 402; false throws
+// instead, so you can inspect the price and pay manually.
+{
+autoPayment:
+true
+},
+);
+await
+mcp
+.
+connect
+(
+new
+SSEClientTransport
+(
+new
+URL
+(
+"http://localhost:4022/sse"
+)));
+const
+report
+=
+await
+mcp
+.
+callTool
+(
+"generate_report"
+, {
+topic:
+"USDC on Base"
+});
+Full runnable version, including wallet funding and a payment-approval hook:
+clients/mcp/simple.ts
+.
+pip
+install
+"cdp-sdk"
+"x402[evm,mcp]"
+The standard
+x402Client
+runs the same loop via
+create_x402_mcp_client
+. Give it a CDP-managed
+wallet by wrapping a CDP Server Wallet with
+EvmLocalAccount
+, then adapting it to the x402
+signer protocol with
+EthAccountSigner
+— it registers just like a local key.
+from
+cdp
+import
+CdpClient
+from
+cdp.evm_local_account
+import
+EvmLocalAccount
+from
+x402
+import
+x402Client
+from
+x402.mcp
+import
+create_x402_mcp_client
+from
+x402.mechanisms.evm
+import
+EthAccountSigner
+from
+x402.mechanisms.evm.exact
+import
+ExactEvmScheme
+account
+=
+await
+CdpClient().evm.get_or_create_account(
+name
+=
+"my-agent"
+)
+signer
+=
+EthAccountSigner(EvmLocalAccount(account))
+payment
+=
+x402Client()
+payment.register(
+"eip155:84532"
+, ExactEvmScheme(signer))
+async
+with
+create_x402_mcp_client(payment,
+"http://localhost:4022"
+)
+as
+mcp:
+report
+=
+await
+mcp.call_tool(
+"generate_report"
+, {
+"topic"
+:
+"USDC on Base"
+})
+Full runnable version, including faucet funding:
+clients/mcp/simple.py
+.
+​
+Reference
+For exact signatures and every configuration option, see the generated
+SDK reference
+.
+​
+What to read next
+Want a wallet bundled in rather than bringing your own? See
+Agentic Wallet
+. Building on AWS Bedrock AgentCore? Its “Coinbase x402
+Bazaar” Gateway target wires up this same endpoint — see
+AgentCore (AWS)
+. Building the other side of this
+exchange, a paid MCP tool? See
+Charge over MCP
+.
+Was this page helpful?
+Yes
+No
+Discover services (Bazaar)
+Previous
+Configure Your x402 Client
+Next

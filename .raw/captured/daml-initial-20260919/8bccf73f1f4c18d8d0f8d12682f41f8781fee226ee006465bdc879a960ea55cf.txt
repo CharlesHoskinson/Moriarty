@@ -1,0 +1,1796 @@
+On this page
+Splice.Api.Token.AllocationV2
+Interfaces
+Interface Allocation
+Choice Allocation_Cancel
+Choice Allocation_Settle
+Choice Allocation_Withdraw
+Choice Archive
+Method allocation_cancelExtraObservers
+Method allocation_cancelImpl
+Method allocation_settleExtraObservers
+Method allocation_settleImpl
+Method allocation_withdrawExtraObservers
+Method allocation_withdrawImpl
+Interface SettlementFactory
+Choice Archive
+Choice SettlementFactory_PublicFetch
+Choice SettlementFactory_SettleBatch
+Method settlementFactory_publicFetchImpl
+Method settlementFactory_settleBatchExtraObservers
+Method settlementFactory_settleBatchImpl
+Data Types
+data AllocationAction
+data AllocationResult
+data AllocationResult_Output
+data AllocationSpecification
+data AllocationView
+data FinalizedAllocation
+data SettlementFactoryView
+data SettlementFactory_SettleBatchResult
+data SettlementInfo
+data TransferLeg
+data TransferLegSide
+data TransferSide
+Functions
+allocation_settleImpl
+allocation_cancelImpl
+allocation_withdrawImpl
+allocation_settleExtraObservers
+allocation_cancelExtraObservers
+allocation_withdrawExtraObservers
+settlementFactory_publicFetchImpl
+settlementFactory_settleBatchImpl
+settlementFactory_settleBatchExtraObservers
+Splice APIs
+Splice Daml Packages
+Token Standard v2
+splice-api-token-allocation-v2
+Splice.Api.Token.AllocationV2
+Copy page
+Copy page
+Reference documentation for Daml module Splice.Api.Token.AllocationV2.
+Copy page
+Copy page
+Daml module
+​
+Splice.Api.Token.AllocationV2
+This module defines V2 of the Allocation interface and supporting types.
+Daml
+​
+Interfaces
+​
+Interface
+Allocation
+A contract representing the approval of the authorizer to send or receive
+the net amount of assets of the transfer legs as part of a settlement where
+the executors and instrument admin check that every transfer leg has a matching
+authorization from the otherside.
+View Type:
+AllocationView
+Choices:
+​
+Choice
+Allocation_Cancel
+Cancel the allocation to release the funds and invalidate the approval
+to execute the settlement.
+Typically called by
+the executors once it is clear that the settlement will not be executed
+the admin to cancel an expired allocation
+The choice is nonconsuming to support alternative consumption patterns,
+e.g., by calling the consuming V1.Allocation_Cancel choice for
+transaction parsing compatibility.
+IMPORTANT: implementations MUST ensure that the allocation is consumed by
+the body of this choice.
+Controllers:
+actors
+Returns:
+AllocationResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the cancellation.
+Implementations MUST check these parties to avoid unauthorized cancellation.
+By default, they SHOULD require them to be equal to the allocation
+executors
+.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+Allocation_Settle
+Settle the allocation by moving the net amount of the transfer legs.
+If a settlement deadline is set, implementations MUST NOT allow calling
+this choice after the settlement deadline has passed.
+The choice is nonconsuming to support alternative consumption patterns,
+e.g., by calling the consuming V1.Allocation_ExecuteTransfer choice for
+transaction parsing compatibility.
+IMPORTANT: implementations MUST ensure that the allocation is consumed by
+the body of this choice.
+Controllers:
+actors
+Returns:
+AllocationResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the settlement.
+Implementations MUST check these parties to avoid unauthorized settlement execution.
+By default, they SHOULD require them to be equal to the allocation
+admin
+and the
+executors
+, so that they can jointly guarantee
+atomic settlement.
+This authorization is typically provided as part of the
+SettlementFactory_SettleBatch
+choice, which should be used by the
+executors
+to settle V2 allocations.
+​
+extraTransferLegSides
+[TransferLegSide]
+Extra transfer leg sides to settle as part of settlement.
+They MUST NOT be set unless iterated settlement was enabled by the
+allocation’s authorizer.
+​
+nextIterationFunding
+Optional (TextMap Decimal)
+The funds to reserve for the next settlement iteration, if there is any.
+This MUST NOT be set unless iterated settlement was enabled by the
+allocation’s authorizer.
+Setting this to
+None
+indicates that no further settlement
+iterations will be executed after this one.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+Allocation_Withdraw
+Allow the authorizer to withdraw the allocation to release the funds
+and invalidate the approval to execute the settlement. This can for
+example be used by the authorizer to undo a mistakenly created
+allocation.
+For committed allocations (i.e.,
+committed
+set to
+True
+), this
+choice can only be exercised once the settlement deadline has passed.
+The choice is nonconsuming to support alternative consumption patterns,
+e.g., by calling the consuming V1.Allocation_Withdraw choice for
+transaction parsing compatibility.
+IMPORTANT: implementations MUST ensure that the allocation is consumed by
+the body of this choice.
+Controllers:
+actors
+Returns:
+AllocationResult
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the withdrawal.
+Implementations MUST check these parties to avoid unauthorized withdrawal.
+By default they SHOULD allow the account parties of the authorizer to
+withdraw the allocation.
+​
+extraArgs
+ExtraArgs
+Additional context required in order to exercise the choice.
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+Methods:
+​
+Method
+allocation_cancelExtraObservers
+Type:
+Allocation_Cancel
+-> [
+Party
+]
+​
+Method
+allocation_cancelImpl
+Type:
+ContractId
+Allocation
+->
+Allocation_Cancel
+->
+Update
+AllocationResult
+​
+Method
+allocation_settleExtraObservers
+Type:
+Allocation_Settle
+-> [
+Party
+]
+​
+Method
+allocation_settleImpl
+Type:
+ContractId
+Allocation
+->
+Allocation_Settle
+->
+Update
+AllocationResult
+​
+Method
+allocation_withdrawExtraObservers
+Type:
+Allocation_Withdraw
+-> [
+Party
+]
+​
+Method
+allocation_withdrawImpl
+Type:
+ContractId
+Allocation
+->
+Allocation_Withdraw
+->
+Update
+AllocationResult
+​
+Interface
+SettlementFactory
+A settlement factory enables the net settlement of a batch of allocations
+for the same instrument admin.
+View Type:
+SettlementFactoryView
+Choices:
+​
+Choice
+Archive
+Controllers:
+Signatories of implementing template
+Returns: ()
+​
+Choice
+SettlementFactory_PublicFetch
+Controllers:
+actors
+Returns:
+SettlementFactoryView
+Arguments:
+​
+actors
+[Party]
+Set of parties executing the fetch.
+​
+Choice
+SettlementFactory_SettleBatch
+Settle a batch of allocations for instruments with the same instrument admin.
+The choice is structured in this form for efficiency and privacy. It
+enables the instrument admin to only perform net debits and credits for
+each account across all transfers being settled; and restrict visibility of
+each credit or debit to executors, admin, and affected account parties only.
+Controllers:
+actors
+Returns:
+SettlementFactory_SettleBatchResult
+Arguments:
+​
+settlement
+SettlementInfo
+The settlement for which the allocations are settled.
+​
+transferLegs
+[TransferLeg]
+The transfers that are to be executed as part of the settlement.
+There MUST be at least one transfer leg. All transfer legs MUST have the
+same instrument admin as the one of the factory.
+​
+allocations
+[FinalizedAllocation]
+Allocations to settle.
+They serve as proof that all transfers executed as part of settlement
+were authorized by both sender and receiver.
+The implementation of this choice determines the validation performed
+by the instrument admin when settling an allocation created by an
+instrument holder.
+​
+actors
+[Party]
+Allows setting non-default controllers for settling the batch, which
+can be used for implementation specific authorization patterns.
+Set of parties executing the settlement.
+Implementations MUST check this value to avoid unauthorized settlement execution.
+By default they SHOULD check that they are equal to
+settlement.executors
+to provide maximal compatibility with apps.
+​
+extraArgs
+ExtraArgs
+Additional choice arguments.
+Methods:
+​
+Method
+settlementFactory_publicFetchImpl
+Type:
+ContractId
+SettlementFactory
+->
+SettlementFactory_PublicFetch
+->
+Update
+SettlementFactoryView
+​
+Method
+settlementFactory_settleBatchExtraObservers
+Type:
+SettlementFactory_SettleBatch
+-> [
+Party
+]
+​
+Method
+settlementFactory_settleBatchImpl
+Type:
+ContractId
+SettlementFactory
+->
+SettlementFactory_SettleBatch
+->
+Update
+SettlementFactory_SettleBatchResult
+​
+Data Types
+​
+data AllocationAction
+Actions available on an allocation.
+Constructors:
+AA_Settle
+AA_Cancel
+AA_Withdraw
+AA_Custom
+​
+id
+Text
+Identifier of the action. Namespaced analogously to metadata keys.
+Used to represent registry-specific actions on allocations.
+Instances:
+instance
+Eq
+AllocationAction
+instance
+Ord
+AllocationAction
+instance
+Show
+AllocationAction
+instance
+GetField
+availableActions
+AllocationView
+(
+Map
+AllocationAction
+[[
+Party
+]])
+instance
+GetField
+id
+AllocationAction
+Text
+instance
+SetField
+availableActions
+AllocationView
+(
+Map
+AllocationAction
+[[
+Party
+]])
+instance
+SetField
+id
+AllocationAction
+Text
+​
+data AllocationResult
+The result of a choice on an allocation.
+Constructors:
+AllocationResult
+​
+output
+AllocationResult_Output
+The output of the action.
+​
+authorizerHoldingCids
+TextMap [ContractId Holding]
+New holdings created for the authorizer as part of the settlement
+keyed by their
+instrumentId.id
+.
+​
+meta
+Metadata
+Additional metadata specific to the settlement, used for extensibility.
+Instances:
+instance
+Eq
+AllocationResult
+instance
+Show
+AllocationResult
+instance
+HasMethod
+Allocation
+allocation_cancelImpl
+(
+ContractId
+Allocation
+->
+Allocation_Cancel
+->
+Update
+AllocationResult
+)
+instance
+HasMethod
+Allocation
+allocation_settleImpl
+(
+ContractId
+Allocation
+->
+Allocation_Settle
+->
+Update
+AllocationResult
+)
+instance
+HasMethod
+Allocation
+allocation_withdrawImpl
+(
+ContractId
+Allocation
+->
+Allocation_Withdraw
+->
+Update
+AllocationResult
+)
+instance
+GetField
+allocationSettleResults
+SettlementFactory_SettleBatchResult
+[
+AllocationResult
+]
+instance
+GetField
+authorizerHoldingCids
+AllocationResult
+(
+TextMap
+[
+ContractId
+Holding
+])
+instance
+GetField
+meta
+AllocationResult
+Metadata
+instance
+GetField
+output
+AllocationResult
+AllocationResult_Output
+instance
+SetField
+allocationSettleResults
+SettlementFactory_SettleBatchResult
+[
+AllocationResult
+]
+instance
+SetField
+authorizerHoldingCids
+AllocationResult
+(
+TextMap
+[
+ContractId
+Holding
+])
+instance
+SetField
+meta
+AllocationResult
+Metadata
+instance
+SetField
+output
+AllocationResult
+AllocationResult_Output
+instance
+HasExercise
+Allocation
+Allocation_Cancel
+AllocationResult
+instance
+HasExercise
+Allocation
+Allocation_Settle
+AllocationResult
+instance
+HasExercise
+Allocation
+Allocation_Withdraw
+AllocationResult
+instance
+HasExerciseGuarded
+Allocation
+Allocation_Cancel
+AllocationResult
+instance
+HasExerciseGuarded
+Allocation
+Allocation_Settle
+AllocationResult
+instance
+HasExerciseGuarded
+Allocation
+Allocation_Withdraw
+AllocationResult
+instance
+HasFromAnyChoice
+Allocation
+Allocation_Cancel
+AllocationResult
+instance
+HasFromAnyChoice
+Allocation
+Allocation_Settle
+AllocationResult
+instance
+HasFromAnyChoice
+Allocation
+Allocation_Withdraw
+AllocationResult
+instance
+HasToAnyChoice
+Allocation
+Allocation_Cancel
+AllocationResult
+instance
+HasToAnyChoice
+Allocation
+Allocation_Settle
+AllocationResult
+instance
+HasToAnyChoice
+Allocation
+Allocation_Withdraw
+AllocationResult
+​
+data AllocationResult_Output
+The output of changing the state of an allocation.
+Constructors:
+AllocationResult_Pending
+​
+allocationCid
+ContractId Allocation
+Contract id of the allocation representing the pending state.
+Use this result to communicate that the allocation is pending further steps.
+AllocationResult_Settled
+​
+nextIterationAllocationCid
+Optional (ContractId Allocation)
+The new allocation created for the next settlement iteration, if any.
+The result of settling an allocation by exercising the
+Allocation_Settle
+choice.
+AllocationResult_Cancelled
+The result of the
+Allocation_Cancel
+choice  when fully authorized.
+AllocationResult_Withdrawn
+The result of the
+Allocation_Withdraw
+choice when fully authorized.
+Instances:
+instance
+Eq
+AllocationResult_Output
+instance
+Show
+AllocationResult_Output
+instance
+GetField
+allocationCid
+AllocationResult_Output
+(
+ContractId
+Allocation
+)
+instance
+GetField
+nextIterationAllocationCid
+AllocationResult_Output
+(
+Optional
+(
+ContractId
+Allocation
+))
+instance
+GetField
+output
+AllocationResult
+AllocationResult_Output
+instance
+SetField
+allocationCid
+AllocationResult_Output
+(
+ContractId
+Allocation
+)
+instance
+SetField
+nextIterationAllocationCid
+AllocationResult_Output
+(
+Optional
+(
+ContractId
+Allocation
+))
+instance
+SetField
+output
+AllocationResult
+AllocationResult_Output
+​
+data AllocationSpecification
+An approval by the authorizer to receive or send assets as part of
+settlement.
+Constructors:
+AllocationSpecification
+​
+admin
+Party
+The asset admin of the instruments that are transferred as part of
+the settlement.
+​
+authorizer
+Account
+The account authorizing the transfers as part of the settlement.
+​
+transferLegSides
+[TransferLegSide]
+The sides of transfer legs authorized by this allocation.
+​
+settlementDeadline
+Optional Time
+The executors’ and authorizer’s agreed time-to-live for the allocation.
+After this time, if set, the allocation can no longer be settled, and
+the authorizer can withdraw the allocation to release the funds.
+​
+nextIterationFunding
+Optional (TextMap Decimal)
+Amounts reserved for funding the next settlement iteration.
+Amounts are keyed by instrument id and MUST be positive.
+Setting this to
+None
+indicates that iterated settlement is disabled,
+and the allocation can only be settled once with exactly its specified
+transfer legs. Setting this to an empty map indicates that iterated settlement
+is enabled, but that no funding for the next iteration is reserved by
+the authorizer. This can be used when the authorizer expects incoming
+transfers in the next iteration, and thus does not need to reserve any funding.
+​
+committed
+Bool
+Whether the authorizer commits to the allocation until either
+the executors settle allocation,
+the executors cancel the allocation,
+the settlement deadline passed, or
+the admin expires the allocation.
+If set to
+True
+, then the authorizer cannot withdraw the allocation
+until the settlement deadline. Use committed allocations for cases
+where the executors need a guarantee that the allocation will be
+available until settlement.
+​
+meta
+Metadata
+Additional metadata for the allocation specification, which can be used
+to store information about an allocation used in iterated settlement.
+Instances:
+instance
+Eq
+AllocationSpecification
+instance
+Show
+AllocationSpecification
+instance
+GetField
+admin
+AllocationSpecification
+Party
+instance
+GetField
+allocation
+AllocationView
+AllocationSpecification
+instance
+GetField
+authorizer
+AllocationSpecification
+Account
+instance
+GetField
+committed
+AllocationSpecification
+Bool
+instance
+GetField
+meta
+AllocationSpecification
+Metadata
+instance
+GetField
+nextIterationFunding
+AllocationSpecification
+(
+Optional
+(
+TextMap
+Decimal
+))
+instance
+GetField
+settlementDeadline
+AllocationSpecification
+(
+Optional
+Time
+)
+instance
+GetField
+transferLegSides
+AllocationSpecification
+[
+TransferLegSide
+]
+instance
+SetField
+admin
+AllocationSpecification
+Party
+instance
+SetField
+allocation
+AllocationView
+AllocationSpecification
+instance
+SetField
+authorizer
+AllocationSpecification
+Account
+instance
+SetField
+committed
+AllocationSpecification
+Bool
+instance
+SetField
+meta
+AllocationSpecification
+Metadata
+instance
+SetField
+nextIterationFunding
+AllocationSpecification
+(
+Optional
+(
+TextMap
+Decimal
+))
+instance
+SetField
+settlementDeadline
+AllocationSpecification
+(
+Optional
+Time
+)
+instance
+SetField
+transferLegSides
+AllocationSpecification
+[
+TransferLegSide
+]
+​
+data AllocationView
+View of a contract representing a ready-to-settle allocation.
+Constructors:
+AllocationView
+​
+originalAllocationCid
+Optional (ContractId Allocation)
+The contract id of the original allocation contract, which is
+None
+for the original allocation contract itself.
+This SHOULD be used by wallets to correlate the same allocation across
+updates to its state. It should not be used to correlate different allocations
+for the same settlement. That can be done using the
+allocation.settlement
+field.
+​
+settlement
+SettlementInfo
+The settlement for which this allocation is made.
+​
+allocation
+AllocationSpecification
+The specification of the allocation.
+​
+holdingCids
+[ContractId Holding]
+The holdings that are backing this allocation.
+Provided so that wallets can correlate the allocation with the
+holdings.
+MAY be empty for registries that do not represent their holdings on-ledger.
+​
+createdAt
+Time
+The time when the allocation was originally created.
+​
+numIterations
+Int
+The number of settlement iterations that have been executed for this allocation so far.
+​
+expiresAt
+Optional Time
+The time at which the allocation expires if inactive.
+Registries MAY expire the allocation and return the locked funds to the
+authorizer after this time. Thereby recovering storage resources and
+protecting themselves from denial-of-service attacks.
+Registries SHOULD avoid unnecessary refreshes by
+making the expiry time as close to the settlement deadline as possible
+bumping expiry on every settlement iteration.
+​
+availableActions
+Map AllocationAction [[Party]]
+What actions are available to which groups of parties. The list of lists
+is interpreted as a set of sets and represents a disjunction of
+conjunctions of parties, i.e., each inner list represents a group of
+parties that can act jointly to execute the action.
+This field can be used to inform wallet users whether they can take an action or not;
+and which other parties they might be waiting on to take their action.
+Supports multiple parties for actions that require joint authorization. Executing them
+will require appropriate, registry-specific delegation contracts to be in place.
+​
+meta
+Metadata
+Additional metadata specific to the allocation, used for extensibility.
+Instances:
+instance
+Eq
+AllocationView
+instance
+Show
+AllocationView
+instance
+HasFromAnyView
+Allocation
+AllocationView
+instance
+HasInterfaceView
+Allocation
+AllocationView
+instance
+GetField
+allocation
+AllocationView
+AllocationSpecification
+instance
+GetField
+availableActions
+AllocationView
+(
+Map
+AllocationAction
+[[
+Party
+]])
+instance
+GetField
+createdAt
+AllocationView
+Time
+instance
+GetField
+expiresAt
+AllocationView
+(
+Optional
+Time
+)
+instance
+GetField
+holdingCids
+AllocationView
+[
+ContractId
+Holding
+]
+instance
+GetField
+meta
+AllocationView
+Metadata
+instance
+GetField
+numIterations
+AllocationView
+Int
+instance
+GetField
+originalAllocationCid
+AllocationView
+(
+Optional
+(
+ContractId
+Allocation
+))
+instance
+GetField
+settlement
+AllocationView
+SettlementInfo
+instance
+SetField
+allocation
+AllocationView
+AllocationSpecification
+instance
+SetField
+availableActions
+AllocationView
+(
+Map
+AllocationAction
+[[
+Party
+]])
+instance
+SetField
+createdAt
+AllocationView
+Time
+instance
+SetField
+expiresAt
+AllocationView
+(
+Optional
+Time
+)
+instance
+SetField
+holdingCids
+AllocationView
+[
+ContractId
+Holding
+]
+instance
+SetField
+meta
+AllocationView
+Metadata
+instance
+SetField
+numIterations
+AllocationView
+Int
+instance
+SetField
+originalAllocationCid
+AllocationView
+(
+Optional
+(
+ContractId
+Allocation
+))
+instance
+SetField
+settlement
+AllocationView
+SettlementInfo
+​
+data FinalizedAllocation
+An allocation finalized by the executors for settlement.
+Constructors:
+FinalizedAllocation
+​
+allocationCid
+ContractId Allocation
+The allocation to settle.
+​
+extraTransferLegSides
+[TransferLegSide]
+The extra transfer leg sides to authorize as part of this allocation
+in this settlement iteration.
+They MUST be empty unless iterated settlement was enabled by the allocation’s authorizer.
+​
+nextIterationFunding
+Optional (TextMap Decimal)
+The funding to reserve for the next settlement iteration.
+This MUST NOT be set unless iterated settlement was enabled by the allocation’s authorizer.
+Instances:
+instance
+Eq
+FinalizedAllocation
+instance
+Show
+FinalizedAllocation
+instance
+GetField
+allocationCid
+FinalizedAllocation
+(
+ContractId
+Allocation
+)
+instance
+GetField
+allocations
+SettlementFactory_SettleBatch
+[
+FinalizedAllocation
+]
+instance
+GetField
+extraTransferLegSides
+FinalizedAllocation
+[
+TransferLegSide
+]
+instance
+GetField
+nextIterationFunding
+FinalizedAllocation
+(
+Optional
+(
+TextMap
+Decimal
+))
+instance
+SetField
+allocationCid
+FinalizedAllocation
+(
+ContractId
+Allocation
+)
+instance
+SetField
+allocations
+SettlementFactory_SettleBatch
+[
+FinalizedAllocation
+]
+instance
+SetField
+extraTransferLegSides
+FinalizedAllocation
+[
+TransferLegSide
+]
+instance
+SetField
+nextIterationFunding
+FinalizedAllocation
+(
+Optional
+(
+TextMap
+Decimal
+))
+​
+data SettlementFactoryView
+View for
+SettlementFactory
+.
+Constructors:
+SettlementFactoryView
+​
+admin
+Party
+The party representing the registry app that administers the instruments
+for which this settlement factory can be used.
+​
+meta
+Metadata
+Additional metadata specific to the settlement factory, used for extensibility.
+Instances:
+instance
+Eq
+SettlementFactoryView
+instance
+Show
+SettlementFactoryView
+instance
+HasMethod
+SettlementFactory
+settlementFactory_publicFetchImpl
+(
+ContractId
+SettlementFactory
+->
+SettlementFactory_PublicFetch
+->
+Update
+SettlementFactoryView
+)
+instance
+HasFromAnyView
+SettlementFactory
+SettlementFactoryView
+instance
+HasInterfaceView
+SettlementFactory
+SettlementFactoryView
+instance
+GetField
+admin
+SettlementFactoryView
+Party
+instance
+GetField
+meta
+SettlementFactoryView
+Metadata
+instance
+SetField
+admin
+SettlementFactoryView
+Party
+instance
+SetField
+meta
+SettlementFactoryView
+Metadata
+instance
+HasExercise
+SettlementFactory
+SettlementFactory_PublicFetch
+SettlementFactoryView
+instance
+HasExerciseGuarded
+SettlementFactory
+SettlementFactory_PublicFetch
+SettlementFactoryView
+instance
+HasFromAnyChoice
+SettlementFactory
+SettlementFactory_PublicFetch
+SettlementFactoryView
+instance
+HasToAnyChoice
+SettlementFactory
+SettlementFactory_PublicFetch
+SettlementFactoryView
+​
+data SettlementFactory_SettleBatchResult
+Result of settling a batch of allocations.
+Constructors:
+SettlementFactory_SettleBatchResult
+​
+allocationSettleResults
+[AllocationResult]
+The result of settling each allocation in the batch.
+In the same order as the
+allocations
+in the choice arguments.
+​
+meta
+Metadata
+Additional metadata specific to the batch settlement, used for extensibility.
+Instances:
+instance
+Eq
+SettlementFactory_SettleBatchResult
+instance
+Show
+SettlementFactory_SettleBatchResult
+instance
+HasMethod
+SettlementFactory
+settlementFactory_settleBatchImpl
+(
+ContractId
+SettlementFactory
+->
+SettlementFactory_SettleBatch
+->
+Update
+SettlementFactory_SettleBatchResult
+)
+instance
+GetField
+allocationSettleResults
+SettlementFactory_SettleBatchResult
+[
+AllocationResult
+]
+instance
+GetField
+meta
+SettlementFactory_SettleBatchResult
+Metadata
+instance
+SetField
+allocationSettleResults
+SettlementFactory_SettleBatchResult
+[
+AllocationResult
+]
+instance
+SetField
+meta
+SettlementFactory_SettleBatchResult
+Metadata
+instance
+HasExercise
+SettlementFactory
+SettlementFactory_SettleBatch
+SettlementFactory_SettleBatchResult
+instance
+HasExerciseGuarded
+SettlementFactory
+SettlementFactory_SettleBatch
+SettlementFactory_SettleBatchResult
+instance
+HasFromAnyChoice
+SettlementFactory
+SettlementFactory_SettleBatch
+SettlementFactory_SettleBatchResult
+instance
+HasToAnyChoice
+SettlementFactory
+SettlementFactory_SettleBatch
+SettlementFactory_SettleBatchResult
+​
+data SettlementInfo
+An unambiguous reference to a settlement, which can be used by wallets to
+correlate allocations to the same settlement.
+The
+executors
+MUST ensure that the triple of
+(id, cid, meta)
+is unique
+across settlements.
+Constructors:
+SettlementInfo
+​
+executors
+[Party]
+The parties that are responsible for executing the settlement and
+guarantee atomic settlement across asset admins.
+​
+id
+Text
+Textual identifier of the settlement.
+​
+cid
+Optional AnyContractId
+Optional contract-id based identifier of the settlement.
+This field is there for technical reasons, as contract-ids cannot be
+converted to text from within Daml, which is due to their full textual
+representation being only known after transactions have been prepared.
+​
+meta
+Metadata
+Additional metadata to identify the settlement, used for extensibility.
+Instances:
+instance
+Eq
+SettlementInfo
+instance
+Show
+SettlementInfo
+instance
+GetField
+cid
+SettlementInfo
+(
+Optional
+AnyContractId
+)
+instance
+GetField
+executors
+SettlementInfo
+[
+Party
+]
+instance
+GetField
+id
+SettlementInfo
+Text
+instance
+GetField
+meta
+SettlementInfo
+Metadata
+instance
+GetField
+settlement
+AllocationView
+SettlementInfo
+instance
+GetField
+settlement
+SettlementFactory_SettleBatch
+SettlementInfo
+instance
+SetField
+cid
+SettlementInfo
+(
+Optional
+AnyContractId
+)
+instance
+SetField
+executors
+SettlementInfo
+[
+Party
+]
+instance
+SetField
+id
+SettlementInfo
+Text
+instance
+SetField
+meta
+SettlementInfo
+Metadata
+instance
+SetField
+settlement
+AllocationView
+SettlementInfo
+instance
+SetField
+settlement
+SettlementFactory_SettleBatch
+SettlementInfo
+​
+data TransferLeg
+A specification of a transfer of holdings between two parties for the
+purpose of a settlement, which often requires the atomic execution of multiple legs.
+Constructors:
+TransferLeg
+​
+transferLegId
+Text
+An identifier for the transfer leg.
+​
+sender
+Account
+The sender of the transfer.
+​
+receiver
+Account
+The receiver of the transfer.
+​
+amount
+Decimal
+The amount to transfer.
+​
+instrumentId
+Text
+The instrument identifier used by the instrument admin.
+​
+meta
+Metadata
+Additional metadata about the transfer leg, used for extensibility.
+Instances:
+instance
+Eq
+TransferLeg
+instance
+Ord
+TransferLeg
+instance
+Show
+TransferLeg
+instance
+GetField
+amount
+TransferLeg
+Decimal
+instance
+GetField
+instrumentId
+TransferLeg
+Text
+instance
+GetField
+meta
+TransferLeg
+Metadata
+instance
+GetField
+receiver
+TransferLeg
+Account
+instance
+GetField
+sender
+TransferLeg
+Account
+instance
+GetField
+transferLegId
+TransferLeg
+Text
+instance
+GetField
+transferLegs
+SettlementFactory_SettleBatch
+[
+TransferLeg
+]
+instance
+SetField
+amount
+TransferLeg
+Decimal
+instance
+SetField
+instrumentId
+TransferLeg
+Text
+instance
+SetField
+meta
+TransferLeg
+Metadata
+instance
+SetField
+receiver
+TransferLeg
+Account
+instance
+SetField
+sender
+TransferLeg
+Account
+instance
+SetField
+transferLegId
+TransferLeg
+Text
+instance
+SetField
+transferLegs
+SettlementFactory_SettleBatch
+[
+TransferLeg
+]
+​
+data TransferLegSide
+A side of a transfer leg, which is what allocations authorize.
+Constructors:
+TransferLegSide
+​
+transferLegId
+Text
+An identifier for the transfer leg.
+​
+side
+TransferSide
+The side of the transfer that this leg refers to.
+​
+otherside
+Account
+The account on the other side of the transfer leg; i.e., the sender
+in case of
+side == ReceiverSide
+, and the receiver in case of
+side == SenderSide
+.
+​
+amount
+Decimal
+The amount being transferred.
+​
+instrumentId
+Text
+The instrument identifier used by the instrument admin.
+​
+meta
+Metadata
+Additional metadata about the transfer leg, used for extensibility.
+Instances:
+instance
+Eq
+TransferLegSide
+instance
+Ord
+TransferLegSide
+instance
+Show
+TransferLegSide
+instance
+GetField
+amount
+TransferLegSide
+Decimal
+instance
+GetField
+extraTransferLegSides
+Allocation_Settle
+[
+TransferLegSide
+]
+instance
+GetField
+extraTransferLegSides
+FinalizedAllocation
+[
+TransferLegSide
+]
+instance
+GetField
+instrumentId
+TransferLegSide
+Text
+instance
+GetField
+meta
+TransferLegSide
+Metadata
+instance
+GetField
+otherside
+TransferLegSide
+Account
+instance
+GetField
+side
+TransferLegSide
+TransferSide
+instance
+GetField
+transferLegId
+TransferLegSide
+Text
+instance
+GetField
+transferLegSides
+AllocationSpecification
+[
+TransferLegSide
+]
+instance
+SetField
+amount
+TransferLegSide
+Decimal
+instance
+SetField
+extraTransferLegSides
+Allocation_Settle
+[
+TransferLegSide
+]
+instance
+SetField
+extraTransferLegSides
+FinalizedAllocation
+[
+TransferLegSide
+]
+instance
+SetField
+instrumentId
+TransferLegSide
+Text
+instance
+SetField
+meta
+TransferLegSide
+Metadata
+instance
+SetField
+otherside
+TransferLegSide
+Account
+instance
+SetField
+side
+TransferLegSide
+TransferSide
+instance
+SetField
+transferLegId
+TransferLegSide
+Text
+instance
+SetField
+transferLegSides
+AllocationSpecification
+[
+TransferLegSide
+]
+​
+data TransferSide
+A side of a transfer.
+Constructors:
+SenderSide
+The outbound side of a transfer, i.e., the sending of assets.
+ReceiverSide
+The inbound direction, i.e., the receipt of assets.
+Instances:
+instance
+Eq
+TransferSide
+instance
+Ord
+TransferSide
+instance
+Show
+TransferSide
+instance
+GetField
+side
+TransferLegSide
+TransferSide
+instance
+SetField
+side
+TransferLegSide
+TransferSide
+​
+Functions
+​
+allocation_settleImpl
+allocation_settleImpl
+:
+Allocation
+->
+ContractId
+Allocation
+->
+Allocation_Settle
+->
+Update
+AllocationResult
+​
+allocation_cancelImpl
+allocation_cancelImpl
+:
+Allocation
+->
+ContractId
+Allocation
+->
+Allocation_Cancel
+->
+Update
+AllocationResult
+​
+allocation_withdrawImpl
+allocation_withdrawImpl
+:
+Allocation
+->
+ContractId
+Allocation
+->
+Allocation_Withdraw
+->
+Update
+AllocationResult
+​
+allocation_settleExtraObservers
+allocation_settleExtraObservers
+:
+Allocation
+->
+Allocation_Settle
+-> [
+Party
+]
+​
+allocation_cancelExtraObservers
+allocation_cancelExtraObservers
+:
+Allocation
+->
+Allocation_Cancel
+-> [
+Party
+]
+​
+allocation_withdrawExtraObservers
+allocation_withdrawExtraObservers
+:
+Allocation
+->
+Allocation_Withdraw
+-> [
+Party
+]
+​
+settlementFactory_publicFetchImpl
+settlementFactory_publicFetchImpl
+:
+SettlementFactory
+->
+ContractId
+SettlementFactory
+->
+SettlementFactory_PublicFetch
+->
+Update
+SettlementFactoryView
+​
+settlementFactory_settleBatchImpl
+settlementFactory_settleBatchImpl
+:
+SettlementFactory
+->
+ContractId
+SettlementFactory
+->
+SettlementFactory_SettleBatch
+->
+Update
+SettlementFactory_SettleBatchResult
+​
+settlementFactory_settleBatchExtraObservers
+settlementFactory_settleBatchExtraObservers
+:
+SettlementFactory
+->
+SettlementFactory_SettleBatch
+-> [
+Party
+]
+Suggest edits
+Raise issue
+Overview
+Overview

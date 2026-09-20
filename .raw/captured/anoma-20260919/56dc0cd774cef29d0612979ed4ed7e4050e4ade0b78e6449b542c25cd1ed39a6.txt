@@ -1,0 +1,1368 @@
+Build a Simple App
+Copy page
+Build a Simple App
+This guide walks through building a minimal React application that lets users:
+Create or restore a private keyring using a WebAuthn passkey.
+Display their Pay Address so others can send them tokens.
+Deposit ERC-20 tokens into the shielded pool (mint).
+View their private token balance.
+Send a private transfer to another user’s Pay Address.
+Withdraw tokens back to their EVM wallet (burn).
+By the end, you will have touched every major surface of the SDK.
+Prerequisites
+Node.js 22+
+A React project with
+wagmi
+configured for wallet interactions.
+Access to Anoma Pay backend, indexer, and Envio endpoints (contact Heliax for credentials).
+1. Install the SDK
+npm
+install
+@anomaorg/anoma-app-sdk
+wagmi
+viem
+2. Initialize WASM at startup
+Call
+initWasm()
+once before mounting your React tree. In a Next.js app, put this in
+_app.tsx
+or a top-level
+layout.tsx
+:
+// app/layout.tsx (Next.js App Router) or pages/_app.tsx
+import
+{ initWasm }
+from
+"@anomaorg/anoma-app-sdk"
+;
+// Top-level await works in Next.js and Vite
+await
+initWasm
+();
+3. Define your configuration
+Create a
+config.ts
+at your project root with connection details for each service:
+// config.ts
+import
+{ allSupportedChains }
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ SupportedChain }
+from
+"@anomaorg/anoma-app-sdk"
+;
+// Pick the chain you are targeting
+export
+const
+chain
+=
+allSupportedChains.
+find
+(
+c
+=>
+c.network
+===
+"base"
+)
+as
+SupportedChain
+;
+export
+const
+config
+=
+{
+permit2Address:
+"0x000000000022D473030F116dDEE9F6B43aC78BA3"
+as
+`0x${
+string
+}`
+,
+permit2DeadlineOffset:
+1_800_000
+,
+// 30 minutes
+backendUrl:
+"https://backend.anoma.money"
+,
+indexerUrl:
+"https://indexer.anoma.money"
+,
+envioUrl:
+"https://envio.anoma.money/v1/graphql"
+,
+chain,
+}
+as
+const
+;
+allSupportedChains
+includes Base mainnet, Ethereum mainnet, Ethereum Sepolia, and BSC. Each entry contains the
+forwarderAddress
+for that chain.
+4. Key management hook
+A keyring must be created once and persisted securely across sessions. This hook derives the keyring from a WebAuthn passkey and keeps it in React state:
+// hooks/useKeyring.ts
+import
+{ useState, useEffect }
+from
+"react"
+;
+import
+{
+createUserKeyringFromPasskey,
+serializeUserKeyring,
+deserializeUserKeyring,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+STORAGE_KEY
+=
+"anomapay:keyring"
+;
+export
+function
+useKeyring
+() {
+const
+[
+keyring
+,
+setKeyring
+]
+=
+useState
+<
+UserKeyring
+|
+null
+>(
+null
+);
+// Restore from sessionStorage on mount
+useEffect
+(()
+=>
+{
+const
+stored
+=
+sessionStorage.
+getItem
+(
+STORAGE_KEY
+);
+if
+(stored)
+setKeyring
+(
+deserializeUserKeyring
+(stored));
+}, []);
+async
+function
+createWithPasskey
+() {
+const
+credential
+=
+await
+navigator.credentials.
+create
+({
+publicKey: {
+challenge: crypto.
+getRandomValues
+(
+new
+Uint8Array
+(
+32
+)),
+rp: { name:
+"My AnomaPay App"
+},
+user: {
+id: crypto.
+getRandomValues
+(
+new
+Uint8Array
+(
+16
+)),
+name:
+"user@example.com"
+,
+displayName:
+"User"
+,
+},
+pubKeyCredParams: [{ alg:
+-
+7
+, type:
+"public-key"
+}],
+extensions: {
+prf: {
+eval: { first:
+new
+TextEncoder
+().
+encode
+(
+"anoma-pay:keyring-seed"
+) },
+},
+},
+},
+})
+as
+PublicKeyCredential
+;
+const
+newKeyring
+=
+createUserKeyringFromPasskey
+(credential);
+sessionStorage.
+setItem
+(
+STORAGE_KEY
+,
+serializeUserKeyring
+(newKeyring));
+setKeyring
+(newKeyring);
+}
+return
+{ keyring, createWithPasskey };
+}
+serializeUserKeyring produces a JSON string containing private key bytes. sessionStorage is cleared when the tab closes. For persistent login across browser sessions, encrypt the serialized keyring with a key derived from the user’s passkey before storing it in localStorage.
+5. Display the Pay Address
+Once the keyring is available, encode the public keys into a Pay Address and show it in the UI:
+// components/PayAddress.tsx
+import
+{
+getPayAddressFromKeyring,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+export
+function
+PayAddress
+({
+keyring
+}
+:
+{
+keyring
+:
+UserKeyring
+}) {
+const
+payAddress
+=
+getPayAddressFromKeyring
+(keyring);
+return
+(
+<
+div
+>
+<
+p
+>Your Pay Address:</
+p
+>
+<
+code
+style
+=
+{{ wordBreak:
+"break-all"
+}}>{payAddress}</
+code
+>
+<
+button
+onClick
+=
+{()
+=>
+navigator.clipboard.
+writeText
+(payAddress)}>
+Copy
+</
+button
+>
+</
+div
+>
+);
+}
+6. Register keys with the Indexer
+The Indexer needs your discovery key pair to route incoming resources to you. Call this once after creating the keyring. It is safe to call multiple times — the Indexer ignores duplicate registrations:
+// lib/registerKeys.ts
+import
+{
+IndexerClient,
+toHex,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ config }
+from
+"../config"
+;
+const
+indexer
+=
+new
+IndexerClient
+(config.indexerUrl);
+export
+async
+function
+registerKeys
+(
+keyring
+:
+UserKeyring
+) {
+await
+indexer.
+addKeys
+({
+public_key:
+toHex
+(keyring.discoveryKeyPair.publicKey),
+secret_key:
+toHex
+(keyring.discoveryKeyPair.privateKey),
+});
+}
+7. Fetch the private balance
+Resources on-chain are encrypted. This function fetches, decrypts, and filters them to get your available (unspent) balance:
+// lib/fetchResources.ts
+import
+{
+IndexerClient,
+EnvioClient,
+parseIndexerResourceResponse,
+pickNonEphemeralResources,
+buildTransactionLookup,
+buildAppResources,
+TRANSFER_LOGIC_VERIFYING_KEY,
+NullifierKey,
+toHex,
+type
+AppResource,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ config }
+from
+"../config"
+;
+const
+indexer
+=
+new
+IndexerClient
+(config.indexerUrl);
+const
+envio
+=
+new
+EnvioClient
+(config.envioUrl);
+export
+async
+function
+fetchResources
+(
+keyring
+:
+UserKeyring
+)
+:
+Promise
+<
+AppResource
+[]> {
+// 1. Fetch encrypted blobs
+const
+{
+indexed_contracts
+}
+=
+await
+indexer.
+config
+();
+const
+{
+resources
+:
+indexerResources
+}
+=
+await
+indexer.
+resources
+(
+toHex
+(keyring.discoveryKeyPair.privateKey),
+indexed_contracts
+);
+// 2. Decrypt using the encryption private key
+const
+decrypted
+=
+await
+parseIndexerResourceResponse
+(
+keyring.encryptionKeyPair.privateKey,
+indexerResources
+);
+// 3. Keep only persistent resources
+const
+persistent
+=
+pickNonEphemeralResources
+(decrypted);
+// 4. Annotate with spent status
+const
+nullifiers
+=
+await
+envio.
+publicNullifiers
+(
+TRANSFER_LOGIC_VERIFYING_KEY
+);
+const
+lookup
+=
+buildTransactionLookup
+(nullifiers);
+const
+nullifierKey
+=
+new
+NullifierKey
+(keyring.nullifierKeyPair.nk);
+return
+buildAppResources
+(persistent, lookup, nullifierKey,
+true
+);
+}
+8. Mint (deposit ERC-20 tokens)
+Before a user can make private transfers, they need to deposit tokens. This function handles the full mint flow:
+// lib/mint.ts
+import
+{
+TransferBuilder,
+TransferBackendClient,
+getPermit2Data,
+signPermit,
+toDeadline,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ useSignTypedData, useAccount }
+from
+"wagmi"
+;
+import
+{ config }
+from
+"../config"
+;
+export
+async
+function
+mint
+(
+keyring
+:
+UserKeyring
+,
+tokenAddress
+:
+`0x${
+string
+}`
+,
+amount
+:
+bigint
+,
+walletAddress
+:
+`0x${
+string
+}`
+,
+signTypedDataAsync
+:
+ReturnType
+<
+typeof
+useSignTypedData>[
+"signTypedDataAsync"
+]
+) {
+const
+backend
+=
+new
+TransferBackendClient
+(config.backendUrl);
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+// 1. Create the mint resource pair
+const
+mintResources
+=
+transferBuilder.client.
+createMintResources
+({
+userAddress: walletAddress,
+forwarderAddress: config.chain.forwarderAddress,
+token: tokenAddress,
+quantity: amount,
+keyring,
+});
+// 2. Sign the Permit2 authorization
+const
+deadline
+=
+toDeadline
+(config.permit2DeadlineOffset);
+const
+nonce
+=
+BigInt
+(Date.
+now
+());
+const
+permit2Props
+=
+{
+permit2Address: config.permit2Address,
+spenderAddress: config.chain.forwarderAddress,
+deadline,
+chainId: config.chain.id,
+nonce,
+actionTreeRoot: mintResources.actionTree.
+root
+().
+toHex
+(),
+token: tokenAddress,
+amount,
+};
+const
+{
+signature
+}
+=
+await
+signPermit
+(signTypedDataAsync, permit2Props, walletAddress);
+// 3. Build and submit
+const
+parameters
+=
+transferBuilder.
+buildMintParameters
+(
+mintResources,
+{ deadline, nonce: nonce.
+toString
+(), signature },
+walletAddress,
+tokenAddress,
+keyring
+);
+const
+{
+transaction_hash
+}
+=
+await
+backend.
+transfer
+(parameters);
+return
+transaction_hash;
+}
+9. Send a private transfer
+// lib/transfer.ts
+import
+{
+TransferBuilder,
+TransferBackendClient,
+ParametersDraftResolver,
+PayloadBuilder,
+decodePayAddress,
+isValidPayAddress,
+type
+AppResource,
+type
+TokenRegistry,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ config }
+from
+"../config"
+;
+export
+async
+function
+sendTransfer
+(
+keyring
+:
+UserKeyring
+,
+availableResources
+:
+AppResource
+[],
+receiverPayAddress
+:
+string
+,
+token
+:
+TokenRegistry
+,
+amount
+:
+bigint
+) {
+if
+(
+!
+isValidPayAddress
+(receiverPayAddress)) {
+throw
+new
+Error
+(
+"Invalid Pay Address"
+);
+}
+const
+receiverKeys
+=
+decodePayAddress
+(receiverPayAddress);
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+const
+resolver
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+resolver.
+addReceiver
+({
+type:
+"AnomaAddress"
+,
+userPublicKeys: receiverKeys,
+quantity: amount,
+token,
+});
+const
+resolved
+=
+resolver.
+build
+(availableResources, config.chain.forwarderAddress);
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+const
+backend
+=
+new
+TransferBackendClient
+(config.backendUrl);
+const
+{
+transaction_hash
+}
+=
+await
+backend.
+transfer
+(parameters);
+return
+transaction_hash;
+}
+10. Burn (withdraw to wallet)
+The burn flow is identical to a transfer, but uses
+EvmAddress
+as the receiver type:
+// lib/burn.ts
+import
+{
+TransferBuilder,
+TransferBackendClient,
+ParametersDraftResolver,
+PayloadBuilder,
+type
+AppResource,
+type
+TokenRegistry,
+type
+UserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+{ config }
+from
+"../config"
+;
+export
+async
+function
+burn
+(
+keyring
+:
+UserKeyring
+,
+availableResources
+:
+AppResource
+[],
+token
+:
+TokenRegistry
+,
+amount
+:
+bigint
+,
+withdrawToAddress
+:
+`0x${
+string
+}`
+) {
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+();
+const
+resolver
+=
+new
+ParametersDraftResolver
+(transferBuilder, keyring);
+resolver.
+addReceiver
+({
+type:
+"EvmAddress"
+,
+address: withdrawToAddress,
+quantity: amount,
+token,
+});
+const
+resolved
+=
+resolver.
+build
+(availableResources, config.chain.forwarderAddress);
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+const
+backend
+=
+new
+TransferBackendClient
+(config.backendUrl);
+const
+{
+transaction_hash
+}
+=
+await
+backend.
+transfer
+(parameters);
+return
+transaction_hash;
+}
+11. Poll for transaction confirmation
+After submitting any transaction (mint, transfer, or burn), poll the backend until it reaches a terminal state:
+// lib/pollTransaction.ts
+import
+{ TransferBackendClient }
+from
+"@anomaorg/anoma-app-sdk"
+;
+import
+type
+{ UUID }
+from
+"crypto"
+;
+import
+{ config }
+from
+"../config"
+;
+export
+async
+function
+waitForProof
+(
+txId
+:
+string
+)
+:
+Promise
+<
+string
+> {
+const
+backend
+=
+new
+TransferBackendClient
+(config.backendUrl);
+const
+terminal
+=
+new
+Set
+([
+"Proven"
+,
+"Failed"
+,
+"Unprocessable"
+]);
+while
+(
+true
+) {
+const
+{
+status
+,
+hash
+}
+=
+await
+backend.
+transactionStatus
+(txId
+as
+UUID
+);
+if
+(status
+===
+"Proven"
+)
+return
+hash;
+if
+(terminal.
+has
+(status))
+throw
+new
+Error
+(
+`Transaction ended with status: ${
+status
+}`
+);
+await
+new
+Promise
+(
+r
+=>
+setTimeout
+(r,
+5_000
+));
+}
+}
+12. Putting it together in a component
+Here is a minimal React component that ties the flows above together:
+// components/AnomaPayApp.tsx
+import
+{ useState, useEffect }
+from
+"react"
+;
+import
+{ useAccount, useSignTypedData }
+from
+"wagmi"
+;
+import
+{ useKeyring }
+from
+"../hooks/useKeyring"
+;
+import
+{ registerKeys }
+from
+"../lib/registerKeys"
+;
+import
+{ fetchResources }
+from
+"../lib/fetchResources"
+;
+import
+{ mint }
+from
+"../lib/mint"
+;
+import
+{ sendTransfer }
+from
+"../lib/transfer"
+;
+import
+{ burn }
+from
+"../lib/burn"
+;
+import
+{ waitForProof }
+from
+"../lib/pollTransaction"
+;
+import
+{ PayAddress }
+from
+"./PayAddress"
+;
+import
+{
+formatTokenAmount,
+type
+AppResource,
+type
+TokenRegistry,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+// Example USDC token definition for Base mainnet
+const
+USDC
+:
+TokenRegistry
+=
+{
+symbol:
+"USDC"
+,
+address:
+"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+,
+decimals:
+6
+,
+network:
+"base"
+,
+};
+export
+function
+AnomaPayApp
+() {
+const
+{
+keyring
+,
+createWithPasskey
+}
+=
+useKeyring
+();
+const
+{
+address
+:
+walletAddress
+}
+=
+useAccount
+();
+const
+{
+signTypedDataAsync
+}
+=
+useSignTypedData
+();
+const
+[
+resources
+,
+setResources
+]
+=
+useState
+<
+AppResource
+[]>([]);
+const
+[
+status
+,
+setStatus
+]
+=
+useState
+(
+""
+);
+// Register keys and fetch resources when keyring is ready
+useEffect
+(()
+=>
+{
+if
+(
+!
+keyring)
+return
+;
+registerKeys
+(keyring)
+.
+then
+(()
+=>
+fetchResources
+(keyring))
+.
+then
+(setResources)
+.
+catch
+(console.error);
+}, [keyring]);
+const
+totalBalance
+=
+resources.
+reduce
+((
+sum
+,
+r
+)
+=>
+sum
++
+r.quantity,
+0
+n
+);
+if
+(
+!
+keyring) {
+return
+<
+button
+onClick
+=
+{createWithPasskey}>Create Keyring with Passkey</
+button
+>;
+}
+return
+(
+<
+div
+>
+<
+PayAddress
+keyring
+=
+{keyring} />
+<
+p
+>Balance: {
+formatTokenAmount
+(totalBalance,
+USDC
+)}</
+p
+>
+<
+button
+onClick
+=
+{
+async
+()
+=>
+{
+if
+(
+!
+walletAddress)
+return
+;
+setStatus
+(
+"Depositing..."
+);
+const
+txId
+=
+await
+mint
+(keyring,
+USDC
+.address,
+10_000_000
+n
+, walletAddress, signTypedDataAsync);
+setStatus
+(
+"Proving..."
+);
+await
+waitForProof
+(txId);
+setResources
+(
+await
+fetchResources
+(keyring));
+setStatus
+(
+"Deposit complete!"
+);
+}}>
+Deposit 10 USDC
+</
+button
+>
+<
+button
+onClick
+=
+{
+async
+()
+=>
+{
+const
+receiverAddress
+=
+prompt
+(
+"Enter receiver Pay Address:"
+);
+if
+(
+!
+receiverAddress)
+return
+;
+setStatus
+(
+"Sending..."
+);
+const
+txId
+=
+await
+sendTransfer
+(keyring, resources, receiverAddress,
+USDC
+,
+5_000_000
+n
+);
+setStatus
+(
+"Proving..."
+);
+await
+waitForProof
+(txId);
+setResources
+(
+await
+fetchResources
+(keyring));
+setStatus
+(
+"Transfer complete!"
+);
+}}>
+Send 5 USDC
+</
+button
+>
+<
+button
+onClick
+=
+{
+async
+()
+=>
+{
+if
+(
+!
+walletAddress)
+return
+;
+setStatus
+(
+"Withdrawing..."
+);
+const
+txId
+=
+await
+burn
+(keyring, resources,
+USDC
+,
+5_000_000
+n
+, walletAddress);
+setStatus
+(
+"Proving..."
+);
+await
+waitForProof
+(txId);
+setResources
+(
+await
+fetchResources
+(keyring));
+setStatus
+(
+"Withdrawal complete!"
+);
+}}>
+Withdraw 5 USDC
+</
+button
+>
+{status
+&&
+<
+p
+>{status}</
+p
+>}
+</
+div
+>
+);
+}
+What’s next
+Read
+Best Practices
+for security guidance and production patterns.
+Read
+Transfers
+for a deeper explanation of the transfer operations.
+Browse
+API Clients
+for a complete reference of all client methods.
+Last updated on
+April 2, 2026
+Best Practices

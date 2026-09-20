@@ -1,0 +1,23 @@
+**Verdict for design consolidation only: changes_requested** (narrow; scope honors the user's steering).
+
+**Scope confirmation.** The candidate delivers one roadmap (U0–U7) with P/C/K as aliases, one vision/design with an explicit Moriarty/Kernel/Midnight responsibility table, and explicit ZR01–ZR16 next-backend requirements with owners and tests. MC01–08, SP01–12, G01–24, ACTUS/DeFi denominators and all five composition operators are retained. Recursion is labeled a dated user planning assumption. Lean is excluded. Permissionless public programs are preserved (UNI-001, ZR02 no allowlist). Phase partiality may create authorized duties, request receipt creates no recipient duty, representation hashes need correspondence not equality, and no perpetual authority is implied. Historical PR738/PR17/transcript findings are consistently marked historical. All U exits are correctly declared specified-only; open implementation is not counted as a defect below.
+
+**Required changes**
+
+1. **openspec/.../requirements.md and traceability.md — UNI-017 is unregistered.** requirements.md states UNI-001–016 are the normative clauses, but spec.md adds UNI-017. The MPLR table maps MPLR-011/013/027/029 only to UNI-009/010, and no row ties MC03, MC06, SP06 or SP09 to UNI-017 or to specific ZR IDs. Correction: change the range to UNI-001–017; add UNI-017 to the MPLR-011/013/027/028/029 rows; add a crosswalk row MC03→ZR02/04/05/08/16, MC06→ZR09/10/14/16, SP06/SP09→ZR13/16. Reason: the user asked for explicit, traceable next-recursion requirements. Without the register, ZR rows cannot be shown to carry the preserved MC03/MC06 obligations.
+
+2. **docs/MORIARTY-BACKEND-REQUIREMENTS.md, ownership table, ZR10 — milestone too late.** ZR10 (unique consumption, stale head, cross-domain replay) is assigned to U3/U4, but ROADMAP U2 already requires replay and signed failure controls on a general single-stage path. Correction: set ZR10 Moriarty milestone to U2 (single lineage) with U3/U4 extensions. Reason: a U2 acceptance without a bound consumption rule would let "complete effect readback" be claimed on a replayable stage.
+
+3. **ROADMAP.md, Immediate delivery brief — U3 vs U5 solver predicate is ambiguous.** "Two independent solvers may supply different authorized routes" appears in the U3 discriminator, while two independent solvers is a U5 exit. Correction: state that U3 accepts with a single directly authored route and no federation, and that solver diversity is U5's predicate exercised on the same program. Reason: otherwise U3 acceptance silently depends on U5 infrastructure, breaking the stated dependency order.
+
+4. **ROADMAP.md U0 exit and docs/MORIARTY-CONSOLIDATED-DESIGN.md, arithmetic section — price orientation and rounding direction are not frozen.** The design asserts a current base-per-quote convention and demands directed rounding but nowhere requires U0 to freeze a canonical orientation, units, or the per-operation rounding direction and beneficiary rule. Correction: add to the U0 exit "canonical price orientation, unit dimension and per-primitive rounding direction policy, bound in the stage numeric profile"; UNI-014 scenarios should reference that policy. Reason: exact arithmetic certificates (U1) and DeFiFormal adaptation cannot be qualified against an unfrozen convention.
+
+5. **docs/MORIARTY-BACKEND-REQUIREMENTS.md ZR03 — "required equality" may be read as literal hash equality.** Correction: phrase as "equality within one representation, or a specified correspondence relation where representations differ (source/Core/ZKIR/ledger)." Reason: matches the traceability disposition and the user's steering.
+
+**Lesser corrections (recommend, not blocking)**
+- ROADMAP U1 exit omits the declared cost relation that the design says every certificate must cover. Add it.
+- U0 exit should record the K reference reconciliation status the design relies on, or explicitly defer it.
+- ZR03/integration text should state where signed-intent signature verification occurs (in-circuit versus ledger), since U1 measures signature feasibility.
+- Typo: "a independently verified" in the backend requirements header.
+
+**Not defects.** Unexecuted ZR tests, unquantified performance targets, absent prove-all commands, and unfilled U exits are explicitly open implementation, correctly labeled. Consensus and reconciliation documents are referenced but not supplied, so their claimed dispositions are accepted as stated, not verified.

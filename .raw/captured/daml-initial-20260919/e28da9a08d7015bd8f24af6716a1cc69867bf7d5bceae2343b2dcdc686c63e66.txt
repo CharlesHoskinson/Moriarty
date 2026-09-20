@@ -1,0 +1,336 @@
+On this page
+DA.Crypto.Text
+Data Types
+type BytesHex
+type PublicKeyHex
+type SignatureHex
+Typeclasses
+class HasToHex a
+class HasFromHex a
+Functions
+isHex
+sha256
+keccak256
+secp256k1WithValidation
+secp256k1WithEcdsaOnly
+secp256k1
+numericViaStringToHex
+numericViaStringFromHex
+byteCount
+minBytes32Hex
+maxBytes32Hex
+isBytes32Hex
+minUInt32Hex
+maxUInt32Hex
+isUInt32Hex
+minUInt64Hex
+maxUInt64Hex
+isUInt64Hex
+minUInt256Hex
+maxUInt256Hex
+isUInt256Hex
+packHexBytes
+sliceHexBytes
+History
+Daml Standard Library
+Modules
+DA.Crypto.Text
+Copy page
+Copy page
+Reference documentation for Daml module DA.Crypto.Text.
+Copy page
+Copy page
+Daml module
+​
+DA.Crypto.Text
+Functions for working with Crypto builtins.
+Daml
+Updated 3.5.1
+​
+Data Types
+​
+type BytesHex
+=
+Text
+​
+type PublicKeyHex
+=
+Text
+A DER formatted public key to be used for ECDSA signature verification
+​
+type SignatureHex
+=
+Text
+A DER formatted SECP256K1 signature
+​
+Typeclasses
+​
+class HasToHex a
+Methods:
+toHex
+:
+a
+->
+BytesHex
+Converts a typed data value into a hex encoded string.
+Instances:
+instance
+HasToHex
+Party
+instance
+HasToHex
+Int
+instance
+HasToHex
+Text
+​
+class HasFromHex a
+Methods:
+fromHex
+:
+BytesHex
+->
+a
+Converts a hex encoded string into a typed data value.
+Instances:
+instance
+HasFromHex
+(
+Optional
+Party
+)
+instance
+HasFromHex
+(
+Optional
+Int
+)
+instance
+HasFromHex
+(
+Optional
+Text
+)
+​
+Functions
+​
+isHex
+isHex
+:
+Text
+->
+Bool
+isHex
+is
+True
+if
+t
+is not empty and consists only of
+hex or hexadecimal characters.
+​
+sha256
+sha256
+:
+BytesHex
+->
+BytesHex
+Computes the SHA256 hash of the decoded UTF8 bytes of the
+Text
+, and returns it in its hex-encoded
+form. The hex encoding uses lowercase letters.
+​
+keccak256
+keccak256
+:
+BytesHex
+->
+BytesHex
+Computes the KECCAK256 hash of the UTF8 bytes of the
+Text
+, and returns it in its hex-encoded
+form. The hex encoding uses lowercase letters.
+​
+secp256k1WithValidation
+secp256k1WithValidation
+:
+SignatureHex
+->
+BytesHex
+->
+PublicKeyHex
+->
+Bool
+Validate the SECP256K1 signature given a hex encoded message and a hex encoded DER formatted public key. Prior to
+signature validation, validate the public key and check it is on the SECP256K1 curve.
+​
+secp256k1WithEcdsaOnly
+secp256k1WithEcdsaOnly
+:
+SignatureHex
+->
+BytesHex
+->
+PublicKeyHex
+->
+Bool
+Validate the SECP256K1 signature given a hex encoded message and a hex encoded DER formatted public key.
+​
+secp256k1
+secp256k1
+:
+SignatureHex
+->
+BytesHex
+->
+PublicKeyHex
+->
+Bool
+Validate the SECP256K1 signature given a SHA256 hash of a hex encoded message and a hex encoded DER formatted public key.
+​
+numericViaStringToHex
+numericViaStringToHex
+:
+NumericScale
+n
+=>
+Numeric
+n
+->
+BytesHex
+​
+numericViaStringFromHex
+numericViaStringFromHex
+:
+NumericScale
+n
+=>
+BytesHex
+->
+Optional
+(
+Numeric
+n
+)
+​
+byteCount
+byteCount
+:
+BytesHex
+->
+Int
+Number of bytes present in a byte encoded string.
+​
+minBytes32Hex
+minBytes32Hex
+:
+BytesHex
+Minimum Bytes32 hex value
+​
+maxBytes32Hex
+maxBytes32Hex
+:
+BytesHex
+Maximum Bytes32 hex value
+​
+isBytes32Hex
+isBytes32Hex
+:
+BytesHex
+->
+Bool
+Validate that the byte encoded string is Bytes32Hex
+​
+minUInt32Hex
+minUInt32Hex
+:
+BytesHex
+Minimum UInt32 hex value
+​
+maxUInt32Hex
+maxUInt32Hex
+:
+BytesHex
+Maximum UInt32 hex value
+​
+isUInt32Hex
+isUInt32Hex
+:
+BytesHex
+->
+Bool
+Validate that the byte encoded string is UInt32Hex
+​
+minUInt64Hex
+minUInt64Hex
+:
+BytesHex
+Minimum UInt64 hex value
+​
+maxUInt64Hex
+maxUInt64Hex
+:
+BytesHex
+Maximum UInt64 hex value
+​
+isUInt64Hex
+isUInt64Hex
+:
+BytesHex
+->
+Bool
+Validate that the byte encoded string is UInt64Hex
+​
+minUInt256Hex
+minUInt256Hex
+:
+BytesHex
+Minimum UInt256 hex value
+​
+maxUInt256Hex
+maxUInt256Hex
+:
+BytesHex
+Maximum UInt256 hex value
+​
+isUInt256Hex
+isUInt256Hex
+:
+BytesHex
+->
+Bool
+Validate that the byte encoded string is UInt256Hex
+​
+packHexBytes
+packHexBytes
+:
+BytesHex
+->
+Int
+->
+Optional
+BytesHex
+Pack a byte encoded string to a given byte count size. If the byte string is shorter than the pad
+size, then prefix with 00 byte strings. If the byte string is larger, then truncate the byte string.
+​
+sliceHexBytes
+sliceHexBytes
+:
+BytesHex
+->
+Int
+->
+Int
+->
+Either
+Text
+BytesHex
+Extract the byte string starting at startByte up to, but excluding, endByte. Byte indexing starts at 1.
+​
+History
+Updated
+3.5.1
+Module declarations or documentation updated.
+Suggest edits
+Raise issue
+DA.ContractKeys
+DA.Date

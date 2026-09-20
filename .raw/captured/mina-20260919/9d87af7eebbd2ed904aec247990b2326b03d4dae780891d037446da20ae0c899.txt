@@ -1,0 +1,6441 @@
+Pickles & Inductive Proof Systems
+Accumulation
+On this page
+Accumulation
+# Accumulation
+Introduction
+​
+The trick below was originally described in
+Halo
+, however we are going to base this
+post on the abstraction of "accumulation schemes" described by Bünz, Chiesa,
+Mishra and Spooner in
+Proof-Carrying Data from Accumulation Schemes
+,
+in particular the scheme in Appendix A. 2.
+Relevant resources include:
+Proof-Carrying Data from Accumulation Schemes
+by Benedikt Bünz, Alessandro Chiesa, Pratyush Mishra and Nicholas Spooner.
+Recursive Proof Composition without a Trusted Setup (Halo)
+by Sean Bowe, Jack Grigg and Daira Hopwood.
+This page describes the most relevant parts of these papers and how it is
+implemented in Pickles/Kimchi. It is not meant to document the low-level details
+of the code in Pickles, but to describe what the code aims to do, allowing
+someone reviewing / working on this part of the codebase to gain context.
+Interactive Reductions Between Relations
+​
+The easiest way to understand "accumulation schemes" is as a set of interactive
+reductions between relations. An interactive reduction
+R
+→
+R
+′
+\relation \to \relation'
+R
+→
+R
+′
+proceeds as follows:
+The prover/verifier starts with some statement
+x
+\statement
+x
+, the prover
+additionally holds
+w
+\witness
+w
+.
+They then run some protocol between them.
+After which, they both obtain
+x
+′
+\statement'
+x
+′
+and the prover obtains
+w
+′
+\witness'
+w
+′
+Pictorially:
+Fig 1.
+An overview the particular reductions/languages (described below) we require.
+With the security/completeness guarantee that:
+(
+x
+,
+w
+)
+∈
+R
+⟺
+(
+x
+′
+,
+w
+′
+)
+∈
+R
+′
+(\statement, \witness) \in \relation
+\iff
+(\statement', \witness') \in \relation'
+(
+x
+,
+w
+)
+∈
+R
+⟺
+(
+x
+′
+,
+w
+′
+)
+∈
+R
+′
+Except with negligible probability.
+In other words: we have reduced membership of
+R
+\relation
+R
+to membership of
+R
+′
+\relation'
+R
+′
+using interaction between the parties: unlike a classical
+Karp-Levin reduction the soundness/completeness may rely on random coins and
+multiple rounds. Foreshadowing here is a diagram/overview of the reductions (the
+relations will be described as we go) used in Pickles:
+Fig 2.
+An overview the particular reductions/languages (described below) we require.
+As you can see from Fig. 2, we have a cycle of reductions (following the arrows)
+e.g. we can reduce a relation "
+R
+A
+c
+c
+,
+G
+⃗
+\relation_{\mathsf{Acc}, \vec{G}}
+R
+Acc
+,
+G
+​
+" to itself by
+applying all 4 reductions. This may seem useless: why reduce a relation to
+itself?
+However the crucial point is the "in-degree" (e.g. n-to-1) of these reductions:
+take a look at the diagram and note that
+any
+number of
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+instances can be reduced to a
+single
+R
+P
+C
+D
+,
+d
+\relPCS{\degree}
+R
+PCD
+,
+d
+​
+instance! This
+R
+P
+C
+D
+,
+d
+\relPCS{d}
+R
+PCD
+,
+d
+​
+instance can then be converted to a single
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+by applying
+the reductions (moving "around the diagram" by running one protocol after the
+other):
+R
+P
+C
+D
+,
+d
+→
+R
+I
+P
+A
+,
+ℓ
+→
+R
+I
+P
+A
+,
+1
+→
+R
+A
+c
+c
+,
+G
+⃗
+\relPCS{\degree} \to
+\relIPA{\ell}  \to
+\relIPA{1} \to
+\relAcc
+R
+PCD
+,
+d
+​
+→
+R
+IPA
+,
+ℓ
+​
+→
+R
+IPA
+,
+1
+​
+→
+R
+Acc
+,
+G
+​
+Note:
+There are many examples of interactive reductions, an example familiar
+to the reader is PlonK itself: which reduces circuit-satisfiability
+R
+C
+\relation_{C}
+R
+C
+​
+(
+x
+\statement
+x
+is the public inputs and
+w
+\witness
+w
+is the wire
+assignments) to openings of polynomial commitments
+R
+P
+C
+D
+,
+d
+\relPCS{d}
+R
+PCD
+,
+d
+​
+(
+x
+′
+\statement'
+x
+′
+are polynomial commitments and evaluation points,
+w
+\witness
+w
+is the opening of
+the commitment).
+More Theory/Reflections about Interactive Reductions (click to expand)
+As noted in
+Compressed
+Σ
+\Sigma
+Σ
+-Protocol Theory and Practical Application to Plug & Play Secure Algorithmics
+every Proof-of-Knowledge (PoK) with
+k
+k
+k
+-rounds for a relation
+R
+\relation
+R
+can
+instead be seen as a reduction to some relation
+R
+′
+\relation'
+R
+′
+with
+k
+−
+1
+k-1
+k
+−
+1
+rounds
+as follows:
+Letting
+x
+′
+\statement'
+x
+′
+be the view of the verifier.
+w
+′
+\witness'
+w
+′
+be a
+k
+k
+k
+'th-round message which could make the verifier accept.
+Hence the relation
+R
+′
+\relation'
+R
+′
+is the set of verifier views (except for the
+last round) and the last missing message which would make the verifier accept if
+sent.
+This simple, yet beautiful, observation turns out to be
+extremely useful
+:
+rather than explicitly sending the last-round message (which may be large/take
+the verifier a long time to check), the prover can instead prove that
+he
+knows
+a last-round message which
+would make the verifier accept
+,
+after all, sending the witness
+w
+′
+\witness'
+w
+′
+is a particularly simple/inefficient
+PoK for
+(
+x
+′
+,
+w
+′
+)
+∈
+R
+′
+(\statement', \witness') \in \relation'
+(
+x
+′
+,
+w
+′
+)
+∈
+R
+′
+.
+The reductions in this document are all of this form (including the folding
+argument): receiving/verifying the last-round message would require too many
+resources (time/communication) of the verifier, hence we instead replace it with
+yet another reduction to yet another language (e.g. where the witness is now
+half the size).
+Hence we end up with a chain of reductions: going from the languages of the
+last-round messages. An "accumulation scheme" is just an example of such a chain
+of reductions which happens to be a cycle. Meaning the language is
+"self-reducing" via a series of interactive reductions.
+A Note On Fiat-Shamir:
+All the protocols described here are public coin and
+hence in implementation the Fiat-Shamir transform is applied to avoid
+interaction: the verifiers challenges are sampled using a hash function (e.g.
+Poseidon) modelled as a reprogrammable random oracle.
+Polynomial Commitment Openings
+R
+P
+C
+D
+,
+d
+\relPCS{d}
+R
+PCD
+,
+d
+​
+​
+Recall that the polynomial commitment scheme (PCS) in Kimchi is just the trivial
+scheme based on Pedersen commitments. For Kimchi we are interested in
+"accumulation for the language (
+R
+P
+C
+S
+,
+d
+\relation_{\mathsf{PCS}, d}
+R
+PCS
+,
+d
+​
+) of polynomial
+commitment openings", meaning that:
+(
+x
+=
+(
+C
+,
+G
+⃗
+,
+x
+,
+y
+)
+,
+w
+=
+(
+f
+⃗
+)
+)
+∈
+R
+P
+C
+S
+,
+d
+⟺
+{
+C
+=
+⟨
+f
+⃗
+,
+G
+⃗
+⟩
+y
+=
+∑
+i
+=
+0
+d
+−
+1
+f
+i
+⋅
+x
+i
+}
+\left(
+\statement = (\comm, \vec{G}, \openx, \openy),
+\witness= (\vec{f})
+\right)
+\in
+\relation_{\mathsf{PCS},d}
+\iff
+\left\{
+\begin{aligned}
+\comm &= \langle \vec{f}, \vec{G} \rangle \\
+\openy &= \sum_{i = 0}^{d-1} f_i \cdot \openx^i
+\end{aligned}
+\right\}
+(
+x
+=
+(
+C
+,
+G
+,
+x
+,
+y
+)
+,
+w
+=
+(
+f
+​
+)
+)
+∈
+R
+PCS
+,
+d
+​
+⟺
+⎩
+⎨
+⎧
+​
+C
+y
+​
+=
+⟨
+f
+​
+,
+G
+⟩
+=
+i
+=
+0
+∑
+d
+−
+1
+​
+f
+i
+​
+⋅
+x
+i
+​
+⎭
+⎬
+⎫
+​
+Where
+f
+⃗
+\vec{f}
+f
+​
+is a list of
+d
+d
+d
+coefficients for a polynomial
+f
+(
+X
+)
+≔
+∑
+i
+=
+0
+d
+−
+1
+f
+i
+⋅
+X
+i
+f(X) \coloneqq \sum_{i=0}^{d-1} f_i \cdot X^i
+f
+(
+X
+)
+:
+=
+∑
+i
+=
+0
+d
+−
+1
+​
+f
+i
+​
+⋅
+X
+i
+.
+This is the language we are interested in reducing: providing a trivial proof,
+i.e. sending
+f
+⃗
+\vec{f}
+f
+​
+requires linear communication and time of the verifier,
+we want a poly-log verifier. The communication complexity will be solved by a
+well-known folding argument, however to reduce computation we are going to need
+the "Halo trick".
+First a reduction from PCS to an inner product relation.
+Reduction 1:
+R
+P
+C
+S
+,
+d
+→
+R
+I
+P
+A
+,
+ℓ
+\relation_{\mathsf{PCS},d} \to \relation_{\mathsf{IPA},\ell}
+R
+PCS
+,
+d
+​
+→
+R
+IPA
+,
+ℓ
+​
+​
+Formally the relation of the inner product argument is:
+\left(
+\statement = (\comm, \vec{G}, H, \vec{\openx}, y),
+\witness = (\vec{f})
+\right)
+\in
+\relation_{\mathsf{IPA},\ell}
+\iff
+\left\{
+\begin{aligned}
+\openy &=
+\langle
+\vec{f},
+\vec{\openx}
+\rangle \in \FF \\
+\land \\
+\comm &= \langle \vec{f}, \vec{G} \rangle + [\openy] \cdot \genOpen \in \GG
+\end{aligned}
+\right\}
+$$ where $\vec{f},\vec{\openx}, \vec{G}$ are of length $\ell$.
+
+We can reduce $\left(\statement = (\comm, \vec{G}, \openx, \openy),
+\witness = (\vec{f})\right) \in
+\relation_{\mathsf{PCS}, d}$ to $\relation_{\mathsf{IPA}, \ell}$ with $d = \ell$ as follows:
+
+- Define $\vec{\openx} = (1, \openx, \openx^2, \openx^3, \ldots, \openx^{\ell-1})$. Because $\vec{f}$ was a satisfying witness to $\relation_{\mathsf{PCS}, d}$,  we have $\openy = f(\openx) = \langle \vec{f}, \vec{\openx} \rangle$. The prover sends $y$.
+- The verifier adds the evaluation $\openy$ to the commitment "in a new coordinate" as follows:
+    1. Verifier picks $\genOpen \sample \GG$ and sends $H$ to the prover.
+    2. Prover/Verifier updates $\comm \gets \comm + [\openy] \cdot \genOpen$
+
+Intuitively we sample a fresh $\genOpen$ to avoid a malicious prover "putting something in the $H$-position", because he must send $\openy$ before seeing $\genOpen$, hence he would need to guess $\genOpen$ before-hand.
+If the prover is honest, we should have a commitment of the form:
+C = \langle \vec{f}, \vec{G} \rangle + [\openy] \cdot H = \langle \vec{f},
+\vec{G} \rangle + [\langle \vec{\openx}, \vec{f} \rangle] \cdot H \in \GG
+**Note:** In some variants of this reduction $H$ is chosen as $[\delta] \cdot J$ for a constant $J \in \GG$ where $\delta \sample \FF$ by the verifier,
+this also works, however we (in Kimchi) simply hash to the curve to sample $H$.
+
+
+## Reduction 2 (Incremental Step): $\relation_{\mathsf{IPA},\ell} \to \relation_{\mathsf{IPA},\ell/2}$
+
+**Note:** The folding argument described below is the particular variant implemented in Kimchi, although some of the variable names are different.
+
+The folding argument reduces a inner product with $\ell$ (a power of two) coefficients to an inner product relation with $\ell / 2$ coefficients.
+To see how it works let us rewrite the inner product in terms of a first and second part:
+\langle \vec{f}, \vec{\openx} \rangle = \langle \vec{f}_L, \vec{\openx}_L
+\rangle
+\langle \vec{f}_R, \vec{\openx}_R \rangle \in \FF $$
+Where
+f
+⃗
+L
+=
+(
+f
+1
+,
+…
+,
+f
+ℓ
+/
+2
+)
+\vec{f}_L = (f_1, \ldots, f_{\ell/2})
+f
+​
+L
+​
+=
+(
+f
+1
+​
+,
+…
+,
+f
+ℓ
+/2
+​
+)
+and
+f
+⃗
+R
+=
+(
+f
+ℓ
+/
+2
++
+1
+,
+…
+,
+f
+ℓ
+)
+\vec{f}_R = (f_{\ell/2 + 1}, \ldots, f_\ell)
+f
+​
+R
+​
+=
+(
+f
+ℓ
+/2
++
+1
+​
+,
+…
+,
+f
+ℓ
+​
+)
+, similarly for
+x
+⃗
+\vec{\openx}
+x
+.
+Now consider a "randomized version" with a challenge
+α
+∈
+F
+\chalfold \in \FF
+α
+∈
+F
+of this
+inner product:
+⟨
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+,
+x
+⃗
+L
++
+α
+⋅
+x
+⃗
+R
+⟩
+=
+α
+−
+1
+⋅
+⟨
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
++
+(
+⟨
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
++
+⟨
+f
+⃗
+L
+,
+x
+⃗
+L
+⟩
+)
+‾
++
+α
+⋅
+⟨
+f
+⃗
+L
+,
+x
+⃗
+R
+⟩
+\begin{aligned}
+    \langle \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R, \ \vec{\openx}_L + \chalfold \cdot \vec{\openx}_R \rangle
+    &=
+    \chalfold^{-1} \cdot  \langle \vec{f}_R, \vec{\openx}_L \rangle \\
+    &+ \underline{\color{magenta} \left(\langle \vec{f}_R, \vec{\openx}_R \rangle + \langle \vec{f}_L, \vec{\openx}_L \rangle\right)} \\
+    &+ \chalfold \cdot \langle \vec{f}_L, \vec{\openx}_R \rangle
+    \end{aligned}
+⟨
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+,
+x
+L
+​
++
+α
+⋅
+x
+R
+​
+⟩
+​
+=
+α
+−
+1
+⋅
+⟨
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
++
+(
+⟨
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
++
+⟨
+f
+​
+L
+​
+,
+x
+L
+​
+⟩
+)
+​
++
+α
+⋅
+⟨
+f
+​
+L
+​
+,
+x
+R
+​
+⟩
+​
+Additional intuition: How do you arrive at the expression above? (click to expand)
+The trick is to ensure that
+$\langle \vec{f}_R, \vec{\openx}_R \rangle + \langle \vec{f}_L, \vec{\openx}_L \rangle = \langle \vec{f}, \vec{\openx} \rangle = v$
+ends up in the same power of $\chalfold$.
+The particular expression above is not special and arguably not the most
+elegant: simpler alternatives can easily be found and the inversion can be
+avoided, e.g. by instead using:
+⟨
+f
+⃗
+L
++
+α
+⋅
+f
+⃗
+R
+,
+α
+⋅
+x
+⃗
+L
++
+x
+⃗
+R
+⟩
+=
+⟨
+f
+⃗
+L
+,
+x
+⃗
+R
+⟩
++
+α
+⋅
+(
+⟨
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
++
+⟨
+f
+⃗
+L
+,
+x
+⃗
+L
+⟩
+)
+‾
++
+α
+2
+⋅
+⟨
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
+\begin{aligned}
+    \langle \vec{f}_L + \chalfold \cdot \vec{f}_R, \ \chalfold \cdot \vec{\openx}_L + \vec{\openx}_R \rangle
+    &= \langle \vec{f}_L, \vec{\openx}_R \rangle \\
+    &+ \chalfold  \cdot \underline{\color{magenta} \left(\langle \vec{f}_R, \vec{\openx}_R \rangle + \langle \vec{f}_L, \vec{\openx}_L \rangle\right)} \\
+    &+ \chalfold^2 \cdot  \langle \vec{f}_R, \vec{\openx}_L \rangle
+    \end{aligned}
+⟨
+f
+​
+L
+​
++
+α
+⋅
+f
+​
+R
+​
+,
+α
+⋅
+x
+L
+​
++
+x
+R
+​
+⟩
+​
+=
+⟨
+f
+​
+L
+​
+,
+x
+R
+​
+⟩
++
+α
+⋅
+(
+⟨
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
++
+⟨
+f
+​
+L
+​
+,
+x
+L
+​
+⟩
+)
+​
++
+α
+2
+⋅
+⟨
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
+​
+Which will have the same overall effect of isolating the interesting term (this
+time as the
+α
+\chalfold
+α
+-coefficient). The particular variant above can be found
+in e.g.
+Compressed
+Σ
+\Sigma
+Σ
+-Protocol Theory and Practical Application to Plug & Play Secure Algorithmics
+and proving extraction is somewhat easier than the variant used in Kimchi.
+The term we care about (underlined in magenta) is
+⟨
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
++
+⟨
+f
+⃗
+L
+,
+x
+⃗
+L
+⟩
+=
+v
+\langle \vec{f}_R, \vec{\openx}_R \rangle + \langle \vec{f}_L, \vec{\openx}_L \rangle = v
+⟨
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
++
+⟨
+f
+​
+L
+​
+,
+x
+L
+​
+⟩
+=
+v
+,
+the other two terms are cross-term garbage. The solution is to let the prover
+provide commitments to the cross terms to "correct" this randomized splitting of
+the inner product
+before
+seeing
+α
+\chalfold
+α
+: the prover commits to the
+three terms (one of which is already provided) and the verifier computes a
+commitment to the new randomized inner product. i.e.
+The prover sends commitment to the cross terms
+⟨
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
+\langle \vec{f}_R, \vec{\openx}_L \rangle
+⟨
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
+and
+⟨
+f
+⃗
+L
+,
+x
+⃗
+R
+⟩
+\langle \vec{f}_L, \vec{\openx}_R \rangle
+⟨
+f
+​
+L
+​
+,
+x
+R
+​
+⟩
+:
+L
+=
+⟨
+f
+⃗
+R
+∥
+0
+⃗
+,
+G
+⃗
+⟩
++
+[
+⟨
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
+]
+⋅
+H
+L = \langle \vec{f}_R \Vert \vec{0}, \vec{G} \rangle + [\langle \vec{f}_R, \vec{\openx}_L \rangle] \cdot H
+L
+=
+⟨
+f
+​
+R
+​
+∥
+0
+,
+G
+⟩
++
+[⟨
+f
+​
+R
+​
+,
+x
+L
+​
+⟩]
+⋅
+H
+R
+=
+⟨
+0
+⃗
+∥
+f
+⃗
+L
+,
+G
+⃗
+⟩
++
+[
+⟨
+f
+⃗
+L
+,
+x
+⃗
+R
+⟩
+]
+⋅
+H
+R = \langle \vec{0} \Vert \vec{f}_L, \vec{G} \rangle + [\langle \vec{f}_L, \vec{\openx}_R \rangle] \cdot H
+R
+=
+⟨
+0
+∥
+f
+​
+L
+​
+,
+G
+⟩
++
+[⟨
+f
+​
+L
+​
+,
+x
+R
+​
+⟩]
+⋅
+H
+The verifier samples
+α
+←
+$
+F
+\chalfold \sample \FF
+α
+←
+$
+F
+and updates the commitment as:
+C
+′
+=
+[
+α
+−
+1
+]
+⋅
+L
++
+C
++
+[
+α
+]
+⋅
+R
+=
+⟨
+α
+−
+1
+⋅
+(
+f
+⃗
+R
+∥
+0
+⃗
+)
++
+(
+f
+⃗
+L
+∥
+f
+⃗
+R
+)
++
+α
+⋅
+(
+0
+⃗
+∥
+f
+⃗
+L
+)
+,
+G
+⃗
+⟩
++
+[
+α
+−
+1
+⋅
+⟨
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
++
+⟨
+f
+⃗
+L
+,
+x
+⃗
+L
+⟩
++
+⟨
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
++
+α
+⋅
+⟨
+f
+⃗
+L
+,
+x
+⃗
+R
+⟩
+]
+⋅
+H
+=
+⟨
+(
+f
+⃗
+L
++
+α
+−
+1
+f
+⃗
+R
+)
+∥
+(
+α
+⋅
+f
+⃗
+L
++
+f
+⃗
+R
+)
+,
+G
+⃗
+⟩
++
+[
+⟨
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
++
+⟨
+α
+⋅
+f
+⃗
+L
++
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
+]
+⋅
+H
+\begin{aligned}
+C' &= [\chalfold^{-1}] \cdot L + C + [\chalfold] \cdot R \\
+   &\ \\
+   &= {\langle \chalfold^{-1} \cdot (\vec{f}_R \Vert \vec{0}) + (\vec{f}_L \Vert \vec{f}_R) + \chalfold \cdot (\vec{0} \Vert \vec{f}_L), \vec{G} \rangle} \\
+   &+
+    \left[
+        {
+          \chalfold^{-1} \cdot \langle \vec{f}_R, \vec{\openx}_L \rangle
+          +
+          {
+          \color{magenta}
+            \langle \vec{f}_L, \vec{\openx}_L \rangle
+            + \langle \vec{f}_R, \vec{\openx}_R \rangle
+            }
+        + \chalfold \cdot \langle \vec{f}_L, \vec{\openx}_R \rangle
+    }\right] \cdot H \\
+   &\ \\
+   &=
+   {\color{blue} \left\langle
+        \left(
+        \vec{f}_L + \chalfold^{-1} \vec{f}_R
+        \right)
+        \Vert
+        \left(
+        \chalfold \cdot \vec{f}_L + \vec{f}_R
+        \right)
+        ,
+        \vec{G} \right\rangle} \\
+   &+
+   \left[
+    {
+    \color{green}
+    \langle
+    \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R
+    ,
+    \vec{\openx}_L
+    \rangle
+    +
+    \langle
+    \chalfold \cdot \vec{f}_L +\vec{f}_R
+    ,
+    \vec{\openx}_R
+    \rangle
+    }
+    \right] \cdot H
+\end{aligned}
+C
+′
+​
+=
+[
+α
+−
+1
+]
+⋅
+L
++
+C
++
+[
+α
+]
+⋅
+R
+=
+⟨
+α
+−
+1
+⋅
+(
+f
+​
+R
+​
+∥
+0
+)
++
+(
+f
+​
+L
+​
+∥
+f
+​
+R
+​
+)
++
+α
+⋅
+(
+0
+∥
+f
+​
+L
+​
+)
+,
+G
+⟩
++
+[
+α
+−
+1
+⋅
+⟨
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
++
+⟨
+f
+​
+L
+​
+,
+x
+L
+​
+⟩
++
+⟨
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
++
+α
+⋅
+⟨
+f
+​
+L
+​
+,
+x
+R
+​
+⟩
+]
+⋅
+H
+=
+⟨
+(
+f
+​
+L
+​
++
+α
+−
+1
+f
+​
+R
+​
+)
+∥
+(
+α
+⋅
+f
+​
+L
+​
++
+f
+​
+R
+​
+)
+,
+G
+⟩
++
+[
+⟨
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
++
+⟨
+α
+⋅
+f
+​
+L
+​
++
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
+]
+⋅
+H
+​
+The final observation in the folding argument is simply that:
+α
+f
+⃗
+L
++
+f
+⃗
+R
+=
+α
+⋅
+(
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+)
+=
+α
+⋅
+f
+⃗
+′
+\chalfold \vec{f}_L + \vec{f}_R
+=
+\chalfold
+\cdot
+\left(
+{
+    \color{purple}
+    \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R
+}
+\right)
+=
+\chalfold
+\cdot
+{
+\color{purple}
+\vec{f}'
+}
+α
+f
+​
+L
+​
++
+f
+​
+R
+​
+=
+α
+⋅
+(
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+)
+=
+α
+⋅
+f
+​
+′
+where
+f
+⃗
+′
+{
+\color{purple}
+\vec{f}'
+}
+f
+​
+′
+is the new witness.
+Hence we can replace occurrences of
+α
+f
+⃗
+L
++
+f
+⃗
+R
+\chalfold \vec{f}_L + \vec{f}_R
+α
+f
+​
+L
+​
++
+f
+​
+R
+​
+by
+α
+f
+⃗
+′
+\chalfold \vec{f}'
+α
+f
+​
+′
+, with this look at the green term:
+⟨
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+,
+x
+⃗
+L
+⟩
++
+⟨
+α
+⋅
+f
+⃗
+L
++
+f
+⃗
+R
+,
+x
+⃗
+R
+⟩
+=
+⟨
+f
+⃗
+′
+,
+x
+⃗
+L
+⟩
++
+⟨
+α
+⋅
+f
+⃗
+′
+,
+x
+⃗
+R
+⟩
+=
+⟨
+f
+⃗
+′
+,
+x
+⃗
+L
+⟩
++
+⟨
+f
+⃗
+′
+,
+α
+⋅
+x
+⃗
+R
+⟩
+=
+⟨
+f
+⃗
+′
+,
+x
+⃗
+L
++
+α
+⋅
+x
+⃗
+R
+⟩
+=
+⟨
+f
+⃗
+′
+,
+x
+⃗
+′
+⟩
+\begin{aligned}
+    {
+    \color{green}
+    \langle
+    \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R
+    ,
+    \vec{\openx}_L
+    \rangle
+    +
+    \langle
+    \chalfold \cdot \vec{f}_L +\vec{f}_R
+    ,
+    \vec{\openx}_R
+    \rangle
+    }
+  &=
+    {
+    \langle
+    \vec{f}'
+    ,
+    \vec{\openx}_L
+    \rangle
+    +
+    \langle
+    \chalfold \cdot \vec{f}'
+    ,
+    \vec{\openx}_R
+    \rangle
+    } \\
+   &=
+    {
+    \langle
+    {
+    \vec{f}'
+    }
+    ,
+    \vec{\openx}_L
+    \rangle
+    +
+    \langle
+    {
+    \vec{f}'
+    }
+    ,
+    \chalfold
+    \cdot
+    \vec{\openx}_R
+    \rangle
+    } \\
+   &=
+    {
+    \langle
+    \vec{f}'
+    ,
+    \vec{\openx}_L
+    +
+    \chalfold
+    \cdot
+    \vec{\openx}_R
+    \rangle
+    } \\
+    &=
+    \langle
+    \vec{f}',
+    \vec{\openx}'
+    \rangle
+\end{aligned}
+⟨
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+,
+x
+L
+​
+⟩
++
+⟨
+α
+⋅
+f
+​
+L
+​
++
+f
+​
+R
+​
+,
+x
+R
+​
+⟩
+​
+=
+⟨
+f
+​
+′
+,
+x
+L
+​
+⟩
++
+⟨
+α
+⋅
+f
+​
+′
+,
+x
+R
+​
+⟩
+=
+⟨
+f
+​
+′
+,
+x
+L
+​
+⟩
++
+⟨
+f
+​
+′
+,
+α
+⋅
+x
+R
+​
+⟩
+=
+⟨
+f
+​
+′
+,
+x
+L
+​
++
+α
+⋅
+x
+R
+​
+⟩
+=
+⟨
+f
+​
+′
+,
+x
+′
+⟩
+​
+By defining
+x
+⃗
+′
+=
+x
+⃗
+L
++
+α
+⋅
+x
+⃗
+R
+\vec{\openx}' = \vec{\openx}_L + \chalfold \cdot \vec{\openx}_R
+x
+′
+=
+x
+L
+​
++
+α
+⋅
+x
+R
+​
+.
+We also rewrite the blue term in terms of
+f
+⃗
+′
+\vec{f}'
+f
+​
+′
+similarly:
+⟨
+(
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+)
+∥
+(
+α
+⋅
+f
+⃗
+L
++
+f
+⃗
+R
+)
+,
+G
+⃗
+⟩
+=
+⟨
+f
+⃗
+′
+∥
+(
+α
+⋅
+f
+⃗
+′
+)
+,
+G
+⃗
+⟩
+=
+⟨
+f
+⃗
+′
+∥
+f
+⃗
+′
+,
+G
+⃗
+L
+∥
+(
+[
+α
+]
+⋅
+G
+⃗
+R
+)
+⟩
+=
+⟨
+f
+⃗
+′
+,
+G
+⃗
+′
+⟩
+\begin{aligned}
+   {\color{blue} \left\langle
+        \left(
+        \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R
+        \right)
+        \Vert
+        \left(
+        \chalfold \cdot \vec{f}_L + \vec{f}_R
+        \right)
+        ,
+        \vec{G} \right\rangle}
+    &=
+   {\langle
+        \vec{f}'
+        \Vert
+        (
+        \chalfold \cdot \vec{f}'
+        )
+        ,
+        \vec{G} \rangle} \\
+    &=
+   {\langle
+        \vec{f}'
+        \Vert
+        \vec{f}'
+        ,
+        \vec{G}_L \Vert ([\chalfold] \cdot \vec{G}_R) \rangle} \\
+    &=
+   \langle
+    \vec{f}'
+    ,
+    \vec{G}'
+   \rangle
+\end{aligned}
+⟨
+(
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+)
+∥
+(
+α
+⋅
+f
+​
+L
+​
++
+f
+​
+R
+​
+)
+,
+G
+⟩
+​
+=
+⟨
+f
+​
+′
+∥
+(
+α
+⋅
+f
+​
+′
+)
+,
+G
+⟩
+=
+⟨
+f
+​
+′
+∥
+f
+​
+′
+,
+G
+L
+​
+∥
+([
+α
+]
+⋅
+G
+R
+​
+)⟩
+=
+⟨
+f
+​
+′
+,
+G
+′
+⟩
+​
+By defining
+G
+⃗
+′
+=
+G
+⃗
+L
++
+[
+α
+]
+⋅
+G
+⃗
+R
+\vec{G}' = \vec{G}_L + [\chalfold] \cdot \vec{G}_R
+G
+′
+=
+G
+L
+​
++
+[
+α
+]
+⋅
+G
+R
+​
+. In summary by
+computing:
+C
+′
+←
+[
+α
+−
+1
+]
+⋅
+L
++
+C
++
+[
+α
+]
+⋅
+R
+∈
+G
+f
+⃗
+′
+←
+f
+⃗
+L
++
+α
+−
+1
+⋅
+f
+⃗
+R
+∈
+F
+ℓ
+/
+2
+x
+⃗
+′
+←
+x
+⃗
+L
++
+α
+⋅
+x
+⃗
+R
+∈
+F
+ℓ
+/
+2
+G
+⃗
+′
+←
+G
+⃗
+L
++
+[
+α
+]
+⋅
+G
+⃗
+R
+∈
+G
+ℓ
+/
+2
+y
+′
+←
+⟨
+f
+′
+⃗
+,
+x
+⃗
+′
+⟩
+\begin{aligned}
+C' &\gets [\chalfold^{-1}] \cdot L + C + [\chalfold] \cdot R \in \GG \\
+\vec{f}' &\gets \vec{f}_L + \chalfold^{-1} \cdot \vec{f}_R \in \FF^{\ell / 2} \\
+\vec{\openx}' &\gets \vec{\openx}_L + \chalfold \cdot \vec{\openx}_R \in \FF^{\ell / 2} \\
+\vec{G}' &\gets \vec{G}_L + [\chalfold] \cdot \vec{G}_R \in \GG^{\ell / 2} \\
+\openy'       &\gets \langle \vec{f'}, \vec{\openx}' \rangle
+\end{aligned}
+C
+′
+f
+​
+′
+x
+′
+G
+′
+y
+′
+​
+←
+[
+α
+−
+1
+]
+⋅
+L
++
+C
++
+[
+α
+]
+⋅
+R
+∈
+G
+←
+f
+​
+L
+​
++
+α
+−
+1
+⋅
+f
+​
+R
+​
+∈
+F
+ℓ
+/2
+←
+x
+L
+​
++
+α
+⋅
+x
+R
+​
+∈
+F
+ℓ
+/2
+←
+G
+L
+​
++
+[
+α
+]
+⋅
+G
+R
+​
+∈
+G
+ℓ
+/2
+←
+⟨
+f
+′
+​
+,
+x
+′
+⟩
+​
+We obtain a new instance of the inner product relation (of half the size):
+(
+x
+=
+(
+C
+′
+,
+G
+⃗
+′
+,
+H
+,
+x
+⃗
+′
+,
+y
+′
+)
+,
+w
+=
+(
+f
+⃗
+′
+)
+)
+∈
+R
+I
+P
+A
+,
+ℓ
+/
+2
+(
+\statement = (C', \vec{G}', H, \vec{\openx}', \openy'),
+\witness = (\vec{f}')
+) \in
+\relation_{\mathsf{IPA}, \ell/2}
+(
+x
+=
+(
+C
+′
+,
+G
+′
+,
+H
+,
+x
+′
+,
+y
+′
+)
+,
+w
+=
+(
+f
+​
+′
+))
+∈
+R
+IPA
+,
+ℓ
+/2
+​
+At this point the prover could send
+x
+⃗
+′
+\vec{\openx}'
+x
+′
+,
+f
+⃗
+′
+\vec{f}'
+f
+​
+′
+to the verifier
+who could verify the claim:
+Computing
+G
+⃗
+′
+\vec{G}'
+G
+′
+from
+α
+\chalfold
+α
+and
+G
+⃗
+\vec{G}
+G
+Computing
+C
+′
+C'
+C
+′
+from
+f
+⃗
+′
+\vec{f}'
+f
+​
+′
+,
+H
+H
+H
+and
+L
+,
+R
+L,R
+L
+,
+R
+(obtained from the preceeding
+round)
+Checking
+y
+′
+=
+?
+⟨
+f
+⃗
+′
+,
+x
+⃗
+′
+⟩
+\openy' \overset?= \langle \vec{f}', \vec{\openx}' \rangle
+y
+′
+=
+?
+⟨
+f
+​
+′
+,
+x
+′
+⟩
+This would require half as much communication as the naive proof. A modest
+improvement...
+However, we can iteratively apply this transformation until we reach an instance
+of constant size:
+Reduction 2 (Full):
+R
+I
+P
+A
+,
+ℓ
+→
+…
+→
+R
+I
+P
+A
+,
+1
+\relIPA{\ell} \to \ldots \to \relIPA{1}
+R
+IPA
+,
+ℓ
+​
+→
+…
+→
+R
+IPA
+,
+1
+​
+​
+That the process above can simply be applied again to the new
+(
+C
+′
+,
+G
+⃗
+′
+,
+H
+,
+x
+⃗
+′
+,
+y
+)
+∈
+R
+I
+P
+A
+,
+ℓ
+/
+2
+(C', \vec{G}', H, \vec{\openx}', \openy) \in \relation_{\mathsf{IPA}, \ell/2}
+(
+C
+′
+,
+G
+′
+,
+H
+,
+x
+′
+,
+y
+)
+∈
+R
+IPA
+,
+ℓ
+/2
+​
+instance as well. By doing so
+k
+=
+log
+⁡
+2
+(
+ℓ
+)
+k = \log_2(\ell)
+k
+=
+lo
+g
+2
+​
+(
+ℓ
+)
+times the total communication
+is brought down to
+2
+k
+2 k
+2
+k
+G
+\GG
+G
+-elements until the instance consists of
+(
+C
+,
+G
+⃗
+,
+H
+,
+x
+⃗
+,
+y
+)
+∈
+R
+I
+P
+A
+,
+1
+(\comm, \vec{G}, \genOpen, \vec{\openx}, \openy) \in \relIPA{1}
+(
+C
+,
+G
+,
+H
+,
+x
+,
+y
+)
+∈
+R
+IPA
+,
+1
+​
+at which point
+the prover simply provides the witness
+f
+⃗
+′
+∈
+F
+\vec{f}' \in \FF
+f
+​
+′
+∈
+F
+.
+Because we need to refer to the terms in the intermediate reductions we let
+G
+⃗
+(
+i
+)
+\vec{G}^{(i)}
+G
+(
+i
+)
+,
+f
+⃗
+(
+i
+)
+\vec{f}^{(i)}
+f
+​
+(
+i
+)
+,
+x
+⃗
+(
+i
+)
+\vec{\openx}^{(i)}
+x
+(
+i
+)
+be the
+G
+⃗
+′
+\vec{G}'
+G
+′
+,
+f
+⃗
+′
+\vec{f}'
+f
+​
+′
+,
+x
+⃗
+′
+\vec{\openx}'
+x
+′
+vectors respectively after
+i
+i
+i
+recursive
+applications, with
+G
+⃗
+(
+0
+)
+\vec{G}^{(0)}
+G
+(
+0
+)
+,
+f
+⃗
+(
+0
+)
+\vec{f}^{(0)}
+f
+​
+(
+0
+)
+,
+x
+⃗
+(
+0
+)
+\vec{\openx}^{(0)}
+x
+(
+0
+)
+being
+the original instance. We will drop the vector arrow for
+G
+⃗
+(
+k
+)
+\vec{G}^{(k)}
+G
+(
+k
+)
+(similarly, for
+f
+,
+x
+f,x
+f
+,
+x
+), since the last step vector has size
+1
+1
+1
+, so we refer to
+this single value instead. We denote by
+α
+i
+\chalfold_i
+α
+i
+​
+the challenge of the
+i
+i
+i
+'th application.
+Reduction 3:
+R
+I
+P
+A
+,
+1
+→
+R
+A
+c
+c
+,
+G
+→
+\relation_{\mathsf{IPA},1} \to \relation_{\mathsf{Acc},\overset{\rightarrow}{G} }
+R
+IPA
+,
+1
+​
+→
+R
+Acc
+,
+G
+→
+​
+​
+While the proof for
+R
+I
+P
+A
+,
+ℓ
+\relIPA{\ell}
+R
+IPA
+,
+ℓ
+​
+above has
+O
+(
+log
+⁡
+(
+ℓ
+)
+)
+O(\log(\ell))
+O
+(
+lo
+g
+(
+ℓ
+))
+-size, the
+verifiers time-complexity is
+O
+(
+ℓ
+)
+O(\ell)
+O
+(
+ℓ
+)
+:
+Computing
+G
+(
+k
+)
+G^{(k)}
+G
+(
+k
+)
+from
+G
+⃗
+(
+0
+)
+\vec{G}^{(0)}
+G
+(
+0
+)
+using
+α
+⃗
+\vec{\chalfold}
+α
+takes
+O
+(
+ℓ
+)
+O(\ell)
+O
+(
+ℓ
+)
+.
+Computing
+x
+(
+k
+)
+\openx^{(k)}
+x
+(
+k
+)
+from
+x
+⃗
+(
+0
+)
+\vec{\openx}^{(0)}
+x
+(
+0
+)
+using
+α
+⃗
+\vec{\chalfold}
+α
+takes
+O
+(
+ℓ
+)
+O(\ell)
+O
+(
+ℓ
+)
+.
+The rest of the verifiers computation is only
+O
+(
+log
+⁡
+(
+ℓ
+)
+)
+O(\log(\ell))
+O
+(
+lo
+g
+(
+ℓ
+))
+, namely computing:
+Sampling all the challenges
+α
+←
+$
+F
+\chalfold \sample \FF
+α
+←
+$
+F
+.
+Computing
+C
+(
+i
+)
+←
+[
+α
+i
+−
+1
+]
+⋅
+L
+(
+i
+)
++
+C
+(
+i
+−
+1
+)
++
+[
+α
+i
+]
+⋅
+R
+(
+i
+)
+C^{(i)} \gets [\chalfold_i^{-1}] \cdot L^{(i)} + C^{(i-1)} + [\chalfold_i] \cdot R^{(i)}
+C
+(
+i
+)
+←
+[
+α
+i
+−
+1
+​
+]
+⋅
+L
+(
+i
+)
++
+C
+(
+i
+−
+1
+)
++
+[
+α
+i
+​
+]
+⋅
+R
+(
+i
+)
+for every
+i
+i
+i
+However, upon inspection, the more pessimistic claim that computing
+x
+⃗
+(
+k
+)
+\vec{\openx}^{(k)}
+x
+(
+k
+)
+takes
+O
+(
+ℓ
+)
+O(\ell)
+O
+(
+ℓ
+)
+turns out to be false:
+Claim:
+Define
+h
+(
+X
+)
+≔
+∏
+i
+=
+0
+k
+−
+1
+(
+1
++
+α
+k
+−
+i
+⋅
+X
+2
+i
+)
+\hpoly(X) \coloneqq \prod_{i = 0}^{k - 1} \left(1 + \chalfold_{k - i} \cdot X^{2^i}\right)
+h
+(
+X
+)
+:
+=
+∏
+i
+=
+0
+k
+−
+1
+​
+(
+1
++
+α
+k
+−
+i
+​
+⋅
+X
+2
+i
+)
+,
+then
+x
+(
+k
+)
+=
+h
+(
+x
+)
+\openx^{(k)} = \hpoly(\openx)
+x
+(
+k
+)
+=
+h
+(
+x
+)
+for all
+x
+\openx
+x
+. Therefore,
+x
+(
+k
+)
+\openx^{(k)}
+x
+(
+k
+)
+can be evaluated in
+O
+(
+k
+)
+=
+O
+(
+log
+⁡
+ℓ
+)
+O(k) = O(\log \ell)
+O
+(
+k
+)
+=
+O
+(
+lo
+g
+ℓ
+)
+.
+Proof:
+This can be verified by looking at the expansion of
+h
+(
+X
+)
+\hpoly(X)
+h
+(
+X
+)
+.
+Define
+{
+h
+i
+}
+i
+=
+0
+l
+\{h_i\}_{i=0}^l
+{
+h
+i
+​
+}
+i
+=
+0
+l
+​
+to be the coefficients of
+h
+(
+X
+)
+\hpoly(X)
+h
+(
+X
+)
+, that is
+h
+(
+X
+)
+=
+∑
+i
+=
+1
+ℓ
+h
+i
+⋅
+X
+i
+−
+1
+\hpoly(X) = \sum_{i=1}^\ell h_i \cdot X^{i-1}
+h
+(
+X
+)
+=
+∑
+i
+=
+1
+ℓ
+​
+h
+i
+​
+⋅
+X
+i
+−
+1
+. Then the claim is equivalent to
+x
+(
+k
+)
+=
+∑
+i
+=
+1
+ℓ
+h
+i
+⋅
+x
+i
+−
+1
+\openx^{(k)} = \sum_{i=1}^{\ell} h_i \cdot \openx^{i-1}
+x
+(
+k
+)
+=
+∑
+i
+=
+1
+ℓ
+​
+h
+i
+​
+⋅
+x
+i
+−
+1
+. Let
+b
+⃗
+(
+i
+,
+j
+)
+\vec{b}(i,j)
+b
+(
+i
+,
+j
+)
+denote the
+j
+j
+j
+th bit in the bit-decomposition of the index
+i
+i
+i
+and observe that:
+h
+i
+=
+∏
+j
+=
+1
+k
+α
+⃗
+k
+−
+j
+b
+(
+i
+,
+j
+)
+where
+∑
+j
+b
+⃗
+(
+i
+,
+j
+)
+⋅
+2
+j
+=
+i
+h_i = \prod_{j=1}^k \vec \chalfold_{k-j}^{b(i,j)} \text{\qquad where\qquad } \sum_{j} \vec b(i,j) \cdot 2^j = i
+h
+i
+​
+=
+j
+=
+1
+∏
+k
+​
+α
+k
+−
+j
+b
+(
+i
+,
+j
+)
+​
+where
+j
+∑
+​
+b
+(
+i
+,
+j
+)
+⋅
+2
+j
+=
+i
+Now, compare this with how a
+k
+k
+k
+th element of
+x
+(
+i
+)
+x^{(i)}
+x
+(
+i
+)
+is constructed:
+x
+k
+(
+1
+)
+=
+x
+k
+(
+0
+)
++
+α
+1
+⋅
+x
+n
+/
+2
++
+k
+(
+0
+)
+x
+k
+(
+2
+)
+=
+x
+k
+(
+1
+)
++
+α
+2
+⋅
+x
+n
+/
+4
++
+k
+(
+2
+)
+=
+x
+k
+(
+0
+)
++
+α
+1
+⋅
+x
+n
+/
+2
++
+k
+(
+0
+)
++
+α
+2
+⋅
+(
+x
+n
+/
+4
++
+k
+(
+0
+)
++
+α
+1
+⋅
+x
+n
+/
+2
++
+n
+/
+4
++
+k
+(
+0
+)
+)
+=
+∑
+i
+=
+0
+3
+x
+i
+⋅
+n
+4
++
+k
+(
+0
+)
+⋅
+(
+∏
+j
+=
+0
+1
+α
+j
+b
+(
+i
+,
+j
+)
+)
+\begin{align*}
+x^{(1)}_k &= x^{(0)}_k + \alpha_1 \cdot x^{(0)}_{n/2+k}\\
+x^{(2)}_k &= x^{(1)}_k + \alpha_2 \cdot x^{(2)}_{n/4+k}\\
+&= x^{(0)}_k + \alpha_1 \cdot x^{(0)}_{n/2+k} + \alpha_2 \cdot (x^{(0)}_{n/4+k} + \alpha_1 \cdot x^{(0)}_{n/2 + n/4 +k})\\
+&= \sum_{i=0}^3 x^{(0)}_{i \cdot \frac{n}{4} + k} \cdot \big( \prod_{j=0}^1 \alpha_j^{b(i,j)} \big)
+\end{align*}
+x
+k
+(
+1
+)
+​
+x
+k
+(
+2
+)
+​
+​
+=
+x
+k
+(
+0
+)
+​
++
+α
+1
+​
+⋅
+x
+n
+/2
++
+k
+(
+0
+)
+​
+=
+x
+k
+(
+1
+)
+​
++
+α
+2
+​
+⋅
+x
+n
+/4
++
+k
+(
+2
+)
+​
+=
+x
+k
+(
+0
+)
+​
++
+α
+1
+​
+⋅
+x
+n
+/2
++
+k
+(
+0
+)
+​
++
+α
+2
+​
+⋅
+(
+x
+n
+/4
++
+k
+(
+0
+)
+​
++
+α
+1
+​
+⋅
+x
+n
+/2
++
+n
+/4
++
+k
+(
+0
+)
+​
+)
+=
+i
+=
+0
+∑
+3
+​
+x
+i
+⋅
+4
+n
+​
++
+k
+(
+0
+)
+​
+⋅
+(
+j
+=
+0
+∏
+1
+​
+α
+j
+b
+(
+i
+,
+j
+)
+​
+)
+​
+Recalling that
+x
+k
+(
+0
+)
+=
+x
+k
+x^{(0)}_k = x^k
+x
+k
+(
+0
+)
+​
+=
+x
+k
+, it is easy to see that this generalizes
+exactly to the expression for
+h
+i
+h_i
+h
+i
+​
+that we derived later, which concludes that
+evaluation through
+h
+(
+X
+)
+h(X)
+h
+(
+X
+)
+is correct.
+Finally, regarding evaluation complexity, it is clear that
+h
+\hpoly
+h
+can be
+evaluated in
+O
+(
+k
+=
+log
+⁡
+ℓ
+)
+O(k = \log \ell)
+O
+(
+k
+=
+lo
+g
+ℓ
+)
+time as a product of
+k
+k
+k
+factors. This concludes
+the proof.
+The "Halo Trick"
+​
+The "Halo trick" resides in observing that this is also the case for
+G
+⃗
+(
+k
+)
+\vec{G}^{(k)}
+G
+(
+k
+)
+: since it is folded the same way as
+x
+⃗
+(
+k
+)
+\vec{\openx}^{(k)}
+x
+(
+k
+)
+. It is
+not hard to convince one-self (using the same type of argument as above) that:
+G
+(
+k
+)
+=
+⟨
+h
+⃗
+,
+G
+⃗
+⟩
+G^{(k)} = \langle \vec{h}, \vec{G} \rangle
+G
+(
+k
+)
+=
+⟨
+h
+,
+G
+⟩
+Where
+h
+⃗
+\vec{h}
+h
+is the coefficients of
+h
+(
+X
+)
+h(X)
+h
+(
+X
+)
+(like
+f
+⃗
+\vec{f}
+f
+​
+is the
+coefficients of
+f
+(
+X
+)
+f(X)
+f
+(
+X
+)
+), i.e.
+h
+(
+X
+)
+=
+∑
+i
+=
+1
+ℓ
+h
+i
+X
+i
+−
+1
+h(X) = \sum_{i = 1}^{\ell} h_i X^{i-1}
+h
+(
+X
+)
+=
+∑
+i
+=
+1
+ℓ
+​
+h
+i
+​
+X
+i
+−
+1
+For notational convince (and to emphasise that they are 1 dimensional vectors),
+define/replace:
+U
+=
+G
+⃗
+(
+k
+)
+∈
+G
+,
+c
+=
+f
+⃗
+(
+k
+)
+∈
+F
+,
+h
+(
+x
+)
+=
+x
+⃗
+(
+k
+)
+∈
+F
+U = \vec{G}^{(k)} \in \GG, \ \ \ c = \vec{f}^{(k)} \in \FF, \ \ \ h(\openx) = \vec{\openx}^{(k)} \in \FF
+U
+=
+G
+(
+k
+)
+∈
+G
+,
+c
+=
+f
+​
+(
+k
+)
+∈
+F
+,
+h
+(
+x
+)
+=
+x
+(
+k
+)
+∈
+F
+With this we define the "accumulator language" which states that "
+U
+U
+U
+" was
+computed correctly:
+(
+x
+=
+(
+U
+,
+α
+⃗
+)
+,
+w
+=
+ϵ
+)
+∈
+R
+A
+c
+c
+,
+G
+⃗
+⟺
+{
+h
+(
+X
+)
+≔
+∏
+i
+=
+0
+k
+−
+1
+(
+1
++
+α
+k
+−
+i
+⋅
+X
+2
+i
+)
+∧
+U
+=
+⟨
+h
+⃗
+,
+G
+⃗
+⟩
+}
+\left(\statement = (U, \vec{\chalfold}), \witness = \epsilon\right)
+\in
+\relation_{\mathsf{Acc}, \vec{G}}
+\iff
+\left\{
+    \begin{aligned}
+       h(X) &\coloneqq \prod_{i = 0}^{k - 1} \left(1 + \chalfold_{k - i} \cdot X^{2^i}\right)
+    \land \ U = \langle \vec{h}, \vec{G} \rangle
+    \end{aligned}
+\right\}
+(
+x
+=
+(
+U
+,
+α
+)
+,
+w
+=
+ϵ
+)
+∈
+R
+Acc
+,
+G
+​
+⟺
+⎩
+⎨
+⎧
+​
+h
+(
+X
+)
+​
+:
+=
+i
+=
+0
+∏
+k
+−
+1
+​
+(
+1
++
+α
+k
+−
+i
+​
+⋅
+X
+2
+i
+)
+∧
+U
+=
+⟨
+h
+,
+G
+⟩
+​
+⎭
+⎬
+⎫
+​
+Note:
+since there is
+no witness
+for this relation anyone can verify
+the relation (in
+O
+(
+ℓ
+)
+O(\ell)
+O
+(
+ℓ
+)
+time) by simply computing
+⟨
+h
+⃗
+,
+G
+⃗
+⟩
+\langle \vec{h}, \vec{G} \rangle
+⟨
+h
+,
+G
+⟩
+in linear time. Instances are also small: the
+size is dominated by
+α
+⃗
+\vec{\chalfold}
+α
+which is
+∣
+α
+⃗
+∣
+=
+log
+⁡
+2
+ℓ
+|\vec{\chalfold}| = \log_2 \ell
+∣
+α
+∣
+=
+lo
+g
+2
+​
+ℓ
+.
+In The Code:
+in the Kimchi code
+α
+⃗
+\vec{\accChal}
+α
+is called
+prev_challenges
+and
+U
+\accCom
+U
+is called
+comm
+, all defined in the
+RecursionChallenge
+struct.
+Now, using the new notation rewrite
+R
+I
+P
+A
+,
+1
+\relation_{\mathsf{IPA},1}
+R
+IPA
+,
+1
+​
+as:
+(
+x
+=
+(
+C
+,
+U
+,
+H
+,
+h
+(
+x
+)
+)
+,
+w
+=
+(
+c
+)
+)
+∈
+R
+I
+P
+A
+,
+1
+⟺
+{
+y
+=
+c
+⋅
+h
+(
+x
+)
+∧
+C
+=
+[
+c
+]
+⋅
+U
++
+[
+y
+]
+⋅
+H
+∈
+G
+}
+\left(
+\statement = (\comm, \accCom, \genOpen, h(\openx)),
+\witness = (c)
+\right)
+\in
+\relation_{\mathsf{IPA},1}
+\iff
+\left\{
+\begin{aligned}
+\openy &= c \cdot h(\openx) \\
+\land \ \comm &= [c] \cdot \accCom + [\openy] \cdot \genOpen \in \GG
+\end{aligned}
+\right\}
+(
+x
+=
+(
+C
+,
+U
+,
+H
+,
+h
+(
+x
+))
+,
+w
+=
+(
+c
+)
+)
+∈
+R
+IPA
+,
+1
+​
+⟺
+{
+y
+∧
+C
+​
+=
+c
+⋅
+h
+(
+x
+)
+=
+[
+c
+]
+⋅
+U
++
+[
+y
+]
+⋅
+H
+∈
+G
+​
+}
+Note:
+It is the same relation, we just replaced some names
+(
+c
+=
+f
+⃗
+(
+k
+)
+c = \vec{f}^{(k)}
+c
+=
+f
+​
+(
+k
+)
+,
+x
+⃗
+(
+k
+)
+=
+h
+(
+x
+)
+\vec{\openx}^{(k)} = \hpoly(\openx)
+x
+(
+k
+)
+=
+h
+(
+x
+)
+) and simplified a
+bit: inner products between 1-dimensional vectors are just multiplications.
+We now have all the components to reduce
+R
+I
+P
+A
+,
+1
+→
+R
+A
+c
+c
+,
+G
+⃗
+\relIPA{1} \to \relAcc
+R
+IPA
+,
+1
+​
+→
+R
+Acc
+,
+G
+​
+(with no
+soundness error) as follows:
+Prover sends
+c
+,
+U
+c, \accCom
+c
+,
+U
+to the verifier.
+Verifier does:
+Compute
+y
+←
+h
+(
+x
+)
+⋅
+c
+\openy \gets h(\openx) \cdot c
+y
+←
+h
+(
+x
+)
+⋅
+c
+Checks
+C
+=
+?
+[
+c
+]
+⋅
+U
++
+[
+y
+]
+⋅
+H
+\comm \overset?= [c] \cdot \accCom + [\openy] \cdot \genOpen
+C
+=
+?
+[
+c
+]
+⋅
+U
++
+[
+y
+]
+⋅
+H
+Output
+(
+x
+=
+(
+U
+,
+α
+⃗
+)
+,
+w
+=
+ϵ
+)
+∈
+R
+A
+c
+c
+,
+G
+⃗
+(\statement = (\accCom, \vec{\accChal}), \witness = \epsilon) \in \relAcc
+(
+x
+=
+(
+U
+,
+α
+)
+,
+w
+=
+ϵ
+)
+∈
+R
+Acc
+,
+G
+​
+Note:
+The above can be optimized, in particular there is no need for the
+prover to send
+U
+\accCom
+U
+.
+Reduction 4:
+R
+A
+c
+c
+,
+G
+→
+→
+R
+P
+C
+S
+,
+d
+\relation_{\mathsf{Acc}, \overset{\rightarrow}{G}} \to \relation_{\mathsf{PCS}, d}
+R
+Acc
+,
+G
+→
+​
+→
+R
+PCS
+,
+d
+​
+​
+Tying the final knot in the diagram.
+The expensive part in checking
+(
+U
+,
+α
+⃗
+)
+∈
+R
+A
+c
+c
+,
+G
+⃗
+(\accCom, \vec{\chalfold})
+\in
+\relation_{\mathsf{Acc}, \vec{G}}
+(
+U
+,
+α
+)
+∈
+R
+Acc
+,
+G
+​
+consists in
+computing
+⟨
+h
+⃗
+,
+G
+⃗
+⟩
+\langle \vec{h}, \vec{G} \rangle
+⟨
+h
+,
+G
+⟩
+given the
+α
+⃗
+\vec{\chalfold}
+α
+describing
+h
+(
+X
+)
+h(X)
+h
+(
+X
+)
+: first expanding
+α
+⃗
+\vec{\chalfold}
+α
+into
+h
+⃗
+\vec{h}
+h
+, then
+computing the MSM. However, by observing that
+U
+=
+⟨
+h
+⃗
+,
+G
+⃗
+⟩
+\accCom = \langle \vec{h}, \vec{G} \rangle
+U
+=
+⟨
+h
+,
+G
+⟩
+is actually
+a polynomial
+commitment
+to
+h
+(
+X
+)
+h(X)
+h
+(
+X
+)
+, which we can evaluate at any point using
+O
+(
+log
+⁡
+ℓ
+)
+O(\log \ell)
+O
+(
+lo
+g
+ℓ
+)
+operations, we arrive at a simple strategy for reducing any
+number of such claims to a single polynomial commitment opening:
+Prover sends
+U
+(
+1
+)
+,
+…
+,
+U
+(
+n
+)
+\accCom^{(1)}, \ldots, \accCom^{(n)}
+U
+(
+1
+)
+,
+…
+,
+U
+(
+n
+)
+to the verifier.
+Verifier samples
+ζ
+←
+$
+F
+\chaleval \sample \FF
+ζ
+←
+$
+F
+,
+u
+←
+$
+F
+u \sample \FF
+u
+←
+$
+F
+and computes:
+y
+=
+∑
+i
+α
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+u
+)
+∈
+F
+C
+=
+∑
+i
+[
+α
+i
+−
+1
+]
+⋅
+U
+(
+i
+)
+∈
+G
+\begin{aligned}
+y &= \sum_i \ \chalfold^{i-1} \cdot h^{(i)}(u) \in \FF \\
+C &= \sum_i \ [\chalfold^{i-1}] \cdot U^{(i)} \in \GG
+\end{aligned}
+y
+C
+​
+=
+i
+∑
+​
+α
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+u
+)
+∈
+F
+=
+i
+∑
+​
+[
+α
+i
+−
+1
+]
+⋅
+U
+(
+i
+)
+∈
+G
+​
+Alternatively:
+y
+=
+∑
+i
+u
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+ζ
+)
+∈
+F
+C
+=
+∑
+i
+[
+u
+i
+−
+1
+]
+⋅
+U
+(
+i
+)
+∈
+G
+\begin{aligned}
+y &= \sum_i \ u^{i-1} \cdot h^{(i)}(\chaleval) \in \FF \\
+C &= \sum_i \ [u^{i-1}] \cdot U^{(i)} \in \GG
+\end{aligned}
+y
+C
+​
+=
+i
+∑
+​
+u
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+ζ
+)
+∈
+F
+=
+i
+∑
+​
+[
+u
+i
+−
+1
+]
+⋅
+U
+(
+i
+)
+∈
+G
+​
+And outputs the following claim:
+(
+C
+,
+ζ
+,
+y
+)
+∈
+L
+P
+C
+S
+,
+ℓ
+(C, \chaleval, y) \in \language_{\mathsf{PCS},\ell}
+(
+C
+,
+ζ
+,
+y
+)
+∈
+L
+PCS
+,
+ℓ
+​
+i.e. the polynomial commitment
+C
+C
+C
+opens to
+y
+y
+y
+at
+ζ
+\chaleval
+ζ
+. The prover has
+the witness:
+f
+(
+X
+)
+=
+∑
+i
+α
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+X
+)
+f(X) = \sum_i \ \chalfold^{i-1} \cdot h^{(i)}(X)
+f
+(
+X
+)
+=
+i
+∑
+​
+α
+i
+−
+1
+⋅
+h
+(
+i
+)
+(
+X
+)
+Why is this a sound reduction: if one of the
+U
+(
+i
+)
+U^{(i)}
+U
+(
+i
+)
+does not commit to
+h
+(
+i
+)
+h^{(i)}
+h
+(
+i
+)
+then they disagree except on at most
+ℓ
+\ell
+ℓ
+points, hence
+f
+(
+i
+)
+(
+ζ
+)
+≠
+h
+(
+i
+)
+(
+ζ
+)
+f^{(i)}(\chaleval) \neq h^{(i)}(\chaleval)
+f
+(
+i
+)
+(
+ζ
+)
+
+=
+h
+(
+i
+)
+(
+ζ
+)
+with probability
+ℓ
+/
+∣
+F
+∣
+\ell/|\FF|
+ℓ
+/∣
+F
+∣
+.
+Taking a union bound over all
+n
+n
+n
+terms leads to soundness error
+n
+ℓ
+∣
+F
+∣
+\frac{n \ell}{|\FF|}
+∣
+F
+∣
+n
+ℓ
+​
+-- negligible.
+The reduction above requires
+n
+n
+n
+G
+\GG
+G
+operations and
+O
+(
+n
+log
+⁡
+ℓ
+)
+O(n \log \ell)
+O
+(
+n
+lo
+g
+ℓ
+)
+F
+\FF
+F
+operations.
+Support for Arbitrary Polynomial Relations
+​
+Additional polynomial commitments (i.e. from PlonK) can be added to the
+randomized sums
+(
+C
+,
+y
+)
+(C, y)
+(
+C
+,
+y
+)
+above and opened at
+ζ
+\chaleval
+ζ
+as well: in which case
+the prover proves the claimed openings at
+ζ
+\chaleval
+ζ
+before sampling the
+challenge
+u
+u
+u
+. This is done in Kimchi/Pickles: the
+ζ
+\chaleval
+ζ
+and
+u
+u
+u
+above is
+the same as in the Kimchi code. The combined
+y
+y
+y
+(including both the
+h
+(
+⋅
+)
+h(\cdot)
+h
+(
+⋅
+)
+evaluations and polynomial commitment openings at
+ζ
+\chaleval
+ζ
+and
+ζ
+ω
+\chaleval \omega
+ζ
+ω
+) is called
+combined_inner_product
+in Kimchi.
+Fig 3.
+Cycle of reductions with the added polynomial relations from PlonK.
+This
+R
+P
+C
+S
+,
+ℓ
+\relation_{\mathsf{PCS},\ell}
+R
+PCS
+,
+ℓ
+​
+instance reduced back into a single
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+instance, which is included with the proof.
+Multiple Accumulators (PCD Case)
+​
+From the section above it may seem like there is always going to be a single
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+instance, this is indeed the case if the proof only verifies a
+single
+proof, "Incremental Verifiable Computation" (IVC) in the
+literature. If the proof verifies
+multiple
+proofs, "Proof-Carrying Data"
+(PCD), then there will be multiple accumulators: every "input proof" includes an
+accumulator (
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+instance), all these are combined into the new (single)
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+instance included in the new proof: this way, if one of the original
+proofs included an invalid accumulator and therefore did not verify, the new
+proof will also include an invalid accumulator and not verify with overwhelming
+probability.
+Fig 4.
+Multiple accumulators from previous input proofs (part of the witness) and the polynomial relations for the new proof are combined and reduced into the new accumulator.
+Note that the new proof contains the (single) accumulator of each "input" proof,
+even though the proofs themselves are part of the witness: this is because
+verifying each input proof results in an accumulator (which could then be
+checked directly -- however this is expensive): the "result" of verifying a
+proof is an accumulator (instance of
+R
+A
+c
+c
+,
+G
+⃗
+\relAcc
+R
+Acc
+,
+G
+​
+) -- which can be verified
+directly or further "accumulated".
+These accumulators are the
+RecursionChallenge
+structs included in a Kimchi
+proof. The verifier check the PlonK proof (which proves accumulation for each
+"input proof"), this results in some number of polynomial relations, these are
+combined with the accumulators for the "input" proofs to produce the new
+accumulator.
+Accumulation Verifier
+​
+The section above implicitly describes the work the verifier must do, but for
+the sake of completeness let us explicitly describe what the verifier must do to
+verify a Fiat-Shamir compiled proof of the transformations above. This
+constitutes "the accumulation" verifier which must be implemented "in-circuit"
+(in addition to the "Kimchi verifier"), the section below also describes how to
+incorporate the additional evaluation point
+ζ
+⋅
+ω
+\chaleval \cdot \omega
+ζ
+⋅
+ω
+("the
+step", used by Kimchi to enforce constraints between adjacent rows). Let
+C
+⊆
+F
+\mathcal{C} \subseteq \FF
+C
+⊆
+F
+be the challenge space (128-bit GLV decomposed
+challenges):
+PlonK verifier on
+π
+\pi
+π
+outputs polynomial relations (in Purple in Fig. 4).
+Checking
+R
+A
+c
+c
+,
+G
+⃗
+\relation_{\mathsf{Acc}, \vec{G}}
+R
+Acc
+,
+G
+​
+and polynomial relations (from
+PlonK) to
+R
+P
+C
+S
+,
+d
+\relation_{\mathsf{PCS},d}
+R
+PCS
+,
+d
+​
+(the dotted arrows):
+Sample
+ζ
+←
+$
+C
+\chaleval \sample \mathcal{C}
+ζ
+←
+$
+C
+(evaluation point) using the
+Poseidon sponge.
+Read claimed evaluations at
+ζ
+\chaleval
+ζ
+and
+ω
+ζ
+\omega \chaleval
+ω
+ζ
+(
+PointEvaluations
+).
+Sample
+v
+←
+$
+C
+\chalv \sample \mathcal{C}
+v
+←
+$
+C
+(commitment combination challenge,
+polyscale
+) using the Poseidon sponge.
+Sample
+u
+←
+$
+C
+\chalu \sample \mathcal{C}
+u
+←
+$
+C
+(evaluation combination challenge,
+evalscale
+) using the Poseidon sponge.
+The
+(
+v
+,
+u
+)
+(\chalv, \chalu)
+(
+v
+,
+u
+)
+notation is consistent with the Plonk paper where
+v
+\chalv
+v
+recombines commitments and
+u
+\chalu
+u
+recombines evaluations
+Compute
+C
+∈
+G
+C \in \GG
+C
+∈
+G
+with
+v
+\chalv
+v
+from:
+U
+(
+1
+)
+,
+…
+,
+U
+(
+n
+)
+\accCom^{(1)}, \ldots, \accCom^{(n)}
+U
+(
+1
+)
+,
+…
+,
+U
+(
+n
+)
+(
+RecursionChallenge.comm
+∈
+G
+\in \GG
+∈
+G
+)
+Polynomial commitments from PlonK (
+ProverCommitments
+)
+Compute
+y
+ζ
+\openy_{\chaleval}
+y
+ζ
+​
+(part of
+combined_inner_product
+) with
+v
+\chalv
+v
+from:
+The evaluations of
+h
+(
+1
+)
+(
+ζ
+)
+,
+…
+,
+h
+(
+n
+)
+(
+ζ
+)
+h^{(1)}(\chaleval), \ldots, h^{(n)}(\chaleval)
+h
+(
+1
+)
+(
+ζ
+)
+,
+…
+,
+h
+(
+n
+)
+(
+ζ
+)
+Polynomial openings from PlonK (
+ProofEvaluations
+) at
+ζ
+\chaleval
+ζ
+Compute
+y
+ζ
+ω
+\openy_{\chaleval\omega}
+y
+ζ
+ω
+​
+(part of
+combined_inner_product
+) with
+v
+\chalv
+v
+from:
+The evaluations of
+h
+(
+1
+)
+(
+ζ
+ω
+)
+,
+…
+,
+h
+(
+n
+)
+(
+ζ
+ω
+)
+h^{(1)}(\chaleval\omega), \ldots, h^{(n)}(\chaleval\omega)
+h
+(
+1
+)
+(
+ζ
+ω
+)
+,
+…
+,
+h
+(
+n
+)
+(
+ζ
+ω
+)
+Polynomial openings from PlonK (
+ProofEvaluations
+) at
+ζ
+⋅
+ω
+\chaleval \cdot \omega
+ζ
+⋅
+ω
+At this point we have two PCS claims, these are combined in the next
+transform.
+Details
+At this point we have two claims:
+    $$
+    \begin{aligned}
+    (\comm, \chaleval, \openy_{\chaleval}) &\in \langPCS{\degree} \\
+    (\comm, \chaleval\omega, \openy_{\chaleval\omega}) &\in \langPCS{\degree}
+    \end{aligned}
+    $$
+These are combined using a random linear combination with $\chalv$ in the inner product argument
+(see [Different functionalities](../plonk/inner_product_api) for details).
+Checking
+R
+P
+C
+S
+,
+d
+→
+R
+I
+P
+A
+,
+ℓ
+\relation_{\mathsf{PCS}, d} \to \relation_{\mathsf{IPA},\ell}
+R
+PCS
+,
+d
+​
+→
+R
+IPA
+,
+ℓ
+​
+.
+Sample
+H
+←
+$
+G
+\genOpen \sample \GG
+H
+←
+$
+G
+using the Poseidon sponge: hash to curve.
+Compute
+y
+←
+y
+ζ
++
+u
+⋅
+y
+ζ
+ω
+\openy \gets \openy_{\chaleval} + \chalu \cdot \openy_{\chaleval\omega}
+y
+←
+y
+ζ
+​
++
+u
+⋅
+y
+ζ
+ω
+​
+.
+Update
+C
+′
+←
+C
++
+[
+y
+]
+⋅
+H
+\comm' \gets \comm + [\openy] \cdot \genOpen
+C
+′
+←
+C
++
+[
+y
+]
+⋅
+H
+.
+Checking
+R
+I
+P
+A
+,
+ℓ
+→
+R
+I
+P
+A
+,
+1
+\relation_{\mathsf{IPA}, \ell} \to \relation_{\mathsf{IPA},1}
+R
+IPA
+,
+ℓ
+​
+→
+R
+IPA
+,
+1
+​
+:
+Check the correctness of the folding argument, for every
+i
+=
+1
+,
+…
+,
+k
+i = 1, \ldots, k
+i
+=
+1
+,
+…
+,
+k
+:
+Receive
+L
+(
+i
+)
+,
+R
+(
+i
+)
+∈
+G
+L^{(i)}, R^{(i)} \in \GG
+L
+(
+i
+)
+,
+R
+(
+i
+)
+∈
+G
+(see the vector
+OpeningProof.lr
+in
+Kimchi).
+Sample
+α
+i
+←
+$
+C
+\chalfold_i \sample \mathcal{C}
+α
+i
+​
+←
+$
+C
+using the Poseidon sponge.
+Compute
+C
+(
+i
+)
+=
+[
+α
+i
+−
+1
+]
+⋅
+L
++
+C
+(
+i
+−
+1
+)
++
+[
+α
+i
+]
+⋅
+R
+C^{(i)} = [\chalfold_i^{-1}] \cdot L + C^{(i-1)} + [\chalfold_i] \cdot R
+C
+(
+i
+)
+=
+[
+α
+i
+−
+1
+​
+]
+⋅
+L
++
+C
+(
+i
+−
+1
+)
++
+[
+α
+i
+​
+]
+⋅
+R
+(using GLV endomorphism)
+(
+Note:
+to avoid the inversion the
+element
+P
+=
+[
+α
+i
+−
+1
+]
+⋅
+L
+P = [\chalfold_i^{-1}] \cdot L
+P
+=
+[
+α
+i
+−
+1
+​
+]
+⋅
+L
+is witnessed and the verifier
+checks
+[
+α
+i
+]
+⋅
+P
+=
+[
+α
+i
+]
+⋅
+(
+[
+α
+i
+−
+1
+]
+⋅
+L
+)
+=
+L
+[\chalfold_i] \cdot P = [\chalfold_i] \cdot ([\chalfold_i^{-1}] \cdot L) = L
+[
+α
+i
+​
+]
+⋅
+P
+=
+[
+α
+i
+​
+]
+⋅
+([
+α
+i
+−
+1
+​
+]
+⋅
+L
+)
+=
+L
+.
+To understand why computing the field inversion would be expensive see
+deferred computation
+)
+Checking
+R
+I
+P
+A
+,
+1
+→
+R
+A
+c
+c
+,
+G
+⃗
+\relation_{\mathsf{IPA},1} \to \relation_{\mathsf{Acc}, \vec{G}}
+R
+IPA
+,
+1
+​
+→
+R
+Acc
+,
+G
+​
+Receive
+c
+c
+c
+form the prover.
+Define
+h
+\hpoly
+h
+from
+α
+⃗
+\vec{\chalfold}
+α
+(folding challenges, computed
+above).
+Compute a combined evaluation of the IPA challenge polynomial on two
+points:
+b
+=
+h
+(
+ζ
+)
++
+u
+⋅
+h
+(
+ζ
+ω
+)
+b = \hpoly(\chaleval) + \chalu \cdot \hpoly(\chaleval \omega)
+b
+=
+h
+(
+ζ
+)
++
+u
+⋅
+h
+(
+ζ
+ω
+)
+Computationally,
+b
+b
+b
+is obtained inside bulletproof folding procedure,
+by folding the vector
+b
+i
+n
+i
+t
+b_{\mathsf{init}}
+b
+init
+​
+such that
+b
+i
+n
+i
+t
+,
+j
+=
+ζ
+j
++
+v
+⋅
+ζ
+j
+w
+j
+b_{\mathsf{init},j} = \zeta^j + v \cdot \zeta^j w^j
+b
+init
+,
+j
+​
+=
+ζ
+j
++
+v
+⋅
+ζ
+j
+w
+j
+using the same
+standard bulletproof challenges that constitute
+h
+(
+X
+)
+h(X)
+h
+(
+X
+)
+. This
+b
+i
+n
+i
+t
+b_{\mathsf{init}}
+b
+init
+​
+is a
+v
+v
+v
+-recombined evaluation point. The equality
+is by linearity of IPA recombination.
+Compute
+y
+′
+←
+c
+⋅
+b
+=
+c
+⋅
+(
+h
+(
+ζ
+)
++
+u
+⋅
+h
+(
+ζ
+ω
+)
+)
+\openy' \gets c \cdot b = c \cdot (\hpoly(\chaleval) + \chalu \cdot \hpoly(\chaleval \omega))
+y
+′
+←
+c
+⋅
+b
+=
+c
+⋅
+(
+h
+(
+ζ
+)
++
+u
+⋅
+h
+(
+ζ
+ω
+))
+,
+this works since:
+x
+(
+k
+)
+=
+x
+ζ
+(
+k
+)
++
+u
+⋅
+x
+ζ
+ω
+(
+k
+)
+\openx^{(\rounds)} =
+\openx^{(\rounds)}_{\chaleval} + \chalu \cdot \openx^{(\rounds)}_{\chaleval\omega}
+x
+(
+k
+)
+=
+x
+ζ
+(
+k
+)
+​
++
+u
+⋅
+x
+ζ
+ω
+(
+k
+)
+​
+See
+Different functionalities
+for more
+details or
+the relevant code
+.
+Compute
+U
+←
+C
+(
+k
+)
+−
+[
+y
+′
+]
+⋅
+H
+\accCom \gets \comm^{(k)} - [\openy'] \cdot \genOpen
+U
+←
+C
+(
+k
+)
+−
+[
+y
+′
+]
+⋅
+H
+(i.e. st.
+C
+(
+k
+)
+=
+U
++
+[
+y
+′
+]
+⋅
+H
+\comm^{(k)} = \accCom + [\openy'] \cdot \genOpen
+C
+(
+k
+)
+=
+U
++
+[
+y
+′
+]
+⋅
+H
+)
+Note that the accumulator verifier must be proven (in addition to the
+Kimchi/PlonK verifier) for each input proof.
+No Cycles of Curves?
+​
+Note that the "cycles of curves" (e.g. Pasta cycle) does not show up in this
+part of the code: a
+separate accumulator
+is needed for each curve and the
+final verifier must check both accumulators to deem the combined recursive proof
+valid. This takes the form of
+passthough
+data in pickles.
+Note however, that the accumulation verifier makes use of both
+G
+\GG
+G
+-operations
+and
+F
+\FF
+F
+-operations, therefore it (like the Kimchi verifier) also requires
+deferred computation
+.
+Edit this page
+Previous
+Inductive proof systems
+Next
+Deferred Computation
+Introduction
+Interactive Reductions Between Relations
+Polynomial Commitment Openings \relPCS{d}
+Reduction 1: \relation_{\mathsf{PCS},d} \to \relation_{\mathsf{IPA},\ell}
+Reduction 2 (Full): \relIPA{\ell} \to \ldots \to \relIPA{1}
+Reduction 3: \relation_{\mathsf{IPA},1} \to \relation_{\mathsf{Acc},\overset{\rightarrow}{G} }
+Reduction 4: \relation_{\mathsf{Acc}, \overset{\rightarrow}{G}} \to \relation_{\mathsf{PCS}, d}
+Support for Arbitrary Polynomial Relations
+Multiple Accumulators (PCD Case)
+Accumulation Verifier
+No Cycles of Curves?

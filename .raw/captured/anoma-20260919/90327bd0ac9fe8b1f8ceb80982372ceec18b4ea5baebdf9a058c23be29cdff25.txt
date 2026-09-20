@@ -1,0 +1,42 @@
+Architecture Overview
+Copy page
+Architecture Overview
+AnomaPay decouples the simple intent to move funds from the execution of that movement. This architecture allows users to interact with the blockchain without needing high-performance hardware for zero-knowledge proof generation or needing to manage gas manually.
+The Transaction Lifecycle
+When you use AnomaPay, the flow of data looks different than a standard EVM transaction.
+Here is the step-by-step lifecycle of a private transfer:
+The User Intent (Alice)
+The process begins with Alice (the User). She interacts with the AnomaPay frontend to create a payment
+Intent
+— a simple instruction like “I want to send 10 USDC to Bob.”
+Alice signs this intent using her in-browser wallet or passkey.
+She then sends this signed intent directly to the
+Transaction Service
+. She does not need to communicate with the Prover directly.
+The Transaction Service Orchestration
+The
+Transaction Service
+acts as the coordinator. It receives Alice’s simple intent and uses it to craft the appropriate transaction to be executed on-chain.
+The
+Transaction Service
+applies checks before and after proving to ensure that the final Transaction Object will be able to execute and settle on-chain.
+The
+Transaction Service
+forwards the request to the Proving Service, asking for the necessary proofs to validate Alice’s intent.
+It packages these into a Transaction Object.
+The Proving Service
+This is where the heavy lifting happens. The Proving Service receives the request from the Transaction Service.
+It performs the computationally intensive work to generate Anoma Resource Machine Proofs.
+These Zero-Knowledge Proofs attest that Alice has the funds and permission to spend them, without revealing her private key or history.
+Once complete, the Proving Service sends these proofs back to the Relayer.
+The Protocol Adapter
+The Protocol Adapter enables Anoma Resource Machine transactions to settle on EVM-
+compatible chains via its execute() function.
+The Transaction Service submits this object to the Protocol Adapter on the blockchain, paying the necessary ETH gas fees.
+The Protocol Adapter contract verifies the proofs via the respective Risc0 verifier contract and settles the transaction, updating the balances for Alice and Bob securely.
+WHY THIS MATTERS
+This architecture provides Hardware Abstraction and Gas Abstraction. You don’t need a powerful GPU to generate proofs, and you don’t need ETH in your wallet to pay for gas —the services handle this for you.
+Last updated on
+April 2, 2026
+Introduction
+Privacy Guarantees

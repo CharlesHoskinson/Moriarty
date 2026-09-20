@@ -1,0 +1,1009 @@
+{
+  "schema_version": 1,
+  "reviewer": {
+    "requested_model": "gpt-6-astra",
+    "requested_effort": "medium",
+    "configured_panel_identity": "gpt-6-astra medium (parent dispatch)",
+    "returned_model_identity": null,
+    "runtime_identity_attestation": "not exposed by tool session; no fabricated provider receipt"
+  },
+  "scope": "Independent abstraction/API and PL-interface panel review",
+  "verdict": "draft substantially supported with material qualifications; product capability not established",
+  "controlling_contract": {
+    "path": "/home/charl/Moriarty-aeon-study/docs/MORIARTY-PRODUCT-CONTRACT.md",
+    "sha256": "4fc10f35df06c2bf3784176a13e048530c98003f2a3b04948512d6c6bcfc32c7"
+  },
+  "source_pins": {
+    "near/docs": "c06865496870cdf8fa985424eca2b13ee2ac6ecf",
+    "near/near-api-js": "2546c85354ab888dc1f559b0e54cfac51f03b484",
+    "near/intents": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+    "near/mpc": "3499a2a44207df89699c9791e21623613a365a16",
+    "near/near-sdk-rs": "4ba939119ea3f9a559d6d45e82859419f5a09a20",
+    "defuse-protocol/sdk-monorepo": "b6bab503e09027b40df3df14ca3610a11ff3d40d",
+    "defuse-protocol/one-click-sdk-rs": "f9741c3dcfe406dba2ce8c2ae73a6e025dbaafd9"
+  },
+  "verified_claims": [
+    "A-keys",
+    "A-meta",
+    "A-payload",
+    "A-multi",
+    "A-nepadapter",
+    "A-ercadapter",
+    "A-nephash",
+    "A-erchash",
+    "A-engine",
+    "A-diff",
+    "A-balance",
+    "A-mpcsign",
+    "A-mpcwire",
+    "A-mpcpayload",
+    "A-callback",
+    "A-quoteold",
+    "A-overview",
+    "A-signed1click",
+    "A-quotesig",
+    "A-signingdocs",
+    "A-oneclick",
+    "A-auth",
+    "A-bus",
+    "A-busrpc",
+    "A-screening"
+  ],
+  "new_claims": [
+    "AA-entry",
+    "AA-detached",
+    "AA-deposit",
+    "AA-ftresolve",
+    "AA-implicit",
+    "AA-fanout",
+    "AA-builder",
+    "AA-quotecheck",
+    "AA-refunddeadline",
+    "AA-generate",
+    "AA-submit",
+    "AA-types",
+    "AA-requote",
+    "AA-status"
+  ],
+  "changed_claims": [
+    {
+      "topic": "atomicity",
+      "change": "Qualify SDK atomicity wording by synchronous contract receipt; detached withdrawal/auth-call work has separate settlement/recovery."
+    },
+    {
+      "topic": "key membership",
+      "change": "Allow implicit-account key identity; explicit prior registration is not universal."
+    },
+    {
+      "topic": "protocol gating",
+      "change": "Add contract pause gate separately from optional hosted service policy."
+    },
+    {
+      "topic": "deadline",
+      "change": "Detailed 1Click API describes refund initiation; quickstart calls it quote expiration. Keep stage-specific meaning."
+    },
+    {
+      "topic": "idempotency",
+      "change": "No duplicate-generation/submission contract established; correlationId, nonce replay rejection and exactly-once settlement are distinct."
+    },
+    {
+      "topic": "MPC continuation",
+      "change": "Duplicate request fan-out invalidates one-content-hash/one-obligation assumption."
+    }
+  ],
+  "proposed_ears_requirements": [
+    {
+      "local_candidate_id": "candidate-authority-proof",
+      "stable_mplr_id": null,
+      "ears": "WHEN a candidate execution is submitted, Moriarty SHALL verify owner authority separately from the bound program, intent-refinement, transition and history proof obligations.",
+      "behavioral_requirement": "WHEN a candidate execution is submitted, Moriarty SHALL verify owner authority separately from the bound program, intent-refinement, transition and history proof obligations.",
+      "motivating_near_claims": [
+        "A-engine",
+        "A-mpcsign",
+        "A-quotesig"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            117
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L117",
+          "captured_at": null,
+          "sha256": "d1518444bc637686df75a5ff4f537fd110b622aeeda063ddb24d4ee14375f402"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            24,
+            223
+          ],
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L24-L223",
+          "captured_at": null,
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/44cf85c3e91dda069045.md",
+          "lines": [
+            8,
+            107
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/verify-quote-signature",
+          "captured_at": "2026-09-19T20:11:11.922807+00:00",
+          "sha256": "faa28576e0613a99877e4d72ad74ab6b34f5e707c0fc8af5ab7f56eec069dc01"
+        }
+      ],
+      "pl_research_questions": [
+        "Which proof/interface composition prevents an authenticated proposer from substituting a weaker relation?"
+      ],
+      "adversarial_acceptance_scenario": "A correctly signed candidate with a wrong fee recipient or unproved transition rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-persistent-duty",
+      "stable_mplr_id": null,
+      "ears": "WHEN a stage completes, fails or becomes unknown, Moriarty SHALL preserve every undischarged liability and pending duty in its authenticated successor state.",
+      "behavioral_requirement": "WHEN a stage completes, fails or becomes unknown, Moriarty SHALL preserve every undischarged liability and pending duty in its authenticated successor state.",
+      "motivating_near_claims": [
+        "AA-detached",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            216,
+            367
+          ],
+          "sha256": "cd25c8fb8619e0456dc2dbcdc18a441668ccd33ba6181a0777185ef20578ff4e",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L216-L367"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        }
+      ],
+      "pl_research_questions": [
+        "How should affine capabilities and persistent obligations interact under weakening, exceptions and joins? Are graded/effect or dependent resource types sufficient?"
+      ],
+      "adversarial_acceptance_scenario": "A successful sibling callback cannot drop debt or release the failed sibling reservation.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-phase-authority",
+      "stable_mplr_id": null,
+      "ears": "WHEN a staged program is lowered to Midnight, Moriarty SHALL bind its guaranteed/fallible phase layout, per-phase authority consumption, fees, failure effects and remedies to the signed intention and proof statement.",
+      "behavioral_requirement": "WHEN a staged program is lowered to Midnight, Moriarty SHALL bind its guaranteed/fallible phase layout, per-phase authority consumption, fees, failure effects and remedies to the signed intention and proof statement.",
+      "motivating_near_claims": [
+        "AA-deposit",
+        "AA-entry"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            63
+          ],
+          "sha256": "95d9ae3f8f99e6d1d78976f25ffbcefa8973cffa2a375fb4bbfc27806b9823df",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L63"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/deposit.rs",
+          "lines": [
+            35,
+            80
+          ],
+          "sha256": "d2314633aa1553c958870569d9f0d1fff60c8ac8b3b8a2bb0daf033b0756c3fc",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/deposit.rs#L35-L80"
+        }
+      ],
+      "pl_research_questions": [
+        "What simulation/refinement relation represents partial commits and charged failure without equating them to atomic source rollback?"
+      ],
+      "adversarial_acceptance_scenario": "A fallible-phase failure retaining an unauthorized guaranteed debit or fee rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-contingency",
+      "stable_mplr_id": null,
+      "ears": "WHEN a contingent release is proposed, Moriarty SHALL require the bound combination of signatures, documents, proofs, recipient actions and other condition evidence under the declared domain/finality assumptions before releasing assets.",
+      "behavioral_requirement": "WHEN a contingent release is proposed, Moriarty SHALL require the bound combination of signatures, documents, proofs, recipient actions and other condition evidence under the declared domain/finality assumptions before releasing assets.",
+      "motivating_near_claims": [
+        "A-mpcsign",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            24,
+            223
+          ],
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L24-L223",
+          "captured_at": null,
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        }
+      ],
+      "pl_research_questions": [
+        "How are temporal conditions and external observations typed without promoting attestations into arbitrary-program proofs?"
+      ],
+      "adversarial_acceptance_scenario": "An MPC signature or solver success flag without delivery evidence cannot discharge the delivery duty.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-retry-identity",
+      "stable_mplr_id": null,
+      "ears": "WHEN a continuation is resumed or retried, Moriarty SHALL authenticate the stage, attempt, predecessor and effect identities and prevent duplicate authority consumption while retaining unresolved earlier attempts.",
+      "behavioral_requirement": "WHEN a continuation is resumed or retried, Moriarty SHALL authenticate the stage, attempt, predecessor and effect identities and prevent duplicate authority consumption while retaining unresolved earlier attempts.",
+      "motivating_near_claims": [
+        "AA-fanout",
+        "AA-submit"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            165,
+            223
+          ],
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7",
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "captured_at": null,
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L165-L223"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c4a08af2366665240b2b.md",
+          "lines": [
+            1,
+            258
+          ],
+          "sha256": "7e9a32b418094b70b73577fddb487fd52a3bb6592f0062147c439a3c85d986ee",
+          "url": "https://docs.near-intents.org/api-reference/oneclick/submit-a-signed-intent",
+          "captured_at": "2026-09-19T20:10:57.538711+00:00",
+          "commit": null
+        }
+      ],
+      "pl_research_questions": [
+        "Which identity/equivalence relation permits safe retries and shared requests without assuming at-most-one invocation per content hash?"
+      ],
+      "adversarial_acceptance_scenario": "Two identical requests with separate pending yields cannot be collapsed into one obligation; a late first callback cannot cause a second payout.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-join",
+      "stable_mplr_id": null,
+      "ears": "WHEN parallel branches join, Moriarty SHALL validate the required branch set and combine their complete effects, cumulative bounds and residual duties according to the declared join policy.",
+      "behavioral_requirement": "WHEN parallel branches join, Moriarty SHALL validate the required branch set and combine their complete effects, cumulative bounds and residual duties according to the declared join policy.",
+      "motivating_near_claims": [
+        "A-callback",
+        "AA-detached"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/near-sdk-rs/examples/callback-results/src/lib.rs",
+          "lines": [
+            11,
+            87
+          ],
+          "commit": "4ba939119ea3f9a559d6d45e82859419f5a09a20",
+          "url": "https://github.com/near/near-sdk-rs/blob/4ba939119ea3f9a559d6d45e82859419f5a09a20/examples/callback-results/src/lib.rs#L11-L87",
+          "captured_at": null,
+          "sha256": "baeb194a63b077e16286bdf14610c47c7ee4f591a842868959d598f2b75e2446"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            216,
+            367
+          ],
+          "sha256": "cd25c8fb8619e0456dc2dbcdc18a441668ccd33ba6181a0777185ef20578ff4e",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L216-L367"
+        }
+      ],
+      "pl_research_questions": [
+        "Can dependent session types or effect rows represent arbitrary branch sets, failure sums and obligation-conserving joins?"
+      ],
+      "adversarial_acceptance_scenario": "A callback swaps branch positions or omits a pending branch; the join rejects or remains pending under explicit policy.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-expiry",
+      "stable_mplr_id": null,
+      "ears": "WHEN an expiry threshold is reached, Moriarty SHALL apply its signed stage-specific rule without inferring nonexecution or discharging existing duties from elapsed time alone.",
+      "behavioral_requirement": "WHEN an expiry threshold is reached, Moriarty SHALL apply its signed stage-specific rule without inferring nonexecution or discharging existing duties from elapsed time alone.",
+      "motivating_near_claims": [
+        "AA-refunddeadline",
+        "A-engine",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            117
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L117",
+          "captured_at": null,
+          "sha256": "d1518444bc637686df75a5ff4f537fd110b622aeeda063ddb24d4ee14375f402"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c064901208ed4d8acbae.md",
+          "lines": [
+            524,
+            747
+          ],
+          "sha256": "62f29e581857cc967940abc0f3d72fbb1d8dbd984fdfc4ce88ce8a71a9591f92",
+          "url": "https://docs.near-intents.org/api-reference/oneclick/request-a-swap-quote",
+          "captured_at": "2026-09-19T20:10:57.169687+00:00",
+          "commit": null
+        }
+      ],
+      "pl_research_questions": [
+        "How should validity deadlines, offer lifetimes, recovery eligibility and revocation be distinguished in temporal semantics?"
+      ],
+      "adversarial_acceptance_scenario": "A deposit mined after a local timeout cannot automatically justify both refund and delivery release.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-public-pipeline",
+      "stable_mplr_id": null,
+      "ears": "WHILE a program uses supported semantics, Moriarty SHALL allow any developer to compile, prove, publish and deploy it without maintainer, hosted-solver, reviewer or registry approval, subject to objective ledger validity, owner authorization and explicit signed application policy.",
+      "behavioral_requirement": "WHILE a program uses supported semantics, Moriarty SHALL allow any developer to compile, prove, publish and deploy it without maintainer, hosted-solver, reviewer or registry approval, subject to objective ledger validity, owner authorization and explicit signed application policy.",
+      "motivating_near_claims": [
+        "A-bus",
+        "A-busrpc",
+        "AA-entry"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/bd2e229d604db97cbe26.md",
+          "lines": [
+            8,
+            25
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/market-makers/message-bus/introduction",
+          "captured_at": "2026-09-19T20:11:15.046337+00:00",
+          "sha256": "6f93e738325cd11e02de11cdaf929d3ea9e227636ba0cc808ecbc0ca9a2f602a"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/0a3283118d29be374f6a.md",
+          "lines": [
+            8,
+            62
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/market-makers/message-bus/rpc",
+          "captured_at": "2026-09-19T20:11:15.953476+00:00",
+          "sha256": "4357ba42c571ebb5e866ef255acd548763a7f81dd083422a657d0cffb2f7057b"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            63
+          ],
+          "sha256": "95d9ae3f8f99e6d1d78976f25ffbcefa8973cffa2a375fb4bbfc27806b9823df",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L63"
+        }
+      ],
+      "pl_research_questions": [
+        "How can optional service/application policy remain composable without becoming language-wide program admission?"
+      ],
+      "adversarial_acceptance_scenario": "Two independently produced plans satisfying the same signed counterparty/application policy receive equivalent objective treatment; missing partner JWT does not prevent local compilation or owner-controlled submission.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-canonical-intent",
+      "stable_mplr_id": null,
+      "ears": "WHEN the owner signs an intention, Moriarty SHALL bind a versioned canonical machine-readable payload and present the same asset, recipient, fee, liability, partial-outcome and recovery constraints in the inspectable signing display.",
+      "behavioral_requirement": "WHEN the owner signs an intention, Moriarty SHALL bind a versioned canonical machine-readable payload and present the same asset, recipient, fee, liability, partial-outcome and recovery constraints in the inspectable signing display.",
+      "motivating_near_claims": [
+        "A-nepadapter",
+        "A-erchash",
+        "AA-builder"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/nep413.rs",
+          "lines": [
+            17,
+            95
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/nep413.rs#L17-L95",
+          "captured_at": null,
+          "sha256": "719427aceb87924417a903dcc37d955875822c8201924dc02124c524ce6c2ecb"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/crates/signatures/erc191/src/lib.rs",
+          "lines": [
+            9,
+            39
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/crates/signatures/erc191/src/lib.rs#L9-L39",
+          "captured_at": null,
+          "sha256": "edfe5a40ff14ac672f124c8d4c5adfb0c9df7520913346bbe6dfe6b6cf2d36a2"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/intents-sdk/src/intents/intent-payload-builder.ts",
+          "lines": [
+            84,
+            240
+          ],
+          "sha256": "7be160458c23cb0bc1fa68f0785fcbe4e2571de973d9fb26a026500d2308dbb9",
+          "commit": "b6bab503e09027b40df3df14ca3610a11ff3d40d",
+          "captured_at": null,
+          "url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/intents-sdk/src/intents/intent-payload-builder.ts#L84-L240"
+        }
+      ],
+      "pl_research_questions": [
+        "What parser/version/canonicalization correspondence is necessary across native-wallet signing standards and semantic hashes?"
+      ],
+      "adversarial_acceptance_scenario": "Payload reserialization or changed domain cannot preserve signature acceptance accidentally; a valid signature over a different displayed intent rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-proposal-admissibility",
+      "stable_mplr_id": null,
+      "ears": "WHEN candidate plans are ranked, Moriarty SHALL first establish each candidate satisfies the immutable signed hard constraints and bound program proof relation.",
+      "behavioral_requirement": "WHEN candidate plans are ranked, Moriarty SHALL first establish each candidate satisfies the immutable signed hard constraints and bound program proof relation.",
+      "motivating_near_claims": [
+        "AA-quotecheck",
+        "A-diff"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/token_diff.rs",
+          "lines": [
+            18,
+            103
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/token_diff.rs#L18-L103",
+          "captured_at": null,
+          "sha256": "94b9fce9429fed24ad6619f45c5d386505326514a7773c28f8e8085d4c6a6591"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/internal-utils/src/solverRelay/getQuote.ts",
+          "lines": [
+            37,
+            139
+          ],
+          "sha256": "5b4e19a15aabe73094f1ef84a5a8f40e2584bbe6032a1611e48135164264bd3a",
+          "commit": "b6bab503e09027b40df3df14ca3610a11ff3d40d",
+          "captured_at": null,
+          "url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/internal-utils/src/solverRelay/getQuote.ts#L37-L139"
+        }
+      ],
+      "pl_research_questions": [
+        "How can optimization/refinement interfaces expose preferences without weakening hard constraints?"
+      ],
+      "adversarial_acceptance_scenario": "A higher-output quote with a different input asset or extra liability is rejected before ranking.",
+      "status": "proposed; theory solution and implementation unresolved"
+    }
+  ],
+  "mplr_candidates": [
+    {
+      "local_candidate_id": "candidate-authority-proof",
+      "stable_mplr_id": null,
+      "ears": "WHEN a candidate execution is submitted, Moriarty SHALL verify owner authority separately from the bound program, intent-refinement, transition and history proof obligations.",
+      "behavioral_requirement": "WHEN a candidate execution is submitted, Moriarty SHALL verify owner authority separately from the bound program, intent-refinement, transition and history proof obligations.",
+      "motivating_near_claims": [
+        "A-engine",
+        "A-mpcsign",
+        "A-quotesig"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            117
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L117",
+          "captured_at": null,
+          "sha256": "d1518444bc637686df75a5ff4f537fd110b622aeeda063ddb24d4ee14375f402"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            24,
+            223
+          ],
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L24-L223",
+          "captured_at": null,
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/44cf85c3e91dda069045.md",
+          "lines": [
+            8,
+            107
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/distribution-channels/1click-api/verify-quote-signature",
+          "captured_at": "2026-09-19T20:11:11.922807+00:00",
+          "sha256": "faa28576e0613a99877e4d72ad74ab6b34f5e707c0fc8af5ab7f56eec069dc01"
+        }
+      ],
+      "pl_research_questions": [
+        "Which proof/interface composition prevents an authenticated proposer from substituting a weaker relation?"
+      ],
+      "adversarial_acceptance_scenario": "A correctly signed candidate with a wrong fee recipient or unproved transition rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-persistent-duty",
+      "stable_mplr_id": null,
+      "ears": "WHEN a stage completes, fails or becomes unknown, Moriarty SHALL preserve every undischarged liability and pending duty in its authenticated successor state.",
+      "behavioral_requirement": "WHEN a stage completes, fails or becomes unknown, Moriarty SHALL preserve every undischarged liability and pending duty in its authenticated successor state.",
+      "motivating_near_claims": [
+        "AA-detached",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            216,
+            367
+          ],
+          "sha256": "cd25c8fb8619e0456dc2dbcdc18a441668ccd33ba6181a0777185ef20578ff4e",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L216-L367"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        }
+      ],
+      "pl_research_questions": [
+        "How should affine capabilities and persistent obligations interact under weakening, exceptions and joins? Are graded/effect or dependent resource types sufficient?"
+      ],
+      "adversarial_acceptance_scenario": "A successful sibling callback cannot drop debt or release the failed sibling reservation.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-phase-authority",
+      "stable_mplr_id": null,
+      "ears": "WHEN a staged program is lowered to Midnight, Moriarty SHALL bind its guaranteed/fallible phase layout, per-phase authority consumption, fees, failure effects and remedies to the signed intention and proof statement.",
+      "behavioral_requirement": "WHEN a staged program is lowered to Midnight, Moriarty SHALL bind its guaranteed/fallible phase layout, per-phase authority consumption, fees, failure effects and remedies to the signed intention and proof statement.",
+      "motivating_near_claims": [
+        "AA-deposit",
+        "AA-entry"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            63
+          ],
+          "sha256": "95d9ae3f8f99e6d1d78976f25ffbcefa8973cffa2a375fb4bbfc27806b9823df",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L63"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/deposit.rs",
+          "lines": [
+            35,
+            80
+          ],
+          "sha256": "d2314633aa1553c958870569d9f0d1fff60c8ac8b3b8a2bb0daf033b0756c3fc",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/deposit.rs#L35-L80"
+        }
+      ],
+      "pl_research_questions": [
+        "What simulation/refinement relation represents partial commits and charged failure without equating them to atomic source rollback?"
+      ],
+      "adversarial_acceptance_scenario": "A fallible-phase failure retaining an unauthorized guaranteed debit or fee rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-contingency",
+      "stable_mplr_id": null,
+      "ears": "WHEN a contingent release is proposed, Moriarty SHALL require the bound combination of signatures, documents, proofs, recipient actions and other condition evidence under the declared domain/finality assumptions before releasing assets.",
+      "behavioral_requirement": "WHEN a contingent release is proposed, Moriarty SHALL require the bound combination of signatures, documents, proofs, recipient actions and other condition evidence under the declared domain/finality assumptions before releasing assets.",
+      "motivating_near_claims": [
+        "A-mpcsign",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            24,
+            223
+          ],
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L24-L223",
+          "captured_at": null,
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        }
+      ],
+      "pl_research_questions": [
+        "How are temporal conditions and external observations typed without promoting attestations into arbitrary-program proofs?"
+      ],
+      "adversarial_acceptance_scenario": "An MPC signature or solver success flag without delivery evidence cannot discharge the delivery duty.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-retry-identity",
+      "stable_mplr_id": null,
+      "ears": "WHEN a continuation is resumed or retried, Moriarty SHALL authenticate the stage, attempt, predecessor and effect identities and prevent duplicate authority consumption while retaining unresolved earlier attempts.",
+      "behavioral_requirement": "WHEN a continuation is resumed or retried, Moriarty SHALL authenticate the stage, attempt, predecessor and effect identities and prevent duplicate authority consumption while retaining unresolved earlier attempts.",
+      "motivating_near_claims": [
+        "AA-fanout",
+        "AA-submit"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/crates/contract/src/api/sign.rs",
+          "lines": [
+            165,
+            223
+          ],
+          "sha256": "bc402efe429540b11644b3da5c926db9c24ac8e8be1b03742761f8ca97da62e7",
+          "commit": "3499a2a44207df89699c9791e21623613a365a16",
+          "captured_at": null,
+          "url": "https://github.com/near/mpc/blob/3499a2a44207df89699c9791e21623613a365a16/crates/contract/src/api/sign.rs#L165-L223"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c4a08af2366665240b2b.md",
+          "lines": [
+            1,
+            258
+          ],
+          "sha256": "7e9a32b418094b70b73577fddb487fd52a3bb6592f0062147c439a3c85d986ee",
+          "url": "https://docs.near-intents.org/api-reference/oneclick/submit-a-signed-intent",
+          "captured_at": "2026-09-19T20:10:57.538711+00:00",
+          "commit": null
+        }
+      ],
+      "pl_research_questions": [
+        "Which identity/equivalence relation permits safe retries and shared requests without assuming at-most-one invocation per content hash?"
+      ],
+      "adversarial_acceptance_scenario": "Two identical requests with separate pending yields cannot be collapsed into one obligation; a late first callback cannot cause a second payout.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-join",
+      "stable_mplr_id": null,
+      "ears": "WHEN parallel branches join, Moriarty SHALL validate the required branch set and combine their complete effects, cumulative bounds and residual duties according to the declared join policy.",
+      "behavioral_requirement": "WHEN parallel branches join, Moriarty SHALL validate the required branch set and combine their complete effects, cumulative bounds and residual duties according to the declared join policy.",
+      "motivating_near_claims": [
+        "A-callback",
+        "AA-detached"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/near-sdk-rs/examples/callback-results/src/lib.rs",
+          "lines": [
+            11,
+            87
+          ],
+          "commit": "4ba939119ea3f9a559d6d45e82859419f5a09a20",
+          "url": "https://github.com/near/near-sdk-rs/blob/4ba939119ea3f9a559d6d45e82859419f5a09a20/examples/callback-results/src/lib.rs#L11-L87",
+          "captured_at": null,
+          "sha256": "baeb194a63b077e16286bdf14610c47c7ee4f591a842868959d598f2b75e2446"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            216,
+            367
+          ],
+          "sha256": "cd25c8fb8619e0456dc2dbcdc18a441668ccd33ba6181a0777185ef20578ff4e",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L216-L367"
+        }
+      ],
+      "pl_research_questions": [
+        "Can dependent session types or effect rows represent arbitrary branch sets, failure sums and obligation-conserving joins?"
+      ],
+      "adversarial_acceptance_scenario": "A callback swaps branch positions or omits a pending branch; the join rejects or remains pending under explicit policy.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-expiry",
+      "stable_mplr_id": null,
+      "ears": "WHEN an expiry threshold is reached, Moriarty SHALL apply its signed stage-specific rule without inferring nonexecution or discharging existing duties from elapsed time alone.",
+      "behavioral_requirement": "WHEN an expiry threshold is reached, Moriarty SHALL apply its signed stage-specific rule without inferring nonexecution or discharging existing duties from elapsed time alone.",
+      "motivating_near_claims": [
+        "AA-refunddeadline",
+        "A-engine",
+        "AA-ftresolve"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            117
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L117",
+          "captured_at": null,
+          "sha256": "d1518444bc637686df75a5ff4f537fd110b622aeeda063ddb24d4ee14375f402"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            154,
+            194
+          ],
+          "sha256": "c190ca5da85578557bede34cde975a0de8400bd1fc9fa92616e5d884d292b3f4",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L154-L194"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/c064901208ed4d8acbae.md",
+          "lines": [
+            524,
+            747
+          ],
+          "sha256": "62f29e581857cc967940abc0f3d72fbb1d8dbd984fdfc4ce88ce8a71a9591f92",
+          "url": "https://docs.near-intents.org/api-reference/oneclick/request-a-swap-quote",
+          "captured_at": "2026-09-19T20:10:57.169687+00:00",
+          "commit": null
+        }
+      ],
+      "pl_research_questions": [
+        "How should validity deadlines, offer lifetimes, recovery eligibility and revocation be distinguished in temporal semantics?"
+      ],
+      "adversarial_acceptance_scenario": "A deposit mined after a local timeout cannot automatically justify both refund and delivery release.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-public-pipeline",
+      "stable_mplr_id": null,
+      "ears": "WHILE a program uses supported semantics, Moriarty SHALL allow any developer to compile, prove, publish and deploy it without maintainer, hosted-solver, reviewer or registry approval, subject to objective ledger validity, owner authorization and explicit signed application policy.",
+      "behavioral_requirement": "WHILE a program uses supported semantics, Moriarty SHALL allow any developer to compile, prove, publish and deploy it without maintainer, hosted-solver, reviewer or registry approval, subject to objective ledger validity, owner authorization and explicit signed application policy.",
+      "motivating_near_claims": [
+        "A-bus",
+        "A-busrpc",
+        "AA-entry"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/bd2e229d604db97cbe26.md",
+          "lines": [
+            8,
+            25
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/market-makers/message-bus/introduction",
+          "captured_at": "2026-09-19T20:11:15.046337+00:00",
+          "sha256": "6f93e738325cd11e02de11cdaf929d3ea9e227636ba0cc808ecbc0ca9a2f602a"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/0a3283118d29be374f6a.md",
+          "lines": [
+            8,
+            62
+          ],
+          "commit": null,
+          "url": "https://docs.near-intents.org/integration/market-makers/message-bus/rpc",
+          "captured_at": "2026-09-19T20:11:15.953476+00:00",
+          "sha256": "4357ba42c571ebb5e866ef255acd548763a7f81dd083422a657d0cffb2f7057b"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            63
+          ],
+          "sha256": "95d9ae3f8f99e6d1d78976f25ffbcefa8973cffa2a375fb4bbfc27806b9823df",
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "captured_at": null,
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L63"
+        }
+      ],
+      "pl_research_questions": [
+        "How can optional service/application policy remain composable without becoming language-wide program admission?"
+      ],
+      "adversarial_acceptance_scenario": "Two independently produced plans satisfying the same signed counterparty/application policy receive equivalent objective treatment; missing partner JWT does not prevent local compilation or owner-controlled submission.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-canonical-intent",
+      "stable_mplr_id": null,
+      "ears": "WHEN the owner signs an intention, Moriarty SHALL bind a versioned canonical machine-readable payload and present the same asset, recipient, fee, liability, partial-outcome and recovery constraints in the inspectable signing display.",
+      "behavioral_requirement": "WHEN the owner signs an intention, Moriarty SHALL bind a versioned canonical machine-readable payload and present the same asset, recipient, fee, liability, partial-outcome and recovery constraints in the inspectable signing display.",
+      "motivating_near_claims": [
+        "A-nepadapter",
+        "A-erchash",
+        "AA-builder"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/nep413.rs",
+          "lines": [
+            17,
+            95
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/nep413.rs#L17-L95",
+          "captured_at": null,
+          "sha256": "719427aceb87924417a903dcc37d955875822c8201924dc02124c524ce6c2ecb"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/crates/signatures/erc191/src/lib.rs",
+          "lines": [
+            9,
+            39
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/crates/signatures/erc191/src/lib.rs#L9-L39",
+          "captured_at": null,
+          "sha256": "edfe5a40ff14ac672f124c8d4c5adfb0c9df7520913346bbe6dfe6b6cf2d36a2"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/intents-sdk/src/intents/intent-payload-builder.ts",
+          "lines": [
+            84,
+            240
+          ],
+          "sha256": "7be160458c23cb0bc1fa68f0785fcbe4e2571de973d9fb26a026500d2308dbb9",
+          "commit": "b6bab503e09027b40df3df14ca3610a11ff3d40d",
+          "captured_at": null,
+          "url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/intents-sdk/src/intents/intent-payload-builder.ts#L84-L240"
+        }
+      ],
+      "pl_research_questions": [
+        "What parser/version/canonicalization correspondence is necessary across native-wallet signing standards and semantic hashes?"
+      ],
+      "adversarial_acceptance_scenario": "Payload reserialization or changed domain cannot preserve signature acceptance accidentally; a valid signature over a different displayed intent rejects.",
+      "status": "proposed; theory solution and implementation unresolved"
+    },
+    {
+      "local_candidate_id": "candidate-proposal-admissibility",
+      "stable_mplr_id": null,
+      "ears": "WHEN candidate plans are ranked, Moriarty SHALL first establish each candidate satisfies the immutable signed hard constraints and bound program proof relation.",
+      "behavioral_requirement": "WHEN candidate plans are ranked, Moriarty SHALL first establish each candidate satisfies the immutable signed hard constraints and bound program proof relation.",
+      "motivating_near_claims": [
+        "AA-quotecheck",
+        "A-diff"
+      ],
+      "motivating_exact_sources": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/token_diff.rs",
+          "lines": [
+            18,
+            103
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/token_diff.rs#L18-L103",
+          "captured_at": null,
+          "sha256": "94b9fce9429fed24ad6619f45c5d386505326514a7773c28f8e8085d4c6a6591"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/sdk-monorepo/packages/internal-utils/src/solverRelay/getQuote.ts",
+          "lines": [
+            37,
+            139
+          ],
+          "sha256": "5b4e19a15aabe73094f1ef84a5a8f40e2584bbe6032a1611e48135164264bd3a",
+          "commit": "b6bab503e09027b40df3df14ca3610a11ff3d40d",
+          "captured_at": null,
+          "url": "https://github.com/defuse-protocol/sdk-monorepo/blob/b6bab503e09027b40df3df14ca3610a11ff3d40d/packages/internal-utils/src/solverRelay/getQuote.ts#L37-L139"
+        }
+      ],
+      "pl_research_questions": [
+        "How can optimization/refinement interfaces expose preferences without weakening hard constraints?"
+      ],
+      "adversarial_acceptance_scenario": "A higher-output quote with a different input asset or extra liability is rejected before ranking.",
+      "status": "proposed; theory solution and implementation unresolved"
+    }
+  ],
+  "dissent_and_gaps": [
+    "Contingent settlement means submit to a destination and wait for a composable combination of signatures, documents, proofs, recipient actions and other specified conditions; recorded funding is distinct from final delivery. No selected PL mechanism; compare dependent/session/refinement/effect/resource systems before choosing syntax or metatheory.",
+    "No general permissionless arbitrary-program correctness proof is established by inspected NEAR signatures or accounting.",
+    "1Click hosted endpoint schemas omit the operational idempotency and exact retry contract needed for a safe adapter.",
+    "Current confidential route requirements do not establish confidentiality, noninterference or independent delivery proofs.",
+    "Protocol pause/control roles cannot be erased from NEAR trust analysis, nor imported as universal Moriarty admission.",
+    "RPC publish_intents prose conflicts with conditional requote=false default; do not claim unconditional retries.",
+    "Cross-chain finality/oracle/bridge/liveness assumptions and ZKIRv3 ledger correspondence remain separate proof obligations."
+  ],
+  "checks": [
+    {
+      "name": "draft-source-hashes",
+      "result": "all 25 matched"
+    },
+    {
+      "name": "NEP413 known vector",
+      "result": "independent Borsh prehash and Ed25519 verification passed; mutation rejected",
+      "digest": "94648d7168d4a58d1eecd11fc2ecad210ef7cb5efce7a22d15a19e1764031f59"
+    },
+    {
+      "name": "source reading",
+      "result": "bounded code/doc reading plus graph neighborhoods; no build or deployed verification"
+    }
+  ],
+  "consensus_review": {
+    "status": "awaiting shared consensus candidate"
+  },
+  "artifacts": {
+    "semantic.json": "71857c8f7876c1a70740a86c83387633e0adc98df769a8282a8a5fa9e542eade",
+    "inspected-files.json": "d569b8b9184d280b96c839080144861d4d68c8f93461bc63001b8f0fb4983e35",
+    "REPORT.md": "bcdb23db48089cd6a10f87cf337582efd87cf424dd1a60ff1e85871ed0c13897",
+    "references.md": "a42b4f1c3af1a4b904db79d1d0e2136c980f422ed9a19ffcec4a57ce72740f60",
+    "graph-traversal.json": "36377c6c14d849df5a1c99a5ac714d6a91fb9e5cd273cc2c538b98fbef8c5152",
+    "claims.json": "cf191ec479be7826fc6469965e3ba9298f764cb0221e6439aeabaae56cee934a"
+  }
+}

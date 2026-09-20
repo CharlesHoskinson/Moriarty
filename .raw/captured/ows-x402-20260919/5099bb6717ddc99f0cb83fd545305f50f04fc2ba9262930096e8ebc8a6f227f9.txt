@@ -1,0 +1,185 @@
+On this page
+Overview
+How it works
+Prerequisites
+Usage
+Compatibility
+Accounts
+Frameworks
+Using Wallets
+x402 Payment Protocol
+Copy page
+Copy page
+Copy page
+Copy page
+​
+Overview
+import
+{
+useX402
+}
+from
+"@coinbase/cdp-hooks"
+;
+const
+{
+fetchWithPayment
+}
+=
+useX402
+();
+await
+fetchWithPayment
+(
+"https://api.example.com/paid-endpoint"
+, {
+method:
+"GET"
+,
+});
+The x402 payment protocol enables instant, automatic stablecoin payments directly over HTTP. With the
+useX402
+hook from
+@coinbase/cdp-hooks
+, you can integrate x402 payments into your user wallet application, allowing users to seamlessly pay for API access and services with their CDP wallets.
+This guide demonstrates how to use the
+useX402
+hook to enable your users to make micropayments for paid APIs and services without complex payment flows or intermediaries.
+For a comprehensive overview of the x402 protocol, see the
+x402 documentation
+.
+​
+How it works
+When your application makes a request to an x402-protected resource:
+The server responds with
+402 Payment Required
+status including payment details
+The
+useX402
+hook automatically:
+Extracts the payment information from the response
+Creates and signs a payment transaction using the user’s wallet
+Includes the payment proof in a retry request
+The server validates the payment and returns the requested resource
+All of this happens seamlessly in the background—your users simply need to be authenticated with a user wallet.
+​
+Prerequisites
+Before integrating x402 payments, ensure you have:
+Completed the
+Non-custodial Wallets Quickstart
+Installed the required packages:
+npm
+pnpm
+yarn
+npm
+install
+@coinbase/cdp-core
+@coinbase/cdp-hooks
+x402-fetch
+pnpm
+add
+@coinbase/cdp-core
+@coinbase/cdp-hooks
+x402-fetch
+yarn
+add
+@coinbase/cdp-core
+@coinbase/cdp-hooks
+x402-fetch
+The
+x402-fetch
+package must be installed separately as it provides the underlying payment protocol implementation.
+​
+Usage
+The
+useX402
+hook provides a
+fetchWithPayment
+function that works like the standard
+fetch
+API but automatically handles x402 payment flows:
+import
+{
+useX402
+}
+from
+"@coinbase/cdp-hooks"
+;
+const
+{
+fetchWithPayment
+}
+=
+useX402
+();
+await
+fetchWithPayment
+(
+"https://api.example.com/paid-endpoint"
+, {
+method:
+"GET"
+,
+});
+For a full API reference of the
+useX402
+hook, see
+here
+.
+​
+Compatibility
+​
+Accounts
+The
+useX402
+hook works with Smart Accounts, EOAs and Solana accounts.
+​
+Frameworks
+The
+useX402
+hook works in React and React Native. If you need support in other frameworks or vanilla JavaScript, you can use the
+fetchWithX402
+action from
+@coinbase/cdp-core
+:
+import
+{
+fetchWithX402
+}
+from
+"@coinbase/cdp-core"
+;
+const
+wrappedFetch
+=
+fetchWithX402
+();
+const
+response
+=
+await
+wrappedFetch
+(
+"https://api.example.com/paid-endpoint"
+, {
+method:
+"GET"
+,
+});
+x402 Protocol Overview
+: Learn more about the x402 payment protocol
+x402 Quickstart for Buyers
+: Comprehensive guide for consuming x402 APIs
+x402 Bazaar
+: Discover x402-compatible APIs and services
+Smart Accounts
+: Enable gas-free payments with Smart Accounts
+React Hooks Reference
+: Explore all available CDP hooks
+Was this page helpful?
+Yes
+No
+Wallet Webhooks
+Previous
+Borrow
+Next

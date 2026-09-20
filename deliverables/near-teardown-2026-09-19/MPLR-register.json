@@ -1,0 +1,200 @@
+[
+  {
+    "id": "MPLR-001",
+    "title": "Staged and partial transaction semantics",
+    "status": "research-draft",
+    "requirement": "When a supported transaction spans several settlement steps, Moriarty shall represent each committed step and the outstanding transaction state explicitly.",
+    "motivation": "A local transaction succeeds while a later receipt or withdrawal fails.",
+    "theory_directions": "Trace semantics, small-step operational semantics, refinement of distributed histories",
+    "language_comparisons": "Daml, Scilla, Motoko",
+    "positive_scenario": "Prove each accepted prefix preserves authority, accounting and outstanding duties; do not label a successful prefix complete.",
+    "negative_scenario": "An accepted debit followed by an unresolved withdrawal is reported as fully settled."
+  },
+  {
+    "id": "MPLR-002",
+    "title": "Typed persistent continuations",
+    "status": "research-draft",
+    "requirement": "When execution suspends for a later event, Moriarty shall persist a typed continuation bound to the program, predecessor, awaited events, authority and outstanding duties.",
+    "motivation": "NEAR promises and callbacks resume across transactions without a fresh original-user signature.",
+    "theory_directions": "Session types, typestate, affine capabilities, defunctionalization, continuation typing",
+    "language_comparisons": "E, Koka, Rust session-type libraries",
+    "positive_scenario": "Resume a valid continuation once with correctly typed evidence and the signed stage policy.",
+    "negative_scenario": "Replay or attach an unrelated callback to consume reserved authority twice."
+  },
+  {
+    "id": "MPLR-003",
+    "title": "Conditional settlement with composable evidence",
+    "status": "research-draft",
+    "requirement": "When a submitted transaction specifies settlement conditions, Moriarty shall withhold the specified delivery until the required combination of authenticated signatures, documentary evidence, proofs, recipient actions and other supported predicates is satisfied.",
+    "motivation": "User definition: submit to an address; settlement waits for the configured combination of conditions. Funding or recording may precede final delivery.",
+    "theory_directions": "Refinement/dependent types, proof-relevant predicates, evidence algebra, authorization logic",
+    "language_comparisons": "Daml, Marlowe, Scilla, Simplicity",
+    "positive_scenario": "A funded request remains pending until its bound recipient signature, document predicate and proof all validate at the policy-defined settlement point.",
+    "negative_scenario": "A document hash alone, an unrelated signature, or an expired proof releases the funds."
+  },
+  {
+    "id": "MPLR-004",
+    "title": "Partial fulfillment and residual duties",
+    "status": "research-draft",
+    "requirement": "When a signed policy permits partial fulfillment, each accepted fill shall satisfy its fill rules and preserve cumulative bounds, remaining authority and residual obligations.",
+    "motivation": "A completed portion of a swap or payment is not the entire economic obligation.",
+    "theory_directions": "Linear logic, resource algebras, quantitative types, financial contract semantics",
+    "language_comparisons": "Move, Cadence, Marlowe, Daml",
+    "positive_scenario": "Two valid partial payments reduce the liability by exactly their authorized discharges.",
+    "negative_scenario": "Splitting a fill bypasses a cumulative fee bound or erases remaining debt."
+  },
+  {
+    "id": "MPLR-005",
+    "title": "Refunds and compensation",
+    "status": "research-draft",
+    "requirement": "When a settlement step fails or remains unresolved, recovery shall distinguish a refund of still-controlled assets from a new compensating action after effects have committed.",
+    "motivation": "A failed downstream promise may not imply that transferred value is available for refund.",
+    "theory_directions": "Sagas, compensating calculi, exception/effect semantics, recovery invariants",
+    "language_comparisons": "Daml, Scilla, E",
+    "positive_scenario": "A recovery transition spends only assets or claims it actually controls and retains unrecovered duties.",
+    "negative_scenario": "Compensation rewrites history or issues a second refund after external delivery."
+  },
+  {
+    "id": "MPLR-006",
+    "title": "Authenticated asynchronous outcomes",
+    "status": "research-draft",
+    "requirement": "When evidence resumes a stage, Moriarty shall authenticate its origin, correlation and declared finality, and enforce the specified consumption rule.",
+    "motivation": "Receipt IDs, returned values and detached calls have different authority and completion meaning.",
+    "theory_directions": "Affine evidence tokens, capability security, event provenance, replay-safe protocols",
+    "language_comparisons": "Move, Rust, Motoko",
+    "positive_scenario": "A duplicated delivery is harmless or rejected without duplicate financial effects.",
+    "negative_scenario": "An attacker substitutes a success flag or callback from another transaction."
+  },
+  {
+    "id": "MPLR-007",
+    "title": "Joins and late results",
+    "status": "research-draft",
+    "requirement": "When a program joins asynchronous branches, it shall specify availability and success policies separately and retain duties for unselected or late branches.",
+    "motivation": "A NEAR join can make failed results available; readiness does not imply all-success.",
+    "theory_directions": "Session types, choreographies, concurrent separation logic, join patterns",
+    "language_comparisons": "JoCaml, Links, Pony",
+    "positive_scenario": "A quorum branch proceeds under its signed rule while late branches remain accounted for.",
+    "negative_scenario": "An any-success join drops the debit or refund duty of a losing branch."
+  },
+  {
+    "id": "MPLR-008",
+    "title": "Stage-specific authority and consent",
+    "status": "research-draft",
+    "requirement": "When a stage executes, it shall use only the authority and consent granted for that stage under the signed lifecycle, revocation and expiry policy.",
+    "motivation": "Callbacks do not freshly consume the originating access-key nonce; delegated workflow authority must be explicit.",
+    "theory_directions": "Authorization logic, capability attenuation, session fidelity, temporal capabilities",
+    "language_comparisons": "Daml, E, Move",
+    "positive_scenario": "Recipient consent is bound to the exact request, amount, asset, conditions and allowed amendment version.",
+    "negative_scenario": "A callback gains the full original signer authority or changes the recipient silently."
+  },
+  {
+    "id": "MPLR-009",
+    "title": "Cumulative work fees and reserves",
+    "status": "research-draft",
+    "requirement": "When execution spans stages, Moriarty shall account for cumulative costs, reserved resources and permitted retained fees under the signed bounds and target phase rules.",
+    "motivation": "Receipt execution and failure can retain fees, rewards or storage consequences.",
+    "theory_directions": "Amortized resource analysis, graded effects, quantitative type theory",
+    "language_comparisons": "AARA languages, Resource Aware ML, Move",
+    "positive_scenario": "A failed stage records retained fees and remaining reserves without exceeding its approved envelope.",
+    "negative_scenario": "Retrying or splitting stages resets the total budget."
+  },
+  {
+    "id": "MPLR-010",
+    "title": "Time finality and unresolved outcomes",
+    "status": "research-draft",
+    "requirement": "When a deadline or observation boundary is reached, Moriarty shall classify what is known and apply the signed expiry policy without treating missing evidence as proof of nonexecution.",
+    "motivation": "Timeout, receipt failure, source finality and destination settlement are different facts.",
+    "theory_directions": "Temporal logic, epistemic logic, distributed failure detectors, timed session types",
+    "language_comparisons": "Daml, Scilla, TLA+/Quint models",
+    "positive_scenario": "An expired request retains unresolved external duties until reliable evidence establishes the relevant delivery, cancellation, nonexecution or recovery outcome; any other residual duties remain.",
+    "negative_scenario": "A late successful transfer is followed by a refund justified only by timeout."
+  },
+  {
+    "id": "MPLR-011",
+    "title": "Causality concurrency and interference",
+    "status": "research-draft",
+    "requirement": "When a suspended workflow resumes amid other activity, its proof shall preserve predecessor causality and revalidate the relevant state and authority under its signed policy.",
+    "motivation": "Other calls may change balances, keys, policy or custody between asynchronous stages.",
+    "theory_directions": "Rely-guarantee reasoning, separation logic, serializability, conflict-aware refinement",
+    "language_comparisons": "Iris-backed languages, Rust, Move",
+    "positive_scenario": "Concurrent valid workflows cannot consume the same reserve or invalidate each other silently.",
+    "negative_scenario": "A simulation snapshot is reused after its relevant balance or authority changed."
+  },
+  {
+    "id": "MPLR-012",
+    "title": "Simulation and assurance status",
+    "status": "research-draft",
+    "requirement": "When a tool simulates or reports a workflow, it shall state which stages, calls and proof judgments were covered and keep prediction separate from accepted execution.",
+    "motivation": "Simulation may skip downstream AuthCall/withdrawal effects or return only a local engine result.",
+    "theory_directions": "Abstract interpretation, trace refinement, effect summaries, proof-producing analysis",
+    "language_comparisons": "Koka, Liquid Haskell, Aeon",
+    "positive_scenario": "A local preview visibly reports unresolved external stages and does not claim settlement.",
+    "negative_scenario": "An omitted external call is displayed as successfully executed or proved."
+  },
+  {
+    "id": "MPLR-013",
+    "title": "Private evidence and continuations",
+    "status": "research-draft",
+    "requirement": "Where evidence or workflow state is private, Moriarty shall define what each participant can observe and how later authorized stages obtain the witness needed to continue.",
+    "motivation": "Documents, signatures, receipt correlations and multi-party continuation state may reveal sensitive facts.",
+    "theory_directions": "Information-flow control, noninterference, zero-knowledge relations, secure session types",
+    "language_comparisons": "Daml/Canton, Zexe-style systems, Jif",
+    "positive_scenario": "Prove a required document property without disclosing fields outside the authorized view.",
+    "negative_scenario": "A public status or continuation identifier leaks a property claimed confidential."
+  },
+  {
+    "id": "MPLR-014",
+    "title": "Certified lowering of staged effects",
+    "status": "research-draft",
+    "requirement": "When a staged program is compiled, correspondence shall preserve its permitted traces, conditions, rejection behavior and costs in the pinned Midnight ZKIRv3 execution model.",
+    "motivation": "NEAR receipt semantics cannot be assumed to match Midnight guaranteed/fallible phases.",
+    "theory_directions": "Compiler correctness, observational refinement, certified primitives, effect preservation",
+    "language_comparisons": "CompCert, CakeML, Simplicity",
+    "positive_scenario": "A target trace is related to a permitted source trace with every retained effect accounted for.",
+    "negative_scenario": "A correct witness generator is presented as proof excluding invalid satisfying witnesses."
+  },
+  {
+    "id": "MPLR-015",
+    "title": "Open programmable financial workflows",
+    "status": "research-draft",
+    "requirement": "When a developer composes supported constructs into a new workflow, validation shall use the versioned language and proof rules rather than a catalog of approved example programs.",
+    "motivation": "A fixed Intents enum is a useful application protocol but not the identity of a general DeFi language.",
+    "theory_directions": "Algebraic effects, extensible DSLs, modular semantics, refinement interfaces",
+    "language_comparisons": "Daml, Koka, Aeon, Marlowe",
+    "positive_scenario": "A newly authored conditional workflow passes the ordinary public pipeline.",
+    "negative_scenario": "A valid program is rejected because it is absent from a project registry."
+  },
+  {
+    "id": "MPLR-016",
+    "title": "Application authority versus project access",
+    "status": "research-draft",
+    "requirement": "When an application restricts participants or evidence issuers, Moriarty shall enforce its authenticated policy without imposing project approval on public program deployment.",
+    "motivation": "Hosted relay screening, contract admin roles and owner authorization operate at different boundaries.",
+    "theory_directions": "Capability security, authorization logic, module boundaries, policy refinement",
+    "language_comparisons": "Daml, E, object-capability languages",
+    "positive_scenario": "A user can require a particular counterparty signature while independent developers deploy supported programs freely.",
+    "negative_scenario": "A hosted service credential or reviewer receipt becomes mandatory proof evidence."
+  },
+  {
+    "id": "MPLR-017",
+    "title": "Complete staged financial accounting",
+    "status": "research-draft",
+    "requirement": "When a stage is accepted, its authenticated effect frame shall account for exact assets and custody, authorized supply changes, fees and separately typed liability evolution.",
+    "motivation": "Internal token-delta balance, external custody and residual economic duties are not interchangeable quantities.",
+    "theory_directions": "Resource separation algebras, nominal asset types, linear accounting, invariant composition",
+    "language_comparisons": "Move, Cadence, Daml, Marlowe",
+    "positive_scenario": "Every asset transfer and liability change has its own well-typed conservation/evolution equation.",
+    "negative_scenario": "Authority units are added to refund amounts, or internal zero-sum balance is called external settlement."
+  },
+  {
+    "id": "MPLR-018",
+    "title": "Inspectable conditional intent",
+    "status": "research-draft",
+    "requirement": "When a participant authorizes a conditional workflow, the signing and reporting interface shall expose its canonical conditions, destination, evidence policy, allowed partial outcomes and recovery rules.",
+    "motivation": "A quote, signature request or pending status can hide distinctions important to the user\u2019s actual intention.",
+    "theory_directions": "Bidirectional transformations, contract elaboration, semantic UI correspondence, typed provenance",
+    "language_comparisons": "Daml, Marlowe, projectional language tools",
+    "positive_scenario": "The displayed request and proved canonical object bind the same documents, recipient consent, deadline and remedies.",
+    "negative_scenario": "The UI promises automatic refund while the signed policy permits an unresolved or compensating outcome."
+  }
+]

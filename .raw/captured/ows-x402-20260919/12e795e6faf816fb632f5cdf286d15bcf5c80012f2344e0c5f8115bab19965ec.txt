@@ -1,0 +1,202 @@
+On this page
+Constructors
+Constructor
+Parameters
+Returns
+Methods
+record()
+Parameters
+Returns
+total()
+Parameters
+Returns
+prune()
+Parameters
+Returns
+removeEntry()
+Parameters
+Returns
+entries()
+Returns
+SpendTracker
+Copy page
+Copy page
+Copy page
+Copy page
+Defined in:
+guardrails/spend-tracker.ts:123
+Tracks spend per asset in an append-only ledger.
+​
+Constructors
+​
+Constructor
+new
+SpendTracker
+(
+options
+?:
+SpendTrackerOptions
+):
+SpendTracker
+;
+Defined in:
+guardrails/spend-tracker.ts:133
+Creates a new SpendTracker.
+​
+Parameters
+options?
+SpendTrackerOptions
+=
+{}
+Optional configuration for the tracker.
+​
+Returns
+SpendTracker
+​
+Methods
+​
+record()
+record
+(
+input
+:
+RecordSpendInput
+):
+Promise
+<
+SpendLedgerEntry
+>
+;
+Defined in:
+guardrails/spend-tracker.ts:151
+Adds a spend entry to the ledger and returns it.
+​
+Parameters
+input
+RecordSpendInput
+The spend record to add.
+​
+Returns
+Promise
+<
+SpendLedgerEntry
+>
+The recorded ledger entry.
+​
+total()
+total
+(
+query
+:
+TotalSpendQuery
+):
+Promise
+<
+bigint
+>
+;
+Defined in:
+guardrails/spend-tracker.ts:187
+Sum atomic amounts for the given asset, optionally restricted to entries
+recorded at or after
+since
+.
+​
+Parameters
+query
+TotalSpendQuery
+Query parameters specifying asset and optional time window.
+​
+Returns
+Promise
+<
+bigint
+>
+The total atomic amount spent.
+​
+prune()
+prune
+(
+now
+:
+number
+,
+windowMs
+?:
+number
+):
+Promise
+<
+void
+>
+;
+Defined in:
+guardrails/spend-tracker.ts:207
+Drop entries older than
+now - windowMs
+.
+​
+Parameters
+now
+number
+Current timestamp in milliseconds.
+windowMs?
+number
+Optional rolling window size in milliseconds.
+​
+Returns
+Promise
+<
+void
+>
+​
+removeEntry()
+removeEntry
+(
+entry
+:
+SpendLedgerEntry
+):
+Promise
+<
+void
+>
+;
+Defined in:
+guardrails/spend-tracker.ts:220
+Removes a previously recorded entry, undoing its contribution to the cumulative total.
+​
+Parameters
+entry
+SpendLedgerEntry
+The ledger entry to remove.
+​
+Returns
+Promise
+<
+void
+>
+​
+entries()
+entries
+():
+Promise
+<
+readonly
+SpendLedgerEntry
+[]
+>
+;
+Defined in:
+guardrails/spend-tracker.ts:240
+Returns all current ledger entries as a read-only snapshot.
+​
+Returns
+Promise
+<readonly
+SpendLedgerEntry
+[]>
+All current entries.
+Was this page helpful?
+Yes
+No

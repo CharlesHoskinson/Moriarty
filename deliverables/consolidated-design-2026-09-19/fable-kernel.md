@@ -1,0 +1,175 @@
+I will deliver the independent proposal directly as text, per the instruction to use no tools.
+
+# Independent proposal: Moriarty governing design and kernel boundary
+
+Evidence read: the product contract, ROADMAP, whole-language REVIEW, the two DeFiFormal scope reviews, FINAL-CONSENSUS, the Anoma SYNTHESIS, the Daml security draft, the OWS/x402 explanation, the September 11 PCD decision, the completion program, MPLR-001 through MPLR-035, and the four APSS explanations. I did not read the OpenSpec change files, Pel packages, the K or Preview RESULT files, or the code under `experiments/`; statements about them below come only through the supplied documents that cite them. Labels: [F] source fact, [R] my recommendation, [O] open feasibility.
+
+## 1. Governing vision
+
+Moriarty is one thing: a bounded language whose every accepted ledger transition is a proof-carrying refinement of an owner-signed intention, with complete typed effects and explicit residual duties, enforced by Midnight's native Halo2-derived PLONK/KZG stack on pinned ZKIRv3 [F: `docs/MORIARTY-PRODUCT-CONTRACT.md`, sections "Execution target" and "What provable intention means"]. Everything else, including the Federated DeFi Kernel, AI solvers, OWS/x402, adapters and DeFiFormal, is either an optional application that produces candidates and evidence, or a reference that produces obligations. None of them sits inside the acceptance relation, and none of them gates deployment [F: contract "Verification versus project process" table; `wiki/research/mplr/MPLR-016.md`].
+
+The single design commitment I propose beyond what the packet already states: **there is exactly one acceptance relation, and it has exactly one signature**. Call it `Accept(Π, ι, σ, H, E, C) ⟹ (σ', D')`: program identity Π, authenticated intention ι, authenticated predecessor state σ, history statement H, typed evidence E, candidate C, yielding successor state and residual-duty set D'. Every layer in the REVIEW's responsibility map either contributes a component of this tuple or proves something about it [R, building on `research/moriarty-whole-design-2026-09-19/REVIEW.md` D1, D2]. The review's central finding is that the fragments exist but do not form one contract [F: REVIEW D1]. The vision is to refuse any further profile, library or kernel feature that does not name its slot in this tuple.
+
+## 2. Boundary table
+
+| Concern | Moriarty language/compiler | Federated DeFi Kernel | Midnight ledger | External adapter / OWS / x402 | DeFiFormal |
+|---|---|---|---|---|---|
+| Who may deploy | Anyone; objective typing, bounds, proof [F: contract] | No say; may refuse to serve a program [F: contract "optional service policy"] | Fees, validity, owner authorization [F] | No say | No say |
+| Program meaning | Owns Core semantics, effect rules, versioned profile | Consumes; must not reinterpret | Executes emitted ZKIRv3 [F: CLM-0947] | Interprets exact signed bytes only [F: `wiki/research/ows-x402/explanation.md`] | Reference vocabulary; no theorem transfers [F: `research/defiformal-moriarty-scope-2026-09-19/composition-review.md` "What can be reused"] |
+| Intention | Owns canonical signed form, display binding, amendment policy [F: contract; MPLR-018] | Reads it; may not widen it [F: MPLR-035] | Verifies bound relation only [F: CLM-0947 "not bound" list] | Delegation carrier; possession is not permission [F: MPLR-031] | Not modeled: capability grant is not owner consent [F: composition-review "A capability grant is not owner consent"] |
+| Candidate construction | Never in the acceptance relation | Primary job: search, quote, route, compose [F: `wiki/research/apss/solvers/explanation.md`] | None | AI solver may plan/purchase [F: ows-x402] | None |
+| Effects and liabilities | Per-asset conservation plus separate liability equation [F: contract "Complete effects"; FINAL-CONSENSUS "Dissent resolved"] | Reports; cannot net away gross duties [F: MPLR-025] | Guaranteed/fallible phase outcomes [F: CLM-0949; `apss/settlement`] | Payment finality ≠ delivery [F: MPLR-033] | Net-effect accounting only; tracked net ≠ residual duty [F: composition-review "Atomic tracked net"] |
+| Evidence | Typed evidence contract: statement, subject, domain/stage/epoch, issuer, freshness, disclosure [R per REVIEW "Privacy, evidence"] | Collects ZK/MPC/TEE/finality under separately named assumptions [F: ROADMAP "Federated kernel"] | Ledger acceptance is one evidence kind | Facilitator/attestation responses are their specified evidence, not finality [F: ows-x402] | Environment/oracle truth external [F: composition-review] |
+| History | Owns the history statement H | May hold off-ledger segments as bounded certificates [F: CLM-0946 item 5] | Read-mismatch linearity on heads [F: CLM-0949] | None | None |
+| Recovery | Owns recovery authority types and reserve rule | Executes recovery under signed policy | Provides finality for recovery transactions | Refund vs compensation distinction [F: MPLR-005] | Claims lifecycle is planned only [F: composition-review "Claim lifecycle"] |
+| Privacy | Owns disclosure policy and completeness domain [F: MPLR-013, 029] | Must not satisfy a stronger signed policy with a weaker adapter policy [F: REVIEW] | ZK toward verifier only | Solver sees what it is given; irreversible [F: `apss/permission` "Privacy authority"] | Refused-path confidentiality not guaranteed [F: composition-review] |
+
+Two boundary rules to write into the contract [R]:
+
+- **Kernel non-authority rule.** The kernel may only produce values for the `C` and `E` slots. It may not produce or modify `ι`, `Π`, `σ` or `H`. Any kernel output that appears in the relation must be reconstructible and re-verifiable by an unrelated party from public plus authorized-private data.
+- **Adapter fail-closed rule.** An adapter that cannot fully decode the material effects of the bytes it is asked to sign must refuse, not degrade [F: ows-x402 "partial effect extraction"; MPLR-014/028 refinement].
+
+## 3. Design proposal
+
+### 3.1 Three partialities, kept apart
+
+The packet uses "partial" for three different things, and the REVIEW flags the resulting P2/C1 overlap [F: REVIEW D8]. I propose fixed vocabulary [R]:
+
+1. **Phase-partial**: one Midnight transaction whose fallible section failed while guaranteed effects and fees stand [F: CLM-0949; `wiki/research/apss/settlement/explanation.md`]. This is a terminal outcome of one stage. The signed intention must enumerate it explicitly with its per-phase fee and nonce consumption [F: contract "Local evaluator rejection can be atomic"].
+2. **Workflow-partial**: a committed stage of a multi-transaction workflow, with an explicit successor continuation and residual duty set [F: MPLR-001, 002, 004].
+3. **Candidate-incomplete**: an uncommitted, possibly unbalanced solver candidate that has produced no ledger effect [F: `deliverables/anoma-study-2026-09-19/SYNTHESIS.md` "Incomplete candidate versus committed partial stage"].
+
+Only the second creates duties. The first can preserve them. The third never can. Every EARS requirement below names which one it governs.
+
+### 3.2 Authority as four scoped rights, not one signature
+
+The REVIEW's D6 identifies expiry-versus-late-success as unresolved [F: REVIEW D6]. I propose the intention carry four independently scoped, independently expiring rights [R]:
+
+- **Initiate**: open a new stage that may consume assets or create duties.
+- **Complete**: finish a stage already initiated, within the bounds set at initiation.
+- **Reconcile**: attach authenticated late evidence to an existing continuation and move it to a known terminal state, without new debit.
+- **Recover/amend**: spend still-controlled custody or reserved work to refund, compensate, or close, under a separately signed recovery policy.
+
+The key property: Initiate expires first; Complete outlives it by a bounded window; Reconcile never expires while a duty is unresolved; Recover has its own signed lifetime and its own reserve. This directly resolves MPLR-010's "late success after timeout" case [F: MPLR-010 review correction] and the APSS point that revocation must not erase existing obligations [F: `apss/permission` "Revocation is similarly temporal"]. It also gives D3's reserve experiment a home: the closure reserve is spendable only by Recover, by whoever holds the recovery capability, and only against enumerated duties [F: REVIEW D3 counterevidence; MPLR-009 refinement].
+
+Delegation to solvers (OWS, x402, AI planners) is attenuation of these four rights, checked as semantic subset under the same consumption state [F: `apss/permission` "Delegation must preserve a semantic subset"]. A collection of permitted values must declare its combination operator [F: RFC 9396 hazard cited there]. Child budgets draw from the parent's aggregate reservation, never from a fresh one [F: MPLR-032].
+
+### 3.3 Typed effect frame with three equations
+
+Adopt the FINAL-CONSENSUS resolution verbatim [F: `deliverables/aeon-study-2026-09-19/review/FINAL-CONSENSUS.md`]: per-asset conservation over transfers, fees, custody and authorized supply change; a separate liability equation, opening plus creation/accrual minus explicit discharge equals closing; and a separate authority-consumption relation for affine rights. I add a fourth, non-monetary set: **residual duties** D as a typed multiset whose only permitted removal is an explicit, authenticated discharge or waiver event [R, extending MPLR-017 and the DeFiFormal claims draft's paid/waived decomposition, F: composition-review "Claim lifecycle"]. Netting is permitted only when the gross-to-net relation is itself proved [F: MPLR-025].
+
+### 3.4 Conditional settlement as a typed evidence combinator
+
+Conditional settlement is a stage whose Complete right is guarded by a predicate over typed evidence [F: MPLR-003; contract "Partial transactions and conditional settlement"]. Evidence terms carry statement, subject, domain/stage/epoch, issuer/verifier, freshness policy and disclosure class [R per REVIEW]. Combinators: conjunction, explicit alternative, threshold, each only as written in the signed policy [F: MPLR-003 terminology note]. A digest is identity, not truth [F: MPLR-003]. Escrow is the case where Initiate has already moved custody into program-controlled reserve; unfunded conditional settlement is the case where it has not [F: contract]. Both create a duty entry the moment the request is recorded, so "recorded" and "delivered" cannot be confused [F: MPLR-001 rejection example].
+
+### 3.5 History: hybrid, with a named claim per artifact
+
+The September 11 decision selects ledger-head induction plus bounded native certificates and rejects general DAG PCD [F: `wiki/decisions/pcd-midnight-native-architecture.md` CLM-0946]. The REVIEW correctly says the product contract controls conflicts but the mechanisms can coexist [F: REVIEW D5]. My disposition [R]:
+
+- On-ledger single-lineage steps: ledger-head induction. Evidence is the read-mismatch rule [F: CLM-0949] plus explicit absence reads for creation and immutable operation keys [F: CLM-0950].
+- Off-ledger segments, foreign-chain imports, and private split/join: bounded native certificates whose statement binds origin, predecessor, consumed resource identities, cumulative budget and remaining duties [F: MPLR-027; Anoma synthesis "Proof aggregation versus historical PCD"].
+- Per-transaction recursive verification of a predecessor ledger proof: not available, because ledger-accepted proofs use a Blake2b transcript that the PR 738 verifier cannot read [F: CLM-0948]. The contract's phrase "when recursive history is used" must therefore be read as "certificate composition," not "recursive ledger proof."
+
+Third-party verifiability must be listed per artifact class [F: REVIEW D5 recommendation].
+
+### 3.6 State lifetime
+
+The 128-entry caps are a local bound, not a product decision [F: REVIEW D4]. I recommend explicitly bounded episodes with an authenticated **successor episode** transition that carries replay domain, cumulative signed budgets, remaining rights and the full duty multiset, and that is itself a Recover/amend-class action [R; MPLR-021 refinement]. PCD does not compress mutable arrays [F: REVIEW D4]. Test: final repayment after cap with outstanding duty.
+
+### 3.7 Certified basis
+
+Retain the Simplicity-inspired jet workstream exactly as the contract states: each primitive certificate binds specification, preconditions, reference semantics, target constraint fragment, implementation/version, theorem evidence and cost model; composition discharges call-site preconditions and framing; hash recognition selects a meaning and never approves a developer [F: contract "Execution target"]. PR 17's `statement-sound` remains conditional on adversarial WShape premises for the older 34-instruction surface [F: contract; `wiki/research/apss/certified-basis/explanation.md`]. The fifteen-primitive estimate is not frozen [F: FINAL-CONSENSUS "Defer or reject"].
+
+### 3.8 What DeFiFormal contributes and does not
+
+Reuse as obligation vocabulary: successful/refused transitions, actual-effect receipts, footprints, initialization-plus-preservation contracts, and the five composition operators with their distinct guarantees [F: composition-review table]. Do not reuse: its trusted template registry as a deployment model, its capability store as consent, its net accounting as debit-order semantics, its tracked-net table as a claims ledger, or its rational balances as circuit arithmetic [F: composition-review; libraries-review "Exact arithmetic" row]. Price convention is inverted between the two systems and must be converted explicitly, with width and rounding, not by copying type spelling [F: libraries-review closing paragraph]. Every ported formula needs native implementation plus its own correspondence check [F: libraries-review].
+
+## 4. Conflicts and dispositions
+
+| Conflict | Sources | Disposition |
+|---|---|---|
+| Sept 11 PCD decision rejects recursive history; product contract and MPLR-027 require history binding | `wiki/decisions/pcd-midnight-native-architecture.md` CLM-0946; contract; MPLR-027 | Hybrid per section 3.5. Decision page stays active for mechanism; contract controls scope. Add a dated reconciliation note. [R] |
+| Completion program says K is primary semantics with optional Lean bridge and lists `.lean` paths; user constraint says no Lean | `openspec/MORIARTY-COMPLETION-PROGRAM.md` "Design decisions"; contract | Retain K as executable reference semantics. Reclassify every `.lean` path as historical; correspondence evidence must be K-plus-native or Agda-style circuit reasoning. MC/SP objectives preserved, tooling choice superseded. [R] |
+| Completion program's RP03 admission, reviewer identity, Endstop, tNIGHT reservations | same file; contract table | Project-internal only, as its own scope correction says. Not in `Accept`. Preserve as budget discipline for project campaigns. [F, disposition R] |
+| MC01 "initial Compact lowering" vs contract "Compact only as intermediate with pinned ZKIRv3 artifact" | completion program MC01; contract | Compact route allowed only with a pinned emitted ZKIRv3 artifact and real acceptance; the legacy `lower-compact.ts` restriction list stays out of scope for the general path. [F REVIEW D1; disposition R] |
+| Managed kernel: "authority ends no later than intent" vs retained duties after expiry | REVIEW D6 | Four-right authority, section 3.2. [R] |
+| Anoma "solver completion" vs Daml "consent to obligations" vs OWS "delegation" | MPLR-035, 019, 031 | Compose as three judgments on one candidate: Delegated(ι, δ), Consent(party, duty), Complete(P, C, E, S). None alone suffices. [R] |
+| P2 partial/failure outcomes vs C1 staged behavior | REVIEW D8 | Fixed vocabulary, section 3.1. P2 owns phase-partial; C-track owns workflow-partial; K-track owns candidate-incomplete. [R] |
+| Local evaluator atomic rejection vs ledger PartialSuccess | contract; CLM-0949; APSS settlement | Lowerer must bind phase layout; no invented failure policy. [F] |
+| "Reserved work not spendable" vs need for recovery path | REVIEW D3; MPLR-009 refinement | Reserve spendable only by Recover right. Do not make it ordinary work. [R] |
+| CoW "permissionless" vs whitelisted solvers | `apss/solvers` | Moriarty: public language open; application marketplaces may restrict; never a language gate. [F, disposition contract] |
+
+## 5. Roadmap: dependency phases and exit evidence
+
+Phase labels map onto existing P0–P7, C0–C4, K0–K5 rather than replacing them; the numbering below gives the dependency order I recommend [R].
+
+**R0 — One contract, one relation.** Publish the versioned `Accept` tuple, the supported-Core embedding for source/5 and the atomic-outcome profile, the three-partiality vocabulary, and the four-right authority model. Depends on: nothing. Exit evidence: a single document that maps every behavior in the contract to a tuple slot, a Core construct and a positive/hostile witness; the REVIEW's traceability view [F: REVIEW D8]. No code claim. Maps to P0 and K0.
+
+**R1 — Target pin and feasibility probes.** Pin compiler, ZKIR major/minor, instruction surface, circuit/key identity and ledger generation separately [F: contract]. Read-only verifier interface intake [F: completion program "Cross-package empirical decisions"]. Measure: one contract-call circuit with an in-circuit intention signature check and phase binding at k ≤ 17 or record why not [F: completion program "Unmeasured signature-circuit cost"]. Exit evidence: pinned manifest; measured k, rows, prove time on named hardware; explicit `interface-blocked` record if any component lacks a checked realization. Maps to P0/P1, MC01/MC04 intake. [O: whether Ed25519 or an alternative fits k17 is unmeasured.]
+
+**R2 — Vertical slice reference model.** Implement the REVIEW's two-asset conditional settlement discriminator in the local semantics: one signer, bounded spend and fees, recipient acceptance plus document predicate, two independent solvers, one residual duty, late result racing expiry/recovery, low-work and ID-cap cases [F: REVIEW "Recommended next design deliverable"]. Add the MPLR-035 positive witness and each single-property hostile mutation [F: MPLR-035]. Exit evidence: result record with policy/artifact hashes, every mutation's expected and observed rejection reason, residual duties at every stage. Local only; no ledger claim. Maps to P2 local, C0–C2, K1–K2.
+
+**R3 — Certified basis for the slice.** Certify only the primitives the slice needs, with the seven-part certificate. Reconcile PR 17 premises to the current instruction surface. Exit evidence: per-primitive certificate with adversarial-witness soundness argument, not honest-witness tests [F: contract]. Maps to P1. [O: number of primitives and proof effort unestimated.]
+
+**R4 — Native acceptance of the slice.** Lower R2 to ZKIRv3, prove with native stack, submit through a clean developer environment to Preview. Tamper with program, intent, predecessor, proof, fees, effects; each must reject at the ledger [F: contract "Demonstrable completion"]. Exit evidence: finalized transaction receipts, effect readback matching R2's reference record, rejection receipts for each control, on the pinned ledger generation. Maps to P2/P3, MC02/MC04/MC05. This is the milestone the packet says no evidence yet supports [F: ROADMAP "Current evidence"].
+
+**R5 — History and composition.** Ledger-head induction demonstrated on the slice's lineage; one bounded certificate import; one private split/join with separate OS users [F: completion program MC06 isolation]. Exit evidence: an artifact table stating who can verify what. Maps to P4, MC06, K3. [O: PR 738 is unmerged and targets ledger 10; fee accounting for accumulators is unresolved, F: CLM-0953.]
+
+**R6 — Kernel and solver delegation.** Constrained wallet delegation through an OWS-compatible bridge, x402 scheme-bound payment with pending/void/capture states, concurrent budget reservation. Exit evidence: MPLR-031 through 034 witnesses; an unregistered solver succeeds with a valid capability; two individually valid purchases exceeding aggregate budget reject; a facilitator response labeled as its evidence class, not finality. Maps to K3–K5. Depends on R4 because a delegation is only meaningful against a real acceptance relation.
+
+**R7 — Libraries and conformance.** ACTUS and DeFi rows via public constructs, with DeFiFormal vocabulary ported per family and price orientation converted [F: libraries-review]. Exit evidence: the four separate columns the completion program requires: semantic, native-proof, local-target, Preview [F: completion program]. All 277 ACTUS fixtures and 72 DeFi rows remain the denominator [F]. Maps to P6, MC07.
+
+**R8 — Independent developer release.** Clean install, novel program, real proofs, developer's own Midnight environment, negative controls [F: contract; P7; MC08].
+
+Parallelizable: R1 and R2 run together; R3 starts once R2 fixes the primitive list; R6's off-chain wallet/x402 modeling can begin during R2 but its exit gate waits for R4.
+
+## 6. Proposed EARS requirements
+
+- **EARS-01** The Moriarty acceptance relation shall have one versioned signature over program identity, authenticated intention, predecessor state, history statement, typed evidence and candidate, and shall produce successor state and a residual-duty multiset. (R0)
+- **EARS-02** When a kernel, solver or adapter supplies data to acceptance, that data shall occupy only the candidate or evidence slots, and shall be re-verifiable by an unrelated party from public plus authorized-private inputs. (R0, R6)
+- **EARS-03** When a signed intention is authored, it shall separately scope Initiate, Complete, Reconcile and Recover rights, each with its own expiry, consumption rule and reserve. (R0, R2)
+- **EARS-04** When Initiate authority has expired and an unresolved duty exists, the system shall continue to accept Reconcile evidence and Recover actions under their own scopes, and shall reject any new Initiate. (R2)
+- **EARS-05** When a stage completes in the fallible phase with failure, the accepted outcome shall be recorded as phase-partial with the guaranteed effects, fees and nonce consumption the intention enumerated, and shall not be recorded as workflow-complete or as failed-without-effect. (R1, R4)
+- **EARS-06** When a solver candidate is unbalanced or unaccepted, no duty, custody change or authority consumption shall be recorded. (R2)
+- **EARS-07** While a workflow stage is committed, its residual-duty multiset shall change only by explicit authenticated discharge, waiver or transfer events. (R2)
+- **EARS-08** When conditional settlement is requested, the recording of the request shall create a duty entry, and delivery shall require the exact signed evidence combinator to validate at the policy-defined settlement point. (R2, R4)
+- **EARS-09** When reserved closure work exists, only a Recover action by a holder of the recovery capability shall consume it, and only against enumerated duties. (R2)
+- **EARS-10** When an instance reaches its declared state bound, a successor-episode transition shall carry replay domain, cumulative budgets, remaining rights and the full duty multiset, or the instance shall be closed with all duties discharged. (R2, R5)
+- **EARS-11** Where history is claimed, each artifact class shall state whether it relies on ledger-head induction or a bounded native certificate, and a certificate's statement shall bind origin, predecessor, consumed resources, cumulative budget and remaining duties. (R5)
+- **EARS-12** When a delegated capability is created, acceptance shall verify semantic subset under the same consumption state, shall reject any increase not signed by the root owner, and shall draw child budgets from the parent's aggregate reservation. (R6)
+- **EARS-13** When an adapter cannot fully decode the material effects of bytes it is asked to sign, it shall refuse. (R6)
+- **EARS-14** When a DeFiFormal formula is ported, the port shall include explicit width, rounding and price-orientation conversion and its own native correspondence check. (R7)
+- **EARS-15** When an optimized primitive substitutes for a reference expression, acceptance shall bind a seven-part certificate proved against adversarial accepted witnesses, not honest-witness tests. (R3)
+
+## 7. MPLR mapping
+
+| MPLR | Design element | Roadmap |
+|---|---|---|
+| 001, 004, 017 | Three-partiality vocabulary; duty multiset; three equations | R0, R2 |
+| 002, 007, 011 | Typed continuation as tuple state; join policies with late-branch duties; revalidation of σ at resume | R2, R5 |
+| 003, 018 | Evidence combinator; display bound to canonical object | R2, R4 |
+| 005, 009, 010 | Recover right; reserve rule; Reconcile after expiry | R2 |
+| 006, 034 | Evidence origin/correlation/finality; logical request identity | R2, R6 |
+| 008, 016, 019, 031, 035 | Four-right authority; application vs project boundary; Consent and Complete judgments | R0, R2, R6 |
+| 012 | Assurance labels per column | R1 onward |
+| 013, 029, 030 | Disclosure class on evidence; completeness domain; common statement across ZK/MPC/TEE | R5, R6 |
+| 014, 020, 021, 022, 023 | Pin manifest; certificates; bounded artifacts; commitment roles; non-vacuous predicates | R1, R3, R4 |
+| 015 | No catalog; public pipeline | R8 |
+| 024, 025, 026 | Explicit domains; gross-to-net relation; behavioral settlement contracts | R2, R7 |
+| 027, 028 | Hybrid history; successor-episode as amendment | R5 |
+| 032, 033 | Aggregate reservation; payment ≠ delivery | R6 |
+
+## 8. Open feasibility and packet gaps
+
+Open [O]:
+
+- Whether an intention signature check plus phase binding fits one contract-call circuit at k ≤ 17 [F: completion program].
+- Whether ledger 10 recursion ships with accumulator fee accounting and the zero-guard hazard fixed [F: CLM-0953].
+- Primitive count and proof effort for R3; the fifteen-primitive figure is unreconciled [F: FINAL-CONSENSUS].
+- Whether an OWS-compatible remote signing bridge exists for Midnight; the packet says it is proposed work [F: ows-x402].
+- Whether private split/join can be produced without predecessor secrets; literature says no surveyed construction does [F: CLM-0959].
+- Whether the DeFiFormal composition operators map onto Midnight phase semantics; the composition review only proposes the adaptation [F: composition-review].
+
+Packet gaps: the OpenSpec change files for permissionless-provable-intention, partial-and-conditional-transactions and kernel-security-and-ai-solvers are cited but not supplied, so P/C/K definitions above are inferred from ROADMAP and REVIEW. The K, Preview loan and swap RESULT files, the jet audit, PR17-APPLICABILITY, the APSS reference files, MPLR-035's Anoma research plan and the kernel SDK interface design are not supplied. No `experiments/` source is supplied; all line citations to it are secondhand through the REVIEW. No other expert proposals were provided, so nothing here is a consensus claim.
+
+Recap: the proposal fixes one acceptance-relation signature, assigns every layer a slot in it, separates three kinds of partiality and four kinds of authority, adopts a hybrid history design consistent with both the September 11 decision and the contract, ports DeFiFormal as vocabulary only, and sequences R0 through R8 with measurable exits. The next concrete step is R0 plus the R1 feasibility measurements, since no supplied evidence yet shows native acceptance of any program beyond the fixed loan and swap fixtures.

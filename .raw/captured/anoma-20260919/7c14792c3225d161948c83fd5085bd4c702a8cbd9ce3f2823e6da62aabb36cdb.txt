@@ -1,0 +1,110 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+State Architecture
+Resource Machine
+Resource Machine
+Primitive interfaces
+Data structures
+Data structures
+Resource
+Compliance unit
+Action
+Action
+Resource logic proof
+Resource logic proof
+Table of contents
+Action tree
+Transaction
+Execution flow
+Notes
+Shielded resource machine
+Integrations
+Integrations
+Protocol Adapters
+Tutorials
+Tutorials
+Contributor guidelines
+Table of contents
+Action tree
+Home
+System architecture
+State Architecture
+Resource Machine
+Data structures
+Action
+module
+arch.system.state.resource_machine.data_structures.action.resource_logic_proof
+;
+Resource logic proof
+¶
+Resource logic proofs attest to validity of resource logics. A resource logic is a computable predicate associated with a resource (this resource is referred to as
+self
+in this context) that constrains the creation and consumption of a resource. Each time a resource is created or consumed, the corresponding resource logic proof is required in order for the action (and thus the transaction) to be valid.
+Action tree
+¶
+When proving, resource logics take as input resources created and consumed in that action.
+Instance
+¶
+Resource's commitment/nullifier
+isConsumed
+- a flag that tells the logic if the resource is consumed or created. Can be inferred from the position of the tag in the corresponding compliance unit.
+actionTreeRoot
+. Action tree is a Merkle tree that contains commitments and nullifiers of the action resources. The resource logic takes as input the root of the action tree.
+applicationData
+Including
+applicationData
+in the instance requires the following pre-processing:
+For each payload type, a new list must be formed by collecting the first entry from each tuple:
+List (BitString, DeletionCriterion) -> List BitString
+. Empty payload lists are ignored
+Merge all resulting lists into a single one
+Dereference the list and attach the elements to the tail of the instance
+The original order of the elements must be preserved at each step.
+Witness
+¶
+self
+resource object
+If
+isConsumed = True
+: nullifier key of
+self
+Resource objects of consumed resources:
+List (Resource, NullifierKey, ActionTreePath)
+Resource objects of created resources:
+List (Resource, ActionTreePath)
+Application-specific inputs
+Note
+Instance and witness elements are expected to go in the same order: the first element of the instance corresponds to the first elements of the witness and so on.
+Constraints
+¶
+For created resources: created commitment integrity:
+r.commitment() = cm
+For consumed resources:
+r.nullifier(nullifierKey) = nf
+Application-specific constraints
+Checks that require access to global
+CMTree
+and
+NullifierSet
+:
+each created resource wasn't created in prior transactions
+each consumed resource wasn't consumed in prior transactions
+Note
+Actions can be verified as parts of supposedly valid transactions and individually, when building a valid transaction (e.g., in the partial solving case). In case the actions are verified
+not
+individually, all global checks can be aggregated and verified at once to reduce the amount of global communication.
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.
