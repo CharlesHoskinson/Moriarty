@@ -1,0 +1,121 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+State Architecture
+Resource Machine
+Resource Machine
+Primitive interfaces
+Primitive interfaces
+Set
+Map
+Fixed size type
+Proving system
+Commitment accumulator
+Nullifier set
+Data structures
+Execution flow
+Notes
+Shielded resource machine
+Integrations
+Integrations
+Protocol Adapters
+Tutorials
+Tutorials
+Contributor guidelines
+Home
+System architecture
+State Architecture
+Resource Machine
+Primitive interfaces
+module
+arch.system.state.resource_machine.primitive_interfaces.commitment_accumulator
+;
+Commitment accumulator
+¶
+All resource commitments are stored in an append-only data structure called a
+commitment accumulator
+. Every time a resource is created, its commitment is added to the commitment accumulator. The resource commitment accumulator is external to the resource machine, but the resource machine can read from it. A commitment accumulator is a
+cryptographic accumulator
+that allows to prove membership for elements accumulated in it, provided a witness and the accumulated value.
+Each time a commitment is added to the accumulator, the accumulator and all witnesses of the already accumulated commitments are updated.
+For a commitment that existed in the accumulator before a new one was added, both the old witness and the new witness (with the corresponding accumulated value parameter) can be used to prove membership. However, the older the witness (and, consequently, the accumulator) that is used in the proof, the more information about the resource it reveals (an older accumulator gives more concrete boundaries on the resource's creation time). For that reason, it is recommended to use fresher parameters when proving membership.
+Accumulator functionality
+¶
+Note
+The witness we are talking about here is not related to proving system witness. It is a distinct concept of cryptographic accumulators.
+The commitment accumulator has type
+Accumulator
+and is parametrised over the types
+AccumulatorWitness
+,
+CommitmentIdentifier
+, and
+AccumulatedValue
+. The commitment accumulator interface must support the following functionality:
+add(Accumulator, CommitmentIdentifier) -> AccumulatorWitness
+adds an element to the accumulator, returning the accumulator witness used to prove membership.
+witness(Accumulator, CommitmentIdentifier) -> Maybe AccumulatorWitness
+for a given element, returns the accumulator witness used to prove membership if the element is present, otherwise returns nothing.
+verify(CommitmentIdentifier, AccumulatorWitness, AccumulatedValue) -> Bool
+verifies the membership proof for a commitment identified with
+CommitmentIdentifier
+element with a membership witness
+AccumulatorWitness
+for the accumulated value
+AccumulatedValue
+.
+value(Accumulator) -> AccumulatedValue
+returns the accumulator value.
+Merkle tree
+¶
+Currently, the commitment accumulator is assumed to be a Merkle tree
+CMTree
+of depth
+\(depth_{CMtree}\)
+, where the leaves contain the resource commitments and the intermediate nodes' values are of type
+MerkleTreeNodeHash
+.
+Note
+The type
+MerkleTreeNodeHash
+of the
+CMTree
+nodes and the type of the leafs
+Commitment
+are distinct types.
+Interface
+¶
+For a Merkle tree:
+CommitmentIdentifier
+type corresponds to the identifier of the resource commitment used to locate the commitment's position in the tree
+AccumulatorWitness
+element is a path to the stored commitment
+AccumulatedValue
+corresponds to the Merkle tree root
+and the functions:
+add
+adds the resource commitment to the tree, returning the path to the commitment
+witness
+finds the resource commitment in the tree and returns the path to it
+verify
+uses the resource commitment and the path to reconstruct the root. Returns
+True
+if the constructed value is equal to the provided value
+value
+returns the tree root
+Todo
+shielded notes: To support the systems with stronger privacy requirements, the witness for such a proof must be a private input when proving membership.
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

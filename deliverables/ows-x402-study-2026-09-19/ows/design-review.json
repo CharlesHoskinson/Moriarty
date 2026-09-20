@@ -1,0 +1,67 @@
+{
+  "configured_model": "gpt-6-astra",
+  "configured_reasoning_effort": "medium",
+  "runtime_identity_attestation": null,
+  "candidate_file": "/home/charl/research/ows-x402-teardown-2026-09-19/design.md",
+  "candidate_sha256": "48c447a2a6ba24db9f9fc0e58f61ef1cec97c8f873d330265defd3d07ea389f8",
+  "verdict": "ENDORSE",
+  "scope": "Source-supported acceptance as a research design; OWS authority, key custody, budgets, operation/effect decoding and proposed bridge scope independently reviewed. No implementation/theorem claim. x402 details remain subject to the separate x402 reviewer.",
+  "blocking_changes": [],
+  "verified_points": [
+    {
+      "point": "Owner bypass and token-plus-file secret recovery are explicit documented design boundaries, so a solver-facing adapter needs a separate actual enforcement boundary.",
+      "claims": [
+        "OWS02",
+        "OWS03",
+        "OWS04",
+        "OWS05"
+      ]
+    },
+    {
+      "point": "Current OWS has no Midnight profile or defined MPC/TEE/PCD bridge. Proposed OWS-compatible bridge wording is appropriately qualified.",
+      "claims": [
+        "OWS20",
+        "OWS21"
+      ]
+    },
+    {
+      "point": "Only Cardano fills effects; current cumulative spend is zero placeholder. Concurrent reservations require authenticated state outside that context.",
+      "claims": [
+        "OWS10",
+        "OWS12",
+        "OWS18"
+      ]
+    },
+    {
+      "point": "Exact signing operation and semantic payload binding are required; allowed chains and typed-data contract rules alone do not prove an economic cap.",
+      "claims": [
+        "OWS08",
+        "OWS09",
+        "OWS11"
+      ]
+    },
+    {
+      "point": "Partial outcomes must include failure collateral and residual duties; ordinary signing/broadcast/audit outcomes are weaker evidence.",
+      "claims": [
+        "OWS15",
+        "OWS16",
+        "OWS18",
+        "OWS22",
+        "OWS23"
+      ]
+    }
+  ],
+  "nonblocking_refinements": [
+    "At adapter formalization distinguish absent required data, unsupported decoder, known-empty effects and unresolved external evidence. The current fail-closed statement has the right scope.",
+    "A budget reservation must be atomic or otherwise serialized in authenticated shared state across federation replicas; a local reservation per replica is insufficient. This is a concrete refinement of the already stated concurrent-budget objective.",
+    "A signing-time expiry or deletion-based credential revocation does not automatically revoke an issued signature, a retained key copy or an in-flight external effect; bind lifecycle semantics to the signed policy.",
+    "Exact-byte interpretation includes every operation alternative such as signHash/signAuthorization; a proof over one route cannot authorize a different raw signing request.",
+    "An isolated or threshold signer still needs statement binding, version/epoch policy, availability and compromise assumptions; compatibility with OWS API conventions does not imply its local storage custody model is mandatory."
+  ],
+  "evidence_that_would_change_vote": [
+    "Claiming current OWS provides Midnight, MPC, attested TEE or formal-intention guarantees without a new independently evidenced implementation/profile.",
+    "Treating the empty effects array or daily_total zero as a proved absence of value movement or previous spending.",
+    "Allowing a solver to recover the underlying unrestricted external key while claiming policy remains cryptographically non-bypassable.",
+    "Treating a signature, audit record, attestation, broadcast hash or payment response as sufficient proof of final service delivery."
+  ]
+}

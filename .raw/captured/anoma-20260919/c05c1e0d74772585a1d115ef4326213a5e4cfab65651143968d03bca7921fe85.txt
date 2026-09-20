@@ -1,0 +1,127 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+Integrations
+Integrations
+Protocol Adapters
+Protocol Adapters
+Ethereum Virtual Machine
+Ethereum Virtual Machine
+EVM Primitive Interfaces
+EVM Datatypes
+EVM Execution Flow
+EVM Interoperability
+EVM Interoperability
+EVM Interoperability Achitecture Motivation
+EVM Interoperability Implementation
+EVM Interoperability Implementation
+Table of contents
+Implementation
+EVM Interoprability Example Applications
+Tutorials
+Tutorials
+Contributor guidelines
+Table of contents
+Implementation
+Home
+Integrations
+Protocol Adapters
+Ethereum Virtual Machine
+EVM Interoperability
+evm
+protocol-adapter
+resource-machine
+EVM Interoperability Implementation
+Implementation
+¶
+Below we detail the exact code using which we perform the interoperability calls.
+During
+execute
+, while going over all the verifier inputs to the resource logics, after their verificatoon we iterate over the
+externalPayload
+of said resource.
+For each element of the list, we try to decode the blob present as follows:
+(
+address
+untrustedForwarder
+,
+bytes
+memory
+input
+,
+bytes
+memory
+expectedOutput
+)
+=
+abi
+.
+decode
+(
+callBlob
+,
+(
+address
+,
+bytes
+,
+bytes
+));
+The interpretation of the variable names should be clear.
+At this point we just execute the calls and make sure that the outputs correspond to the preset ones. Note that the verifier provides the logic reference of the appropriate resource as an explict extra input ot the function.
+bytes
+memory
+actualOutput
+=
+IForwarder
+(
+untrustedForwarder
+).
+forwardCall
+({
+logicRef
+:
+carrierLogicRef
+,
+input
+:
+input
+});
+if
+(
+keccak256
+(
+actualOutput
+)
+!=
+keccak256
+(
+expectedOutput
+))
+{
+revert
+ForwarderCallOutputMismatch
+({
+expected
+:
+expectedOutput
+,
+actual
+:
+actualOutput
+});
+}
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

@@ -1,0 +1,2325 @@
+    Nova: Recursive Zero-Knowledge Arguments
+              from Folding Schemes
+
+            Abhiram Kothapalli†              Srinath Setty⋆      Ioanna Tzialla‡
+    †                                   ⋆                        ‡
+        Carnegie Mellon University          Microsoft Research       New York University
+
+
+
+          Abstract. We introduce a new approach to realize incrementally ver-
+          ifiable computation (IVC), in which the prover recursively proves the
+          correct execution of incremental computations of the form y = F (ℓ) (x),
+          where F is a (potentially non-deterministic) computation, x is the input,
+          y is the output, and ℓ > 0. Unlike prior approaches to realize IVC, our ap-
+          proach avoids succinct non-interactive arguments of knowledge (SNARKs)
+          entirely and arguments of knowledge in general. Instead, we introduce
+          and employ folding schemes, a weaker, simpler, and more efficiently-
+          realizable primitive, which reduces the task of checking two instances in
+          some relation to the task of checking a single instance. We construct a
+          folding scheme for a characterization of NP and show that it implies an
+          IVC scheme with improved efficiency characteristics: (1) the “recursion
+          overhead” (i.e., the number of steps that the prover proves in addition
+          to proving the execution of F ) is a constant and it is dominated by two
+          group scalar multiplications expressed as a circuit (this is the smallest
+          recursion overhead in the literature), and (2) the prover’s work at each
+          step is dominated by two multiexponentiations of size O(|F |), providing
+          the fastest prover in the literature. The size of a proof is O(|F |) group
+          elements, but we show that using a variant of an existing zkSNARK,
+          the prover can prove the knowledge of a valid proof succinctly and in
+          zero-knowledge with O(log |F |) group elements. Finally, our approach
+          neither requires a trusted setup nor FFTs, so it can be instantiated
+          efficiently with any cycles of elliptic curves where DLOG is hard.
+
+
+1       Introduction
+
+We revisit the problem of realizing incrementally-verifiable computation (IVC) [47]:
+ a cryptographic primitive that enables producing proofs of correct execution of
+“long running” computations such that a verifier can efficiently verify the correct
+ execution of any prefix of the computation. IVC enables a wide variety of appli-
+ cations including verifiable delay functions [10, 50], succinct blockchains [14, 34],
+ and incrementally-verifiable versions of verifiable state machines [36, 42].
+     A well-known approach to construct IVC is to use succinct non-interactive
+ arguments of knowledge (SNARKs) for NP [26, 27, 33, 39]: at each incremental
+ step i, the prover produces a SNARK proving that it has applied F correctly to
+ the output of step i − 1 and that the SNARK verifier represented as a circuit
+ has accepted the SNARK from step i − 1 [7, 9]. However, it is well-known that
+this approach is impractical [7, 21]. Alternatively, one can use SNARKs without
+trusted setup [19, 23, 41, 44] but their verifiers are more expensive than those
+of SNARKs with trusted setup, both asymptotically and concretely. Recent
+works [11, 13, 17, 18] aim to address the inefficiency of SNARK-based IVC, with
+an innovative approach: at each step, the verifier circuit “defers” expensive steps
+in verifying a SNARK for NP instances (e.g., verifying polynomial evaluation
+proofs) by accumulating those steps into a single instance that is later checked
+efficiently. However, these works still require the prover to produce a SNARK at
+each step and the verifier circuit to partially verify that SNARK.
+     We introduce a new approach that avoids SNARKs (and more generally
+arguments of knowledge) entirely and relies purely on deferral to realize IVC. In
+a nutshell, instead of accumulating expensive steps of verifying a SNARK for
+NP instances, the verifier circuit in our approach accumulates the NP instances
+themselves. We formalize this technique as a new and minimal primitive, which we
+refer to as a folding scheme. A folding scheme is weaker, simpler, and far more ef-
+ficient compared to arguments of knowledge including SNARKs. Indeed, realizing
+IVC via folding schemes results in improved efficiency over prior work (Figure 2):
+(1) the verifier circuit is constant-sized and its size is dominated by two group
+scalar multiplications; this is the smallest verifier circuit in the literature (in the
+context of recursive proof composition); and (2) the prover’s work at each step
+is dominated by two multiexponentiations of size O(|F |), providing the fastest
+prover in the literature, both asymptotically and concretely. Section 1.4 provides
+a detailed comparison between our approach and prior work.
+
+
+1.1   Folding Schemes
+
+A folding scheme is defined with respect to an NP relation, and it is a protocol
+between an untrusted prover and a verifier. Both entities hold two N -sized NP
+instances, and the prover in addition holds purported witnesses for both instances.
+The protocol enables the prover and the verifier to output a single N -sized NP
+instance, which we refer to as a folded instance. Furthermore, the prover privately
+outputs a purported witness to the folded instance using purported witnesses for
+the original instances. Informally, a folding scheme guarantees that the folded
+instance is satisfiable only if the original instances are satisfiable. A folding
+scheme is said to be non-trivial if the verifier’s costs and the communication are
+lower in the case where the verifier participates in the folding scheme and then
+verifies a purported NP witness for the folded instance than the case where the
+verifier verifies purported NP witnesses for each of the original instances.
+    Several existing techniques exhibit the two-to-one reduction pattern of folding
+schemes. Examples include the sumcheck protocol [38] and the split-and-fold
+techniques in inner product arguments [12]. Appendix A provides further details.
+
+Remark 1 (Folding Schemes vs. SNARKs). SNARKs for NP [8, 26, 27, 33, 39]
+trivially imply a folding scheme for NP: given two NP instances u1 and u2 and
+the corresponding witnesses, the prover proves u1 by producing a SNARK. The
+verifier checks that SNARK and then sets u2 to be the folded instance. However,
+
+
+                                          2
+we construct a folding scheme for NP without relying on SNARKs (or more
+generally arguments of knowledge). Specifically, our folding scheme is weaker
+than any argument of knowledge (succinct or otherwise) because it merely reduces
+the satisfiability of two NP instances to the satisfiability of a single NP instance.1
+
+    To design a folding scheme for NP, we start with a popular NP-complete
+language that generalizes arithmetic circuit satisfiability: R1CS (Definition 10).
+As we illustrate later, it is difficult to devise a folding scheme for R1CS. To
+address this, we introduce a variant of R1CS, called relaxed R1CS, which, like
+R1CS, not only characterizes NP, but, unlike R1CS, can support a folding scheme.
+The following theorem captures the cryptographic and efficiency characteristics
+of our folding scheme for relaxed R1CS.
+Theorem 1. There exists a constant-round, public-coin, zero-knowledge folding
+scheme for relaxed R1CS where for N -sized relaxed R1CS instances over a finite
+field F with the same “structure” (i.e., R1CS coefficient matrices), the prover’s
+work is Oλ (N ), and the verifier’s work and the communication are both Oλ (1),
+assuming the existence of any additively-homomorphic commitment scheme that
+provides Oλ (1)-sized commitments to N -sized vectors over F (e.g., Pedersen’s
+commitments), where λ is the security parameter.
+   Because our folding scheme is public coin, it can be made non-interactive in the
+random oracle model using the Fiat-Shamir transform [25], and be instantiated
+(heuristically) in the standard model using a concrete hash function. We rely on
+such a non-interactive folding scheme to construct IVC.
+
+1.2   IVC from Non-Interactive Folding Schemes
+We show how to realize IVC using a non-interactive version of our folding scheme
+for relaxed R1CS. We refer to our construction as Nova.
+    Recall that an IVC is an argument of knowledge [33, 39]2 for incremental
+computations of the form y = F (ℓ) (x), where F is a (possibly non-deterministic)
+computation, ℓ > 0, x is a public input, and y is the public output. At each
+incremental step, the IVC prover produces a proof that the step was computed
+correctly and it has verified a proof for the prior step. In other words, at
+each incremental step, the IVC prover produces a proof of satisfiability for
+an augmented circuit that augments the circuit for F with a “verifier circuit”
+that verifies the proof of the prior step. Recursively, the final proof proves the
+correctness of the entire incremental computation. A key aspect of IVC is that
+neither the IVC verifier’s work nor the IVC proof size depends on the number of
+1
+  This work realizes IVC using our folding scheme. As IVC implies SNARKs (e.g.,
+  see [7]), one might wonder whether folding schemes are in general weaker than
+  SNARKs. However, existing constructions of IVC (including our own) rely on addi-
+  tional assumptions (§4.2), which the resulting IVC-based SNARK inherits.
+2
+  An argument of knowledge for circuit satisfiability enables an untrusted polynomial-
+  time prover to prove to a verifier the knowledge of a witness w such that C(w, x) = y,
+  where C is a circuit, x is some public input, and y is some public output.
+
+
+                                          3
+ steps in the incremental computation. In particular, the IVC verifier only verifies
+ the proof produced at the last step of the incremental computation.
+      In Nova, we consider incremental computations, where each step of the in-
+ cremental computation is expressed with R1CS (all the steps in the incremental
+ computation share the same R1CS coefficient matrices). At step i of the incre-
+ mental computation, as in other approaches to IVC, Nova’s prover proves that
+ the step i was computed correctly. Furthermore, at step i, instead of verifying a
+ proof for step i − 1 (as in traditional approaches to IVC), Nova’s approach treats
+ the computation at step i − 1 as an R1CS instance and folds that into a running
+ relaxed R1CS instance. Specifically, at each step, Nova’s prover proves that it has
+ performed the step’s computation and has folded its prior step represented as an
+ R1CS instance into a running relaxed R1CS instance. In other words, the circuit
+ satisfiability instance that the prover proves at each incremental step computes a
+ step of the incremental computation and includes a circuit for the computation
+ of the verifier in the non-interactive folding scheme for relaxed R1CS.
+      A distinctive aspect of Nova’s approach to IVC is that it achieves the smallest
+“verifier circuit” in the literature. Since the verifier’s costs in the non-interactive
+version of the folding scheme for relaxed R1CS is Oλ (1), the size of the com-
+ putation that Nova’s prover proves at each incremental step is ≈|F |, assuming
+ N -sized vectors are committed with an Oλ (1)-sized commitments (e.g., Pedersen’s
+ commitments). In particular, the verifier circuit in Nova is constant-sized and
+ its size is dominated by two group scalar multiplications. Furthermore, Nova’s
+ prover’s work at each step is dominated by two multiexponentiations of size ≈|F |.
+ Note that Nova’s prover does not perform any FFTs, so it can be instantiated
+ efficiently using any cycles of elliptic curves where DLOG is hard.
+      With the description thus far, the size of an IVC proof (which is a purported
+witness for the running relaxed R1CS instance) is Oλ (|F |). Instead of sending
+ such a proof to a verifier, at any point in the incremental computation, Nova’s
+ prover can prove the knowledge of a satisfying witness to the running relaxed
+ R1CS instance in zero-knowledge with an Oλ (log |F |)-sized succinct proof using
+ a zkSNARK that we design by adapting Spartan [41]. The following theorem
+ summarizes our key result.
+
+Theorem 2. For any incremental function where each step of the incremental
+function applies a (non-deterministic) function F , there exists an IVC scheme
+with the following efficiency characteristics, assuming N -sized vectors are com-
+mitted with an Oλ (1)-sized commitments.
+
+  – IVC proof sizes are O(|F |) and the verifier’s work to verify them is Oλ (|F |).
+    The prover’s work at each incremental step is ≈|F |. Specifically, the prover’s
+    work at each step is dominated by two multiexponentiations of size ≈|F |.
+  – Succinct zero-knowledge proofs of valid IVC proofs are size Oλ (log |F |), and
+    the verifier’s work to verify them is either Oλ (log |F |) or Oλ (|F |) depending
+    on the commitment scheme for vectors. The prover’s work to produce this
+    succinct zero-knowledge proof is Oλ (|F |).
+
+
+                                          4
+1.3    Implementation and Performance Evaluation
+We implement Nova as a library in about 6,000 lines of Rust [3]. The library
+is generic over a cycle of elliptic curves and a hash function (used internally as
+the random oracle). The library provides candidate implementations with the
+Pasta cycle of elliptic curves [4] and Poseidon [2, 29]. For the former, Nova relies
+on pasta-msm [5], a high-performance library for computing multiexpoentiations
+over the Pasta cycle of curves. Finally, the library accepts F (i.e., a step of the
+incremental computation) as a bellperson gadget [1].
+
+Recursion Overheads. We measure the size of Nova’s verifier circuit, as it
+determines the recursion overhead : the number of additional constraints that the
+prover must prove at each incremental step besides proving an invocation of F .
+    We find that Nova’s verifier circuit is ≈10,000 R1CS constraints. This is
+the smallest verifier circuit in the literature and hence Nova incurs the lowest
+recursion overhead. Specifically, Nova’s recursion overhead is > 10× lower than in
+SNARK-based IVC [7] with state-of-the-art per-circuit trusted setup SNARK [30],
+and over 100× smaller than with a SNARK without trusted setup [23]. Compared
+to recent works, Nova’s recursion overhead is over 13× lower than Halo’s [13],
+and over 4× lower than the scheme of Bünz et al. [17].
+
+Performance of Nova. We experiment with Nova on an Azure Standard
+F32s v2 VM (16 physical CPUs, 2.70 GHz Intel(R) Xeon(R) Platinum 8168, and
+64 GB memory). In our experiments, we vary the number of constraints in F .
+Our performance metrics are: the prover time, the verifier time, and proof sizes.
+We measure these for Nova’s IVC scheme as well as its Spartan-based zkSNARK
+to compress IVC proofs. Figure 1 depicts our results, and we find the following.
+ – The prover’s per-step cost to produce an IVC proof and compress it scale
+   sub-linearly with the size of F (since the cost is dominated by two multiex-
+   ponentiations, which scale sub-linearly due to the Pippenger algorithm and
+   parallelize better at larger sizes). When |F | ≈ 220 constraints, the prover’s
+   per-step cost to produce an IVC proof is ≈1µs/constraint. For the same F ,
+   the cost to produce a compressed IVC proof is ≈24µs/constraint.3
+ – Compressed IVC proofs are ≈ 8–9 KB and are significantly shorter than IVC
+   proofs (e.g., they are ≈7,400× shorter when |F | ≈ 220 constraints).
+ – Verifying a compressed proof is only ≈2× higher costs than verifying a
+   significantly longer IVC proof.
+
+
+1.4    A More Detailed Comparison with Prior Work
+Figure 2 compares Nova with prior approaches. Nova’s approach can be viewed
+as taking Halo’s approach to the extreme. Specifically:
+3
+    If the prover produces a compressed IVC proof every ≈24 steps, the prover incurs at
+    most 2× overhead to compress IVC proofs. Similarly, if the prover compresses its
+    IVC proof every ≈240 steps, the overhead drops to ≈20%.
+
+
+                                           5
+                    102                                                     1054                                                      104
+
+
+
+                                                          proof size (KB)                                        verifier time (ms)
+ prover time (s)
+                        1                                                   103
+                    10                                                      102                                                       103
+                        0
+                    10                                                      101                                                       102
+                     −1
+                                                                            100
+                   10                                                       10                                                        101
+                            214 215 216 217 218 219 220                            214 215 216 217 218 219 220                              214 215 216 217 218 219 220
+                                 # constraints                                           # constraints                                            # constraints
+
+                            IVC Scheme (per step)                                                     A zkSNARK of a Valid IVC Proof
+
+                   Fig. 1: Performance of Nova as a function of |F |. See the text for details.
+
+ – At each incremental step, Halo’s verifier circuit verifies a “partial” SNARK.
+   This still requires Halo’s prover to perform |F |-sized FFTs and O(|F |) expo-
+   nentiations (i.e., not an |F |-sized multiexponentiation). Whereas, in Nova,
+   the verifier circuit folds an entire NP instance representing computation at
+   the prior step into a running relaxed R1CS instance. This only requires Nova’s
+   prover to commit to a satisfying assignment of an ≈|F |-sized circuit (which
+   computes F and performs the verifier’s computation in a folding scheme for
+   relaxed R1CS), so at each step, Nova’s prover only computes an O(|F |)-sized
+   multiexponentiation and does not compute any FFTs. So, Nova’s prover
+   incurs lower costs than Halo’s prover, both asymptotically and concretely.
+ – The verifier circuit in Halo is of size Oλ (log |F |) whereas in Nova, it is Oλ (1).
+   Concretely, the dominant operations in Halo’s circuit is O(log |F |) group
+   scalar multiplications, whereas in Nova, it is two group scalar multiplications.
+ – Halo and Nova have the same proof sizes Oλ (log |F |) and verifier time Oλ (|F |).
+    Bünz et al. [18] apply Halo’s approach to other polynomial commitment
+schemes. Halo Infinite [11] generalizes the approach in Halo [13] to any homomor-
+phic polynomial commitment scheme; they also obtain PCD (and hence IVC)
+even when polynomial commitment schemes do not satisfy succinctness.
+    Bünz et al. [17] propose a variant of the approach in Halo, where they realize
+PCD (and hence IVC) without relying on succinct arguments. Specifically, they
+first devise a non-interactive argument of knowledge (NARK) for R1CS with
+Oλ (N )-sized proofs and Oλ (N ) verification times for N -sized R1CS instances.
+Then, they show that most of the NARK’s verifier’s computation can be deferred
+by performing Oλ (1) work in the verifier circuit. For zero-knowledge, Nova relies
+on zero-knowledge arguments with succinct proofs, whereas their approach does
+not rely on succinct arguments. However, Nova’s approach has several conceptual
+and efficiency advantages over the work of Bünz et al [17]:
+ – Nova introduces a new primitive called a folding scheme, which is conceptually
+   simpler and is easier to realize than prior notions such as (split) accumulation
+   schemes used in prior work [17, 18]. Furthermore, a folding scheme for NP
+   directly leads to IVC and is again easier to analyze than with prior notions.
+ – At each step, their prover performs an O(|F |)-sized FFT (which costs
+   O(|F | log |F |) operations over F ). Whereas, Nova does not perform any FFTs.
+ – Their prover’s work for multiexponentitions at each step and the size of their
+   verifier circuit are both higher than in Nova by ≈4×.
+
+
+                                                                                            6
+                         “Verifier circuit”   Prover        Proof size    Verifier      assumptions
+                         (dominant ops)       (each step)
+BCTV14 [7] with [30]†    3P                   O(C) FFT      Oλ (1)        Oλ (1)        q-type
+                                              O(C) MSM
+                           √                                    √             √
+Spartan [41]-based IVC   O( C) G              O(C) MSM      Oλ ( C)       Oλ ( C)       DLOG, RO
+Fractal [23]             Oλ (log2 C) F        O(C) FFT      Oλ (log2 C)   Oλ (log2 C)   RO
+                         O(log2 C) H          O(C) MHT
+Halo [13]                O(log C) G           O(C) FFT      Oλ (log C)    Oλ (C)        DLOG, RO
+                                              O(C) EXP
+BCLMS [17]⋆              8G                   O(C) FFT      Oλ (C)        Oλ (C)        DLOG, RO
+                                              O(C) MSM
+Nova (this work)         2G                   O(C) MSM      Oλ (log C)    Oλ (C)        DLOG, RO
+Nova (this work)         2 GT                 O(C) MSM      Oλ (log C)    Oλ (log C)    SXDH, RO
+†
+ Requires per-circuit trusted setup and is undesirable in practice
+O(C) FFT: FFT over an O(C)-sized vector costing O(C log C) operations over F
+O(C) MHT: Merkle tree over an O(C)-sized vector costing O(C) hash computations
+O(C) EXP: O(C) exponentiations in a cryptographic group
+O(C) MSM: O(C)-sized multi-exponentiation in a cryptographic group
+
+
+
+Fig. 2: Asymptotic costs of Nova and its baselines to produce and verify a proof for an
+ incremental computation where each incremental step applies a function F . C denotes
+ the size of the computation at each incremental step, i.e., |F | + |CV |, where CV is the
+“verifier circuit” in IVC. The “verifier circuit” column depicts the number of dominant
+ operations in CV , where P denotes a pairing in a pairing-friendly group, F denotes
+ the number of finite field operations, H denotes a hash computation, and G denotes a
+ scalar multiplication in a cryptographic group. The prover column depicts the cost to
+ the prover for each step of the incremental computation, and proof sizes and verifier
+ times refer respectively to the size of the proof of the incremental computation and the
+ associated verification times. For Nova’s proof sizes and verification times, we depict the
+ compressed proof sizes (otherwise, they are Oλ (C)) and the time to verify a compressed
+ proof (otherwise, they are Oλ (C)). Rows with RO require heuristically instantiating
+ the random oracle with a concrete hash function in the standard model.
+
+
+    – Proof sizes are Oλ (|F |) in their work, whereas in Nova, they are Oλ (log |F |).
+      We believe, in theory, they can also compress their proofs, using a succinct
+      argument, but unlike Nova, they do not specify how to do so in a concretely
+      efficient manner. Furthermore, using succinct arguments is inconsistent with
+      their goal of not employing them.
+Concurrent work. In an update concurrent with this work, Bünz et al. [17] provide
+an improved construction of their NARK for R1CS, which leads to an IVC that,
+like Nova, avoids FFTs. Furthermore, they improve the size of the verifier circuit
+by ≈2×, which is still larger than Nova’s verifier circuit by ≈2×. The per-step
+computation of the prover remains 4× higher than Nova.
+
+1.5     An Overview of the Rest of the Paper
+Section 2 provides the necessary background. Section 3 formally defines folding
+schemes and their properties. In Section 4, we introduce a variant of R1CS
+
+
+                                                 7
+called relaxed R1CS for which we provide a folding scheme satisfying Theorem 1.
+Then, in Section 5, we use a non-interactive version of the folding scheme (§4.2)
+to construct an IVC scheme and a scheme to compress IVC proofs satisfying
+Theorem 2 by assuming the existence of a zkSNARK for relaxed R1CS with
+logarithmic-sized proofs. Finally, in Section 6, we construct such a zkSNARK.
+
+
+2     Preliminaries
+
+Let F denote a finite field with |F | = 2Θ(λ) , where λ is the security parameter.
+Let ∼
+    = denote computational indistinguishability with respect to a PPT adversary.
+We globally assume that generator algorithms that produce public parameters
+are additionally provided appropriate size bounds.
+
+
+2.1   A Commitment Scheme for Vectors over F
+
+We require a commitment scheme for vectors over F that is additively homo-
+morphic and succinct. We formally define these two properties and others noted
+below in Appendix F. Below, we define the syntax for commitment schemes.
+
+Definition 1 (A Commitment Scheme for Vectors). A commitment scheme
+for F m is a tuple of three protocols with the following interface.
+
+ – Gen(1λ , m) → pp: takes length parameter m; produces public parameters pp.
+ – Com(pp, v, r) → C: takes vector v ∈ F m and r ∈ F ; produces commitment C.
+ – Open(pp, C, v, r) → {0, 1}: verifies the opening of commitment C to v ∈ F m .
+
+A commitment scheme satisfies hiding (the commitment reveals no information),
+binding (a PPT adversary cannot open a commitment to two different values),
+and succinctness (the commitment size is logarithmic in the opening size).
+
+
+2.2   Non-Interactive Arguments of Knowledge
+
+Definition 2 (Non-Interactive Argument of Knowledge). Consider a
+relation R over public parameters, structure, instance, and witness tuples. A non-
+interactive argument of knowledge for R consists of PPT algorithms (G, P, V)
+and deterministic K, denoting the generator, the prover, the verifier and the
+encoder respectively with the following interface.
+
+ – G(1λ ) → pp: On input security parameter λ, samples public parameters pp.
+ – K(pp, s) → (pk, vk): On input structure s, representing common structure
+   among instances, outputs the prover key pk and verifier key vk.
+ – P(pk, u, w) → π: On input instance u and witness w, outputs a proof π
+   proving that (pp, s, u, w) ∈ R.
+ – V(vk, u, π) → {0, 1}: Checks instance u given proof π.
+
+
+                                        8
+An argument of knowledge satisfies completeness if for any PPT adversary A
+                                    pp ← G(1λ ),
+                                                        
+                  
+                                   (s, (u, w)) ← A(pp), 
+                                                         
+               Pr  V(vk, u, π) = 1 (pp, s, u, w) ∈ R,
+                                                         = 1.
+                                                         
+                                   (pk, vk) ← K(pp, s), 
+                                    π ← P(pk, u, w)
+An argument of knowledge satisfies knowledge soundness if for all PPT adversaries
+A there exists a PPT extractor E such that for all randomness ρ
+                                     pp ← G(1λ ),
+                                                         
+                 V(vk, u, π) = 1, (s, u, π) ← A(pp; ρ), 
+             Pr 
+                 (pp, s, u, w) ̸∈ R (pk, vk) ← K(pp, s),  = negl(λ).
+                                                          
+
+                                     w ← E(pp, ρ)
+Definition 3 (Zero-Knowledge). An argument of knowledge (G, K, P, V) for
+relation R satisfies zero-knowledge if there exists PPT simulator S such that for
+all PPT adversaries A
+                                                                            
+  
+                  pp ← G(1λ ),         
+                                           
+                                                         (pp, τ ) ← S(1λ ),   
+                                                                               
+                   (s, (u, w)) ← A(pp),                  (s, (u, w)) ← A(pp), 
+  
+                                                                            
+                                                                           
+     (pp, s, u, π) (pp, s, u, w) ∈ R,     ∼
+                                          = (pp, s, u, π) (pp, s, u, w) ∈ R,
+                   (pk, vk) ← K(pp, s),                  (pk, vk) ← K(pp, s), 
+  
+                                                                           
+  
+                                       
+                                                                             
+                                                                             
+                   π ← P(pk, u, w)                        π ← S(pp, u, τ )
+                                                                             
+
+Definition 4 (Succinctness). A non-interactive argument system is succinct
+if the size of the proof π is polylogarithmic in the size of the witness w.
+
+2.3   Incrementally Verifiable Computation
+Incrementally verifiable computation (IVC) [47] enables verifiable computation
+for repeated function application. Intuitively, for a function F , with initial input
+z0 , an IVC scheme allows a prover to produce a proof Πi for the statement
+zi = F (i) (z0 ) (i.e., i applications of F on input z0 ) given a proof Πi−1 for
+the statement zi−1 = F (i−1) (z0 ). Formally, IVC schemes additionally permit
+F to take auxiliary input ω. We recall the definition of IVC using notational
+conventions of modern argument systems.
+Definition 5 (IVC). An incrementally verifiable computation (IVC) scheme is
+defined by PPT algorithms (G, P, V) and deterministic K denoting the generator,
+the prover, the verifier, and the encoder respectively. An IVC scheme (G, K, P, V)
+satisfies perfect completeness if for any PPT adversary A
+                                     pp ← G(1λ ),
+                                                                                   
+        
+                                    F, (i, z0 , zi , zi−1 , ωi−1 , Πi−1 ) ← A(pp), 
+                                                                                    
+                                    (pk, vk) ← K(pp, F ),                          
+     Pr  V(vk, i, z  ,
+                     0 iz , Πi ) = 1                                                =1
+        
+                                    zi = F (zi−1 , ωi−1 ),                         
+                                                                                    
+                                    V(vk, i − 1, z0 , zi−1 , Πi−1 ) = 1,           
+                                     Πi ← P(pk, i, z0 , zi ; zi−1 , ωi−1 , Πi−1 )
+
+                                          9
+where F is a polynomial time computable function. Likewise, an IVC scheme
+satisfies knowledge soundness if for any constant n ∈ N, and for all expected
+polynomial time adversaries P ∗ , there exists an expected polynomial-time extractor
+E such that
+                                         pp ← G(1λ ),
+                                                                        
+                 zn = z where
+            Pr  zi+1 ← F (zi , ωi )     (F, (z0 , z), Π) ← P ∗ (pp, r),  ≈
+             r
+                 ∀i ∈ {0, . . . , n − 1} (ω0 , . . . , ωn−1 ) ← E(pp, r)
+                                             pp ← G(1λ ),
+                                                                           
+
+            Pr  V(vk, (n, z0 , z), Π) = 1 (F, (z0 , z), Π) ← P ∗ (pp, r), 
+             r
+                                             (pk, vk) ← K(pp, F )
+
+where r denotes an arbitrarily long random tape.
+   An IVC scheme satisfies succinctness if the size of the IVC proof Π does not
+grow with the number of applications n.
+
+    We note that in the definition above, the number of steps n is treated as a
+fixed environment variable that characterizes the extractor. This model is required
+for all known general recursive techniques as they rely on recursive extractors
+that blowup polynomially for each additional recursive step [11, 14, 17, 18, 23].
+Bitansky et al. [9] avoid such a restriction by making non-blackbox assumptions
+about the extractors runtime with respect to that of the malicious prover. In any
+case, there are no known attacks on arbitrary depth recursion.
+
+
+3     Folding Schemes
+
+This section formally defines folding schemes. Intuitively, a folding scheme for a
+relation R is a protocol that reduces the task of checking two instances in R to
+the task of checking a single instance in R.
+
+Definition 6 (Folding Scheme). Consider a relation R over public parameters,
+structure, instance, and witness tuples. A folding scheme for R consists of a
+PPT generator algorithm G, a deterministic encoder algorithm K, and a pair of
+PPT algorithms P and V denoting the prover and verifier respectively, with the
+following interface:
+
+ – G(1λ ) → pp: On input security parameter λ, samples public parameters pp.
+ – K(pp, s) → (pk, vk): On input pp, and a common structure s between instances
+   to be folded, outputs a prover key pk and a verifier key vk.
+ – P(pk, (u1 , w1 ), (u2 , w2 )) → (u, w): On input instance-witness tuples (u1 , w1 )
+   and (u2 , w2 ) outputs a new instance-witness tuple (u, w) of the same size.
+ – V(vk, u1 , u2 ) → u: On input instances u1 and u2 , outputs a new instance u.
+
+Let
+
+                     (u, w) ← ⟨P(pk, w1 , w2 ), V(vk)⟩(u1 , u2 )
+
+
+                                         10
+denote the the verifier’s output instance u and the prover’s output witness w from
+the interaction of P and V on witnesses (w1 , w2 ), prover key pk, verifier key vk
+and instances (u1 , u2 ). Likewise, let
+
+
+                         tr = ⟨P(pk, w1 , w2 ), V(vk)⟩(u1 , u2 )
+
+
+denote the corresponding interaction transcript. A folding scheme satisfies perfect
+completeness if for all PPT adversaries A
+
+
+                             pp ← G(1λ ),
+                                                                        
+         
+                            (s, (u1 , w1 ), (u2 , w2 )) ← A(pp),        
+                                                                         
+      Pr  (pp, s, u, w) ∈ R (pp, s, u1 , w1 ), (pp, s, u2 , w2 ) ∈ R,
+                                                                         = 1.
+                                                                         
+                            (pk, vk) ← K(pp, s),                        
+                             (u, w) ← ⟨P(pk, w1 , w2 ), V(vk)⟩(u1 , u2 )
+
+
+A folding scheme satisfies knowledge soundness if for any expected polynomial-time
+adversary P ∗ there is an expected polynomial-time extractor E such that
+
+
+                                 pp ← G(1λ ),
+                                                               
+          (pp, s, u1 , w1 ) ∈ R,
+     Pr                         (s, (u1 , u2 )) ← P ∗ (pp, ρ),  ≥
+          (pp, s, u2 , w2 ) ∈ R
+                                 (w1 , w2 ) ← E(pp, ρ)
+                                 pp ← G(1λ ),
+                                                                        
+                                (s, (u1 , u2 )) ← P ∗ (pp, ρ),          
+         (pp, s, u, w) ∈ R
+     Pr                                                                  − negl(λ)
+                                 (pk, vk) ← K(pp, s),                    
+                                 (u, w) ← ⟨P ∗ (pk, ρ), V(vk)⟩(u1 , u2 )
+
+
+where ρ denotes arbitrary input randomness for P ∗ . We call a transcript an
+accepting transcript if P outputs a satisfying folded witness w for the folded
+instance u. We consider a folding scheme non-trivial if the communication costs
+and V’s computation are lower in the case where V participates in the folding
+scheme and then checks a witness sent by P for the folded instance than the case
+where V checks witnesses sent by P for each of the original instances.
+
+
+
+Definition 7 (Non-Interactive). A folding scheme (G, K, P, V) is non-interactive
+if the interaction between P and V consists of a single message from P to V.
+This single message is denoted as an output of P, and an input to V.
+
+
+
+Definition 8 (Zero-Knowledge). A folding scheme (G, K, P, V) satisfies zero-
+knowledge for relation R if there exists a PPT simulator S such that for all PPT
+
+
+                                           11
+adversaries A, and V ∗ , and input randomness ρ
+                                                                   
+                
+                     pp ← G(1λ ),                                  
+                                                                    
+                 (s, (u1 , w1 ), (u2 , w2 )) ← A(pp),
+                
+                                                                   
+                                                                    
+                                                                    
+                  tr (pk, vk) ← K(pp, s),                             ∼
+                                                                      =
+                      (pp, s, u1 , w1 ), (pp, s, u2 , w2 ) ∈ R,
+                
+                                                                   
+                                                                    
+                                                                   
+                      tr = ⟨P(pk, w1 , w2 ), V ∗ (vk, ρ)⟩(u1 , u2 )
+                
+                                                                   
+                                                                    
+                                                               
+                
+                     pp ← G(1λ ),                              
+                                                                
+                 (s, (u1 , w1 ), (u2 , w2 )) ← A(pp), 
+                
+                                                               
+                                                                
+                  tr (pp, s, u1 , w1 ), (pp, s, u2 , w2 ) ∈ R,
+                      (pk, vk) ← K(pp, s),
+                
+                                                               
+                                                                
+                                                               
+                               ∗                               
+                              V (vk,ρ)
+                      tr ← S            (pk, u1 , u2 )
+                                                               
+
+Definition 9 (Public Coin). A folding scheme (G, K, P, V) is called public coin
+if all the messages sent from V to P are sampled from a uniform distribution.
+
+    Typically, knowledge soundness is difficult to prove directly. To assist these
+proofs, prior works employ the forking lemma [12], which abstracts away much
+of the probabilistic reasoning. The original forking lemma shows that to prove
+knowledge soundness it is sufficient to construct a PPT extractor that takes
+as input a “tree” of accepting transcripts and outputs a satisfying witness.
+However, in our setting, this extractor must additionally take as input the prover’s
+output (i.e., the folded instance and witness) for each of these transcripts, which
+contains information needed to reconstruct the original witness. So, we introduce
+a small variant of the forking lemma that captures this modification.
+
+Lemma 1 (Forking Lemma for Folding Schemes). Consider a (2µ + 1)-
+move folding scheme Π = (G, K, P, V). Π satisfies knowledge soundness if there
+exists a PPT X such that for all input instance pairs (u1 , u2 ), outputs satisfying
+witnesses (w1 , w2 ) with probability 1 − negl(λ), given public parameters pp, a
+structure s, and an (n1 , . . . , nµ )-tree of accepting transcripts and the corresponding
+folded instance-witness pairs (u, w). This tree comprises of n1 transcripts (and the
+corresponding instance-witness pairs) with fresh randomness in V’s first message;
+and for each such transcript, n2 transcripts (and the corresponding instance-
+witness
+Qµ       pairs) with fresh randomness in V’s second message; etc., for a total of
+   i=1 i leaves bounded by poly(λ).
+       n
+
+Proof Intuition. A proof for our variant of the forking lemma is similar to that
+of Bootle et al. [12]. We present a formal proof in Appendix E.
+
+
+4    A Folding Scheme for NP
+In this section, we describe a public-coin, zero-knowledge interactive folding
+scheme for NP. We additionally discuss how to make it non-interactive. We
+leverage the non-interactivity property to realize IVC in the next section, and
+the zero-knowledge property to achieve zero-knowledge IVC proof compression.
+
+
+                                           12
+4.1    A Public-Coin, Zero-Knowledge Folding Scheme
+
+To design a folding scheme for NP, we need an NP-complete language. While
+theoretically any NP-complete language is a viable candidate, we focus on R1CS,4
+a popular algebraic representation that generalizes arithmetic circuit satisfiability.
+
+Definition 10 (R1CS). Consider a finite field F . Let the public parameters
+consist of size bounds m, n, ℓ ∈ N where m > ℓ. The R1CS structure consists of
+sparse matrices A, B, C ∈ F m×m with at most n = Ω(m) non-zero entries in each
+matrix. An instance x ∈ F ℓ consists of public inputs and outputs and is satisfied
+by a witness W ∈ F m−ℓ−1 if (A · Z) ◦ (B · Z) = C · Z, where Z = (W, x, 1).
+
+    As we show in the next section, to realize IVC, we only need a folding
+scheme that can fold two R1CS instances with the same R1CS matrices (A, B, C).
+Specifically, given R1CS matrices (A, B, C), and two corresponding instance-
+witness pairs (x1 , W1 ) and (x2 , W2 ), we would like to devise a scheme that reduces
+the task of checking both instances into the task of checking a single new instance-
+witness pair (x, W ) against the same R1CS matrices (A, B, C). Unfortunately, as
+we illustrate now, it is difficult to devise a folding scheme for R1CS such that it
+satisfies completeness, let alone knowledge soundness.
+
+First Attempt. As R1CS is an algebraic system, the most direct approach
+would be to take a random linear combination. Ignoring efficiency concerns,
+suppose that the prover sends witnesses W1 and W2 in the first step. The verifier
+responds with a random r ∈ F ; the prover and the verifier both compute
+
+                                   x ← x1 + r · x2
+                                 W ← W1 + r · W2 ,
+
+and set the new instance-witness pair to be (x, W ). However, for non-trivial
+Z1 = (W1 , x1 , 1) and Z2 = (W2 , x2 , 1), and Z = (W, x, 1), we roughly have that
+
+    AZ ◦ BZ = A(Z1 + r · Z2 ) ◦ B(Z1 + r · Z2 )
+              = AZ1 ◦ BZ1 + r · (AZ1 ◦ BZ2 + AZ2 ◦ BZ1 ) + r2 · (AZ2 ◦ BZ2 )
+              ̸= CZ.
+
+    The failed attempt exposes three issues. First, we must account for an addi-
+tional cross-term, r · (AZ1 ◦ BZ2 + AZ2 ◦ BZ1 ). Second, the terms excluding the
+cross-term combine to produce a term that does not equal CZ:
+
+    AZ1 ◦ BZ1 + r2 · (AZ2 ◦ BZ2 ) = CZ1 + r2 · CZ2 ̸= CZ1 + r · CZ2 = CZ.
+
+Third, we do not even have that Z = Z1 +r·Z2 because Z1 +r·Z2 = (W, x, 1+r·1).
+4
+    R1CS is implicit in the QAPs formalism of GGPR [26], but it was made explicit in
+    subsequent work [43]; they refer to it as a “constraint system in quadratic form”.
+
+
+                                          13
+Second Attempt. To handle the first issue, we introduce a “slack” (or error)
+vector E ∈ F m which absorbs the cross terms generated by folding. To handle
+the second and third issues, we introduce a scalar u, which absorbs an extra
+factor of r in CZ1 + r2 · CZ2 and in Z = (W, x, 1 + r · 1). We refer to a variant of
+R1CS with these additional terms as relaxed R1CS.
+Definition 11 (Relaxed R1CS). Consider a finite field F . Let the public
+parameters consist of size bounds m, n, ℓ ∈ N where m > ℓ. The relaxed R1CS
+structure consists of sparse matrices A, B, C ∈ F m×m with at most n = Ω(m)
+non-zero entries in each matrix. A relaxed R1CS instance consists of an error
+vector E ∈ F m , a scalar u ∈ F , and public inputs and outputs x ∈ F ℓ . An instance
+(E, u, x) is satisfied by a witness W ∈ F m−ℓ−1 if (A · Z) ◦ (B · Z) = u · (C · Z) + E,
+where Z = (W, x, u).
+    Note that any R1CS instance can be expressed as a relaxed R1CS instance by
+augmenting it with u = 1 and E = 0, so relaxed R1CS retains NP-completeness.
+    Building on the first attempt, the prover and verifier can now use E to
+accumulate the cross-terms. In particular, for Zi = (Wi , xi , ui ), the prover and
+verifier additionally compute
+
+      u ← u1 + r · u2
+     E ← E1 + r · (AZ1 ◦ BZ2 + AZ2 ◦ BZ1 − u1 CZ2 − u2 CZ1 ) + r2 · E2 ,
+
+and set the new instance-witness pair to be ((E, u, x), W ). Conveniently, updating
+u in this manner also keeps track of how the constant term in Z should be updated,
+which motivates our choice to use u in Z = (W, x, u) rather than introducing a
+new variable. Now, for Z = (W, x, u), and for random r ∈ F ,
+
+AZ ◦ BZ = AZ1 ◦ BZ1 + r · (AZ1 ◦ BZ2 + AZ2 ◦ BZ1 ) + r2 · (AZ2 ◦ BZ2 )
+           = (u1 CZ1 + E1 ) + r · (AZ1 ◦ BZ2 + AZ2 ◦ BZ1 ) + r2 · (u2 CZ2 + E2 )
+           = (u1 + r · u2 ) · C(Z1 + rZ2 ) + E
+           = uCZ + E.
+
+This implies that, for R1CS matrices (A, B, C), the folded witness W is a satisfying
+witness for the folded instance (E, u, x) as promised. A few issues remain: in the
+above scheme, the prover sends witnesses (W1 , W2 ) for the verifier to compute E.
+As a result, the folding scheme is not non-trivial; it is also not zero-knowledge.
+
+Final Protocol. To circumvent these issues, we use succinct and hiding additively
+homomorphic commitments to W and E in the instance, and treat both W and E
+as the witness. We refer to this variant of relaxed R1CS as committed relaxed R1CS.
+Below, we describe a folding scheme for committed relaxed R1CS, where the
+prover sends a single commitment to aid the verifier in computing commitments
+to the folded witness (W, E).
+Definition 12 (Committed Relaxed R1CS). Consider a finite field F and a
+commitment scheme Com over F . Let the public parameters consist of size bounds
+
+
+                                          14
+m, n, ℓ ∈ N where m > ℓ, and commitment parameters ppW and ppE for vectors of
+size m and m−ℓ−1 respectively. The committed relaxed R1CS structure consists of
+sparse matrices A, B, C ∈ F m×m with at most n = Ω(m) non-zero entries in each
+matrix. A committed relaxed R1CS instance is a tuple (E, u, W , x), where E and
+W are commitments, u ∈ F , and x ∈ F ℓ are public inputs and outputs. An instance
+(E, u, W , x) is satisfied by a witness (E, rE , W, rW ) ∈ (F m , F , F m−ℓ−1 , F ) if E =
+Com(ppE , E, rE ), W = Com(ppW , W, rW ), and (A · Z) ◦ (B · Z) = u · (C · Z) + E,
+where Z = (W, x, u).
+
+Construction 1 (A Folding Scheme for Committed Relaxed R1CS).
+Consider a finite field F and a succinct, hiding, and homomorphic commitment
+scheme Com over F . We define the generator and the encoder as follows.
+
+ – G(1λ ) → pp: output size bounds m, n, ℓ ∈ N, and commitment parameters
+   ppW and ppE for vectors of size m and m − ℓ − 1 respectively.
+ – K(pp, (A, B, C)) → (pk, vk): output pk ← (pp, (A, B, C)) and vk ← ⊥.
+
+The verifier V takes two committed relaxed R1CS instances (E 1 , u1 , W 1 , x1 ) and
+(E 2 , u2 , W 2 , x2 ). The prover P, in addition to the two instances, takes witnesses to
+both instances, (E1 , rE1 , W1 , rW1 ) and (E2 , rE2 , W2 , rW2 ). Let Z1 = (W1 , x1 , u1 )
+and Z2 = (W2 , x2 , u2 ). The prover and the verifier proceed as follows.
+
+ 1. P: Send T := Com(ppE , T, rT ), where rT ←R F and with cross term
+
+                 T = AZ1 ◦ BZ2 + AZ2 ◦ BZ1 − u1 · CZ2 − u2 · CZ1 .
+
+ 2. V: Sample and send challenge r ←R F .
+ 3. V, P: Output the folded instance (E, u, W , x) where
+
+                               E ← E1 + r · T        + r2 · E 2
+                               u ← u1 + r · u2
+                               W ← W1 + r · W2
+                               x ← x1 + r · x2
+
+ 4. P: Output the folded witness (E, rE , W, rW ), where
+
+                              E ← E1 + r · T          + r2 · E2
+                              rE ← rE1 + r · rT       + r2 · rE2
+                              W ← W1 + r · W2
+                              rW ← rW1 + r · rW2
+
+Theorem 3 (A Folding Scheme for Committed Relaxed R1CS). Con-
+struction 1 is a public-coin folding scheme for committed relaxed R1CS with
+perfect completeness, knowledge soundness, and zero-knowledge.
+
+
+                                            15
+Proof Intuition. With textbook algebra, we can show that if witnesses (E1 , rE1 ,
+W1 , rW1 ) and (E2 , rE2 , W2 , rW2 ) are satisfying witnesses, then the folded witness
+(E, rE , W, rW ) must be a satisfying witness. We prove knowledge soundness via
+the forking lemma (Lemma 1) by showing that the extractor can produce the
+initial witnesses given three accepting transcripts and the corresponding folded
+witnesses. Specifically, the extractor uses all three transcripts to compute Ei and
+rEi , and any two transcripts to compute Wi and rWi for i ∈ {1, 2}. The choice
+of which two transcripts does not matter due to the binding property of the
+commitment scheme. We present a formal proof in Appendix B.
+
+
+4.2   Achieving Non-Interactivity via the Fiat-Shamir Transform
+
+To design Nova’s IVC scheme, we require our folding scheme for committed
+relaxed R1CS to be non-interactive in the standard model. To do so we first
+achieve non-interactivity in the random oracle model using the (strong) Fiat-
+Shamir transform [25]. Next, we heuristically instantiate the random oracle using
+a cryptographic hash function. As a result, we can only heuristically argue the
+security of the resulting non-interactive folding scheme. Note that all existing
+IVC constructions in the standard model require instantiating the random oracle
+with a cryptographic hash function [13, 17, 23, 47].
+
+Construction 2 (A Non-Interactive Folding Scheme). We achieve non-
+interactivity in the random oracle model using the strong Fiat-Shamir trans-
+form [25]. Let ρ denote a random oracle sampled during parameter genera-
+tion and provided to all parties. Let (G, K, P, V) represent our interactive fold-
+ing scheme (Construction 1). We construct a non-interactive folding scheme
+(G, K, P, V) as follows:
+
+ – G(1λ ): output pp ← G(1λ ).
+ – K(pp, (A, B, C)): vk ← ρ(pp, s) and pk ← (pp, (A, B, C), vk); output (vk, pk).
+ – P(pk, (u1 , w1 ), (u2 , w2 )): runs P((pk.pp, pk.(A, B, C)) to retrieve its first mes-
+   sage T , and sends T to V; computes r ← ρ(vk, u1 , u2 , T ), forwards this to P,
+   and outputs the resulting output.
+ – V(vk, u1 , u2 , T ): runs V with T as the message from the prover and with
+   randomness r ← ρ(vk, u1 , u2 , T ), and outputs the resulting output.
+
+Assumption 1 (RO instantiation). Construction 2 is a non-interactive folding
+scheme that satisfies completeness, knowledge soundness, and zero-knowledge in
+the standard model when ρ is instantiated with a cryptographic hash function.
+
+
+5     Nova: An IVC Scheme with Proof Compression
+
+This section describes Nova, an IVC scheme designed from a non-interactive fold-
+ing scheme, which when instantiated with any additively-homomorphic commit-
+ment scheme with succinct commitments achieves the claimed efficiency (Lemma 4).
+In addition, Nova incorporates an efficient zkSNARK to prove the knowledge
+
+
+                                          16
+of valid IVC proofs succinctly and in zero-knowledge, providing a succinct,
+zero-knowledge proof of knowledge of a valid IVC proof.
+    In Nova, at each incremental step, the prover folds a particular step of the
+incremental computation (represented as a committed relaxed R1CS instance-
+witness pair) into a running committed relaxed R1CS instance-witness pair. At
+any step in the incremental computation, a valid “IVC proof”, in a nutshell, is
+a satisfying witness of the running committed relaxed R1CS instance (which
+an honest prover can compute by folding witnesses associated with each step
+of the incremental computation) along with the running committed relaxed
+R1CS instance. Furthermore, at any incremental step, Nova’s prover can prove
+in zero-knowledge and with a succinct proof—using a variant of an existing
+zkSNARK [41] (Section 6)—that it knows a valid IVC proof (i.e., a satisfying
+witness) to the running committed relaxed R1CS instance (Construction 4).
+    Note that Nova is not a zero-knowledge IVC scheme, as that would additionally
+require an IVC proof to be zero-knowledge (in Nova’s case, an IVC proof does
+not hide witnesses associated with steps of the incremental computation). This
+difference is immaterial in the context of a single prover since it can use Nova’s
+auxiliary zkSNARK to provide a zero-knowledge proof of knowledge of a valid
+IVC proof; we leave it to future work to achieve zero-knowledge IVC.
+
+
+5.1     Constructing IVC from a Folding Scheme for NP
+
+Recall that an IVC scheme allows a prover to show that zn = F (n) (z0 ) for some
+count n, initial input z0 , and output zn . We now show how to construct an IVC
+scheme for a non-deterministic, polynomial-time computable function F using our
+non-interactive folding scheme for committed relaxed R1CS (Construction 2).5
+    In our construction, as in a SNARK-based IVC, the prover uses an augmented
+function F ′ (Figure 3), which, in addition to invoking F , performs additional
+bookkeeping to fold proofs of prior invocations of itself.
+    We first describe a simplified version of F ′ , to provide intuition. F ′ takes
+as non-deterministic advice two committed relaxed R1CS instances ui and Ui .
+Suppose that Ui represents the correct execution of invocations 1, . . . , i − 1 of F ′
+so long as ui represents the correct execution of invocation i of F ′ . F ′ performs
+two tasks. First, it executes a step of the incremental computation: instance ui
+contains zi which F ′ uses to output zi+1 = F (zi ). Second, F ′ invokes the verifier
+of the non-interactive folding scheme to fold the task of checking ui and Ui into
+the task of checking a single instance Ui+1 . The IVC prover then computes a
+new instance ui+1 which attests to the correct execution of invocation i + 1 of F ′ ,
+thereby attesting that zi+1 = F (zi ) and Ui+1 is the result of folding ui and Ui .
+Now, we have that Ui+1 represents the correct execution of invocations 1, . . . , i
+of F ′ so long as ui+1 represents the correct execution of invocation i + 1 of F ′ .
+    The above description glossed over a subtle discrepancy: Because F ′ must
+output the running instance Ui+1 for the next invocation to use, it is contained
+5
+    While, in theory, we can use any folding scheme for NP, we specifically invoke our
+    construction for committed relaxed R1CS for a simpler presentation.
+
+
+                                          17
+           i
+          z0
+          zi                                                                         zi+1
+
+         ui                                               F                                     hi+1
+
+
+
+
+                                      ?
+  Ui                         ui .x =                Ui+1 ←           hi+1 ← hash
+                         hash(i, z0 , zi , Ui )   NIFS.V(Ui , ui ) (i + 1, z0 , zi+1 , Ui+1 )
+
+
+
+
+Fig. 3: A simplified depiction of F ′ . F ′ represented as a committed relaxed R1CS
+instance ui+1 encodes the statement that there exists (i, z0 , zi , ui , Ui , Ui+1 , ri , ri+1 , T )
+such that ui .x = hash(vk, i, z0 , zi , Ui , ri ), hi+1 = hash(vk, i + 1, z0 , F (zi ), Ui+1 , ri+1 ),
+Ui+1 = NIFS.V (vk, Ui , ui , T ), and that F ′ outputs hi+1 . The diagram omits depicting
+vk, ωi , ri , ri+1 , and T .
+
+
+in ui+1 .x (i.e., the public IO of ui+1 ). But, in the next iteration, F ′ must fold
+ui+1 .x into Ui+1 .x, meaning that F ′ is stuck trying to squeeze Ui+1 into Ui+1 .x.
+To handle this inconsistency, we modify F ′ to output a collision-resistant hash
+of its public IO rather than producing it directly (this ensures that the public
+IO of F ′ is a constant number of finite field elements). The next invocation of
+F ′ then additionally takes the preimage of this hash as non-deterministic advice.
+Note that the hash function takes an additional random input. We assume that
+this provides a commitment scheme with hiding commitments.
+
+Producing IVC Proofs. Let (u⊥ , w⊥ ) be the trivially satisfying instance-
+witness pair, where E, W, and x are appropriately-sized zero vectors, rE = 0,
+rW = 0, and E and W are commitments of E and W respectively.
+    Now, in iteration i + 1, the IVC prover runs F ′ and computes ui+1 and Ui+1
+as well as the corresponding witnesses wi+1 and Wi+1 . Because ui+1 and Ui+1
+together attest to the correctness of i+1 invocations of F ′ (which indirectly attests
+to i + 1 invocations of F ) the IVC proof Πi+1 is ((Ui+1 , Wi+1 ), (ui+1 , wi+1 )).
+Moreover, succinctness is maintained by the properties of the underlying folding
+scheme. We formally describe our construction below.
+Construction 3 (IVC). Let NIFS = (G, K, P, V) be the non-interactive folding
+scheme for committed relaxed R1CS (Construction 2). Consider a polynomial-
+time function F that takes non-deterministic input, and a cryptographic hash
+function hash. We define our augmented function F ′ as follows (all arguments to
+F ′ are taken as non-deterministic advice):
+
+F ′ (vk, Ui , ui , (i, z0 , zi ), ωi , T , ri , ri+1 ) → x:
+
+
+
+                                                       18
+If i = 0, output hash(vk, i + 1, z0 , F (z0 , ω0 ), u⊥ , ri+1 ),
+otherwise,
+     (1) check that ui .x = hash(vk, i, z0 , zi , Ui , ri ), where ui .x is the public IO of ui ,
+     (2) check that (ui .E, ui .u) = (u⊥ .E, 1),
+     (3) compute Ui+1 ← NIFS.V(vk, Ui , ui , T ), and
+     (4) output hash(vk, i + 1, z0 , F (zi , ωi ), Ui+1 , ri+1 ).
+
+      Because F ′ can be computed in polynomial time, it can be represented as
+a committed relaxed R1CS structure. We assume that there is a deterministic
+procedure, which we denote with AUGMENT, that takes as input a function F
+and public parameters pp sampled by G of the IVC scheme, and outputs the
+committed relaxed R1CS structure corresponding to F ′ , which we denote with
+sF ′ .6 Let
+
+             (ui+1 , wi+1 ) ← trace(F ′ , (vk, Ui , ui , (i, z0 , zi ), ωi , T , ri , ri+1 ))
+
+denote the satisfying committed relaxed R1CS instance-witness pair (ui+1 , wi+1 )
+for the execution of F ′ , as a committed Relaxed R1CS with structure sF ′ , on
+non-deterministic advice (vk, Ui , ui , (i, z0 , zi ), ωi , T , ri , ri+1 ). Note that trace is
+a randomized algorithm that internally samples randomness to create hiding
+commitments inside ui+1 . Additionally, note that trace sets ui+1 .E = u⊥ .E and
+that ui+1 .u = 1.
+    We define the IVC scheme (G, K, P, V) as follows.
+
+G(1λ ) → pp: Output NIFS.G(1λ ).
+
+K(pp, F ) → (pk, vk):
+
+(1) compute sF ′ ← AUGMENT(pp, F );
+(2) compute (pkfs , vkfs ) ← NIFS.K(pp, sF ′ );
+(3) output (pk, vk) ← ((pp, F, pkfs ), (pp, sF ′ , vkfs )).
+
+P(pk, (i, z0 , zi ), ωi , Πi ) → Πi+1 :
+
+(1) if i = 0, compute (Ui+1 , Wi+1 , T ) ← (u⊥ , w⊥ , u⊥ .E);
+(2) otherwise, parse Πi as ((Ui , Wi ), (ui , wi ), ri ) and compute (Ui+1 , Wi+1 , T ) ←
+NIFS.P(pk, (Ui , Wi ), (ui , wi ));
+(3) sample ri+1 ∈ F randomly;
+(4) compute (ui+1 , wi+1 ) ← trace(F ′ , (vk, Ui , ui , (i, z0 , zi ), ωi , T , ri , ri+1 )), and
+(5) output Πi+1 ← ((Ui+1 , Wi+1 ), (ui+1 , wi+1 ), ri+1 ).
+
+V(vk, (i, z0 , zi ), Πi ) → {0, 1}:
+
+ 6
+     In practice, F ′ is implemented as R1CS in a tool such as bellperson [1]. We require
+     that the procedure that outputs R1CS matrices for F ′ to be deterministic. This is
+     the case in our implementation of Nova [3].
+
+
+                                                   19
+If i = 0, check that zi = z0 ;
+otherwise,
+     (1) parse Πi as ((Ui , Wi ), (ui , wi ), ri ),
+     (2) check that ui .x = hash(vk, i, z0 , zi , Ui , ri ),
+     (3) check that (ui .E, u.u) = (u⊥ .E, 1), and
+     (4) check that Wi and wi are satisfying witnesses to Ui and ui respectively
+using vk.pp and vk.sF ′ .
+Lemma 2 (Completeness). Construction 3 is an IVC scheme that satisfies
+completeness.
+Proof Intuition. Given a satisfying IVC proof Πi = ((Ui , Wi ), (ui , wi ), ri ) suppose
+that P outputs Πi+1 = ((Ui+1 , Wi+1 ), (ui+1 , wi+1 ), ri+1 ). Because Πi is a valid
+IVC proof, (ui , wi ) and (Ui , Wi ) are satisfying instance-witness pairs. Because
+(Ui+1 , Wi+1 ) is obtained by folding (ui , wi ) and (Ui , Wi ), it must be satisfying
+by the folding scheme’s completeness. By construction, (ui+1 , wi+1 ) is satisfying
+instance-witness pair that satisfies the IVC verifier’s auxiliary checks including
+the ones that involve ri+1 . Thus, Πi+1 is satisfying. Appendix C provides a
+formal proof.
+Lemma 3 (Knowledge Soundness). Construction 3 is an IVC scheme that
+satisfies knowledge soundness.
+Proof Intuition. For function F , constant n, pp ← G(1λ ), and (pk, vk) ← K(pp, F ),
+consider an adversary P ∗ that outputs (z0 , z, Π) such that V(vk, (n, z0 , z), Π) = 1
+with probability ϵ. We construct an extractor E that with input (pp, z0 , z), outputs
+(ω0 , . . . , ωn−1 ) such that by computing zi ← F (zi−1 , ωi−1 ) for all i ∈ {1, . . . , n}
+we have that zn = z with probability ϵ − negl(λ). We show inductively that E
+can construct an extractor Ei that outputs (zi , . . . , zn−1 ), (ωi , . . . , ωn−1 ), and Πi
+such that for all j ∈ {i + 1, . . . , n}, zj = F (zj−1 , ωj−1 ), V(vk, i, z0 , zi , Πi ) = 1,
+and zn = z with probability ϵ − negl(λ). Then, because in the base case when
+i = 0, V checks that z0 = zi , it is sufficient for E to run E0 to retrieve values
+(ω0 , . . . , ωn−1 ). Initially, En simply runs the assumed P ∗ to get a satisfying Πn .
+Given extractor Ei that satisfies the inductive hypothesis, we can construct
+extractor Ei−1 . Appendix C provides a formal proof.
+Lemma 4 (Efficiency). When instantiated with the Pedersen commitment
+scheme (Construction 6), we have that |F ′ | = |F | + o(2 · G + 2 · H + R), where
+|F | denotes the number of R1CS constraints to encode a function F , G is the
+number of constraints required to encode a group scalar multiplication, H is the
+number of constraints required to encode hash, and R is the number of constraints
+to encode the RO ρ.
+Proof. On input instances U and u, NIFS.V computes E ← U.E + r · T + r2 · u.E
+and W ← U.W + r · u.W . However, by construction, u.E = u⊥ .E = 0. So, NIFS.V
+computes two group scalar multiplications, as it does not need to compute r2 ·u.E.
+NIFS.V additionally invokes the RO once to obtain a random scalar. Finally, F ′
+makes two additional calls to hash (details are in the description of F ′ ).
+
+
+                                            20
+5.2   Compressing IVC Proofs with zkSNARKs
+
+To prove a statement about an incremental computation, the prover can produce
+an IVC proof using the construction in the prior section and send the IVC
+proof to the verifier. However, this does not satisfy zero-knowledge (as the IVC
+proof described in the prior section does not hide the prover’s non-deterministic
+inputs) and succinctness (as the IVC proof size is linear in the size F ). In theory,
+one can address this problem with any zkSNARK for NP. Specifically, P can
+produce a zkSNARK proving that it knows Πi such that IVC verifier V accepts
+for statement (i, z0 , zi ). Naturally, the proof sent to the verifier is succinct and
+zero-knowledge due to the corresponding properties of the zkSNARK.
+    Unfortunately, employing an off-the-shelf zkSNARK makes the overall solu-
+tion impractical as the zkSNARK prover must prove, among other things, the
+knowledge of vectors whose commitments equal a particular value; this requires
+encoding a linear number of group scalar multiplications in the programming
+model of zkSNARKs (e.g., R1CS or circuits). To address this, we design a zk-
+SNARK tailored for our particular purpose and we describe it in Section 6. Below,
+we describe how to use a zkSNARK to prove the knowledge of a valid IVC proof.
+Formally, we design a zkSNARK for the following relation.
+
+Definition 13 (IVC Proof Validity Relation). Let IVC = (G, K, P, V) denote
+the IVC scheme described in Construction 3. We define the relation RVIVC over
+public parameter, structure, instance, and witness tuples as follows.
+                                                                            
+                                             vk ← IVC.K(pp, F ),
+         RVIVC = (pp, F, (n, z0 , zn ), Πn )
+                                             IVC.V(vk, (i, z0 , zi ), Π) = 1
+
+   In a nutshell, we leverage the fact that Π contains two committed relaxed
+R1CS instance-witness pairs. So, P first folds the instance-witness pairs (u, w)
+and (U, W) in Π to produce a folded instance-witness pair (U′ , W′ ), using NIFS.P.
+Next, P runs zkSNARK.P to prove that it knows a valid witness for U′ . One
+caveat is that for zero-knowledge to hold, we need that Π is honestly randomized.
+We capture this qualification formally in Theorem 4.
+
+Construction 4 (A zkSNARK of a Valid IVC Proof ). Let IVC = (G, K, P, V)
+denote the IVC scheme in Construction 3, let NIFS denote the non-interactive
+folding scheme in Construction 2, and let hash denote a randomized crypto-
+graphic hash function that provides hiding. Assume a zkSNARK (Definition 2),
+zkSNARK, for committed relaxed R1CS that has the same public parameter gen-
+erator algorithm. We construct a zkSNARK (G, K, P, V) for the relation RVIVC
+(Definition 13) as follows.
+
+G(1λ ) → pp:
+
+Output pp ← zkSNARK.G(1λ )
+
+K(pp, F ) → (pk, vk):
+
+
+                                         21
+(1) Compute (pkIVC , vkIVC ) ← IVC.K(pp, F ).
+(2) Compute sF ′ ← AUGMENT(pp, F ).
+(3) Compute (pkzkSNARK , vkzkSNARK ) ← zkSNARK.K(pp, sF ′ ).
+(4) Output pk ← ((pkIVC , pkzkSNARK ) and vk ← (vkIVC , vkzkSNARK )).
+
+P(pk, (n, z0 , zn ), Πn )) → π:
+
+If n = 0, output ⊥;
+otherwise,
+    (1) parse Πn as ((Un , Wn ), (un , wn ), rn )
+    (2) compute (U′ , W′ , T n ) ← NIFS.P(pkIVC , ((Un , Wn ), (un , wn )))
+    (3) compute πU′ ← zkSNARK.P(pkzkSNARK , U′ , W′ )
+    (4) output (Un , un , rn , T n , πU′ ).
+
+V(vk, (n, z0 , zn ), π) → {0, 1}:
+
+If n = 0, check that z0 = zi ;
+otherwise,
+    (1) parse π as (Un , un , rn , T n , πU′ ),
+    (2) check that un .x = hash(vkIVC , i, z0 , zn , Un , rn ),
+    (3) check that (u.E, u.u) = (u⊥ .E, 1),
+    (4) compute U′ ← NIFS.V(vkIVC , Un , un , T n ), and
+    (5) check that zkSNARK.V(vkzkSNARK , U′ , πU′ ) = 1.
+
+
+Theorem 4 (A zkSNARK of a Valid IVC Proof ). Construction 4 is a
+SNARK of a valid IVC proof produced by Construction 3. It provides zero-
+knowledge if the adversary A is restricted to sample the instance-witness pair
+((n, z0 , zn ), Πn ) with the following strategy, where A⋆ is an arbitrary PPT algo-
+rithm:
+
+A(pp) → (F, (n, z0 , zi ), Πn ):
+
+ 1. (F, n, z0 , ω0 , . . . , ωn−1 ) ← A⋆ (pp)
+ 2. (pkIVC , vkIVC ) ← IVC.K(pp, F )
+ 3. Π0 ← ⊥
+ 4. for i = 1 to n
+    (a) Πi ← IVC.P(pkIVC , (i, z0 , zi−1 ), ωi−1 , Πi−1 )
+    (b) zi ← F (zi−1 , ωi−1 )
+ 5. Output (F, (n, z0 , zn ), Πn )
+
+Proof Intuition. Completeness and knowledge soundness hold due to the com-
+pleteness and knowledge soundness of the underlying zkSNARK and the non-
+interactive folding scheme. Assuming the non-interactive folding scheme satisfies
+succinctness (e.g., by using the Pedersen commitment scheme), succinctness holds
+
+
+                                             22
+due to the fact that u, U, and T are succinct, and due to the succinctness of the
+underling zkSNARK.
+    To prove zero-knowledge, we leverage the restriction on the adversarily strat-
+egy to generate instance-witness pairs for the zkSNARK. In particular, we con-
+struct a simulator S that first iteratively simulates (Ui , ui ) for all i ∈ {1, . . . , n}.
+Specifically, given the simulated values (Ui , ui ), S first uses the simulator of the
+non-interactive folding scheme to simulate T i . S then folds Ui and ui using T i to
+produce Ui+1 . S simulates ui using the observation that all terms are randomized.
+The only exception is un .x, which is set to hash(vkNIFS , n, z0 , zn , Un , rn ), where
+rn ∈ F is sampled randomly. In the final round, S folds un and Un (again using
+a simulated T n ) to produce an instance U′ , and then uses the simulator of the
+zkSNARK to produce πU′ . S outputs (Un , un , rn , T n , πU′ ). We provide a formal
+proof in Appendix D.
+
+
+6     A zkSNARK for Committed Relaxed R1CS
+As described in Section 5.2, Nova needs a zkSNARK for committed relaxed R1CS
+to prove the knowledge of a valid IVC proof succinctly and in zero-knowledge.
+This section presents such a zkSNARK by adapting Spartan [41]. We build on
+Spartan [41] to avoid FFTs and a trusted setup.
+
+6.1   Background
+We assume familiarity with polynomials. We provide background in Appendix G.
+Definition 14 (Polynomial Extension). Suppose f : {0, 1}ℓ → F is a function
+that maps ℓ-bit strings to an element of F . A polynomial extension of f is a low-
+degree ℓ-variate polynomial fe : F ℓ → F such that fe(x) = f (x) for all x ∈ {0, 1}ℓ .
+A multilinear extension (MLE) of a function f : {0, 1}ℓ → F is a low-degree
+polynomial extension where the extension is a multilinear polynomial.
+    Every function f : {0, 1}ℓ → F has a unique MLE, and conversely every
+ℓ-variate multilinear polynomial over F extends a unique function mapping
+{0, 1}ℓ → F . Below, we use fe to denote the unique MLE of f .
+Lemma 5 (The Sum-Check Protocol [38]). For ℓ-variate polynomial G over
+F with degree at most µ in each variable, there exists a public-coin interactive
+proof
+P protocol (known as the sum-check protocol) to reduce theℓ task of checking
+   x∈{0,1}ℓ G(x) = T to the task of checking G(r) = e for r ∈ F . The interaction
+consists of a total of ℓ rounds, where in each round the verifier sends a single
+element of F and the prover responds with µ + 1 elements of F .
+
+6.2   A Polynomial IOP for Idealized Relaxed R1CS
+Our exposition below is based on Spartan [41] and its recent recapitulation [37].
+The theorem below and its proof is a verbatim adaptation of Spartan’s polynomial
+IOP for R1CS to relaxed R1CS.
+
+
+                                            23
+    Recall that an interactive proof (IP) [28] for a relation R is an interactive
+protocol between a prover and a verifier where the prover proves the knowledge of
+a witness w for a prescribed instance u such that (u, w) ∈ R. An interactive oracle
+proof (IOP) [6, 40] generalizes interactive proofs where in each round the prover
+may send an oracle (e.g., a string) and the verifier may query a previously-sent
+oracle during the remainder of the protocol. A polynomial IOP [19] is an IOP in
+which the oracle sent by the prover is a polynomial and the verifier may query for
+an evaluation of the polynomial at a point in its domain. We consider a (minor)
+variant of polynomial IOPs, where the verifier has oracle access to polynomials
+in the R1CS structure and instance.
+    We first construct a polynomial IOP for an idealized version of relaxed
+R1CS (Definition 15) where the instance contains a purported witness. We then
+compile it into a zkSNARK for committed relaxed R1CS (Definition 12).
+
+Definition 15 (Idealized Relaxed R1CS). Consider a finite field F . Let the
+public parameters consist of size bounds m, n, ℓ ∈ N where m > ℓ. An idealized
+relaxed R1CS structure consists of sparse matrices A, B, C ∈ F m×m with at most
+n = Ω(m) non-zero entries in each matrix. An idealized relaxed R1CS instance
+consists of an error vector E ∈ F m , a scalar u ∈ F , witness vector W ∈ F m ,
+and public inputs and outputs x ∈ F ℓ . An instance (E, u, W, x) is satisfying if
+(A · Z) ◦ (B · Z) = u · (C · Z) + E, where Z = (W, x, u).
+
+Construction 5 (Polynomial IOP for Idealized Relaxed R1CS). Consider
+an idealized relaxed R1CS statement φ consisting of public parameters (m, n, ℓ),
+structure (A, B, C), and instance (E, u, W, x), Without loss of generality, we
+assume that m and n are powers of 2 and that m = 2 · (ℓ + 1).
+     Let s = log m. We interpret the matrices A, B, C as functions with signature
+{0, 1}log m × {0, 1}log m → F in a natural manner. In particular, an input in
+{0, 1}log m × {0, 1}log m is interpreted as the binary representation of an index
+(i, j) ∈ [m] × [m], where [m] := {1, . . . , m} and the function outputs (i, j)th entry
+of the matrix. As such, let e  A, eB, and C  e denote multilinear extensions of A, B,
+and C interpreted as functions, so they are 2 log m-variate sparse multilinear
+polynomials of size n. Similarly, we interpret E and W as functions with respective
+signatures {0, 1}log m → F and {0, 1}log m−1 → F . Furthermore, let E        e and W f
+denote the multilinear extensions of E and W interpreted as functions, so they
+are multilinear polynomials in log m and log m − 1 variables respectively.
+     As noted earlier, the verifier has an oracle access to the following polynomials:
+A, e
+ e   B, e
+        C, e
+           E, and W f . Additionally, the verifier reads u and x in entirety.
+     Let Z = (W, x, u). Similar to how we interpret matrices as functions, we
+interpret Z and (x, u) as functions with the following respective signatures:
+{0, 1}s → F and {0, 1}s−1 → F . Observe that the MLE Z        e of Z satisfies
+
+      e 1 , . . . , Xs ) = (1 − X1 ) · W
+      Z(X                                                          ]
+                                       f (X2 , . . . , Xs ) + X1 · (x, u)(X2 , . . . , Xs )   (1)
+
+    Similar to [41, Theorem 4.1], checking if φ is satisfiable is equivalent, except
+for a soundness error of log m/|F | over the choice of τ ∈ F s , to checking if the
+
+
+                                               24
+following identity holds:
+                                    ?
+                                          X
+                                 0=                eq(τ, x) · F (x),
+                                                   e                                     (2)
+                                        x∈{0,1}s
+
+where
+                                                                              
+                        X                                    X
+         F (x) =                A(x, y) · e
+                                 e         Z(y) ·                  B(x, y) · e
+                                                                     e         Z(y) −
+                      y∈{0,1}s                            y∈{0,1}s
+                                                               
+                           X
+                  u ·              C(x, y) · e
+                                    e         Z(y) + e
+                                                     E(x) ,
+                         y∈{0,1}s
+
+
+     e is the multilinear extension of eq : {0, 1}s × {0, 1}s → F where eq(x, e) = 1
+and eq
+if x = e and 0 otherwise.
+    That is, if φ is satisfiable, then Equation (2) holds with probability 1 over
+the choice of τ , and if not, then Equation (2) holds with probability at most
+O(log m/|F |) over the random choice of τ .
+    To compute the right-hand side in Equation (2), the prover and the verifier
+apply the sum-check protocol to the following polynomial: g(x) := e      eq(τ, x) · F (x)
+From the verifier’s perspective, this reduces the task of computing the right-hand
+side of Equation (2) to the task of evaluating g at a random input rx ∈ F s . Note
+that the verifier
+              Qs can locally evaluate e   eq(τ, rx ) in O(log m) field operations via
+eq(τ, rx ) = i=1 (τi rx,i + (1 − τi )(1 − rx,i )). With e
+ e                                                       eq(τ, rx ) in hand, g(rx ) can
+                                                            P
+be computed in O(1) time given the four quantities: y∈{0,1}s e          A(rx , y) · e
+                                                                                    Z(y),
+P                              P
+           s B(rx , y) · Z(y),        s C(rx , y) · Z(y), and E(rx ).
+             e           e              e           e          e
+  y∈{0,1}                          y∈{0,1}
+   The last quantity can be computed with a single query to polynomial E.              e
+Furthermore, the first three quantities can be computed by applying the sum-
+check protocol three more times in parallel, once to each of the following three
+polynomials (using the same random vector of field elements, ry ∈ F s , in each of
+the three invocations): eA(rx , y) · e
+                                     Z(y), eB(rx , y) · e         C(rx , y) · e
+                                                        Z(y), and e           Z(y).
+   To perform the verifier’s final check in each of these three invocations of the
+sum-check protocol, it suffices for the verifier to evaluate each of the above three
+polynomials at the random vector ry , which means it suffices for the verifier to
+evaluate A(r
+          e x , ry ), B(r
+                      e x , ry ), C(r
+                                  e x , ry ), and Z(r
+                                                    e y ). The first three evaluations
+can be obtained via the verifier’s assumed query access to (A,     e B,
+                                                                      e C).
+                                                                          e Z(re y ) can
+be computed (via Equation (1)) from a query to W        f and from computing (x,   ]  u).
+   In summary, we have the following polynomial IOP.
+
+ 1. V → P: τ ∈R F s
+ 2. V ↔ P: run the sum-check protocol to reduce the check in Equation (2)
+    to checking if the following hold, where rx , ry are vectors in F s chosen at
+    random by the verifier over the course of the sum-check protocol:
+                    ?                  ?                      ?
+     – eA(rx , ry ) = vA , e
+                           B(rx , ry ) = vB , and e
+                                                  C(rx , ry ) = vC ;
+
+
+                                                   25
+               ?
+      – E(r
+        e x) =   vE ; and
+               ?
+      – Z(ry ) = vZ .
+        e
+ 3. V:
+                            ?                 ?                     ?
+     – check if A(r
+                e x , ry ) =  vA , B(r
+                                   e x , ry ) = vB , and C(r
+                                                         e x , ry ) = vC , with a query
+       to A,
+          e eB, Ce at (rx , ry );
+                        ?
+     – check if e
+                E(rx ) = vE with an oracle query to e     E; and
+                           ?
+      – check if e Z(ry ) = vZ by checking if: vZ = (1 − ry [1]) · vW + ry [1] ·
+        ]
+        (x, u)(ry [2..]), where ry [2..] refers to a slice of ry without the first element
+        of ry , and vW ← W   f (ry [2..]) via an oracle query (see Equation (1)).
+
+Theorem 5. Construction 5 is a polynomial IOP for idealized relaxed R1CS
+defined over a finite field F , with the following parameters, where m denotes the
+dimension of the R1CS matrices, and n denotes the number of non-zero entries in
+the matrices: Soundness error is O(log m)/|F |; round complexity is O(log m); The
+verifier has query access to 2 log m-variate multilinear polynomials A,
+                                                                     e B,
+                                                                        e Ce in the
+structure, and (log m)-variate multilinear polynomial E, and (log m − 1)-variate
+                                                         e
+multilinear polynomial W  f in the instance; the verifier issues a single query to
+polynomials A, B, C, and W
+               e  e  e         f , E,
+                                   e and otherwise performs O(log m) operations
+over F ; the prover performs O(n) operations over F to compute its messages in
+the polynomial IOP and to respond to the verifier’s queries to (W  f, e
+                                                                      E, A,
+                                                                         e eB, e
+                                                                               C).
+
+Proof. Perfect completeness follows from perfect completeness of the sum-check
+protocol and the fact that Equation (2) holds with probability 1 over the choice
+of τ if φ is satisfiable. Applying a standard union bound to the soundness error
+introduced by probabilistic check in Equation (2) with the soundness error of the
+sum-check protocol [38], we conclude that the soundness error for the depicted
+polynomial IOP as at most O(log m)/|F |.
+     The sum-check protocol is applied four times (although three of the invocations
+occur in parallel and in practice combined into one [41]). In each invocation, the
+polynomial to which the sum-check protocol is applied has degree at most 3 in each
+variable, and the number of variables is s = log m. Hence, the round complexity
+of the polynomial IOP is O(log m). Since each polynomial has degree at most 3
+in each variable, the total communication cost is O(log m) field elements.
+     The claimed verifier runtime is immediate from the verifier’s runtime in
+the sum-check protocol, and the fact that eq      e can be evaluated at any input
+(τ, rx ) ∈ F 2s in O(log m) field operations. As in Spartan [41], the prover’s work in
+the polynomial IOP in O(n) operations over F using prior techniques [45, 51].
+
+
+6.3   Compiling Polynomial IOPs to zkSNARKs
+
+As in prior works [19, 22, 41], we compile our polynomial IOP into a zkSNARK
+using a polynomial commitment scheme [32] and the Fiat-Shamir transform [25].
+
+
+                                           26
+Interpreting commitments to vectors as polynomial commitments. It is
+well known that commitments to m-sized vectors over F are commitments to log m-
+variate multilinear polynomials represented with evaluations over {0, 1}m [35, 41,
+49, 52]. Furthermore, there is a polynomial commitment scheme for log m-variate
+multilinear polynomials if there exists an argument protocol to prove an inner
+product computation between a committed vector and an m-sized public vector
+((r1 , 1 − r1 ) ⊗ . . . ⊗ (rlog m , 1 − rlog m )), where r ∈ F log m is an evaluation point.
+There are two candidate constructions in the literature. Note that the primary
+difference between two schemes is in the verifier’s time.
+
+ 1. PCBP . If the commitment scheme for vectors over F is Pedersen’s commit-
+    ments (Construction 6), as in prior work [49], Bulletproofs [16] provides
+    a suitable inner product argument protocol. The polynomial commitment
+    scheme here achieves the following efficiency characteristics, assuming the
+    hardness of the discrete logarithm problem. For a log m-variate multilinear
+    polynomial, committing takes Oλ (m) time to produce an Oλ (1)-sized com-
+    mitment; the prover incurs Oλ (m) costs to produce an evaluation proof of
+    size Oλ (log m) that can be verified in Oλ (m). Note that PCBP is a special
+    case of Hyrax’s polynomial commitment scheme [49].
+ 2. PCDory . If vectors over F are committed with a two-tiered “matrix” commit-
+    ment (see for example, [20, 35]), which provides Oλ (1)-sized commitments to
+    m-sized vectors under the SXDH assumption. With this commitment scheme,
+    Dory [35] provides the necessary inner product argument. The polynomial
+    commitment here achieves the following efficiency characteristics, assuming
+    the hardness of SXDH. For a log m-variate multilinear polynomial, commit-
+    ting takes Oλ (m) time to produce an Oλ (1)-sized commitment; the prover
+    incurs Oλ (m) costs to produce an evaluation proof of size Oλ (log m) that
+    can be verified in Oλ (log m).
+
+Polynomial commitments for sparse multilinear polynomials. In our
+constructions below, we require polynomial commitment schemes that can ef-
+ficiently handle sparse multilinear polynomials. Spartan [41, §7] (and its opti-
+mization [44, §6]) provides a generic compiler to transform existing polynomial
+commitment schemes for multilinear polynomials into those that can efficiently
+handle sparse multilinear polynomials. Specifically, we apply [37, Theorem 5])
+(which captures Spartan’s compiler in a generic manner) to PCBP and PCDory to
+obtain their variants that can efficiently handle sparse multilinear polynomials;
+we refer to them as “Sparse-PCBP ” and “Sparse-PCDory ” respectively.
+
+Theorem 6 (A zkSNARK from PCBP ). Assuming the hardness of the discrete
+logarithm problem, there exists a zkSNARK in the random oracle model for
+committed relaxed R1CS with the following efficiency characteristics, where m
+denotes the dimensions of R1CS matrices and n denotes the number of non-zero
+entries in the matrices: The encoder runs in time Oλ (n); The prover runs in
+time Oλ (n); The proof length is Oλ (log n); and the verifier runs in time Oλ (n).7
+ 7
+     Appendix H describes a minor optimization and a corresponding Corollary.
+
+
+                                            27
+Proof. For R1CS structure (A, B, C), we first have the encoder directly provide
+(e
+ A, e
+    B, e
+       C) in the prover key, and additionally provide sparse polynomial commit-
+ments to A, e B,
+              e Ce using Sparse-PCBP in both the prover and verifier keys. Next, we
+apply the compiler of [19] using PCBP to the polynomial IOP from Construction 5.
+At a high level, this replaces all of the oracles provided to the verifier with PCBP
+commitments, which the prover and verifier then use to simulate ideal queries to
+a committed oracle. By [19, Theorem 6] this provides a public-coin honest-verifier
+zero-knowledge interactive argument of knowledge. In particular, we can treat
+the resulting protocol as an argument for committed relaxed R1CS because the
+verifier is now provided with (polynomial) commitments to E and W . Applying
+the Fiat-Shamir transform [25] achieves non-interactivity and zero-knowledge in
+the random oracle model.
+    The claimed efficiency follows from the efficiency of the polynomial IOP,
+PCBP , and Sparse-PCBP . In more detail, using Sparse-PCBP , the encoder takes
+Oλ (n) time to create commitments 2 log m-variate sparse multilinear polynomials
+A,
+ e B,
+   e C.e The prover’s costs in the polynomial IOP is O(n). Furthermore, proving
+the evaluations of two O(log m)-variate multilinear polynomials using PCBP , it
+takes Oλ (m) time. And, to prove the evaluations of three 2 log m-variate sparse
+multilinear polynomials of size n, using Sparse-PCBP , it takes Oλ (n) time. In
+total, the prover time is Oλ (n). The proof length in the polynomial IOP is
+O(log m), and the proof sizes in the polynomial evaluation proofs is Oλ (log n),
+so the proof length is Oλ (log n). The verifier’s time in the polynomial IOP is
+O(log m). In addition, it verifies five polynomial evaluations, which costs Oλ (n)
+time: the two polynomial in the instance take Oλ (m) time using PCBP , and the
+three polynomials in the structure takes Oλ (n) time using Sparse-PCBP . So, in
+total, the verifier time is Oλ (n).
+
+Corollary 1 (A zkSNARK from PCDory ). Assuming the hardness of the
+SXDH problem, there exists a zkSNARK in the random oracle model for committed
+relaxed R1CS with the following efficiency characteristics, where m denotes the
+dimensions of R1CS matrices and n denotes the number of non-zero entries in
+the matrices: The encoder runs in time Oλ (n); The prover runs in time Oλ (n);
+The proof length is Oλ (log n); and the verifier runs in time Oλ (log n).
+
+
+Acknowledgments
+
+We thank Arasu Arun, Weidong Cui, Justin Drake, Bryan Parno, and Justin
+Thaler for various conversations and helpful comments on a prior version of this
+paper. We thank Andy Polyakov and Kelly Olson for help with pasta-msm. We
+thank Chhi’mèd Künzang for helpful conversations and for PRs to the Nova
+repository, including an adapter that enables transforming circuits written with
+bellperson to a format that Nova uses. We thank Wilson Nguyen for pointing
+out a discrepancy in the zero-knowledge property proven in a prior version
+of Appendix D. Abhiram Kothapalli (while at Carnegie Mellon University)
+was supported by a gift from Bosch, NSF Grant No. 1801369, and by the
+
+
+                                        28
+CONIX Research Center, one of six centers in JUMP, a Semiconductor Research
+Corporation (SRC) program sponsored by DARPA.
+
+
+
+
+                                    29
+                                 References
+
+
+ [1] bellperson. https://crates.io/crates/bellperson
+ [2] neptune. https://crates.io/crates/neptune
+ [3] Nova: Recursive SNARKs without trusted setup. https://github.com/
+     Microsoft/Nova
+ [4] Pasta curves. https://crates.io/crates/pasta curves
+ [5] pasta-msm. https://crates.io/crates/pasta-msm
+ [6] Ben-Sasson, E., Chiesa, A., Spooner, N.: Interactive Oracle Proofs. In: TCC
+     (2016)
+ [7] Ben-Sasson, E., Chiesa, A., Tromer, E., Virza, M.: Scalable zero knowledge
+     via cycles of elliptic curves. In: CRYPTO (2014)
+ [8] Bitansky, N., Canetti, R., Chiesa, A., Tromer, E.: From extractable collision
+     resistance to succinct non-interactive arguments of knowledge, and back
+     again. In: ITCS (2012)
+ [9] Bitansky, N., Canetti, R., Chiesa, A., Tromer, E.: Recursive composition
+     and bootstrapping for SNARKs and proof-carrying data. In: STOC (2013)
+[10] Boneh, D., Bünz, B., Fisch, B.: A survey of two verifiable delay functions.
+     Cryptology ePrint Archive, Report 2018/712 (2018)
+[11] Boneh, D., Drake, J., Fisch, B., Gabizon, A.: Halo Infinite: Recursive zk-
+     SNARKs from any Additive Polynomial Commitment Scheme. Cryptology
+     ePrint Archive, Report 2020/1536 (2020)
+[12] Bootle, J., Cerulli, A., Chaidos, P., Groth, J., Petit, C.: Efficient zero-
+     knowledge arguments for arithmetic circuits in the discrete log setting. In:
+     EUROCRYPT (2016)
+[13] Bowe, S., Grigg, J., Hopwood, D.: Halo: Recursive proof composition without
+     a trusted setup. Cryptology ePrint Archive, Report 2019/1021 (2019)
+[14] Bowe, S., Grigg, J., Hopwood, D.: Halo2 (2020), https://github.com/zcash/
+     halo2
+[15] Brakerski, Z., Holmgren, J., Kalai, Y.T.: Non-interactive delegation and
+     batch np verification from standard computational assumptions. In: STOC.
+     pp. 474–482 (2017)
+[16] Bünz, B., Bootle, J., Boneh, D., Poelstra, A., Wuille, P., Maxwell, G.:
+     Bulletproofs: Short proofs for confidential transactions and more. In: S&P
+     (2018)
+[17] Bünz, B., Chiesa, A., Lin, W., Mishra, P., Spooner, N.: Proof-carrying data
+     without succinct arguments. Cryptology ePrint Archive, Report 2020/1618
+     (2020)
+[18] Bünz, B., Chiesa, A., Mishra, P., Spooner, N.: Proof-carrying data from
+     accumulation schemes. In: TCC (2020)
+[19] Bünz, B., Fisch, B., Szepieniec, A.: Transparent SNARKs from DARK
+     compilers. In: EUROCRYPT (2020)
+[20] Bünz, B., Maller, M., Mishra, P., Vesely, N.: Proofs for inner pairing products
+     and applications. Cryptology ePrint Archive, Report 2019/1177 (2019)
+[21] Chen, W., Chiesa, A., Dauterman, E., Ward, N.P.: Reducing participation
+     costs via incremental verification for ledger systems. Cryptology ePrint
+     Archive, Report 2020/1522 (2020)
+[22] Chiesa, A., Hu, Y., Maller, M., Mishra, P., Vesely, N., Ward, N.: Marlin: Pre-
+     processing zkSNARKs with universal and updatable SRS. In: EUROCRYPT
+     (2020)
+[23] Chiesa, A., Ojha, D., Spooner, N.: Fractal: Post-quantum and transparent
+     recursive proofs from holography. In: EUROCRYPT (2020)
+[24] Drucker, A.: New limits to classical and quantum instance compression.
+     SIAM Journal of Computing 44(5), 144–3–1479 (2015)
+[25] Fiat, A., Shamir, A.: How to prove yourself: Practical solutions to identifica-
+     tion and signature problems. In: CRYPTO. pp. 186–194 (1986)
+[26] Gennaro, R., Gentry, C., Parno, B., Raykova, M.: Quadratic span programs
+     and succinct NIZKs without PCPs. In: EUROCRYPT (2013)
+[27] Gentry, C., Wichs, D.: Separating succinct non-interactive arguments from
+     all falsifiable assumptions. In: STOC. pp. 99–108 (2011)
+[28] Goldwasser, S., Micali, S., Rackoff, C.: The knowledge complexity of interac-
+     tive proof-systems. In: STOC (1985)
+[29] Grassi, L., Khovratovich, D., Rechberger, C., Roy, A., Schofnegger, M.:
+     Poseidon: A new hash function for zero-knowledge proof systems. Cryptology
+     ePrint Archive, Paper 2019/458 (2019)
+[30] Groth, J.: On the size of pairing-based non-interactive arguments. In: EU-
+     ROCRYPT (2016)
+[31] Harnik, D., Naor, M.: On the compressibility of N P instances and crypto-
+     graphic applications. SIAM Journal of Computing 39(5), 1667–1713 (2010)
+[32] Kate, A., Zaverucha, G.M., Goldberg, I.: Constant-size commitments to
+     polynomials and their applications. In: ASIACRYPT. pp. 177–194 (2010)
+[33] Kilian, J.: A note on efficient zero-knowledge proofs and arguments (extended
+     abstract). In: STOC (1992)
+[34] Labs, O.: Mina cryptocurrency (2020), https://minaprotocol.com
+[35] Lee, J.: Dory: Efficient, transparent arguments for generalised inner products
+     and polynomial commitments. Cryptology ePrint Archive, Report 2020/1274
+     (2020)
+[36] Lee, J., Nikitin, K., Setty, S.: Replicated state machines without replicated
+     execution. In: S&P (2020)
+[37] Lee, J., Setty, S., Thaler, J., Wahby, R.: Linear-time zero-knowledge SNARKs
+     for R1CS. Cryptology ePrint Archive, Report 2021/030 (2021)
+[38] Lund, C., Fortnow, L., Karloff, H., Nisan, N.: Algebraic methods for interac-
+     tive proof systems. In: FOCS (Oct 1990)
+[39] Micali, S.: CS proofs. In: FOCS (1994)
+[40] Reingold, O., Rothblum, G.N., Rothblum, R.D.: Constant-round interactive
+     proofs for delegating computation. In: STOC. pp. 49–62 (2016)
+[41] Setty, S.: Spartan: Efficient and general-purpose zkSNARKs without trusted
+     setup. In: CRYPTO (2020)
+[42] Setty, S., Angel, S., Gupta, T., Lee, J.: Proving the correct execution of
+     concurrent services in zero-knowledge. In: OSDI (Oct 2018)
+
+
+                                        31
+[43] Setty, S., Braun, B., Vu, V., Blumberg, A.J., Parno, B., Walfish, M.: Resolv-
+     ing the conflict between generality and plausibility in verified computation.
+     In: EuroSys (Apr 2013)
+[44] Setty, S., Lee, J.: Quarks: Quadruple-efficient transparent zkSNARKs. Cryp-
+     tology ePrint Archive, Report 2020/1275 (2020)
+[45] Thaler, J.: Time-optimal interactive proofs for circuit evaluation. In:
+     CRYPTO (2013)
+[46] Thaler, J.: Proofs, arguments, and zero-knowledge. http://people.cs.
+     georgetown.edu/jthaler/ProofsArgsAndZK.html (2020)
+[47] Valiant, P.: Incrementally verifiable computation or proofs of knowledge
+     imply time/space efficiency. In: TCC. pp. 552–576 (2008)
+[48] Wahby, R.S., Ji, Y., Blumberg, A.J., Shelat, A., Thaler, J., Walfish, M.,
+     Wies, T.: Full accounting for verifiable outsourcing. In: CCS (2017)
+[49] Wahby, R.S., Tzialla, I., Shelat, A., Thaler, J., Walfish, M.: Doubly-efficient
+     zkSNARKs without trusted setup. In: S&P (2018)
+[50] Wesolowski, B.: Efficient verifiable delay functions. In: EUROCRYPT. pp.
+     379–407 (2019)
+[51] Xie, T., Zhang, J., Zhang, Y., Papamanthou, C., Song, D.: Libra: Succinct
+     zero-knowledge proofs with optimal prover computation. In: CRYPTO (2019)
+[52] Zhang, Y., Genkin, D., Katz, J., Papadopoulos, D., Papamanthou, C.: vSQL:
+     Verifying arbitrary SQL queries over dynamic outsourced databases. In: S&P
+     (2017)
+
+
+
+
+                                        32
+                     Supplementary Materials
+
+A     Additional Related Work
+
+A folding scheme is reminiscent of the technique used in protocols such as
+Bulletproofs [16], where the prover splits an N -sized inner product instance
+into two N/2-sized inner product instances, and then the prover and the verifier
+interactively combine the two N/2-sized instances into a single N/2-sized instance.
+A folding scheme differs from this technique in that it targets folding NP relations.
+Furthermore, our folding scheme for relaxed R1CS folds arbitrary NP instances.
+     A folding scheme is also reminiscent of the sum-check protocol [38] applied to
+layered circuits [48, 49], where the prover and the verifier interactively combine
+β ≥ 2 instances of depth-1 circuit satisfiability into a single depth-1 circuit
+satisfiability instance, and the combined instance is proven using additional
+invocations of the sum-check protocol. Once the protocol combines β instances
+of depth-1 circuit satisfiability into a single depth-1 circuit satisfiability instance,
+it is not entirely clear how to fold additional circuit satisfiability instances into
+a single running instance. Whereas, with a folding scheme, the prover and the
+verifier can continually fold NP instances into a single running instance.
+     Finally, a folding scheme is also related to other prior notions such as “batch
+verification” [15, 40] and “instance compression” [24, 31]. Given β NP instances,
+batch verification protocols aim to produce a succinct proof that all β instances are
+satisfiable. In contrast, a folding scheme’s goal is to transform the satisfiability
+of two NP instances into a single NP-instance. (AND)-instance compression
+schemes efficiently compress β SAT instances into a single short string that
+retains information about whether all instances are satisfiable. A folding scheme
+differs from this notion in that compression is aided by an (untrusted) prover
+who knows (purported) witnesses to the original β instances. Furthermore, unlike
+instance compression, a folding scheme can be interactive.
+
+
+B    Proof of Theorem 3 (A Folding Scheme for Committed
+     Relaxed R1CS)
+
+Lemma 6 (Completeness). Construction 1 is a folding scheme for committed
+relaxed R1CS with perfect completeness.
+
+Proof. Consider a finite field F , a succinct, hiding, and homomorphic commitment
+scheme Com over F , and public parameters consisting of size bounds m, n, ℓ ∈ N
+where m > ℓ, and commitment parameters ppW and ppE for vectors of size m
+and m − ℓ − 1 respectively sampled by the generator. Consider an adversarially
+chosen R1CS structure (A, B, C) ∈ F m×m and two committed relaxed R1CS
+instances
+
+               φ1 = (E 1 , u1 , W 1 , x1 )   and φ2 = (E 2 , u2 , W 2 , x2 ).
+
+
+                                              33
+Suppose that the prover P, in addition to the two instances, holds satisfying
+witnesses to both instances, (E1 , rE1 , W1 , rW1 ) and (E2 , rE2 , W2 , rW2 ). Let Z1 =
+(W1 , x1 , u1 ) and Z2 = (W2 , x2 , u2 ).
+   Now suppose that P and V compute a folded instance φ = (E, u, W , x), and
+suppose that P computes a folded witness (E, rE , W, rW ), To prove completeness,
+we must show that (E, W ) is a satisfying witness for instance φ. Let Z = (W, x, u).
+   For (E, W ) to be a satisfying witness, we must have the following:
+
+                               AZ ◦ BZ = u · CZ + E                                 (3)
+
+and
+
+                               E = Com(ppE , E, rE )                                (4)
+                               W = Com(ppW , W, rW )                                (5)
+
+It is easy to see that Equations (4) and (5) hold from the additive homomorphism
+of the commitment scheme.
+    Thus, we focus on proving that Equation (3) holds. By construction, for
+Equation (3) to hold, we must have for r ∈R F
+
+      A(Z1 + r · Z2 ) ◦ B(Z1 + r · Z2 ) = (u1 + r · u2 ) · C(Z1 + r · Z2 ) + E.
+
+Distributing, we must have
+
+          AZ1 ◦ BZ1 + r(AZ1 ◦ BZ2 + AZ2 ◦ BZ1 ) + r2 (AZ2 ◦ BZ2 ) =
+          u1 · CZ1 + r(u1 · CZ2 + u2 CZ1 ) + r2 · u2 · CZ2 + E.
+Aggregating by powers of r, we must have
+                 (AZ1 ◦ BZ1 − u1 · CZ1 )+
+                 r(AZ1 ◦ BZ2 + AZ2 ◦ BZ1 − u1 · CZ2 − u2 CZ1 )+
+                                                                                    (6)
+                 r2 (AZ2 ◦ BZ2 − u2 · CZ2 )
+               =E.
+However, because W1 and W2 are satisfying witnesses, we have
+
+                            AZ1 ◦ BZ1 − u1 · CZ1 = E1
+                            AZ2 ◦ AZ2 − u2 · CZ2 = E2 .
+
+Additionally, by construction we have
+
+               AZ1 ◦ BZ2 + AZ2 ◦ BZ1 − u1 · CZ2 − u2 · CZ1 = T.
+
+Thus, by substitution, for Equation (6) to hold we must have
+
+                              E1 + r · T + r2 · E2 = E,
+
+which holds by construction.
+
+
+
+                                          34
+Lemma 7 (Knowledge Soundness). Construction 1 is a knowledge sound
+folding scheme for committed relaxed R1CS.
+
+Proof. Consider a finite field F , a succinct, hiding, and homomorphic commitment
+scheme Com over F , and public parameters consisting of size bounds m, n, ℓ ∈ N
+where m > ℓ, and commitment parameters ppW and ppE for vectors of size m
+and m − ℓ − 1 respectively sampled by the generator. Consider an adversarially
+chosen R1CS structure (A, B, C) ∈ F m×m and two committed relaxed R1CS
+instances
+
+                φ1 = (E 1 , u1 , W 1 , x1 )   and φ2 = (E 2 , u2 , W 2 , x2 ).
+
+We prove knowledge soundness via the forking lemma (Lemma 1). That is,
+we prove that there exists a PPT algorithm X such that when given public
+parameters pp, structure (A, B, C), and a tree of accepting transcripts and the
+corresponding folded instance-witness pairs outputs a satisfying witness with
+probability 1 − negl(λ).
+    In more detail, suppose X is provided three transcripts (τ1 , τ2 , τ3 ) with the
+same initial commitment T from the prover. Note that a transcript τi for i ∈
+{1, 2, 3} additionally comes attached with an accepting witness τi .(W, E, rW , rE )
+and the verifier’s randomness τi .r. Interpolating points (τ1 .r, τ1 .W ) and (τ2 .r, τ2 .W ),
+X retrieves (W1 , W2 ) such that
+
+                                  W1 + τi .r · W2 = τi .W                                 (7)
+
+for i ∈ {1, 2}. Similarly interpolating points (τ1 .r, τ1 .E), (τ2 .r, τ2 .E), (τ3 .r, τ3 .E),
+X retrieves (E1 , E2 ) and a cross-term T such that
+
+                            E1 + τi .r · T + τi .r2 · E2 = τi .E                          (8)
+
+for i ∈ {1, 2, 3}. Using the same approach, X can interpolate for rW1 , rW2 and
+rE1 , rT , rE2 . We must argue that (W1 , E1 , rW1 , rE1 ) and (W2 , E2 , rW2 , rE2 ) are
+indeed satisfying witnesses for φ1 and φ2 respectively.
+    We first show that the retrieved witness elements are valid openings to the
+corresponding commitments in the instance. For i ∈ {1, 2}, because τi .W, τi .rW
+is part of a satisfying witness, by construction,
+
+                  Com(ppW , W1 , rW1 ) + τi .r · Com(ppW , W2 , rW2 )
+                   = Com(ppW , W1 + τi .r · W2 , rW1 + τi .r · rW2 )
+                   = Com(ppW , τi .W, τi .rW )
+                   = W 1 + τi .r · W 2 .
+
+Interpolating, we must have that
+
+                               Com(ppW , W1 , rW1 ) = W 1                                 (9)
+                               Com(ppW , W2 , rW2 ) = W 2 .                              (10)
+
+
+                                               35
+   Similarly, for i ∈ {1, 2, 3}, because τi .E, τi .rE is part of a satisfying witness,
+by construction, we must have
+
+     Com(ppE , E1 , rE1 ) + τi .r · Com(ppE , T, rT ) + τi .r2 · Com(ppE , E2 , rE2 )
+      = Com(ppE , E1 + τi .r · T + τi .r2 · E2 , rE1 + τi .r · rT + τi .r2 · rE2 )
+      = Com(ppE , τi .E, τi .rE )
+      = E 1 + τi .r · T + τi .r2 · E 2 .
+
+Interpolating, we must have that
+
+                                 Com(ppE , E1 , rE1 ) = E 1
+                                 Com(ppE , E2 , rE2 ) = E 2
+
+    Next, we must show that (W1 , E1 ) and (W2 , E2 ) satisfy the relaxed R1CS
+relation. To show this, we must first argue that Equation (7) holds for i = 3 as
+well (i.e., W1 + τ3 .r · W2 = τ3 .W ). Indeed, Equations (9) and (10) imply that
+
+                 Com(ppW , W1 + τ3 .r · W2 , rW1 + τ3 .r · rW2 )
+                 = Com(ppW , W1 , rW1 ) + τ3 .r · Com(ppW , W2 , rW2 )
+                 = W 1 + τ3 .r · W 2
+                 = Com(ppW , τ3 .W, τ3 .W )
+
+Thus, by the binding property of Com, we must additionally have that
+
+                                  W1 + τ3 .r · W2 = τ3 .W                               (11)
+
+with probability 1 − negl(λ).
+   Because (τi .W, τi .E) is part of a satisfying witness, for i ∈ {1, 2, 3} we have
+
+                        A(τi .Z) ◦ B(τi .Z) = u · C(τi .Z) + τi .E
+
+where τi .Z = (τi .W, τi .x, τi .u). However, by Equations (7), (8), and (11) for
+i ∈ {1, 2, 3}, this implies that with probability 1 − negl(λ)
+
+          A(Z1 + τi .r · Z2 ) ◦ B(Z1 + τi .r · Z2 ) =
+          (u1 + τi .r · u2 ) · C(Z1 + τi .r · Z2 ) + (E1 + τi .r · T + τi .r2 · E2 )
+
+where Z1 = (W1 , x1 , u1 ) and Z2 = (W2 , x2 , u2 ). Expanding and interpolating, we
+have that
+
+                               AZ1 ◦ BZ1 = u1 · CZ1 + E1
+                               AZ2 ◦ BZ2 = u2 · CZ2 + E2
+
+with probability 1−negl(λ). Thus, (W1 , E1 , rW1 , rE1 ) and (W2 , E2 , rW2 , rE2 ) meet
+all the requirements to be satisfying witnesses for φ1 and φ2 respectively with
+probability 1 − negl(λ).
+
+
+                                             36
+Lemma 8 (Zero-Knowledge). Construction 1 is a zero-knowledge folding
+scheme for committed relaxed R1CS.
+Proof. Intuitively, zero-knowledge holds because the prover only sends a single
+hiding commitment. More formally, the simulator S samples random T ∈ F m and
+r ∈ F and computes T = Com(ppE , T, r). Next, S derives the verifier’s challenge,
+r, using ρ and outputs tr = (T , r). (Perfect) zero-knowledge holds from the
+(perfect) hiding property of the underlying commitment scheme.
+
+
+C      Proofs for IVC from Folding Schemes (Construction 3)
+Lemma 9 (IVC Completeness). Construction 3 is an IVC scheme that sat-
+isfies perfect completeness.
+Proof. Consider (F, i + 1, z0 , zi+1 ) and the corresponding inputs (zi , ωi ) such that
+
+                                    zi+1 = F (zi , ωi )
+
+Let pp ← G(1λ ), and let (pk, vk) ← K(pp, F ). Now consider a proof Πi such that
+
+                                V(vk, i, z0 , zi , Πi ) = 1
+
+We must show that given
+
+                          Πi+1 ← P(pk, (i, z0 , zi ), ωi , Πi )
+
+that
+
+                           V(vk, i + 1, z0 , zi+1 , Πi+1 ) = 1
+
+with probability 1. We show this by induction on i.
+
+Base Case (i = 0): Suppose the prover is provided Π0 such that
+
+                               V(vk, 0, z0 , z0 , Π0 ) = 1.
+
+By the base case of P and F ′ , we have
+
+                            Π1 = ((u⊥ , w⊥ ), (u1 , w1 ), r1 )
+
+for some (u1 , w1 ). By definition, the instance-witness pair (u⊥ , w⊥ ) satisfies F ′ .
+Moreover, by construction, (u1 , w1 ) must also be satisfying. Additionally, by the
+construction of F ′ , we have
+
+                      u1 .x = hash(vk, 1, z0 , F (z0 , w0 ), u⊥ , r1 ).
+
+And, by the construction of P, we have w1 .E = 0 and w1 .rE = 0 (implying that
+u1 .E = 0), and u1 .u = 1. Therefore, we have
+
+                               V(pp, 1, z0 , z1 , Π1 ) = 1.
+
+
+                                             37
+Inductive Step (i ≥ 1): Assume that for
+
+                                 Πi = ((Ui , Wi ), (ui , wi ), ri )
+
+we have that
+
+                                    V(vk, i, z0 , zi , Πi ) = 1
+
+and suppose that
+
+       Πi+1 = ((Ui+1 , Wi+1 ), (ui+1 , wi+1 ), ri+1 ) ← P(pk, (i, z0 , zi ), ωi , Πi ).
+
+By the construction of P, we have that
+
+                   (Ui+1 , Wi+1 , T ) ← NIFS.P(pk, (Ui , Wi ), (ui , wi )).
+
+Thus, by the completeness of the underlying folding scheme, and the premise
+that (ui , wi ) and (Ui , Wi ) are satisfying instance-witness pairs, we have that
+(Ui+1 , Wi+1 ) is a satisfying instance-witness pair. Additionally, by the premise,
+we have that ui .x = hash(vk, i, z0 , zi , Ui , ri ), ui .E = 0, and ui .u = 1. Therefore, P
+can construct a satisfying instance-witness pair (ui+1 , wi+1 ) that represents the
+correct execution of F ′ on input (U, u, (i, z0 , zi ), ωi , T , ri , ri+1 ), where ri+1 ∈R F .
+By construction, this particular input implies that
+
+     ui+1 .x = hash(vk, ui .i + 1, ui .z0 , F (zi , wi ), NIFS.V(vk, Ui , ui , T ), ri+1 )
+                                                                                             (12)
+             = hash(vk, ui .i + 1, ui .z0 , zi+1 , Ui+1 , ri+1 )
+by the correctness of the underlying folding scheme. As in the base case, by the
+construction of P, we have wi+1 .E = 0, wi+1 .rE = 0 (implying that ui+1 .E = 0)
+and ui+1 .u = 1. Thus, by Equation (12) we have
+
+                              V(vk, i + 1, z0 , zi+1 , Πi+1 ) = 1.
+
+
+Lemma 10 (IVC Knowledge Soundness). Construction 3 is an IVC scheme
+that satisfies knowledge soundness.
+Proof. Our approach is inspired by a recursive extraction technique described by
+Bünz et al [17]. Let pp ← G(1λ ). Consider an expected polynomial-time adversary
+P ∗ that outputs a function F on input pp, and let (pk, vk) ← K(pp, F ). Suppose
+that, for a constant n, P ∗ additionally outputs (z0 , z, Π) such that
+
+                                    V(vk, n, z0 , z, Π) = 1
+
+with probability ϵ. We must construct an expected polynomial-time extractor E
+that with input (pp, z0 , z), outputs (ω0 , . . . , ωn−1 ) such that by computing
+
+                                     zi ← F (zi−1 , ωi−1 )
+
+
+                                                38
+we have that zn = z with probability ϵ − negl(λ).
+   We show inductively that E can construct an expected polynomial-time
+extractor Ei (pp) that outputs ((zi , . . . , zn−1 ), (ωi , . . . , ωn−1 ), Πi ) such that for all
+j ∈ {i + 1, . . . , n},
+                                       zj = F (zj−1 , ωj−1 )
+and
+                                     V(vk, i, z0 , zi , Πi ) = 1                             (13)
+for zn = z with probability ϵ − negl(λ). Then, because in the base case when i = 0,
+V checks that z0 = zi , the values (ω0 , . . . , ωn−1 ) retrieved by E0 (pp) are such that
+computing zi+1 = F (zi , ωi ) for all i ≥ 1 gives zn = z. At a high level, to construct
+an extractor Ei−1 , we first assume the existence of Ei that satisfies the inductive
+hypothesis. We then use Ei (pp) to construct an adversary for the non-interactive
+folding scheme (which we denote as P             ei−1 ). This in turn guarantees an extractor
+for the non-interactive folding scheme, which we denote as Eei−1 . We then use
+Eei−1 to construct Ei−1 that satisfies the inductive hypothesis.
+    In the base case, for i = n, let En (pp; ρ) output (⊥, ⊥, Πn ) where Πn is the
+output of P ∗ (pp; ρ). By the premise, En succeeds with probability ϵ in expected
+polynomial-time.
+    For i ≥ 1, suppose E can construct an expected polynomial-time extractor Ei
+that outputs ((zi , . . . , zn−1 ), (ωi , . . . , ωn−1 )), and Πi that satisfies the inductive
+hypothesis. To construct an extractor Ei−1 , E first constructs an adversary P           ei−1
+for the non-interactive folding scheme as follows:
+
+P
+ei−1 (pp; ρ):
+
+(1) Let ((zi , . . . , zn−1 ), (ωi , . . . , ωn−1 ), Πi ) ← Ei (pp; ρ).
+(2) Parse Πi as ((Ui , Wi ), (ui , wi ), ri ).
+(3) Parse wi to retrieve (Ui−1 , ui−1 , T i−1 , ri−1 ).
+(4) Output (Ui−1 , ui−1 ) and ((Ui , Wi ), T i−1 ).
+By the inductive hypothesis, we have that V(vk, i, z0 , zi , Πi ) = 1, where Πi ←
+Ei (pp) with probability ϵ − negl(λ). Therefore, by the the verifier’s checks we
+have that (ui , wi ) and (Ui , Wi ) are satisfying instance-witness pairs, and that
+                                ui .x = hash(vk, i, z0 , zi , Ui , ri ).
+
+Because V ensures that (ui .E, ui .u) = (0, 1) we have that wi is indeed a satisfying
+assignment for F ′ (and not just a trivially satisfying witness). Then, by the
+construction of F ′ and the binding property of the hash function, we have that
+                              Ui = NIFS.V(vk, Ui−1 , ui−1 , T i−1 )
+
+with probability ϵ − negl(λ). Thus, P    ei−1 succeeds in producing an accepting
+folded instance-witness pair (Ui , Wi ), for instances (Ui−1 , ui−1 ), with probability
+ϵ − negl(λ) in expected polynomial-time.
+
+
+                                                  39
+    Then, by the knowledge soundness of the underlying non-interactive folding
+scheme (Assumption 1) there exists an extractor Eei−1 that outputs (wi−1 , Wi−1 )
+such that (ui−1 , wi−1 ) and (Ui−1 , Wi−1 ) satisfy F ′ with probability ϵ − negl(λ)
+in expected polynomial-time.
+    Given an expected polynomial-time P    ei−1 and an expected polynomial-time
+Ei−1 , E constructs an expected polynomial time Ei−1 as follows
+ e
+
+Ei−1 (pp; ρ):
+
+(1) ((Ui−1 , ui−1 ), (Ui , Wi ), T i−1 ) ← P     ei−1 (pp; ρ)
+(2) Retrieve ((zi , . . . , zn−1 ), (ωi , . . . , ωn−1 ), Πi , ri−1 ) from the internal state of
+    P
+    ei−1 .
+(3) Parse Πi .wi to retrieve zi−1 and ωi−1
+(4) Let (wi−1 , Wi−1 ) ← Eei−1 (pp).
+(5) Let Πi−1 ← ((Ui−1 , Wi−1 ), (ui−1 , wi−1 ), ri−1 ).
+(6) Output ((zi−1 , . . . , zn−1 ), (ωi−1 , . . . , ωn−1 ), Πi−1 ).
+
+We first reason that the output (zi−1 , . . . , zn−1 ), and (ωi−1 , . . . , ωn−1 ) are valid.
+By the inductive hypothesis, we already have that for all j ∈ {i + 1, . . . , n},
+
+                                    zj = F (zj−1 , ωj−1 ),
+
+and that V(vk, i, z0 , zi , ((Ui , Wi ), (ui , wi ), ri )) = 1 with probability ϵ − negl(λ).
+Because V additionally checks that
+
+                              ui .x = hash(vk, i, z0 , zi , Ui , ri )                      (14)
+
+by the construction of F ′ and the binding property of the hash function, we have
+
+                                     F (zi−1 , ωi−1 ) = zi
+
+with probability ϵ − negl(λ). Next, we argue that Πi−1 is valid. Because (ui , wi )
+satisfies F ′ , and (Ui−1 , ui−1 ) were retrieved from wi , by the binding property of
+the hash function, and by Equation (14), we have that
+
+                            ui−1 .x = hash(vk, i − 1, z0 , zi−1 , Ui−1 , ri−1 )
+                (ui−1 .E, ui−1 .u) = (0, 1)
+
+Additionally, in the case where i = 1, by the base case check of F ′ , we have that
+zi−1 = z0 . Because Eei−1 succeeds with probability ϵ − negl(λ), we have that
+
+                             V(vk, i − 1, z0 , zi−1 , Πi−1 ) = 1
+
+with probability ϵ − negl(λ).
+
+
+                                               40
+D     Proof of Theorem 4 (A zkSNARK of a Valid IVC
+      Proof )
+
+Proof. Completeness and knowledge soundness hold due to the completeness and
+knowledge soundness of the underlying zero-knowledge succinct non-interactive ar-
+gument of knowledge (zkSNARK) and the non-interactive folding scheme (NIFS).
+Succinctness holds due to the succinctness of the commitment scheme underlying
+the non-interactive folding scheme, the succinctness of the hash function, and the
+succinctness of the underlying non-interactive argument. To prove zero-knowledge,
+we first construct a simulator S as follows. Let NIFS.S and zkSNARK.S denote the
+simulators for the underlying non-interactive folding scheme and the zkSNARK
+respectively. The simulator is given as input the statement proven by an IVC
+proof (n, z0 , zn ) along with public parameters pp. For i ∈ {1, . . . , n−1}, let zi = ⊥.
+
+S(pp, (n, z0 , zn ), τ ) → π:
+
+If n = 0,
+    output ⊥;
+otherwise,
+    (1) for i ∈ {0, . . . , n − 1}
+                 ′
+        (ri+1 , ri+1 ) ←R F
+        if i = 0
+             U1 ← u⊥
+             u1 ← (hash(vk, 1, z0 , z1 , U1 , r1 ), (u⊥ .E, 1, Com(pp, 0, r1′ )))
+        otherwise
+             T i ← NIFS.S(ppNIFS , Ui , ui )
+             Ui+1 ← NIFS.V(vkNIFS , Ui , ui , T i )
+                                                                                     ′
+             ui+1 ← (hash(vk, i+1, z0 , zi+1 , Ui+1 , ri+1 ), (u⊥ .E, 1, Com(pp, 0, ri+1 )));
+    (2) T n ← NIFS.S(ppNIFS , Un , un )
+    (3) πU′ ← zkSNARK.S(ppzkSNARK , NIFS.V(vkNIFS , Un , un , T n ), τ )
+    (4) output (Un , un , rn , T n , πU′ ).
+
+   If n = 0, both the simulator and the honest prover output ⊥. If n > 0, we
+reason that the pair (U, u) is indistinguishable from the pair produced by an
+honest prover. We do so by showing that if (Ui , ui ) is indistinguishable then
+(Ui+1 , ui+1 ) is indistinguishable.
+
+ – Suppose that i = 1. By the definition of IVC.P, U1 = u⊥ in both the real
+   and simulated settings. Additionally, we have that u1 .E = u⊥ .E and u.u = 1
+   in both the real and simulated setting. Due to the hiding property of the
+   hash function, we have that the simulated hash of the public IO, hash(vk, i +
+   1, z0 , zi+1 , Ui+1 , ri+1 ), is indistinguishable from the one generated honestly.
+   Due to the hiding property of the commitment scheme, we additionally
+                                                                              ′
+   have that the simulated commitment to the witness, Com(pp, 0, ri+1            ), is
+   indistinguishable from the one generated honestly.
+
+
+                                             41
+ – For some i ∈ {1, . . . , n − 1}, suppose now that (Ui , ui ) is indistinguish-
+   able in the real and the simulated settings. Due to the zero-knowledge
+   property of the underlying non-interactive folding scheme, we have that
+   T i ← NIFS.S(ppNIFS , Ui , ui ) is indistinguishable in the real and the simu-
+   lated settings. Thus, we have that Ui+1 ← NIFS.V(vk, Ui , ui , T i ) is indis-
+   tinguishable in the real and the simulated settings. Then, we have that
+   hash(vkNIFS , i + 1, z0 , zi+1 , Ui+1 , ri+1 ) is indistinguishable in the real and the
+   simulated setting. The remaining pieces of ui+1 are indistinguishable in the
+   real and the simulated setting for the same reasons as the base case. Thus,
+   we have that (Ui+1 , ui+1 ) is indistinguishable in the real and the simulated
+   settings.
+
+    Furthermore, in both the real and simulated settings, Un and un satisfy the
+verifier’s hash check that un .x = hash(vk, n, z0 , zn , Un , rn+1 ). In the simulated
+setting, this holds because the simulator uses the provided values of (n, z0 , zn )
+when computing un .x.
+    Now, because (Un , un ) are indistinguishable from that produced by honest
+IVC.P, we have that T n produced by NIFS.S(pp, Un , un ) is indistinguishable from
+that produced by P due to the zero-knowledge property of the underlying non-
+interactive folding scheme. This means that U′ generated by NIFS.V(vk, Un , un , T )
+is indistinguishable from that produced honestly. This means that πU′ is indistin-
+guishable in the real and the simulated setting due to the zero-knowledge property
+of the underlying zkSNARK. Thus, the simulated zkSNARK (Un , un , T n , πU′ ) is
+indistinguishable from the one generated honestly.
+
+
+E    Proof of Lemma 1 (Forking Lemma for Folding
+     Schemes)
+
+We provide a proof for our variant of the forking lemma by adapting the proof of
+the forking lemma from Bootle et al. [12].
+
+Lemma. Let F denote a finite field. Consider a (2µ + 1)-move folding scheme
+Π = (G, K, P, V). Π satisfies knowledge soundness if there exists a PPT X such
+that for all input instance pairs (u1 , u2 ), outputs satisfying witnesses (w1 , w2 )
+with probability 1 − negl(λ), given public parameters pp, a structure s, and an
+(n1 , . . . , nµ )-tree of accepting transcripts and the corresponding folded instance-
+witness pairs (u, w). This tree comprises of n1 transcripts (and the corresponding
+instance-witness pairs) with fresh randomness in V’s first message; and for each
+such transcript, n2 transcripts (and the corresponding instance-witness Qµ       pairs)
+with fresh randomness in V’s second message; etc., for a total of i=1 ni leaves
+bounded by poly(λ).
+
+Proof. Consider a (2µ + 1)-move folding scheme (G, K, P, V) for relation R with
+randomness sampled uniformly from F where |F | ≥ 2λ . Suppose there exists a
+PPT X such that for arbitrary input instances (u1 , u2 ), outputs the corresponding
+satisfying witnesses (w1 , w2 ) with probability 1 − negl(λ), given public parameters
+
+
+                                           42
+pp, a structure s, and an (n1 , . . . , nµ )-tree of accepting
+                                                         Qµ         transcripts and the
+corresponding folded instance-witness pairs where i=1 ni . Consider an arbitrary
+expected polynomial-time adversary P ∗ , and pp ← G(1λ ). Let ϵ be the probability
+that, given (u1 , u2 ) ← P ∗ (pp, ρ), P ∗ (pp, ρ) succeeds in producing a valid witness w
+for the folded instance u. To prove that (G, K, P, V) satisfies knowledge-soundness
+we will show that there exists a corresponding extractor E that outputs a valid
+witness pair (w1 , w2 ) for instances (u1 , u2 ) given public parameters pp and the
+prover randomness ρ with probability ϵ − negl(λ).
+    We first construct an extractor E as follows:
+
+E(pp, ρ) → (w1 , w2 ):
+ 1. Compute (s, (u1 , u2 )) ← P ∗ (pp, ρ)
+ 2. Compute tree ← T (1), where the function T is defined below.
+ 3. If tree is not a valid (n1 , . . . , nµ )-tree (i.e. there are collisions in the verifier’s
+    randomness) return ⊥.
+ 4. Output (w1 , w2 ) ← X (pp, s, u1 , u2 , tree).
+T (i) → tree:
+ 1. Sample the verifier’s randomness for round i; denote it as ri .
+ 2. If i = µ + 1, compute
+                                 (u, w) ← ⟨P ∗ (ρ), V(u1 , u2 )⟩
+    and let tr be the corresponding transcript. If (u, w) ∈ R, output {(tr, (u, w))}.
+    Otherwise output ⊥.
+ 3. With fixed verifier randomness (r1 , . . . , ri ), compute tree ← T (i + 1) once. If
+    tree = ⊥ output ⊥.
+ 4. With fixed verifier randomness (r1 , . . . , ri ), repeatedly run T (i + 1) until
+    ni − 1 additional lists of accepting transcripts are acquired. Append all the
+    results to tree.
+ 5. Output tree.
+    Let E1 denote the event that T (1) outputs tree ̸= ⊥ in less than T time
+steps (we specify T later). Given E1 , let E2 denote the event that the resulting tree
+is a valid (n1 , . . . , nµ )-tree (i.e. there are no collisions in the verifier’s randomness).
+Given E1 and E2 , let E3 denote the event that X succeeds with tree as input.
+Then, we have that E succeeds with probability
+                             PE = Pr [E3 ] · Pr [E2 ] · Pr [E1 ].
+We now compute each of these probabilities. To compute Pr [E1 ], we observe that
+T (1) fails (i.e. returns ⊥) only when its first call to T (2) fails. Likewise, T (2)
+fails only when its first call to T (3) fails. Chaining these assertions, we have that
+T (1) fails with probability (1 − ϵ), which, by assumption, is the probability that
+T (µ + 1) fails. Thus, the expected number of times T (i) calls T (i + 1) is
+                                                                 (ni − 1)
+     1 + Pr [First call to T (i + 1) succeeds] ·
+                                                     Pr [T (i + 1) returns tree ̸= ⊥]
+
+                                              43
+               (ni − 1)
+     =1+ϵ·
+                   ϵ
+     = ni .
+                                                   Qµ
+Hence, the total runtime is expected to be t = O( i=1 ni ) which is bounded
+above by poly(λ) by assumption. Moreover, by Markov’s inequality, we have that
+T runs for time longer than T > t with probability Tt . Thus, we have that
+
+                                                t
+                              Pr[E1 ] = (1 −      ) · ϵ.
+                                                T
+Given E1 we have that T runs in at most T time-steps. This ensures that there are
+at most T random challenges produced for the verifier, and that the probability
+                           2
+of collision is at most T|F | . Thus, we have that
+
+                                                 T2
+                                Pr[E2 ] = 1 −         .
+                                                 |F |
+
+Finally, given E1 and E2 , we have that Pr[E3 ] = 1 − negl(λ) by assumption.
+Consolidating our calculations we have that E succeeds with probability
+                                          T2      t
+                  PE = (1 − negl(λ)) · 1 −      · 1−    ·ϵ
+                                           |F |      T
+            p
+Setting T = 3 |F | (and assuming that T ≥ t) we have that
+                                         1          t 
+               PE = (1 − negl(λ)) · 1 − p      · 1 − p      ·ϵ
+                                        3
+                                          |F |       3
+                                                       |F |
+                   = ϵ − negl(λ)
+
+
+
+
+F    A Commitment Scheme for Vectors
+We first recall the syntax for commitment schemes for vectors introduced in
+Section 2.1 and then define the required binding and hiding properties. Next,
+we define the additionally required additively homomorphic and succinctness
+properties. For the sake of concreteness, we reproduce Pedersen’s commitment
+scheme, which satisfies all of the required properties.
+
+Definition 16 (Commitment Scheme). A commitment scheme for F m is a
+tuple of three protocols with the following syntax that satisfy the two properties
+listed below:
+ – pp ← Gen(1λ , m): produces public parameters pp.
+ – C ← Com(pp, x, r): takes as input x ∈ F m and r ∈ F ; produces a public
+   commitment C.
+
+
+                                       44
+  – b ← Open(pp, C, x, r): verifies the opening of commitment C to x ∈ F m and
+    r ∈ F ; outputs b ∈ {0, 1}.
+
+(1) Binding. For any PPT adversary A, the following probability is negl(λ):
+
+                         pp ← Gen(1λ , m),
+                                                                             
+           b0 = b1 = 1, (C, x0 ∈ F m , x1 ∈ F m , r0 ∈ F , r1 ∈ F ) ← A(pp), 
+       Pr 
+           x0 ̸= x1
+                                                                              
+                         b0 ← Open(pp, C, x0 , r0 ),                          
+                         b1 ← Open(pp, C, x1 , r1 )
+
+(2) Hiding. For all PPT adversaries A = (A0 , A1 ), the following probability is
+    negl(λ):                                                  
+                                     (x0 , x1 , st) ← A0 (pp),
+                     1              b ←R {0, 1}, r ←R F , 
+                       − Pr 
+                             b = b̄ C ← Com(pp, xb , r), 
+                                                               
+                     2
+                                     b̄ ← A1 (st, C)
+    If hiding holds for all adversaries, then the commitment is statistically hiding.
+
+Definition 17 (Additively Homomorphic). A commitment scheme for vec-
+tors over F m , (Gen, Com, Open), is additively homomorphic if for all public pa-
+rameters pp produced from Gen(1λ , m), and for any x1 , x2 ∈ F m and for any
+r1 , r2 ∈ F , Com(pp, x1 , r1 ) + Com(pp, x2 , r2 ) = Com(pp, x1 + x2 , r1 + r2 ).
+
+Definition 18 (Succinctness). A commitment scheme for vectors over F m ,
+(Gen, Com, Open), provides succinct commitments if for all public parameters
+pp produced from Gen(1λ , m), and any x ∈ F m and r ∈ F , |Com(pp, x, r)| =
+Oλ (polylog(|x|)).
+
+Construction 6 (Pedersen Commitment). For group G such that |G| ≥ 2λ
+with scalar field F and where the discrete logarithm problem is hard, the Pedersen
+commitment scheme for vectors over F is defined as follows:
+
+  – pp ← Gen(1λ , m): Sample g ←R Gm , h ←RQG. Output (g, h).
+  – C ← Com(pp, x ∈ F m , r ∈ F ): Output hr · i∈{0,...,m} gixi .
+
+Lemma 11 (Pedersen Commitment). The Pedersen commitment scheme is
+hiding, binding, additively homomorphic, and succinct.
+
+
+G     Background on Polynomials
+
+This section is adapted from prior work [37, 41, 46]. We recall a few basic facts
+about polynomials.
+
+  – A polynomial g over F is an expression consisting of a sum of monomials
+    where each monomial is the product of a constant and powers of one or more
+    variables; all arithmetic is performed over F .
+
+
+                                         45
+ – The degree of a monomial is the sum of the exponents of variables in the
+   monomial; the (total) degree of a polynomial g is the maximum degree of
+   any monomial in g. Furthermore, the degree of a polynomial g in a particular
+   variable xi is the maximum exponent that xi takes in any g’s monomials.
+ – A multivariate polynomial is a polynomial with more than one variable. A
+   multivariate polynomial is called a multilinear polynomial if the degree of
+   the polynomial in each variable is at most one.
+ – A multivariate polynomial g over a finite field F is called low-degree if the
+   degree of g in each variable is bounded above by a constant.
+
+
+H    An Optimization to Theorem 6
+In Theorem 6, given that the verifier’s runtime to verify an evaluation is at least
+linear in the polynomial size, the verifier does not gain by querying commitments
+to structure polynomials A,e B,
+                              e C.
+                                 e Rather, the verifier can directly evaluate them,
+which not only simplifies the protocol (as one does not need Sparse-PCBP ), but
+also improves costs, both asymptotically and concretely.
+
+Corollary 2. Assuming the hardness of the discrete logarithm problem, there
+exists a non-interactive zero-knowledge argument of knowledge for committed
+relaxed R1CS with the following efficiency characteristics, where m denotes the
+dimensions of the R1CS coefficient matrices and n denotes the number of non-zero
+entries in the matrices: The encoder runs in time Oλ (m); The prover runs in
+time O(n) + Oλ (m); The proof length is Oλ (log m); and the verifier runs in time
+n + Oλ (m).
+
+
+
+
+                                        46
+

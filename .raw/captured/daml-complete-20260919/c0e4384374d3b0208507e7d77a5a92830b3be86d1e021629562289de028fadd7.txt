@@ -1,0 +1,597 @@
+On this page
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-dso-governance
+Splice.DSO.DecentralizedSynchronizer
+Copy page
+Copy page
+Documentation for Splice.DSO.DecentralizedSynchronizer
+Copy page
+Copy page
+Data structures and contracts related managing the decentralized synchronizer.
+​
+Data Types
+data
+DsoDecentralizedSynchronizerConfig
+The decentralized synchronizer consists of a series of actual synchronizers. New synchronizers are created by the SVs for the rare case of needing to roll-out a BFT protocol upgrade that cannot be rolled out in a backwards compatible fashion.
+Note that synchronizers themselves are formed by a cluster of nodes run by the SVs. As can be seen form
+SynchronizerNodeConfig
+each sv runs multiple different kinds of physical nodes.
+DsoDecentralizedSynchronizerConfig
+Field
+Type
+Description
+synchronizers
+Map
+Text
+SynchronizerConfig
+The actual synchronizers, numbered sequentially.
+lastSynchronizerId
+Text
+The last allocated synchronizer Id.
+activeSynchronizerId
+Text
+The synchronizer to be used for managing standard DSO and Amulet workflows.
+instance
+Eq
+DsoDecentralizedSynchronizerConfig
+instance
+Show
+DsoDecentralizedSynchronizerConfig
+instance
+GetField “activeSynchronizerId” DsoDecentralizedSynchronizerConfig
+Text
+instance
+GetField “decentralizedSynchronizer” DsoRulesConfig DsoDecentralizedSynchronizerConfig
+instance
+GetField “lastSynchronizerId” DsoDecentralizedSynchronizerConfig
+Text
+instance
+GetField “synchronizers” DsoDecentralizedSynchronizerConfig (
+Map
+Text
+SynchronizerConfig)
+instance
+SetField “activeSynchronizerId” DsoDecentralizedSynchronizerConfig
+Text
+instance
+SetField “decentralizedSynchronizer” DsoRulesConfig DsoDecentralizedSynchronizerConfig
+instance
+SetField “lastSynchronizerId” DsoDecentralizedSynchronizerConfig
+Text
+instance
+SetField “synchronizers” DsoDecentralizedSynchronizerConfig (
+Map
+Text
+SynchronizerConfig)
+instance
+Patchable DsoDecentralizedSynchronizerConfig
+data
+LegacySequencerConfig
+Config for a legacy sequencer, i.e., a migration id that is still up but paused. This is useful to allow validators to catch up.
+LegacySequencerConfig
+Field
+Type
+Description
+migrationId
+Int
+The synchronizer migration id corresponding to this sequencer.
+sequencerId
+Text
+The id of the sequencer.
+url
+Text
+The public accessible url of the sequencer.
+instance
+Eq
+LegacySequencerConfig
+instance
+Show
+LegacySequencerConfig
+instance
+GetField “legacySequencerConfig” SynchronizerNodeConfig (
+Optional
+LegacySequencerConfig)
+instance
+GetField “migrationId” LegacySequencerConfig
+Int
+instance
+GetField “sequencerId” LegacySequencerConfig
+Text
+instance
+GetField “url” LegacySequencerConfig
+Text
+instance
+SetField “legacySequencerConfig” SynchronizerNodeConfig (
+Optional
+LegacySequencerConfig)
+instance
+SetField “migrationId” LegacySequencerConfig
+Int
+instance
+SetField “sequencerId” LegacySequencerConfig
+Text
+instance
+SetField “url” LegacySequencerConfig
+Text
+instance
+Patchable LegacySequencerConfig
+data
+MediatorConfig
+Config for a mediator.
+MediatorConfig
+Field
+Type
+Description
+mediatorId
+Text
+The id of the mediator.
+instance
+Eq
+MediatorConfig
+instance
+Show
+MediatorConfig
+instance
+GetField “mediator” SynchronizerNodeConfig (
+Optional
+MediatorConfig)
+instance
+GetField “mediatorId” MediatorConfig
+Text
+instance
+SetField “mediator” SynchronizerNodeConfig (
+Optional
+MediatorConfig)
+instance
+SetField “mediatorId” MediatorConfig
+Text
+instance
+Patchable MediatorConfig
+data
+PhysicalSynchronizerNodeConfig
+PhysicalSynchronizerNodeConfig
+Field
+Type
+Description
+sequencer
+Optional
+SequencerConnectionConfig
+The configuration of this sv’s optional local sequencer.
+instance
+Eq
+PhysicalSynchronizerNodeConfig
+instance
+Show
+PhysicalSynchronizerNodeConfig
+instance
+GetField “sequencer” PhysicalSynchronizerNodeConfig (
+Optional
+SequencerConnectionConfig)
+instance
+SetField “sequencer” PhysicalSynchronizerNodeConfig (
+Optional
+SequencerConnectionConfig)
+instance
+Patchable PhysicalSynchronizerNodeConfig
+type
+PhysicalSynchronizerNodeConfigMap
+=
+Map
+Int
+PhysicalSynchronizerNodeConfig
+A map from physical synchronizer serial to the configuration of a sv’s node for that physical synchronizer.
+instance
+GetField “physicalSynchronizers” SynchronizerNodeConfig (
+Optional
+PhysicalSynchronizerNodeConfigMap)
+instance
+SetField “physicalSynchronizers” SynchronizerNodeConfig (
+Optional
+PhysicalSynchronizerNodeConfigMap)
+data
+ScanConfig
+Config for a Scan instance.
+ScanConfig
+Field
+Type
+Description
+publicUrl
+Text
+The publicly accessible URL of the Scan instance.
+instance
+Eq
+ScanConfig
+instance
+Show
+ScanConfig
+instance
+GetField “publicUrl” ScanConfig
+Text
+instance
+GetField “scan” SynchronizerNodeConfig (
+Optional
+ScanConfig)
+instance
+SetField “publicUrl” ScanConfig
+Text
+instance
+SetField “scan” SynchronizerNodeConfig (
+Optional
+ScanConfig)
+instance
+Patchable ScanConfig
+data
+SequencerConfig
+Config for a sequencer.
+SequencerConfig
+Field
+Type
+Description
+migrationId
+Int
+The synchronizer migration id corresponding to this sequencer.
+sequencerId
+Text
+The id of the sequencer.
+url
+Text
+The public accessible url of the sequencer.
+availableAfter
+Optional
+Time
+Any participant should subscribe this sequencer after this time. ^ If not set the sequencer is not yet accessible
+instance
+Eq
+SequencerConfig
+instance
+Show
+SequencerConfig
+instance
+GetField “availableAfter” SequencerConfig (
+Optional
+Time
+)
+instance
+GetField “migrationId” SequencerConfig
+Int
+instance
+GetField “sequencer” SynchronizerNodeConfig (
+Optional
+SequencerConfig)
+instance
+GetField “sequencerId” SequencerConfig
+Text
+instance
+GetField “url” SequencerConfig
+Text
+instance
+SetField “availableAfter” SequencerConfig (
+Optional
+Time
+)
+instance
+SetField “migrationId” SequencerConfig
+Int
+instance
+SetField “sequencer” SynchronizerNodeConfig (
+Optional
+SequencerConfig)
+instance
+SetField “sequencerId” SequencerConfig
+Text
+instance
+SetField “url” SequencerConfig
+Text
+instance
+Patchable SequencerConfig
+data
+SequencerConnectionConfig
+Connection config for a sequencer.
+SequencerConnectionConfig
+Field
+Type
+Description
+url
+Text
+The public accessible url of the sequencer.
+instance
+Eq
+SequencerConnectionConfig
+instance
+Show
+SequencerConnectionConfig
+instance
+GetField “sequencer” PhysicalSynchronizerNodeConfig (
+Optional
+SequencerConnectionConfig)
+instance
+GetField “url” SequencerConnectionConfig
+Text
+instance
+SetField “sequencer” PhysicalSynchronizerNodeConfig (
+Optional
+SequencerConnectionConfig)
+instance
+SetField “url” SequencerConnectionConfig
+Text
+instance
+Patchable SequencerConnectionConfig
+data
+SequencerIdentityConfig
+Config for a sequencer.
+SequencerIdentityConfig
+Field
+Type
+Description
+sequencerId
+Text
+The id of the sequencer.
+availableAfter
+Optional
+Time
+Any participant should subscribe this sequencer after this time. ^ If not set the sequencer is not yet accessible
+instance
+Eq
+SequencerIdentityConfig
+instance
+Show
+SequencerIdentityConfig
+instance
+GetField “availableAfter” SequencerIdentityConfig (
+Optional
+Time
+)
+instance
+GetField “sequencerId” SequencerIdentityConfig
+Text
+instance
+GetField “sequencerIdentity” SynchronizerNodeConfig (
+Optional
+SequencerIdentityConfig)
+instance
+SetField “availableAfter” SequencerIdentityConfig (
+Optional
+Time
+)
+instance
+SetField “sequencerId” SequencerIdentityConfig
+Text
+instance
+SetField “sequencerIdentity” SynchronizerNodeConfig (
+Optional
+SequencerIdentityConfig)
+instance
+Patchable SequencerIdentityConfig
+data
+SynchronizerConfig
+The DSO-level configuration of a synchronizer. This contains the shared parameters of the synchronizer.
+SynchronizerConfig
+Field
+Type
+Description
+state
+SynchronizerState
+The state of this synchronizer
+cometBftGenesisJson
+Text
+The CometBftGenesis json value required for new svs to bring up their CometBft nodes for this synchronizer.
+acsCommitmentReconciliationInterval
+Optional
+Int
+Participants connected to the decentralized synchronizer exchange ACS commitment messages every reconciliation interval seconds.
+instance
+Eq
+SynchronizerConfig
+instance
+Show
+SynchronizerConfig
+instance
+GetField “acsCommitmentReconciliationInterval” SynchronizerConfig (
+Optional
+Int
+)
+instance
+GetField “cometBftGenesisJson” SynchronizerConfig
+Text
+instance
+GetField “state” SynchronizerConfig SynchronizerState
+instance
+GetField “synchronizers” DsoDecentralizedSynchronizerConfig (
+Map
+Text
+SynchronizerConfig)
+instance
+SetField “acsCommitmentReconciliationInterval” SynchronizerConfig (
+Optional
+Int
+)
+instance
+SetField “cometBftGenesisJson” SynchronizerConfig
+Text
+instance
+SetField “state” SynchronizerConfig SynchronizerState
+instance
+SetField “synchronizers” DsoDecentralizedSynchronizerConfig (
+Map
+Text
+SynchronizerConfig)
+instance
+Patchable SynchronizerConfig
+data
+SynchronizerNodeConfig
+The configuration of a sv’s node for a particular synchronizer.
+SynchronizerNodeConfig
+Field
+Type
+Description
+cometBft
+CometBftConfig
+The configuration of this sv’s CometBFT nodes and keys.
+sequencer
+Optional
+SequencerConfig
+The configuration of this sv’s optional local sequencer.
+mediator
+Optional
+MediatorConfig
+The configuration of this sv’s optional local mediator.
+scan
+Optional
+ScanConfig
+The configuration of this sv’s optional Scan instance.
+legacySequencerConfig
+Optional
+LegacySequencerConfig
+The legacy sequencer config for the prior migration id that is still up. We store this so it can be published on scan and validators can catchup.
+sequencerIdentity
+Optional
+SequencerIdentityConfig
+The configuration of this sv’s optional local sequencer.
+physicalSynchronizers
+Optional
+PhysicalSynchronizerNodeConfigMap
+The synchronizer node configs for the currently running physical synchronizers.
+instance
+Eq
+SynchronizerNodeConfig
+instance
+Show
+SynchronizerNodeConfig
+instance
+GetField “cometBft” SynchronizerNodeConfig CometBftConfig
+instance
+GetField “legacySequencerConfig” SynchronizerNodeConfig (
+Optional
+LegacySequencerConfig)
+instance
+GetField “mediator” SynchronizerNodeConfig (
+Optional
+MediatorConfig)
+instance
+GetField “newNodeConfig” DsoRules_SetSynchronizerNodeConfig SynchronizerNodeConfig
+instance
+GetField “physicalSynchronizers” SynchronizerNodeConfig (
+Optional
+PhysicalSynchronizerNodeConfigMap)
+instance
+GetField “scan” SynchronizerNodeConfig (
+Optional
+ScanConfig)
+instance
+GetField “sequencer” SynchronizerNodeConfig (
+Optional
+SequencerConfig)
+instance
+GetField “sequencerIdentity” SynchronizerNodeConfig (
+Optional
+SequencerIdentityConfig)
+instance
+SetField “cometBft” SynchronizerNodeConfig CometBftConfig
+instance
+SetField “legacySequencerConfig” SynchronizerNodeConfig (
+Optional
+LegacySequencerConfig)
+instance
+SetField “mediator” SynchronizerNodeConfig (
+Optional
+MediatorConfig)
+instance
+SetField “newNodeConfig” DsoRules_SetSynchronizerNodeConfig SynchronizerNodeConfig
+instance
+SetField “physicalSynchronizers” SynchronizerNodeConfig (
+Optional
+PhysicalSynchronizerNodeConfigMap)
+instance
+SetField “scan” SynchronizerNodeConfig (
+Optional
+ScanConfig)
+instance
+SetField “sequencer” SynchronizerNodeConfig (
+Optional
+SequencerConfig)
+instance
+SetField “sequencerIdentity” SynchronizerNodeConfig (
+Optional
+SequencerIdentityConfig)
+instance
+Patchable SynchronizerNodeConfig
+data
+SynchronizerNodeConfigLimits
+SynchronizerNodeConfigLimits
+Field
+Type
+Description
+cometBft
+CometBftConfigLimits
+instance
+Eq
+SynchronizerNodeConfigLimits
+instance
+Show
+SynchronizerNodeConfigLimits
+instance
+GetField “cometBft” SynchronizerNodeConfigLimits CometBftConfigLimits
+instance
+GetField “synchronizerNodeConfigLimits” DsoRulesConfig SynchronizerNodeConfigLimits
+instance
+SetField “cometBft” SynchronizerNodeConfigLimits CometBftConfigLimits
+instance
+SetField “synchronizerNodeConfigLimits” DsoRulesConfig SynchronizerNodeConfigLimits
+instance
+Patchable SynchronizerNodeConfigLimits
+type
+SynchronizerNodeConfigMap
+=
+Map
+Text
+SynchronizerNodeConfig
+A map from synchronizer-ids to the configuration of a sv’s node for this synchronizer.
+instance
+GetField “sv1SynchronizerNodes” DsoBootstrap SynchronizerNodeConfigMap
+instance
+GetField “synchronizerNodes” NodeState SynchronizerNodeConfigMap
+instance
+SetField “sv1SynchronizerNodes” DsoBootstrap SynchronizerNodeConfigMap
+instance
+SetField “synchronizerNodes” NodeState SynchronizerNodeConfigMap
+data
+SynchronizerState
+The state of a synchronizer.
+DS_Bootstrapping
+The synchronizer is still being bootstrapped, and SVs are required to provision their nodes for it.
+DS_Operational
+The synchronizer is operational, and thus can be used as the active synchronizer.
+DS_Decomissioned
+The synchronizer has been decommissioned and svs are now allowed to shutdown their nodes for that synchronizer. We track this state explicitly instead of just deleting the synchronizer config, as decomissioning likely takes a while, and we want to avoid confusion among SV operators when they see errors raised from some of their synchronizer nodes.
+ExtSynchronizerState
+Extension constructor to work around the current lack of upgrading for variants in Daml 3.0. Will serve as the default value in a containing record in case of an extension.
+instance
+Eq
+SynchronizerState
+instance
+Show
+SynchronizerState
+instance
+GetField “state” SynchronizerConfig SynchronizerState
+instance
+SetField “state” SynchronizerConfig SynchronizerState
+instance
+Patchable SynchronizerState
+​
+Functions
+noSynchronizerNodes
+: SynchronizerNodeConfigMap
+emptySynchronizerNodeConfig
+: SynchronizerNodeConfig
+validSynchronizerNodeConfig
+: SynchronizerNodeConfigLimits -> SynchronizerNodeConfig ->
+Bool
+defaultSynchronizerNodeConfigLimits
+: SynchronizerNodeConfigLimits
+Suggest edits
+Raise issue
+Splice.DSO.AmuletPrice
+Splice.DSO.SvState

@@ -1,0 +1,1116 @@
+Pickles & Inductive Proof Systems
+Deferred Computation
+On this page
+Deferred Computation
+Let
+F
+p
+\mathbb{F}_p
+F
+p
+​
+and
+F
+q
+\mathbb{F}_q
+F
+q
+​
+be the two fields, with
+∣
+E
+p
+(
+F
+q
+)
+∣
+=
+p
+|\mathbb{E}_p(\mathbb{F}_q)| = p
+∣
+E
+p
+​
+(
+F
+q
+​
+)
+∣
+=
+p
+,
+∣
+E
+q
+(
+F
+p
+)
+∣
+=
+q
+|\mathbb{E}_q(\mathbb{F}_p)| = q
+∣
+E
+q
+​
+(
+F
+p
+​
+)
+∣
+=
+q
+for
+Elliptic curves
+E
+p
+(
+F
+q
+)
+\mathbb{E}_p(\mathbb{F}_q)
+E
+p
+​
+(
+F
+q
+​
+)
+and
+E
+q
+(
+F
+p
+)
+\mathbb{E}_q(\mathbb{F}_p)
+E
+q
+​
+(
+F
+p
+​
+)
+.
+Assume
+q
+>
+p
+q > p
+q
+>
+p
+. We have a proof system (Kimchi) over
+F
+p
+\mathbb{F}_p
+F
+p
+​
+and
+F
+q
+\mathbb{F}_q
+F
+q
+​
+, where commitments to public inputs are:
+P
+p
+=
+⟨
+e
+⃗
+,
+H
+⃗
+⟩
+∈
+E
+p
+(
+F
+q
+)
+P
+q
+=
+⟨
+e
+⃗
+,
+G
+⃗
+⟩
+∈
+E
+q
+(
+F
+p
+)
+P_p = \langle \vec{e}, \vec{H} \rangle \in \mathbb{E}_p(\mathbb{F}_q) \\
+P_q = \langle \vec{e}, \vec{G} \rangle \in \mathbb{E}_q(\mathbb{F}_p)
+P
+p
+​
+=
+⟨
+e
+,
+H
+⟩
+∈
+E
+p
+​
+(
+F
+q
+​
+)
+P
+q
+​
+=
+⟨
+e
+,
+G
+⟩
+∈
+E
+q
+​
+(
+F
+p
+​
+)
+Respectively. See
+Pasta Curves
+for more details.
+When referring to the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-side we mean the proof system for circuit
+over the field
+F
+q
+\mathbb{F}_q
+F
+q
+​
+.
+Public Inputs / Why Passing
+​
+In pickles-rs we have the notion of "passing" a variable (including the
+transcript) from one side to the other. e.g. when a field element
+α
+∈
+F
+p
+\alpha \in \mathbb{F}_p
+α
+∈
+F
+p
+​
+needs to be used as a scalar on
+F
+q
+\mathbb{F}_q
+F
+q
+​
+.
+This document explains what goes on "under the hood". Let us start by
+understanding why:
+Let
+v
+∈
+F
+q
+v \in \mathbb{F}_q
+v
+∈
+F
+q
+​
+be a scalar which we want to use to do both:
+Field arithmetic in
+F
+q
+\mathbb{F}_q
+F
+q
+​
+Scalar operations on
+E
+q
+(
+F
+p
+)
+\mathbb{E}_q(\mathbb{F}_p)
+E
+q
+​
+(
+F
+p
+​
+)
+In order to do so efficiently, we need to split these operations across two
+circuits (and therefore proofs) because:
+Emulating
+F
+q
+\mathbb{F}_q
+F
+q
+​
+arithmetic in
+F
+p
+\mathbb{F}_p
+F
+p
+​
+is very expensive, e.g.
+computing
+v
+⋅
+w
+v \cdot w
+v
+⋅
+w
+requires
+O
+(
+log
+⁡
+(
+q
+)
+2
+)
+O(\log(q)^2)
+O
+(
+lo
+g
+(
+q
+)
+2
+)
+multiplications over
+F
+p
+\mathbb{F}_p
+F
+p
+​
+: 100's of gates for a single multiplication.
+Since
+E
+q
+(
+F
+p
+)
+⊆
+F
+p
+×
+F
+p
+\mathbb{E}_q(\mathbb{F}_p) \subseteq \mathbb{F}_p \times \mathbb{F}_p
+E
+q
+​
+(
+F
+p
+​
+)
+⊆
+F
+p
+​
+×
+F
+p
+​
+we cannot compute
+[
+v
+]
+⋅
+H
+∈
+E
+q
+(
+F
+p
+)
+[v] \cdot H \in \mathbb{E}_q(\mathbb{F}_p)
+[
+v
+]
+⋅
+H
+∈
+E
+q
+​
+(
+F
+p
+​
+)
+over
+F
+q
+\mathbb{F}_q
+F
+q
+​
+efficiently, because, like before, emulating
+F
+p
+\mathbb{F}_p
+F
+p
+​
+arithmetic in
+F
+q
+\mathbb{F}_q
+F
+q
+​
+is very expensive...
+Solution
+​
+The solution is to "pass" a value
+v
+v
+v
+between the two proofs, in other words to
+have two values
+v
+~
+∈
+F
+p
+\tilde{v} \in \mathbb{F}_p
+v
+~
+∈
+F
+p
+​
+and
+v
+∈
+F
+q
+v \in \mathbb{F}_q
+v
+∈
+F
+q
+​
+which are
+equal as integers i.e.
+lift
+(
+v
+)
+=
+lift
+(
+v
+~
+)
+∈
+Z
+\text{lift}(v) = \text{lift}(\tilde{v}) \in \mathbb{Z}
+lift
+(
+v
+)
+=
+lift
+(
+v
+~
+)
+∈
+Z
+:
+they represent "the same number". A naive first attempt would be to simply add
+v
+~
+∈
+F
+p
+\tilde{v} \in \mathbb{F}_p
+v
+~
+∈
+F
+p
+​
+to the witness on the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-side, however
+this has two problems:
+Insufficient Field Size:
+p
+<
+q
+p < q
+p
+<
+q
+hence
+v
+v
+v
+cannot fit in
+F
+p
+\mathbb{F}_p
+F
+p
+​
+.
+No Binding:
+More concerning, there is
+no binding
+between the
+v
+~
+\tilde{v}
+v
+~
+in the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-witness and the
+v
+v
+v
+in the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-witness: a
+malicious prover could choose completely unrelated values. This violates
+soundness of the overall
+F
+q
+/
+F
+q
+\mathbb{F}_q/\mathbb{F}_q
+F
+q
+​
+/
+F
+q
+​
+-relation being proved.
+Problem 1: Decompose
+​
+The solution to the first problem is simple:
+In the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-side decompose
+v
+=
+2
+⋅
+h
++
+l
+v = 2 \cdot h + l
+v
+=
+2
+⋅
+h
++
+l
+with
+h
+∈
+[
+0
+,
+2
+⌊
+log
+⁡
+p
+⌋
+)
+h \in [0, 2^{\lfloor \log p \rfloor})
+h
+∈
+[
+0
+,
+2
+⌊
+l
+o
+g
+p
+⌋
+)
+(high bits) and
+l
+∈
+{
+0
+,
+1
+}
+l \in \{ 0, 1 \}
+l
+∈
+{
+0
+,
+1
+}
+(low
+bit). Note
+l
+,
+h
+<
+p
+l, h < p
+l
+,
+h
+<
+p
+since
+2
+p
+>
+q
+2 p > q
+2
+p
+>
+q
+; always the case for any cycle of curves,
+p
+p
+p
+is only
+≈
+q
+\approx \sqrt{q}
+≈
+q
+​
+smaller than
+q
+q
+q
+, by Hasse. Now "
+v
+~
+\tilde{v}
+v
+~
+" is
+"represented" by the two values
+h
+~
+,
+l
+~
+∈
+F
+p
+\tilde{h}, \tilde{l} \in \mathbb{F}_p
+h
+~
+,
+l
+~
+∈
+F
+p
+​
+.
+Note that no decomposition is necessary if the "original value"
+v
+v
+v
+was in
+F
+p
+\mathbb{F}_p
+F
+p
+​
+, since
+F
+q
+\mathbb{F}_q
+F
+q
+​
+is big enough to hold the lift of any
+element in
+F
+p
+\mathbb{F}_p
+F
+p
+​
+.
+Problem 2: Compute Commitment to the Public Input of other side
+​
+To solve the binding issue we will add
+l
+,
+h
+l, h
+l
+,
+h
+to the public inputs on the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-side, for simplicity we will describe the case where
+l
+,
+h
+l, h
+l
+,
+h
+are
+the only public inputs in the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-side, which means that the
+commitment
+P
+p
+∈
+E
+p
+(
+F
+q
+)
+P_p \in \mathbb{E}_p(\mathbb{F}_q)
+P
+p
+​
+∈
+E
+p
+​
+(
+F
+q
+​
+)
+to the public inputs on the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+side is:
+P
+p
+=
+[
+h
+]
+⋅
+G
+h
++
+[
+l
+]
+⋅
+G
+l
+∈
+E
+p
+(
+F
+q
+)
+P_p = [h] \cdot G_h + [l] \cdot G_l \in \mathbb{E}_p(\mathbb{F}_q)
+P
+p
+​
+=
+[
+h
+]
+⋅
+G
+h
+​
++
+[
+l
+]
+⋅
+G
+l
+​
+∈
+E
+p
+​
+(
+F
+q
+​
+)
+At this point it is
+important to note
+that
+E
+p
+\mathbb{E}_p
+E
+p
+​
+is defined over
+F
+q
+\mathbb{F}_q
+F
+q
+​
+!
+Which means that we can compute
+P
+p
+∈
+E
+p
+(
+F
+q
+)
+P_p \in \mathbb{E}_p(\mathbb{F}_q)
+P
+p
+​
+∈
+E
+p
+​
+(
+F
+q
+​
+)
+efficiently
+on the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-side!
+Therefore to enforce the binding, we:
+Add a sub-circuit which checks:
+P
+p
+=
+[
+h
+]
+⋅
+G
+h
++
+[
+l
+]
+⋅
+G
+l
+∈
+E
+p
+(
+F
+q
+)
+,
+∣
+h
+∣
+=
+⌊
+log
+⁡
+p
+⌋
+∣
+l
+∣
+=
+1
+P_p = [h] \cdot G_h + [l] \cdot G_l \in \mathbb{E}_p(\mathbb{F}_q), \\
+|h| = \lfloor \log p \rfloor \\
+|l| = 1
+P
+p
+​
+=
+[
+h
+]
+⋅
+G
+h
+​
++
+[
+l
+]
+⋅
+G
+l
+​
+∈
+E
+p
+​
+(
+F
+q
+​
+)
+,
+∣
+h
+∣
+=
+⌊
+lo
+g
+p
+⌋
+∣
+l
+∣
+=
+1
+Add
+P
+p
+=
+(
+x
+,
+y
+)
+∈
+F
+q
+×
+F
+q
+P_p = (x, y) \in \mathbb{F}_q \times \mathbb{F}_q
+P
+p
+​
+=
+(
+x
+,
+y
+)
+∈
+F
+q
+​
+×
+F
+q
+​
+to the public input
+on the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-side.
+We recurse onwards...
+​
+At this point the statement of the proof in
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-side is: the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-proof is sound,
+condition
+on providing an opening of
+P
+p
+P_p
+P
+p
+​
+that satisfies the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-relation.
+At this point you can stop and verify the proof (in the case of a "step proof"
+you would), by recomputing
+P
+p
+P_p
+P
+p
+​
+outside the circuit while checking the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-relation manually "in the clear".
+However, when recursing (e.g. wrapping in a "wrap proof") we need to "ingest"
+this public input
+P
+p
+P_p
+P
+p
+​
+; after all, to avoid blowup in the proof size everything
+(proofs/accumulators/public inputs etc.) must eventually become part of the
+witness and every computation covered by a circuit...
+To this end, the wrap proof is a proof for the
+F
+p
+\mathbb{F}_p
+F
+p
+​
+-relation with the
+public input
+P
+p
+P_p
+P
+p
+​
+which additionally verifies the
+F
+q
+\mathbb{F}_q
+F
+q
+​
+-proof.
+The next "step" proof then verifies this wrap proof which means that
+P
+p
+P_p
+P
+p
+​
+then
+becomes part of the witness!
+In Pickles
+​
+We can arbitrarily choose which side should compute the public input of the
+other, in pickles we let "wrap" compute the commitment to the public input.
+Enforcing Equality
+​
+Enforces that the public input of the proof verified on the Fr side is equal to
+the Fp input computed on Fr side.
+Edit this page
+Previous
+Accumulation
+Next
+Pickles Technical Diagrams
+Public Inputs / Why Passing
+Solution
+We recurse onwards...
+In Pickles
+Enforcing Equality

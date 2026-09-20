@@ -1,0 +1,20 @@
+**Verdict: APPROVED. Reader: CLEAR.**
+
+All three documents preserve the protected claim inventory. The banner leads the README, both public references are linked, every one of the 35 MPLRs, 16 ZRs and 8 MNRs has exactly one paragraph with its ID, and the status distinctions survive: ZKIRv4 as proposed workstream, March 2027 as a planning assumption, full recursion and private multi-parent composition as target obligations, no Lean, no project approval, application consent still required, proofs covering intention and complete effects but not oracle truth or foreign finality, local evaluator distinct from the federated kernel. Formal grammar, data-tex strings and code blocks are internally consistent with the source contracts: the 18 and 37 control-step counts, the 28-guard tally, the ProRata worked example, the /3 and /5 contract mappings and the September 17 case counts all check.
+
+**Findings that merit a small correction**
+
+- **language.html, "Funded composition" paragraph.** The sentence "The separate September 17 Core /4 K lifecycle definition adds the scoped financial read constructors" is not supported by the evidence supplied. The September 17 result reports a four-step loan lifecycle and 104 cases but does not name the read constructors, and the /3 contract states the bounded K kernel does not implement them. Proposed minimal correction: either cite the artifact that shows the K lifecycle definition implementing those constructors, or soften to "The separate September 17 K lifecycle definition executes the scoped Originate, Accrue and Repay lifecycle; read-constructor coverage in K is recorded in its result file where present." The closing "general correspondence remains open" already protects scope, so this is a citation gap, not a claim inflation.
+- **requirements.html, "Implementation direction".** U5 is summarized as "optional federation integration". The roadmap names U5 as "Federated kernel and constrained AI solvers", and solver delegation is a protected README theme. Proposed correction: "optional federation integration and constrained solver services (U5)".
+
+**Optional cadence and consistency notes**
+
+- **requirements.html, "Implementation direction".** "begins by establishing ... then establishes" repeats the verb within one sentence. Suggest "begins with the financial semantics and target compatibility matrix (U0), then the certified primitive basis and native feasibility (U1)".
+- **requirements.html, all 59 requirement paragraphs.** Each follows the same three-beat shape: framing sentence, obligation, negative consequence opening with "cannot" or "must not". This is defensible for a requirements register and the profile favors retaining defined-term repetition, so no change is required. If any variation is wanted, the best candidates are the aphoristic openers in MPLR-008, MPLR-024, MPLR-028 and MNR04, which could take the obligation first and the framing second.
+- **language.html, "Operational semantics" opener.** Three consecutive short sentences ("Static judgments describe... Small-step rules describe... K supplies...") read as telegraph. Joining the first two is enough.
+- **language.html, grammar section.** "local funded evaluator" for /5 risks confusion with the older moriarty-funded-source/0 profile described later. "local evaluator" is safer.
+- **Typography across all three.** Curly apostrophes in "Midnight’s" and "project’s" sit beside straight ones in "Moriarty's", "another&#x27;s". Pick one form.
+
+**What was kept**
+
+The uniform requirement paragraph structure, the repeated scope disclaimers ("This is executable TypeScript semantics", "general correspondence remains open"), and the parenthetical rule labels are deliberate and should not be smoothed by a later cadence pass. They carry claim status, not habit.

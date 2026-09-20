@@ -1,0 +1,1093 @@
+                                           Composing ontra ts:
+                                    an adventure in nan ial engineering
+                                               Fun tional pearl
+           Simon Peyton Jones                            Jean-Mar   Eber                         Julian Seward
+
+     Mi rosoft Resear h, Cambridge                 LexiFi Te hnologies, Paris              University of Glasgow
+
+        simonpjmi rosoft. om                   jeanmar .eberlexifi. om                v-sewardjmi rosoft. om
+
+
+                                                     23rd August 2000
+
+Abstra t                                                        At this point, any red-blooded fun tional programmer
+                                                                should start to foam at the mouth, yelling \build a om-
+Finan ial and insuran e ontra ts do not sound like promis-      binator library". And indeed, that turns out to be not only
+ing territory for fun tional programming and formal seman-      possible, but tremendously bene ial.
+ti s, but in fa t we have dis overed that insights from pro-    The nan e industry has an enormous vo abulary of jargon
+gramming languages bear dire tly on the omplex subje t          for typi al ombinations of nan ial ontra ts (swaps, fu-
+of des ribing and valuing a large lass of ontra ts.             tures, aps, oors, swaptions, spreads, straddles, aptions,
+We introdu e a ombinator library that allows us to de-          European options, Ameri an options, ...the list goes on).
+s ribe su h ontra ts pre isely, and a ompositional denota-      Treating ea h of these individually is like having a large
+tional semanti s that says what su h ontra ts are worth.         atalogue of prefabri ated omponents. The trouble is that
+We sket h an implementation of our ombinator library in         someone will soon want a ontra t that is not in the ata-
+Haskell. Interestingly, lazy evaluation plays a ru ial role.    logue.
+                                                                If, instead, we ould de ne ea h of these ontra ts using
+                                                                a xed, pre isely-spe i ed set of ombinators, we would be
+1 Introdu tion                                                  in a mu h better position than having a xed atalogue.
+                                                                For a start, it be omes mu h easier to des ribe new, unfore-
+Consider the following nan ial ontra t, : the right to          seen, ontra ts. Beyond that, we an systemati ally analyse,
+ hoose on 30 June 2000 between
+                                            C
+                                                                and perform omputations over these new ontra ts, be ause
+                                                                they are des ribed in terms of a xed set of primitives.
+D1  Both of:                                                    The major thrust of this paper is to draw insights from the
+          Re eive $100 on 29 Jan 2001.                          study of fun tional programming to illuminate the world of
+     D11
+                                                                  nan ial ontra ts. More spe i ally, our ontributions are
+     D12  Pay $105 on 1 Feb 2002.                               the following:
+D2  An option exer isable on 15 De 2000 to hoose one of:            We de ne a arefully- hosen set of ombinators, and,
+          Both of:                                                    through an extended sequen e of examples in Haskell,
+     D21
+
+                Re eive $100 on 29 Jan 2001.                          we show that these ombinators an indeed be used to
+           D211
+                                                                      des ribe a wide variety of ontra ts (Se tion 3).
+                Pay $106 on 1 Feb 2002.
+                                                                    Our ombinators an be used to des ribe a ontra t, but
+           D212
+
+     D22  Both of:                                                    we also want to pro ess a ontra t. Notably, we want to
+           D221 Re eive $100 on 29 Jan 2001.                          be able to nd the value of a ontra t. In Se tion 4 we
+           D222 Pay $112 on 1 Feb 2003.                               des ribe how to give an abstra t valuation semanti s to
+                                                                      our ombinators. A fundamentally-important property
+The details of this ontra t are not important, but it is a            of this semanti s is that it is ompositional ; that is, the
+simpli ed but realisti example of the sort of ontra t that is         value of a ompound ontra t is given by ombining
+traded in nan ial derivative markets. What is important is            the values of its sub- ontra ts.
+that omplex ontra ts, su h as , are formed by ombining
+                                C
+                                                                    We sket h an implementation of our valuation seman-
+together simpler ontra ts, su h as , whi h in turn are
+                                     D1
+                                                                      ti s, using as an example a simple interest rate model
+formed from simpler ontra ts still, su h as , .
+                                             D11   D12
+                                                                      and its asso iated latti e (Se tion 5). Lazy evaluation
+                                                                      turns out to be tremendously important in translating
+                                                                      the ompositional semanti s into a modular implemen-
+To appear in the International Conferen e on Fun -
+tional Programming, Montreal, Sept 2000
+                                                                      tation (Se tion 5.3).
+                                                                Stated in this way, our work sounds like a perfe tly rou-
+                                                                tine appli ation of the idea of using a fun tional language
+               , d, u Contra t                                          Now we an de ne our date t1:
+                    o Observable
+                 t, s Date, time                                          t1,t2 :: Date
+                    k Curren y                                            t1 = date "1530GMT 1 Jan 2010"
+                    x Dimensionless real value                            t2 = date "1200GMT 1 Feb 2010"
+                   p  Value pro ess                                     We will sometimes need to subtra t dates, to get a time
+                   v  Random variable                                   di eren e, and add a date and a time di eren e to get a
+                                                                        new date.
+              Figure 1: Notational onventions                             type Days = Double     -- A time differen e
+                                                                          diff :: Date -> Date -> Days
+                                                                          add :: Date -> Days -> Date
+to de ne a domain-spe i ombinator library, thereby ef-
+fe tively reating an appli ation-spe i programming lan-                 We represent a time di eren e as a oating-point number in
+guage. Su h languages have been de ned for parsers,                     units of days (parts of days an be important).
+musi , animations, hardware ir uits, and many others
+[van Deursen et al., 2000℄. However, from the standpoint of
+  nan ial engineers, our language is truly radi al: they a -            2.2 Combining ontra ts
+knowledge that the la k of a pre ise way to des ribe omplex
+ ontra ts is \the bane of our lives" . 1                                So z b lets us build a simple ontra t. We an also ombine
+It has taken us a long time to boil down the immense soup                ontra ts to make bigger ontra ts. A good example of su h
+of a tively-traded ontra ts into a reasonably small set of              a ombining form is and, whose type is:
+ ombinators; but on e that is done, new vistas open up,                   and :: Contra t -> Contra t -> Contra t
+be ause a single formal des ription an drive all manner of              Using and we an de ne 3, a ontra t that involves two
+automated pro esses. For example, we an generate s hed-                 payments : 2
+ules for ba k-oÆ e ontra t exe ution, perform risk analysis
+optimisations, present ontra ts in new graphi al ways (e.g.                 2, 3 :: Contra t
+de ision trees), provide animated simulations, and so on.                   2 = z b t2 200 GBP
+                                                                            3 = 1 `and` 2
+This paper is addressed to a fun tional programming audi-
+en e. We will introdu e any nan ial jargon as we go.                    That is, the holder of ontra t 3 will bene t from a payment
+                                                                        of $100 at time t1, and another payment of $200 at time
+                                                                        t2.
+2 Getting started
+                                                                        In general, the ontra ts we an des ribe are between two
+                                                                        parties, the holder of the ontra t, and the ounter-party.
+In this se tion we will informally introdu e our notation for           Notwithstanding Bibli al advi e (A ts 20.35), by default the
+ ontra ts, and show how we an build more ompli ated on-                 owner of a ontra t re eives the payments, and makes the
+tra ts out of simpler ones. We use the fun tional language               hoi es, spe i ed in the ontra t. This situation an be re-
+Haskell [Peyton Jones et al., 1999℄ throughout.                         versed by the give ombinator:
+                                                                          give :: Contra t -> Contra t
+2.1 A simple ontra t                                                    The ontra t give is simply with rights and obligations
+Consider the following simple ontra t, known to the indus-              reversed, a statement we will make pre ise in Se tion 4.2. In-
+try as zero- oupon dis ount bond : \re eive $100 on 1st Jan-            deed, when two parties agree on a ontra t, one a quires the
+uary 2010". We an spe ify this ontra t, whi h we name                    ontra t , and the other simultaneously a quires (give );
+ 1, thus:
+                                                                        ea h is the other's ounter-party. For example, 4 is a on-
+                                                                        tra t whose holder re eives $100 at time t1, and pays $200
+   1 :: Contra t                                                        at time t2:
+   1 = z b t1 100 GBP                                                       4 =    1 `and` give         2
+Figure 1 summarises the notational onventions we use                    So far, ea h of our de nitions has de ned a new ontra t
+throughout the paper for variables, su h as 1 and t1 in                 ( 1, 2, et ). It is also easy to de ne a new ombinator
+this de nition.                                                         (a fun tion that builds a ontra t). For example, we ould
+The ombinator z b used in 1's de nition has the following               de ne andGive thus:
+type:                                                                     andGive :: Contra t -> Contra t -> Contra t
+  z b :: Date -> Double -> Curren y -> Contra t                           andGive   d =   `and` give d
+The rst argument to z b is a Date, whi h spe i es a parti -             Now we an give an alternative de nition of 4 (whi h we
+ular moment in time (i.e. both date and time). We provide               built earlier):
+a fun tion, date, that onverts a date expressed as a friendly               4 =    1 `andGive`         2
+ hara ter string to a Date.                                                2 In Haskell, a fun tion    an be turned into an in x operator by
+  date :: String -> Date                                                en losing it in ba k-quotes.
+  1 The quote is from an informal response to a draft of our work
+
+
+
+
+                                                                    2
+This ability to de ne new ombinators, and use them just               But the bond we want pays $100 at t1, and no earlier,
+as if they were built in, is quite routine for fun tional pro-        regardless of when the bond itself is a quired. To obtain
+grammers, but not for nan ial engineers.                              this e e t we use two other ombinators, get and trun ate,
+                                                                      thus:
+3 Building ontra ts                                                       6 = get (trun ate t1 (one GBP))
+                                                                      (trun ate t     ) is a ontra t that trims 's horizon so that
+We have now ompleted our informal introdu tion. In this               it annot be a quired any later than t. (get ) is a on-
+se tion we will give the full set of primitives, and show how a       tra t that, when a quired, a quires the underlying ontra t
+wide variety of other ontra ts an be built using them. For              at 's horizon | that is, at the last possible moment |
+referen e, Figure 2 gives the primitive ombinators over on-           regardless of when the omposite ontra t (get ) is a -
+tra ts; we will introdu e these primitives as we need them.           quired. The ombination of the two is exa tly the e e t
+                                                                      we want, sin e the horizon of (trun ate t1 (one GBP)) is
+                                                                      exa tly t1. Like one, get and trun ate are de ned in Fig-
+3.1 A quisition date and horizon                                      ure 2.
+Figure 2 gives an English-language, but quite pre ise, de-            We are still not nished. The bond we want pays $100
+s ription of ea h ombinator. To do so, it uses two te hni al          not $1. We use the ombinator s aleK to \s ale up" the
+terms: a quisition date, and horizon. We begin by intro-               ontra t, thus:
+du ing them brie y.                                                       7 = s aleK 100 (get (trun ate t1 (one GBP)))
+Our language des ribes what a ontra t is. However, what               We will de ne s aleK shortly, in Se tion 3.3. It has the type
+the onsequen es for the holder of the ontra t depends on
+the date at whi h the ontra t is a quired, its a quisition              s aleK :: Double -> Contra t -> Contra t
+date. (By \ onsequen es for the holder" we mean the rights            To a quire (s aleK x ) is to a quire , but all the pay-
+and obligations that the ontra t onfers on the holder of              ments and re eipts in are multiplied by x. So we an,
+a ontra t.) For example, the ontra t \re eive $100 on 1                nally, de ne z b orre tly:
+Jan 2000 and re eive $100 on 1 Jan 2001" is worth a lot less
+if a quired after 1 Jan 2000, be ause any rights and obliga-            z b :: Date -> Double -> Curren y -> Contra t
+tions that fall due before the a quisition date are simply              z b t x k = s aleK x (get (trun ate t (one k)))
+dis arded.                                                            This de nition of z b e e tively extends our repertoire of
+The se ond fundamental on ept is that of a ontra t's hori-             ombinators, just as andGive did in Se tion 2.2, only more
+zon, or expiry date : the horizon, or expiry date, of a ontra t       usefully. We will ontinually extend our library of ombina-
+is the latest date at whi h it an be a quired. A ontra t's            tors in this way.
+horizon may be nite or in nite. The horizon of a ontra t is           Why did we go to the trouble of de ning z b in terms of
+  ompletely spe i ed by the ontra t itself: given a ontra t,          four ombinators, rather than making it primitive? Be ause
+we an easily work out its horizon using the de nitions in             it turns out that s aleK, get, trun ate, and one are all in-
+Figure 2. Note arefully, though, that a ontra t's rights              dependently useful. Ea h embodies a distin t pie e of fun -
+and obligations may, in prin iple, extend well beyond its             tionality, and by separating them we signi antly simplify
+horizon. For example, onsider the ontra t \the right to               the semanti s and enri h the algebra of ontra ts (Se tion 4).
+de ide on or before 1 Jan 2001 whether to have ontra t                The ombinators we present are the result of an extended,
+C  ". This sort of ontra t is alled an option. Its horizon            iterative pro ess of re nement, leading to an interlo king
+is 1 Jan 2001 | it annot be a quired after that date |                set of de isions | programming language designers will be
+but if one a quires it before then, the underlying ontra t            quite familiar with this pro ess.
+C   may (indeed, typi ally will) have onsequen es extending
+well beyond 1 Jan 2001.
+To reiterate, the horizon of a ontra t is a property of the           3.3 Observables and s aling
+  ontra t, while the a quisition date is not.                         A real ontra t often mentions quantities that are to be mea-
+                                                                      sured on a parti ular date. For example, a ontra t might
+3.2 Dis ount bonds                                                    say \re eive an amount in dollars equal to the noon Centi-
+                                                                      grade temperature in Los Angeles"; or \pay an amount in
+Earlier, we des ribed the zero- oupon dis ount bond: \re-             pounds sterling equal to the 3-month LIBOR spot rate mul-     3
+
+
+ eive $100 at time t1" (Se tion 2.1). At that time we as-             tiplied by 100". We use the term observable for an obje tive,
+sumed that z b was a primitive ombinator, but in fa t it              but perhaps time-varying, quantity. By \obje tive" we mean
+isn't. It is obtained by omposing no fewer than four more             that at any parti ular time the observable has a value that
+primitive ombinators. We begin with the one ombinator:                both parties to the ontra t will agree. The temperature in
+                                                                      Los Angeles an be obje tively measured; but the value to
+    5 = one GBP                                                       me of insuring my house is subje tive, and is not an observ-
+Figure 2 gives a areful, albeit informal, de nition of one:           able. Observables are thus a di erent \kind of thing" from
+if you a quire (one GBP), you immediately re eive $1. The              ontra ts, so we give them a di erent type:
+  ontra t has an in nite horizon; that is, there is no restri -           3 The LIBOR spot rate is published daily in the nan ial press. For
+
+tion on when you an a quire this ontra t.                             present purposes it does not matter what it means; all that matters
+                                                                      is that it is an observable quantity.
+
+
+                                                                  3
+    zero :: Contra t                                                    expires at the earlier of t and the horizon of .
+        zero  is a ontra t that may be a quired at any                  Noti e that trun ate limits only the possible a -
+         time. It has no rights and no obligations, and                 quisition date of ; it does not trun ate 's rights
+         has an in nite horizon. (Se tion 3.4.)                         and obligations, whi h may extend well beyond
+                                                                        t. (Se tion 3.4.)
+    one :: Curren y -> Contra t
+        (one k)   is a ontra t that immediately pays the            then :: Contra t -> Contra t -> Contra t
+         holder one unit of the urren y k. The ontra t                  If you a quire
+                                                                                     ( 1 `then` 2)    and has not
+                                                                                                         1
+         has an in nite horizon. (Se tion 3.2.)                         expired, then you a quire . If has expired,
+                                                                                                1    1
+                                                                        but has not, you a quire . The ompound
+                                                                             2                    2
+    give :: Contra t -> Contra t
+         To a quire            is to a quire all 's rights               ontra t expires when both and expire.
+                                                                                                   1      2
+                  (give )
+         as obligations, and vi e versa. Note that for a                (Se tion 3.5.)
+         bilateral ontra t q between parties and ,
+                                              A      B   A
+                                                                    s ale :: Obs Double -> Contra t -> Contra t
+         a quiring q implies that a quires (give q).
+                                    B
+                                                                        If you a quire
+                                                                                     (s ale o )     , then you a quire
+         (Se tion 2.2.)                                                 at the same moment, ex ept that all the rights
+    and :: Contra t -> Contra t -> Contra t                             and obligations of are multiplied by the value
+         If you a quire
+                     ( 1 `and` 2)       then you immedi-                of the observable o at the moment of a quisition.
+         ately a quire both (unless it has expired) and
+                          1                                             (Se tion 3.3.)
+         2   (unless it has expired). The omposite on-
+         tra t expires when both and expire. (Se -
+                              1      2
+                                                                    get :: Contra t -> Contra t
+                                                                        If you a quire        then you must a quire
+         tion 2.2.)                                                                  (get )
+                                                                        at 's expiry date. The ompound ontra t ex-
+    or :: Contra t -> Contra t -> Contra t                              pires at the same moment that expires. (Se -
+         If you a quire
+                     ( 1 `or` 2)     you must immedi-                   tion 3.2.)
+         ately a quire either or (but not both). If
+                           1    2
+         either has expired, that one annot be hosen.               anytime :: Contra t -> Contra t
+                                                                If you a quire             you must a quire ,
+         When both have expired, the ompound ontra t                                 (anytime )
+                                                                but you an do so at any time between the a qui-
+         expires. (Se tion 3.4.)                                sition of (anytime ) and the expiry of . The
+    trun ate :: Date -> Contra t -> Contra t                     ompound ontra t expires when does. (Se -
+        (trun ate t ) is exa tly like ex ept that it            tion 3.5.)
+                                     Figure 2: Primitives for de ning ontra ts
+  noonTempInLA :: Obs Double                                           s aleK :: Double -> Contra t -> Contra t
+  libor3m      :: Obs Double                                           s aleK x   = s ale (konst x)
+In general, a value of type Obs represents a time-varying
+                                d                                    Any arithmeti ombination of observables is also an observ-
+quantity of type .
+                 d                                                   able. For example, we may write:
+In the previous se tion we used s aleK to s ale a ontra t              ntLAinKelvin :: Obs Double
+by a xed quantity. The primitive ombinator s ale s ales                ntLAinKelvin = noonTempInLA + konst 373
+a ontra t by a time-varying value, that is, by an observable:        We an use the addition operator, (+), to add two observ-
+  s ale :: Obs Double -> Contra t -> Contra t                        ables, be ause observables are an instan e of the Num lass ,4
+
+
+With the aid of s ale we an de ne the (strange but re-               whi h has operations for addition, subtra tion, multipli a-
+alisti ) ontra t \re eive an amount in dollars equal to the          tion, and so on:
+noon Centigrade temperature in Los Angeles":                           instan e Num a => Num (Obs a)
+   8 = s ale noonTempInLA (one USD)                                  (Readers who are unfamiliar with Haskell's type lasses need
+Again, we have to be very pre ise in our de nitions. Exa tly         not worry | all we need is that we an employ the usual
+when is the noon temperature in LA sampled? Answer (in               arithmeti operators for observables.) These observables
+Figure 2): when you a quire (s ale o ) you immediately               and their operations are, of ourse, reminis ent of Fran's
+a quire , s aling all the payments and re eipts in by the            behaviours [Elliott and Hudak, 1997℄. Like Fran, we pro-
+value of the observable o sampled at the moment of a quisi-          vide ombinators for lifting fun tions to the observable level,
+                                                                     lift, lift2, et . Figure 3 gives the primitive ombinators
+tion. So we sample the observable at a single, well-de ned           over observables.
+moment (the a quisition date) and then use that single num-
+ber to s ale the subsequent payments and re eipts in .                  4 And   indeed all the other numeri
+                                                                     Fra tional, et
+                                                                                                              lasses, su h as Real,
+A very useful observable is one that has the same value at
+every time:
+  konst :: a -> Obs a
+With its aid we an de ne s aleK:
+
+                                                                4
+                                                                     european :: Date -> Contra t -> Contra t
+   konst :: a -> Obs a
+       (konst x)    is an observable that has value x at           For example, onsider the ontra t 5:
+        any time.                                                     5 = european (date "24 Apr 2003") (
+   lift :: (a -> b) -> Obs a -> Obs b                                       z b (date "12 May 2003") 0.4   GBP `and`
+       (lift f o)    is the observable whose value is the                   z b (date "12 May 2004") 9.3   GBP `and`
+        result of applying to the value of the observable
+                       f                                                    z b (date "12 May 2005") 109.3 GBP `and`
+       o .                                                                  give (z b (date "26 Apr 2003") 100 GBP)
+                                                                         )
+   lift2 :: (a->b-> ) -> Obs a -> Obs b -> Obs
+       (lift2 f o1 o2)     is the observable whose value           This ontra t gives the right to hoose, on 24 Apr 2003,
+        is the result of applying to the values of the
+                             f                                     whether or not to a quire an underlying ontra t onsisting
+        observables and .
+                  o1    o2                                         of three re eipts and one payment. In the nan ial industry,
+                                                                   this kind of ontra t is indeed alled a all on a oupon
+   instan e Num a => Num (Obs a)                                   bond, giving the right, at a future date, to buy a bond for a
+        All numeri operations lift to the Obs type. The            pres ribed pri e. As with z b, we de ne european in terms
+        implementation is simple, using lift and lift2.            of simpler elements:
+   time :: Date -> Obs Days                                          european :: Date -> Contra t -> Contra t
+        The value of the observable (time t) at time s               european t u = get (trun ate t (u `or` zero))
+        is the number of days between s and t, positive            You an read this de nition as follows:
+        if s is later than t.
+   There may be an arbitrary number of other primitive                The primitive ontra t zero has no rights or obliga-
+   observables provided by a parti ular implementation.                tions:
+   For example:                                                           zero :: Contra t
+   libor :: Curren y -> Days -> Days -> Obs Double
+       (libor k m1 m2)    is an observable equal, at any              The ontra t (u `or` zero) expresses the hoi e be-
+        time , to the quoted forward (a tuarial) rate in
+              t                                                         tween a quiring u and a quiring nothing.
+         urren y k over the time interval `add` m1 to
+                                           t
+                                                                      We trim the horizon of the ontra t (u `or` zero) to
+          `add` m2.
+                                                                        t, using the primitive ombinator trun ate (Figure 2).
+        t
+
+
+
+
+            Figure 3: Primitives over observables                     Finally, we use our get ombinator to a quire it at that
+                                                                        horizon.
+3.4 European options                                               We will repeatedly en ounter the pattern
+                                                                   (trun ate t (u `or` zero)), so we will pa kage it
+Mu h of the subtlety in nan ial ontra ts arises be ause the        up into a new omposite ombinator:
+parti ipants an exer ise hoi es. We en apsulate hoi e in             perhaps :: Date -> Contra t -> Contra t
+two primitive ombinators, or and anytime. The former al-             perhaps t u = trun ate t (u `or` zero)
+lows one to hoose whi h of two ontra ts to a quire (this
+se tion), while the latter allows one to hoose when to a -
+quire it (Se tion 3.5).                                            3.5 Ameri an options
+First, we onsider the hoi e between two ontra ts:                  The or ombinator lets us hoose whi h of two ontra ts to
+  or :: Contra t -> Contra t -> Contra t                           a quire. Let us now onsider the hoi e of when to a quire
+When you a quire the ontra t ( 1 `or` 2), you must im-             a ontra t:
+mediately a quire either 1 or 2 (but not both). Clearly,             anytime :: Contra t -> Contra t
+  1 an only be hosen at or before 1's horizon, and sim-
+ilarly for 2. The horizon for ( 1 `or` 2) is the latest            A quiring the ontra t anytime u gives the right to a quire
+of the horizons of 1 and 2. A quiring this omposite on-            the \underlying" ontra t u at any time, from a quisition
+tra t, for example, after 1's horizon but before 2's horizon       date of anytime u up to u's horizon. However, note that u
+means that you an only \ hoose" to a quire ontra t 2.              must be a quired, albeit perhaps at the latest possible date.
+For example, the ontra t                                           An Ameri an option o ers more exibility than a European
+  z b t1 100 GBP `or` z b t2 110 GBP                               option. Typi ally, an Ameri an option onfers the right
+                                                                   to a quire an underlying ontra t at any time between two
+gives the holder the right, if a quired before (t1 t2), to
+                                               min   ;             dates, or not to do so at all. Our rst (in orre t) attempt
+ hoose immediately either to re eive $100 at t1, or alterna-       to de ne su h a ontra t might be to say:
+tively to re eive $110 at t2.                                        ameri an :: (Date,Date) -> Contra t -> Contra t
+A so- alled European option gives the right to hoose, at a           ameri an (t1,t2) u    -- WRONG
+parti ular date, whether or not to a quire an \underlying"             = anytime (perhaps t2 u)
+ ontra t:
+
+                                                               5
+but that is obviously wrong be ause it does not mention t1.                and sto hasti ma hinery used by nan ial experts
+We have to arrange that if we a quire the Ameri an ontra t                 [Revuz and Yor, 1991, Musiela and Rutkowski, 1997℄.
+before t1 then the bene ts are the same as if we a quired it         Con rete implementation. A pro ess is an abstra t
+at t1. So our next attempt is:                                             mathemati al value. To make a omputer al ulate
+  ameri an (t1,t2) u    -- WRONG                                           with pro esses we have to represent them somehow
+    = get (trun ate t1 (anytime (perhaps t2 u)))                           | this is the step from abstra t semanti s to on-
+But that is wrong too, be ause it does not allow us to a quire               rete implementation. An implementation will onsist
+the Ameri an ontra t after t1. We really want to say \until                of a nan ial model, asso iated to some dis rete nu-
+t1 you get this, and after t1 you get that". We an express                 meri al method. A tremendous number of di erent
+this using the then ombinator:                                               nan ial models are used today; but only three fam-
+                                                                           ilies of numeri al methods are widely used in industry:
+  ameri an (t1,t2) u                                                       partial di erential equations [Willmot et al., 1993℄,
+    = get (trun ate t1 opt) `then` opt                                     Monte Carlo [Boyle et al., 1997℄ and latti e methods
+    where                                                                  [Cox et al., 1979℄.
+      opt :: Contra t
+      opt = anytime (perhaps t2 u)                                   This approa h is strongly reminis ent of the way in whi h a
+We give the intermediate ontra t opt an (arbitrary) name              ompiler is typi ally stru tured. The program is rst trans-
+in a where lause, be ause we need to use it twi e. The new           lated into a low-level but ma hine-independent intermediate
+ ombinator then is de ned as follows: if you a quire the             language; many optimisations are applied at this level; and
+ ontra t ( 1 `then` 2) before 1 expires then you a quire             then the program is further translated into the instru tion
+ 1, otherwise you a quire 2 (unless it too has expired).             set for the desired pro essor (Pentium, Spar , or whatever).
+                                                                     In a similar way, we an transform a ontra t into a value
+3.6 Summary                                                          pro ess, apply meaning-preserving optimising transforma-
+                                                                     tions to this intermediate representation, before omputing
+We have now given the avour of our approa h to de ning               a value for the pro ess. This latter step an be done inter-
+ ontra ts. The ombinators we have de ned so far are not              pretatively, or one ould imagine generating spe ialised ode
+enough to des ribe all the ontra ts that are a tively traded,        that, when run, would perform the valuation.
+and we are extending the set in ongoing work. However, our           Indeed, our abstra t semanti s serves as our referen e model
+main on lusions are una e ted:                                       for what it means for two ontra ts to be the same. For
+                                                                     example, here are two laims:
+    Finan ial ontra ts an be des ribed in a purely de lar-                         get (get ) = get
+     ative way.                                                            give ( 1 `or` 2) = give 1 `or` give 2
+    A huge variety of ontra ts an be des ribed in terms             In fa t, the rst is true, and the se ond is not, but how
+     of a small number of ombinators.                                do we know for sure? Answer: we ompare their valuation
+Identifying the \right" primitive ombinators is quite a hal-         semanti s, as we shall see in Se tion 4.6.
+lenge. For example, it was a breakthrough to identify and
+separate the two forms of hoi e, or and anytime, and en ap-          4.1 Value pro esses
+sulate those hoi es (and nothing else) in two ombinators.
+                                                                     De nition 1 (Value pro ess.) A value pro ess, p, over
+4 Valuation                                                          type a, is a partial fun tion from time to a random variable
+                                                                     of type a. The random variable p(t) des ribes the possible
+                                                                     values for p at time t. We write the informal type de nition
+We now have at our disposal a ri h language for des ribing
+  nan ial ontra ts. This is already useful for ommuni at-                             PR = DAT E ! RV
+                                                                                           a           ,       a
+
+ing between people | the industry la ks any su h pre ise
+notation. But in addition, a pre ise des ription lends itself        (We use aligraphi font for types at the semanti level.) Be-
+to automati pro essing of various sorts. From a single on-            ause we need to work with di erent pro esses but de ned on
+tra t des ription we may hope to generate legal paperwork,           the same \underlying spa e" ( ltration), su h a value pro-
+pi tures, s hedules and more besides. The most immediate              ess is more pre isely des ribed as an adapted sto hasti pro-
+question one might ask about a ontra t is, however, what              ess, given a ltration. Su h pro esses ome equipped with
+is it worth? That is, what would I pay to own the ontra t?           a sophisti ated mathemati al theory [Revuz and Yor, 1991,
+It is to this question that we now turn.                             Musiela and Rutkowski, 1997℄, but it is unlikely to be fa-
+We will express ontra t valuation in two \layers":                   miliar to omputer s ientists, so we only present informal,
+                                                                     intuitive notions. We usually abbreviate \value pro ess"
+Abstra t evaluation semanti s. First, we will show how               to simply \pro ess". Be warned, though: \pro ess" and
+      to translate an arbitrary ontra t, written in our              \variable" mean quite di erent things to their onventional
+      language, into a value pro ess, together with a                 omputer s ien e meanings.
+      handful of operations over these pro esses. These              Both ontra ts and observables are modeled as pro esses.
+      pro esses orrespond dire tly to the mathemati al               The underlying intuition is as follows:
+
+                                                                 6
+                           Ek [ ℄ : Contra t ! PR R
+                  ( 1)
+                   E              Ek [ give ℄ = Ek [ ℄
+                  ( 2) Ek [ 1 `and` 2℄ = Ek [ 1℄ + Ek [ 2℄
+                   E                                                       on f j  ( 1) ^          t   t   H       t      H   ( 2)g
+                                                  Ek [ 1℄                  on f j  ( 1) ^          t   t   H       t > H       ( 2)g
+                                                  Ek [ 2℄                  on f j      ( 1) ^       t   t > H       t      H   ( 2)g
+                  ( 3) Ek [ 1 `or` 2℄ =
+                   E                                   (Ek[ 1℄ Ek [ 2℄ ) on f j  ( 1) ^
+                                                         max                   ;                    t   t   H       t      H   ( 2)g
+                                                  Ek [ 1℄                  on f j  ( 1) ^          t   t   H       t > H       ( 2)g
+                                                  Ek [ 2℄                  on f j      ( 1) ^       t   t > H       t      H   ( 2)g
+                  ( 4) Ek [ o `s ale` ℄ = V [ o℄  Ek [ ℄
+                   E
+                  ( 5)
+                   E                 Ek [ zero℄ = K0
+                  ( 6) Ek [ trun ate T ℄ = Ek [ ℄
+                   E                                                       on f j  Tg              t   t
+                  ( 7) Ek [ 1 `then` 2℄ = Ek [ 1℄
+                   E                                                       on f j  ( 1)g           t   t   H
+                                                  Ek [ 2℄                  on f j      ( 1)g        t   t > H
+                  ( 8)
+                   E              Ek [ one k2℄ =         (k2)
+                                                         ex hk
+
+                  ( 9)
+                   E               Ek [ get ℄ =            (Ek [ ℄ ( ( ))) if ( ) 6= 1
+                                                         dis
+                                                               H(      )
+                                                                                   H            H
+
+                  ( 10)     Ek [ anytime ℄ =                (Ek [ ℄ )      if ( ) 6= 1
+                                                               k
+                                                                H(         )
+                   E                                     snell                                  H
+                                                                   k
+
+
+
+
+                                  Figure 4: Compositional evaluation semanti s for ontra ts
+                                                                                   is the whole point! Everything so far has been leading up to
+               V [ ℄ : Obs a ! PR a                                                this point; our entire design is organised around the desire
+                                                                                   to give a simple, tra table, modular, valuation semanti s.
+              V [ konst x℄ = K(x)                                                  Let us look at Figure 4 in more detail.
+                V [ time s℄ =     (s)                                              The fun tion Ek [ ℄ takes a ontra t, , and maps it to a
+                                 time
+             V [ lift f o℄ =     (f V [ o℄ )
+                                 lif t   ;
+      V [ lift2 f o1 o2℄ =       2(f V [ o1℄ V [ o2℄ )                             pro ess des ribing, for ea h moment in time, the value in
+                                                                                     urren y k of a quiring at that moment. For example,
+                                 lif t       ;       ;
+      V [ libor k m1 m2℄ = ...omitted
+                                                                                   the equation for give (E1) says that the value pro ess for
+                                                                                   give is simply the negation of Ek [ ℄ , the value pro ess for
+      Figure 5: Evaluation semanti s for observables                                 . Aha! What does \negation" mean? Clearly, we need not
+                                                                                   only the notion of a value pro ess, but also a olle tion of
+                                                                                   operations over these pro esses. Negating a pro esses is one
+   The value pro ess for an observable o maps a time to a     t                   su h operation; the negation of a pro ess is simply a fun -
+      random variable des ribing the possible values of o at .
+                                                                                                                                    p
+                                                                       t           tion that maps ea h time, , to the negation of ( ). It is an
+      For example, the value pro ess for the observable \IBM
+                                                                                                                t                       p t
+                                                                                   absolutely straightforward exer ise to \lift" all operations
+      sto k pri e in US$" is a (total) fun tion that maps a                        on real numbers to operate point-wise on pro esses. (This,
+      time to a real-valued random variable that des ribes                         in turn, requires us to negate a random variable, but doing
+      the possible values of IBM's sto k pri e in US$.                             so is simple.) We will need a number of other operations
+    The value pro ess for a ontra t , expressed in ur-                            over pro esses. They are summarised in Figure 6, but we
+      ren y is a (partial) fun tion from a time, , to a
+            k                                             t
+                                                                                   will introdu e ea h one as we need it.
+      random variable des ribing the value, in urren y ,               k           Next, onsider equation (E2). The and of two ontra ts is
+      of a quiring the ontra t at time .         t                                 modeled by taking the sum of their two value pro esses; we
+                                                                                   need three equations to give the value of Ek [ ℄ when is ear-
+                                                                                                                                              t
+
+These intuitions are essential to understand the rest of the                       lier than the horizon of both ontra ts, when it is earlier
+paper.                                                                             than one but later than the other, and vi e versa. In the
+                                                                                   fourth ase | i.e. for times beyond both horizons | the
+A value pro ess is, in general, a partial fun tion of time;                        evaluation fun tion is simply unde ned. We use the nota-
+that is, it may not be de ned for all values of its argument.                      tion \ f j            g" to indi ate that the orresponding
+Observables are de ned for all time, and so do not need this
+                                                                                         on t       :::t:::
+                                                                                   equation applies for only part of the (time) domain of Ek [ ℄ .
+  exibility; they de ne total pro esses. However, ontra ts                         Figure 7 spe i es formally how to al ulate the horizon H( )
+are not de ned for all time; the value pro ess for a ontra t                       of a ontra t . It returns 1 as the horizon of a ontra t
+is unde ned for times beyond its horizon.                                          with an in nite horizon; we extend , , and   min       in the
+                                                                                                                                         max
+                                                                                   obvious way to su h in nities.
+4.2 From ontra ts to pro esses                                                     Equation (E3) does the same for the or ombinator. Again,
+How, then, are we to go from ontra ts and observables to                           by design, the ombinator maps to a simple mathemati al
+pro esses? Figure 4 gives the omplete translation from on-                         operation, . One might wonder why we de ned a value
+                                                                                                max
+
+
+tra ts to pro esses, while Figure 5 does the same for observ-                      pro ess to be a partial fun tion, rather than a total fun tion
+ables. These Figures do not look very impressive, but that                         that is zero beyond its horizon. Equation (E3) gives the
+
+                                                                               7
+   These primitives are independent of the evaluation                                                           (zero) = 1
+   model                                                                                                          H
+                                                                                                               (one k) = 1
+                                                                                                                 H
+
+   K : ! PR                                                                                            H ( 1 `and` 2) =    ( ( 1) ( 2))  max H      ;H
+                                                                                                          ( 1 `or` 2) =    ( ( 1) ( 2))
+       a               a
+        The pro ess K( ) is de ned at all times to have                                                 H                                max H      ;H
+                                                                                                        ( 1 `then` 2) =    ( ( 1) ( 2))
+                                x
+        value .                                                                                     H                                    max H      ;H
+                                                                                                        (trun ate t ) =    (t ( ))
+                   x
+
+
+         : DAT E ! PR R
+                                                                                                    H                                    min   ;H
+   time                                                                                                    (s ale o ) = ( )
+        The pro ess ( ) is de ned at all times to be
+                                                                                                           H                             H
+                           time s                                           t                              (anytime ) = ( )
+        the number of days between and . It is positive
+                                                                                                           H                             H
+                                                            s       t                                          (get ) = ( )
+        if is later than .
+                                                                                                                 H                       H
+               t                    s
+
+
+       : ( ! ) ! PR ! PR
+   lif t       a   b                a                   b
+        Apply the spe i ed fun tion to the argument pro-                                                        Figure 7: De nition of horizon
+          ess point-wise. The result is de ned only where
+        the arguments pro ess is de ned.
+      2 : ( ! ! ) ! PR ! PR ! PR                                                            Equation (E6) trun ates a pro ess simply by limiting its
+   lif t       a       b                        a
+        Combine the two argument pro esses point-wise
+                                                                b
+                                                                                            domain | remember, again, that the time argument of a
+        with the spe i ed fun tion. The result is de ned                                    pro ess models the a quisition date. The then ombinator
+        only where both arguments are de ned.                                               of equation (E7) behaves like the rst pro ess in its domain,
+                                                                                            and elsewhere like the se ond.
+   These primitives are dependent on the parti ular
+   model                                                                                    4.3 Ex hange rates
+       T
+   dis k  : RV R ! PR R                                                                     The top group of operations over value pro esses de ned in
+        The primitive          maps a real-valued random
+                   T
+
+                                                                                            Figure 6 are generi { they are unrelated to a parti ular
+                                        T
+                               dis k
+        variable at date , expressed in urren y , to its
+                                T                                       k
+                                                                                              nan ial model. But we an't get away with that for ever.
+        \fair" equivalent sto hasti value pro ess in the                                    The lower group of primitives in the same gure are spe i
+        same urren y .         k
+                                                                                            to nan ial ontra ts, and they are used in the remaining
+   ex hk1 k( 2) : PR R                                                                      equations of Figure 4.
+                ( 2) is a real-valued pro ess representing
+           ex hk1 k
+                                                                                            Consider equation (E8) in Figure 4. It says that to get
+        the value of one unit of 2, expressed in urren y
+                                                    k
+                                                                                            the value pro ess for one unit of urren y k2, expressed in
+          1. This is simply the pro ess representing the
+           k
+                                                                                             urren y k, is simply the ex hange-rate pro ess between k2
+        quoted ex hange rate between the urren ies.                                         and k namely k (k2) (Figure 6). Where do we get these
+                                                                                                                ex h
+
+           : PR R ! PR R                                                                    ex hange-rate pro esses from? When we ome to implemen-
+                                                                                            tation, we will need some (numeri al) assumption about fu-
+        T
+   snellk
+        The primitive             al ulates the Snell enve-
+                               snellk
+                                            T
+
+                                                                                            ture evolution of ex hange rates, but for now it suÆ es to
+        lope of its argument. It uses the probability mea-                                  treat the ex hange rate pro esses as primitives. However,
+        sure asso iated with the urren y .                          k
+                                                                                            there are important relationships between them! Notably:
+                       Figure 6: Model primitives                                                  A( 1)                       ( ) = K(1)
+                                                                                                                                  ex hk k
+                                                                                                   A( 2)        2( ) 
+                                                                                                            ex hk      k1    3( ) =
+                                                                                                                                 ex hk    k2  3( )  ex hk   k1
+
+
+                                                                                            That is, ex hange-rate pro ess between a urren y and it-
+answer: beyond 1's horizon one is for ed to hoose 2. In                                     self is everywhere unity; and it makes no di eren e whether
+general, ( 0) 6= !
+           max v1 ;            v1                                                           we onvert dire tly into or whether we go via some
+                                                                                                           k1                      k3
+
+Equation (E4) is ni e and simple. To s ale a ontra t by                                     intermediate urren y . These are parti ular ases of no-
+                                                                                                                            k2
+
+a time-varying observable o, we simply multiply the value                                   arbitrage onditions .      5
+
+
+pro ess for the ontra t Ek [ ℄ by the value pro ess for the ob-                             You might also wonder what has be ome of the bid-
+servable | remember that we are modeling ea h observable                                    o er spread en ountered by every traveller at the foreign-
+by a value pro ess. We express the latter as V [ o℄ , de ned in                             ex hange ounter. In order to keep things te hni ally
+Figure 5 in a very similar fashion to Ek [ ℄ . At rst this seems                            tra table, nan e theory assumes most of the time the ab-
+odd: how an we s ale point-wise, when the s aling applies                                   sen e of any spreads: one typi ally rst omputes a \fair"
+to future payments and re eipts in ? Re all that the value                                  pri e, before nally adding a pro t margin. It is the latter
+pro ess for at a time gives the value of a quiring at .
+                                t                                                   t       whi h gives rise to the spread, but our modeling applies only
+Well, if this value is then the value of a quiring the same
+                           v                                                                to the former.
+ ontra t with all payments and re eipts s aled by is er-                        x
+tainly  . Our de nition of s ale in Figure 2 was in fa t
+       v       x
+                                                                                               5 A no-arbitrage ondition is one that ex ludes a risk-free oppor-
+
+driven dire tly by our desire to express its semanti s in a                                 tunity to earn money. If su h an opportunity were to exist, everyone
+                                                                                            would take it, and the opportunity would soon go away!
+simple way. Simple semanti s gives rise to simple algebrai
+properties (Se tion 4.6).
+The equations for zero, trun ate, and then are also easy.
+Equation (E5) delivers the onstant zero pro ess, while
+
+                                                                                        8
+4.4 Interest rates                                                                    . Sin e we an exer ise the option at any time,
+                                                                                       q         p
+                                                                                       anytime   is at all times better than .
+Next, onsider equation (E9). The get ombinator a quires                             8           ( ( )). Sin e we an always defer exer ising
+the underlying ontra t at its horizon, ( ). (get is
+                                                                                                          t
+                                                                                           t:q        dis k q t
+
+unde ned if has an in nite horizon.) It does not matter
+                                                       H
+                                                                                     the option, (anytime ) is always better than the same
+what 's value might be at earlier times; all that matters is                          ontra t a quired later.
+ 's value at its horizon, whi h is des ribed by the random
+variable E [ ℄ ( ( )). What is the value of get at earlier
+                    H
+                                                                                  4.5 Observables
+times? To answer that question we need a spe i ation of
+                k
+
+
+
+future evolution of interest rates, that is an interest rate                      We an only value ontra ts over observables that we an
+model.                                                                            model. For example, we an only value a ontra t involving
+Let's onsider a on rete example:                                                  the temperature in Los Angeles if we have a model of the
+                                                                                  temperature in Los Angeles. Some su h observables learly
+         = get (s aleK 10 (trun ate t (one GBP)))                                 require separate models. Others, su h as the LIBOR rate
+where t is one year from today. The underlying ontra t                            and the pri e of futures, an in estuously be modeled as the
+(s aleK 10 (trun ate t (one GBP))) pays out $10 im-                               value of parti ular ontra ts. We omit all the details here;
+mediately it is a quired; the get a quires it at its horizon,                     Figure 5 gives the semanti s only for the simplest observ-
+namely t. So the value of at t is just $10. Before t,                             ables. This is not unrealisti , however. One an write a
+though, it is not worth as mu h. If I expe t interest rates                       large range of ontra ts with our ontra t ombinators and
+to average (say) 10% over the next year, a fair pri e for
+                6                                                                 only these simple observables.
+today would be about $9.
+Just as the primitive         en apsulates assumptions about
+                           ex h                                                   4.6 Reasoning about ontra ts
+future ex hange rate evolution, so the primitive             en-    dis
+ apsulates an interest rate evolution (Figure 6). It maps                         Now we are ready to use our semanti s to answer the ques-
+a random variable des ribing a payout, in a parti ular ur-                        tions we posed at the beginning of Se tion 4. First, is this
+ren y, at a parti ular date, into a pro ess des ribing the                        equation valid?
+value of that payout at earlier dates, in the same urren y.
+Like , there are some properties that any no-arbitrage
+         ex h                                                                       get (get            ) = get
+  nan ial model should satisfy. Notably:                                          We take the meaning of the left hand side in some arbitrary
+  ( 3)
+     A                     ( )( ) =
+                             t
+                        dis k v t            v
+                                                                                   urren y :     k
+
+
+  ( 4)
+     A     ex hk1( ) 
+                     k2       () =
+                               t
+                           dis k  v
+                                             1(
+                                                 t
+                                             dis k   1 ( )( )  )
+                                                    ex hk  k2  t          v
+                                                                                         E [ get (get )℄
+  ( 5)
+     A                  ( +2 ) =
+                         t
+                     dis k v1    v2          ( )+ ( )
+                                                 t
+                                             dis k v1
+                                                            t
+                                                        dis k v2
+                                                                                         =
+                                                                                           k
+                                                                                                  1 (E [ get ℄ ( ))
+                                                                                                 dis
+                                                                                                     h
+                                                                                                               k          h1 by (E9)
+                                                                                         =          ( 2 (E [ ℄ ( ))( )) by (E9)
+                                                                                                     k
+
+The rst equation says that should be the identity at its                                          1  h         h
+                                                                                                 dis       dis       k         h2   h1
+
+                                                                                         =        2(       2 (E [ ℄ ( ))( )) sin e   =
+                                  dis                                                                k         k
+
+horizon; the se ond says that the interest rate evolution of                                     dis
+                                                                                                     h
+                                                                                                           dis
+                                                                                                               h
+                                                                                                                     k         h2   h2             h1   h2
+
+di erent urren ies should be ompatible with the assump-                                  =        2 (E [ ℄ ( ))              by (A3)
+                                                                                                     k         k
+                                                                                                     h
+                                                                                                 dis               h2
+
+tion of evolution of ex hange rates. The third is often used                             = E [ get ℄                         by (E9)
+                                                                                                       k       k
+                                                           7
+
+in a right-to-left dire tion as optimisations: rather than per-                          w
+                                                                                                  k
+                                                                                           here
+
+form dis ounting on two random variables separately, and                                        = (get )
+                                                                                                 h1        H
+
+then add the resulting pro ess trees, it is faster to add the                                   = ()
+                                                                                                 h2        H
+
+random variables (a single olumn) and then dis ount the
+result. Just as in an optimising ompiler, we may use iden-                        In a similar way, we an argue this plausible equation is
+tities like these to transform (the meaning of) our ontra t                       false:
+into a form that is faster to exe ute.
+                                                                                       give ( 1 `or` 2) = give 1 `or` give 2
+                                                                                                                          ?
+
+One has to be areful, though. Here is a plausible property
+that does not hold:                                                               The proof is routine, but its ore is the observation that
+             ( ( )) = ( ( )
+                t
+          dis k max v1 ; v2
+                                              t
+                                                    ( ))
+                                   max dis k v1 ; dis k v2
+                                                                t
+                                                                                                             ( ) 6= (
+                                                                                                               max a; b        )
+                                                                                                                               max       a;    b
+
+
+It is plausible be ause it would hold if            were single
+                                                      v1 ; v2                     Ba k in the real world, the point is that the left hand side
+numbers and          were a simple multipli ative fa tor. But
+                    dis                                                           gives the hoi e to the ounter-party, whereas in the right
+v1  and are random variables, and the property is false.
+           v2                                                                     hand side the hoi e is made by the holder of the ontra t.
+Equation (E10) uses the           operator to give the meaning
+                               snell                                              Our ombinators satisfy a ri h set of equalities, su h as that
+of anytime. This operator is mathemati ally subtle, but                           given for get above. Some of these equalities have side on-
+it has a simple hara terisation:            ( ) is the smallest
+                                                  t
+                                           snellk p                               ditions; for example:
+pro ess (under an ordering relation we mention brie y at
+           q
+the end of Se tion 4.6) su h that                                                   s ale o ( 1 `or`                2) = s ale o              1 `or` s ale o   2
+     6 For the asso iated risk-neutral probability, but we will not go in         holds only if o  0, for exa tly the same reason that get does
+these nan ial details here.                                                       not ommute with or. Hang on! What does it mean to say
+   7 The nan ially edu ated reader should note that we assume here
+                                                                                  that \o  0"? We mean that o is positive for all time. More
+impli itly what is alled omplete markets.                                         generally, as well as equalities between ontra ts, we have
+
+                                                                              9
+also developed a notion of ordering between both observables
+and ontra ts, 1  2, pronoun ed \ 1 dominates 2".
+Roughly speaking, 1  2 if it is at all times preferable to                                                    8%
+a quire 1 than to a quire 2; that is, ( 1)  ( 2) and
+                                        H         H
+8  ( 2) E [ 1℄ ( )  E [ 2℄ ( )
+ t   H     :       t          t                                                                          7%
+
+Equalities, su h as the ones given above, an be used as op-
+timising transformations in a valuation engine. A \ ontra t
+                                                                                              6%
+                                                                                                               6%
+ ompiler" an use these identities to transform a ontra t,
+expressed in the intermediate language of value pro esses                          5%
+(see the introdu tion to Se tion 4), into a form that an be
+                                                                                                         5%
+
+valued more heaply.                                                                           4%               4%
+
+4.7 Summary                                                                                              3%
+
+This ompletes our des ription of the abstra t evaluation
+semanti s. From a programming-language point of view,                              Time step
+                                                                                                               2%
+
+everything is quite routine, in luding our proofs. But we
+stress that it is most unusual to nd formal proofs in the                          0          1           2      3
+  nan e industry at this level of abstra tion. We have named
+and tamed the ompli ated primitives ( , , et ): the
+                                        dis   ex h
+laws they must satisfy give us a way to prove identities about
+ ontra ts without having to understand mu h about random                     Figure 8: A short term interest rate evolution
+variables. The mathemati al details are ar ane, believe us!
+                                                                      At ea h node of the tree is asso iated a one period short
+5 Implementation                                                      term interest rate, shortly denominated the interest rate
+                                                                      from now on. We know today's interest rate, so the rst
+Our evaluation semanti s is not only an abstra t beast. We             olumn in the tree has just one element. However, there
+ an also regard Figures 4 and 5 as a translation from our             is some un ertainty of what interest rates will evolve to by
+ ontra t language into a lower-level language of pro esses,           the end of the rst time step. This is expressed by having
+whose ombinators are the primitives of Figure 6. Then we              two interest-rate values in the se ond olumn; the idea is
+ an optimise the pro ess-level des ription, using (A1)-(A5).          that the interest rate will evolve to one of these two val-
+Finally, all (ha!) we need to do is to implement the pro ess-         ues with equal probability. In the third time step, the rates
+level primitives, and we will be able to value an arbitrary           split again, but the down/up path joins the up/down path,
+ ontra t.                                                             so there are only three rates in the third olumn, not four.
+                                                                      This is why the stru ture is alled a latti e; it makes the
+The key de ision is, of ourse, how we implement a value               whole s heme omputationally feasible by giving only a lin-
+pro ess. A value pro ess has to represent un ertainty about           ear growth in the width of the tree with time. Of ourse, the
+the future in an expli it way. There are numerous ways to             tree is only a dis rete approximation of a ontinuous pro ess;
+model this un ertainty. For the sake of on reteness, we               its re ombining nature is just a hoi e for eÆ ien y reasons.
+will simply pi k the Ho and Lee model, and use a latti e              We write for the ve tor of rates in time-step , and
+                                                                                  Rt                                    t       Rt;i
+method to evaluate ontra ts with it [Ho and Lee, 1986℄.               for the 'th member of that ve tor, starting with 0 at the
+                                                                              i
+We hoose this model and numeri al method for their te h-              bottom. Thus, for example, = 5%. The a tual numbers
+                                                                                                   R2;1
+ni al simpli ity and histori al importan e, but mu h of this          in Figure 8 are unrealisti ally regular: in more elaborated
+se tion is also appli able to other models (e.g. Bla k Derman         interest rate models, they will not be evenly spa ed but only
+Toy). Changing the numeri al method (e.g. to Monte Carlo)             monotoni ally distributed in ea h olumn.
+would entail bigger hanges, but nothing in our language or
+its semanti s (Se tions 1-4) would be a e ted. Indeed, it
+is entirely possible to use di erent numeri al methods for            5.2 Value pro esses
+di erent parts of a single ontra t.
+                                                                      So mu h for the interest rate model. A value pro ess is
+                                                                      modeled by a latti e of exa tly the same shape as the interest
+5.1 An interest rate model                                            rate evolution, ex ept that we have a value at ea h node
+                                                                      instead of an interest rate. Figure 9 shows the value pro ess
+In the typi al Ho and Lee numeri al s heme, the interest              tree for our favourite zero- oupon bond
+rate evolution is represented by a latti e (or \re ombining
+tree"), as depi ted in Figure 8. Ea h olumn of the tree                  7 = get (s aleK 10 (trun ate t (one GBP)))
+represents a dis rete time step, and time in reases from left         evaluated in pounds sterling (GBP). Using our evaluation se-
+to right. Time zero represents \now". As usual with dis rete          manti s we have
+models, there is an issue of how long a time step will be; we
+won't dis uss that further here, but we note in passing that                         E [ 7℄ = tGBP (K(10)(t))
+                                                                                        GBP        dis
+
+the time steps need not be of uniform size.                           In the Figure, we assume that the time t is time step 3. At
+                                                                      step 3, therefore, the value of the ontra t is ertainly 10
+                                                                 10
+                                                                                             The model-spe i operations of Figure 6 are a bit
+                                                                                               harder. We have des ribed how to implement ,        dis
+                                                             10
+                                                                                               whi h uses the interest rate model.     ex h  is a tually
+                                                                                               rather easier (multiply the value pro ess point-wise by
+                                                9.35                                           a pro ess representing the ex hange-rate). The      snell
+                                                                                               primitive takes a bit more work, and we do not de-
+                              8.90                                                             s ribe it in detail here. Roughly speaking, a possible
+                                                             10
+                                                                                               implementation may be: take the nal olumn of the
+                                                                                               tree, dis ount it ba k one time step, take the maximum
+                                                                                               of that olumn with the orresponding olumn of the
+               8.64
+                                                9.52
+                                                                                               original tree, and then repeat that pro ess all the way
+                              9.25                           10                                ba k to the root.
+                                                                                          The remaining high-level question is: in the (big) set of
+                                                9.71
+                                                                                          possible interest rate models, what is a \good" model? The
+                                                                                          answer is rather in estuous. A andidate interest rate model
+                                                             10                           should pri e orre tly those ontra ts that are widely traded:
+               Time step                                                                  one an simply look up the urrent market pri es for them,
+                                                                                          and ompare them with the al ulated results. So we look
+                0                 1              2             3
+                                                                                          for and later adjust the interest rate model until it ts the
+                                                                                          market data for these simple ontra ts. Now we are ready to
+                                                                                          use the model to ompute pri es for more exoti ontra ts.
+           Figure 9: A Ho and Lee valuation latti e                                       The entire market is a giganti feedba k system, and a tive
+                                                                                          resear h studies the problem of its stability.
+at all nodes, be ause un onditionally delivers $10 at that                                5.3 Implementation in Haskell
+time | remember axiom (A3). At time step 2, however,
+we must dis ount the $10 by the interest rate appropriate                                 We have two partial implementations of (earlier versions of)
+to that time step. We ompute the value at ea h node of                                    these ideas, one of whi h is implemented as a Haskell om-
+time-step 2 by averaging the two values in its su essors,                                 binator library. The type Contra t is implemented as an
+and then dis ounting the average value ba k one time step                                 algebrai data type, with one onstru tor for ea h primitive
+using the interest rate asso iated to that node . Using the          8
+                                                                                           ombinator:
+same notation for the value tree as we used for the rate
+                                                    V
+model , we get the equation:
+       R                                                                                    data Contra t = One Date Curren y
+                                                                                                          | Give Contra t
+                        = 2(1 ++  )
+                           Vt;i
+                                       Vt+1;i       Vt+1;i+1
+                                                                                                          | ...
+                                                 Rt;i   t
+                                                                                          The translation to pro esses is done by a straightforward
+where  is the size of the time step. Using this equation
+           t                                                                              re ursive Haskell implementation of Ek [ ℄ :
+we an ll in the rest of the values in the tree, as we have
+done in Figure 9. The value in time step 0 is the urrent                                    eval :: Model -> Curren y -> Contra t -> ValPro
+value of the ontra t, in pounds sterling. i.e $8 64.                   :                  Here, Model ontains the interest rate evolutions, ex hange
+In short, a latti e implementation works as follows:                                      rate evolutions, and whatever other \underlyings" are ne -
+                                                                                          essary to evaluate the ontra t.
+    A value pro ess is represented by a latti e, in whi h                                Our rst implementation used the following representation
+      ea h olumn is a dis rete representation of a random                                 for a value pro ess:
+      variable. The value in ea h node is one of the possible                               type ValPro     = (TimeStep, [Sli e℄)
+      values the variable an take, and in our very simple                                   type Sli e      = [Double℄
+      setting the number of paths from the root to the node
+      is proportional to the probability that the variable will                           A value pro ess is represented by a pair of (a) the pro ess's
+      take that value. We will say a bit more about how to                                horizon, and (b) a list of sli es (or olumns), one per time
+      represent su h a tree in the next subse tion.                                       step in reverse time order. The rst sli e is at the horizon
+                                                                                          of the pro ess, the next sli e is one time step earlier, and so
+    The generi operations, in the top half of Figure 6,                                  on. Sin e the (fundamental) dis ount re urren e equation
+      are easy to implement. K( ) is a value pro ess that is
+                                                x                                         (Se tion 5.1) works ba kwards in time, it is onvenient to
+      everywhere equal to .         ( ) is a pro ess in whi h
+                                           x   time t                                     represent the list this way round. Ea h sli e is one element
+      the values in a parti ular olumn are all equal to the                               shorter than the one before.
+      number of days between that olumn's time and .
+                                                                                          Laziness plays a very important role, for two reasons:
+                                                                                 t
+          ( ) applies to point-wise; 2(
+     lif t f; p                   f        p            ) \zips
+                                                            lif t   f; p1 ; p2
+      together" and , ombining orresponding values
+                      p1              p2
+      point-wise with .       f                                                               Pro ess trees an be ome very large, sin e their size is
+   8 For evident presentation reasons, we don't are about the fa t                             quadrati in the number of time steps they over. A
+that the Ho and Lee model is member of a lass of models that admit                              omplex ontra t will be represented by ombining to-
+in fa t a losed-form solution for zero- oupon bonds.                                           gether many value trees; it would be Very Bad to fully
+                                                                                     11
+    evaluate these sub-trees, and only then ombine them.              This problem arises, in various guises, in almost every
+    Lazy evaluation automati ally \pipelines" the evalua-             embedded domain-spe i language. We have seen it in
+    tion algorithm, so that only the \ urrent sli e" of ea h          Fran's rea tive animations [Elliott and Hudak, 1997℄, the
+    value tree is required at any one moment.                         diÆ ulty of extra ting net-lists from Hawk ir uit des rip-
+   Only part of a pro ess tree may be required. Consider             tions [Cook et al., 1998℄, and in other settings besides.
+    again our example ontra t                                         What makes it parti ularly frustrating is that the sharing is
+                                                                      absolutely apparent in the sour e program.
+          = get (s aleK 10 (trun ate t (one GBP)))                    One \solution" is to suggest that eval be made a
+                                                                      memo fun tion [Hughes, 1985, Cook and Laun hbury, 1997,
+      The             value           pro ess             for         Marlow et al., 1999℄, but we do not nd it satisfa tory. Los-
+      (s aleK 10 (trun ate t (one GBP))) is a om-                     ing sharing an give rise to an unbounded amount of dupli-
+      plete value pro ess, all the way ba k to time-step               ated work, so it seems unpleasant to relegate the mainte-
+      zero, with value 10 everywhere. But get samples                 nan e of proper sharing to an operational me hanism. For
+      this value pro ess only at its horizon | there is no            example, a memo fun tion may be de eived by unevaluated
+      point in omputing its value at any earlier time. By             arguments, or automati ally-purged memo tables, or what-
+      representing a value pro ess as a lazily-evaluated list         ever. For now we simply identify it as an important open
+      we get the \right" behaviour automati ally.                     problem that deserves further study. The only paper that
+                                                                      addresses this issue head on is [Claessen and Sands, 1999℄:
+Mi rosoft Resear h ollaborates losely with Lombard Risk               it proposes one way to make sharing observable, but leaves
+Systems Ltd, who have a produ tion tree-based valuation               open the question of memo fun tions.
+system in C++. It uses a lever but omplex event-driven
+engine in whi h a value tree is represented by a single sli e
+that is mutated as time progresses. There is never a no-
+tion of a omplete tree. The Haskell implementation treats             6 Putting our work in ontext
+trees as rst lass values, and this point of view o ers a rad-
+i al new perspe tive on the whole evaluation pro ess. We              At rst sight, nan ial ontra ts and fun tional program-
+are hopeful that some of the insights from our Haskell im-            ming do not have mu h to do with ea h other. It has been
+plementation may serve to inform and improve the eÆ ient              a surprise and delight to dis over that many of the insights
+C++ implementation.                                                   useful in the design, semanti s, and implementation of pro-
+The Haskell version takes around 900 lines of Haskell to              gramming languages an be applied dire tly to the des rip-
+support a working, albeit limited, ontra t valuation engine,          tion and evaluation of ontra ts. One of us (Eber) has been
+ omplete with a COM interfa e [Finne et al., 1999℄ that lets          developing this idea for nearly ten years at So iete Generale.
+it be plugged into Lombard's framework. It is not nearly as           The others (Peyton Jones and Seward) ame to it mu h more
+fast as the produ tion ode, but it is not unbearably slow             re ently, through a fruitful partnership with Lombard Risk
+either | for example, it takes around 20 se onds to ompute            Systems Ltd. The original idea was to apply fun tional pro-
+the value of a ontra t with 15 sub- ontra ts, over 500 time           gramming to a realisti problem, and to ompare our result-
+steps, on a standard desktop PC. Though it la ks mu h                 ing program with the existing imperative version | but we
+fun tionality, the ompositional approa h means that an                have ended up with a radi al re-thinking of how to des ribe
+already value some ontra ts, su h as options over options,            and evaluate ontra ts.
+that the produ tion system annot. (The produ tion system              Though there is a great deal of work on
+is not fundamentally in apable of su h feats; but it is pro-          domain-spe i          programming languages                   (see
+grammed on a ase-by- ase basis, and the more ompli ated               [Hudak, 1996, van Deursen et al., 2000℄ for surveys),
+ ases are dauntingly hard to implement.)                              our work is virtually the only attempt to give a formal de-
+                                                                      s ription to nan ial ontra ts. An ex eption is the RISLA
+5.4 Memoisation                                                       language developed at CWI [van Deursen and Klint, 1998℄,
+                                                                      an obje t-oriented domain-spe i language for nan ial
+In fun tional programming terms, most of this is quite                 ontra ts. RISLA is designed for an obje t-oriented frame-
+straightforward. There is a nasty pra ti al problem, how-             work, and appears to be more stateful and less de larative
+ever, that repeatedly bites people who embed a domain spe-            than our system.
+ i language in a fun tional language. Consider the on-                We have presented our design as a ombinator library em-
+tra t                                                                 bedded in Haskell, and indeed Haskell has proved an ex el-
+                                                                      lent host language for prototyping both the library design
+   10 = join `and` join
+                                                                      and various implementation hoi es. However, our design is
+      where
+                                                                      absolutely not Haskell-spe i . The big payo omes from a
+        join = <stuff> `or` <more stuff>
+                                                                      de larative approa h to des ribing ontra ts. As it happens
+Here, join is a shared sub- ontra t of 10 mu h like opt in            we also used a fun tional language for implementing the on-
+our de nition of ameri an (Se tion 3.5). The trouble is that          tra t language, but that is somewhat in idental. It ould
+eval will evaluate the two bran hes of the and at the root            equally well be implemented as a free-standing domain-
+of 10, oblivious of the fa t that these two bran hes are the          spe i language, using domain-spe i ompiler te hnol-
+same. In fa t, eval will do all the work of evaluating join           ogy. Indeed, one of us (Eber) has work afoot do to just this,
+twi e! There is no way for eval to tell that it has \seen this         ompiling a ontra t into ode that should be as fast or
+argument before".                                                     faster than the best available urrent valuation engines, us-
+
+                                                                 12
+ing the stri t fun tional language OCaml [Leroy et al., 1999℄           International Conferen e on Fun tional Programming
+as implementation language.                                             (ICFP'97), pages 263{273. ACM, Amsterdam.
+Although Haskell is lazy, and that was useful in our im-              [Finne et al., 1999℄ Finne, S., Leijen, D., Meijer, E., and
+plementation, the really signi ant feature of the ontra t-               Peyton Jones, S. (1999). Calling hell from heaven and
+des ription language is that it is de larative not that it is            heaven from hell. In ACM SIGPLAN International Con-
+lazy. Our design an be seen as a de larative, domain-                    feren e on Fun tional Programming (ICFP'99), pages
+spe i language entirely independent of Haskell, and one                  114{125, Paris. ACM.
+ ould readily implement a valuation engine for it in Java or
+C++, for example.                                                     [Ho and Lee, 1986℄ Ho, T. and Lee, S. (1986). Term Stru -
+There is mu h left to do. We need to expand the set of                   ture Movements and Pri ing Interest Rate Contingent
+ ontra t ombinators to des ribe a wider range of ontra ts;               Claims. Journal of Finan e, 41:1011{1028.
+to expand the set of observables; to provide semanti s for            [Hudak, 1996℄ Hudak, P. (1996). Building domain-spe i
+these new ombinators; to write down and prove a range of                 embedded languages. ACM Computing Surveys, 28.
+theorems about ontra ts; to onsider whether the notion of             [Hughes, 1985℄ Hughes, J. (1985). Lazy memo-fun tions. In
+a \normal form" makes sense for ontra ts; to build a robust
+implementation; to exploit the dramati simpli ations that                Pro Aspenas workshop on implementation of fun tional
+                                                                         languages.
+ losed formulas make possible; to give a formal spe i ation
+of the evolution of a ontra t during its life; and to validate        [Leroy et al., 1999℄ Leroy, X., Vouillon, J., Doligez, D.,
+all this in real nan ial settings. We have only just begun.              et al. (1999). The Obje tive Caml system, re-
+                                                                         lease 3.00. Te hni al Report, INRIA, available at
+A knowledgements                                                         http:// aml.inria.fr/o aml.
+                                                                      [Marlow et al., 1999℄ Marlow, S., Peyton Jones, S., and
+We warmly thank John Wisbey, Jurgen Gaiser-Porter, and                   Elliott, C. (1999). Stret hing the storage manager:
+Mal olm Pymm at Lombard Risk Systems Ltd for their                       weak pointers and stable names in Haskell. In Interna-
+ ollaboration. They invested a great deal of time in edu-                tional Workshop on Implementing Fun tional Languages
+ ating two of the present authors (Peyton Jones and Se-                  (IFL'99), Le ture Notes in Computer S ien e, Lo hem,
+ward) in the mysteries of nan ial ontra ts and the Bla k-                The Netherlands. Springer Verlag.
+Derman-Toy evaluation model. Jean-Mar Eber warmly                     [Musiela and Rutkowski, 1997℄ Musiela, M. and Rutkowski,
+thanks Philippe Artzner for many very helpful dis ussions                M. (1997). Martingale Methods in Finan ial Modelling.
+and So iete Generale for nan ial support of this work. We            Springer.
+also thank Conal Elliott, Andrew Kennedy, Stephen Jarvis,
+Andy Moran, Norman Ramsey, Colin Run iman, David Vin-                 [Peyton Jones et al., 1999℄ Peyton Jones, S., Hughes, R.,
+ ent and the ICFP referees, for their helpful feedba k.                  Augustsson, L., Barton, D., Boutel, B., Burton, W.,
+                                                                         Fasel, J., Hammond, K., Hinze, R., Hudak, P., Johns-
+                                                                         son, T., Jones, M., Laun hbury, J., Meijer, E., Pe-
+Referen es                                                               terson, J., Reid, A., Run iman, C., and Wadler, P.
+                                                                         (1999). Report on the programming language Haskell 98.
+[Boyle et al., 1997℄ Boyle, P., Broadie, M., and Glasserman,             http:/haskell.org.
+   P. (1997). Monte arlo methods for se urity pri ing. Jour-
+   nal of E onomi Dynami s and Control, 21:1267{1321.                 [Revuz and Yor, 1991℄ Revuz, D. and Yor, M. (1991). Con-
+                                                                         tinuous Martingales and Brownian Motion. Springer.
+[Claessen and Sands, 1999℄ Claessen, K. and Sands, D.
+   (1999). Observable sharing for fun tional ir uit des rip-          [van Deursen et al., 2000℄ van Deursen, A., Kline, P., and
+   tion. In Thiagarajan, P. and Yap, R., editors, Advan es               Visser, J. (2000). Domain-spe i languages: an an-
+   in Computing S ien e (ASIAN'99); 5th Asian Computing                  notated bibliography. Te hni al report, Centrum voor
+   S ien e Conferen e, Le ture Notes in Computer S ien e,                Wiskunde en Informati a, Amsterdam.
+   pages 62{73. Springer Verlag.                                      [van Deursen and Klint, 1998℄ van Deursen, A. and Klint,
+[Cook and Laun hbury, 1997℄ Cook, B. and Laun hbury, J.                  P. (1998). Little languages: little maintenan e? Journal
+   (1997). Disposable memo fun tions. In Laun hbury, J.,                 of Software Maintenan e, 10:75{92.
+   editor, Haskell workshop, Amsterdam.                               [Willmot et al., 1993℄ Willmot, P., Dewyne, J., and Howi-
+[Cook et al., 1998℄ Cook, B., Laun hbury, J., and                        son, S. (1993). Option Pri ing: Mathemati al Models and
+   Matthews, J. (1998). Spe ifying supers alar mi ro-                    Computation. Oxford Finan ial Press.
+   pro essors in Hawk. In Formal te hniques for hardware
+   and hardware-like systems, Marstrand, Sweden.
+[Cox et al., 1979℄ Cox, J. C., Ross, S. A., and Rubinstein,
+   M. (1979). Option pri ing: a simpli ed approa h. Journal
+   of Finan ial E onomi s, 7:229{263.
+[Elliott and Hudak, 1997℄ Elliott, C. and Hudak, P. (1997).
+   Fun tional rea tive animation. In ACM SIGPLAN
+
+                                                                 13
+

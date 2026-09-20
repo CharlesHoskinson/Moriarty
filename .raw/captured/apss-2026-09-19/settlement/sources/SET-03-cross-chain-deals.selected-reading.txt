@@ -1,0 +1,162 @@
+PDF page 1:
+                 Cross-chain Deals and Adversarial Commerce
+
+                    Maurice Herlihy                                 Barbara Liskov                              Liuba Shrira
+                     Brown University                                    MIT CSAIL                           Brandeis University
+                mph@cs.brown.edu                               liskov@csail.mit.edu                       liuba@brandeis.edu
+
+
+
+
+ABSTRACT                                                                              sical notions of correctness for atomic transactions must be
+Modern distributed data management systems face a new                                 rethought.
+challenge: how can autonomous, mutually-distrusting par-                                 Classical atomicity means that a transaction’s effects take
+ties cooperate safely and effectively? Addressing this chal-                          place everywhere or nowhere. This notion of atomicity can-
+lenge brings up questions familiar from classical distributed                         not be guaranteed when parties are potentially malicious:
+systems: how to combine multiple steps into a single atomic                           the best one can do is to ensure that honest parties cannot
+action, how to recover from failures, and how to synchronize                          be cheated. Moreover, classical transactions often prioritize
+concurrent access to data. Nevertheless, each of these issues                         safety over liveness, allowing, for example, commit proto-
+requires rethinking when participants are autonomous and                              cols that can block [41]. For cross-chain commerce, however,
+potentially adversarial.                                                              liveness guarantees have been relied upon to ensure that one
+   We propose the notion of a cross-chain deal, a new way                             party cannot trick another into locking up assets forever, or
+to structure complex distributed computations that man-                               even for a long time.
+age assets in an adversarial setting. Deals are inspired by                              Classical isolation guarantees that concurrent transactions
+classical atomic transactions, but are necessarily different,                         cannot interfere in destructive ways. Isolation is typically
+in important ways, to accommodate the decentralized and                               provided via properties such as serializability or snapshot
+untrusting nature of the exchange. We describe novel safety                           consistency. These properties are poorly suited to cross-
+and liveness properties, along with two alternative proto-                            chain commerce, where mutually-untrusting parties may re-
+cols for implementing cross-chain deals in a system of in-                            quire multiple cautious interactions to set up and execute a
+dependent blockchain ledgers. One protocol, based on syn-                             deal. Instead, non-interference takes the form of protection
+chronous communication, is fully decentralized, while the                             against double-spending: ensuring that one party does not
+other, based on semi-synchronous communication, requires                              concurrently sell the same asset to multiple counterparties.
+a globally shared ledger.                                                                Here we propose the notion of a cross-chain deal, a new
+                                                                                      computational abstraction for structuring commercial inter-
+PVLDB Reference Format:                                                               actions that mirror standard (non-blockchain) commercial
+Maurice Herlihy, Barbara Liskov, and Liuba Shrira. Cross-chain                        practices. Cross-chain deals are inspired by classical atomic
+Deals and Adversarial Commerce. PVLDB, 13(2): 100-113, 2019.                          transactions and modern cross-chain swaps, but differ, in
+DOI: https://doi.org/10.14778/3364324.3364326                                         essential ways, from both.
+                                                                                         Cross-chain deals are not atomic transactions. They solve
+                                                                                      different problems: transactions perform complex distributed
+1.    INTRODUCTION                                                                    state changes, while deals, by contrast, simply exchange
+   The emerging domain of electronic commerce spanning                                assets among parties. While a transaction’s effects must
+multiple blockchains is a kind of fun-house mirror of clas-                           be “all-or-nothing” to preserve global invariants, each au-
+sical distributed computing: familiar features are recogniz-                          tonomous party in a deal can decide independently whether
+able, but distorted. For example, classical atomic transac-                           it finds an outcome satisfactory for itself. Transactions and
+tions are often described in terms of the well-known ACID                             deals make different failure assumptions: transactions usu-
+properties [25]: atomicity, consistency, isolation, and dura-                         ally assume parties can fail only by crashing, while deals
+bility. We will see that cross-chain commerce requires struc-                         necessarily assume parties may deviate arbitrarily from the
+tures superficially similar to, but fundamentally different                           common protocol.
+from, classical atomic transactions. In particular, the clas-                            Cross-chain deals are also not cross-chain swaps. As illus-
+                                                                                      trated below, cross-chain swaps lack the expressive power to
+                                                                                      support all but the simplest kinds of standard commercial
+This work is licensed under the Creative Commons Attribution-                         practices.
+NonCommercial-NoDerivatives 4.0 International License. To view a copy                    Adversarial commerce, defined as economic exchange
+of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/. For         among mutually untrusted autonomous parties, is here to
+any use beyond those covered by this license, obtain permission by emailing           stay. Moreover, a system architecture composed of au-
+info@vldb.org. Copyright is held by the owner/author(s). Publication rights           tonomous untrusted parties that communicate via shared
+licensed to the VLDB Endowment.
+Proceedings of the VLDB Endowment, Vol. 13, No. 2
+                                                                                      tamper-proof data stores is the most natural way to organize
+ISSN 2150-8097.                                                                       such a system. Although we will propose protocols based on
+DOI: https://doi.org/10.14778/3364324.3364326
+
+
+
+
+                                                                                100
+
+PDF page 2:
+today’s blockchains and smart contracts, none of our prin-             Synchronous protocols may require countermeasures against
+cipal results depends on specific blockchain technology, or            denial-of-service attacks, such as choosing timeouts care-
+even blockchains as such. Instead, we focus on computa-                fully, or establishing “watchtowers” [12]. Semi-synchronous
+tional abstractions central to any systematic approach to              protocols avoid explicit timeouts, but they necessarily re-
+adversarial commerce, no matter what technology underlies              quire a greater degree of centralization than synchronous
+the shared data stores.                                                protocols. (Indeed, we sketch a proof that any semi-
+   This paper makes the following contributions.                       synchronous protocol there must be a single ledger consulted
+                                                                       by all parties.) Choosing a communication model involves
+   • We propose the cross-chain deal as a new computa-                 complex application-specific trade-offs that lie beyond the
+     tional abstraction for structuring complex distributed            scope of this paper.
+     exchanges in an adversarial setting. Deals require new               To illustrate the broad applicability of cross-chain deals,
+     notions of correctness and new distributed protocols.             we introduce two protocols for implementing cross-chain
+   • We propose new safety and liveness properties to re-              deals: a fully-decentralized timelock protocol that assumes
+     place the classical notions of transactional atomicity.           a synchronous communication model, and a more central-
+                                                                       ized certified blockchain protocol that does not. While both
+   • We describe two protocols for implementing cross-                 protocols implement cross-chain deals, we will see that they
+     chain deals: a fully-decentralized timelock protocol              make different guarantees about what happens when things
+     that assumes a synchronous communication model,                   go wrong.
+     and a more centralized certified blockchain (CBC) pro-
+     tocol that does not. We sketch a proof that any proto-            1.2    Other Approaches
+     col that tolerates periods of asynchrony must rely on                Today, the most common way to trade electronic assets
+     a centralized blockchain (or similar ledger structure).           is to use a trusted third party, sometimes called a crypto
+                                                                       exchange, such as Coinbase or Binance. Such exchanges
+   • We sketch implementations of the two protocols and                are typically unregulated, and provide no guarantees of any
+     use them to analyze the costs of the protocols. Given             kind. Crypto exchanges have been known to lose substantial
+     the immature state of today’s blockchain technology,              sums to hackers [7], and even to vanish along with their
+     we focus on inherent, abiding, platform-independent               customers’ deposits [42].
+     trade-offs and costs rather than explicit performance                The need for safety in adversarial commerce has inspired
+     measurements. Our intent is to illustrate the costs as-           an outburst of interest in cross-chain swaps [9, 10, 16, 26, 27,
+     sociated with the qualitatively different ways in which           35, 36, 45, 46], supporting atomic, one-shot, unconditional
+     cross-chain deals can be supported.                               direct transfers between parties. Existing cross-chain swap
+                                                                       proposals have very limited expressive power: they cannot
+   Specifying correctness for systems in which parties can
+                                                                       support indirect transfers, as mediated by a broker, nor can
+deviate arbitrarily from the common protocol requires care.
+                                                                       they support conditional exchanges such as auctions, where
+One cannot even assume parties will be rational, because
+                                                                       the seller exchanges assets only with the highest bidder. In
+they may have unknown objective functions (such as a for-
+                                                                       general, cross-chain swaps do not support the kinds of com-
+eign power willing to pay to disrupt an economy). Further-
+                                                                       plex “business logic” required by many kinds of modern fi-
+more, some familiar classical properties such as the “all-or-
+                                                                       nancial deals.
+nothing” property of atomic transactions cannot be enforced
+in an adversarial setting. In much of the literature on cross-         1.3    Example
+chains swaps and transactions, correctness is treated infor-
+                                                                          Alice is a ticket broker. She buys tickets at wholesale
+mally, or in an ambiguous way. Without a realizable (and
+                                                                       prices from event organizers and resells them at retail prices
+realistic) notion of correctness, it is impossible to reason
+                                                                       to consumers, collecting a modest commission. Alice lives in
+about the correctness of blockchain protocols, smart con-
+                                                                       the future, where tickets are managed on a ticket blockchain,
+tract code, or any other subsystem supporting adversarial
+                                                                       a tamper-proof replicated ledger that tracks ticket owner-
+commerce.
+                                                                       ship. Similarly, the coins paid for those tickets live on a dis-
+1.1   System Models                                                    tinct coin blockchain. Both blockchains support contracts,
+                                                                       simple programs that control when and how ownership of
+   The cross-chain deal abstraction is flexible enough to en-
+                                                                       tickets and coins is transferred.
+compass a variety of system models and assumptions. At
+                                                                          One day Bob, a theater owner, decides to sell two coveted
+one extreme, proof-of-work protocols such as Bitcoin [33]
+                                                                       tickets to a hit play for 100 coins. Alice knows that Carol
+and Ethereum [18] require a synchronous model, where
+                                                                       would be willing to pay 101 coins for those tickets, so Alice
+there is a known upper bound on the propagation time
+                                                                       moves to broker a deal between Bob and Carol.
+for one party’s change to the blockchain state to be no-
+                                                                          Alice’s task is to devise a distributed protocol, executed
+ticed by the other parties. At the other extreme, Byzan-
+                                                                       by Alice, Bob, and Carol, communicating through contracts
+tine fault-tolerant consensus protocols such as Algorand [23],
+                                                                       running on various blockchains, to execute a cross-chain deal
+Libra [6], and Hot-Stuff [1] operate in a more demanding
+                                                                       that transfers the tickets from Bob to Carol, and the coins
+semi-synchronous model, where there is initially no bound
+                                                                       from Carol to Bob, minus Alice’s commission. If all goes as
+on propagation time, but the system eventually reaches a
+                                                                       planned, all transfers take place, and if anything goes wrong
+global stabilization time (GST) after which the system be-
+                                                                       (someone crashes or tries to cheat), no honest party should
+comes synchronous. (In practice, the synchronous periods
+                                                                       end up worse off. For example, Alice should not end up
+need only last “long enough” to stabilize the protocol.)
+                                                                       holding tickets she can’t sell or coins that she must refund.
+   Each model has advantages and disadvantages, and each
+imposes its own constraints on protocols and applications.
+
+
+
+                                                                 101

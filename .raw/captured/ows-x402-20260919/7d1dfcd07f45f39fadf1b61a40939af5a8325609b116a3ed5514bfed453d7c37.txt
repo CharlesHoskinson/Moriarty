@@ -1,0 +1,443 @@
+On this page
+Before you debug
+Payment fails or the 402 persists
+It works on testnet but fails on mainnet
+Settlement problems
+Discovery problems
+Error code reference
+Any payment
+EVM exact payments
+Solana exact payments
+Settlement only
+Getting help
+Support
+Troubleshooting
+Copy page
+Copy page
+Copy page
+Copy page
+Fixes for the errors that come up most often when integrating x402 with CDP.
+​
+Before you debug
+Four things resolve most reports, and they are faster to check than to read about:
+Which environment.
+CdpX402Client
+and
+createX402Server
+default to
+"production"
+, which
+means mainnet and real funds. Omitting the option is not the same as running in development.
+Which network.
+The CAIP-2 identifier has to match on both sides. A client registered for
+eip155:8453
+cannot pay a route that only accepts
+eip155:84532
+.
+The balance.
+Confirm the payer holds the token the route asks for, on that network.
+The credentials.
+Sellers need
+CDP_API_KEY_ID
+and
+CDP_API_KEY_SECRET
+for the
+facilitator.
+CDP_WALLET_SECRET
+is only required if the SDK provisions an API Key
+Wallet to receive (or if you are a buyer paying with
+CdpX402Client
+).
+Then read the
+error
+field in the server’s JSON response before anything else. It usually names the
+failure directly, and the codes are explained under
+Error code reference
+.
+​
+Payment fails or the 402 persists
+The endpoint still returns 402 after I attach a payment
+The server rejected the payment rather than ignoring it, so the reason is in the response body.
+The usual causes, in rough order of frequency:
+The payer’s balance is too low, or holds the right token on the wrong network.
+The client and the route have no network and scheme in common.
+CdpX402Client
+registers Base
+exact
+, EVM
+upto
+, and EVM-only
+auth-capture
+by default. Add other EVM networks or Solana
+(
+exact
+and
+upto
+) through
+networkSchemes
+.
+The amount does not match. The
+exact
+scheme requires equality on EVM, so neither
+underpayment nor overpayment settles.
+The authorization expired before it reached the facilitator.
+The payer was declined by compliance screening. See
+A payment was declined by screening
+.
+No scheme registered
+The client or the server never registered a handler for the scheme and network combination the
+payment needs.
+On TypeScript this is rare, because
+CdpX402Client
+and
+createX402Server
+register their
+supported defaults for you. Add non-default EVM networks or Solana (
+exact
+and
+upto
+) through
+networkSchemes
+on the client. On Python there are no defaults, so every scheme is registered
+by hand, and this error means one was missed. It also appears when a plain network name is
+passed where a CAIP-2 identifier is expected, since
+base
+and
+eip155:8453
+do not match as
+strings.
+invalid_payload or a schema validation failure
+The payload reached the facilitator but did not match the expected shape. Check, in order:
+Protocol version.
+A v1 client against a v2 server produces exactly this error. The
+giveaway is
+X-PAYMENT
+in the request instead of
+PAYMENT-SIGNATURE
+.
+Mixed package versions.
+The
+@x402
+packages release in lockstep, so a stale
+@x402/evm
+against a current
+@x402/core
+can send a payload the server rejects. Upgrade them together.
+Price format.
+Route prices are strings such as
+"$0.01"
+, not numbers.
+The signature itself.
+A wrong chain ID or an expired
+validBefore
+fails validation
+rather than producing a signature error.
+Signing fails in Python
+ExactEvmScheme
+expects an x402 signer, and an
+eth_account
+object declares
+sign_typed_data
+differently. The scheme wraps an
+eth_account
+object in
+EthAccountSigner
+for you, so a
+signing failure here usually means the object you passed is neither — a raw key, a viem-style
+account, or a custom class. Pass a CDP account through
+EvmLocalAccount
+first. The working
+setup is in
+step 2 of the buyer quickstart
+.
+​
+It works on testnet but fails on mainnet
+Four things change when you move, and any one of them produces a failure that looks like a broken
+integration:
+The environment flag.
+"production"
+is the default, so an integration that worked on testnet
+had
+environment: "development"
+set explicitly somewhere. Removing it is what moves you to
+mainnet, and forgetting to remove it is what keeps you on testnet.
+The network identifiers.
+Base is
+eip155:8453
+, not
+eip155:84532
+. On Python, where there is
+no environment switch, every registration has to be updated by hand.
+The balance.
+Testnet USDC does not exist on mainnet. Fund the payer with real USDC on the
+network the route accepts.
+The client’s networks.
+CdpX402Client
+registers Base mainnet in production and Base Sepolia
+in development. Add Polygon, Arbitrum, World, or Solana (
+exact
+and
+upto
+) through
+networkSchemes
+in either environment.
+See
+Choose your environment
+for the
+seller-side configuration.
+​
+Settlement problems
+Settlement timed out. Should I retry?
+Yes. A timed-out settle can still have landed onchain, but retrying the same authorization
+cannot charge the buyer a second time: the
+exact
+scheme’s authorization nonce is single-use, so
+the facilitator rejects the replay with
+invalid_payload
+. Every scheme has an equivalent
+protection.
+That reply is ambiguous on its own, though, because it looks the same whether the first attempt
+settled or the payload was bad to begin with. To learn what actually happened, take the
+transaction reference from the timed-out response and look it up on the network with
+eth_getTransactionReceipt
+or the Solana equivalent. A confirmed transaction is a completed
+payment, and no transaction reference means nothing was broadcast.
+A payment was declined by screening
+The CDP Facilitator screens every payment against sanctions lists and Know Your Transaction risk
+signals, checking the payer and the recipient. A declined payment returns
+kyt_risk_detected
+with a
+403
+, so nothing moves onchain and the buyer keeps their funds. Screening runs at both
+verification and settlement.
+This is not retryable. An address was declined rather than a request, so the same buyer is
+declined again until they pay from a different account. If you believe an address was declined
+incorrectly, raise it in
+Discord
+.
+A buyer may have been charged twice
+A single authorization cannot settle twice on Base or Solana, so start by working out which of
+two different things happened.
+If the payment payloads were identical across the requests, the likely story is that the first
+settlement failed and the retry succeeded, which is one charge rather than two. If the payloads
+differed, the buyer signed twice, and the usual reason is a client paying again to regain access
+to a resource it had already paid for.
+That second case is a design problem rather than a bug, and there are two extensions that fix
+it.
+payment-identifier
+gives the client an idempotency key, so a repeated request returns the
+original response instead of asking for payment again.
+sign-in-with-x
+gives the caller a
+provable identity that persists across requests, so your server can recognize a returning buyer
+and serve what they already bought. Neither is prescribed by the CDP SDK, so you configure them
+by hand.
+​
+Discovery problems
+My endpoint is missing from the Bazaar
+Run the
+validation endpoint
+first. It
+identifies the missing requirement faster than working through the checklist by hand.
+An endpoint has to be served over public HTTPS, return valid Bazaar metadata on a
+402
+, and
+have settled at least one payment through the CDP Facilitator. Endpoints on localhost, behind
+an authenticating proxy, or reachable only over plain HTTP are not indexed.
+On the settlement call that triggers indexing, set both
+paymentPayload.extensions.bazaar
+and
+paymentPayload.resource
+.
+If all of that holds, give it time. Indexing runs after the settled payment and takes up to 15
+minutes.
+How do I read the validation response?
+valid
+is the summary, and the fields under it explain how it was reached.
+preflight
+lists what was checked before any simulated payment. It separates failures, which
+block indexing, from advisory recommendations, which do not.
+bazaarExtension
+reports whether your discovery metadata was found and parsed.
+simulation.outcome
+is the result of a simulated payment.
+accepted
+is the success signal.
+A response with
+valid: true
+and advisory recommendations will be indexed, but agents may
+struggle to call it. Recommendations are usually about missing input schemas.
+For indexing behavior itself, including the
+EXTENSION-RESPONSES
+header, route consolidation,
+ranking refresh timing, and removal for inactivity, see
+Troubleshooting discovery
+.
+​
+Error code reference
+The facilitator returns a reason string on every rejection:
+invalidReason
+when verification fails,
+errorReason
+when settlement fails. The codes below are the ones the CDP Facilitator returns in
+practice, which is a smaller set than the x402 specification defines.
+​
+Any payment
+Code
+Status
+Meaning
+insufficient_funds
+400
+The payer’s balance is below the amount required.
+invalid_payload
+400
+The payload is malformed, fails validation, or reuses a spent authorization.
+invalid_scheme
+400
+The payload’s scheme is not one the route accepts.
+invalid_network
+400
+The network in the payload is not one the route accepts.
+invalid_amount
+400
+The amount could not be parsed, or is not a positive value.
+amount_too_low
+400
+The payment is below the minimum amount the facilitator will settle.
+self_send_not_allowed
+400
+The payer and the recipient are the same address.
+kyt_risk_detected
+403
+The payer or the recipient was declined by compliance screening.
+request_blocked_by_location
+403
+The request came from a jurisdiction the facilitator does not serve.
+permit2_disabled
+400
+The payment needs Permit2, which is not enabled for that token or network.
+preflight_validation_failed
+400
+A check that runs before the scheme sees the payment failed.
+invalid_bazaar_extension
+400
+The Bazaar discovery metadata on the
+402
+is malformed.
+unsupported_payload_type
+400
+The payload type is not one the facilitator handles.
+unknown_error
+500
+The failure could not be classified. Report these.
+invalid_payload
+is the catch-all, so it covers more than a malformed body. A reused authorization
+nonce, a failed onchain simulation, and a recipient that does not match the route all arrive as
+invalid_payload
+.
+​
+EVM
+exact
+payments
+Code
+Meaning
+invalid_exact_evm_payload_signature
+The signature does not recover to the payer address.
+invalid_exact_evm_payload_authorization_value
+The amount does not exactly match the amount required.
+invalid_exact_evm_payload_authorization_valid_before
+The authorization expired before settlement.
+invalid_exact_evm_payload_authorization_valid_after
+The authorization is not valid yet.
+invalid_exact_evm_payload_undeployed_smart_wallet
+The payer is a counterfactual smart wallet with no deployment data.
+smart_wallet_deployment_failed
+Deploying the payer’s smart wallet during settlement failed.
+Tokens that settle through Permit2 add a parallel family prefixed
+invalid_exact_evm_permit2_payload_
+, covering
+signature
+,
+amount
+,
+deadline
+,
+recipient
+,
+spender
+,
+valid_after
+, and
+allowance_required
+.
+allowance_required
+is the one to know: it means
+the one-time Permit2 approval has not been granted yet.
+​
+Solana
+exact
+payments
+Solana rejections are prefixed
+invalid_exact_svm_payload_transaction
+, with about twenty variants
+that name the specific instruction or account at fault. The ones that come up most are
+invalid_exact_svm_payload_transaction_simulation_failed
+,
+invalid_exact_svm_payload_transaction_sender_ata_not_found
+when the payer has no associated token
+account for the asset, and
+invalid_exact_svm_payload_transaction_amount_mismatch
+.
+​
+Settlement only
+Code
+Meaning
+settle_exact_failed_onchain
+The settlement transaction was submitted and reverted.
+settle_exact_node_failure
+The facilitator could not reach the network to submit or confirm.
+settle_exact_svm_transaction_confirmation_timed_out
+The Solana transaction was submitted but did not confirm in time.
+settle_exact_svm_block_height_exceeded
+The Solana transaction expired before confirmation.
+invalid_exact_evm_verification_failed
+Verification, rerun at settlement time, no longer passes.
+The last three are the ones worth handling deliberately, because the payment may or may not have
+landed. Resolve them by confirming the transaction rather than by retrying.
+Other schemes carry their own codes.
+batch-settlement
+defines a large family prefixed
+invalid_batch_settlement_evm_
+. EVM
+upto
+surfaces failures through
+invalid_payload
+, while
+Solana
+upto
+defines
+invalid_upto_svm_
+codes for payment requirements, payload, channel, and
+settlement failures, plus
+settle_upto_svm_
+codes for onchain and confirmation failures.
+​
+Getting help
+For product and integration questions rather than errors, start with the
+FAQ
+. For anything else, the CDP Discord and the protocol and SDK issue
+trackers are listed under
+Community and developer resources
+.
+When you report a payment failure, include the CAIP-2 network, the scheme, the
+error
+field from
+the response, and the transaction reference if one exists. Without those, the first reply will ask
+for them.
+Was this page helpful?
+Yes
+No
+FAQ
+Previous
+Custom Stablecoins
+Next

@@ -1,0 +1,602 @@
+{
+  "study": "astra-intents",
+  "as_of": "2026-09-19",
+  "scope": "Pinned source audit, not deployment audit or exploit validation",
+  "claims": [
+    {
+      "id": "IK01",
+      "claim": "Acceptance validates wallet signature, current account key, verifying contract, deadline, and single-use nonce before executing typed intents.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            118
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L118"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            20,
+            336
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L20-L336"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/accounts/account/nonces.rs",
+          "lines": [
+            45,
+            72
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/accounts/account/nonces.rs#L45-L72"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/payload/nep413.rs",
+          "lines": [
+            37,
+            83
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/payload/nep413.rs#L37-L83"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection",
+      "qualification": "Nonce mutation happens before typed operations but is not a separately durable commit if the containing execution receipt fails. Successful execution followed by a later failed asynchronous receipt does not restore that nonce."
+    },
+    {
+      "id": "IK02",
+      "claim": "The core accepts a fixed tagged Intent enum, with an AuthCall extension point; it does not accept an arbitrary predicate and execution proof.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/mod.rs",
+          "lines": [
+            28,
+            143
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/mod.rs#L28-L143"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/auth.rs",
+          "lines": [
+            9,
+            64
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/auth.rs#L9-L64"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/auth_call.rs",
+          "lines": [
+            17,
+            36
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/auth_call.rs#L17-L36"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK03",
+      "claim": "TokenDiff specifies exact signed per-token changes; eligible negative deltas incur rounded-up fees credited to the collector, with NFT and one-unit MT/IMT exemptions. Finalization rejects unmatched per-token sums.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/token_diff.rs",
+          "lines": [
+            25,
+            215
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/token_diff.rs#L25-L215"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/state/deltas.rs",
+          "lines": [
+            233,
+            283
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/state/deltas.rs#L233-L283"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK04",
+      "claim": "Simulation uses a cache and cannot execute external promise effects; a successful simulation is not a withdrawal completion guarantee.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            64
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L64"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/state/cached.rs",
+          "lines": [
+            257,
+            374
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/state/cached.rs#L257-L374"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/gitbook-docs/market-makers/verifier/simulating-intents.md",
+          "lines": [
+            87,
+            93
+          ],
+          "commit": "589b25d612161de1a463316d90ff19759dd994eb",
+          "url": "https://github.com/defuse-protocol/gitbook-docs/blob/589b25d612161de1a463316d90ff19759dd994eb/market-makers/verifier/simulating-intents.md#L87-L93"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK05",
+      "claim": "NEP141 deposit derives token identity from predecessor; deposit increments internal balance and supply; withdrawal decrements both and creates asynchronous transfer/callback work.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/deposit.rs",
+          "lines": [
+            18,
+            76
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/deposit.rs#L18-L76"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/mod.rs",
+          "lines": [
+            18,
+            127
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/mod.rs#L18-L127"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            54,
+            226
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L54-L226"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            20,
+            336
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L20-L336"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK06",
+      "claim": "At the FT withdrawal resolver, a failed transfer-call promise result is treated as the entire amount used; a successful malformed transfer-call result gives zero used. A failed ordinary transfer result gives zero used and attempts an internal refund. This is a recovery rule, not proof of actual remote usage.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            54,
+            226
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L54-L226"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK07",
+      "claim": "DAO/UnrestrictedWithdrawer can invoke force withdrawal using explicit owner and receiver, DAO can install full access keys, DAO/Upgrader can deploy code, and pause/unpause roles exist. This source does not establish deployed role holders.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            54,
+            226
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L54-L226"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/admin.rs",
+          "lines": [
+            7,
+            21
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/admin.rs#L7-L21"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/upgrade.rs",
+          "lines": [
+            9,
+            28
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/upgrade.rs#L9-L28"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/mod.rs",
+          "lines": [
+            50,
+            151
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/mod.rs#L50-L151"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK08",
+      "claim": "execute_intents has a pause gate but no role allowlist; adding sponsored relayer keys is privileged. The sample solver optionally filters 1Click/router partner metadata. Service access is not universal intent acceptance policy.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/mod.rs",
+          "lines": [
+            24,
+            64
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/mod.rs#L24-L64"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/relayer.rs",
+          "lines": [
+            12,
+            41
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/relayer.rs#L12-L41"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/near-intents-amm-solver/src/services/quoter.service.ts",
+          "lines": [
+            34,
+            203
+          ],
+          "commit": "0f29eb26df7bb36bcb6fad97919680edfc8bdebb",
+          "url": "https://github.com/defuse-protocol/near-intents-amm-solver/blob/0f29eb26df7bb36bcb6fad97919680edfc8bdebb/src/services/quoter.service.ts#L34-L203"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK09",
+      "claim": "The sample solver prices reserve-backed AMM quotes, signs token diffs, and may decline requests; the verifier does not prove best price or solver search completeness.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/near-intents-amm-solver/src/services/quoter.service.ts",
+          "lines": [
+            34,
+            203
+          ],
+          "commit": "0f29eb26df7bb36bcb6fad97919680edfc8bdebb",
+          "url": "https://github.com/defuse-protocol/near-intents-amm-solver/blob/0f29eb26df7bb36bcb6fad97919680edfc8bdebb/src/services/quoter.service.ts#L34-L203"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/mod.rs",
+          "lines": [
+            32,
+            118
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/mod.rs#L32-L118"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK10",
+      "claim": "Deposit execution has two failure boundaries: refund_if_fails executes inline, otherwise it schedules a detached execute_intents call.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/deposit.rs",
+          "lines": [
+            18,
+            76
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/deposit.rs#L18-L76"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK11",
+      "claim": "Separate intents do not impose completion order on their created promises; AuthCall attached wNEAR explicitly has no internal refund on failure.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/mod.rs",
+          "lines": [
+            28,
+            143
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/mod.rs#L28-L143"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/intents/auth.rs",
+          "lines": [
+            9,
+            64
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/intents/auth.rs#L9-L64"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            20,
+            336
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L20-L336"
+        }
+      ],
+      "status": "source-grounded",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "IK12",
+      "claim": "Verifier receipt accounting is narrower than end-to-end multichain settlement; external token and bridge semantics remain dependencies.",
+      "confidence": "high",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/intents/state.rs",
+          "lines": [
+            20,
+            336
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/intents/state.rs#L20-L336"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/src/contract/tokens/nep141/withdraw.rs",
+          "lines": [
+            54,
+            226
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/src/contract/tokens/nep141/withdraw.rs#L54-L226"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/defuse-protocol/gitbook-docs/market-makers/verifier/introduction.md",
+          "lines": [
+            3,
+            38
+          ],
+          "commit": "589b25d612161de1a463316d90ff19759dd994eb",
+          "url": "https://github.com/defuse-protocol/gitbook-docs/blob/589b25d612161de1a463316d90ff19759dd994eb/market-makers/verifier/introduction.md#L3-L38"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/defuse/core/src/engine/state/cached.rs",
+          "lines": [
+            257,
+            374
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/defuse/core/src/engine/state/cached.rs#L257-L374"
+        }
+      ],
+      "status": "architectural inference",
+      "review_status": "verified-source-inspection"
+    },
+    {
+      "id": "AI13",
+      "claim": "The adjacent escrow-swap contract persists maker funding until a permitted taker supplies the destination token under committed price, deadline and partial-fill rules; this is a funded conditional-settlement precedent, not a general evidence interpreter.",
+      "confidence": "high",
+      "status": "source-grounded with stated architectural inference",
+      "review_status": "new-source-inspection",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/state.rs",
+          "lines": [
+            43,
+            89
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/state.rs#L43-L89"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/fund.rs",
+          "lines": [
+            11,
+            33
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/fund.rs#L11-L33"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/tokens/mod.rs",
+          "lines": [
+            20,
+            65
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/tokens/mod.rs#L20-L65"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/fill.rs",
+          "lines": [
+            19,
+            43
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/fill.rs#L19-L43"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/fill.rs",
+          "lines": [
+            127,
+            148
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/fill.rs#L127-L148"
+        }
+      ]
+    },
+    {
+      "id": "AI14",
+      "claim": "Escrow maker and taker payouts are asynchronous. Maker transfer refunds have persistent recovery state; taker and fee-collector refunds have no corresponding lost-and-found accounting in this contract.",
+      "confidence": "high",
+      "status": "source-grounded with stated architectural inference",
+      "review_status": "new-source-inspection",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/fill.rs",
+          "lines": [
+            91,
+            124
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/fill.rs#L91-L124"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/state.rs",
+          "lines": [
+            266,
+            295
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/state.rs#L266-L295"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/resolve.rs",
+          "lines": [
+            53,
+            78
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/resolve.rs#L53-L78"
+        }
+      ]
+    },
+    {
+      "id": "AI15",
+      "claim": "Escrow on_auth checks the configured forwarding contract and currently dispatches only Close. It is not a generic mechanism for accumulating recipient signatures, documents or proofs.",
+      "confidence": "high",
+      "status": "source-grounded with stated architectural inference",
+      "review_status": "new-source-inspection",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/auth_call.rs",
+          "lines": [
+            20,
+            44
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/auth_call.rs#L20-L44"
+        }
+      ]
+    },
+    {
+      "id": "AI16",
+      "claim": "Escrow close authorization differs by stage, and cleanup requires closed, expired, no tracked maker balances, and no tracked callbacks. These tracked quantities do not include every possible taker or fee-collector recovery obligation.",
+      "confidence": "high",
+      "status": "source-grounded with stated architectural inference",
+      "review_status": "new-source-inspection",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/close.rs",
+          "lines": [
+            27,
+            50
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/close.rs#L27-L50"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/contract/cleanup.rs",
+          "lines": [
+            67,
+            110
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/contract/cleanup.rs#L67-L110"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/repos/near/intents/contracts/escrow-swap/src/state.rs",
+          "lines": [
+            266,
+            295
+          ],
+          "commit": "32a7836f825e8c984c26149f4456793ec7e3d49a",
+          "url": "https://github.com/near/intents/blob/32a7836f825e8c984c26149f4456793ec7e3d49a/contracts/escrow-swap/src/state.rs#L266-L295"
+        }
+      ]
+    },
+    {
+      "id": "AI17",
+      "claim": "Captured official docs explicitly exclude external asynchronous effects from simulation and warn that cross-contract calls need not finish in intent order; broad custody and settlement wording in the introduction must be scoped using the pinned administrative and withdrawal code.",
+      "confidence": "high",
+      "status": "documentation-source comparison",
+      "evidence": [
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/429379261beee7b9d022.md",
+          "url": "https://docs.near-intents.org/integration/verifier-contract/intent-types-and-execution",
+          "retrieved_at": "2026-09-19T20:11:20.328734+00:00",
+          "sha256": "6acac7ca680b4077c7fba8a63e4a699c779de707eea53096db0e764e9d9721a2"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/baeaa40a9cf2ffa08094.md",
+          "url": "https://docs.near-intents.org/integration/verifier-contract/introduction",
+          "retrieved_at": "2026-09-19T20:11:20.929224+00:00",
+          "sha256": "14eab7b859ac1230f18d74c95d24b9a87e136411dbcb31daf3f495c48bb1d7ad"
+        },
+        {
+          "path": "/home/charl/research/near-teardown-2026-09-19/docs/captures/e49e0a70779960343b4c.md",
+          "url": "https://docs.near-intents.org/integration/verifier-contract/simulating-intents",
+          "retrieved_at": "2026-09-19T20:11:21.893234+00:00",
+          "sha256": "dde98d1f72346bc79a87d6cc5fd69e2de34e1cec1f3081da4f3f357c16d13a57"
+        }
+      ]
+    }
+  ],
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "medium",
+    "identity_basis": "parent-dispatched explicit panel identity"
+  },
+  "provenance": {
+    "reused_from": "/home/charl/research/near-teardown-2026-09-19/studies/intents-kernel/claims.json",
+    "sha256": "15d3f081b66e8c5da6481f70929b4479926a30aab36bbb953ae9f9bffba3ed76",
+    "method": "Independent source reinspection; IDs preserved with qualifications below."
+  }
+}

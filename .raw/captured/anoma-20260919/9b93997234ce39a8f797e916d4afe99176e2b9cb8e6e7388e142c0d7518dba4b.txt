@@ -1,0 +1,284 @@
+Key Management
+Copy page
+Key Management
+Every user in the Anoma Pay protocol is represented by four cryptographic key pairs. Together they form a
+keyring
+(
+UserKeyring
+). Understanding what each key does helps you reason about which parts of the keyring need to be available at runtime and which require secure storage.
+The four key pairs
+Key pair
+Type
+Role
+authorityKeyPair
+secp256k1
+Signs the action tree to authorize resource consumption
+nullifierKeyPair
+custom
+Proves the right to spend (nullify) a resource
+encryptionKeyPair
+secp256k1
+Derives per-resource encryption keys so only the owner can decrypt their balances
+discoveryKeyPair
+secp256k1
+Lets the Indexer route incoming resources to the right user
+Authority key pair
+The authority key pair signs the
+action tree
+— a Merkle root computed over the set of resources being consumed and created in a transaction. Without a valid signature from the authority key, the backend will reject the transaction.
+keyring.authorityKeyPair.publicKey
+// Uint8Array (33 bytes, compressed secp256k1)
+keyring.authorityKeyPair.privateKey
+// Uint8Array (32 bytes)
+Nullifier key pair
+The nullifier key pair is unique: its “commitment” (
+cnk
+) is the SHA-256 hash of the private key (
+nk
+). This commitment is baked into each resource at creation time. When spending a resource, the protocol derives a
+nullifier
+from
+nk
+— a unique tag that proves consumption without revealing which resource was spent.
+keyring.nullifierKeyPair.nk
+// Uint8Array — the private nullifier key
+keyring.nullifierKeyPair.cnk
+// Uint8Array — SHA256(nk), embedded in resources
+Encryption key pair
+When a resource is created for you, its payload is encrypted to your encryption public key. The SDK uses the corresponding private key to decrypt resource blobs fetched from the Indexer, recovering the token type, amount, and other metadata.
+Discovery key pair
+The discovery private key is registered with the Indexer via
+IndexerClient.addKeys()
+. The Indexer uses the corresponding public key to tag incoming resources so they can be retrieved later.
+Key derivation
+All four key pairs are derived from a single 32-byte seed using HMAC-SHA256 with separate domain strings:
+Key
+Domain string
+Authority
+ANOMA_AUTHORITY_KEY
+Nullifier
+ANOMA_NULLIFIER_KEY
+Encryption
+ANOMA_STATIC_ENCRYPTION_KEY
+Discovery
+ANOMA_STATIC_DISCOVERY_KEY
+A single seed reproducibly derives the entire keyring. Losing the seed means losing access to all resources derived from it.
+Creating a keyring
+Random (new user)
+import
+{ createUserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+// uses crypto.getRandomValues internally
+From a seed (deterministic)
+Pass any 32-byte
+Uint8Array
+as a seed. The SDK applies the PRF to each domain separately:
+import
+{ createUserKeyring }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+seed
+:
+Uint8Array
+=
+/* 32 bytes */
+;
+const
+keyring
+=
+createUserKeyring
+(seed);
+From a wallet signature (IKM)
+Derive a seed by having the user sign a fixed message with their EVM wallet, then pass that signature as
+input key material
+(IKM). HKDF-SHA256 is applied internally with the salt
+"anoma-pay:keyring-seed"
+:
+import
+{ createUserKeyringFromIkm }
+from
+"@anomaorg/anoma-app-sdk"
+;
+// ikm can be any byte sequence — e.g. a wallet signature over a fixed message
+const
+ikm
+:
+Uint8Array
+=
+/* bytes derived from wallet signature */
+;
+const
+keyring
+=
+createUserKeyringFromIkm
+(ikm);
+From a WebAuthn passkey (recommended for browser apps)
+The recommended approach for browser applications. The passkey PRF extension produces deterministic output from the device authenticator:
+import
+{ createUserKeyringFromPasskey }
+from
+"@anomaorg/anoma-app-sdk"
+;
+// credential must have been obtained with the PRF extension enabled
+const
+keyring
+=
+createUserKeyringFromPasskey
+(credential);
+This throws a descriptive error if the authenticator does not support the WebAuthn PRF extension.
+Extracting public keys
+To receive tokens, a user shares their public keys. Extract them from the full keyring:
+import
+{
+createUserKeyring,
+extractUserPublicKeys,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+const
+publicKeys
+=
+extractUserPublicKeys
+(keyring);
+// {
+//   authorityPublicKey:       Uint8Array (33 bytes)
+//   discoveryPublicKey:       Uint8Array (33 bytes)
+//   encryptionPublicKey:      Uint8Array (33 bytes)
+//   nullifierKeyCommitment:   Uint8Array (32 bytes)
+// }
+Pay Address encoding
+A
+Pay Address
+encodes the four public keys into a single 180-character Base64URL string for sharing. The raw bytes are assembled in this fixed order before encoding:
+Field
+Size (bytes)
+Authority Public Key
+33
+Discovery Public Key
+33
+Encryption Public Key
+33
+Nullifier Key Commitment
+32
+CRC32 Checksum
+4
+Total
+135
+The CRC32 checksum covers the first 131 bytes and is used to catch transcription errors. It does not provide cryptographic security.
+Encoding
+import
+{
+createUserKeyring,
+encodePayAddress,
+extractUserPublicKeys,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+const
+payAddress
+=
+encodePayAddress
+(
+extractUserPublicKeys
+(keyring));
+There is also a convenience helper that combines the two steps:
+import
+{
+createUserKeyring,
+getPayAddressFromKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keyring
+=
+createUserKeyring
+();
+const
+payAddress
+=
+getPayAddressFromKeyring
+(keyring);
+Decoding
+Decoding validates the length and CRC32 checksum before returning the public keys:
+import
+{ decodePayAddress }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+keys
+=
+decodePayAddress
+(payAddress);
+// keys.authorityPublicKey         — Uint8Array (33 bytes)
+// keys.discoveryPublicKey         — Uint8Array (33 bytes)
+// keys.encryptionPublicKey        — Uint8Array (33 bytes)
+// keys.nullifierKeyCommitment     — Uint8Array (32 bytes)
+decodePayAddress
+throws if the string is empty, the decoded byte length is not 135, or the CRC32 checksum does not match.
+Validation
+Use
+isValidPayAddress
+to get a boolean result without throwing:
+import
+{ isValidPayAddress }
+from
+"@anomaorg/anoma-app-sdk"
+;
+if
+(
+!
+isValidPayAddress
+(userInput)) {
+// show a validation error in the UI
+}
+Serialization
+Keyrings should be persisted across sessions. The serialized format hex-encodes all private and public key bytes into a JSON object:
+import
+{
+serializeUserKeyring,
+deserializeUserKeyring,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+// Serialize — returns a JSON string containing private key material
+const
+json
+=
+serializeUserKeyring
+(keyring);
+// Restore
+const
+restored
+=
+deserializeUserKeyring
+(json);
+The serialized keyring contains all private key bytes in plaintext JSON. Treat it with the same care as a private key. Store it in sessionStorage (cleared on tab close) or an encrypted vault. Never persist it to localStorage unencrypted or transmit it over the network.
+Last updated on
+February 18, 2026
+Getting Started
+Resources

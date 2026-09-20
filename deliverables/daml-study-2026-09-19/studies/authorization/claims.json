@@ -1,0 +1,997 @@
+{
+  "schema_version": 1,
+  "study": "Daml authorization, obligation formation and scoped delegation",
+  "author_model": "gpt-6-astra",
+  "requested_effort": "medium",
+  "runtime_identity_attestation": null,
+  "scope": "documentation and formal-rule analysis; no runtime/source implementation attestation",
+  "claims": [
+    {
+      "id": "DA01",
+      "claim": "Formal required authorizers are create signatories or exercise/fetch actors. Root context is commit requesters; a consequence context is the immediate parent exercise actors plus input-contract signatories, not all ancestor authority.",
+      "classification": "documented_formal_rule",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1389,
+            1538
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA02",
+      "claim": "Authorization and conformance are distinct: relabeling an unauthorized asset transfer actor to an available authorizer can satisfy the former while violating the template controller rule.",
+      "classification": "documented_negative_witness",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1564,
+            1578
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA03",
+      "claim": "Tutorial NonTransitive TryB -> TryA fails because Bob authority present under TryB is absent from TryA consequences, whose actor and signatory are Alice only.",
+      "classification": "documented_negative_witness",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            715,
+            802
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA04",
+      "claim": "Making both issuer and owner IOU signatories prevents unilateral issuer archival and unauthorized recipient signature; the tutorial explicitly notes that omitted positivity constraints allow negative amounts.",
+      "classification": "documented_example",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            28,
+            238
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA05",
+      "claim": "IouSender is a reusable receiver-signed delegation whose shown checks are positive amount and sender=current owner; it contains no issuer, currency, expiry or aggregate-bound check. Those further policies cannot be inferred from this example.",
+      "classification": "source_based_inspection",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            462,
+            564
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA06",
+      "claim": "Multiple controllers require every controller authority; acceptance can combine standing signatory authority with the accepting actor rather than collect a new signature from every signatory in that transaction.",
+      "classification": "documented_rule",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            234,
+            325
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            462,
+            501
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1426,
+            1538
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA07",
+      "claim": "Current Workflow example permits the initiator to create a contract directly with Approved state because initiator is its only signatory and no creation precondition excludes Approved. Its choice guard is not proof that Approve occurred.",
+      "classification": "derived_negative_witness_not_executed",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m2-multi-party-workflows",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.txt",
+          "sha256": "71465bd7271ef24970e0fabf8f27f7ad9efcd4cdbecbcada9499e9246c86230a",
+          "lines": [
+            280,
+            343
+          ],
+          "retrieved_at": "2026-09-19T21:02:40Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.html",
+          "raw_sha256": "142f1aadf6926ac0604e1d25c57eb38ea71f05f766d5933e8eeae2a0b436ceda",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1216,
+            1269
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1389,
+            1434
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA08",
+      "claim": "Current controller-delegation Asset Transfer cannot by itself create the replacement Asset for a distinct newOwner absent that newOwner authority; the child context contains old owner and chosen delegate/actor, not an arbitrary recipient.",
+      "classification": "derived_negative_witness_not_executed",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m2-multi-party-workflows",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.txt",
+          "sha256": "71465bd7271ef24970e0fabf8f27f7ad9efcd4cdbecbcada9499e9246c86230a",
+          "lines": [
+            183,
+            235
+          ],
+          "retrieved_at": "2026-09-19T21:02:40Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.html",
+          "raw_sha256": "142f1aadf6926ac0604e1d25c57eb38ea71f05f766d5933e8eeae2a0b436ceda",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1389,
+            1434
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA09",
+      "claim": "The Vote example cannot initialize votes=[] because contract signatories must be nonempty; its TallyAndExecute requires all voters as controllers, so a numerical approval threshold alone does not authorize tally execution.",
+      "classification": "derived_negative_witness_not_executed",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m2-multi-party-workflows",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.txt",
+          "sha256": "71465bd7271ef24970e0fabf8f27f7ad9efcd4cdbecbcada9499e9246c86230a",
+          "lines": [
+            405,
+            480
+          ],
+          "retrieved_at": "2026-09-19T21:02:40Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/85291c62ebc299ad2b36.html",
+          "raw_sha256": "142f1aadf6926ac0604e1d25c57eb38ea71f05f766d5933e8eeae2a0b436ceda",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            230,
+            249
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.txt",
+          "sha256": "17e03ba0cea2735ecc371a9dd329352cc24b7b75a721a69f3042a515f0c52bbd",
+          "lines": [
+            484,
+            501
+          ],
+          "retrieved_at": "2026-09-19T21:02:42Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/93d58513009025639d38.html",
+          "raw_sha256": "a371f07d61415feba3835b2b39f478c86588cfbde13e5f4e5bdd0ca85d722e3f",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA10",
+      "claim": "Contract/choice observer status does not itself confer action authority, but the same party can separately be a controller. The broad composition claim that observers cannot exercise choices is false when read universally.",
+      "classification": "documentation_contradiction",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/composition-multi-party",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.txt",
+          "sha256": "f31f4323cd00c99ec67a5a02bb172d243ade21c0c9d08fd44d15a3b7c85b1e30",
+          "lines": [
+            465,
+            489
+          ],
+          "retrieved_at": "2026-09-19T21:02:26Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.html",
+          "raw_sha256": "69543e407d0ed2a6b14529e365c79e163414cf460b66cebebe115f1a46b19da8",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-choices",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a9b4b8d5939f2e313852.txt",
+          "sha256": "6ef751e4739c2327937ca27b2dd025f55f28688dc8ff0fa0177d018d3d851e08",
+          "lines": [
+            260,
+            305
+          ],
+          "retrieved_at": "2026-09-19T21:02:43Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a9b4b8d5939f2e313852.html",
+          "raw_sha256": "ff8e63a30952b81d5fa2ac930ae83240aef87e7fdf81e5b1c2bd9c3d970371ad",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1389,
+            1434
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA11",
+      "claim": "Detailed privacy allows ancestor witnesses to see descendant actions and contract divulgence to nonstakeholders; stakeholder-only visibility wording in composition docs is too broad.",
+      "classification": "documentation_contradiction",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/composition-multi-party",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.txt",
+          "sha256": "f31f4323cd00c99ec67a5a02bb172d243ade21c0c9d08fd44d15a3b7c85b1e30",
+          "lines": [
+            465,
+            489
+          ],
+          "retrieved_at": "2026-09-19T21:02:26Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.html",
+          "raw_sha256": "69543e407d0ed2a6b14529e365c79e163414cf460b66cebebe115f1a46b19da8",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1770,
+            1943
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA12",
+      "claim": "An isolated action or private projection may establish internal authorization while losing the context needed to establish root authorization. The wrong-asset transfer appears acceptable in the issuer projection because the original unauthorized parent context is omitted.",
+      "classification": "documented_formal_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1473,
+            1578
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA13",
+      "claim": "Disclosure enables use of contract data but does not supply the absent owner authority to transfer another party asset. Prior immediate divulgence also does not automatically provide later command disclosure.",
+      "classification": "documented_formal_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            794,
+            879
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1944,
+            1980
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA14",
+      "claim": "Formal ledger validity combines consistency, conformance and authorization and Canton guarantees validity for honest parties under configured topology assumptions; the document explicitly allows a dishonest signatory coalition double-spend example outside that guarantee.",
+      "classification": "documented_assumption_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1580,
+            1623
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA15",
+      "claim": "Daml model conformance constrains whole action trees and their required consequences, but standalone public creates/choices and cross-action submitter value flow do not by themselves enforce every intended workflow history.",
+      "classification": "documented_formal_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            1216,
+            1367
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA16",
+      "claim": "Ledger API token permission determines whether a participant serves a request; party hosting and Daml ledger validity independently determine whether it can serve it. Read, act and execute rights are distinct and package management is participant-admin scoped.",
+      "classification": "documented_service_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.txt",
+          "sha256": "a90d3be4b669d790981a5441cef5ca7756b7c2ca1f456aa4b75ea4730d1c0edb",
+          "lines": [
+            20,
+            155
+          ],
+          "retrieved_at": "2026-09-19T21:02:25Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.html",
+          "raw_sha256": "0d00e2cf95094bdbe1836f6ba9251d45af03ea83b4b9b38575fe9e3753db22a4",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA17",
+      "claim": "The API guide says current user rights can be changed without issuing new tokens while later describing JWT tokens as nonrevocable. Token-byte revocation and mutable user-right enforcement must not be conflated.",
+      "classification": "documentation_qualification",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.txt",
+          "sha256": "a90d3be4b669d790981a5441cef5ca7756b7c2ca1f456aa4b75ea4730d1c0edb",
+          "lines": [
+            156,
+            163
+          ],
+          "retrieved_at": "2026-09-19T21:02:25Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.html",
+          "raw_sha256": "0d00e2cf95094bdbe1836f6ba9251d45af03ea83b4b9b38575fe9e3753db22a4",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/authorization",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.txt",
+          "sha256": "a90d3be4b669d790981a5441cef5ca7756b7c2ca1f456aa4b75ea4730d1c0edb",
+          "lines": [
+            296,
+            302
+          ],
+          "retrieved_at": "2026-09-19T21:02:25Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/3aa18eea4fefced206bb.html",
+          "raw_sha256": "0d00e2cf95094bdbe1836f6ba9251d45af03ea83b4b9b38575fe9e3753db22a4",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA18",
+      "claim": "External parties retain transaction-authorization keys but still rely on hosting validators for confirmation/state validation. Internal-party submission keys are entrusted to validators; external signing does not remove the hosting trust model.",
+      "classification": "documented_assumption_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/1e08172f3d11bfd1a225.txt",
+          "sha256": "820f3d35fb158af921b8b004a0780906dcf4ff01a1af63aec0bf2937ea6ecf1c",
+          "lines": [
+            30,
+            99
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/1e08172f3d11bfd1a225.html",
+          "raw_sha256": "b3f6cc2cf6757031a8ce495b4a1a423389f76bf5dbfbe0d87b8b01b632e9da90",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA19",
+      "claim": "External signing prepares an interpreted transaction, signs a hash committing to command and result, submits transaction plus signature and observes the result. This is authorization of a concrete transaction, not a proof of arbitrary economic correctness or a general constrained-plan intention.",
+      "classification": "documented_flow_and_scoped_inference",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/1e08172f3d11bfd1a225.txt",
+          "sha256": "820f3d35fb158af921b8b004a0780906dcf4ff01a1af63aec0bf2937ea6ecf1c",
+          "lines": [
+            102,
+            114
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/1e08172f3d11bfd1a225.html",
+          "raw_sha256": "b3f6cc2cf6757031a8ce495b4a1a423389f76bf5dbfbe0d87b8b01b632e9da90",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            62,
+            73
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA20",
+      "claim": "The external submission reference requires display of prepared transaction contents and independent hash recomputation when the preparing participant is untrusted; read visibility is separate from Daml fetch authorization.",
+      "classification": "documented_api_requirement",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-transactions",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.txt",
+          "sha256": "17ae6d2dbe0b584e1a097bebdaab0ea63295461c9088543537e30a096552aee2",
+          "lines": [
+            248,
+            326
+          ],
+          "retrieved_at": "2026-09-19T21:02:30Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.html",
+          "raw_sha256": "b1c202b145838e9036868dd5dd89b0dae3c018e69ff71064761f8154d4dd447b",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA21",
+      "claim": "Prepared transaction hashing is explicitly versioned, encodes action hierarchy and metadata, and defines a purpose/version-separated SHA256 final hash. Protobuf serialization alone is not its canonical signed encoding.",
+      "classification": "documented_encoding_design",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            62,
+            163
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            472,
+            637
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            721,
+            812
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA22",
+      "claim": "Hashing documentation has unresolved executable-spec inconsistencies: enum lists V2/V3 while table supports V4; metadata pseudocode uses submission_time/disclosed_events while Python uses preparation_time/input_contracts; V2 metadata pseudocode includes max_record_time unlike V2 example code. Do not claim a byte-exact verified implementation from this page.",
+      "classification": "documentation_contradiction",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            74,
+            100
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            730,
+            770
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            986,
+            1010
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-hashing-algorithm",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.txt",
+          "sha256": "25359c6cc89990f1ffa24dde6c2b4b2823f71f9482987a61753d58c24212e3ab",
+          "lines": [
+            1165,
+            1196
+          ],
+          "retrieved_at": "2026-09-19T21:02:28Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/4b3e672b95663c141b85.html",
+          "raw_sha256": "c1f792a41255784e090b2b9fe8201b29f7422ab42a691dae7cfffb382a0cff86",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA23",
+      "claim": "External submission excerpt distinguishes change ID (user_id, act_as set, command_id), per-retry submission_id and a deduplication window, and max_record_time bounds prepared-transaction admission. These are not identical to workflow identity or complete settlement proof.",
+      "classification": "documented_api_boundary",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-transactions",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.txt",
+          "sha256": "17ae6d2dbe0b584e1a097bebdaab0ea63295461c9088543537e30a096552aee2",
+          "lines": [
+            235,
+            256
+          ],
+          "retrieved_at": "2026-09-19T21:02:30Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.html",
+          "raw_sha256": "b1c202b145838e9036868dd5dd89b0dae3c018e69ff71064761f8154d4dd447b",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/external-signing-transactions",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.txt",
+          "sha256": "17ae6d2dbe0b584e1a097bebdaab0ea63295461c9088543537e30a096552aee2",
+          "lines": [
+            347,
+            389
+          ],
+          "retrieved_at": "2026-09-19T21:02:30Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/d73e69a0dfbb5cfe3384.html",
+          "raw_sha256": "b1c202b145838e9036868dd5dd89b0dae3c018e69ff71064761f8154d4dd447b",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA24",
+      "claim": "The composition TradeSettlement.Settle body is pure (), consuming the contract by default but encoding no asset-delivery effect. A Settled label or consumed settlement record is not evidence of economic delivery.",
+      "classification": "derived_negative_witness_not_executed",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/composition-multi-party",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.txt",
+          "sha256": "f31f4323cd00c99ec67a5a02bb172d243ade21c0c9d08fd44d15a3b7c85b1e30",
+          "lines": [
+            335,
+            394
+          ],
+          "retrieved_at": "2026-09-19T21:02:26Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/b5d40f8c1191e5d5da32.html",
+          "raw_sha256": "69543e407d0ed2a6b14529e365c79e163414cf460b66cebebe115f1a46b19da8",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m3-choices",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a9b4b8d5939f2e313852.txt",
+          "sha256": "6ef751e4739c2327937ca27b2dd025f55f28688dc8ff0fa0177d018d3d851e08",
+          "lines": [
+            117,
+            121
+          ],
+          "retrieved_at": "2026-09-19T21:02:43Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a9b4b8d5939f2e313852.html",
+          "raw_sha256": "ff8e63a30952b81d5fa2ac930ae83240aef87e7fdf81e5b1c2bd9c3d970371ad",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA25",
+      "claim": "Package selection distinguishes the contract creation package from the target template used for fetch/exercise. Detailed upgrade reference recomputes target metadata and ensure, and non-interface choice-body fetch/exercise uses statically referenced package dependencies.",
+      "classification": "documented_upgrade_rule",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m6-package-selection",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.txt",
+          "sha256": "a6de57ab02c6b1b9d55a125ad6c34f64460fcf7de822090e198f222a86161933",
+          "lines": [
+            15,
+            26
+          ],
+          "retrieved_at": "2026-09-19T21:02:59Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.html",
+          "raw_sha256": "d4eb4fa16c631e0406c16358e5dfb73ab6c88903b88ef5803dc23568c4c7ec9d",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/smart-contract-upgrading-reference",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.txt",
+          "sha256": "d38fb8f173822e056090574093ef064f14280d550ca68baf759e95a894ef6796",
+          "lines": [
+            895,
+            912
+          ],
+          "retrieved_at": "2026-09-19T21:02:34Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.html",
+          "raw_sha256": "5259c2609400cfd97af383373f35033b62f7a37b3aa11aaedb7311160c3b0fa3",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/smart-contract-upgrading-reference",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.txt",
+          "sha256": "d38fb8f173822e056090574093ef064f14280d550ca68baf759e95a894ef6796",
+          "lines": [
+            1612,
+            1621
+          ],
+          "retrieved_at": "2026-09-19T21:02:34Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.html",
+          "raw_sha256": "5259c2609400cfd97af383373f35033b62f7a37b3aa11aaedb7311160c3b0fa3",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA26",
+      "claim": "Upgrade compatibility permits modified controllers and choice bodies while preserving specified structural rules and recomputed contract metadata. This compatibility is not a theorem that outstanding signed economic consent is semantically unchanged.",
+      "classification": "documented_rule_and_design_inference",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m6-upgrade-compatibility",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/2f0cea552ceb1d496f08.txt",
+          "sha256": "09394215062c3f2a0aa2fa6f350015890261b7e6d6b9fd4acdd6c0300960598c",
+          "lines": [
+            45,
+            70
+          ],
+          "retrieved_at": "2026-09-19T21:03:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/2f0cea552ceb1d496f08.html",
+          "raw_sha256": "27b08c6f2e31490d0a790ac53b8b87b0e5cac88d39f7bf09471cf419328f637a",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/smart-contract-upgrading-reference",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.txt",
+          "sha256": "d38fb8f173822e056090574093ef064f14280d550ca68baf759e95a894ef6796",
+          "lines": [
+            895,
+            912
+          ],
+          "retrieved_at": "2026-09-19T21:02:34Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.html",
+          "raw_sha256": "5259c2609400cfd97af383373f35033b62f7a37b3aa11aaedb7311160c3b0fa3",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA27",
+      "claim": "Package-selection guidance says code references govern target versions and no automatic newest-version preference, whereas production guidance loosely says new contracts use latest uploaded version and old choices use the new body. Preserve version-resolution scope rather than silently adopting latest.",
+      "classification": "documentation_qualification",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/appdev/modules/m6-package-selection",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.txt",
+          "sha256": "a6de57ab02c6b1b9d55a125ad6c34f64460fcf7de822090e198f222a86161933",
+          "lines": [
+            15,
+            26
+          ],
+          "retrieved_at": "2026-09-19T21:02:59Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.html",
+          "raw_sha256": "d4eb4fa16c631e0406c16358e5dfb73ab6c88903b88ef5803dc23568c4c7ec9d",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m6-package-selection",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.txt",
+          "sha256": "a6de57ab02c6b1b9d55a125ad6c34f64460fcf7de822090e198f222a86161933",
+          "lines": [
+            60,
+            80
+          ],
+          "retrieved_at": "2026-09-19T21:02:59Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/89c71974a152286833fd.html",
+          "raw_sha256": "d4eb4fa16c631e0406c16358e5dfb73ab6c88903b88ef5803dc23568c4c7ec9d",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/modules/m7-smart-contract-upgrades",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/19a6f52b3ab7164b6367.txt",
+          "sha256": "e599708488a0a56695b89342e65b7d15ac351e6558236f798f2cc91a44e92cc4",
+          "lines": [
+            66,
+            86
+          ],
+          "retrieved_at": "2026-09-19T21:03:06Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/19a6f52b3ab7164b6367.html",
+          "raw_sha256": "bc8057bed63cb9985b2eb20cc220eded0b532fc920aa64a42e1e3485339d1779",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/appdev/deep-dives/smart-contract-upgrading-reference",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.txt",
+          "sha256": "d38fb8f173822e056090574093ef064f14280d550ca68baf759e95a894ef6796",
+          "lines": [
+            895,
+            912
+          ],
+          "retrieved_at": "2026-09-19T21:02:34Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/a79467d1f3485c1235d8.html",
+          "raw_sha256": "5259c2609400cfd97af383373f35033b62f7a37b3aa11aaedb7311160c3b0fa3",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA28",
+      "claim": "The detailed ledger model interoperability section explicitly describes evolving vision and provides no general cross-ledger key uniqueness guarantee; it is not evidence of universal atomic settlement across independent chains.",
+      "classification": "documented_scope_limit",
+      "sources": [
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            2090,
+            2110
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        },
+        {
+          "url": "https://docs.canton.network/overview/reference/ledger-model-detailed",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.txt",
+          "sha256": "af9999a0bd68dce0101886ea98dd8cfabde2c0ecd422ffa20327b91da9369a77",
+          "lines": [
+            2590,
+            2670
+          ],
+          "retrieved_at": "2026-09-19T21:04:01Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/51fcbf39cd749b8380a3.html",
+          "raw_sha256": "6babbb28663a17bf19d92bfa8eb6c3180c898c4c360ecbcca2dd9d9de3ac0831",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "current documentation captured 2026-09-19; runtime version not independently attested"
+        }
+      ]
+    },
+    {
+      "id": "DA29",
+      "claim": "Archived build/3.5 propose-accept pattern models consent through issuer-signed proposal, recipient-controlled acceptance and jointly signed result agreement; it motivates obligation formation, not legal enforceability or general proof carrying execution.",
+      "classification": "versioned_documented_pattern",
+      "sources": [
+        {
+          "url": "https://archived.docs.digitalasset.com/build/3.5/sdlc-howtos/smart-contracts/develop/patterns/propose-accept.html",
+          "local_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/5a49803a712e8eee8035.txt",
+          "sha256": "1214edb7f1f477ce95e1413cf00cde21e795688a291c48768daa09ff69e0cd1a",
+          "lines": [
+            439,
+            591
+          ],
+          "retrieved_at": "2026-09-19T21:04:20Z",
+          "raw_file": "/home/charl/research/daml-teardown-2026-09-19/docs/captures/5a49803a712e8eee8035.html",
+          "raw_sha256": "9d967da7699942ace4d07491fb06c0d2c230f95a8865fc840b836e8385470cb8",
+          "capture_method": "Scrapling 0.4.15",
+          "version_scope": "archived build/3.5 documentation"
+        }
+      ]
+    }
+  ]
+}

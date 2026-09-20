@@ -1,0 +1,399 @@
+On this page
+DA.TextMap
+Functions
+fromList
+fromListWithL
+fromListWithR
+fromListWith
+toList
+empty
+size
+null
+lookup
+member
+filter
+filterWithKey
+delete
+singleton
+insert
+insertWith
+union
+merge
+Orphan Typeclass Instances
+Daml Standard Library
+Modules
+DA.TextMap
+Copy page
+Copy page
+Reference documentation for Daml module DA.TextMap.
+Copy page
+Copy page
+Daml module
+​
+DA.TextMap
+TextMap - A map is an associative array data type composed of a
+Daml
+​
+Functions
+​
+fromList
+fromList
+: [(
+Text
+,
+a
+)] ->
+TextMap
+a
+Create a map from a list of key/value pairs.
+​
+fromListWithL
+fromListWithL
+: (
+a
+->
+a
+->
+a
+) -> [(
+Text
+,
+a
+)] ->
+TextMap
+a
+Create a map from a list of key/value pairs with a combining
+function. The combining function is only used when a key appears multiple
+times in the list and it takes two arguments: the first one is the new value
+being inserted at that key and the second one is the value accumulated so
+far at that key.
+Examples:
+>>> fromListWithL (++) [("A", [1]), ("A", [2]), ("B", [2]), ("B", [1]), ("A", [3])]
+fromList [("A", [3, 2, 1]), ("B", [1, 2])]
+>>> fromListWithL (++) [] == (empty : TextMap [Int])
+True
+​
+fromListWithR
+fromListWithR
+: (
+a
+->
+a
+->
+a
+) -> [(
+Text
+,
+a
+)] ->
+TextMap
+a
+Create a map from a list of key/value pairs like
+fromListWithL
+with the combining function flipped. Examples:
+>>> fromListWithR (++) [("A", [1]), ("A", [2]), ("B", [2]), ("B", [1]), ("A", [3])]
+fromList [("A", [1, 2, 3]), ("B", [2, 1])]
+>>> fromListWithR (++) [] == (empty : TextMap [Int])
+True
+​
+fromListWith
+fromListWith
+: (
+a
+->
+a
+->
+a
+) -> [(
+Text
+,
+a
+)] ->
+TextMap
+a
+Deprecated: Daml compatibility helper, use ‘fromListWithR’ instead of ‘fromListWith’
+​
+toList
+toList
+:
+TextMap
+a
+-> [(
+Text
+,
+a
+)]
+Convert the map to a list of key/value pairs where the keys are
+in ascending order.
+​
+empty
+empty
+:
+TextMap
+a
+The empty map.
+​
+size
+size
+:
+TextMap
+a
+->
+Int
+Number of elements in the map.
+​
+null
+null
+:
+TextMap
+v
+->
+Bool
+Is the map empty?
+​
+lookup
+lookup
+:
+Text
+->
+TextMap
+a
+->
+Optional
+a
+Lookup the value at a key in the map.
+​
+member
+member
+:
+Text
+->
+TextMap
+v
+->
+Bool
+Is the key a member of the map?
+​
+filter
+filter
+: (
+v
+->
+Bool
+) ->
+TextMap
+v
+->
+TextMap
+v
+Filter the
+TextMap
+using a predicate: keep only the entries where the
+value satisfies the predicate.
+​
+filterWithKey
+filterWithKey
+: (
+Text
+->
+v
+->
+Bool
+) ->
+TextMap
+v
+->
+TextMap
+v
+Filter the
+TextMap
+using a predicate: keep only the entries which
+satisfy the predicate.
+​
+delete
+delete
+:
+Text
+->
+TextMap
+a
+->
+TextMap
+a
+Delete a key and its value from the map. When the key is not a
+member of the map, the original map is returned.
+​
+singleton
+singleton
+:
+Text
+->
+a
+->
+TextMap
+a
+Create a singleton map.
+​
+insert
+insert
+:
+Text
+->
+a
+->
+TextMap
+a
+->
+TextMap
+a
+Insert a new key/value pair in the map. If the key is already
+present in the map, the associated value is replaced with the
+supplied value.
+​
+insertWith
+insertWith
+: (
+v
+->
+v
+->
+v
+) ->
+Text
+->
+v
+->
+TextMap
+v
+->
+TextMap
+v
+Insert a new key/value pair in the map. If the key is already
+present in the map, it is combined with the previous value using the given function
+f new_value old_value
+.
+​
+union
+union
+:
+TextMap
+a
+->
+TextMap
+a
+->
+TextMap
+a
+The union of two maps, preferring the first map when equal
+keys are encountered.
+​
+merge
+merge
+: (
+Text
+->
+a
+->
+Optional
+c
+) -> (
+Text
+->
+b
+->
+Optional
+c
+) -> (
+Text
+->
+a
+->
+b
+->
+Optional
+c
+) ->
+TextMap
+a
+->
+TextMap
+b
+->
+TextMap
+c
+Merge two maps.
+merge f g h x y
+applies
+f
+to all key/value pairs
+whose key only appears in
+x
+,
+g
+to all pairs whose key only appears
+in
+y
+and
+h
+to all pairs whose key appears in both
+x
+and
+y
+.
+In the end, all pairs yielding
+Some
+are collected as the result.
+​
+Orphan Typeclass Instances
+instance
+Show
+a
+=>
+Show
+(
+TextMap
+a
+)
+instance
+Eq
+a
+=>
+Eq
+(
+TextMap
+a
+)
+instance
+Ord
+a
+=>
+Ord
+(
+TextMap
+a
+)
+instance
+Semigroup
+(
+TextMap
+b
+)
+instance
+Monoid
+(
+TextMap
+b
+)
+instance
+Functor
+TextMap
+instance
+Foldable
+TextMap
+instance
+Traversable
+TextMap
+Suggest edits
+Raise issue
+DA.Text
+DA.Time

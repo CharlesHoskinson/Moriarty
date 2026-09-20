@@ -1,0 +1,181 @@
+{
+  "model": "claude-fable-5-1",
+  "effort": "medium",
+  "track": "distributed-systems-cryptographic-protocol-audit: Chain Signatures/MPC/TEE and Omni Bridge trust boundaries for Moriarty contingent settlement",
+  "report_markdown": "# Chain Signatures, MPC/TEE and Omni Bridge: what Moriarty can prove and what it cannot promise\n\nScope note. This is one bounded pass over the supplied excerpts only. I did not read omitted pages, did not open the pinned repositories beyond the excerpted files, and did not run code or query any live deployment. Every proposition below is tagged in the claims array as verified-from-excerpt, inferred, or unverified. Most excerpts come from two publishers (near/near-one and docs.near-intents.org); agreement between them is not independent assurance.\n\n## Explanation\n\n### Signing authority is not fact verification\n\nThe central architectural fact for Moriarty is that Chain Signatures produce a signature, not a settlement. The `v1.signer` contract exposes a `sign` method that takes a payload, a derivation path and a domain id, yields while the MPC network signs, and returns a signature that the caller must still relay to the destination chain (https://docs.near.org/chain-abstraction/chain-signatures lines 137-176; implementation page lines 231-295). The docs page itself states that Chain Signatures is a one-way tool for outbound transactions and points at Omni Bridge for reading external state (lines 36-37). A signature therefore proves, at most, that a threshold of MPC participants authorized a specific byte string under a key derived from the requesting NEAR account and path. It does not prove broadcast, inclusion, finality, or that the destination chain interpreted the bytes as intended.\n\nThe MPC README adds a second capability the older docs do not describe: foreign chain transaction verification, in which nodes independently query configured RPC providers, run deterministic extractors, and produce a threshold signature over the observed values (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/README.md line 38). This is an attestation of RPC responses, not of chain consensus. The foreign-chain design confirms the safety statement is relative: fewer than `signing_threshold` participants cannot force a false attestation, and each node compares every configured provider and errors on disagreement (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/calculating-supported-foreign-chains.md lines 60-72, 123-126). The same file says the terminal-on-disagreement rule is an implementation requirement, not current behavior, and that the voted RPC quorum is stored but not yet consumed (lines 17-19, 65-67). For Moriarty, an MPC-signed foreign observation is exactly what the product contract calls a named assumption (/home/charl/Moriarty-aeon-study/docs/MORIARTY-PRODUCT-CONTRACT.md line 39): it can be bound into a proof statement as an observation, never substituted for the transition proof.\n\n### Governance, operators and upgrades are one trust domain\n\nThe domain-separation design records that today the governance voting threshold and the cryptographic reconstruction threshold are the same value (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/domain-separation.md lines 5-9). The split into `GovernanceThreshold` and per-key `ReconstructionThreshold`, with a 60 percent governance floor, is proposed; PRs 1 and 2 are marked done, PRs 3 through 7 are not (lines 339-361, 383-600). The TEE design states that participants also act as operators (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/securing-mpc-with-tee/securing-mpc-with-tee.md line 136), and that the node account key is granted access to all contract methods, widening the in-contract blast radius as an accepted tradeoff (lines 414-423). New signature domains and participant sets are added by participant vote (`vote_add_domains`, `vote_new_parameters`; docs.near.org chain-signatures lines 179-181, 193-197). Image upgrades follow a launcher pattern where a threshold of participants votes a new image hash and stale nodes are evicted after a default seven-day deadline (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/tee-lifecycle.md lines 262-298).\n\nThe consequence for Moriarty: the signer key, the rules for who signs, the code they run, and the foreign-chain RPC policy are all controlled by the same participant set. A Moriarty proof that binds a signer public key binds an artifact whose controlling semantics can change by vote without the user's consent. The proof statement must therefore pin the signer contract account, the domain id and the public key at signing time as execution-domain facts, and the signed intent must state whether a later participant or key change invalidates the plan.\n\n### TEE narrows the threat model; it does not remove operators\n\nThe threat model states a conservative TEE assumption: integrity is relied on, confidentiality is best-effort (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/threat-model-diagram.md line 385). Disk rollback is listed as an open risk (T6, line 281), and T13 records that attestation proves what code runs, not who owns the machine (lines 288, 298). The attestation-verifier design adds that the MPC contract cannot verify another account's code hash or access-key list, so auditing a candidate verifier is a voter responsibility (/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/docs/design/attestation-verifier-contract.md lines 233-240), and that rotating a broken verifier does not purge attestations it already accepted; they age out over up to seven days, described as containment of future trust, not remediation of past damage (lines 212-218). Moriarty cannot inherit TEE claims as proof; at most a Moriarty deployment can record the attestation policy hash as an observation.\n\n### NEAR execution patterns Moriarty must model\n\nThree NEAR facts in the excerpts shape contingent settlement. First, a failed promise result carries no payload; a rejection and an unreachable callee are indistinguishable unless the outcome is returned as a value on a successful receipt (attestation-verifier-contract.md lines 284-292). Second, yield-resume callbacks fire exactly once, either on resume or after roughly 200 blocks of silence, and an out-of-gas in the callback drops cleanup with no retry (lines 114-126). Third, the target of a cross-contract call is fixed when scheduled, not re-read at execution, so governance changes can race in-flight calls (lines 357-358). These are the concrete shapes of the product contract's requirement that each failure outcome be an explicit transition retaining residual duties (MORIARTY-PRODUCT-CONTRACT.md line 39). A Moriarty NEAR pattern library should model a sign request as a state machine: requested, signature returned, timeout without signature, signature returned but destination outcome unknown, destination confirmed by observation, destination reverted by observation.\n\n### Omni Bridge: per-direction verification\n\nInbound to NEAR, Omni Bridge verifies a source-chain proof: light clients for Ethereum, Bitcoin and Zcash; Wormhole for Solana, BNB and EVM L2s (/home/charl/research/near-teardown-2026-09-19/repos/Near-One/omni-bridge/README.md lines 14-18; https://docs.near.org/chain-abstraction/omnibridge/overview lines 24-48). Outbound, MPC operators sign a destination-chain payment and relayers only carry it (https://docs.near-intents.org/learn/omni-bridge/overview lines 10-17, 26-29). Near One runs the bridge (line 8). Anyone can submit an inbound proof (line 25). Inbound trust therefore differs by chain: a light client inherits the source chain's consensus and the light client's own correctness; Wormhole adds a guardian set as a distinct trust root; neither is described in the excerpts at the level of a verifiable specification. The README lists versioned prover helper contracts (eth-prover-0_4_1, vaa-prover-0_4_3; lines 36-38) but the upgrade authority over `omni.bridge.near` and those provers is not in the excerpts. Finality waits are published (Ethereum 960 s, Arbitrum 1066 s, Base 1026 s, Solana 14 s; lines 88-93); those are operator policies, not proofs of irreversibility.\n\nThe Intents bridging page documents a manual BTC refund path for deposits that never finalized on NEAR (https://docs.near-intents.org/integration/bridging/overview lines 52-53). That is direct evidence that partial and unknown states exist in production and that recovery is operational, not protocol-guaranteed.\n\n## Reference\n\n### Trust boundary table (from excerpts)\n\n| Boundary | Who controls | Excerpt basis | Moriarty treatment |\n|---|---|---|---|\n| Signer key and domains | MPC participants by vote | chain-signatures lines 179-197; domain-separation lines 5-9 | Pin contract, domain id, public key as execution-domain facts |\n| Foreign-chain observation | Participants plus their configured RPC providers | mpc README line 38; calculating-supported-foreign-chains lines 60-72 | Named observation assumption; never a transition proof |\n| TEE attestation policy | Participants vote image and verifier hashes | tee-lifecycle lines 238-247; attestation-verifier lines 208-218 | Observation of policy hash only |\n| Inbound bridge proof | Light client or Wormhole guardians per chain | omni-bridge README lines 16-18 | Per-chain named assumption, distinct per route |\n| Outbound relay and destination inclusion | Relayers and destination chain | intents omni-bridge overview lines 10-17, 26-29 | Cannot be promised; explicit pending/unknown states |\n| Bridge contract upgrades | Not in excerpts | omni-bridge README lines 31-39 lists versioned provers | Unverified; treat as assumption |\n\n### Failure outcomes a Moriarty NEAR pattern must enumerate\n\n1. Sign request yields, MPC never responds, callback fires with failed promise after roughly 200 blocks. Fees and any guaranteed-phase effects are retained.\n2. Signature returned, caller never broadcasts. Authority was exercised; no destination effect.\n3. Signature returned and broadcast; destination outcome unknown at time of NEAR observation.\n4. Destination chain includes the transaction, later reorganizes. Excerpts give operator wait times only.\n5. Payload lacks chain binding (pre-EIP-155 or shared UTXO format); the same signature may be valid on another chain (chain-signatures lines 113-135).\n\n## How-to\n\n### How to bind a Chain Signatures request into a Moriarty proof statement\n\n1. Encode the destination transaction from typed fields inside the Moriarty program; hash it to the exact payload passed to `sign`. The proof shows payload equals hash of a transaction whose effects refine the signed intent under a named destination-chain model.\n2. Require the destination encoding to include chain identity, and use a per-chain derivation path, following the replay guidance (chain-signatures lines 129-135).\n3. Record the signer contract account, domain id and derived public key in the execution domain.\n4. Model the sign yield as a fallible phase with an explicit timeout transition.\n5. Treat any later foreign-chain verification result as an observation with its provider policy hash, not as settlement.\n\n### How to represent an inbound Omni Bridge deposit\n\n1. Name the route (light client or Wormhole) per chain as a distinct assumption.\n2. Treat bridge acceptance on NEAR as the settled event for NEAR-side duties; treat source-chain finality as the bridge operator's policy, not a proof.\n3. Provide a recovery transition for deposits that never finalize on NEAR, mirroring the documented manual BTC refund path, without promising a refund.\n\n## Tutorial\n\nA developer authoring a BTC-settled loan in Moriarty would: declare a liability opened on NEAR when the borrower signs intent; request an MPC signature over a Bitcoin transaction paying the lender, with the payload derived in-program; mark the liability as pending-settlement once the signature is returned; consume an MPC foreign-chain observation of the Bitcoin transaction as a named assumption to discharge the liability; and provide explicit unknown and recovered transitions that keep the liability open if the observation never arrives. At no point does the program claim the coins moved; it claims that if the observation assumption holds, the liability discharge is valid. This matches the product contract's rule that debt cannot disappear through a local success result (MORIARTY-PRODUCT-CONTRACT.md line 37).\n\n## What remains unverified\n\nThe excerpts do not show: the actual `v1.signer` contract source at the pinned mpc commit; the omni.bridge.near admin or upgrade keys; the Wormhole guardian set and its verification on NEAR; the light client contracts' correctness or their own upgrade paths; whether foreign-chain verification is enabled on mainnet; whether the domain-separation PRs 3 through 7 have landed; whether the terminal-on-disagreement rule has been implemented; and any of the referenced audit reports. The near/intents, amm-solver and sdk-monorepo commits are pinned but no excerpt from them was supplied, so nothing about the Verifier contract or solver behavior is verified here.",
+  "claims": [
+    {
+      "id": "C1",
+      "claim": "Chain Signatures sign returns a signature that the caller must relay to the destination chain; the docs describe it as a one-way outbound tool.",
+      "evidence_locator": "https://docs.near.org/chain-abstraction/chain-signatures lines 36-37, 137-176; .../implementation lines 285-295",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C2",
+      "claim": "A signature is bound to a network only if the signed payload encodes that network; legacy EVM and shared-UTXO formats permit cross-chain replay; distinct derivation paths per chain are recommended.",
+      "evidence_locator": "https://docs.near.org/chain-abstraction/chain-signatures lines 113-135",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C3",
+      "claim": "The MPC network offers foreign chain transaction verification by querying configured RPC providers and threshold-signing observed values.",
+      "evidence_locator": "/home/charl/research/near-teardown-2026-09-19/repos/near/mpc/README.md line 38",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C4",
+      "claim": "Foreign-chain verification safety is relative to signing_threshold and configured providers; the terminal-on-disagreement rule is a stated requirement, not current behavior; RPC quorum is stored but not consumed.",
+      "evidence_locator": ".../mpc/docs/design/calculating-supported-foreign-chains.md lines 17-19, 60-72, 123-126",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C5",
+      "claim": "An MPC-signed foreign observation attests RPC responses, not chain consensus, and is therefore a named assumption for Moriarty rather than a transition proof.",
+      "evidence_locator": "Inference from C3, C4 and /home/charl/Moriarty-aeon-study/docs/MORIARTY-PRODUCT-CONTRACT.md line 39",
+      "classification": "inferred"
+    },
+    {
+      "id": "C6",
+      "claim": "Governance voting threshold and cryptographic reconstruction threshold are currently the same value; the split is a design with only PRs 1-2 marked done.",
+      "evidence_locator": ".../mpc/docs/design/domain-separation.md lines 5-9, 383-600",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C7",
+      "claim": "MPC participants also act as operators, and the node account key is granted access to all contract methods as an accepted security tradeoff.",
+      "evidence_locator": ".../mpc/docs/design/securing-mpc-with-tee/securing-mpc-with-tee.md lines 136, 414-423",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C8",
+      "claim": "New signature domains and participant sets are added by participant votes; the network is described as 8 nodes.",
+      "evidence_locator": "https://docs.near.org/chain-abstraction/chain-signatures lines 179-181, 193-197",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C9",
+      "claim": "The TEE threat model relies on TDX integrity but treats confidentiality as best-effort; disk rollback is an open risk; attestation proves what runs, not who owns the machine.",
+      "evidence_locator": ".../mpc/docs/design/threat-model-diagram.md lines 281, 288, 298, 385",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C10",
+      "claim": "Rotating a broken attestation verifier does not purge already-accepted attestations; they age out over up to 7 days; verifier audit is a voter responsibility because the contract cannot read another account's code hash.",
+      "evidence_locator": ".../mpc/docs/design/attestation-verifier-contract.md lines 212-218, 233-240",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C11",
+      "claim": "NEAR failed promise results carry no payload; rejection and unreachable callee are indistinguishable unless encoded as a success value; yield callbacks fire once, on resume or after ~200 blocks; cross-contract call targets are fixed at scheduling time.",
+      "evidence_locator": ".../mpc/docs/design/attestation-verifier-contract.md lines 114-126, 284-292, 357-358",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C12",
+      "claim": "Omni Bridge inbound verification uses light clients for Ethereum, Bitcoin, Zcash and Wormhole for Solana, BNB, EVM L2s; outbound uses MPC signing with relayers only carrying messages; Near One runs it.",
+      "evidence_locator": ".../Near-One/omni-bridge/README.md lines 14-18; https://docs.near.org/chain-abstraction/omnibridge/overview lines 24-48; https://docs.near-intents.org/learn/omni-bridge/overview lines 8-29",
+      "classification": "verified-from-excerpt"
+    },
+    {
+      "id": "C13",
+      "claim": "Published finality waits (Ethereum 960s, Arbitrum 1066s, Base 1026s, Solana 14s) are operator policy figures, not irreversibility proofs.",
+      "evidence_locator": ".../Near-One/omni-bridge/README.md lines 87-97",
+      "classification": "verified-from-excerpt (figures); inferred (interpretation)"
+    },
+    {
+      "id": "C14",
+      "claim": "A manual BTC refund process exists for deposits that never finalized on NEAR, evidencing production partial/unknown states with operational recovery.",
+      "evidence_locator": "https://docs.near-intents.org/integration/bridging/overview lines 52-53",
+      "classification": "verified-from-excerpt (page title only; procedure not read)"
+    },
+    {
+      "id": "C15",
+      "claim": "Omni Bridge upgrade authority over omni.bridge.near and the versioned prover contracts is not described in the excerpts.",
+      "evidence_locator": ".../Near-One/omni-bridge/README.md lines 31-39",
+      "classification": "unverified"
+    },
+    {
+      "id": "C16",
+      "claim": "Mainnet enablement of foreign-chain verification, landing of domain-separation PRs 3-7, and the current v1.signer contract source at the pinned commit are not established by the excerpts.",
+      "evidence_locator": "Absence in supplied excerpts",
+      "classification": "unverified"
+    },
+    {
+      "id": "C17",
+      "claim": "Nothing about the NEAR Intents Verifier contract or solver behavior is verified; those repositories are pinned but no excerpt was supplied.",
+      "evidence_locator": "Pinned commits near/intents 32a7836f, near-intents-amm-solver 0f29eb26, sdk-monorepo b6bab503; no excerpt",
+      "classification": "unverified"
+    }
+  ],
+  "proposed_requirements": [
+    {
+      "id": "R1",
+      "ears": "When a Moriarty program requests an MPC signature over a destination-chain payload, the compiler shall require the payload to be derived in-program from typed transaction fields that include the destination chain identity, and the proof statement shall bind the signer contract account, domain id and derived public key.",
+      "positive_scenario": "An EIP-155 transaction with chainId is hashed in-program and signed via path ethereum-1; the proof shows the payload refines the signed intent under the EVM model.",
+      "negative_scenario": "A pre-EIP-155 payload or a shared path across chains is rejected at compile time."
+    },
+    {
+      "id": "R2",
+      "ears": "When a sign request yields, the program shall declare explicit transitions for signature-returned, timeout-without-signature and signature-returned-but-destination-unknown, each retaining residual duties and stating retained fees.",
+      "positive_scenario": "Timeout after the yield window leaves the liability open and records fee consumption; no refund is asserted.",
+      "negative_scenario": "A program that treats the yield callback failure as success or as refund is rejected."
+    },
+    {
+      "id": "R3",
+      "ears": "When a program consumes an MPC foreign-chain observation, the proof statement shall record it as a named observation assumption bound to the provider policy hash, and shall not use it to discharge a mandatory transition proof.",
+      "positive_scenario": "Liability discharge is conditional on observation O of a Bitcoin transaction; the claim reads: if O holds, discharge is valid.",
+      "negative_scenario": "A program asserting the coins moved because O arrived is rejected."
+    },
+    {
+      "id": "R4",
+      "ears": "When an inbound bridge deposit is modeled, the program shall name the verification route per chain and treat NEAR-side bridge acceptance as the settled event, with source-chain finality as an external assumption.",
+      "positive_scenario": "An Ethereum deposit via light client and a Solana deposit via Wormhole carry distinct assumption identifiers.",
+      "negative_scenario": "A single generic bridge-trusted assumption spanning both routes is rejected."
+    },
+    {
+      "id": "R5",
+      "ears": "If a signed intent depends on a specific MPC participant set or public key, then the intent shall state whether a governance change of participants, domains or verifier policy invalidates outstanding plans.",
+      "positive_scenario": "Intent pins public key K; a later reshare producing a different key causes the plan to fall into an explicit invalid-authority state.",
+      "negative_scenario": "Silent continuation under a changed key set is rejected."
+    },
+    {
+      "id": "R6",
+      "ears": "Where a NEAR cross-contract callback returns a failed promise, the pattern library shall model the outcome as unknown rather than rejected, unless the callee encodes rejection as a success value.",
+      "positive_scenario": "Callee returns Rejected(reason) as a value; program transitions to rejected with residual duties.",
+      "negative_scenario": "A bare failed promise mapped to a refund or a definitive rejection is rejected."
+    }
+  ],
+  "contradictions": [
+    "docs.near.org chain-signatures line 36 says Chain Signatures is one-way and directs external-state reads to Omni Bridge, while the mpc README line 38 describes MPC-network foreign chain transaction verification; the older doc appears stale rather than strictly contradictory.",
+    "docs.near.org omnibridge/overview lines 24-48 lists Zcash and Polygon under Omni Bridge; docs.near-intents.org bridging overview lines 22, 31 lists Zcash under POA Bridge and omits Polygon from Omni Bridge; chain-to-route mapping differs across publishers.",
+    "docs.near.org omnibridge/overview line 17 describes transfers as trustless, while the same publisher documents light client, Wormhole, MPC participant voting and operator-run relayers as trust roots.",
+    "docs.near.org chain-signatures lines 227-229 claims nobody but the account holder can request signatures, but the excerpts show participants control domains, participant sets and code by vote; the claim holds only under honest-threshold and honest-governance assumptions.",
+    "attestation-verifier-contract.md line 3 states parts of its own mpc-contract-side design were not built, so its yield-resume description is design, not implemented behavior."
+  ],
+  "missing_evidence": [
+    "v1.signer contract source at near/mpc a47cf412 (pinned nearcore) and 3499a2a4 (pinned mpc): actual sign, respond and governance code.",
+    "Omni Bridge NEAR contract source, admin keys and upgrade path for omni.bridge.near and prover contracts at Near-One/omni-bridge 3124f85f.",
+    "Wormhole guardian set verification on NEAR (vaa-prover) and the Ethereum/Bitcoin light client implementations.",
+    "Mainnet status of foreign-chain verification, domain-separation PRs 3-7, and terminal-on-disagreement implementation.",
+    "Referenced audit reports in audits/README.md.",
+    "Any excerpt from near/intents Verifier contract, amm-solver or sdk-monorepo.",
+    "The manual BTC refund procedure content.",
+    "Actual NEAR runtime yield timeout constant and receipt semantics from nearcore rather than from MPC design prose."
+  ],
+  "recommendations_for_moriarty": [
+    "Recommendation, not implemented: add a NEAR pattern library that models sign requests, yield callbacks and cross-contract calls as explicit state machines with unknown, pending, settled and recovered states, per product contract line 39.",
+    "Recommendation: define an observation assumption type that carries the MPC foreign-chain policy hash, the signer public key and the domain id, and forbid its use as a transition proof.",
+    "Recommendation: require in-program payload derivation with chain binding and per-chain derivation paths; reject legacy EVM and shared-UTXO formats without replay protection.",
+    "Recommendation: bind signer contract, key and participant epoch into the execution domain so governance changes are visible as authority changes rather than silent continuation.",
+    "Recommendation: represent inbound bridge routes as distinct per-chain assumptions and publish a trust report listing them for each compiled program.",
+    "Recommendation: state in developer documentation that Moriarty proofs never supply destination inclusion, finality, MPC liveness, relayer behavior or refunds."
+  ],
+  "evidence_that_would_change_conclusions": [
+    "v1.signer source showing the contract verifies destination-chain semantics or binds chain identity itself would strengthen what can be proven from the signature alone.",
+    "Evidence that foreign-chain verification consults chain consensus proofs rather than RPC responses would upgrade the observation from RPC attestation to a light-client-grade assumption.",
+    "Landing of domain-separation PRs 3-7 and a governance threshold strictly above reconstruction threshold would alter the governance-equals-signing conclusion.",
+    "Omni Bridge contracts shown to be immutable or governed by a documented independent process would change the upgrade-surface assessment.",
+    "Implementation of terminal-on-disagreement and RPC quorum consumption would change the current-behavior caveat on foreign-chain safety.",
+    "A NEAR protocol source showing promise failures carry payloads would invalidate the unknown-versus-rejected modeling requirement."
+  ]
+}

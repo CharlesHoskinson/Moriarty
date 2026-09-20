@@ -1,0 +1,157 @@
+On this page
+Templates
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Round
+Copy page
+Copy page
+Documentation for Splice.Round
+Copy page
+Copy page
+​
+Templates
+template
+ClosedMiningRound
+A record that a specific mining round has been closed, which can be used to archive expired rewards.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+round
+Round
+issuancePerValidatorRewardCoupon
+Decimal
+issuancePerFeaturedAppRewardCoupon
+Decimal
+issuancePerUnfeaturedAppRewardCoupon
+Decimal
+issuancePerSvRewardCoupon
+Decimal
+optIssuancePerValidatorFaucetCoupon
+Optional
+Decimal
+Introduced in CIP-3
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+IssuingMiningRound
+A mining round for whose rewards amulets are being issued.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+round
+Round
+issuancePerValidatorRewardCoupon
+Decimal
+issuancePerFeaturedAppRewardCoupon
+Decimal
+issuancePerUnfeaturedAppRewardCoupon
+Decimal
+issuancePerSvRewardCoupon
+Decimal
+opensAt
+Time
+Time after which rewards from this mining round can be collected
+targetClosesAt
+Time
+Time when this round is expected to close during standard DSO. The round SHOULD NOT be archived before this time.
+optIssuancePerValidatorFaucetCoupon
+Optional
+Decimal
+Introduced in CIP-3
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+template
+OpenMiningRound
+A mining round for which new rewards can be registered. Note that multiple mining rounds can be open at the same time to give some time for propagating a new open round, while still registering rewards against the previous open round.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+round
+Round
+amuletPrice
+Decimal
+opensAt
+Time
+Time after which transfers can use this mining round
+targetClosesAt
+Time
+Time when this round is expected to be closed as part of standard DSO. The round SHOULD NOT be archived before this time.
+issuingFor
+RelTime
+Timepoint on the issuance curve that was used to determing the issuance configuration for this round.
+transferConfigUsd
+TransferConfig USD
+Configuration determining the fees and limits in USD for Amulet transfers
+issuanceConfig
+IssuanceConfig
+Configuration for issuance of this round.
+tickDuration
+RelTime
+Duration of a tick, which is the duration of half a round.
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+OpenMiningRound_Fetch
+Controller: p
+Returns: OpenMiningRound
+Field
+Type
+Description
+p
+Party
+template
+SummarizingMiningRound
+A mining round for which the total sum of registered rewards is being computed. Rewards can no longer be registered aginst such a round.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+round
+Round
+amuletPrice
+Decimal
+issuanceConfig
+IssuanceConfig
+tickDuration
+RelTime
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+​
+Functions
+getIssuingMiningRoundIssuancePerValidatorFaucetCoupon
+: IssuingMiningRound ->
+Decimal
+Accessor with defaulting for the optional issuancePerValidatorFaucetCoupon field
+getClosedMiningRoundIssuancePerValidatorFaucetCoupon
+: ClosedMiningRound ->
+Decimal
+Accessor with defaulting for the optional issuancePerValidatorFaucetCoupon field
+Suggest edits
+Raise issue
+Splice.RelRound
+Splice.Schedule

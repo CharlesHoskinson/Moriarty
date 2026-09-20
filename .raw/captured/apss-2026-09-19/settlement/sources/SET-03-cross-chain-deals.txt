@@ -1,0 +1,1012 @@
+                 Cross-chain Deals and Adversarial Commerce
+
+                    Maurice Herlihy                                 Barbara Liskov                              Liuba Shrira
+                     Brown University                                    MIT CSAIL                           Brandeis University
+                mph@cs.brown.edu                               liskov@csail.mit.edu                       liuba@brandeis.edu
+
+
+
+
+ABSTRACT                                                                              sical notions of correctness for atomic transactions must be
+Modern distributed data management systems face a new                                 rethought.
+challenge: how can autonomous, mutually-distrusting par-                                 Classical atomicity means that a transaction’s effects take
+ties cooperate safely and effectively? Addressing this chal-                          place everywhere or nowhere. This notion of atomicity can-
+lenge brings up questions familiar from classical distributed                         not be guaranteed when parties are potentially malicious:
+systems: how to combine multiple steps into a single atomic                           the best one can do is to ensure that honest parties cannot
+action, how to recover from failures, and how to synchronize                          be cheated. Moreover, classical transactions often prioritize
+concurrent access to data. Nevertheless, each of these issues                         safety over liveness, allowing, for example, commit proto-
+requires rethinking when participants are autonomous and                              cols that can block [41]. For cross-chain commerce, however,
+potentially adversarial.                                                              liveness guarantees have been relied upon to ensure that one
+   We propose the notion of a cross-chain deal, a new way                             party cannot trick another into locking up assets forever, or
+to structure complex distributed computations that man-                               even for a long time.
+age assets in an adversarial setting. Deals are inspired by                              Classical isolation guarantees that concurrent transactions
+classical atomic transactions, but are necessarily different,                         cannot interfere in destructive ways. Isolation is typically
+in important ways, to accommodate the decentralized and                               provided via properties such as serializability or snapshot
+untrusting nature of the exchange. We describe novel safety                           consistency. These properties are poorly suited to cross-
+and liveness properties, along with two alternative proto-                            chain commerce, where mutually-untrusting parties may re-
+cols for implementing cross-chain deals in a system of in-                            quire multiple cautious interactions to set up and execute a
+dependent blockchain ledgers. One protocol, based on syn-                             deal. Instead, non-interference takes the form of protection
+chronous communication, is fully decentralized, while the                             against double-spending: ensuring that one party does not
+other, based on semi-synchronous communication, requires                              concurrently sell the same asset to multiple counterparties.
+a globally shared ledger.                                                                Here we propose the notion of a cross-chain deal, a new
+                                                                                      computational abstraction for structuring commercial inter-
+PVLDB Reference Format:                                                               actions that mirror standard (non-blockchain) commercial
+Maurice Herlihy, Barbara Liskov, and Liuba Shrira. Cross-chain                        practices. Cross-chain deals are inspired by classical atomic
+Deals and Adversarial Commerce. PVLDB, 13(2): 100-113, 2019.                          transactions and modern cross-chain swaps, but differ, in
+DOI: https://doi.org/10.14778/3364324.3364326                                         essential ways, from both.
+                                                                                         Cross-chain deals are not atomic transactions. They solve
+                                                                                      different problems: transactions perform complex distributed
+1.    INTRODUCTION                                                                    state changes, while deals, by contrast, simply exchange
+   The emerging domain of electronic commerce spanning                                assets among parties. While a transaction’s effects must
+multiple blockchains is a kind of fun-house mirror of clas-                           be “all-or-nothing” to preserve global invariants, each au-
+sical distributed computing: familiar features are recogniz-                          tonomous party in a deal can decide independently whether
+able, but distorted. For example, classical atomic transac-                           it finds an outcome satisfactory for itself. Transactions and
+tions are often described in terms of the well-known ACID                             deals make different failure assumptions: transactions usu-
+properties [25]: atomicity, consistency, isolation, and dura-                         ally assume parties can fail only by crashing, while deals
+bility. We will see that cross-chain commerce requires struc-                         necessarily assume parties may deviate arbitrarily from the
+tures superficially similar to, but fundamentally different                           common protocol.
+from, classical atomic transactions. In particular, the clas-                            Cross-chain deals are also not cross-chain swaps. As illus-
+                                                                                      trated below, cross-chain swaps lack the expressive power to
+                                                                                      support all but the simplest kinds of standard commercial
+This work is licensed under the Creative Commons Attribution-                         practices.
+NonCommercial-NoDerivatives 4.0 International License. To view a copy                    Adversarial commerce, defined as economic exchange
+of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/. For         among mutually untrusted autonomous parties, is here to
+any use beyond those covered by this license, obtain permission by emailing           stay. Moreover, a system architecture composed of au-
+info@vldb.org. Copyright is held by the owner/author(s). Publication rights           tonomous untrusted parties that communicate via shared
+licensed to the VLDB Endowment.
+Proceedings of the VLDB Endowment, Vol. 13, No. 2
+                                                                                      tamper-proof data stores is the most natural way to organize
+ISSN 2150-8097.                                                                       such a system. Although we will propose protocols based on
+DOI: https://doi.org/10.14778/3364324.3364326
+
+
+
+
+                                                                                100
+today’s blockchains and smart contracts, none of our prin-             Synchronous protocols may require countermeasures against
+cipal results depends on specific blockchain technology, or            denial-of-service attacks, such as choosing timeouts care-
+even blockchains as such. Instead, we focus on computa-                fully, or establishing “watchtowers” [12]. Semi-synchronous
+tional abstractions central to any systematic approach to              protocols avoid explicit timeouts, but they necessarily re-
+adversarial commerce, no matter what technology underlies              quire a greater degree of centralization than synchronous
+the shared data stores.                                                protocols. (Indeed, we sketch a proof that any semi-
+   This paper makes the following contributions.                       synchronous protocol there must be a single ledger consulted
+                                                                       by all parties.) Choosing a communication model involves
+   • We propose the cross-chain deal as a new computa-                 complex application-specific trade-offs that lie beyond the
+     tional abstraction for structuring complex distributed            scope of this paper.
+     exchanges in an adversarial setting. Deals require new               To illustrate the broad applicability of cross-chain deals,
+     notions of correctness and new distributed protocols.             we introduce two protocols for implementing cross-chain
+   • We propose new safety and liveness properties to re-              deals: a fully-decentralized timelock protocol that assumes
+     place the classical notions of transactional atomicity.           a synchronous communication model, and a more central-
+                                                                       ized certified blockchain protocol that does not. While both
+   • We describe two protocols for implementing cross-                 protocols implement cross-chain deals, we will see that they
+     chain deals: a fully-decentralized timelock protocol              make different guarantees about what happens when things
+     that assumes a synchronous communication model,                   go wrong.
+     and a more centralized certified blockchain (CBC) pro-
+     tocol that does not. We sketch a proof that any proto-            1.2    Other Approaches
+     col that tolerates periods of asynchrony must rely on                Today, the most common way to trade electronic assets
+     a centralized blockchain (or similar ledger structure).           is to use a trusted third party, sometimes called a crypto
+                                                                       exchange, such as Coinbase or Binance. Such exchanges
+   • We sketch implementations of the two protocols and                are typically unregulated, and provide no guarantees of any
+     use them to analyze the costs of the protocols. Given             kind. Crypto exchanges have been known to lose substantial
+     the immature state of today’s blockchain technology,              sums to hackers [7], and even to vanish along with their
+     we focus on inherent, abiding, platform-independent               customers’ deposits [42].
+     trade-offs and costs rather than explicit performance                The need for safety in adversarial commerce has inspired
+     measurements. Our intent is to illustrate the costs as-           an outburst of interest in cross-chain swaps [9, 10, 16, 26, 27,
+     sociated with the qualitatively different ways in which           35, 36, 45, 46], supporting atomic, one-shot, unconditional
+     cross-chain deals can be supported.                               direct transfers between parties. Existing cross-chain swap
+                                                                       proposals have very limited expressive power: they cannot
+   Specifying correctness for systems in which parties can
+                                                                       support indirect transfers, as mediated by a broker, nor can
+deviate arbitrarily from the common protocol requires care.
+                                                                       they support conditional exchanges such as auctions, where
+One cannot even assume parties will be rational, because
+                                                                       the seller exchanges assets only with the highest bidder. In
+they may have unknown objective functions (such as a for-
+                                                                       general, cross-chain swaps do not support the kinds of com-
+eign power willing to pay to disrupt an economy). Further-
+                                                                       plex “business logic” required by many kinds of modern fi-
+more, some familiar classical properties such as the “all-or-
+                                                                       nancial deals.
+nothing” property of atomic transactions cannot be enforced
+in an adversarial setting. In much of the literature on cross-         1.3    Example
+chains swaps and transactions, correctness is treated infor-
+                                                                          Alice is a ticket broker. She buys tickets at wholesale
+mally, or in an ambiguous way. Without a realizable (and
+                                                                       prices from event organizers and resells them at retail prices
+realistic) notion of correctness, it is impossible to reason
+                                                                       to consumers, collecting a modest commission. Alice lives in
+about the correctness of blockchain protocols, smart con-
+                                                                       the future, where tickets are managed on a ticket blockchain,
+tract code, or any other subsystem supporting adversarial
+                                                                       a tamper-proof replicated ledger that tracks ticket owner-
+commerce.
+                                                                       ship. Similarly, the coins paid for those tickets live on a dis-
+1.1   System Models                                                    tinct coin blockchain. Both blockchains support contracts,
+                                                                       simple programs that control when and how ownership of
+   The cross-chain deal abstraction is flexible enough to en-
+                                                                       tickets and coins is transferred.
+compass a variety of system models and assumptions. At
+                                                                          One day Bob, a theater owner, decides to sell two coveted
+one extreme, proof-of-work protocols such as Bitcoin [33]
+                                                                       tickets to a hit play for 100 coins. Alice knows that Carol
+and Ethereum [18] require a synchronous model, where
+                                                                       would be willing to pay 101 coins for those tickets, so Alice
+there is a known upper bound on the propagation time
+                                                                       moves to broker a deal between Bob and Carol.
+for one party’s change to the blockchain state to be no-
+                                                                          Alice’s task is to devise a distributed protocol, executed
+ticed by the other parties. At the other extreme, Byzan-
+                                                                       by Alice, Bob, and Carol, communicating through contracts
+tine fault-tolerant consensus protocols such as Algorand [23],
+                                                                       running on various blockchains, to execute a cross-chain deal
+Libra [6], and Hot-Stuff [1] operate in a more demanding
+                                                                       that transfers the tickets from Bob to Carol, and the coins
+semi-synchronous model, where there is initially no bound
+                                                                       from Carol to Bob, minus Alice’s commission. If all goes as
+on propagation time, but the system eventually reaches a
+                                                                       planned, all transfers take place, and if anything goes wrong
+global stabilization time (GST) after which the system be-
+                                                                       (someone crashes or tries to cheat), no honest party should
+comes synchronous. (In practice, the synchronous periods
+                                                                       end up worse off. For example, Alice should not end up
+need only last “long enough” to stabilize the protocol.)
+                                                                       holding tickets she can’t sell or coins that she must refund.
+   Each model has advantages and disadvantages, and each
+imposes its own constraints on protocols and applications.
+
+
+
+                                                                 101
+1.4     Cross-Chain Deals vs. Cross-chain Swaps
+                                                                         Table 1: Alice, Bob, and Carol’s deal. Rows rep-
+   Existing proposals for cross-chain swaps set up a collection          resent outgoing transfers, and columns incoming
+of unconditional transfers from one party to another. Each               transfers
+party checks that it is satisfied with its own transfers in and                            Alice     Bob      Carol
+out, and then when all approve, the transfers take place. In                       Alice           100 coins tickets
+most of these proposals, transfers are triggered by producing                      Bob    tickets
+the preimage to a hashed value within a certain time (a                            Carol 101 coins
+hashed timelock ), but there are proposals to use blockchain-
+based two-phase commit protocols [45].
+   Because each party sets up an unconditional transfer,                 commit (complete) the deal if it deems the actual payoff to
+cross-chain swaps are incapable of expressing many kinds                 be acceptable.
+of standard financial transactions. For example:                           In our running example, the payoff is given by the 3 × 3
+                                                                         matrix in Table 1. Carol expects to transfer 101 coins to
+     • Even Alice, Bob, and Carol’s simple ticket brokering
+                                                                         Alice in return for tickets transferred from Alice. Similarly,
+       deal cannot be expressed as a cross-chain swap. Alice
+                                                                         Bob expects to transfer tickets to Alice in return for 100
+       pays Bob with coins she receives from Carol, and sells
+                                                                         coins from Alice. Although the table refers only to “tickets,”
+       Carol a ticket she receives from Bob. Alice cannot
+                                                                         the specific (non-fungible) tickets to be provided would be
+       commit to either transfer at the start of the proto-
+                                                                         part of the deal specification, while the specific (fungible)
+       col because she does not own those assets. Instead,
+                                                                         coins would likely be omitted.
+       Alice acts as a broker, contributing value by acting as
+                                                                           A deal where Alice auctions an asset to Bob and Carol
+       middleman, relaying assets between Bob and Carol (or
+                                                                         would require two matrices, one for each successful outcome:
+       more generally, between a pool of wholesale sellers and
+                                                                         (1) if Bob outbids Carol, Alice transfers her asset to Bob,
+       a pool of retail buyers).
+                                                                         Bob transfers his bid to Alice, and Carol transfers her bid
+     • As part of the ticket deal, Carol wants to convert alt-           back to herself, and (2) if Carol outbids Bob, the transfers
+       coins into coins, which she will use to pay Alice. If the         are symmetric. (A realistic on-chain auction would also in-
+       deal does not go through, she does not want to be left            clude fees and deposits to penalize malicious behavior by
+       holding extra coins. Carol cannot statically commit to            bidders.)
+       transfer those coins, because she does not own them
+       at the start of the protocol.
+                                                                         2.2    Correctness
+                                                                            Parties to a deal carry out a protocol to complete the
+     • Suppose instead Alice wants to auction an asset. Bob              deal’s transfers. In an environment where we cannot force
+       and Carol escrow their bids. Alice’s contract compares            the parties to follow a protocol, it is impossible to guarantee
+       those bids, and if the higher bid exceeds her reserve             that all transfers take place as promised by the deal speci-
+       price, it releases the lower bid to the loser, and ex-            fication. Which kind of partial transfers should be deemed
+       changes the asset for the winner’s higher bid. Auctions           acceptable?
+       cannot be expressed as swaps because the auction’s                   Instead of distinguishing between faulty and non-faulty
+       outcome (reserve price exceeded, identity of winner)              parties, as in classical models, we distinguish only between
+       cannot be determined until all bids have been submit-             compliant parties who follow the protocol, and deviating
+       ted.                                                              parties who do not. Many kinds of fault-tolerant distributed
+                                                                         protocols require that some fraction of the parties be com-
+     • More generally, cross-chain swaps cannot support any              pliant. For example, proof-of-work consensus [33] requires
+       kind of arbitrage, where Alice acquires an asset at one           a compliant majority, while most Byzantine fault-tolerant
+       price, and immediately resells it at a higher price.              (BFT) consensus protocols require more than two-thirds of
+  We are not aware of any prior cross-chain swap protocol                the participants to be compliant. For cross-chain deals, how-
+that can support these (conventional) kinds of structured                ever, it seems prudent to make no assumptions about the
+deals. While cross-chain swaps can be considered a special               number of deviating parties.
+case of cross-chain deals, cross-chain deals are substantially              This classification of parties as either compliant or de-
+more flexible and powerful.                                              viating is partly inspired by the classification in the BAR
+                                                                         model [2], which identifies parties as rational, altruistic, or
+                                                                         Byzantine. In adversarial commerce, compliant parties are
+2.    CROSS-CHAIN DEALS                                                  rational parties that choose to follow the protocol; all oth-
+  Here we describe cross-chain deals, what it means to exe-              ers are deviating, whether rational or not (c.f. [21]). There
+cute them, and what it means for them to be correct.                     are no altruistic parties. Critically, our classification differs
+                                                                         from that of BAR (and other standard models of Byzantine
+2.1     Specifying the Deal                                              behavior) by not limiting the number of Byzantine parties.
+   Each payoff (set of final transfers) for a deal can be ex-               The most fundamental safety property is (informally) that
+pressed as a matrix (or table), where each row and column                compliant parties should end up “no worse off,” even when
+is labeled with a party, and the entry at row i and column               other parties deviate arbitrarily from the protocol. A party’s
+j shows the assets to be transferred from party i to party j.            payoff for a protocol execution is the sets of incoming and
+A party’s column states what it expects to acquire from the              outgoing assets actually transferred. Some payoffs are con-
+deal (its incoming assets), and its row states what it expects           sidered acceptable, the rest not. Some acceptable payoffs are
+to relinquish (its outgoing assets). A party enters a deal if            preferable to others, but any acceptable payoff leaves that
+the proposed transfers leave it better off, and it agrees to             party “no worse off.”
+
+
+
+                                                                   102
+   Every party considers the following payoffs acceptable:              that asset to a counterparty, and otherwise it refunds that
+All, where all agreed transfers take place, and Nothing,                asset to the original owner.
+where no transfers take place. In addition, we allow a party               A party can publish a new contract on a blockchain, or
+to consider other payoffs acceptable. For example, a party              call a function exported by an existing contract. Contract
+that expects three incoming transfers and three outgoing                code and contract state are public, so a party calling a con-
+transfers may be willing to accept a payoff where it receives           tract knows what code will be executed. Contract code must
+only two incoming transfers in return for only two outgo-               be deterministic because contracts are typically re-executed
+ing transfers. Of course, any such choice is application-               multiple times by mutually-suspicious parties.
+dependent.                                                                 A contract accesses data on the blockchain where it re-
+   We also assume that if a payoff is acceptable to a party             sides, but it cannot directly access data from the out-
+then so is any payoff where that party transfers in strictly            side world, and cannot call contracts on other blockchains.
+more incoming assets (something for nothing) or transfers               A contract on blockchain A can learn of a change to a
+out strictly fewer outgoing assets (discount pricing). For ex-          blockchain B only if some party explicitly informs A of B’s
+ample, a payoff where a party transfers no outgoing assets              change, along with some kind of “proof” that the informa-
+but receives some incoming assets is an acceptable modifica-            tion about B’s state is correct.
+tion to the Nothing payoff. Such outcomes, while unlikely                  In summary, contract code is passive, public, determinis-
+in practice, cannot be excluded.                                        tic, and trusted, while parties are active, autonomous, and
+   A cross-chain deal protocol satisfies safety if:                     potentially dishonest. Parties are given a protocol, which
+                                                                        each party may or may not follow. Parties may or may not
+  Property 1. For every protocol execution, every compli-               act rationally [2].
+ant party ends up with an acceptable payoff.                               We make standard cryptographic assumptions. Each
+This notion of safety replaces the classical all-or-nothing             party has a public key and a private key, and any party’s
+property of atomic transactions, which, as noted, cannot                public key is known to all. Messages are signed so they can-
+be implemented in the presence of deviating parties.                    not be forged, and they include single-use labels (“nonces”)
+   Cross-chain task protocols typically rely on some form of            so they cannot be replayed.
+escrow to ensure the good faith of participating parties. The
+following weak liveness property ensures that conforming
+parties’ assets cannot be locked up forever.                            4.     HOW CROSS-CHAIN DEALS WORK
+                                                                           We can model a cross-chain deal in terms of a simple state
+  Property 2. No asset belonging to a compliant party is                machine that tracks ownership of assets, and whose transi-
+escrowed forever.                                                       tions represent escrows, transfers, commits, and aborts.
+                                                                           Let P be a domain of parties, and A a domain of assets. (A
+   Finally, we would like protocols to satisfy the following
+                                                                        party may be a person or a contract, and assets are digital
+strong liveness property:
+                                                                        tokens representing items of value.) An asset has exactly
+  Property 3. If all parties are compliant and willing to               one owner at a time: Owns(P, a) is true if P and only P
+accept their proposed payoffs, then all transfers happen (all           owns a.
+parties’ payoffs are All).                                                 An active deal tentatively transfers asset ownership from
+                                                                        one party to another. We say a tentative transfer commits if
+It is a well-known result [20] that strong liveness is possible         it becomes permanent, and it aborts if it is discarded. A deal
+only in periods when the communication network is syn-                  commits if all its tentative transfers commit, and it aborts
+chronous, ensuring a fixed upper bound on message delivery              if all its tentative transfers abort.
+time.                                                                      While a deal is in progress, its state encompasses two
+                                                                        maps, C : A → P and A : A → P, both initially empty.
+3.   SYSTEM MODEL                                                       C(a) indicates the eventual owner of asset a if the deal com-
+   For our purposes, a blockchain is a publicly-readable,               mits at a’s blockchain, and A(a) the owner if it aborts at
+tamper-proof distributed ledger (or database) that tracks               that blockchain. We use Owns C (P, a) to indicate that P
+ownership of assets among various parties. An asset may be              will own a if the deal commits, and Owns A (P, a) to indicate
+fungible, like a sum of money, or non-fungible, like a theater          that P will own a if the deal aborts.
+ticket. A party can be a person, an organization, or even                  Escrow plays the role of classical concurrency control, en-
+a contract (see below). We assume multiple independent                  suring that a single asset cannot be transferred to different
+blockchains, each managing a different kind of asset. We                parties at the same time. Here is what happens when P
+restrict our attention to blockchains that track asset own-             places a in escrow during deal D:
+ership, and to deals that transfer asset ownership from one
+party to another. We assume all value transfers are explic-                  Pre:    Owns(P, a)
+itly represented on the blockchain. For example, Alice does                  Post:   Owns(D, a) and Owns C (P, a) and Owns A (P, a)
+not send paper tickets to Carol off-chain.
+   A party can publish an entry on a blockchain, and it                 The precondition states that P can escrow A only if P owns
+can monitor one or more blockchains, receiving notifications            a. If that precondition is satisfied, the postcondition states
+when other parties publish entries. In our model, publish-              that ownership of a is transferred from P to D (via the es-
+ing an entry usually executes a blockchain-resident program             crow contract), but P remains the owner of a in both C and
+called a contract. We will use contracts for escrow : an asset          A, since no tentative transfer has happened yet, so P would
+owner temporarily transfers ownership of an asset to a con-             regain ownership of a if D were to terminate either way.
+tract. If certain conditions are met, the contract transfers            For example, when Bob escrows his tickets, they become
+
+
+
+                                                                  103
+the property of the contract, but should the deal terminate               Cross-chain deals rely on two critical, intertwined mech-
+right then, the tickets would revert to Bob.                           anisms. First, the escrow mechanism prevents double-
+   Next we define what happens when party P tentatively                spending by making the escrow contract itself the asset
+transfers an asset (or assets) a to party Q as part of deal D.         owner. Care must be taken that assets belonging to compli-
+                                                                       ant parties do not remain escrowed forever in the presence
+            Pre:   Owns(D, a) and Owns C (P, a)                        of malicious behavior by counterparties. Second, the com-
+           Post:   Owns C (Q, a)                                       mit protocol must be resilient in the presence of malicious
+                                                                       misbehavior. A deviating party may be able to steal assets
+The precondition requires a to be held in escrow by D, with            if it can convince some parties that the deal completed suc-
+P the indicated owner should D commit. If the precondition             cessfully, and others that it did not. If a deviating party can
+is satisfied, the postcondition states that Q will become the          prevent (or delay) a decision by the commit protocol, then
+owner of the transferred a should D commit (at this point).            it can keep assets locked up forever (or a long time).
+For example, when Carol transfers 101 coins to Alice, Al-                 The principal challenge in implementing cross-chain deal
+ice becomes the owner of those coins in C. Alice can then              protocols is the design of the integrated escrow management
+transfer 100 of those coins to Bob, retaining one for herself,         and commit protocol. Just as with classical transaction
+all in C.                                                              mechanisms, there are many possible choices and trade-offs.
+   Assets remain in escrow until the deal terminates. If the           In the remainder of this paper, we describe two cross-chain
+deal terminates by committing, the owners of assets in C               deal protocols, implemented via contracts, one for the syn-
+become the actual owners (displacing D). If it terminates              chronous timing model, and one for the semi-synchronous
+by aborting, the owners of assets in A become the actual               model, each making different trade-offs concerning decen-
+owners (again displacing D).                                           tralization and fault-tolerance.
+4.1   Phases
+  A deal is executed in the following phases.
+                                                                       5.   TIMELOCK PROTOCOL
+                                                                          We now describe a timelock commit protocol where es-
+Clearing Phase. A market-clearing service discovers and                crowed assets are released if all parties vote to commit.
+broadcasts the participants, the proposed transfers, and pos-          Parties do not explicitly vote to abort. Instead, timeouts
+sibly other deal-specific information. The market clearing             are used to ensure that escrowed assets are not locked up
+service may be centralized, but it is not a trusted party,             forever if some party crashes or walks away from the deal.
+because each party later decides for itself whether to par-            This protocol assumes a synchronous network model where
+ticipate. The precise structure of the service is beyond the           blockchain propagation time is known and bounded.
+scope of this paper.                                                      In our example, Bob places his tickets into escrow, then
+                                                                       transfers them to Alice, who transfers them to Carol. All
+                                                                       parties examine their incoming assets, and if the resulting
+Escrow Phase. Parties escrow their outgoing assets. For                payoff is acceptable, the parties vote to commit at the es-
+example, Bob escrows his tickets and Carol her coins.
+                                                                       crow contract on each asset’s blockchain. For example, if
+                                                                       Alice, Bob, and Carol all register commit votes on the ticket
+Transfer Phase. The parties perform the sequence of ten-               blockchain, the escrow contract releases the tickets to Carol.
+tative ownership transfers according to the deal. For ex-              All votes are subject to timeouts: if any commit vote fails
+ample, Bob tentatively transfers the tickets to Alice, who             to appear before the contract’s timeout expires, the tick-
+subsequently transfers them to Carol.                                  ets revert to Bob. (Symmetric conditions apply to Carol’s
+                                                                       coins.)
+Validation Phase. Once the tentative transfers are com-                   Because of the adversarial nature of a deal, each party is
+plete, each party checks that the deal is the same as pro-             motivated to publish its vote on the blockchains controlling
+posed by the (untrusted) market-clearing service, that its             its incoming assets (it is eager to be paid), but not on the
+incoming assets are properly escrowed (so they cannot be               blockchains controlling its outgoing assets (it is not so eager
+double-spent), and that the payoff defined by the incom-               to pay). To align the protocol with incentives, one party’s
+ing and outgoing assets is acceptable. For example, Carol              commit vote may be forwarded from one escrow contract to
+checks that the tickets to be transferred are escrowed, that           another by a motivated party.
+the seats are (at least as good as) the ones agreed upon, and             For example, Bob is motivated to publish his commit vote
+that she is not about to somehow overpay.                              only on the coin blockchain. However, once published, Bob’s
+   In the classical two-phase commit protocol [8], valida-             vote becomes visible to Carol, who is motivated to forward
+tion usually requires no semantic checks; instead a party              that vote to the ticket blockchain. Carol’s position is sym-
+agrees to prepare if appropriate locks are held and persis-            metric: she is motivated to publish her vote only on the
+tence is guaranteed. Under adversarial commerce, however,              ticket blockchain, but Bob is motivated to forward it to the
+an application-specific validation phase is needed for each            coin blockchain. Alice is motivated to send her vote to both
+party to decide whether the proposed payoff is acceptable.             blockchains. (Nevertheless, no harm occurs if a party sends
+For example, only Carol can decide whether the tickets she             its commit vote directly to any contract.)
+is about to purchase are ones she wants.                                  A tricky part of this protocol is how to choose timeouts.
+                                                                       A protocol implementation that simply assigns each party
+Commit Phase. The parties vote on whether to make the                  a timeout for each asset does not satisfy our notions of cor-
+tentative transfers permanent. If all parties vote to commit,          rectness, as shown by the following example.
+the escrowed assets are transferred to their new owners; oth-             Suppose that the ticket and coin escrows assign Al-
+erwise they are refunded to their original owners.                     ice timeouts At and Ac respectively, and that Bob and
+
+
+
+                                                                 104
+Carol’s commit votes have already been published on both
+blockchains. In one scenario, Alice waits until just before Ac                                          Alice
+to register her vote on the coin blockchain, unlocking Carol’s                    tickets                                   tickets
+payment to Bob. It may take time ∆ for Carol to observe
+Alice’s vote and forward it to the ticket blockchain, implying
+that At ≥ Ac +∆. In another scenario, Alice waits until just                                100 coins           101 coins
+before At to register her vote on the ticket blockchain, un-
+locking Bob’s tickets for Carol. It may take time ∆ for Bob                        Bob                                       Carol
+to observe Alice’s vote and forward it to the coin blockchain,
+implying that Ac ≥ At + ∆, a contradiction.
+   To resolve this dilemma, each escrow contract’s timeout
+                                                                         Figure 1: Alice, Bob, and Carol’s deal expressed as
+for a party’s commit vote depends on the length of the path
+                                                                         a digraph
+along which that vote was forwarded. For example, if Alice
+votes directly, her vote will be accepted only if it is received
+within ∆ of the commit protocol’s starting time. This vote
+                                                                          Validation Phase. Each party examines its escrowed in-
+must be signed by Alice. If Alice forwards a vote from Bob,
+                                                                         coming assets to see if they represent an acceptable payoff
+that vote will be accepted only if it is received within 2·∆ of
+                                                                         and the deal information provided by the market-clearing
+the starting time, where the extra ∆ reflects the worst-case
+                                                                         service is correct. If so, the party votes to commit.
+extra time needed to forward the vote. This vote must be
+signed first by Bob, then Alice. Finally, if Alice forwards
+a vote that Bob forwarded from Carol, that vote will be                   Commit Phase. Each compliant party sends a commit
+accepted only if it is received within 3 · ∆, and so on. This            vote to the escrow contract for each incoming asset. (A
+vote must be signed first by Carol, then Bob, then Alice. We             compliant party is free to altruistically send commit votes
+refer to this chain of signatures as the vote’s path signature.          to other escrow contracts as well.) A party uses
+   In general, a vote from party X received with path signa-                                      commit(D, v, p)
+ture p must arrive within time |p| · ∆ of the pre-established
+commit protocol starting time, where |p| is the number of                to vote directly and to forward votes to the deal’s escrow
+distinct signatures for that vote.                                       contracts, where v is the voter and p is the path signature
+                                                                         for v’s vote. For example, if Alice is forwarding Bob’s vote
+5.1    Running the Protocol                                              then v is Bob, and p contains first Bob’s signature, and
+  Here is how to execute the phases of a timelock protocol.              then Alice’s signature. (Throughout, we assume that deal
+                                                                         identifiers are unique to guard against replay attacks.)
+ Clearing Phase. The market-clearing service broadcasts                     A contract accepts a commit vote only if it arrives in time
+the following to all parties in the deal: the deal identifier            and is well-formed: all parties in the path signature are
+D, the list of parties plist, a commit phase starting time t0            unique and in the plist, and their signatures are valid and
+used to compute timeouts, and the timeout delay ∆. Most                  attest to a vote from v. If the commit is accepted, that
+blockchains measure time imprecisely, usually by multiply-               contract has now accepted a vote from the party.
+ing the current block height by the average block rate. The                 A contract releases the escrowed asset to the new owner(s)
+choice of t0 should be far enough in the future to take into ac-         when it accepts a commit vote from every party. If the
+count the time needed to perform the deal’s tentative trans-             contract has not accepted a vote from every party by time
+fers, and ∆ should be large enough to render irrelevant any              t0 +N ·∆, where N is the number of parties, it will never ac-
+imprecision in blockchain timekeeping. Because t0 and ∆                  cept the missing votes, so the contract times out and refunds
+are used only to compute timeouts, their values do not af-               its escrowed assets to the original owners.
+fect normal execution times, where all votes are received in
+a timely way. If deals take minutes (or hours), then ∆ could
+                                                                         5.2    Well-formed Deals and Decentralization
+be measured in hours (or days).                                             For ease of exposition, we can think of a deal as a directed
+                                                                         graph (digraph), where each vertex represents a party, and
+ Escrow Phase. Each party places its outgoing assets in                  each arc represents a transfer; the digraph for our deal is
+escrow through an escrow contract                                        shown in Figure 1.
+                                                                            If the deal digraph is not strongly connected, it can be
+                     escrow (D, Dinfo, a).                               shown that the deal is not well-formed, in the sense that it
+                                                                         must include one or more “free riders” that collectively take
+on that asset’s blockchain. Here D is the deal identifier and            assets but do not return any [27]. The remaining parties
+Dinfo is the rest of the information about the deal (plist, t0 ,         have no incentive to conform to any protocol executing such
+and ∆); the escrow requests takes effect only if the party is            a deal, because they could improve their payoffs by excluding
+the owner of a and a member of the plist.                                the free riders1 .
+                                                                            A compliant party first sends votes to the escrow con-
+ Transfer Phase. Party P transfers an asset (or assets) a                tracts on its incoming assets’ blockchains. Then it monitors
+tentatively owned by P to party Q by sending                             its outgoing assets’ blockchains and forwards other parties’
+                                                                         votes to its incoming assets’ blockchains. No party needs to
+                      transfer (D, a, Q).
+                                                                         1
+                                                                          Perhaps the free riders are sending some kind of hidden off-
+to the escrow contract on the asset’s blockchain. The party              chain payments to the other parties, but support for hidden
+must be the owner of a and Q must be in the plist.                       payments is beyond this paper’s scope.
+
+
+
+                                                                   105
+interact with any other blockchains. For example, if Carol                Theorem 2. The timelock protocol satisfies weak live-
+owns only altcoins, then as part of the deal, she can go                ness: no compliant party’s outgoing assets are locked up for-
+to David to exchange her altcoins for coins, and the deal               ever.
+can commit without parties such as Bob needing to interact
+                                                                           Proof. Every escrow created by a compliant party has
+with the altcoin blockchain (or even know about it). This
+                                                                        a finite timeout.
+protocol is decentralized in the sense that there is no single
+blockchain that must be accessed by all compliant parties.
+                                                                          Theorem 3. The timelock protocol satisfies strong live-
+   This voting protocol reflects the (incentive-compatible)
+                                                                        ness.
+minimum a compliant party must do. Nothing prevents
+compliant parties from sending their commit votes directly                 Proof. If all parties are compliant, they all send com-
+to arbitrary blockchains, although typically parties will want          mit votes to the escrow contracts for their incoming assets.
+to restrict themselves to blockchains they already use. For             Each time a new commit vote appears on an outgoing as-
+example, Bob might send his vote directly to the ticket                 set’s contract, the party forwards it to its incoming assets’
+blockchain, perhaps hoping to speed up the commit process.              contracts. Since the deal is well-formed, the deal digraph is
+If he does so, he passes up a (very unlikely) opportunity to            strongly connected, and all commit votes are forwarded to
+cheat Carol if she (non-compliantly) fails to claim her tickets         all contracts in time.
+in time.
+   In the remainder of this section, we assume that deals are              Suppose that Bob acquires Alice and Carol’s votes on
+well-formed, and the corresponding digraphs are strongly                time, and forwards them to claim the coins, but Alice and
+connected, although the timelock protocol can handle ill-               Carol are driven offline before they can forward Bob’s vote
+formed deals if needed.                                                 to the ticket blockchain, so Bob ends up with both the coins
+                                                                        and the tickets. Technically, Alice and Carol have deviated
+5.3    What Could Possibly Go Wrong?                                    from the protocol by not claiming their assets in time. As a
+   What happens if parties choose to deviate? For example,              countermeasure, ∆ should be chosen large enough to make
+suppose Bob wants to trade b-coins for c-coins, and Carol               sustained denial-of-service attacks prohibitively expensive.
+wants the reverse. Alice brokers their deal, taking 101 b-              For similar reasons, the Lightning payment network [38] em-
+coins (c-coins) from Bob (Carol), then forwarding 100 coins             ploys watchtowers [12] to monitor escrow contracts to act on
+to each counterparty, keeping a 1-coin commission from each             the behalf of off-line parties.
+side. This time, Alice happens to hold both kinds of coins.
+To save time, she transfers 101 of Bob’s b-coins into her ac-           6.   CBC PROTOCOL
+count, and simultaneously transfers 100 of her own b-coins
+                                                                           Now we describe a commit protocol that assumes only a
+to Carol, and similarly for Carol (in the opposite direction).
+                                                                        semi-synchronous communication model [17], Since we can-
+Now suppose Alice is infected by a virus, and starts to be-
+                                                                        not use timed escrow, we allow parties to vote to abort if
+have irrationally. After Bob releases his vote, Alice stops
+                                                                        validation fails, or if too much time has passed.
+communicating with him, but she communicates normally
+                                                                           Unlike in the classical two-phase commit protocol [8],
+with Carol. Bob’s timelock will eventually expire, and he
+                                                                        there is no coordinator; instead we use a special blockchain,
+will take back his coins, so for him the deal aborted. Carol,
+                                                                        the certified blockchain, or CBC, as a kind of shared log.
+however, will transfer her 101 c-coins to Alice and receive
+                                                                        The CBC might be a stand-alone blockchain or one of those
+her 100 b-coins, so for her the deal committed normally.
+                                                                        already being used in the deal.
+   Although this outcome is not “all-or-nothing”, it is con-
+                                                                           Instead of voting on individual assets, each party votes on
+sidered acceptable because all compliant parties end up with
+                                                                        the CBC whether to commit or abort the entire deal. The
+acceptable outcomes, But Alice, who deviated from the pro-
+                                                                        CBC records and orders these votes. A party can extract
+tocol, foots the bill, paying Carol without being paid by
+                                                                        a proof from the CBC that particular votes were recorded
+Bob. We emphasize the unenforceability of classical cor-
+                                                                        in a particular order. A party claiming an asset (or a re-
+rectness properties because it may seem counter-intuitive.
+                                                                        fund) presents a proof of commit (or abort) to the contract
+But if we want to verify that contracts are correct, we must
+                                                                        managing that asset. The contract checks the proof’s va-
+take care to use a realizable notion of correctness.
+                                                                        lidity and carries out the requested transfers if the proof is
+5.4    Correctness                                                      valid. A proof of commit proves that every party voted to
+                                                                        commit the deal before any party voted to abort. A proof
+   Theorem 1. The timelock protocol satisfies safety.                   of abort proves that some party voted to abort before ev-
+   Proof. By construction, transferring a compliant party               ery party voted to commit. A party can rescind an earlier
+X’s escrowed incoming and outgoing assets is an accept-                 commit vote by voting to abort (for example, if the deal
+able payoff for X. Suppose by way of contradiction that                 is taking too long to complete). To ensure strong liveness,
+X’s outgoing asset a is released from escrow and transferred            once a compliant party has voted to commit, it must wait
+(with commit votes from every party), but the escrow for                long enough to give the other parties a chance to vote before
+X’s incoming asset b times out and is refunded because of a             it changes its mind and votes to abort.
+missing vote from party Z. Suppose Z’s commit vote at a’s                  Recall that a commit protocol is decentralized if there is
+contract arrived with path signature p. The signatures in p             no single blockchain accessed by all parties in any execution
+cannot include X’s, because X is compliant and would have               (see Section 5.2). The CBC protocol is not decentralized in
+already forwarded Z’s vote to b. Z’s vote must have arrived             this sense, because the CBC itself is a centralized “white-
+at a before time t0 +|p|·∆. Since X is compliant, it forwards           board” shared by all parties. This loss of decentralization is
+that vote to b’s contract before time t0 + (|p| + 1) · ∆, where         inevitable: no protocol that tolerates periods of asynchrony
+that vote is accepted, a contradiction.                                 can be decentralized. A complete formal proof is out of
+
+
+
+                                                                  106
+scope, but we outline an argument adapted from Fischer,                   6.2    What Could Possibly Go Wrong?
+Lynch, and Paterson [20]. If all parties are compliant, then                 When things go wrong, the CBC protocol permits fewer
+if the deal commits (resp. aborts) at any asset’s blockchain,             outcomes than the timelock protocol, because all compliant
+it must commit (resp. abort) at all of them. Initially, the               parties agree on whether the deal committed or aborted.
+deal’s state is bivalent: both commit and abort are possible              Nevertheless, because we cannot constrain the behavior of
+outcomes. But the deal’s state cannot remain bivalent for-                deviating parties, even this protocol cannot enforce the clas-
+ever, so it must be possible to reach a (bivalent) critical state         sical “all-or-nothing” property of atomic transactions. For
+where each party is about to take a decisive step that will               example, if (deviating) Carol erroneously sends 1001 coins
+force the protocol to enter a univalent state where either a              to Alice, instead of the 101 expected, and all parties vote to
+commit outcome or an abort outcome becomes inevitable. A                  commit, then (compliant) Alice ends up with a commission
+potentially decisive step forcing an eventual commit cannot               of 901 coins, an outcome that is neither “all” nor “noth-
+take place at a different blockchain than a potentially deci-             ing”, even for compliant parties. Of course, such an out-
+sive step forcing an eventual abort, because then it would be             come is unlikely in practice, but such distinctions matter
+impossible to determine which happened first, hence which                 when reasoning about correctness. Both the timelock and
+one was truly decisive. It follows that in any such critical              CBC protocols satisfy the (informal) safety property that
+state, all parties must be about to call the same contract,               no compliant party can end up “worse off.”
+violating decentralization.
+                                                                          6.3    Correctness
+6.1    Running the Protocol                                                  The correctness of the CBC protocol is mostly self-
+  Here is how to execute the phases of a CBC protocol.                    evident: safety is satisfied because complaint parties agree
+                                                                          on whether a deal commits or aborts. Weak liveness is satis-
+Clearing Phase. The market-clearing service broadcasts a                  fied because any compliant party whose assets are locked up
+unique identifier D and a list of participating parties plist             for too long will eventually vote to abort, and strong live-
+(this protocol does not require the t0 starting time or ∆).               ness is satisfied in periods when the network is synchronous
+One party records the start of the deal on the CBC by pub-                because every party votes to commit before any party votes
+lishing an entry:                                                         to abort.
+
+                      startDeal (D, plist).                               6.4    Cross-Chain Proofs
+The calling party must appear in the plist. If more than                    It is easy for (active) parties to ascertain whether a deal
+one startDeal for D is recorded on the CBC, the earliest is               committed or aborted; it is not so easy for passive contracts,
+considered definitive.                                                    which cannot directly observe other blockchains, to do so.
+                                                                            A deal’s decisive vote is the one that determines whether
+                                                                          the deal commits or aborts. A straightforward approach is
+Escrow Phase. Each party places its outgoing assets in                    to present each contract with a subsequence of the CBC’s
+escrow:
+                                                                          blocks, starting with the deal’s first startDeal record, and
+                   escrow (D, plist, h, a, . . .)                         ending with its decisive vote. But how can the contract tell
+                                                                          whether the blocks presented are really on the CBC? The
+Here, h is the hash that identifies a particular startDeal                answer depends partly on the kind of algorithm underlying
+entry on the CBC that started the deal; it is needed in case              the CBC blockchain.
+there is more than one such entry on the CBC. The ellipsis
+indicates arguments that vary depending on the algorithm                  6.5    Byzantine Fault-Tolerant Consensus
+used to implement the CBC, as discussed in Section 6.4. As                   Let us assume the CBC relies on Byzantine fault-tolerant
+in the timelock protocol, the sender must be the owner of                 (BFT) consensus [1, 4, 11, 40]. BFT protocols guarantee
+asset a and a member of plist.                                            safety even when communication is asynchronous, and they
+                                                                          ensure liveness when communication becomes synchronous
+Transfer Phase. Party P transfers an asset (or assets) a                  after the GST.
+tentatively owned by P to party Q by sending                                 Blocks are approved by a known set of 3f + 1 validators,
+                                                                          of which at most f can deviate from the protocol. (The
+                       transfer (D, a, Q).
+                                                                          details of how validators reach consensus on new blocks
+to the escrow contract on the asset’s blockchain. P must be               are not important here.) To support long-term fault tol-
+the owner of a and Q must be in the plist.                                erance, the blockchain is periodically reconfigured by having
+                                                                          at least 2f + 1 current validators elect a new set of valida-
+Validation Phase. As before, each party checks that its                   tors. For ease of exposition, assume each block contains the
+proposed payoff is acceptable and that assets are properly                next block’s group of validators and their keys.
+escrowed with the correct plist and h.                                       Each block in a BFT blockchain is vouched for by a cer-
+                                                                          tificate containing at least f + 1 validator signatures of that
+                                                                          block’s hash. (Any f + 1 signatures are enough because
+Commit Phase. Each party X publishes either a commit                      at least one of them must come from an honest validator.)
+or abort vote for D on the CBC:
+                                                                          The sequence of blocks and their certificates can be used
+          commit(D, h, X)     or     abort(D, h, X)                       as a proof. The contract on the asset blockchain will be
+                                                                          able to check this proof as long as it knows the first block’s
+where D is the deal identifier, and h is the startDeal . As               set of validators, accomplished by passing the 3f + 1 initial
+usual, each voter must be in the start-of-deal plist.                     block validators as an argument to each of the deal’s escrow
+
+
+
+                                                                    107
+contracts (in place of the ellipses). Parties must identify            how such implementations might be organized. To compare
+correct validators when putting assets in escrow, and they             their implementation costs, we use a cost model inspired by
+must check validators’ credentials before voting to commit.            the Ethereum [44] blockchain, currently the best-developed
+   Checking the proof as just described is a lot of work; the          platform. The costs of non-PoW blockchains are likely to
+proof is likely to be spread over many blocks, each containing         be similar.
+a large number of entries. Furthermore, we cannot shorten                Table 2 summarizes gas costs for a deal with n parties, m
+the proof by omitting irrelevant block entries, because then a         assets, and t ≥ n transfers.
+malicious party might fool a contract into making a wrong
+decision. But there are many ways to make BFT proofs                   7.1   Gas Costs
+more efficient.                                                           To make denial-of-service attacks prohibitively expensive,
+   A straightforward optimization is to take advantage of              virtual machines that execute contracts typically charge for
+the fact that the CBC has validators. This allows the par-             each instruction executed. In Ethereum [44], this charge is
+ties to request certificates from the CBC. Such a certificate          expressed in terms of gas units, whose value (in Ether, the
+would vouch for the current state of the deal (active, com-            blockchain’s native currency) varies according to demand.
+mitted, aborted). This certificate alone would constitute              For example, the gas cost of simple arithmetic operations
+a proof provided the original validators are still active, and         or accesses to short-lived memory is in single digits, and
+otherwise the party must also provide the chain of validators          control flow or read operations from long-lived storage is in
+across each reconfiguration.                                           double or triple digits. In general, gas costs are dominated
+                                                                       by two kinds of operations: writing to long-lived storage is
+6.6   Proof-of-work (Nakamoto) Consensus                               (usually) 5000 gas, and each signature verification is 3000
+   Proofs of commit or abort generated by a CBC imple-                 gas.
+mented using proof-of-work consensus (like Bitcoin [33] or                To illustrate our gas cost analysis, Figure 2 shows a
+Ethereum [18]) are possible, but care is needed because such           fragment of a pseudocode implementation of a generic
+blockchains lack finality: any proof might be contradicted by          EscrowManager contract for a fungible asset, modeled
+a later proof, although forging a later, contradictory proof           as an ERC20-standard token [22].          The heart of the
+becomes more expensive to the adversary the longer it waits.           EscrowManager contract is a pair of mappings: escrow
+(Kiayias et al. [29, 30] propose changes to standard PoW               records how many tokens each party has escrowed (Line 3),
+protocols that would make such “proofs-of-proof-of-work”               and onCommit records how many tokens each party would
+more compact.)                                                         receive if the deal commits (Line 4). For clarity, some error
+   Here is a scenario where Alice can construct a fake “proof          checking has been omitted.
+of abort” for a proof-of-work CBC. As soon as the deal ex-
+ecution starts, Alice (perhaps aided by partners in crime)              Escrow Phase. Each party calls the escrow function to
+privately mines a block that contains an abort vote from Al-           escrow some number of tokens. This function incurs 2 stor-
+ice. When her part of the deal is complete, however, Alice             age writes (in a function call) to transfer the token from
+publicly sends a commit vote to the CBC. If, by the time all           the sender to the escrow contract (Line 8), and 1 storage
+parties have voted commit, Alice was able to mine a private            write each to update the escrow (Line 9) and the onCommit
+abort block, then Alice can use that fake proof of abort to            (Line 10) maps, for a total of 4 storage writes. Globally, the
+halt outgoing transfers of her assets, while using the legiti-         escrow phase incurs O(m) gas costs.
+mate proof of commit to trigger incoming transfers.
+   In the spirit of proof-of-work, such an attack can be made           Transfer Phase. Each party calls the transfer function
+more expensive by requiring a proof of commit or abort                 to transfer some number of escrowed tokens to another
+to include some number of confirmation blocks beyond the               party. This function incurs 1 storage write to decrement the
+one containing the decisive vote, forcing Alice to outper-             sender’s tentative onCommit balance (Line 15), and another
+form the rest of the CBC’s miners for an extended duration.            to increment the recipient’s balance (Line 16). Globally, the
+To deter rational cheaters, the number of confirmations re-            transfer phase incurs O(t) gas costs.
+quired should vary depending on the value of the deal, im-
+plying that high-value deals would take longer to resolve               Validation Phase. Each party monitors its incoming and
+than lower-value deals.                                                outgoing escrow contracts to ensure it is satisfied with the
+   To summarize, while it is technically possible to produce           assets it is due to acquire and relinquish. This computation
+commit or abort proofs from a proof-of-work CBC, the re-               takes place entirely at the parties, and incurs no gas cost.
+sult is likely to be slow and complex. In the same way
+a proof-of-work blockchain can fork, a “proof-of-proof-of-
+work” [29] can be contradicted by a later “proof-of-proof-of-
+                                                                        Timelock Protocol Commit Phase. Timelock escrow con-
+                                                                       tracts verify commit path signatures. Note that signatures
+work”. Similarly, to make the production of contradictory
+                                                                       are generated by parties, not by contracts, so while signature
+proofs expensive, the proof’s difficulty must be adjusted to
+                                                                       generation incurs computation costs at parties, it incurs no
+match the value of the assets transferred by the deal. By
+                                                                       gas costs at contracts.
+contrast, a BFT certificate of commit or abort is final, and
+                                                                          Figure 3 shows a pseudocode fragment for a timelock es-
+independent of the value of the deal’s assets.
+                                                                       crow contract. The contract records the set of parties par-
+                                                                       ticipating in the deal (Line 2) and which ones have voted
+7.    COST ANALYSIS                                                    (Line 2). The commit function takes as arguments the
+  This section analyzes the costs associated with each of              voter, the set of signers, and their signatures. It checks
+the protocols. The code shown here is not intended to be               that the deal has not timed out (Line 6), that the voter
+a detailed implementation; it is only intended to illustrate           is legitimate (Line 7), that the vote has not already been
+
+
+
+                                                                 108
+                                                     Table 2: Gas costs
+                 Protocol       Escrow        Transfer and Validation         Commit or Abort
+                 Timelock     O(m) writes           O(t) writes         O(mn2 ) sig. ver. + O(m) writes
+                   CBC        O(m) writes           O(t) writes       O(m(f + 1)) sig. ver. + O(m) writes
+
+
+
+ 1 contract EscrowManager {
+ 2     ERC20Interface asset ;               // contract holding assets
+ 3     mapping(address => uint) escrow; // escrowed assets
+ 4     mapping(address => uint) onCommit; // result of tentative transfers
+ 5      ...
+ 6     // transfer into escrow account
+ 7     function escrow ( uint amount) public {
+ 8          require ( asset . transferFrom(msg.sender, this , amount));
+ 9          escrow[msg.sender] = escrow[msg.sender] + amount;
+10          onCommit[msg.sender] = onCommit[msg.sender] + amount;
+11     }
+12     // tentative transfer
+13     function transfer (address to , uint amount) public {
+14          require (onCommit[msg.sender] >= amount);
+15          onCommit[msg.sender] = onCommit[msg.sender] − amount;
+16          onCommit[to] = onCommit[to] + amount;
+17     } ... }
+
+                    Figure 2: Pseudocode code for Escrow and Transfer (some details omitted)
+
+
+recorded (Line 8), and that there are no duplicate signers              number of storage writes to update the escrow mappings.
+(Line 9). The expensive steps are verifying each of the sig-
+natures (Line 11), and recording the voter (Line 13) in long-           7.2   Time Costs
+lived storage.                                                             We analyze each commit protocol’s timing delays when
+   Each escrow contract verifies a vote from each of n parties,         the network is synchronous, with bound ∆ on the time
+and each party’s vote could have been signed by up to n − 1             needed both to change a blockchain state, and to have that
+others, yielding a worst-case per-contract bound of O(n2 )              change observed by any interested party. The results are
+signature verifications, plus a constant number of storage              summarized in Table 3; here we assume each asset is trans-
+writes for other bookkeeping. Since there are m contracts,              ferred k times.
+the timelock commit protocol incurs an O(mn2 ) global gas                  For both protocols, if all parties are conforming, the es-
+cost. In the best case, a deal can abort with no signature              crow phase takes time at most ∆, since every party updates
+verifications, but in the worst case, aborting can cost almost          its outgoing assets’ escrow contracts in parallel. Similarly,
+as much as committing.                                                  the transfer phase takes time at most k · ∆. It may be pos-
+                                                                        sible to execute transfers concurrently, in which case this
+ CBC Protocol Commit Phase. Escrow contracts check                      phase takes time at most ∆. At the end of the transfer
+proofs from the CBC by verifying that they are correctly                phase, validation is local and immediate.
+signed by enough validators. Figure 4 shows a pseudocode
+fragment for an escrow contract for a CBC using an un-                  Timelock Protocol Commit Phase. If each party sends its
+derlying BFT consensus protocol that tolerates f Byzantine              commit vote only to the blockchains managing its incoming
+validators . We assume the optimization where parties re-               assets, then the worst-case duration of the commit phase is
+quest status certificates from the CBC; for brevity, we as-             proportional to the longest sequence of transfers, which is
+sume there have been no reconfigurations.                               bounded by n∆.
+   The contract keeps track of the CBC’s current set of val-
+idators (Line 2); it also knows their public keys. The commit           CBC Protocol Commit Phase. All conforming parties
+function takes as arguments the set of signers and their sig-           send their votes to the CBC in parallel, and these votes
+natures. It checks that there are no duplicate validators               are available very quickly when the CBC is implemented
+(Line 6), that all signers are validators (Line 7), and that            using a BFT protocol such as from the PBFT family [1, 11].
+there are enough votes (Line 8). The expensive step is ver-             It requires at most another ∆ for the escrow contracts to
+ifying each of the validator signatures (Line 10); there will           transfer or refund their assets.
+also be a constant number of storage writes to record the
+outcome and to update the escrow and ownership mappings.
+   Each contract verifies f + 1 signatures, or (k + 1)(f + 1)
+                                                                        8.    RELATED WORK
+if the set of validators has changed k times. The global gas              As noted, in a cross-chain swap [9, 10, 16, 27, 35, 36,
+cost is O(m(f + 1)) signature verifications plus a constant             45, 46], each party transfers an asset to another party and
+                                                                        halts. Cross-chain swaps are attractive because they reduce
+
+
+
+                                                                  109
+ 1 contract TimelockManager is EscrowManager{
+ 2     address [] parties ;            // participating parties
+ 3     address [] voted;               // which parties have voted
+ 4      ...
+ 5     function commit (address voter , address [] signers , bytes32 [] sigs ) public {
+ 6          require (now < start + (path.length() ∗ DELTA)); // not timed out
+ 7          require ( parties . contains ( voter ));                // legit voters only
+ 8          require (!voted. contains ( voter ));                   // no duplicate votes
+ 9          require (checkUnique(signers ));                        // no duplicate signers
+10          for ( int i = 0 ; i < signers . length ; i ++) {
+11              require (checkSig(voter , signers [ i ], sigs [ i ])); // expensive
+12          }
+13          voted.push(voter );                                     // remember who voted
+14     }}
+
+              Figure 3: Pseudocode Fragment for Timelock contract voting (some details omitted)
+
+ 1 contract CBCManager is EscrowManager{
+ 2     address [] validators ;         // CBC validators
+ 3      ...
+ 4     // check commit proof is valid
+ 5     function commit (address[] signers , bytes32 [] sigs ) public {
+ 6          require (checkUnique(signers ));              // no duplicate signers
+ 7          require ( validators . contains ( signers )); // only validators voted
+ 8          require ( signers . length >= f+1);           // enough validators voted
+ 9          for ( int i = 0 ; i < f+1; i++) {
+10              require (checkSig( signers [ i ], sigs [ i ])); // expensive
+11          }
+12          outcome = COMMITTED;                          // remember we committed
+13     } ... }
+
+                 Figure 4: Pseudocode Fragment for CBC proof-checking (some details omitted)
+
+
+or eliminate the use of exchanges, some of which have proved            tions’ final outcomes. Both commit protocols use timeout
+to be untrustworthy [42, 43]. However, we have seen that                mechanisms based on path signatures.
+cross-chain swaps lack the power to express the simple bro-                Zakhary et al. [45] propose a cross-chain commitment pro-
+kerage deal described in our example, as well as auctions               tocol that does not use hashed timelocks. Instead, par-
+and other conventional financial transactions.                          ticipating blockchains exchange “proofs” of state changes,
+   To our knowledge, the only cross-chain swap protocols                somewhat similar to our CBC proposal, but because parties
+used in practice are hashed timelocked contracts [9, 10, 16,            need to register their intended transfers at the start, this
+35, 36]. Herlihy [27] generalizes prior two-party cross-chain           protocol supports only unconditional swaps, not full-fledged
+swap protocols to a protocol for multi-party swaps on ar-               deals.
+bitrary strongly-connected directed graph. Herlihy also ob-                Off-chain payment networks [15, 24, 26, 34, 38] and state
+serves that the classical “all-or-nothing” correctness prop-            channels [14] use hashed timelock contracts to circumvent
+erty is ill-suited to cross-chain swaps, and proposes an alter-         the scalability limits of existing blockchains. They conduct
+native correctness property which is more specialized than              repeated off-chain transactions, finalizing their net transac-
+the one presented here because it is formulated explicitly              tions in a single on-chain transaction. The use of hashed
+in terms of direct swaps, not the more general structures               timelock contracts ensures that parties cannot be cheated
+permitted by cross-chain deals. For example, Herlihy as-                if one party tries to settle an incorrect final state. Lind
+sumed that any swap outcome where a party receives only                 et al. [32] propose using (hardware) trusted execution en-
+partial inputs and partial outputs is unacceptable, but the             vironments to ease synchrony requirements. It remains to
+notions of correctness introduced here allow parties to spec-           be seen whether off-chain networks can be applied to cross-
+ify whether some such partial deal outcomes are acceptable.             chain deals. Arwen [26] supports multiple off-chain atomic
+   The timelock commit protocol presented here has a sim-               swaps between parties and exchanges, but their protocol is
+pler structure than the one proposed by Herlihy. That proto-            specialized to currency trading and does not seem to sup-
+col used secrets held by a carefully-chosen subset of parties.          port non-fungible assets. Komodo [36] supports off-chain
+Our protocol replaces secrets with votes performed by ev-               cross-platform payments.
+eryone, so it is possible to treat all parties uniformly, and              Sharded blockchains [3, 31] address scalability limits of
+there is no need for a careful contract deployment phase.               blockchains by partitioning the state into multiple shards
+Our protocol also clarifies when parties review the transac-            so that transactions on different shards can proceed in par-
+
+
+
+
+                                                                  110
+                                     Table 3: Delays for synchronous communication
+                          Protocol    Escrow Transfer and Validation Commit       Abort
+                          Timelock      ∆            k∆ or ∆         O(n)∆       O(n)∆
+                            CBC         ∆            k∆ or ∆         O(1)∆  per-party timeout
+
+
+
+allel, and support multi-step atomic transactions spanning                to commit a CBC deal (O(m(f + 1))) than a timelock deal
+multiple shards. An atomic transaction that spans multiple                (O(mn2 )); in a deal with many participants the reverse may
+shards is executed at the client in Chainspace [3] , or at the            be true. Even if the CBC protocol is more expensive, one
+server in Omniledger [31]. In these systems a transaction                 gets what one pays for: the CBC protocol works in a more
+represents a single trusted party and there is no support for             demanding timing model.
+transactions involving untrusted parties.
+   Chainspace [3] allows transactions to specify immutable                10.    CONCLUSIONS
+proof contracts to be executed at the server. The proofs
+                                                                             Today’s distributed data management systems face a new
+are used to validate client execution traces resembling op-
+                                                                          and daunting challenge: enabling commerce among au-
+timistic concurrency control. Channels [5], an extension of
+                                                                          tonomous parties who do not know or trust one another,
+Omniledger Atomix protocols, uses proofs in a two-phase
+                                                                          a model we have called adversarial commerce. Prior ap-
+protocol similar to our CBC, for atomic untrusted cross-
+                                                                          proaches, such as distributed atomic transactions or cross-
+shard single-step multi-party UTXO [28] transfers, but does
+                                                                          chain swaps, are inappropriate for the trust model or have
+not support multi-step deals or non-fungible assets.
+                                                                          limited expressive power.
+   The BAR (byzantine, altruistic and rational) computa-
+                                                                             In classical distributed systems, participating parties are
+tion model [2, 13] supports cooperative services spanning
+                                                                          trusted. Techniques such as replica groups can mask crashes
+autonomous administrative domains that are resilient to
+                                                                          and Byzantine failures, ensuring that trust is warranted.
+Byzantine and rational manipulations. Like Byzantine fault-
+                                                                          Computations are often organized as atomic transactions
+tolerant systems, BAR-tolerant systems assume a bounded
+                                                                          that ensure, for example, that transactions appear to run
+number of Byzantine faults, and as such do not fit the ad-
+                                                                          in one-at-a-time order, taking effect either everywhere or
+versarial deal model, where any number of parties may be
+                                                                          nowhere.
+Byzantine.
+                                                                             By contrast, in adversarial commerce each party decides
+   The CBC somewhat resembles an oracle [37], a trusted
+                                                                          for itself whether to participate in a particular interaction.
+data feed that reports physical-world occurrences to con-
+                                                                          Parties agree to follow a common protocol, an agreement
+tracts.
+                                                                          that can be monitored, but not enforced. Correctness is lo-
+   An early precursor of adversarial commerce was the study
+                                                                          cal and selfish: all parties that follow the protocol end up
+of federated databases [39], which addressed the problem of
+                                                                          “no worse off” than when they started, even in the pres-
+coordinating and committing transactions that span multi-
+                                                                          ence of faulty or malicious behavior by an arbitrary number
+ple autonomous, mutually untrusting, heterogeneous data
+                                                                          of other parties. Examples of adversarial commerce include
+stores. (Federated databases did not attempt to tolerate
+                                                                          securities trading, digital asset management, the Internet
+arbitrary Byzantine behavior.)
+                                                                          of Things, supply chain management, and, of course, cryp-
+                                                                          tocurrencies.
+9.   DISCUSSION                                                              It is easy to confuse cross-chain deals with atomic transac-
+   Deals can provide incentives for good behavior. For ex-                tions, and with cross-chain swaps, since they address similar
+ample, a party might escrow a small deposit that is lost if               needs. We hope this paper has clarified the critical distinc-
+that party is the first to cause the deal to fail. Designing              tions between them, and explained why cross-chain deals are
+and implementing such incentives is an area of ongoing re-                needed to address the demands of adversarial commerce.
+search [19].
+   In the timelock commit protocol, if ∆ is too small, parties
+may be vulnerable to an extended denial-of-service attack,
+which can cause them to lose their incoming assets. There
+is a similar threat to the CBC commit protocol, where the
+CBC itself might be the target of a denial of service attack,
+but the effect is different: instead the deal’s assets are locked
+up for the duration of the attack, not lost forever.
+   A more subtle issue concerning the CBC commit proto-
+col is that the parties must trust the CBC not to engage in
+censorship, where CBC validators selectively choose to ig-
+nore certain deals, causing them to abort when they could
+otherwise have committed.
+   The main difference in performance in the timelock and
+CBC protocols is the number of signatures that must be
+verified to complete the protocol, so we need to consider n
+parties vs. f + 1 validators. Many deals will likely have only
+a few participants, and in this case it will be more expensive
+
+
+
+                                                                    111
+11.   REFERENCES                                                         Systems and Networks (DSN), DCC Symposium, 2008.
+ [1] I. Abraham, G. Gueta, and D. Malkhi. Hot-stuff the             [14] J. Coleman, L. Horne, and L. Xuanji. Counterfactual:
+     linear, optimal-resilience, one-message BFT devil.                  Generalized state channels.
+     CoRR, abs/1803.05069, 2018. To appear in PODC                       http://l4.ventures/papers/statechannels.pdf,
+     2019.                                                               2018.
+ [2] A. S. Aiyer, L. Alvisi, A. Clement, M. Dahlin, J.-P.           [15] C. Decker and R. Wattenhofer. A fast and scalable
+     Martin, and C. Porth. Bar fault tolerance for                       payment network with bitcoin duplex micropayment
+     cooperative services. In Proceedings of the Twentieth               channels. In A. Pelc and A. A. Schwarzmann, editors,
+     ACM Symposium on Operating Systems Principles,                      Stabilization, Safety, and Security of Distributed
+     SOSP ’05, pages 45–58, New York, NY, USA, 2005.                     Systems, pages 3–18, Cham, 2015. Springer
+     ACM.                                                                International Publishing.
+ [3] M. Al-Bassam, A. Sonnino, S. Bano, D. Hrycyszyn,               [16] DeCred. Decred cross-chain atomic swapping.
+     and G. Danezis. Chainspace: A sharded smart                         https://github.com/decred/atomicswap. As of 8
+     contracts platform. CoRR, abs/1708.03778, 2017.                     January 2018.
+ [4] E. Androulaki, A. Barger, V. Bortnikov, C. Cachin,             [17] C. Dwork, N. Lynch, and L. Stockmeyer. Consensus in
+     K. Christidis, A. De Caro, D. Enyeart, C. Ferris,                   the presence of partial synchrony. J. ACM,
+     G. Laventman, Y. Manevich, S. Muralidharan,                         35(2):288–323, Apr. 1988.
+     C. Murthy, B. Nguyen, M. Sethi, G. Singh, K. Smith,            [18] Ethereum. https://github.com/ethereum/.
+     A. Sorniotti, C. Stathakopoulou, M. Vukolić, S. W.            [19] A. Evans. A crash course in mechanism design for
+     Cocco, and J. Yellick. Hyperledger fabric: A                        cryptoeconomic applications.
+     distributed operating system for permissioned                       https://medium.com/blockchannel/a-crash-
+     blockchains. In Proceedings of the Thirteenth EuroSys               course-in-mechanism-design-for-cryptoeconomic-
+     Conference, EuroSys ’18, pages 30:1–30:15, New York,                applications-a9f06ab6a976, 2017. As of 11 April
+     NY, USA, 2018. ACM.                                                 2019.
+ [5] E. Androulaki, C. Cachin, A. D. Caro, and                      [20] M. J. Fischer, N. A. Lynch, and M. S. Paterson.
+     E. Kokoris-Kogias. Channels: Horizontal scaling and                 Impossibility of distributed consensus with one faulty
+     confidentiality on permissioned blockchains. In                     process. J. ACM, 32(2):374–382, Apr. 1985.
+     ESORICS, 2018.                                                 [21] B. Ford and R. B ohme. Rationality is self-defeating in
+ [6] L. Association. An introduction to libra.                           permissionless systems. https:
+     https://libra.org/en-US/wp-content/uploads/                         //bford.info/2019/09/23/rational/?fbclid=
+     sites/23/2019/06/LibraWhitePaper_en_US.pdf,                         IwAR3Mh0RsKZm0juma2uXNJXNlwu3Ll7Gls28PnqKVvIDt0o-
+     2019. As of 24 September 2019.                                      itNAacNod0Nc, Sept. 2019. As of 26 September 2019.
+ [7] B. Barrett. Hack brief: Hackers stole $40 million from         [22] E. Foundation. Erc20 token standard.
+     binance cryptocurrency exchange.                                    https://theethereum.wiki/w/index.php/ERC20_
+     https://www.wired.com/story/hack-binance-                           Token_Standard, 2019. As of 6 April 2019.
+     cryptocurrency-exchange/, May 2019. As of 8 July               [23] Y. Gilad, R. Hemo, S. Micali, G. Vlachos, and
+     2019.                                                               N. Zeldovich. Algorand: Scaling byzantine agreements
+ [8] P. A. Bernstein, V. Hadzilacos, and N. Goodman.                     for cryptocurrencies. In Proceedings of the 26th
+     Concurrency Control and Recovery in Database                        Symposium on Operating Systems Principles, SOSP
+     Systems. Addison-Wesley Longman Publishing Co.,                     ’17, pages 51–68, New York, NY, USA, 2017. ACM.
+     Inc., Boston, MA, USA, 1986.                                   [24] M. Green and I. Miers. Bolt: Anonymous payment
+ [9] bitcoinwiki. Atomic cross-chain trading.                            channels for decentralized currencies. Cryptology
+     https://en.bitcoin.it/wiki/Atomic_cross-                            ePrint Archive, Report 2016/701, 2016.
+     chain_trading. As of 9 January 2018.                                https://eprint.iacr.org/2016/701.
+[10] S. Bowe and D. Hopwood. Hashed time-locked                     [25] T. Haerder and A. Reuter. Principles of
+     contract transactions. https://github.com/bitcoin/                  transaction-oriented database recovery. ACM Comput.
+     bips/blob/master/bip-0199.mediawiki. As of 9                        Surv., 15(4):287–317, Dec. 1983.
+     January 2018.                                                  [26] E. Heilman, S. Lipmann, and S. Goldberg. The arwen
+[11] M. Castro and B. Liskov. Practical byzantine fault                  trading protocols.
+     tolerance. In Proceedings of the Third Symposium on                 https://www.arwen.io/whitepaper.pdf, Jan. 2019.
+     Operating Systems Design and Implementation, OSDI                   As of 23 February 2019.
+     ’99, pages 173–186, Berkeley, CA, USA, 1999.                   [27] M. Herlihy. Atomic cross-chain swaps. In Proceedings
+     USENIX Association.                                                 of the 2018 ACM Symposium on Principles of
+[12] J. Chester. Your guide on bitcoin’s lightning network:              Distributed Computing, PODC ’18, pages 245–254,
+     The opportunities and the issues. https:                            New York, NY, USA, 2018. ACM.
+     //www.forbes.com/sites/jonathanchester/2018/                   [28] Investopedia. Utxo.
+     06/18/your-guide-on-the-lightning-network-the-                      https://www.investopedia.com/terms/u/utxo.asp,
+     opportunities-and-the-issues/#6c8d8c0f3677N,                        2019. As of 7 April 2019.
+     June 2018. As of 11 December 2018.                             [29] A. Kiayias, N. Lamprou, and A.-P. Stouka. Proofs of
+[13] A. Clement, H. Li, J. Napper, J. P. M. Martin,                      proofs of work with sublinear complexity. In
+     L. Alvisi, and M. Dahlin. Bar primer. In Proceedings                International Conference on Financial Cryptography
+     of the International Conference on Dependable                       and Data Security, 2016.
+
+
+
+                                                              112
+[30] A. Kiayias, A. Miller, and D. Zindros. Non-interactive           [38] J. Poon and T. Dryja. The bitcoin lightning network:
+     proofs of proof-of-work. Cryptology ePrint Archive,                   Scalable off-chain instant payments.
+     Report 2017/963, 2017.                                                https://lightning.network/lightning-network-
+     https://eprint.iacr.org/2017/963.                                     paper.pdf, Jan. 2016. As of 29 December 2017.
+[31] E. Kokoris Kogias, P. S. Jovanovic, L. Gasser,                   [39] A. P. Sheth and J. A. Larson. Federated database
+     N. Gailly, E. Syta, and B. A. Ford. Omniledger: A                     systems for managing distributed, heterogeneous, and
+     secure, scale-out, decentralized ledger via sharding. In              autonomous databases. ACM Comput. Surv., 22(3),
+     2018 IEEE Symposium on Security and Privacy (SP),                     Sept. 1990.
+     page 16, 2018.                                                   [40] Tendermint. http:/https:
+[32] J. Lind, I. Eyal, F. Kelbert, O. Naor, P. R. Pietzuch,                //github.com/tendermint/tendermint/wiki, Oct
+     and E. G. Sirer. Teechain: Scalable blockchain                        2015. Commit c318a227.
+     payments using trusted execution environments.                   [41] Wikipedia. Two-phase commit protocol.
+     CoRR, abs/1707.05454, 2017.                                           https://en.wikipedia.org/wiki/Two-
+[33] S. Nakamoto. Bitcoin: A peer-to-peer electronic cash                  phase_commit_protocol. As of 18 May 2018.
+     system. May 2009.                                                [42] Wikipedia. Mt. gox.
+[34] R. Network. What is the raiden network?                               https://en.wikipedia.org/wiki/Mt._Gox, 2019. As
+     https://raiden.network/101.html. As of 26 January                     of 6 April 2019.
+     2018.                                                            [43] Wikipedia. Quadriga fintech solutions. https://en.
+[35] T. Nolan. Atomic swaps using cut and choose. https:                   wikipedia.org/wiki/Quadriga_Fintech_Solutions,
+     //bitcointalk.org/index.php?topic=1364951. As of                      2019. As of 6 April 2019.
+     9 January 2018.                                                  [44] G. Wood. Ethereum: A secure decentralised
+[36] T. K. Organization. The barterdex whitepaper: A                       generalised transaction ledger. Ethereum project
+     decentralized, open-source cryptocurrency exchange,                   yellow paper, 151:1–32, 2014.
+     powered by atomic-swap technology.                               [45] V. Zakhary, D. Agrawal, and A. El Abbadi. Atomic
+     https://supernet.org/en/technology/                                   commitment across blockchains. CoRR,
+     whitepapers/BarterDEX-Whitepaper-v0.4.pdf. As                         abs/1905.02847, 2019.
+     of 9 January 2018.                                               [46] G. Zyskind, C. Kisagun, and C. FromKnecht. Enigma
+[37] J. Peterson, J. Krug, M. Zoltu, A. K. Williams, and                   catalyst: a machine-based investing platform and
+     S. Alexander. Augur: a decentralized oracle and                       infrastructure for crypto-assets.
+     prediction market platform.                                           https://www.enigma.co/enigma_catalyst.pdf. As of
+     https://www.augur.net/whitepaper.pdf, 2018. As of                     25 January 2018.
+     7 April 2019.
+
+
+
+
+                                                                113
+

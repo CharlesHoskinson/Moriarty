@@ -1,0 +1,189 @@
+On this page
+Interfaces
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-api-featured-app-v2
+Splice.Api.FeaturedAppRightV2
+Copy page
+Copy page
+Documentation for Splice.Api.FeaturedAppRightV2
+Copy page
+Copy page
+The API for featured apps to record their activity. This package extends FeaturedAppRightV1 with support for specifying a weight when creating a marker to improve efficiency.
+​
+Interfaces
+interface
+FeaturedAppActivityMarker
+A marker created by a featured application for activity generated from that app. This is used to record activity other than amulet transfers, which have built-in support for recording featured app activity.
+viewtype
+FeaturedAppActivityMarkerView
+Choice
+Archive
+Controller: Signatories of implementing template
+Returns: ()
+(no fields)
+interface
+FeaturedAppRight
+An interface for contracts allowing application providers to record their featured activity. Note that most instances of amulet will likely define some fair usage constraints.
+viewtype
+FeaturedAppRightView
+Choice
+Archive
+Controller: Signatories of implementing template
+Returns: ()
+(no fields)
+Choice
+FeaturedAppRight_CreateActivityMarker
+Record activity due to a featured app.
+Controller: (DA.Internal.Record.getField @“provider” (view this))
+Returns: FeaturedAppRight_CreateActivityMarkerResult
+Field
+Type
+Description
+beneficiaries
+[AppRewardBeneficiary]
+The set of beneficiaries and weights that define how the rewards should be split up between the beneficiary parties. Implementations SHOULD check that the weights are positive and add up to 1.0. Implementations MAY also impose a limit on the maximum number of beneficiaries.
+weight
+Optional Decimal
+A weight for the resulting markers. None defaults to a weight of 1.0. Specifying a weight of 5 for example makes the resulting markers equivalent to 5 markers of weight 1 in terms of rewards they generate. The weight must be >= 1.0 Implementations MAY impose an upper limit on the weight.
+Method featuredAppRight_CreateActivityMarkerImpl :
+ContractId FeaturedAppRight -> FeaturedAppRight_CreateActivityMarker -> Update FeaturedAppRight_CreateActivityMarkerResult
+​
+Data Types
+data
+AppRewardBeneficiary
+Specification of a beneficiary of featured app rewards.
+AppRewardBeneficiary
+Field
+Type
+Description
+beneficiary
+Party
+The party that is granted the right to mint the weighted amount of reward for this activity.
+weight
+Decimal
+A weight between 0.0 and 1.0 that defines how much of the reward this beneficiary can mint.
+instance
+Eq AppRewardBeneficiary
+instance
+Ord AppRewardBeneficiary
+instance
+Show AppRewardBeneficiary
+instance
+GetField “beneficiaries” FeaturedAppRight_CreateActivityMarker [AppRewardBeneficiary]
+instance
+GetField “beneficiary” AppRewardBeneficiary Party
+instance
+GetField “weight” AppRewardBeneficiary Decimal
+instance
+SetField “beneficiaries” FeaturedAppRight_CreateActivityMarker [AppRewardBeneficiary]
+instance
+SetField “beneficiary” AppRewardBeneficiary Party
+instance
+SetField “weight” AppRewardBeneficiary Decimal
+data
+FeaturedAppActivityMarkerView
+FeaturedAppActivityMarkerView
+Field
+Type
+Description
+dso
+Party
+The DSO party.
+provider
+Party
+The featured app provider.
+beneficiary
+Party
+The party that is granted the right to mint the weighted amount of reward for this activity.
+weight
+Decimal
+A weight between 0.0 and 1.0 that defines how much of the reward this beneficiary can mint.
+instance
+Eq FeaturedAppActivityMarkerView
+instance
+Show FeaturedAppActivityMarkerView
+instance
+HasFromAnyView FeaturedAppActivityMarker FeaturedAppActivityMarkerView
+instance
+HasInterfaceView FeaturedAppActivityMarker FeaturedAppActivityMarkerView
+instance
+GetField “beneficiary” FeaturedAppActivityMarkerView Party
+instance
+GetField “dso” FeaturedAppActivityMarkerView Party
+instance
+GetField “provider” FeaturedAppActivityMarkerView Party
+instance
+GetField “weight” FeaturedAppActivityMarkerView Decimal
+instance
+SetField “beneficiary” FeaturedAppActivityMarkerView Party
+instance
+SetField “dso” FeaturedAppActivityMarkerView Party
+instance
+SetField “provider” FeaturedAppActivityMarkerView Party
+instance
+SetField “weight” FeaturedAppActivityMarkerView Decimal
+data
+FeaturedAppRightView
+FeaturedAppRightView
+Field
+Type
+Description
+dso
+Party
+The DSO party.
+provider
+Party
+The featured app provider.
+instance
+Eq FeaturedAppRightView
+instance
+Show FeaturedAppRightView
+instance
+HasFromAnyView FeaturedAppRight FeaturedAppRightView
+instance
+HasInterfaceView FeaturedAppRight FeaturedAppRightView
+instance
+GetField “dso” FeaturedAppRightView Party
+instance
+GetField “provider” FeaturedAppRightView Party
+instance
+SetField “dso” FeaturedAppRightView Party
+instance
+SetField “provider” FeaturedAppRightView Party
+data
+FeaturedAppRight_CreateActivityMarkerResult
+Result of calling the
+FeaturedAppRight_CreateActivityMarker
+choice.
+FeaturedAppRight_CreateActivityMarkerResult
+Field
+Type
+Description
+activityMarkerCids
+[ContractId FeaturedAppActivityMarker]
+The set of activity markers created by the choice.
+instance
+HasMethod FeaturedAppRight “featuredAppRight_CreateActivityMarkerImpl” (ContractId FeaturedAppRight -> FeaturedAppRight_CreateActivityMarker -> Update FeaturedAppRight_CreateActivityMarkerResult)
+instance
+GetField “activityMarkerCids” FeaturedAppRight_CreateActivityMarkerResult [ContractId FeaturedAppActivityMarker]
+instance
+SetField “activityMarkerCids” FeaturedAppRight_CreateActivityMarkerResult [ContractId FeaturedAppActivityMarker]
+instance
+HasExercise FeaturedAppRight FeaturedAppRight_CreateActivityMarker FeaturedAppRight_CreateActivityMarkerResult
+instance
+HasExerciseGuarded FeaturedAppRight FeaturedAppRight_CreateActivityMarker FeaturedAppRight_CreateActivityMarkerResult
+instance
+HasFromAnyChoice FeaturedAppRight FeaturedAppRight_CreateActivityMarker FeaturedAppRight_CreateActivityMarkerResult
+instance
+HasToAnyChoice FeaturedAppRight FeaturedAppRight_CreateActivityMarker FeaturedAppRight_CreateActivityMarkerResult
+​
+Functions
+featuredAppRight_CreateActivityMarkerImpl
+: FeaturedAppRight -> ContractId FeaturedAppRight -> FeaturedAppRight_CreateActivityMarker -> Update FeaturedAppRight_CreateActivityMarkerResult
+Suggest edits
+Raise issue
+splice-api-featured-app-v2 docs
+splice-api-reward-assignment-v1 docs

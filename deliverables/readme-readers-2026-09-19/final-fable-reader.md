@@ -1,0 +1,6 @@
+Verdict: FLAGS
+
+1. "The quickstart exercises two profiles" — Nothing before this point has introduced a quickstart, and no section carries that name, so I could not tell where to find the thing being referenced until I guessed much later that "Try the local developer workflow" was meant. — severity: medium
+2. "The proposed Federated DeFi Kernel coordinates work" — This paragraph moves from kernel responsibilities to implementation status, to planned adapters, to "the local evaluator APIs are the available starting point", and then to a three-party responsibility split. I had to reread to work out which sentences describe the kernel and which describe the repository's current state. — severity: medium
+3. "This separates three kinds of work." — The text lists three kinds of work, then says the CAKE framework names "these concerns" as four items, with the fourth explained only afterwards. I had to stop and reconcile three against four before the mapping made sense. — severity: medium
+4. "The principal remaining obligations are" — This paragraph stacks a list of obligations, a list of evidence types, and a verification-versus-deployment caveat in succession, and I skimmed it and lost which item belonged to which claim. — severity: medium

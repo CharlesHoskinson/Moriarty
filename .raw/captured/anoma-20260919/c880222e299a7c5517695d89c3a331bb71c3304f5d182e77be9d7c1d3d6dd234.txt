@@ -1,0 +1,456 @@
+Anoma specs
+Latest version (v1.0.0)
+Development version
+Home
+Anoma architecture
+Changelog
+Indexes
+Indexes
+List of tags
+List of modules
+System architecture
+System architecture
+Identity Architecture
+State Architecture
+Integrations
+Integrations
+Protocol Adapters
+Protocol Adapters
+Ethereum Virtual Machine
+Ethereum Virtual Machine
+EVM Primitive Interfaces
+EVM Datatypes
+EVM Datatypes
+Table of contents
+Resource
+Resource Computable Components
+Compliance Unit
+Action
+Transaction
+EVM Execution Flow
+EVM Interoperability
+Tutorials
+Tutorials
+Contributor guidelines
+Table of contents
+Resource
+Resource Computable Components
+Compliance Unit
+Action
+Transaction
+Home
+Integrations
+Protocol Adapters
+Ethereum Virtual Machine
+evm
+protocol-adapter
+resource-machine
+EVM Resource Machine Datatypes
+¶
+This section contains the descriptions of the RM datatype implementations and their interfaces.
+The "Proof" sections try to describe the explicit implementation details that may differ from the original RM specification.
+Resource
+¶
+A
+resource
+is implemented as the following Solidity struct:
+struct
+Resource
+{
+bytes32
+logicRef
+;
+bytes32
+labelRef
+;
+bytes32
+valueRef
+;
+bytes32
+nullifierKeyCommitment
+;
+bytes32
+nonce
+;
+bytes32
+randSeed
+;
+uint128
+quantity
+;
+bool
+ephemeral
+;
+}
+Resource Computable Components
+¶
+Commitment
+A commitment of resource
+resource
+is computed as packed bytes of the resource fields alongside with hardcoded 17 bytes prepending randomness values:
+function
+commitment
+(
+Resource
+memory
+resource
+)
+internal
+pure
+returns
+(
+bytes32
+cm
+)
+{
+cm
+=
+sha256
+(
+abi
+.
+encodePacked
+(
+resource
+.
+logicRef
+,
+resource
+.
+labelRef
+,
+resource
+.
+quantity
+,
+resource
+.
+valueRef
+,
+resource
+.
+ephemeral
+,
+resource
+.
+nonce
+,
+resource
+.
+nullifierKeyCommitment
+,
+rcm
+(
+resource
+)
+)
+);
+}
+function
+rcm
+(
+Resource
+memory
+resource
+)
+internal
+pure
+returns
+(
+bytes32
+randCm
+)
+{
+bytes17
+prfExpandPersonalization
+=
+0x52495343305f457870616e645365656401
+;
+randCm
+=
+sha256
+(
+abi
+.
+encodePacked
+(
+prfExpandPersonalization
+,
+resource
+.
+randSeed
+,
+resource
+.
+nonce
+));
+}
+Nullifier
+A nullifier of a resource
+resource
+with nullifier key
+nullifierKey
+is computed as packed bytes of the nullifier key, nonce, hardcoded 17 bytes with randomness fields of a resource, as well as the commitment of a resource as described above.
+function
+nullifier
+(
+Resource
+memory
+resource
+,
+bytes32
+nullifierKey
+)
+internal
+pure
+returns
+(
+bytes32
+nf
+)
+{
+nf
+=
+sha256
+(
+abi
+.
+encodePacked
+(
+nullifierKey
+,
+resource
+.
+nonce
+,
+psi
+(
+resource
+),
+commitment
+(
+resource
+)));
+}
+function
+psi
+(
+Resource
+memory
+resource
+)
+internal
+pure
+returns
+(
+bytes32
+randNf
+)
+{
+bytes17
+prfExpandPersonalization
+=
+0x52495343305f457870616e645365656400
+;
+randNf
+=
+sha256
+(
+abi
+.
+encodePacked
+(
+prfExpandPersonalization
+,
+resource
+.
+randSeed
+,
+resource
+.
+nonce
+));
+}
+Kind
+A kind of a resource
+resource
+with
+logicRef = resource.logicRef
+and
+labelRef = resource.labelRef
+is computed as
+sha256(abi.encode(logicRef, labelRef))
+.
+Delta
+The delta of a resource
+resource
+is computed as the multiple of the resource kind and quantity seen as scalars and Pedersen-committed to a 2D point on the K256 curve. However, we do not use them for verification purposes. For details one can consult the
+compliance circuit
+.
+Compliance Unit
+¶
+The compliance unit is defined as the
+VerifierInput
+struct:
+struct
+VerifierInput
+{
+bytes
+proof
+;
+Instance
+instance
+;
+}
+where the instance is the expected compliance unit instance type:
+struct
+Instance
+{
+ConsumedRefs
+consumed
+;
+CreatedRefs
+created
+;
+bytes32
+unitDeltaX
+;
+bytes32
+unitDeltaY
+;
+}
+where
+struct
+ConsumedRefs
+{
+bytes32
+nullifier
+;
+bytes32
+logicRef
+;
+bytes32
+commitmentTreeRoot
+;
+}
+and
+struct
+CreatedRefs
+{
+bytes32
+commitment
+;
+bytes32
+logicRef
+;
+}
+As mentioned in
+EVM Primitive Interfaces
+page, the unit delta is represented as a 2D point.
+Action
+¶
+The action datatype is described as
+struct
+Action
+{
+Logic
+.
+VerifierInput
+[]
+logicVerifierInputs
+;
+Compliance
+.
+VerifierInput
+[]
+complianceVerifierInputs
+;
+}
+Where the compliance verifier input time is defined above, while the logic verifier input is defined as:
+struct
+VerifierInput
+{
+bytes32
+tag
+;
+bytes32
+verifyingKey
+;
+AppData
+appData
+;
+bytes
+proof
+;
+}
+The
+AppData
+stands for the 4 different payloads we posess:
+struct
+AppData
+{
+ExpirableBlob
+[]
+resourcePayload
+;
+ExpirableBlob
+[]
+discoveryPayload
+;
+ExpirableBlob
+[]
+externalPayload
+;
+ExpirableBlob
+[]
+applicationPayload
+;
+}
+with
+ExpirableBlob
+defined as
+struct
+ExpirableBlob
+{
+DeletionCriterion
+deletionCriterion
+;
+bytes
+blob
+;
+}
+There are only two deletion criteria we support:
+enum
+DeletionCriterion
+{
+Immediately
+,
+Never
+}
+The storage of the criteria is designated to the EVM event history logs. Once the transaction is executed, the event will be transmitted, including the blobs, which will then be recoverable by an interested party through indexing services.
+The
+actionTreeRoot
+is computed as the root of a merkle tree of depth 4 with leaves provided by the
+tag
+s in the corresponding Action.
+Transaction
+¶
+The transaction is defined as a list of actions with the delta prove attesting to the balancing of the action alongside an aggregation proof, attesting to the verification of all the logic and compliance verifying keys present in the transaction given the instances:
+struct
+Transaction
+{
+Action
+[]
+actions
+;
+bytes
+deltaProof
+;
+bytes
+aggregationProof
+;
+}
+If an aggregation proof is present, the PA only checks the delta and the aggregation proofs.
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! We'll try to improve this page in the future.

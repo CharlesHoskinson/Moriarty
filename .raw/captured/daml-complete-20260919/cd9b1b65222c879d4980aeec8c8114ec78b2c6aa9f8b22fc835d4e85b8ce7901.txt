@@ -1,0 +1,432 @@
+On this page
+Templates
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.ExternalPartyAmuletRules
+Copy page
+Copy page
+Documentation for Splice.ExternalPartyAmuletRules
+Copy page
+Copy page
+​
+Templates
+template
+ExternalPartyAmuletRules
+Rules contract that can be used in transactions that require signatures from an external party. This is intended to get archived and recreated as rarely as possible to support long delays between preparing and signing a transaction.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+Choice
+ExternalPartyAmuletRules_CreateTransferCommand
+Controller: sender
+Returns: ExternalPartyAmuletRules_CreateTransferCommandResult
+Field
+Type
+Description
+sender
+Party
+receiver
+Party
+delegate
+Party
+amount
+Decimal
+expiresAt
+Time
+nonce
+Int
+description
+Optional
+Text
+expectedDso
+Optional
+Party
+Choice
+ExternalPartyAmuletRules_ExpireAmuletAllocations
+Controller: dso
+Returns: ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+Field
+Type
+Description
+expectedDso
+Party
+inputs
+[ExternalPartyAmuletRules_ExpireAmuletAllocationInput]
+observers
+[
+Party
+]
+interface instance
+AllocationFactory
+for
+ExternalPartyAmuletRules
+interface instance
+TransferFactory
+for
+ExternalPartyAmuletRules
+template
+TransferCommand
+Deprecated: The token standard transfer APIs now support 24h signing delays so this contract is no longer required.
+One-time delegation to execute a transfer to the given receiver for the given amount.
+Signatory: sender, dso
+Field
+Type
+Description
+dso
+Party
+sender
+Party
+receiver
+Party
+delegate
+Party
+The delegate that actually executes the transfer
+amount
+Decimal
+expiresAt
+Time
+Expiry of the command until when TransferCommand_Send must be called
+nonce
+Int
+Expected nonce value to order and deduplicate concurrent transfers. Starts at 0 and the next value to use can then be read from TransferCommandCounter and the in-flight TransferCommand contracts.
+description
+Optional
+Text
+Choice
+Archive
+Controller: sender, dso
+Returns: ()
+(no fields)
+Choice
+TransferCommand_Expire
+Controller: p
+Returns: TransferCommand_ExpireResult
+Field
+Type
+Description
+p
+Party
+Choice
+TransferCommand_Send
+Controller: delegate
+Returns: TransferCommand_SendResult
+Field
+Type
+Description
+context
+PaymentTransferContext
+inputs
+[TransferInput]
+transferPreapprovalCidO
+Optional
+(
+ContractId
+TransferPreapproval)
+transferCounterCid
+ContractId
+TransferCommandCounter
+Choice
+TransferCommand_Withdraw
+Controller: sender
+Returns: TransferCommand_WithdrawResult
+(no fields)
+template
+TransferCommandCounter
+A contract tracking the number of completed TransferCommands per sender, which is used to determine the nonces used in TransferCommands for deduplication.
+Signatory: dso
+Field
+Type
+Description
+dso
+Party
+sender
+Party
+nextNonce
+Int
+Choice
+Archive
+Controller: dso
+Returns: ()
+(no fields)
+​
+Data Types
+data
+ExternalPartyAmuletRules_CreateTransferCommandResult
+ExternalPartyAmuletRules_CreateTransferCommandResult
+Field
+Type
+Description
+transferCommandCid
+ContractId
+TransferCommand
+instance
+Eq
+ExternalPartyAmuletRules_CreateTransferCommandResult
+instance
+Show
+ExternalPartyAmuletRules_CreateTransferCommandResult
+instance
+GetField “transferCommandCid” ExternalPartyAmuletRules_CreateTransferCommandResult (
+ContractId
+TransferCommand)
+instance
+SetField “transferCommandCid” ExternalPartyAmuletRules_CreateTransferCommandResult (
+ContractId
+TransferCommand)
+instance
+HasExercise
+ExternalPartyAmuletRules ExternalPartyAmuletRules_CreateTransferCommand ExternalPartyAmuletRules_CreateTransferCommandResult
+instance
+HasFromAnyChoice
+ExternalPartyAmuletRules ExternalPartyAmuletRules_CreateTransferCommand ExternalPartyAmuletRules_CreateTransferCommandResult
+instance
+HasToAnyChoice
+ExternalPartyAmuletRules ExternalPartyAmuletRules_CreateTransferCommand ExternalPartyAmuletRules_CreateTransferCommandResult
+data
+ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+Field
+Type
+Description
+allocationCid
+ContractId
+AmuletAllocation
+expireLock
+Bool
+instance
+Eq
+ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+instance
+Show
+ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+instance
+GetField “allocationCid” ExternalPartyAmuletRules_ExpireAmuletAllocationInput (
+ContractId
+AmuletAllocation)
+instance
+GetField “expireLock” ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+Bool
+instance
+GetField “inputs” ExternalPartyAmuletRules_ExpireAmuletAllocations [ExternalPartyAmuletRules_ExpireAmuletAllocationInput]
+instance
+SetField “allocationCid” ExternalPartyAmuletRules_ExpireAmuletAllocationInput (
+ContractId
+AmuletAllocation)
+instance
+SetField “expireLock” ExternalPartyAmuletRules_ExpireAmuletAllocationInput
+Bool
+instance
+SetField “inputs” ExternalPartyAmuletRules_ExpireAmuletAllocations [ExternalPartyAmuletRules_ExpireAmuletAllocationInput]
+data
+ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+Field
+Type
+Description
+results
+[AmuletAllocation_DsoExpireResult]
+instance
+Eq
+ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+instance
+Show
+ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+instance
+GetField “results” ExternalPartyAmuletRules_ExpireAmuletAllocationsResult [AmuletAllocation_DsoExpireResult]
+instance
+SetField “results” ExternalPartyAmuletRules_ExpireAmuletAllocationsResult [AmuletAllocation_DsoExpireResult]
+instance
+HasExercise
+ExternalPartyAmuletRules ExternalPartyAmuletRules_ExpireAmuletAllocations ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+instance
+HasFromAnyChoice
+ExternalPartyAmuletRules ExternalPartyAmuletRules_ExpireAmuletAllocations ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+instance
+HasToAnyChoice
+ExternalPartyAmuletRules ExternalPartyAmuletRules_ExpireAmuletAllocations ExternalPartyAmuletRules_ExpireAmuletAllocationsResult
+data
+TransferCommandResult
+TransferCommandResultFailure
+Field
+Type
+Description
+reason
+InvalidTransferReason
+TransferCommandResultSuccess
+Field
+Type
+Description
+result
+TransferResult
+instance
+Eq
+TransferCommandResult
+instance
+Show
+TransferCommandResult
+instance
+GetField “reason” TransferCommandResult InvalidTransferReason
+instance
+GetField “result” TransferCommandResult TransferResult
+instance
+GetField “result” TransferCommand_SendResult TransferCommandResult
+instance
+SetField “reason” TransferCommandResult InvalidTransferReason
+instance
+SetField “result” TransferCommandResult TransferResult
+instance
+SetField “result” TransferCommand_SendResult TransferCommandResult
+data
+TransferCommand_ExpireResult
+TransferCommand_ExpireResult
+Field
+Type
+Description
+sender
+Party
+nonce
+Int
+instance
+Eq
+TransferCommand_ExpireResult
+instance
+Show
+TransferCommand_ExpireResult
+instance
+GetField “nonce” TransferCommand_ExpireResult
+Int
+instance
+GetField “sender” TransferCommand_ExpireResult
+Party
+instance
+SetField “nonce” TransferCommand_ExpireResult
+Int
+instance
+SetField “sender” TransferCommand_ExpireResult
+Party
+instance
+HasExercise
+TransferCommand TransferCommand_Expire TransferCommand_ExpireResult
+instance
+HasFromAnyChoice
+TransferCommand TransferCommand_Expire TransferCommand_ExpireResult
+instance
+HasToAnyChoice
+TransferCommand TransferCommand_Expire TransferCommand_ExpireResult
+data
+TransferCommand_SendResult
+TransferCommand_SendResult
+Field
+Type
+Description
+result
+TransferCommandResult
+sender
+Party
+nonce
+Int
+instance
+Eq
+TransferCommand_SendResult
+instance
+Show
+TransferCommand_SendResult
+instance
+GetField “nonce” TransferCommand_SendResult
+Int
+instance
+GetField “result” TransferCommand_SendResult TransferCommandResult
+instance
+GetField “sender” TransferCommand_SendResult
+Party
+instance
+SetField “nonce” TransferCommand_SendResult
+Int
+instance
+SetField “result” TransferCommand_SendResult TransferCommandResult
+instance
+SetField “sender” TransferCommand_SendResult
+Party
+instance
+HasExercise
+TransferCommand TransferCommand_Send TransferCommand_SendResult
+instance
+HasFromAnyChoice
+TransferCommand TransferCommand_Send TransferCommand_SendResult
+instance
+HasToAnyChoice
+TransferCommand TransferCommand_Send TransferCommand_SendResult
+data
+TransferCommand_WithdrawResult
+TransferCommand_WithdrawResult
+Field
+Type
+Description
+sender
+Party
+nonce
+Int
+instance
+Eq
+TransferCommand_WithdrawResult
+instance
+Show
+TransferCommand_WithdrawResult
+instance
+GetField “nonce” TransferCommand_WithdrawResult
+Int
+instance
+GetField “sender” TransferCommand_WithdrawResult
+Party
+instance
+SetField “nonce” TransferCommand_WithdrawResult
+Int
+instance
+SetField “sender” TransferCommand_WithdrawResult
+Party
+instance
+HasExercise
+TransferCommand TransferCommand_Withdraw TransferCommand_WithdrawResult
+instance
+HasFromAnyChoice
+TransferCommand TransferCommand_Withdraw TransferCommand_WithdrawResult
+instance
+HasToAnyChoice
+TransferCommand TransferCommand_Withdraw TransferCommand_WithdrawResult
+​
+Functions
+amulet_transferFactory_transferImpl
+: ExternalPartyAmuletRules ->
+ContractId
+TransferFactory -> TransferFactory_Transfer ->
+Update
+TransferInstructionResult
+amulet_allocationFactory_allocateImpl
+: ExternalPartyAmuletRules ->
+ContractId
+AllocationFactory -> AllocationFactory_Allocate ->
+Update
+AllocationInstructionResult
+requireExpectedAdminMatch
+:
+Party
+->
+Party
+->
+Update
+()
+Suggest edits
+Raise issue
+Splice.Expiry
+Splice.ExternalPartyConfigState

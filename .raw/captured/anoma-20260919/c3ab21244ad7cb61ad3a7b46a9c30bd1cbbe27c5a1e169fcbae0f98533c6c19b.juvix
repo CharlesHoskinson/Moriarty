@@ -1,0 +1,122 @@
+module Anoma.Transaction;
+
+import Stdlib.Prelude open;
+import Anoma.Types open;
+import Anoma.Rep open;
+
+module DeltaComponent;
+
+  type DeltaComponent :=
+    mk {
+      denom : Kind;
+      sign : Bool;
+      amount : Nat
+    };
+
+  zero : DeltaComponent :=
+    mk@{
+      denom := Kind.mk 0;
+      sign := true;
+      amount := 0
+    };
+
+  open DeltaComponent public;
+end;
+
+open DeltaComponent using {DeltaComponent} public;
+
+Delta : Type := List DeltaComponent;
+
+-- Proof, Resource, and Transaction are mutually recursive so they must be
+-- defined in the same module.
+module Helper;
+  syntax alias Proof := Resource;
+
+  positive
+  type Resource :=
+    mkResource {
+      logic : Resource -> Transaction -> Bool;
+      label : Nat;
+      quantity : Nat;
+      data : Nat;
+      eph : Bool;
+      nonce : Nat;
+      npkContents : Nat;
+      rseed : Nat
+    };
+
+  positive
+  type Transaction :=
+    mkTransaction {
+      roots : List Nat;
+      commitments : List Commitment;
+      nullifiers : List Nullifier;
+      proofs : List Proof;
+      delta : Delta;
+      extra : Nat;
+      -- TODO: Encoding of the preference function is not specified
+      preference : Nat
+    };
+end;
+
+module Transaction;
+  syntax alias mk := Helper.mkTransaction;
+
+  open Helper.Transaction public;
+  open Helper using {Transaction} public;
+end;
+
+open Transaction using {Transaction} public;
+
+module Resource;
+  open Helper.Resource public;
+  open Helper using {Resource} public;
+
+  mk
+    (logic : Resource -> Transaction -> Bool)
+    (label : Nat)
+    (quantity : Nat)
+    (data : Nat)
+    (eph : Bool)
+    (nonce : Nat)
+    (npk : PublicKey)
+    (rseed : Nat)
+    : Resource :=
+    Helper.mkResource@{
+      logic;
+      label;
+      quantity;
+      data;
+      eph;
+      nonce;
+      npkContents := toAtom npk;
+      rseed
+    };
+
+  npk : Resource -> PublicKey := npkContents >> fromAtom;
+
+end;
+
+open Resource using {Resource} public;
+
+module Traits;
+
+  import Anoma.System open using {anomaEncode};
+  import Stdlib.Trait.Ord.Eq open using {fromOrdToEq};
+
+  open Resource;
+
+  instance
+  ResourceOrd : Ord Resource :=
+    let
+      prod (r : Resource) : _ :=
+        anomaEncode (logic r), label r, quantity r, data r, eph r, nonce r, npkContents r, rseed r;
+    in mkOrd@{
+      cmp (r1 r2 : Resource) : Ordering := Ord.cmp (prod r1) (prod r2)
+    };
+
+  instance
+  ResourceEq : Eq Resource := fromOrdToEq;
+end;
+
+open Traits using {ResourceOrd; ResourceEq} public;

@@ -1,0 +1,9 @@
+# Protected content and publication brief
+
+One README retains docs/assets/moriarty-banner.png first. Explain intention, bounded language design, native Midnight ZKIRv3, optional federation, complete effects and duties, partial/conditional/multichain settlement, solver delegation and limitations. Link two public references: requirements.html and language.html. Each of 35 MPLRs,16 ZR requirements and8 Mina recursion refinements gets exactly one explanatory prose paragraph. IDs, distinctions and requirement status must survive rewriting.
+
+ZKIRv4 is proposed next-version requirements, not an announced upstream version. Approximately March2027 recursion availability is user planning assumption, not verified promise. Full native recursion and private multiparent history remain target obligations; bounded stages do not imply bounded total history or eventual completion. No Lean dependency or Mina-backend substitution. Developers need no project/council/registry/provider approval. Application consent and objective ledger rules remain necessary. Proofs concern authenticated formal intention, allactual effects, gross debit, fees, net outcomes, separately typed debt and residual duties. Proofs do not establish unencoded wishes, oracle truth or foreign finality. Local evaluator != optional federatedkernel.
+
+Formal grammar, formula data-tex strings, code blocks and static judgments are protected against stylistic rewriting. Each historical profile keeps its scope; current local Source/5 and narrow repayment projections must remain distinguished. Matching examples != general source/Core/K/ZKIR correspondence. Financial target path and private native composition remain open. Prose may motivate definitions and dependencies but cannot invent theorem/construct/quantifier.
+
+All new words are original English adapted through Inkwell Grothendieck profile, not attributed to historical author. Metrics diagnostic only.

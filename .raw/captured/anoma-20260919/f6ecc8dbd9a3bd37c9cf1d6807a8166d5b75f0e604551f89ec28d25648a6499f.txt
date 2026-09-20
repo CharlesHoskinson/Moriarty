@@ -1,0 +1,329 @@
+Earn
+Copy page
+Earn
+AnomaPay can move a shielded balance into a yield-bearing vault and back out, in a single atomic transaction. The user’s token leaves the shielded pool, is deposited into the vault, and the vault shares re-enter the pool as a new private resource. Redeeming reverses it. If any step fails, the whole transaction reverts and the user keeps their original balance.
+private resource (USDC) → [unwrap → deposit into vault → wrap] → private resource (vault shares)
+Yield accrues while the shares sit in the shielded pool. No further transaction is needed, and the user’s position is never visible as a position.
+Two different kinds of yield are reachable this way: a
+protocol savings rate
+, and a
+managed lending strategy
+. AnomaPay moves value into both the same way.
+Why ERC-4626 specifically
+A shielded resource commits to a fixed quantity. A token whose balance
+grows
+, a rebasing token, cannot be represented because the amount recorded at wrap time would silently stop matching the amount held.
+ERC-4626
+vaults sidestep this. A share count never changes meaning the
+share price
+rises as the vault earns. A user holding 100 shares still holds 100 shares tomorrow, worth more. That makes vault shares ordinary ERC-20s as far as the shielded pool is concerned.
+The practical consequence is that any ERC-4626 vault is a candidate for listing. What varies between vaults is not the shielded mechanics but how you get in and out.
+What the yield is
+Sky savings via
+sUSDS
+The
+Sky Savings Rate
+is a rate Sky governance sets and funds from protocol revenue. Every holder earns the same published rate and the vault’s only job is to accrue it. Entering and exiting is a fixed-rate conversion.
+Morpho vaults
+A
+Morpho
+vault is a
+managed strategy
+. A curator allocates depositors’ funds across lending markets, choosing which collateral types, oracles and exposure caps to accept, and the yield is whatever borrowers in those markets pay. It is variable by construction and the curator’s judgement is part of the risk you take on.
+Listed vaults run
+no reward program
+. Rewards are distributed to whichever address holds the shares, which in our case is one forwarder shared by every user, so they could not be credited to individual depositors. Restricting the list to reward-free vaults means the displayed yield is the yield a depositor actually receives.
+Vault
+Managed by
+Entry
+steakUSDC
+Steakhouse
+USDC → vault
+bbqUSDC
+Smokehouse
+USDC → vault
+gtUSDC
+Gauntlet
+USDC → vault
+vbshUSDC
+Vault Bridge
+USDC → vault
+Yields come from Morpho’s indexer and are served in the
+network configuration
+as
+apy
+on each token entry, alongside
+sUSDS
+and the usual metadata. Everything above is on Ethereum mainnet and entered from USDC.
+Neither yield is guaranteed, but they fail differently. The Sky rate can be changed by Sky governance. A Morpho vault can lose principal if a market it has allocated into accrues bad debt and its return depends on a curator’s ongoing decisions.
+How a deposit executes
+Both yield sources reach the shielded pool through identical plumbing. Because both are ERC-4626, AnomaPay does not need to know what a vault does with the money to move value in and out of it to provide consistency in the same three legs, the same commitment, and the same atomicity. The uniformity is in the transport.
+Structurally it is the same three-leg shape as a
+swap
+:
+Leg
+What happens
+Unwrap
+The deposit amount is unwrapped from the user’s shielded balance to the
+GenericCallForwarder
+.
+Generic call
+The
+forwarder
+executes the pre-committed calls: approve the vault, deposit, and approve
+Permit2
+for the shares.
+Wrap
+The committed share amount is pulled from the forwarder via Permit2 and wrapped into a new private resource.
+What differs between vaults is only the middle leg.
+Morpho vaults
+are bare ERC-4626: the token you deposit
+is
+the vault’s asset, so there is no routing. Three calls in, two out.
+approve(vault, assets) → vault.deposit(assets, forwarder) → approve(permit2, shares)
+sUSDS
+takes USDS, not USDC, so entering routes through Sky’s peg stability module first. That conversion is fixed-rate rather than a trade and it adds two calls.
+The route is built with
+Osero
+’s
+integration SDK
+, which owns Sky’s deployment addresses and the peg module’s conversion maths. AnomaPay does not reimplement them, so a change on Sky’s side reaches us through Osero rather than through a contract address we had pinned ourselves.
+approve(psm, usdc) → psm.sellGem(forwarder, usdc) → approve(sUSDS, usds)
+→ sUSDS.deposit(usds, forwarder) → approve(permit2, shares)
+Both execute atomically in one transaction. The forwarder holds the intermediate USDS only inside that transaction, so no third party can act on it.
+Quotes are built server-side
+AnomaPay asks the backend for a quote and receives the calls ready to execute:
+GET /vault/{network}/{vaultId}/quote?direction=deposit&amount=1000000
+{
+"vaultId"
+:
+"morpho-gtusdc-mainnet"
+,
+"direction"
+:
+"deposit"
+,
+"inputToken"
+:
+"0xa0b8…eb48"
+,
+"outputToken"
+:
+"0xdd0f…490d"
+,
+"inputAmount"
+:
+"1000000"
+,
+"expectedOutput"
+:
+"879812531268306465710"
+,
+"minOutput"
+:
+"879724550015179635063"
+,
+"calls"
+: [ {
+"to"
+:
+"0x…"
+,
+"value"
+:
+"0"
+,
+"data"
+:
+"0x095ea7b3…"
+},
+…
+]
+}
+Building a bundle requires reading the vault’s live share price and, for sUSDS, the peg module’s conversion fee.
+direction
+is
+deposit
+or
+redeem
+.
+amount
+is in the input token’s smallest unit: the asset when depositing, shares when redeeming.
+What
+minOutput
+means
+expectedOutput
+is what the vault would return right now.
+minOutput
+is what the transaction commits to and it is the number that matters because the wrap leg pulls exactly that amount.
+The two differ because share price moves between quoting and execution. Proving takes time and the vault keeps earning throughout. So the committed amount sits just below the expected one, roughly 1 basis point, measured against a real drift of about 0.002 bps over a proving window.
+Anything the vault returns above
+minOutput
+stays in the forwarder. This is the residual-balance property described in
+Generic Calls
+.
+One exception is worth knowing about. An
+sUSDS redemption
+commits its output exactly, with no buffer and no residue, because the final leg exits through the peg module’s
+buyGem
+, which is exact-
+out
+. The amount delivered is fixed in the calldata. Every other path, i.e. sUSDS deposits and Morpho in both directions, is exact-in and carries the buffer.
+Building a deposit
+Fetch a quote
+const
+res
+=
+await
+fetch
+(
+`${
+backendUrl
+}/api/v1/vault/ethereum/morpho-gtusdc-mainnet/quote`
++
+`?direction=deposit&amount=1000000`
+// 1 USDC (6 decimals)
+);
+const
+quote
+=
+await
+res.
+json
+();
+// quote.expectedOutput - shares the vault would mint now, for display
+// quote.minOutput      - shares the transaction commits to receiving
+// quote.calls          - the EVM calls, in execution order
+Amounts cross the wire as decimal strings, since they exceed
+Number
+’s safe range.
+Resolve the resources
+The three legs are the same shape as a swap, so
+SwapResolver
+assembles them unchanged. It takes the call array as opaque data and has no venue-specific behaviour:
+import
+{
+TransferBuilder,
+SwapResolver,
+PayloadBuilder,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+(
+chain.transferLogicVerifyingKey,
+chain.trivialLogicVerifyingKey
+);
+const
+resolver
+=
+new
+SwapResolver
+(transferBuilder, keyring, chain);
+const
+resolved
+=
+resolver.
+resolve
+({
+senderResources: resources,
+// the user's USDC resources
+tokenA: usdc,
+// spent
+tokenB: vaultShare,
+// received
+swapAmount:
+1_000_000
+n
+,
+// excludes the fee
+minBuyAmount:
+BigInt
+(quote.minOutput),
+calls: quote.calls.
+map
+(
+c
+=>
+({
+to: c.to,
+value:
+BigInt
+(c.value),
+data: c.data,
+})),
+fee,
+// relayer fee, paid in USDC
+});
+Sign and submit
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+const
+{
+transaction_hash
+:
+txId
+}
+=
+await
+backend.
+transfer
+(parameters);
+Redeeming is the same flow with
+direction=redeem
+,
+amount
+in shares, and the tokens reversed.
+tokenA
+is the vault share and
+tokenB
+the asset.
+After submission the transaction follows the same lifecycle as a transfer, see
+Transaction lifecycle
+.
+Fees and position size
+The relayer fee is paid in the token being spent meaning the asset when depositing, the vault shares when redeeming. It is largely fixed per transaction rather than proportional to the amount and it grows with how many resources the transaction consumes. Thus, a position built up over many small deposits costs more to exit than one built in a single deposit.
+Errors
+Error
+Meaning
+Handling
+Amount must be greater than zero
+The quote was requested with a zero amount
+Validate before requesting
+Amount is too small to produce any output after fees
+The amount rounds to nothing through the vault or the peg module
+Increase the amount
+Vault is not currently accepting transactions
+The vault has been disabled server-side
+Surface it as unavailable; existing balances remain redeemable
+Unknown vault on this network
+The vault id is not listed for that network
+Read available vaults from the network configuration
+Insufficient fee
+The relayer fee moved between quoting and validation
+Rebuild with a fresh fee estimate
+Privacy
+The vault interaction itself is public. The forwarder’s deposit is visible on-chain, including the vault and the amount. What stays private is
+who
+deposited. The transaction cannot be linked to a specific AnomaPay user and both the source balance and the resulting position remain shielded.
+The anonymity set for a vault is the set of AnomaPay users transacting with that same vault. Spreading deposits across many vaults makes each one’s set smaller. A distinctive amount can also be correlated between a deposit and the redemption that follows it.
+Last updated on
+February 18, 2026
+Swaps
+API Clients

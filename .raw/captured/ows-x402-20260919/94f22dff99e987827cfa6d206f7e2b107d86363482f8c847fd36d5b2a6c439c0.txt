@@ -1,0 +1,202 @@
+On this page
+Type Declaration
+type
+accountName?
+type
+accountName?
+ownerAccountName
+type
+evm?
+solana?
+PayToConfig
+Copy page
+Copy page
+Copy page
+Copy page
+type
+PayToConfig
+=
+|
+{
+type
+:
+"eoa"
+;
+accountName
+?:
+string
+;
+}
+|
+{
+type
+:
+"smart"
+;
+accountName
+?:
+string
+;
+ownerAccountName
+:
+string
+;
+}
+|
+{
+type
+:
+"address"
+;
+evm
+?:
+Address
+;
+solana
+?:
+string
+;
+};
+Defined in:
+server.ts:217
+Receiver wallet configuration for
+createX402Server
+.
+Controls how receiver wallet addresses are resolved:
+"eoa"
+— provision a CDP EVM EOA + Solana account (default)
+"smart"
+— provision a CDP Smart Contract Wallet + Solana account
+"address"
+— use provided addresses directly, no provisioning needed
+​
+Type Declaration
+{
+type
+:
+"eoa"
+;
+accountName
+?:
+string
+;
+}
+​
+type
+type
+:
+"eoa"
+;
+CDP Server Wallet (EOA). Default when
+type
+is omitted.
+​
+accountName?
+optional
+accountName
+:
+string
+;
+Named CDP account to use as the receiver wallet.
+Defaults to
+"x402-receiver-wallet-1"
+.
+{
+type
+:
+"smart"
+;
+accountName
+?:
+string
+;
+ownerAccountName
+:
+string
+;
+}
+​
+type
+type
+:
+"smart"
+;
+CDP Smart Contract Wallet.
+​
+accountName?
+optional
+accountName
+:
+string
+;
+Named CDP smart account. Defaults to
+"x402-receiver-wallet-1"
+.
+​
+ownerAccountName
+ownerAccountName
+:
+string
+;
+Owner EOA account name. Required for
+"smart"
+type.
+{
+type
+:
+"address"
+;
+evm
+?:
+Address
+;
+solana
+?:
+string
+;
+}
+​
+type
+type
+:
+"address"
+;
+Use provided addresses directly.
+No wallet provisioning is performed —
+CDP_WALLET_SECRET
+is not required.
+API key credentials (
+CDP_API_KEY_ID
+/
+CDP_API_KEY_SECRET
+) are still
+needed for the CDP facilitator.
+At least one of
+evm
+or
+solana
+should be provided, or all routes
+must supply explicit
+payTo
+values in the full x402
+RouteConfig
+format.
+​
+evm?
+optional
+evm
+:
+Address
+;
+EVM address to receive payments.
+​
+solana?
+optional
+solana
+:
+string
+;
+Solana address to receive payments.
+Was this page helpful?
+Yes
+No

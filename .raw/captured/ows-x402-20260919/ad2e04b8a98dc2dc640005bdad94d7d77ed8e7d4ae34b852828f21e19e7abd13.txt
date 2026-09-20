@@ -1,0 +1,248 @@
+On this page
+Examples
+Extends
+Constructors
+Constructor
+Parameters
+Returns
+Overrides
+Accessors
+accountName
+Get Signature
+Methods
+getAddresses()
+Returns
+createPaymentPayload()
+Parameters
+Returns
+Overrides
+CdpX402Client
+Copy page
+Copy page
+Copy page
+Copy page
+Defined in:
+client.ts:322
+A Coinbase CDP-powered x402 client that initializes lazily on first payment.
+Extends
+x402Client
+with automatic wallet provisioning and scheme registration.
+Credentials and RPC URLs fall back to environment variables; wallet
+configuration is supplied explicitly via config.
+The account name/address used for payments is resolved internally. Use
+CdpX402Client.getAddresses
+to retrieve it — for example, to fund
+the wallet before making a payment.
+​
+Examples
+import
+{
+CdpX402Client
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+wrapFetchWithPayment
+}
+from
+"@x402/fetch"
+;
+const
+client
+=
+new
+CdpX402Client
+();
+const
+{
+evmAddress
+,
+svmAddress
+}
+=
+await
+client
+.
+getAddresses
+();
+console
+.
+log
+(
+"Fund this address before paying:"
+,
+evmAddress
+,
+svmAddress
+);
+const
+fetchWithPayment
+=
+wrapFetchWithPayment
+(
+fetch
+,
+client
+);
+const
+response
+=
+await
+fetchWithPayment
+(
+"https://api.example.com/report"
+);
+const
+USDC_BASE
+=
+"0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+;
+const
+client
+=
+new
+CdpX402Client
+({
+spendControls:
+{
+maxAmountPerPayment:
+{
+atomic:
+10_000
+n
+,
+asset:
+USDC_BASE
+},
+maxCumulativeSpend:
+{
+atomic:
+50_000
+n
+,
+asset:
+USDC_BASE
+},
+maxCumulativeSpendWindow:
+"24h"
+,
+allowedNetworks:
+[
+"eip155:8453"
+],
+},
+});
+​
+Extends
+x402Client
+​
+Constructors
+​
+Constructor
+new
+CdpX402Client
+(
+config
+?:
+CdpX402ClientConfig
+):
+CdpX402Client
+;
+Defined in:
+client.ts:332
+Creates a CdpX402Client that initializes lazily on first payment.
+​
+Parameters
+config?
+CdpX402ClientConfig
+Optional configuration. Credentials and RPC URLs fall back to environment variables.
+​
+Returns
+CdpX402Client
+​
+Overrides
+x402Client
+.
+constructor
+​
+Accessors
+​
+accountName
+​
+Get Signature
+get
+accountName
+():
+string
+;
+Defined in:
+client.ts:344
+The CDP account name that this client provisions (or has already
+provisioned) for payment signing. Resolved synchronously from config
+and defaults — does not perform any CDP account lookups.
+Returns
+string
+The resolved account name, e.g.
+"x402-client-wallet-1"
+.
+​
+Methods
+​
+getAddresses()
+getAddresses
+():
+Promise
+<
+CdpX402WalletAddresses
+>
+;
+Defined in:
+client.ts:355
+Provisions the CDP wallet (if not already provisioned) and returns its
+addresses. Call this eagerly — for example, to display or fund the
+wallet — instead of waiting for the lazy initialization on first payment.
+​
+Returns
+Promise
+<
+CdpX402WalletAddresses
+>
+The EVM and Solana addresses backing this client’s payments.
+​
+createPaymentPayload()
+createPaymentPayload
+(
+paymentRequired
+:
+PaymentRequired
+):
+Promise
+<
+PaymentPayload
+>
+;
+Defined in:
+client.ts:366
+Creates the payment payload, initializing the CDP wallet lazily on first call.
+​
+Parameters
+paymentRequired
+PaymentRequired
+The x402 payment requirements from the resource server.
+​
+Returns
+Promise
+<
+PaymentPayload
+>
+The signed payment payload.
+​
+Overrides
+x402Client
+.
+createPaymentPayload
+Was this page helpful?
+Yes
+No

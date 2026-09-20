@@ -10,6 +10,8 @@
 
 ## Global constraints
 
+This is an internal maintainer implementation plan. Task admission, reviewer selection, resource reservations and RP03 apply only to project-operated development campaigns using project resources or credentials. They are not permissions to author, compile, prove or deploy a Moriarty program. External developers use objective language/proof rules, contract and participant authorization, and target ledger validity. The separation is a specified requirement, not a claim of completed deployment support.
+
 Status: S2, specified-only. [Program rules](README.md) apply to every task.
 
 Full-completion dependencies (not individual task entry gates): SP01. Stage scope: successor-frontend. Use `sprints.json` entryGates for task eligibility; those prerequisites mirror RP stage admission. Full-completion dependencies cannot delay an otherwise admitted task. A completed sprint never substitutes for a current campaign admission record.
@@ -53,7 +55,7 @@ Interfaces use the common records in [the sprint contract](README.md#shared-arti
 
 - [ ] Bind inputs, exact file ownership and independent expected results in this task or the existing `openspec/sprints/execution/SP02.md` note. Reuse sufficient records; routine edits do not require another packet or design vote.
 - [ ] Implement check and format commands using the same frontend. Specify stdout JSON, stderr diagnostics and exit codes before implementation. Add explicit source locations and profile hashes. Specify the simulation input/output contract for SP03, without claiming an evaluator exists.
-- [ ] Verify: Formatting preserves parsed meaning and is idempotent. CLI/API results agree. Comments cannot alter signed Core meaning; unknown profiles reject. Simulation acceptance belongs to SP03.
+- [ ] Verify: Formatting preserves parsed meaning and is idempotent. CLI/API results agree. A newly authored supported program checks without a project program allowlist, campaign record or reviewer receipt. Comments cannot alter signed Core meaning; unknown profiles reject. Simulation acceptance belongs to SP03.
 - [ ] Retain commands, outputs, resource use and exact source/profile digests under `SP02` in the owning package evidence.
 - [ ] Obtain current scoped reviews and commit the accepted task without changing unrelated files.
 
@@ -67,7 +69,7 @@ npm --prefix experiments/moriarty-language test
 node experiments/moriarty-language/src/cli.ts check --profile experiments/moriarty-language/spec/successor/bounds.json experiments/moriarty-language/spec/successor/examples/loan.mori
 ```
 
-Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Proof and public commands additionally require live RP03 admission.
+Expected: exit 0 for valid supported inputs and all required controls passing. Invalid source/data must produce the documented rejection, not a crash or partial effect. Project-operated proof or public-network campaigns using project resources or credentials additionally require live RP03 admission. Public compiler, prover and SDK use with developer-owned resources SHALL NOT require RP03, project reviewer receipts or Foreman/Pel records.
 
 ## Report-informed acceptance refinement
 

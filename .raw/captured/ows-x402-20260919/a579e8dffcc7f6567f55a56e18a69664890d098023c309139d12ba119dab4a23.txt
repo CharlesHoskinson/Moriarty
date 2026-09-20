@@ -1,0 +1,558 @@
+Validate x402 endpoint
+cURL
+curl --request POST \
+  --url https://api.cdp.coinbase.com/platform/v2/x402/validate \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '
+{
+  "resource": "https://api.example.com/weather/forecast",
+  "method": "GET"
+}
+'
+import requests
+
+url = "https://api.cdp.coinbase.com/platform/v2/x402/validate"
+
+payload = {
+    "resource": "https://api.example.com/weather/forecast",
+    "method": "GET"
+}
+headers = {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+
+print(response.text)
+const options = {
+  method: 'POST',
+  headers: {Authorization: 'Bearer <token>', 'Content-Type': 'application/json'},
+  body: JSON.stringify({resource: 'https://api.example.com/weather/forecast', method: 'GET'})
+};
+
+fetch('https://api.cdp.coinbase.com/platform/v2/x402/validate', options)
+  .then(res => res.json())
+  .then(res => console.log(res))
+  .catch(err => console.error(err));
+<?php
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+  CURLOPT_URL => "https://api.cdp.coinbase.com/platform/v2/x402/validate",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 30,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "POST",
+  CURLOPT_POSTFIELDS => json_encode([
+    'resource' => 'https://api.example.com/weather/forecast',
+    'method' => 'GET'
+  ]),
+  CURLOPT_HTTPHEADER => [
+    "Authorization: Bearer <token>",
+    "Content-Type: application/json"
+  ],
+]);
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+  echo "cURL Error #:" . $err;
+} else {
+  echo $response;
+}
+package main
+
+import (
+	"fmt"
+	"strings"
+	"net/http"
+	"io"
+)
+
+func main() {
+
+	url := "https://api.cdp.coinbase.com/platform/v2/x402/validate"
+
+	payload := strings.NewReader("{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("Authorization", "Bearer <token>")
+	req.Header.Add("Content-Type", "application/json")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	fmt.Println(string(body))
+
+}
+HttpResponse<String> response = Unirest.post("https://api.cdp.coinbase.com/platform/v2/x402/validate")
+  .header("Authorization", "Bearer <token>")
+  .header("Content-Type", "application/json")
+  .body("{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}")
+  .asString();
+require 'uri'
+require 'net/http'
+
+url = URI("https://api.cdp.coinbase.com/platform/v2/x402/validate")
+
+http = Net::HTTP.new(url.host, url.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(url)
+request["Authorization"] = 'Bearer <token>'
+request["Content-Type"] = 'application/json'
+request.body = "{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}"
+
+response = http.request(request)
+puts response.read_body
+200
+400
+500
+502
+503
+{
+  "valid": true,
+  "statusCode": 402,
+  "x402Version": 2,
+  "preflight": [
+    {
+      "check": "reachable",
+      "passed": true,
+      "detail": "Endpoint responded within the timeout.",
+      "severity": "required"
+    },
+    {
+      "check": "returns_402",
+      "passed": true,
+      "detail": "Endpoint responded with HTTP 402 Payment Required.",
+      "expected": "402",
+      "actual": "402",
+      "severity": "required"
+    },
+    {
+      "check": "has_bazaar_extension",
+      "passed": true,
+      "detail": "Payment requirements include the bazaar discovery extension.",
+      "severity": "required"
+    },
+    {
+      "check": "parse",
+      "passed": true,
+      "detail": "Payment requirements parsed successfully.",
+      "severity": "required"
+    }
+  ],
+  "paymentRequirements": {
+    "scheme": "exact",
+    "network": "base",
+    "maxAmountRequired": "100000",
+    "resource": "https://api.example.com/weather/forecast",
+    "description": "Real-time weather forecast data.",
+    "mimeType": "application/json",
+    "payTo": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "maxTimeoutSeconds": 60
+  },
+  "bazaarExtension": {
+    "info": {
+      "input": {
+        "type": "http",
+        "method": "GET"
+      }
+    },
+    "schema": {}
+  },
+  "simulation": {
+    "outcome": "accepted"
+  },
+  "index": {
+    "active": true,
+    "lastCrawledAt": "2026-06-01T12:00:00Z",
+    "quality": {
+      "l30DaysTotalCalls": 42,
+      "l30DaysUniquePayers": 15,
+      "lastCalledAt": "2026-06-01T12:00:00Z"
+    }
+  }
+}
+{
+  "errorType": "invalid_request",
+  "errorMessage": "Invalid request. resource is required and must be a valid HTTPS URL."
+}
+{
+  "errorType": "internal_server_error",
+  "errorMessage": "An internal server error occurred. Please try again later."
+}
+{
+  "errorType": "bad_gateway",
+  "errorMessage": "Bad gateway. Please try again later."
+}
+{
+  "errorType": "service_unavailable",
+  "errorMessage": "Service unavailable. Please try again later."
+}
+x402 Facilitator
+Validate x402 endpoint
+Copy page
+Copy page
+Validates an x402 endpoint’s bazaar-discovery configuration by probing the seller’s URL live.
+Returns a uniform array of preflight check results (reachable, returns402, hasBazaarExtension, parse) and a simulated facilitator accept/reject decision so sellers and agents can confirm their endpoint is ready to be discovered before going live.
+This operation is read-only: it performs no payment and does not index the resource.
+Copy page
+Copy page
+POST
+/
+v2
+/
+x402
+/
+validate
+Try it
+Validate x402 endpoint
+cURL
+curl --request POST \
+  --url https://api.cdp.coinbase.com/platform/v2/x402/validate \
+  --header 'Authorization: Bearer <token>' \
+  --header 'Content-Type: application/json' \
+  --data '
+{
+  "resource": "https://api.example.com/weather/forecast",
+  "method": "GET"
+}
+'
+import requests
+
+url = "https://api.cdp.coinbase.com/platform/v2/x402/validate"
+
+payload = {
+    "resource": "https://api.example.com/weather/forecast",
+    "method": "GET"
+}
+headers = {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+
+print(response.text)
+const options = {
+  method: 'POST',
+  headers: {Authorization: 'Bearer <token>', 'Content-Type': 'application/json'},
+  body: JSON.stringify({resource: 'https://api.example.com/weather/forecast', method: 'GET'})
+};
+
+fetch('https://api.cdp.coinbase.com/platform/v2/x402/validate', options)
+  .then(res => res.json())
+  .then(res => console.log(res))
+  .catch(err => console.error(err));
+<?php
+
+$curl = curl_init();
+
+curl_setopt_array($curl, [
+  CURLOPT_URL => "https://api.cdp.coinbase.com/platform/v2/x402/validate",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 30,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "POST",
+  CURLOPT_POSTFIELDS => json_encode([
+    'resource' => 'https://api.example.com/weather/forecast',
+    'method' => 'GET'
+  ]),
+  CURLOPT_HTTPHEADER => [
+    "Authorization: Bearer <token>",
+    "Content-Type: application/json"
+  ],
+]);
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+  echo "cURL Error #:" . $err;
+} else {
+  echo $response;
+}
+package main
+
+import (
+	"fmt"
+	"strings"
+	"net/http"
+	"io"
+)
+
+func main() {
+
+	url := "https://api.cdp.coinbase.com/platform/v2/x402/validate"
+
+	payload := strings.NewReader("{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}")
+
+	req, _ := http.NewRequest("POST", url, payload)
+
+	req.Header.Add("Authorization", "Bearer <token>")
+	req.Header.Add("Content-Type", "application/json")
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	fmt.Println(string(body))
+
+}
+HttpResponse<String> response = Unirest.post("https://api.cdp.coinbase.com/platform/v2/x402/validate")
+  .header("Authorization", "Bearer <token>")
+  .header("Content-Type", "application/json")
+  .body("{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}")
+  .asString();
+require 'uri'
+require 'net/http'
+
+url = URI("https://api.cdp.coinbase.com/platform/v2/x402/validate")
+
+http = Net::HTTP.new(url.host, url.port)
+http.use_ssl = true
+
+request = Net::HTTP::Post.new(url)
+request["Authorization"] = 'Bearer <token>'
+request["Content-Type"] = 'application/json'
+request.body = "{\n  \"resource\": \"https://api.example.com/weather/forecast\",\n  \"method\": \"GET\"\n}"
+
+response = http.request(request)
+puts response.read_body
+200
+400
+500
+502
+503
+{
+  "valid": true,
+  "statusCode": 402,
+  "x402Version": 2,
+  "preflight": [
+    {
+      "check": "reachable",
+      "passed": true,
+      "detail": "Endpoint responded within the timeout.",
+      "severity": "required"
+    },
+    {
+      "check": "returns_402",
+      "passed": true,
+      "detail": "Endpoint responded with HTTP 402 Payment Required.",
+      "expected": "402",
+      "actual": "402",
+      "severity": "required"
+    },
+    {
+      "check": "has_bazaar_extension",
+      "passed": true,
+      "detail": "Payment requirements include the bazaar discovery extension.",
+      "severity": "required"
+    },
+    {
+      "check": "parse",
+      "passed": true,
+      "detail": "Payment requirements parsed successfully.",
+      "severity": "required"
+    }
+  ],
+  "paymentRequirements": {
+    "scheme": "exact",
+    "network": "base",
+    "maxAmountRequired": "100000",
+    "resource": "https://api.example.com/weather/forecast",
+    "description": "Real-time weather forecast data.",
+    "mimeType": "application/json",
+    "payTo": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "maxTimeoutSeconds": 60
+  },
+  "bazaarExtension": {
+    "info": {
+      "input": {
+        "type": "http",
+        "method": "GET"
+      }
+    },
+    "schema": {}
+  },
+  "simulation": {
+    "outcome": "accepted"
+  },
+  "index": {
+    "active": true,
+    "lastCrawledAt": "2026-06-01T12:00:00Z",
+    "quality": {
+      "l30DaysTotalCalls": 42,
+      "l30DaysUniquePayers": 15,
+      "lastCalledAt": "2026-06-01T12:00:00Z"
+    }
+  }
+}
+{
+  "errorType": "invalid_request",
+  "errorMessage": "Invalid request. resource is required and must be a valid HTTPS URL."
+}
+{
+  "errorType": "internal_server_error",
+  "errorMessage": "An internal server error occurred. Please try again later."
+}
+{
+  "errorType": "bad_gateway",
+  "errorMessage": "Bad gateway. Please try again later."
+}
+{
+  "errorType": "service_unavailable",
+  "errorMessage": "Service unavailable. Please try again later."
+}
+Body
+application/json
+Request to validate an x402 endpoint's bazaar-discovery configuration.
+​
+resource
+string<uri>
+required
+HTTPS URL of the x402 endpoint to validate. Must use the
+https://
+scheme.
+Required string length:
+12 - 2048
+Pattern:
+^https://.*$
+Example:
+"https://api.example.com/weather/forecast"
+​
+method
+enum<string>
+default:
+GET
+The HTTP method used to probe the endpoint. Only GET and POST are supported; other verbs are intentionally rejected because x402 resources are expected to respond to these methods.
+Available options:
+GET
+,
+POST
+Example:
+"GET"
+Response
+200
+application/json
+Successfully validated the x402 endpoint.
+Response from validating an x402 endpoint's bazaar-discovery configuration.
+​
+valid
+boolean
+required
+Whether the endpoint is valid: all preflight checks passed and the facilitator would index the resource.
+Example:
+true
+​
+statusCode
+integer | null
+required
+The HTTP status code returned by the endpoint, or
+null
+if the endpoint was not reachable.
+Example:
+402
+​
+x402Version
+integer | null
+required
+The x402 protocol version advertised by the endpoint, or
+null
+if it could not be determined. Intentionally a bare integer rather than the
+X402Version
+enum so the validator can surface unsupported or malformed version values returned by non-conforming endpoints.
+Example:
+2
+​
+preflight
+object[]
+required
+All check results in run order. Well-known check names are
+reachable
+,
+returns_402
+,
+has_bazaar_extension
+, and
+parse
+. Additional checks may be added in future versions.
+Show child attributes
+​
+paymentRequirements
+x402V2PaymentRequirements · object
+required
+The raw decoded payment requirements returned by the endpoint, or
+null
+if the endpoint was not reachable or did not return a parseable 402 payload. Lets sellers inspect exactly what their endpoint is advertising.
+x402V2PaymentRequirements
+x402V1PaymentRequirements
+Show child attributes
+​
+bazaarExtension
+object | null
+required
+The
+extensions.bazaar
+block from the endpoint's discovery metadata, or
+null
+if the bazaar extension was absent or the endpoint was not reachable. Lets sellers verify the discovery configuration their endpoint is advertising.
+Example:
+{
+  "info": {
+    "input": { "type": "http", "method": "GET" }
+  },
+  "schema": {}
+}
+​
+simulation
+object
+required
+The simulated facilitator decision for the x402 endpoint.
+Show child attributes
+Example:
+{ "outcome": "accepted" }
+​
+index
+object | null
+required
+Bazaar index status for the endpoint, or
+null
+if the endpoint is not yet indexed. Present on every response regardless of simulation outcome.
+Show child attributes
+Example:
+{
+  "active": true,
+  "lastCrawledAt": "2026-06-01T12:00:00Z",
+  "quality": {
+    "l30DaysTotalCalls": 42,
+    "l30DaysUniquePayers": 15,
+    "lastCalledAt": "2026-06-01T12:00:00Z"
+  }
+}
+Was this page helpful?
+Yes
+No
+Settle payment
+Previous
+Verify payment
+Next

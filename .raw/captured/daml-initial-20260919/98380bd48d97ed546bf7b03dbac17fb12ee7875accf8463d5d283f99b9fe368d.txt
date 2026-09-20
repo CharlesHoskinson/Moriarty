@@ -1,0 +1,335 @@
+On this page
+DA.Exception
+Data Types
+type Exception e
+data ArithmeticError
+data AssertionFailed
+data GeneralError
+data PreconditionFailed
+Typeclasses
+class HasThrow e
+class HasMessage e
+class HasToAnyException e
+class HasFromAnyException e
+class Action m => ActionThrow m
+class ActionThrow m => ActionCatch m
+Orphan Typeclass Instances
+History
+Daml Standard Library
+Modules
+DA.Exception
+Copy page
+Copy page
+Reference documentation for Daml module DA.Exception.
+Copy page
+Copy page
+Daml module
+​
+DA.Exception
+Exception handling in Daml.
+Daml
+Updated 3.5.2
+Deprecated 3.4.9
+Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+All deprecations (2)
+Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+Use
+-Wno-deprecated-exceptions
+to disable this warning.
+​
+Data Types
+​
+type Exception e
+= (
+HasThrow
+e
+,
+HasMessage
+e
+,
+HasToAnyException
+e
+,
+HasFromAnyException
+e
+)
+Exception typeclass. This should not be implemented directly,
+instead, use the
+exception
+syntax.
+​
+data ArithmeticError
+Exception raised by an arithmetic operation, such as divide-by-zero or overflow.
+Deprecated: Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+Deprecated: Use
+-Wno-deprecated-exceptions
+to disable this warning.
+Constructors:
+ArithmeticError
+​
+message
+Text
+​
+data AssertionFailed
+Exception raised by assert functions in DA.Assert
+Deprecated: Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+Deprecated: Use
+-Wno-deprecated-exceptions
+to disable this warning.
+Constructors:
+AssertionFailed
+​
+message
+Text
+​
+data GeneralError
+Exception raised by
+error
+.
+Deprecated: Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+Deprecated: Use
+-Wno-deprecated-exceptions
+to disable this warning.
+Constructors:
+GeneralError
+​
+message
+Text
+​
+data PreconditionFailed
+Exception raised when a contract is invalid, i.e. fails the ensure clause.
+Deprecated: Exceptions are deprecated, prefer
+failWithStatus
+, and avoid using catch.
+Deprecated: Use
+-Wno-deprecated-exceptions
+to disable this warning.
+Constructors:
+PreconditionFailed
+​
+message
+Text
+​
+Typeclasses
+​
+class HasThrow e
+Part of the
+Exception
+constraint.
+Methods:
+throwPure
+:
+e
+->
+t
+Throw exception in a pure context.
+Instances:
+instance
+HasThrow
+ArithmeticError
+instance
+HasThrow
+AssertionFailed
+instance
+HasThrow
+GeneralError
+instance
+HasThrow
+PreconditionFailed
+​
+class HasMessage e
+Part of the
+Exception
+constraint.
+Methods:
+message
+:
+e
+->
+Text
+Get the error message associated with an exception.
+Instances:
+instance
+HasMessage
+AnyException
+instance
+HasMessage
+ArithmeticError
+instance
+HasMessage
+AssertionFailed
+instance
+HasMessage
+GeneralError
+instance
+HasMessage
+PreconditionFailed
+​
+class HasToAnyException e
+Part of the
+Exception
+constraint.
+Methods:
+toAnyException
+:
+e
+->
+AnyException
+Convert an exception type to AnyException.
+Instances:
+instance
+HasToAnyException
+AnyException
+instance
+HasToAnyException
+ArithmeticError
+instance
+HasToAnyException
+AssertionFailed
+instance
+HasToAnyException
+GeneralError
+instance
+HasToAnyException
+PreconditionFailed
+​
+class HasFromAnyException e
+Part of the
+Exception
+constraint.
+Methods:
+fromAnyException
+:
+AnyException
+->
+Optional
+e
+Convert an AnyException back to the underlying exception type, if possible.
+Instances:
+instance
+HasFromAnyException
+AnyException
+instance
+HasFromAnyException
+ArithmeticError
+instance
+HasFromAnyException
+AssertionFailed
+instance
+HasFromAnyException
+GeneralError
+instance
+HasFromAnyException
+PreconditionFailed
+​
+class Action m => ActionThrow m
+Action type in which
+throw
+is supported.
+Methods:
+throw
+:
+Exception
+e
+=>
+e
+->
+m
+t
+Instances:
+instance
+ActionThrow
+Update
+​
+class ActionThrow m => ActionCatch m
+Action type in which
+try ... catch ...
+is supported.
+DEPRECATED: Avoid the use of catch in daml code, prefer error handling on client, and throwing using
+failWithStatus
+Methods:
+_tryCatch
+: (() ->
+m
+t
+) -> (
+AnyException
+->
+Optional
+(
+m
+t
+)) ->
+m
+t
+Handle an exception. Use the
+try ... catch ...
+syntax
+instead of calling this method directly.
+Instances:
+instance
+ActionCatch
+Update
+​
+Orphan Typeclass Instances
+instance
+GetField
+message
+GeneralError
+Text
+instance
+SetField
+message
+GeneralError
+Text
+instance
+GetField
+message
+ArithmeticError
+Text
+instance
+SetField
+message
+ArithmeticError
+Text
+instance
+GetField
+message
+PreconditionFailed
+Text
+instance
+SetField
+message
+PreconditionFailed
+Text
+instance
+GetField
+message
+AssertionFailed
+Text
+instance
+SetField
+message
+AssertionFailed
+Text
+​
+History
+Updated
+3.5.2
+Module declarations or documentation updated.
+Deprecated
+3.4.9
+Suggest edits
+Raise issue
+DA.Either
+DA.Fail

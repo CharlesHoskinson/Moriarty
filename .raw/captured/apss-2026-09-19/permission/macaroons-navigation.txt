@@ -1,0 +1,1141 @@
+            Macaroons: Cookies with Contextual Caveats
+            for Decentralized Authorization in the Cloud
+
+                      Arnar Birgisson                               Joe Gibbs Politz               Úlfar Erlingsson, Ankur Taly,
+          Chalmers University of Technology                         Brown University             Michael Vrable, and Mark Lentczner
+                 arnarbi@gmail.com                                  joe@cs.brown.edu                            Google Inc
+                                                                                                 {ulfar,ataly,mvrable,mzero}@google.com
+
+    Abstract—Controlled sharing is fundamental to distributed                       control are of critical concern, especially as the Cloud is
+systems; yet, on the Web, and in the Cloud, sharing is still                        commonly used for sharing private, sensitive end-user data,
+based on rudimentary mechanisms. More flexible, decentralized                       e.g., through email or social networking applications.
+cryptographic authorization credentials have not been adopted,
+largely because their mechanisms have not been incrementally                            Unfortunately, controlled sharing in the Cloud is founded
+deployable, simple enough, or efficient enough to implement                         on basic, rudimentary authorization mechanisms, such HTTP
+across the relevant systems and devices.                                            cookies that carry pure bearer tokens [21, 54]. Thus, today, it
+    This paper introduces macaroons: flexible authorization cre-                    is practically impossible for the owner of a private, sensitive
+dentials for Cloud services that support decentralized delegation                   image stored at one Cloud service to email a URL link to that
+between principals. Macaroons are based on a construction that                      image, safely—given the many opportunities for impersonation
+uses nested, chained MACs (e.g., HMACs [43]) in a manner that                       and eavesdropping—such that the image can be seen only
+is highly efficient, easy to deploy, and widely applicable.                         by logged-in members of a group of users that the owner
+                                                                                    maintains at another, unrelated Cloud service. Currently, this
+    Although macaroons are bearer credentials, like Web cookies,
+macaroons embed caveats that attenuate and contextually confine                     use case is possible only if the image, access group, and users
+when, where, by who, and for what purpose a target service                          are all at a single service, or if two Cloud services keep special,
+should authorize requests. This paper describes macaroons and                       pairwise ties using custom, proprietary mechanisms (e.g., as
+motivates their design, compares them to other credential systems,                  done by Dropbox and Facebook [55]).
+such as cookies and SPKI/SDSI [14], evaluates and measures a
+prototype implementation, and discusses practical security and                          Of course, the ubiquitous use of bearer tokens is due to
+application considerations. In particular, it is considered how                     advantages—such as simplicity and ease of adoption—that
+macaroons can enable more fine-grained authorization in the                         cannot be overlooked. For example, bearer tokens can easily
+Cloud, e.g., by strengthening mechanisms like OAuth2 [17], and                      authorize access for unregistered users (e.g., to the shopping
+a formalization of macaroons is given in authorization logic.                       cart of a first-time visitor to a Cloud service) or from unnamed,
+                                                                                    transient contexts (e.g., from a pop-up window shown during
+                           I.   I NTRODUCTION                                       private, incognito Web browsing). Such dynamic and short-
+                                                                                    lived principals arise naturally in distributed systems, like the
+Macaroons are authorization credentials that provide flexible                       Cloud and the “Grid” [47]. In comparison, most authorization
+support for controlled sharing in decentralized, distributed                        mechanisms based on public-key certificates are not directly
+systems. Macaroons are widely applicable since they are a                           suited to the Cloud, since they are based on more expensive
+form of bearer credentials—much like commonly-used cookies                          primitives that can be difficult to deploy, and define long-lived,
+on the Web—and have an efficient construction based on keyed                        linkable identities, which may impact end-user privacy [21].
+cryptographic message digests [43].
+                                                                                        Even so, the inflexibility of current Cloud authorization is
+    Macaroons are designed for the Web, mobile devices, and                         quite unsatisfactory. Most users will have first-hand experience
+the related distributed systems collectively known as the Cloud.                    of the resulting frustrations—for example, because they have
+Such modern software is often constructed as a decentralized                        clicked on a shared URL, only to be redirected to a page
+graph of collaborative, loosely-coupled services. Those ser-                        requesting account creation or sharing of their existing online
+vices comprise different protection domains, communication                          identity. Similarly, many users will have uncomfortably surren-
+channels, execution environments, and implementations—with                          dered their passwords to use some Cloud service functionality,
+each service reflecting the characteristics and interests of the                    such as to populate an address book (e.g., on LinkedIn.com)
+different underlying stakeholders. Thus, security and access                        or to aggregate their financial data (e.g., on mint.com).
+                                                                                        Macaroons aim to combine the best aspects of using
+Permission to freely reproduce all or part of this paper for noncommercial
+purposes is granted provided that copies bear this notice and the full citation
+                                                                                    bearer tokens and using flexible, public-key certificates for
+on the first page. Reproduction for commercial purposes is strictly prohibited      authorization, by providing (i) the wide applicability, ease-
+without the prior written consent of the Internet Society, the first-named author   of-use, and privacy benefits of bearer credentials based on
+(for reproduction of an entire paper only), and the author’s employer if the        fast cryptographic primitives, (ii) the expressiveness of truly
+paper was prepared within the scope of employment.                                  decentralized credentials based on authorization logic, like
+NDSS ’14, 23-26 February 2014, San Diego, CA, USA
+Copyright 2014 Internet Society, ISBN 1-891562-35-5                                 SPKI/SDSI [14], and (iii) general, precise restrictions on how,
+http://dx.doi.org/doi-info-to-be-provided-later                                     where, and when credentials may be used.
+    Macaroons allow authority to be delegated between pro-                                                      o1 o2 o3 o4 o 5           Objects, rights
+tection domains with both attenuation and contextual con-                                                                                 (what)
+finement. For this, each macaroon embeds caveats which are                                              s1
+predicates that restrict the macaroon’s authority, as well as the
+context in which it may be successfully used. For example,                                              s2
+such caveats may attenuate a macaroon by limiting what                                                  s3
+objects and what actions it permits, or contextually confine it                                                                              S
+                                                                                                        s4
+by requiring additional evidence, such as third-party signatures,                                       s5
+or by restricting when, from where, or in what other observ-
+able context it may be used. In particular, a macaroon that                                    Subjects
+authorizes service requests may contain caveats that require                               (who, where)
+proof that the requests have been audited and approved by an                                                               O
+abuse-detection service, and come from a specific device with                         Fig. 1. Macaroons in the Access Control Matrix model [36]. By attenuating
+a particular authenticated user.                                                      a macaroon authorizing O, a derived macaroon may permit access only to o3 .
+                                                                                      Even when held by all subjects in S, contextual caveats may confine the use
+    In short, Macaroons allow Cloud services to authorize                             of this derived macaroon to the observable context of principal s4 .
+resource access using efficient, restricted bearer tokens that can
+be delegated further, and, via embedded caveats, attenuated in
+scope, subjected to third-party inspection and approval, and                          two decades, several such credentials-based mechanisms have
+confined to be used only in certain contexts. Fundamental to                          been developed using public-key certificates and the formal-
+this flexibility of macaroons is a chained construction of nested                     ism of authorization logic [37, 53]. Of these, many support
+HMAC values that simultaneously provides key distribution                             highly flexible, decentralized authorization for distributed sys-
+and protects integrity, generalizing earlier work dating back to                      tems, with notable examples including SPKI/SDSI [14], Trust
+the Amoeba operating system [3, 25, 51].                                              Management [11], active certificates [12], and SecPAL [9].
+                                                                                      However—whether due to the cost of their primitives, their
+                                                                                      need for federation, coordination, or public identities, or the
+              II.   M OTIVATION AND F OUNDATIONS                                      complexity of their implementation—such flexible public-key-
+    Conceptually, macaroons make an assertion about condi-                            certificate mechanisms have seen little use in the Cloud [54].
+tional access to a target service1 , along these lines: “The bearer                       Instead, near exclusively, authorization in the Cloud is
+may perform a request as long as predicates C1 , . . . , Cn hold                      based on a pattern of pure bearer tokens: secrets that grant
+true in the context of that request.”                                                 unconditional authority, and are sent directly between protec-
+    In distributed systems, the complexity of such assertions                         tion domains, even on unencrypted channels [21]. Examples of
+can grow surprisingly quickly, even for simple, practical au-                         pure bearer tokens include the HTTP cookies sent to identify
+thorization policies. For example, if, as in Section I, the owner                     authorized sessions, the secrets for API keys, OAuth tokens,
+of a private image at TS wants to safely email its URL link                           and SAML or OpenID assertions used at other protocol layers,
+to the members of a group G kept at an unrelated service A,                           as well as the “unlisted URLs” that are commonly created and
+macaroons may establish an assertion like the following:                              shared via email or chat to provide limited access to private
+    The bearer, client C, may perform the request at TS                               content [28, 50, 54].
+       as long as the operation is read,                                                   Efficiency, wide applicability, and ease-of-adoption are
+       as long as the object is privateImage.jpg,                                     three main reasons for bearer tokens’ popularity in the Cloud.
+       as long as the user at C is logged into service A,                             Macaroons share all three of these properties, in their HMAC-
+       as long as that logged-in user is in group G at A,                             based construction. First, macaroons are simple enough to
+       as long as the above proofs are recent/fresh enough,                           implement, and fast-enough to use in near any environment—
+       and, as long as the user at C didn’t just log out of A.                        even a severely-limited, out-of-date Web browser executing
+Furthermore, the image may be subject to additional access                            on slow, resource-constrained mobile hardware. Second, mac-
+controls at TS (e.g., to track changes of ownership), the request                     aroons are bearer credentials and, so, principals may gain
+from client C may be performed from an unnamed context                                authority simply by gathering macaroons. Third, macaroons
+(e.g., a transient Web-page frame), and the logged-in user’s                          still provide new benefits even when unilaterally adopted, e.g.,
+privacy may need to be protected from TS. (Variants of this                           by allowing users to restrict when, and from where, credentials
+assertion are the basis for paper’s examples and the end-to-end                       may be used [21].
+evaluation in Section VII.)
+                                                                                          By supporting attenuation, delegation, and contextual con-
+    Due to their flexible, efficient HMAC-based construction,                         finement, macaroons have much greater expressiveness than
+macaroons can enforce such complex assertions despite tight                           previously existing Cloud bearer tokens. Thus, as shown in
+freshness constraints and the need to closely guard privacy.                          Figure 1, a user that holds access rights to the objects in O
+                                                                                      can safely pass, via email, a macaroon for the right to access
+    Macaroons are an instance of what has been termed claims-
+                                                                                      a single object o4 , limited to the specific recipient s4 , even if
+based, proof-carrying, or simply credentials-based authoriza-
+                                                                                      all the parties in S can read the email. Moreover, as shown in
+tion, and is defined precisely in [48, Chapter 9]. Over the last
+                                                                                      Figure 2, the user can do this without the operational difficulty
+  1 This section shows key terms and new concepts in italics when introduced          or latency and bandwidth costs of running an intermediate
+and informally defined; the next two sections and the appendix provide detailed       proxy service, and even without contacting the target service
+definitions and describe concrete implementations.                                    to mint new, restricted credentials.
+
+                                                                                  2
+                   TS                TS               TS                             predicate that must hold true for the context of any requests
+                                                                                     that the derived macaroon is to authorize at the target service—
+                                                                                     with that predicate evaluated by the target service in the context
+                   IS                IS                IS                            of each particular request. Notably, as shown in Figure 2, by
+                                                                                     adding caveats, new, more restricted authorization credentials
+                                                                                     can be directly derived from macaroons, without proxying
+                    C                C                 C                             requests to the target service, or re-minting new credentials
+                 Proxy                                                               from it. Thus, macaroons can help avoid the latency and
+                                Re-minted          Macaroon
+              restrictions      restrictions      restrictions                       overhead, loss of transparency, and trust requirements imposed
+                                                                                     by the proxying and credential re-minting patterns commonly
+Fig. 2. Three ways for an intermediary service IS to give a client C limited
+access to a target service TS: by proxying requests, by having TS mint new,
+                                                                                     used in the today’s Cloud.
+restricted credentials for C, or by IS deriving new macaroons for C. Arrows               For example, every macaroon is likely to contain one or
+show credential passing and doubled arrows indicate access.
+                                                                                     more validity-period caveats whose predicates restrict the time
+                                                                                     (at the target service) during which the macaroon will authorize
+                                                                                     requests; similarly, each macaroon is likely to have caveats that
+    In their expressiveness, and in aspects of their construction,                   restrict the arguments permitted in requests. A macaroon may
+macaroons are related to cascaded proxy certificates [44], re-                       have multiple caveats on the same attribute, such as time, in
+stricted delegation [33], active certificates [12], proof-carrying                   which case all the caveats’ predicates must hold true in the
+authentication [6], and Grid computing [22], as well as systems                      context of requests.
+for limiting resource consumption [23] and access to net-
+worked storage services [3, 25]. Indeed, compared to systems                             It is straightforward to add and enforce such first-party
+based on authorization logic like SPKI/SDSI [14], it must be                         caveats that confine the context observed at the target service
+stated explicitly that macaroons have no real advantage other                        when a macaroon is used. In the Cloud, such restrictions
+than their efficiency and ease of adoption. In particular, in                        on bearer tokens are sometimes used to reduce the ease by
+terms of functionality and security, HMAC-based macaroons                            which tokens can be stolen and abused by attackers, while
+have the clear disadvantage of being verifiable only by the tar-                     retaining the flexibility and privacy benefits of token-based
+get service, and by revealing to it certain keys, which prevents                     authorization [5, 13, 17, 31]. Because requests are sent directly
+useful types of key reuse. (This is detailed in Sections IV-D                        from clients (as shown in Figure 2), target services need only
+and V-B and Section V-H outlines a public-key variant of mac-                        check the predicates in such caveats against the context of
+aroons eliminating this disadvantage.) However, considering                          incoming requests, for example to restrict the source IP address
+the macaroons’ efficiency and flexibility, remarkably few such                       (or, better yet, ChannelID [21]).
+trade-offs must be made for their practical deployment.                                  However, macaroons’ flexibility stems mostly from third-
+     In particular, revocation of authority is a long-standing                       party caveats, their main innovation, which allow a macaroon
+challenge for credentials-based authorization systems, as de-                        to specify and require any number of holder-of-key proofs3 to
+tailed in [19, Section 6] and [48, Chapter 9.8]. Broadly, this                       be presented with authorized requests. For example, instead
+challenge has been addressed by (i) using very short-lived                           of using time-based validity-period caveats, macaroons might
+credentials, (ii) allowing the addition of freshness constraints,                    use caveats for a third-party revocation-checking service, and
+(iii) relying on external, authoritative state (such as revoca-                      require authorized requests to present fresh proofs discharging
+tion lists, or epoch counters), and (iv) splitting credentials,                      those caveats. Such third-party caveats can ensure that each
+and granting authority only to a freshly-gathered collection.                        request authorized by a macaroon is subject to any number
+Macaroons excel at all four of these revocation strategies: due                      of extra steps for authentication, authorization, or audit—e.g.,
+to their efficiency, and flexibility, macaroons may live only for                    to name just a few, checks of network time, authentication
+seconds, and may be split or constrained in any manner, as                           at identity providers, auditing and provenance tracking at
+described in the following sections.                                                 document repositories, scanning by anti-virus engines, and
+                                                                                     vetting by a DoS-prevention and risk-analysis service [29].
+A. Concepts and Constructions                                                            Even when macaroons are used to enforce complex au-
+     Macaroons operate from a service’s point-of-view, in that                       thorization policies, there is no particular need for end users
+they permit a given target service, such as a Cloud resource                         to be aware of macaroons. In any construction, client-side
+server2 , to mint a bearer credential that grants authority to                       macaroons will be handled and processed not by users, but
+access some aspects of the service. A distinguishing character-                      by software such as client-side JavaScript in Web browsers.
+istic of macaroon credentials is that their bearer can delegate                      Thus, users can remain equally unaware of macaroons as they
+parts of their authority to other principals by deriving new                         are of current Cloud authorization tokens.
+macaroons that both attenuate the accessible aspects of the                              Revisiting the example at the start of this section, consider
+target service and also restrict, via contextual confinement,                        a construction where all macaroons are encoded into “unlisted
+from where, by who, and with what extra evidence, the derived                        URLs.” Thus, instead of a HTTP session cookie, the owner
+macaroon may be used.                                                                may hold a macaroon URL granting them full access to their
+   To restrict the authority of a derived macaroon, caveats are                        3 In distributed authorization, the term-of-art holder-of-key proof is used
+added and embedded within it. Each macaroon caveat states a                          when a party is authenticated by proving possession of a key, e.g., by signing
+  2 Protocols like OAuth2 [17] use the term relying party, not target service.
+                                                                                     a protocol message with a private key [30]. Macaroons use holder-of-key
+                                                                                     proofs extensively, in particular for third-party-caveat discharges.
+
+
+                                                                                 3
+                 RANDOM_NONCE
+                  90..fc
+                                                                                                                          FS
+                                 HMAC(KTS, RANDOM_NONCE)
+
+Above is an example of the simplest possible macaroon credential. If it grants
+                                                                                                                                             TS
+bearers access to a key-value storage service for chunks, it can be attenuated                       C
+by adding a caveat whose predicate restricts accessible chunks, as below:
+                                                                                                     RANDOM_NONCE
+                 RANDOM_NONCE
+                                                                                                     time ≤ 5/8/13, 3pm GMT
+                 chunk ∈ {100..500}                                                                                                     Caveats
+                                                                                                     chunk ∈ {100..500}                 added
+                  f5..30         HMAC(90..fc, "chunk ∈ {100..500}")                                                                     by TS
+                                                                                                     operation ∈ {read, write}
+To check the macaroons’ integrity, the storage service can compute and verify
+the terminal, derived HMAC value, even when the resulting macaroon is further                        time ≤ 5/1/13, 1am GMT
+                                                                                                                                        Caveats
+attenuated with a caveat whose predicate permits only reading, as below:
+                                                                                                     chunk ∈ {235}                      added
+                                                                                                                                        by FS
+                 RANDOM_NONCE                                                                        client_ip == 192.0.32.7
+                 chunk ∈ {100..500}                                                                  KUSER
+                 operation == read
+                                                                                     Fig. 4. A macaroon held by the user at client C, authorizing limited-time
+                  0a..9f         HMAC(f5..30, "operation == read")                   access to chunk 235 at a key-value storage service TS from one network
+                                                                                     IP address. This macaroon is derived from another (shown shaded in gray)
+                                                                                     that a social-networking “forum service” FS holds for a range of chunks at
+Fig. 3. Three macaroons, respectively giving full access to all chunks at a          TS—delegating and attenuating the authority of that macaroon.
+key-value storage service, permitting all requests to chunks in the range 100
+to 500, or allowing only reading from that range. Starting at its key KTS,
+the service can verify the integrity of each macaroon by deriving its chain of       for a discussion.) Starting with this root key, a macaroon’s
+nested HMAC values. Macaroons are presented with requests, and the service           chain of HMAC values is derived by computing, for each
+permits only requests that satisfy the macaroons’ caveats.
+                                                                                     message, a keyed HMAC value, nested so that each such value
+                                                                                     itself is used as the HMAC key for the next message. Thus, a
+private images at TS. From this URL, the owner can create a                          macaroon with two messages MsgId and MsgCav and root key
+new, derived macaroon URL for read-only access to an image,                          KR could have the signature HMAC(Ktmp , MsgCav), where
+embed within it a third-party caveat that requires proof of                          Ktmp is HMAC(KR , MsgId).
+membership in a group G at service A, and share it via email.                           An example of this concrete macaroon construction is
+Any recipient of this derived URL would have to get a fresh                          shown in Figure 3. (This example, like others in this paper,
+discharge for the third-party caveat—which may require the                           draws from the distributed systems literature where related
+user to log into A, via a redirection—and pass it along to TS                        chained-message-digest constructions have long been used for
+when using the URL to view the image. All of the above                               authorizing access to networked storage [3, 25, 51].)
+could be accomplished using software, such that both parties
+remained unaware of the use of macaroons.                                                In Figure 3, starting from a macaroon with a random
+                                                                                     nonce key identifier, and a secret key KTS held at the target
+                                                                                     service, two macaroons are successively derived by adding
+       III.   C ONCRETE M ECHANISMS AND E XAMPLES                                    caveat predicates and chaining the HMAC signatures. Each
+    Concretely, a macaroon granting authority to a Cloud server                      macaroon authorizes requests to a target service that offers key-
+is constructed from a sequence of messages and a chain of                            value storage for chunks, with caveats in the derived macaroons
+keyed cryptographic digests derived from those messages. This                        restricting the authorized chunks and operations. To verify the
+chain of digest values is computed using HMAC functions with                         integrity of these macaroons, the target service need only check
+appropriate truncation (e.g., to 128 bits) [43]. Each macaroon                       their signature against the HMAC values 90..fc, f5..30, or
+contains, however, only the terminal, final HMAC value in the                        0a..9f, derived using its key KTS.
+chain, with this value serving as the macaroon’s signature: a                            This construction makes it particularly simple to delegate
+generalized message authentication code that (i) allows target                       and attenuate authorization credentials, since the chain of
+services to verify the integrity of macaroons, and (ii) also                         HMAC signatures establishes shared keys between the target
+allows shared keys to be established with the bearers of any                         service and the bearers of successive, derived macaroons.
+derived macaroons.
+                                                                                         For example, Figure 4 shows a macaroon authorizing a
+     Fundamental to macaroons is how this chain of keyed                             user at client C to access chunk 235 at a key-value stor-
+HMAC values is constructed, in a nested fashion, along the                           age service TS. This macaroon has been derived as a strict
+sequence of messages in a macaroon—of which, all but the                             attenuation of another, more permissive macaroon—held by
+first are caveats. The first message in a macaroon is required                       the social-networking “forum service” FS—by both eliding
+to be a public, opaque key identifier that maps to a secret root                     that macaroon’s signature (called, say KFS), and by adding
+key known only to the target service. (Such key identifiers                          caveats whose predicates require a specific chunk and client
+can be implemented, e.g., using random nonces, indices into a                        IP address to be present in the request context. Even so, this
+database at the target service, keyed HMACs, or using public-                        macaroon’s signature, KUSER, both allows the target storage
+key or secret-key encryption; see [37, Sections 4.2 and 4.3]                         service to verify its integrity, and also allows its bearer to
+
+                                                                                 4
+             RANDOM_NONCE
+             chunk ∈ {100..500}                                                                                                FS
+              f5..30            HMAC(90..fc, "chunk ∈ {100..500}")                                                               KA
+
+The above macaroon from the example in Figure 3 permits access to a range of
+chunks. By deriving a macaroon with an added third-party caveat, that authority                                                AS
+can be delegated to a user “bob” at an authentication service, as below:                                                                            TS
+                                                                                                          C
+              RANDOM_NONCE
+              chunk ∈ {100..500}                                                             RANDOM_NONCE
+                                                                                                                                      Macaroon discharging
+              cav@AS.com: vId           cId                                                  time ≤ 5/8/13, 3pm GMT                   the third-party caveat,
+              3c..f0                              Enc(KA, RN::user == “bob”)                 chunk ∈ {100..500}                        with new first-party
+                                 Enc(f5..30, RN)
+                                                                                                                                       caveats added by AS
+                                                                                             operation ∈ {read, write}
+                       HMAC(f5..30, vId :: cId)
+                                                                                             cav@AS.com, Enc(RN)                    Enc(KA, RN::user == “bob”)
+A third-party caveat message contains an root key and assertion encrypted for the
+discharging service (above, cId), a hint to its location (above, AS.com), and the            chunk ∈ {235}                          time ≤ 5/1/13 9am GMT
+same key encrypted for the target service to allow verification (above, vId). The
+signature of a discharge macaroon (below) is chained from this root key.                     operation == read                      client_ip == 192.0.32.7
+                                                                                             KUSER                                  H(KHERE)
+             Enc(KA, RN::user == “bob”)
+             time ≤ 5/1/13 9am GMT                      cId
+                                                                                        Fig. 6. Two macaroons that together give client C limited-time read access to
+              53..d3                                                                    chunk 235 at the key-value storage service TS. Using its macaroon from TS,
+                                                                                        the “forum service” FS derives for C a macaroon (on the left) that embeds a
+                    H(HMAC(HMAC(RN, cId), "time ≤ 5/1/13 9am GMT"))                     third-party caveat for an authentication service AS, confining access to clients
+                                                                                        C where a user “bob” is logged into AS. That caveat contains an encrypted
+                                                                                        root key and a key identifier. Using that key identifier, AS derives for C a
+Fig. 5. A macaroon with a third-party caveat (in the middle), derived from
+                                                                                        macaroon (on the right) that asserts, for only a limited time, and for only one
+another macaroon (at the top). At the bottom is a discharge macaroon for the
+                                                                                        IP address, that AS has verified client C’s user.
+caveat (whose signature is hashed to prevent further chaining), created by a
+third-party holder of the shared key KA after checking the assertion in the
+key identifier cId. By deriving the chain of nested HMAC values, the target
+service can verify the integrity of such discharge macaroons by decrypting the          the macaroon onto which the third-party caveat is added (in
+encrypted root key identifier vId.                                                      Figure 5, it is denoted vId, and is the root key RN, encrypted
+                                                                                        using the HMAC value f5..30). The target server can decrypt
+                                                                                        this second copy of the root key, and use it to verify the
+derive new, further attenuated macaroons. In this manner,                               signatures of caveat discharge macaroons.
+macaroon signatures both protect integrity and act as keys.
+                                                                                            In general, to authorize a request, a target service may
+    The third-party caveats in macaroons are requirements for                           need to verify an entire set of macaroons presented with that
+holder-of-key proofs: assertions of one or more predicates                              request, and establish (i) that caveat discharge macaroons can
+signed by the holder of a key. The manner in which these                                be found for all third-party caveats, and (ii) that all first-party
+requirements are embedded into a macaroon, and its chain                                caveat predicates hold true in the context of the request. Target
+of HMAC values, allows (i) the appropriate parties to create                            services can perform this verification by inducing a tree from
+proofs asserting those predicates, (ii) those proofs, themselves,                       the set of presented macaroons, and checking their macaroon
+to embed additional caveats (even for new, additional third                             signatures against the chain of HMAC values derived along
+parties), and, (iii) the target service to verify that all required                     each branch from the root to the leaves. To build this tree, the
+proofs have been discharged, recursively.                                               messages in the third-party caveats allow the target service to
+                                                                                        match the key identifiers of caveat discharge macaroons and
+    A proof that discharges a macaroon’s third-party caveat                             decrypt their root keys—in Figure 5, respectively, the identifier
+is itself a macaroon, as shown in Figure 5 (at the bottom).                             Enc(KA, RN::user == “bob”) and root key Enc(f5..30, RN).
+Such caveat discharge macaroons have a key identifier that
+encodes both the root key for deriving holder-of-key proofs and                             The main advantages and innovative aspects of macaroons
+the predicates to be asserted by the third party (in Figure 5,                          are illustrated by the example of Figure 6, in combination.
+it is denoted cId, and contains the key RN paired with the                              From its existing macaroon for the service TS, the forum
+caveat predicate user == “bob” encrypted under the key KA).                             service FS can derive a macaroon for user “bob” that attenuates
+Conceptually, this key identifier can be thought of as a message                        what aspects of TS are accessible; simultaneously, FS can
+encrypted with a public key for the third-party.                                        delegate the authentication of users to a third-party service
+                                                                                        AS, using the key KA it holds for AS. (Of course, for this,
+    This same caveat key identifier is also contained in the                            FS must know AS, and trust it to perform authentication.) The
+message that a macaroon embeds for a third-party caveat,                                AS service can evaluate the request from client C however it
+along with a hint to the location of caveat-discharging service                         chooses, before returning a macaroon that discharges the user
+(in Figure 5, that hint is @AS.com). This message also                                  == “bob” caveat. Notably, this caveat discharge macaroon may
+contains another, encrypted copy of the root key for holder-                            be very short lived (e.g., be valid for minutes, or seconds), due
+of-key proofs, encrypted with a key from the signature of                               to the efficiency and low overhead macaroons’ HMAC-based
+
+                                                                                    5
+construction. Also, AS can also add arbitrary further caveats             Definition: A macaroon M is a tuple of the form
+to that returned macaroon—even third-party caveats, although                                   macaroon@L hid , C, sigi
+this is not shown in Figure 6—that restrict the context where,            where,
+and when borne by who, the macaroon credential should grant                 * L ∈ Locs (optional) is a hint to the target’s location.
+any authority. In particular, those further caveats can ensure
+                                                                            * id ∈ BitStrs is the macaroon identifier.
+that the user is still logged in, by requiring a fresh holder-of-
+key proof based on a key held by the login agent at C. Finally,             * C is a list of caveats of the form cav@cL hcId, vIdi, where
+using macaroons, all of the above can be accomplished without                 ◦ cL ∈ Locs (optional) is a hint to a discharge location.
+the target service TS having any direct relationship with AS,                 ◦ cId ∈ BitStrs is the caveat identifier.
+and without TS knowing that the request from C is on behalf
+                                                                              ◦ vId ∈ BitStrs is the verification-key identifier.
+of a user “bob” (thus protecting the user’s privacy).
+                                                                            * sig ∈ Keys is a chained-MAC signature over the maca-
+   This section has left many technical details of macaroons                  roon identifier id , as well as each of the caveats in C, in
+to be further considered. The following sections cover these                  linear sequence.
+aspects, with the next two sections and the appendix providing
+a precise definition of macaroons.                                        Fig. 7.   Definitions of the components of macaroons and their caveats.
+
+
+        IV.   D ESIGN , O PERATIONS , AND S ECURITY                       A. Structure of Macaroons and Caveats
+   This section formally defines the notation, structure, and                 Every macaroon is associated with a root key, and is minted
+operations of macaroons, precisely defines macaroon-based                 by a target service principal, henceforth called the target.
+authorization like that in the example of Figure 6, and also              Macaroons begin with a key identifier for the target, followed
+considers the security and expressiveness of decentralized                by a list of caveats and a macaroon signature, computed using
+authorization mechanisms based on macaroons.                              the root key. The key identifier, or macaroon identifier, conveys
+    Macaroons use primitives whose domain of values are                   the secret root key and (optionally) a list of predicates to the
+Keys for all cryptographic keys, Locs for the locations of                target service. The macaroon signature is the chained-MAC of
+all services, and BitStrs for all bit-string values. Keys and             the identifier and caveats, in sequence, under the root key.
+locations are all bit-strings; thus Keys ∪ Locs ⊆ BitStrs.                    Both first-party and third-party caveats are defined using
+Macaroons are based on a secure, keyed cryptographic hash                 the same structure that consists of two identifiers: a caveat
+function MAC, and its output message authentication codes,                identifier meant for the caveat’s discharging principal, and a
+as well as secure encryption and decryption functions Enc and             verification-key identifier meant for the embedding macaroon’s
+Dec, with the following type signatures:                                  target service, with the embedding macaroon’s signature en-
+               MAC : Keys × BitStrs → Keys                                suring the integrity of both identifiers.
+               Enc : Keys × BitStrs → BitStrs
+                                                                              For third-party caveats, the caveat identifier encodes within
+               Dec : Keys × BitStrs → BitStrs
+                                                                          it one or more predicates and a root key, henceforth called
+It is assumed that each key output by a MAC opera-                        the caveat root key; its construction is held abstract and may
+tion can be used as a valid key for another MAC op-                       vary across caveat-discharging principals. The verification-key
+eration, or for symmetric-key-based Enc and Dec opera-                    identifier encodes within it only the caveat root key, encrypted
+tions. Using this, the nested chained-MAC for a list of                   using the current signature from the embedding macaroon;
+bit-strings [b1 , . . . , bn ], under a key k, is defined as as           the target can decrypt this identifier to obtain the root key,
+MAC(. . . MAC(MAC(k, b1 ), b2 ) . . . , bn ), where MAC(k, b1 ) is        since it can always recover all intermediate signatures in a
+used as the key for computing the MAC of b2 , which in turn               macaroon. On the other hand, for first-party caveats the caveat
+is used as the key for computing the MAC of b3 , and so on.               identifier is simply the authorization predicate in the clear, and
+                                                                          the constant 0 is used as the verification-key identifier. Caveats
+    Principals are each associated with a location, a set of              also have an optional location, not covered by the signature
+keys and macaroons, and the ability to manage secrets; the                of the embedding macaroon, which provides a hint for where
+universe of all principals is denoted Prncs. For each secret              the principal that can discharge a caveat may be contacted.
+they hold, principals are assumed to be able to construct
+a public key identifier that confidentially, and appropriately                The target considers a macaroon’s third-party caveat to be
+conveys this secret. Such key identifiers have long been used             discharged if it finds a caveat discharge macaroon that begins
+in security protocols, with each acting as a certificate that             with the caveat identifier and has a chained-MAC signature
+reminds a principal P of a certain secret it holds; their specifics       that is correctly constructed using the caveat root key that
+may vary across principals, with possible implementations                 the target decodes from the verification-key identifier. Such a
+including secret-key certificates based on symmetric, shared-             caveat discharge macaroon may have other third-party caveats,
+key encryption as well as simple, ordinal identifiers that index          for which the target must recursively seek discharges. On the
+into a principal’s persistent, confidential database (see [18] and        other hand, a first-party caveat is discharged by checking that
+[37, Section 4.3] for a discussion).                                      its authorization predicate holds true, when evaluated in the
+                                                                          context of the request.
+    Importantly for macaroons, key identifiers provide a means
+of authentication via holder-of-key proofs: a principal P may                Figure 7 provides a definition of macaroons and their
+be presented with a key identifier and asked to prove knowl-              caveats. Macaroon and caveat locations are left optional, and
+edge of the secret, or some derivative of the secret.                     without integrity, both out of practical concerns (address and
+
+                                                                      6
+CreateMacaroon(k, id , L)                                                           M.AddThirdPartyCaveat and M.AddFirstPartyCaveat re-
+  sig := MAC(k, id )                                                                spectively. M.AddThirdPartyCaveat takes as input a caveat
+  return macaroon@L hid , [ ], sigi                                                 root key cK, a caveat identifier cId, and a location cL of the
+                                                                                    caveat’s discharging principal. It first computes a verification-
+M.addCaveatHelper(cId, vId, cL)                                                     key identifier vId by encrypting the key cK with the macaroon
+ macaroon@L hid , C, sigi ← M       // ← is pattern matching                        signature of M as the encryption key. Next, using the method
+ C := cav@cL hcId, vIdi                                                             M.addCaveatHelper, it adds the caveat cav@cL hcId, vIdi to
+ sig 0 := MAC(sig, vId :: cId)    // :: is pair concatenation                       the caveat of M , and updates the signature to the MAC of the
+ return macaroon@L hid , C . C, sig 0 i     // . is list append                     pair vId :: cId, using the existing signature as the MAC key.
+                                                                                        The M.AddFirstPartyCaveat operation takes as in-
+M.AddThirdPartyCaveat(cK, cId, cL)                                                  put an authorization predicate a, and adds it using the
+ vId := Enc(M.sig, cK)                                                              M.addCaveatHelper method, as the caveat cav@> ha, 0i to the
+ return M.addCaveatHelper(cId, vId, cL)                                             caveat list of M . Here, > is a well-known location constant
+                                                                                    that refers to the target service.
+M.AddFirstPartyCaveat(a)
+ return M.addCaveatHelper(a, 0, >)                                                  Preparing requests: While making an access request, a
+                                                                                    client is required to provide an authorizing macaroon along
+M.PrepareForRequest(M)                                                              with discharge macaroons for the various embedded third-party
+ Msealed := ∅                                                                       caveats. These discharge macaroons are powerful holder-of-
+                                                                                    key proofs that may be used to satisfy obligations in any and
+ for M 0 ∈ M
+                                                                                    all macaroons that embed the corresponding third-party caveat
+   macaroon@L0 hid 0 , C 0 , sig 0 i ← M 0                                          identifier that uses the same root key.
+   sig 00 := M.bindForRequest(sig 0 )
+   Msealed := Msealed ∪ {macaroon@L0 hid 0 , C 0 , sig 00 i}                            In particular, an attack is possible if the client accidentally
+ return Msealed                                                                     makes a request to a principal other than the original target
+                                                                                    (perhaps by falling prey to phishing). In this case, this other
+M.Verify(TM , k, A, M)                                                              principal can maliciously re-use any discharge macaroons it
+                                                                                    receives to discharge third-party caveats embedded in mac-
+ cSig := MAC(k, M.id )
+                                                                                    aroons for itself, thereby authorizing itself using contextual
+ for i := 0 to |M.C| − 1                                                            caveat discharges from the client. To prevent such malicious
+   cav@L hcId, vIdi ← M.C[i]                                                        re-use, all discharge macaroons are required to be bound
+   cK := Dec(cSig, vId)                                                             to the authorizing macaroon before being sent along with
+   if (vId = 0)                                                                     a request to the target. This binding is carried out by the
+      assert (∃a ∈ A : a = cId)                                                     method M.PrepareForRequest(M), which binds the authoriz-
+   else                                                                             ing macaroon M to each discharge macaroon M 0 in the list
+                         M 0 .id = cId
+                                                    
+      assert ∃M 0 ∈ M :                                                             M by modifying their signature to M.bindForRequest(M 0 ).
+                         ∧ M 0 .Verify(TM , cK, A, M)                               Here, M.bindForRequest(M 0 ) is kept abstract, but one pos-
+   cSig := MAC(cSig, vId :: cId)                                                    sible implementation would be to hash together the signa-
+ assert (M.sig = TM .bindForRequest(cSig))                                          tures of the authorizing and discharging macaroons, so that
+ return true                                                                        M.bindForRequest(M 0 ) = H(M 0 .sig :: M.sig).
+Fig. 8. The operations essential to authorization using macaroon credentials.       Verifying macaroons: In order to verify an incoming access
+                                                                                    request consisting of an authorizing macaroon TM and a
+                                                                                    set of discharge macaroons M, a target service must ensure
+name redirection is common, in the Cloud) and also to honor                         that all first-party and third-party caveats embedded in either
+the maxim that, in distributed systems, only keys speak [53].                       TM or any macaroon in M are satisfied. For the purpose
+                                                                                    of formalization, this task is simplified by assuming that the
+B. Macaroon Operations                                                              target service first generates a set A of all embedded first-party
+                                                                                    caveat predicates that hold true in the context of the request
+     Figure 8 shows the operations to create and extend maca-                       whose macaroon is to be verified.
+roons, prepare them for use in a request, and verify them at a
+target service. The operations are written as pseudocode, with                           To authorize the request, the target service invokes the
+semantic clarity in mind. For a macaroon M , the notations                          method TM .Verify(TM , k, A, M) where k is the root key
+M.id , M.cavs and M.sig are used to refer to its identifier,                        of macaroon TM . The method iterates over the list of caveats
+list of caveats, and signature, respectively.                                       in TM and checks each of them. For each embedded first-
+                                                                                    party caveat cav@> ha, 0i, it checks if the predicate a appears
+Creating macaroons: Given a high-entropy root key k and                             in A. For each embedded third-party caveat cav@Lc hcId, vIdi
+an identifier id , the function CreateMacaroon(k, id ) returns a                    in TM , it extracts the root key cK from vId, and then checks
+macaroon that has the identifier id , an empty caveat list, and                     if there exists a macaroon M 0 ∈ M such that (i) M 0 has cId as
+a valid signature sig = MAC(k, id ).                                                its macaroon identifier and (ii) M 0 can be recursively verified
+                                                                                    by invoking M 0 .Verify(TM , cK, A, M). Finally it checks that
+Adding caveats:  Third-party and first-party caveats                                the signature of the current macaroon is a proper chained-MAC
+can be added to a macaroon M using the methods                                      signature bound to the authorization macaroon TM .
+
+                                                                                7
+C. Example Authorization Using Macaroons                                  first binds all discharge macaroons in MU to the authorizing
+                                                                          macaroon MFS :
+    This section outlines in detail the macaroon-based au-
+thorization flow for the paper’s running example, previously               Msealed
+                                                                               U     := MFS .PrepareForRequest(MU )
+described in Sections II and III and illustrated in Figure 6.             It then makes an access request to the target service by sending
+                                                                          it the request parameters, the authorizing macaroon MFS and
+Minting the macaroon at the target service: The flow                      the set of discharge macaroons Msealed    :
+                                                                                                              U
+begins with the target service (the storage service) constructing
+a macaroon MTS which grants time-limited read/write access                U −→ TS : chunk = 235, operation = read; MFS ; MU
+to a subset of the storage chunks. To do so it generates a fresh
+                                                                          Handling the request at the target service: The target
+root key k and a public identifier {k}TS (which, recall, allows
+                                                                          service handles access requests using a three stage process:
+TS to retrieve k).
+ M0 := CreateMacaroon(k, {k}TS )                                          (1) First-party caveat discharge. Scan all the provided mac-
+ M1 := M0 .AddFirstPartyCaveat(“chunk ∈ {100 . . . 500}”)                     aroons for first-party caveats and check the associated
+ M2 := M1 .AddFirstPartyCaveat(“op ∈ {read, write}”)                          predicates in the context of the request. Let A be the
+ MTS := M2 .AddFirstPartyCaveat(“time < 5/1/13 3pm”)                          set of validated predicates.
+The macaroon MTS is handed to the forum service.                          (2) Macaroon verification. Extract the root key k from
+                                                                              the identifier of the macaroon MFS and invoke
+Attenuating the macaroon at the forum service: The forum                      MFS .Verify(MFS , k, A, Muser ) . If Verify fails (i.e., an
+service adds caveats to the macaroon before passing it on,                    assertion fails), the request is forbidden.
+in particular, it adds a third-party caveat requiring the user            (3) Dispatch. Provide services according to the now-
+authenticate as “bob” at AS.com. For this, the forum service                  authorized request parameters.
+must trust and have a relationship with AS.com, and there are
+many options for how they interact. For example, the forum
+service can mint a fresh caveat root key cK and communicate               D. Security and Expressiveness
+with AS.com to obtain a caveat key identifier for it:                         Macaroons use cryptographic means to provide the sym-
+FS −→ AS : cK, “user = bob”                                               bolic security properties of verifiable integrity, secrecy of
+AS −→ FS : {(cK, “user = bob”)}AS = cId                                   intermediate keys, and the inability for adversaries to remove
+M3 := MTS .AddThirdPartyCaveat                                            caveats. Even when Enc and Dec can be assumed to be secure,
+              (cK, {(cK, “user = bob”)}AS , AS.com)                       the cryptographic security of the chained MAC construction
+                                                                          must still be considered (e.g., as previously done in [3, 25]).
+Alternately, if AS publishes a public key, or if AS and the               Fortunately, its security is straightforward when MAC is an
+forum service have previously shared a symmetric key, the                 HMAC function [43]. The signature of a macaroon whose
+forum service can construct the caveat key identifier itself by           starting identifier id conveys the root key K0 can be written
+encrypting cK and the predicate. All parties in the message               as HMAC(KDF(K0 , [id, m1 , . . . , mn−1 ]), mn ), where KDF
+exchanges above are are assumed to always perform proper                  is a key derivation function, defined by HMAC(K0 , id) for
+authentication, and establish confidentiality and integrity, using        the base case, or by using the successive HMAC outputs as
+an out-of-band mechanism like TLS [20].                                   the HMAC keys for a list of messages. Then, the required
+    The forum service further attenuates the macaroon so that             properties follow from HMAC unforgeability and the confi-
+it only grants read-only access to a single chunk:                        dentiality of the HMAC key parameter due to HMACs being
+                                                                          pseudo-random functions [43].
+M4 := M3 .AddFirstPartyCaveat(“chunk = 235”)
+MF S := M4 .AddFirstPartyCaveat(“operation = read”)                           On top of the above sketch, Adriana López-Alt has created
+                                                                          complete proofs of security for three different macaroon con-
+Subsequently, the macaroon MF S is passed on to the user.                 structions [41]. Usefully, these proofs have explicitly identified
+Acquiring discharges from the authentication service: The                 the need to use an authenticated encryption function Enc for
+user scans the macaroon MF S for third-party caveats to to                caveat identifiers in HMAC-based macaroons.
+discharge. Finding one, the user sends cId to AS.com, where                   It is relatively straightforward to establish the flexibil-
+AS extracts cK and the predicate from cId and, if the                     ity of macaroon authorization, by comparing them to well-
+predicate is true, creates a discharge macaroon:                          known, highly-expressive decentralized authorization creden-
+M00 := CreateMacaroon(cK, cId)                                            tials. It can be proven formally that macaroons are at least
+M10 := M00 .AddFirstPartyCaveat(“time < 5/1/13, 9am”)                     as expressive as SPKI/SDSI [16], and we have constructed
+  0
+MAS   := M10 .AddFirstPartyCaveat(“ip = 192.0.32.7”)                      such proofs (in particular, based on Li and Mitchell’s formal
+AS −→ U : MAS  0                                                          semantics [39]), where SPKI/SDSI delegation is reduced to
+                                                                          third-party caveats for conjunctive holder-of-key assertions.
+To check predicates, AS may perform extra work, e.g., to                  Intuitively, such proofs of macaroons’ expressiveness are pos-
+redirect the user to authenticate as “bob” using a password.              sible because, public-key certificates can be emulated using
+                   0
+After receiving MAS   , the user adds it to their set of discharges       opaque key identifiers and additional network requests in
+MU , and if it contains any new third-party caveats, the user             online systems (see [18] and [37, Section 4.3]).
+also collects discharges for those, recursively.
+                                                                              However, unfortunately, our proofs have offered few in-
+Making an access request using macaroons:                The user         sights, except to show that symmetric cryptography and
+
+                                                                      8
+enough extra messages can emulate public-key-based mech-                               RANDOM_NONCE
+anisms; therefore, these proofs are omitted here. Meanwhile,
+                                                                                       chunk ∈ {100..500} ;
+the formalization of macaroons in authorization logic has been                         operation == read
+more clarifying, and is presented in the appendix.
+                                                                                       b3..4f         HMAC(KTS, "chunk … read")
+    HMAC-based macaroons do suffer in one important way
+compared to public-key-based credentials: only the target ser-         Fig. 9.   Multiple caveats under one signature, as an optimization.
+vice that originally mints a macaroon can check its validity.
+Specifically, the verification of an HMAC-based macaroon               Section IV. For example, root keys, lists of predicates, or other
+requires knowledge of its root key—and since this key confers          secrets may be stored in a database at the service and identified
+the ability to arbitrarily modify the macaroon and its caveats,        by an index key (such as a random nonce, like in Section III).
+it cannot be widely shared. On the other hand, third-party             Such identifiers have the nice property of being completely
+verification is possible when using asymmetric signing keys            opaque and allowing revocation to be simply done by deleting
+and public verification keys, as in SPKI/SDSI, or the public-          a database row; however, the downside is that the target must
+key-based macaroons described later in Section V-H. However,           maintain a database, either centralized or replicated across the
+the HMAC-based macaroons are orders-of-magnitude more                  servers operating the service.
+efficient (as shown in Section VII), which, in many cases, is
+                                                                           Alternatively, one may minimize state kept at the princi-
+a worthwhile trade-off.
+                                                                       pal’s server nodes by encrypting the keys and other secrets
+    Macaroons’ flexibility does not obviate the need to analyze        to be identified. For this, shared, symmetric encryption keys
+the security of any concrete authorization protocols using             may be used, known to and trusted by each principal pair;
+them—just as with any other type of authorization credential.          alternatively, public-key encryption may be used, which can
+In particular, such protocols must account for how target              allow the same key to be used by several principals to create
+services learn, during verification, the intermediate signatures       caveats for a single service that holds the private key.
+of macaroons, as well as the root keys of all caveat discharge
+macaroons, and consider how—in an adversarial model—                   B. Minting Caveat Root Keys
+other parties may also learn those keys, e.g., due to flaws in
+target services. Similarly, the concrete means for establishing            The root keys for caveats and caveat discharge macaroons
+macaroon key identifiers must be analyzed, especially if shared        are shared across principals; in particular, the root keys of all
+symmetric keys are used to add third-party caveats. Fortu-             verified macaroons become known to the target service for a
+nately, many frameworks exist for the analysis of authorization        request. Thus, such root keys should not be reused—e.g., by
+protocols that use public-key, shared-key, and MAC-based               embedding the same caveat identifier in multiple macaroons—
+constructions [45, 10, 4]. Also, such analysis can be greatly          unless this is strictly necessary (e.g., for performance reasons),
+simplified if fresh, pairwise symmetric keys establish trust           and it is done in a known-to-be secure fashion (e.g., verified
+between principals and if macaroons use caveats with fresh,            by a separate protocol analysis). In particular, while such reuse
+high-entropy root keys that are unique and distinct from root          may be safe as long as all macaroons are for the same target
+keys in other macaroons. For this purpose, protocols may               service, it’s most likely not safe when multiple target services
+choose to derive root keys using the entropy of intermediate           are involved.
+macaroon signatures.                                                       Therefore, to add a third-party caveat to a macaroon, an
+                                                                       unpredictable caveat root key must be chosen—otherwise ma-
+             V.   I MPLEMENTATION C ONCERNS                            licious parties might guess the root key and forge a discharge
+                                                                       macaroon—even though some principals (e.g., Web browser
+    This section considers how distributed systems may im-
+                                                                       frames, or embedded devices), may not have a good source of
+plement macaroon-based authorization. The choice of topics
+                                                                       entropy for creating truly random keys.
+is based on experiences building prototype macaroon mecha-
+nisms for Cloud clients, servers, and mobile devices, and using            To address this concern, caveat root keys may be derived
+these to implement both new authorization protocols and to             from the signature of the embedding macaroon. Concretely, for
+improve existing ones, like those based on OAuth2 [17].                adding a caveat to a macaroon with signature sig, its bearer
+                                                                       may to generate a strong root key using HMAC(sig, n)—where
+     Empirically, in distributed systems, macaroons are simple
+                                                                       n is an arbitrary nonce—because HMAC is a pseudo-random
+to implement, easy to integrate with existing code, and incur
+                                                                       function [43]. Such a key will be unique, due to the second
+little overhead. In particular, it simplifies the task that much
+                                                                       pre-image resistance of HMAC, and will therefore never be
+of macaroons’ flexibility stems from the semantics of caveats
+                                                                       repeated across different caveats.
+being left up to application services. However, macaroon-based
+systems still need to support a common library of well-known
+caveats—such as for specifying expiration time, as well as             C. Optimizations and Privacy
+predicates about client context such as IP addresses, Chan-                Macaroons permit many optimizations, in both their prim-
+nelID, etc.—leaving service- or application-specific caveat            itives and applications. For example, a reduced number of
+predicates to be used in specific protocols.                           operations can be used for chained-MACs, if caveats are
+                                                                       combined as in Figure 9.
+A. Encoding Key Identifiers
+                                                                           Both as an optimization, and also to protect privacy, appli-
+   The key identifiers for both macaroons and caveats may              cations and services may choose to omit certain information
+be constructed using service-specific means, as discussed in           from caveat discharge macaroons. In particular, for nested
+
+                                                                   9
+third-party caveats, an inner, nested discharge macaroon need            they encode a monotonic property—use the same caveat iden-
+not be included in the discharge for the outer caveat. Thus,             tifier (and, hence, the same root key), for multiple macaroons,
+for example, if a third party caveat may restrict access to              without risk. Thus, for example, a Web browser might hold
+users within a certain age range, the caveat discharging service         hundreds of macaroons for images at the same Cloud service,
+may add a caveat that requires a third-party authority to assert         such that all macaroons share the same third-party revocation-
+the bearer’s date of birth; subsequently, the same discharging           check caveat, and a single macaroon can discharge that caveat
+service may remove this birthdate-assertion caveat when it               for any image. Of course, this discharge macaroon can, and
+issues a discharge macaroon, to not reveal the bearer’s age,             should, be very short lived.
+thereby protecting their privacy.
+                                                                             Revocation may also be required when target services are
+    With regards to privacy, it should be noted that attack-             updated. For example, the operation delete may be added
+ers may try to add third-party caveats to probe for private              to a target service that offers previously-immutable, read-
+information—e.g., by tricking users to reveal membership in              only storage, and the existing macaroons for this target may
+some group. However, for this, attackers must be able to both            not constrain the operations in requests. In this case, the
+trigger users to make requests with certain parameters, and              service may implement a default-deny policy for the delete
+observe the results. Under these conditions, similar attacks are         operation, and authorizing its use only in future macaroons.
+equally possible in many existing authorization frameworks               As a more principled approach, targets may version aspects
+(e.g., SPKI/SDSI), and not specific to macaroons.                        of their service, and embed first-party predicates in macaroons
+                                                                         that constrain the authorized versions.
+D. Local Discharging of Third-party Caveats
+    Third-party caveats can be used to implement decentralized           F. Disjunctive and Negated Caveats
+authorization using holder-of-key proofs from authentication                 When adding third-party caveats to a macaroon, it may be
+servers, as explained in earlier examples. However, third-party          desirable to add a set of them where only one needs to be
+caveats may be discharged not just by networked servers, but             discharged. An example use case would be to allow a client
+by any isolated protection domain capable of holding secrets—            to choose which authentication provider to use. One way of
+such as, for example, a Web browser frame or extension, a                achieving this would be to augment macaroons to also include
+mobile application, or a hardware token that is available locally        a conjunction or disjunction operator at the beginning of every
+to a user at a client.                                                   caveat list. The Verify method would then accordingly conjunct
+    The delegation of third-party caveat discharging to such             or disjunct the proof obligations specified by the caveats. This
+local principals can improve both performance (by reducing               leads to a notion of caveats on a macaroon as a logical formula
+network messages), as well as the precision of authorization             with both disjunction and conjunction.
+policy enforcement. For example, a collection of unrelated                   One may ask if it makes sense to add negation as well,
+Web services may use the same federated login system; if                 where a macaroon can only be invoked if a certain caveat is
+each service maintains separate sessions, logging out of one             not discharged. However, the semantics of negation become
+service may leave the user, unknowingly, still logged in and             tricky when the negated caveat discharge macaroon contains
+authorized in other services, and thereby put them at risk.              further nested third-party caveats. Thus, negation should only
+Instead, using macaroons, each request, on all sessions, may             be supported at the level of predicate checking, e.g., along the
+derive a fresh, or very short-lived, caveat discharge from the           lines of op 6∈ {write, delete}, if needed.
+third-party federated login service (e.g., via a hidden iframe
+that holds the caveat root key to derive discharge macaroons
+                                                                         G. Caveats on the Structure of Macaroons
+and is accessible from each service’s Web page). Thus, a
+federated login service may hold the authoritative credentials,              In some applications, there may be a need for caveat
+and services may be decoupled, yet the user need log out only            predicates to make assertions about the structure and values in
+once to immediately de-authorize all services.                           the set of authorizing macaroons. In this case, one macaroon’s
+                                                                         caveats could restrict the shape of the tree of macaroons that is
+E. Revocation and Versioning                                             induced during verification at the target service, or the values
+                                                                         permitted in another macaroon in that tree.
+    As previously mentioned in Section II, macaroons excel
+at the common revocation strategies for credential-based au-                 Such a structural caveat may, for example, be used to
+thorization: using short-lived, fresh credentials, that can be           enforce notions of well-formed transactions, by ensuring that
+subject to state-based checking and can be split between                 a certain order of nested third-party caveat discharges are
+principals [48, Chapter 9.8]. Indeed, the local discharging              present [15]. Structural caveats may also name values in other
+of caveats of the previous subsection is just one example                caveats or discharge macaroons. For example, the BrowserID
+of split credentials, subject to state-based checks. For other           protocol behind Mozilla Persona [42] states that identity as-
+workloads or desired policies, revocation may be done via                sertions (minted by a Web browser and verified by a trusted
+a database “whitelist” (resp. “blacklist”) of valid macaroons            service) must successfully verify only if they state the domain
+(resp. invalid), via embedding expiry times or epoch counters            name of the relying party they are meant for. Recasting
+in macaroons, or via some combination of the above.                      BrowserID in terms of macaroons, this check can be enforced
+                                                                         in the form of a structural caveat.
+    Commonly, state-based revocation may be via a third-party
+caveat to a service like a network time authority. To avoid                 Structural caveats can also be used to make assertions
+the need for redundant discharging, such caveats might—when              about public-key signatures. For example, a service may mint
+
+                                                                    10
+a macaroon that requires bearers to prove possession of a                    A. Macaroons and End Users
+certain private key. For this, the service can add a first-party
+                                                                                 Macaroons are useful for many existing end-user Cloud
+structural caveat whose predicate states “the set of macaroons
+                                                                             application scenarios. For example, a macaroon can be minted
+must contain a digitally signed message m, verifiable by the
+                                                                             for sharing an image on Google Docs or Dropbox, with third-
+public key P .” The bearer would then be required to present
+                                                                             party caveats limiting its use to a particular set of users. In
+such a signed message along with each request to the target
+                                                                             such scenarios, when making use of a macaroon, end users
+service, if it is to be authorized by a macaroon with this caveat.
+                                                                             need not experience any significant change from the workflow
+                                                                             they use today. The client interface of the Cloud service could
+H. Public-key-based Macaroon Constructions                                   allow the user to request an “unlisted URL”, with options for
+    Many existing authorization systems are based on public-                 selecting the allowed recipients, and provide means for that
+key certificates, including SPKI/SDSI [16], KeyNote trust                    URL to be shared with those parties, e.g., over email.
+management [11], etc. Several of these systems are not truly                     Sometimes, a user’s management of macaroon credentials
+decentralized, but instead require a globally-accessible infras-             may involve more than one application. For example, when
+tructure, such as a revocation list, or a repository of certificates.        sharing a Dropbox image with a limited group, a user might
+Further, upon an authorization request, some of these systems                copy its URL from Dropbox to a service such as Google+
+carry out a certificate-chain discovery process that can be                  or Facebook, and use that service’s client interface to pick
+costly; e.g., the worst-case complexity for SPKI/SDSI being                  the recipient group and attenuate the authority of the URL’s
+cubic in the size of the repository, as shown in [16].                       macaroon credentials. Similarly, when visiting the link for
+    Instead, authorization based on public-key certificates can              this shared URL, its recipients might be redirected to a login
+benefit from following the patterns of macaroon constructions,               screen, to discharge third-party caveats, before being able to
+as an instance of proof-carrying authorization [6]. Already,                 access the image at the URL.
+some public-key-based applications use a delegation pattern                      In general, since macaroons are easily serialized, the cur-
+where authority is sent between principals by chaining an                    rent mechanisms for sharing and storing access tokens over
+existing certificate to a newly-minted public/private key pair—              email, social postings, and chat may continue to work as
+handed off to a new principal—such that the recipient holds                  before. However, instead of copying and pasting URLs, the
+a private key whose public key is certified to wield a part of               user interfaces for macaroons may be more user-friendly, e.g.,
+the sender’s authority.                                                      taking the form of explicit, custom “Share” buttons, similar to
+    By having each principal, recursively, apply the above                   those used for minting OAuth2 tokens today.
+pattern to all authorizations, public-key certificates can effect
+the same type of delegation, attenuation, and key distribution as            B. Existing Use of Contextual Caveats
+macaroons. While increasing the number of online messages,
+                                                                                 Current bearer token authorization relies heavily on imple-
+following such a macaroon-based pattern eliminates the need
+                                                                             mentation guidelines, which puts the security of the mecha-
+to maintain a global certificate repository, since each principal
+                                                                             nisms in the hands of implementors. For example, Mozilla’s
+will individually manage the set of certificates relevant to it,
+                                                                             BrowserID recommends constraining messages by checking
+and each certificate is unique.
+                                                                             the domain of the relying party [42], and many similar checks
+    Furthermore, by appropriately choosing the certificate va-               apply to OAuth2 [40]. By using macaroons, such guidelines
+lidity times, and the predicates in their assertions, other ben-             can be made into explicit, mandatory contextual caveats.
+efits of macaroons may be replicated. In particular, such a
+                                                                                As another example, ChannelID binds bearer tokens to a
+certificate-based construction can provide the same privacy
+                                                                             channel-specific public key [7]. ChannelID is well suited for
+benefits as macaroons, in preventing linkability. Unfortunately,
+                                                                             use in first-party caveat predicates that aim to contextually
+unlike the MAC in macaroons, the cryptographic primitives
+                                                                             confine the use of macaroons to specific (recipient) principals.
+of public-key certificates can incur significant overhead—as
+shown in the measurements of Section VII—especially for the                      Such caveats are likely to use application-specific predicate
+minting of the new public/private key pairs essential to the                 languages, similar to how Bucket Policies in the Amazon S3
+above construction. Therefore, to be more widely applicable,                 service define a rich policy language for contextual autho-
+public-key-based macaroon constructions might also make use                  rization of clients accessing S3 storage [5]. Of course, using
+of HMAC-based signatures, e.g., as in [41].                                  macaroons, such policies could be set per issued token, instead
+                                                                             of per storage bucket, efficiently and with very little effort.
+          VI.    A PPLICATIONS AND U SE PATTERNS
+                                                                             C. Cookies as Macaroons
+    Macaroons may be used not only to reimplement existing
+authorization mechanisms—to state them using a single, uni-                      Cookies are widely used for authorization bearer tokens,
+fied model, rather than using specific, bespoke protocols—but                such as HTTP session identifiers. With macaroon-based cook-
+also to enable new types of authorization for Cloud applica-                 ies, immediate benefits may be gained: macaroons would
+tions. For example, as in Section V-D, macaroon credentials                  ensure integrity despite not maintaining state at the server, and,
+may be split, so that a separate party holds a necessary caveat              through the use of caveats, allow the cookies to be bound to
+discharge, thereby enabling a form of privilege amplification                specific, observable client context, such as IP address, user
+similar to that in [52]. In addition to building such new                    agent strings, referrers etc. An interesting benefit is also that
+protocols, macaroons can also be used to enhance several                     clients could add caveats, for example to limit the usefulness
+existing authorization mechanisms.                                           of stolen cookies. Even simple attenuation might offer clients
+
+                                                                        11
+significant protection, e.g., by limiting any outbound cookies                SHA-1                  0.36 µs    RSA sign           458 µs
+to a single client IP address, and a validity period of only a few            SHA-256                0.63 µs    RSA verify          27 µs
+seconds. Cookies may also benefit from macaroon delegation,                   HMAC-SHA-1              1.7 µs    RSA encrypt         30 µs
+for example to implement light-weight, precise revocation via                 HMAC-SHA-256            2.8 µs    RSA decrypt        461 µs
+session liveness checking—like described in Section V-D, and                  AES-128                0.35 µs    RSA keygen       54000 µs
+used by the second end-to-end application in Section VII-B.                 TABLE I.      OVERHEAD OF CRYPTOGRAPHIC PRIMITIVES , IN O PEN SSL.
+
+D. OAuth2 and Macaroons                                                                              Python     JS/Chrome      JS/Node.js
+    The OAuth 2.0 Authorization Framework (or, simply,                        HMAC-SHA-256           13.7 µs        26.9 µs       11.4 µs
+OAuth2) defines a popular protocol for allowing Web services                  AES-128                 5.4 µs        41.3 µs       18.7 µs
+to grant their users certain access to other services, referred               Mint macaroon          16.0 µs        27.2 µs       19.4 µs
+to as relying parties. OAuth2 authorization relies on several                 Add caveat             54.9 µs       294.8 µs       56.3 µs
+kinds of tokens. Most important of these are access tokens,                   Verify                 96.3 µs       358.5 µs       68.9 µs
+which are short-lived tokens that act as capabilities, e.g., to               Marshal as JSON        15.2 µs         3.6 µs        3.0 µs
+login sessions, and refresh tokens, which are long-lived tokens               Parse from JSON        35.0 µs         3.3 µs        5.0 µs
+meant to be exchanged for access tokens at relying parties.                   TABLE II.     OVERHEAD OF MACAROON PRIMITIVES , IN PRACTICE .
+Tokens are transferred between protocol participants through
+one of several flows defined by the OAuth2 RFC [17].
+    In the context of OAuth2, one use of macaroons might be                 types implemented in Python and JavaScript, and also through
+to structure each concrete OAuth token as a macaroon, thereby               measurement of an end-to-end Web application that imple-
+allowing caveats to be embedded into the token. Such caveats                ments an image-sharing scenario using macaroons credentials
+may be used to either attenuate the authority granted by the                for authorization, as in this paper’s running example.
+token (similar to the examples in Section II), or to explicitly
+encode security guidelines prescribed for agents participating              A. Cost of Authorization Primitives
+in OAuth flows (see [8, 17, 40, 50]). As suggested earlier in
+this section, the latter is particularly useful, since implemen-                To compare the performance overhead of different prim-
+tations frequently ignore these security guidelines [50].                   itives for authorization credentials, Table I lists the cost of
+                                                                            some cryptographic operations, in microseconds, using mi-
+    As an example, consider the OAuth Implicit-Grant flow                   crobenchmarks of the implementations in OpenSSL 1.0.1c.
+where an access token is handed to a client-side application                The measurements were run on a 2.33 GHz Intel Core2 server.
+by placing it in the fragment identifier of the application’s URI.
+Since an attacker can easily replace a token in the fragment                    In Table I, hash algorithms are benchmarked using short
+identifier with a token meant for another application, a “caveat”           messages, such as would be common in the use of macaroons,
+associated with this flow is that all received access tokens                and, in this case, HMAC setup overhead dominates. Even so,
+must be validated at the resource server by an application to               computing an HMAC for short messages (up to a few hundred
+ensure that they are indeed meant for it (see Section 10.16                 bytes) imposes a less than 2× slowdown compared to the
+in [17]). This validation step can be mandated by simply                    processing of messages without integrity codes. To reduce
+having a third-party caveat for the token-validation endpoint               MAC overhead further, an implementation might choose to
+on all issued access tokens. More generally, most security                  define MAC(k, msg) = SHA-256(k k msg) truncated to 128
+recommendations on tightly confining tokens to particular                   bits. Since the key to MAC is always a fixed length, there is
+clients and limiting their validity, to prevent token theft, session        no confusion over where the key ends and the message begins,
+swapping and impersonation attacks—e.g., as listed in [50]—                 and truncating the hash prevents extension attacks.
+can be mandated by specifying them as caveats embedded into                     Public key operations are more expensive. Using 1024-bit
+OAuth tokens that are re-cast as macaroon credentials.                      RSA, operations with the public key (encrypt/verify) take 27–
+    OAuth2 also suffers from problems due to the nature in                  30 µs, and private-key operations (decrypt/sign) take 460 µs.
+which relationships are formed. Relying parties must have a                 Minting fresh keys is particularly expensive: a single CPU
+pre-existing relation to the Web service that they (or their user)          core can mint at most 18 key pairs per second, in our
+want to use. For example, a website wishing to allow its users              measurements. Thus the public-key alternative to macaroons
+to login with an OAuth2 identity provider must first register               discussed in Section V-H may have prohibitive overhead,
+itself as a client application with that provider. In practice, this        since it is fundamentally based on the minting of new keys.
+limits the user’s choice of identity providers, requires the Web            Relying on symmetric cryptography, or a combination of the
+service to maintain centralized state, and forces relying parties           two, greatly improves the performance—by as much as two
+to keep and protect a number of client tokens. There are several            to four orders of magnitude over a public-key construction.
+means by which macaroons can address these issues, such as                  This makes macaroons fast enough to be applicable nearly
+by safely storing client identities and redirection URLs directly           anywhere, even when implemented in JavaScript [49].
+in the macaroons issued by relying parties, thus avoiding the                   Table II shows the performance overhead of the primitive
+need for a central registry.                                                operations for macaroon authorization, based on measurements
+                                                                            of two prototype implementations of macaroon credentials in
+         VII.    M EASUREMENTS AND E VALUATION                              Python 2.7.2 and JavaScript. For the JavaScript implemen-
+    This section considers the performance of macaroon prim-                tation, the measurements are from a Web browser (Google
+itives, both through microbenchmark measurements of proto-                  Chrome v27.0) using the Stanford JS Crypto library [49,
+
+                                                                       12
+             servers                                 servers
+                                                                                     shown on the right in Figure 10. For an image dragged-and-
+     TS                   FS                 TS     1 year
+                                                                 FS                  dropped by the user on client C, the Web browser window
+                                                                                     for Ed gets a URL and derived macaroon for direct access
+                                  with
+                                3rd-party                                            to an image on TS. This macaroon is valid only for a few
+                                                                    15 min.
+                                 caveat                                              seconds and could be further confined (e.g., to C’s IP address).
+                                 for AS
+                                                                                     Measured from Ed’s Web browser window, it takes only an
+                                                      2 sec.                         average of 5.0 milliseconds to request and obtain such a URL
+     AS                     C                Ed                     C
+                                                                                     and an authorizing macaroon. Bringing the total access time
+          browser windows                         browser windows
+                                                                                     to 12.5 milliseconds, it took on average 7.5 milliseconds to
+                                                                                     download a 40 kB image from a locally-hosted Web server,
+                                                                                     with Node.js verifying the macaroon and checking its caveats.
+Fig. 10. Left: To access a service TS, a third-party caveat is discharged by
+AS to authenticate a user of the FS service at client C, just as in Figure 6.            In comparison, it is enlightening to consider OAuth2-based
+Right: Using macaroons, authority is delegated for different lengths of time
+between principals, finally passing to an image editor Web browser frame Ed.
+                                                                                     constructions for the above scenarios. To be as fine grained as
+                                                                                     a macaroon-based approach, while strictly following the flows
+                                                                                     specified by OAuth2, separate access tokens would have to be
+Aug. 2013], as well as from Node.js (v0.10.3) and its standard                       issued for each image access. This might well be impractical,
+crypto module wrapper of OpenSSL (v1.0.1c). As can be seen                           e.g., since the latency of a sequence of HTTP redirects would
+in the table, the minting of macaroons requires little more than                     then be imposed upon each access to TS. Instead, in practice,
+an HMAC signature, which is fast (although slower than when                          it is common to sacrifice fidelity to the OAuth2 flows, e.g.,
+performed natively, as in Table I). In general, the measurements                     by granting longer-lived, more broadly-scoped access tokens.
+show data structure manipulation to be the slowest aspect of                         In this case, this might mean that the Ed image editor would
+the operations in Table II, with serialization from JSON being                       receive a hard-to-revoke credential for read access to all of the
+especially costly in Python.                                                         user’s photos FS, which might last for an hour, or more.
+                                                                                         The light-weight nature of macaroons allows them to be
+B. End-to-end Application Performance                                                used liberally. On the client, fast delegation between protection
+    To model real-world performance of macaroons, we con-                            domains, such as Web browser frames, means that separate
+structed an end-to-end Web application based on this paper’s                         macaroons, with precise contextual confinement, can be is-
+running example. In this application, a file-sharing website FS                      sued for each access—thus adhering tightly to the principle
+handles user accounts and the data for images to be shared,                          of least privilege. Notably, in the above scenario, no pre-
+while the actual image files are in a Cloud storage service                          existing relationship is required between Ed and FS, except
+TS. As in Section II, the storage service TS issues a long-                          an agreement on the use of macaroons, and on a common
+lived macaroon to FS, which grants FS full access to certain                         protocol for accessing image files.
+files. When a user connects to FS from its Web browser client
+C, their browser receives URLs to the user’s images on TS                                                 VIII.   D ISCUSSION
+along with macaroon credentials. Each of these macaroons is
+                                                                                         As flexible authorization credentials for distributed sys-
+an attenuated, derived version of TS’s macaroon, of shorter
+                                                                                     tems, macaroons build upon a wealth of prior results, de-
+duration, tied to a specific filename, and confined to the user’s
+                                                                                     veloped over nearly half a century. Thus, for macaroons, the
+client C. Then, authorized by these macaroons, the user’s Web
+                                                                                     closely related work covers entire fields of study—including
+browser can fetch the image files directly from TS.
+                                                                                     access control [32], authorization logic [37], trust manage-
+   Measuring this Web application on a local network, an                             ment [11], proof-carrying authorization [6], extensibility of
+average of 470 µs was added to the end-to-end request                                mechanisms [38] and more—which cannot be fully represented
+processing latency—compared to file serving without access                           here, although the most closely related lines of work warrant
+checks—with authorization in Node.js verifying a macaroon                            a discussion, as below.
+with four caveats on the expiration time and request arguments
+                                                                                         Traditional capability systems do not directly support con-
+    As another end-to-end scenario, we enhanced our Web                              finement or revocation of access. Over the years, using all
+application to perform user authentication across Web browser                        of the three patterns illustrated in Figure 3, capability systems
+frames, as shown on the left in Figure 10. For this, FS                              have been modified to support controlled delegation [24]. As in
+adds a third-party caveat to the macaroon it provides to the                         the first pattern, in [46] a proxy-based mechanism is described
+client C, where those caveats need discharging by a separate                         for revoking and delegating the access provided by a capability.
+authentication service AS. The AS service has delegated the                          As in the second pattern, in [26] an identity-based capability
+discharging of its caveats to an isolated Web browser frame                          system is described where delegation involves services re-
+for the user’s login session, so that authentication caveats can                     minting new capabilities after checking applicable security
+be discharged without network access. The TS service verifies                        policies. As in the third pattern, in [44], a macaroon-like
+that all caveats are discharged, but does not get to know the                        mechanism is proposed for chaining restrictions upon an au-
+identity of AS, or the user. In our experiments, the measured                        thorization credential using symmetric-key operations, thereby
+total overhead of discharging these third-party caveats was on                       confining its context of use—although this work provided no
+average only 3 milliseconds for each image access.                                   provision for third-party caveats, like those in macaroons.
+   As a final end-to-end scenario, we had our Web application                           Macaroons are credentials, not capabilities, because the
+share images with a third-party, Web-based image editor Ed, as                       possession of a macaroon is a necessary, but not a sufficient
+
+                                                                                13
+condition for granting authority. As bearer credentials, the                                             R EFERENCES
+contextual caveats in macaroons help them avoid the confine-
+ment problem, which arises for unmodified capabilities where               [1] M. Abadi, “Variations in access control logic,” in Intl. Conf. on Deontic
+                                                                               Logic in Computer Science, 2008.
+“the right to exercise access carries with it the right to grant
+                                                                           [2] M. Abadi, M. Burrows, B. W. Lampson, and G. D. Plotkin, “A calculus
+access” [26]. Furthermore, upon use of a macaroon, target                      for access control in distributed systems,” ACM Trans. Programming
+services need not only check that all caveats are discharged,                  Languages and Systems, vol. 15, no. 4, 1993.
+but may also perform additional access control, for example,               [3] M. Aguilera, M. Ji, M. Lillibridge, J. MacCormick, E. Oertli, D. An-
+to check continued ownership of the accessed resource.                         dersen, M. Burrows, T. Mann, and C. Thekkath, “Block-level security
+                                                                               for network-attached disks,” in USENIX Conf. on File and Storage
+    Over the last two decades, several public-key certificate                  Technologies, (FAST), 2003.
+mechanisms [9, 11, 12, 14, 35, 37, 53] have been developed                 [4] D. Akhawe, A. Barth, P. E. Lam, J. Mitchell, and D. Song, “Towards
+to provide highly flexible, decentralized authorization for dis-               a formal foundation of Web security,” in IEEE Computer Security
+tributed systems, while avoiding the problems of pure bearer                   Foundations (CSF), 2010.
+                                                                           [5] Amazon Inc., “Example cases for Amazon S3 Bucket
+tokens. The general idea is that principals possess unique                     Policies,” 2013, http://docs.aws.amazon.com/AmazonS3/latest/dev/
+public/private key pairs, and delegate access to other principals              AccessPolicyLanguage UseCases s3 a.html.
+by issuing certificates signed using their private key. SPKI               [6] A. W. Appel and E. W. Felten, “Proof-carrying authentication,” in ACM
+certificates [14] specify the delegate’s public key, a validity                Computer and Communications Security (CCS)). ACM, 1999.
+period, and an S-expression describing a set of rights; whereas            [7] D. Balfanz and R. Hamilton, “Transport layer security (TLS) Chan-
+Active certificates [12] specify mobile code that is executed                  nel IDs,” IETF Draft, 2013, http://tools.ietf.org/html/draft-balfanz-tls-
+                                                                               channelid.
+by the target service at the time of a request and mediates all
+                                                                           [8] C. Bansal, K. Bhargavan, and S. Maffeis, “Discovering concrete attacks
+access between the requestor and the service.                                  on website authorization by formal analysis,” in IEEE Computer Security
+    While such public-key delegation certificates are highly                   Foundations (CSF), 2012.
+                                                                           [9] M. Y. Becker, C. Fournet, and A. D. Gordon, “SecPAL: Design and se-
+expressive and truly decentralized (since they can be minted                   mantics of a decentralized authorization language,” Journal of Computer
+locally and verified by anyone), they have been harder to                      Security, vol. 18, no. 4, 2010.
+adopt in the Cloud than schemes founded on bearer tokens.                 [10] B. Blanchet, “Automatic verification of correspondences for security
+In particular, adoption has been hampered by the need for                      protocols,” Journal of Computer Security, vol. 17, no. 4, 2009.
+certificate-revocation infrastructure, the use of cryptographic           [11] M. Blaze, J. Feigenbaum, and J. Lacy, “Decentralized trust management,”
+primitives with significant per-request overhead, and the use                  in IEEE Symp. on Security & Privacy, 1996.
+of long-lived, linkable public identities for principals.                 [12] N. Borisov and E. A. Brewer, “Active certificates: A framework for
+                                                                               delegation,” in Network and Distributed Systems Security Symp. (NDSS),
+    Macaroons are only verifiable by their target service,                     2002.
+but for that service they offer flexible, efficient credentials-          [13] J. Bradley, P. Hunt, T. Nadalin, and H. Tschofenig, “The OAuth 2.0
+                                                                               authorization framework: Holder-of-the-key token usage,” IETF Draft,
+based authorization [48]. Notably, macaroons permit bearers                    http://tools.ietf.org/html/draft-tschofenig-oauth-hotk.
+of credentials to delegate authority, in a decentralized, general         [14] E. Carl Ellison, “SPKI certificate theory,” IETF RFC 2693 (Experimen-
+manner, using an efficient chained-HMAC construction. The                      tal), 1999, http://www.ietf.org/rfc/rfc2693.txt.
+authority of these derived credentials can be subject to atten-           [15] D. D. Clark and D. R. Wilson, “A comparison of commercial and military
+uation and contextual confinement, based on first-party and                    computer security policies.” in IEEE Symp. on Security & Privacy, 1987.
+third-party caveats that restrict both the permitted functionality        [16] D. Clarke, J.-E. Elien, C. Ellison, M. Fredette, A. Morcos, and R. L.
+(by limiting the set of allowed operations and objects) as well                Rivest, “Certificate chain discovery in SPKI/SDSI,” Journal of Computer
+                                                                               Security, vol. 9, no. 4, 2002.
+as the authorized principals (by confining the environment and
+                                                                          [17] E. D. Hardt, “The OAuth 2.0 Authorization Framework,” IETF RFC
+context in which a macaroon may be successfully wielded).                      6749 (Informational), 2012, http://tools.ietf.org/html/rfc6749.
+    Macaroons are an improvement upon cookies. They are                   [18] D. Davis and R. R. Swick, “Network security via private-key certifi-
+                                                                               cates,” Operating Systems Review, vol. 24, no. 4, 1990.
+especially well-suited to the Cloud, where the notion of
+                                                                          [19] J. DeTreville, “Binder, a logic-based security language,” in IEEE Symp.
+a central authority is often lacking, and where the notion                     on Security & Privacy, 2002.
+of principals is highly dynamic and may involve unnamed,                  [20] T. Dierks and E. Rescola, “The Transport Layer Security (TLS) Proto-
+local entities such as iframes in Web browsers. As bearer                      col,” IETF RFC 5246 (Standards track), 2008, http://www.ietf.org/rfc/
+credentials that use HMAC signatures for both integrity and                    rfc5246.txt.
+for key distribution, macaroons are highly efficient, widely              [21] M. Dietz, A. Czeskis, D. Balfanz, and D. S. Wallach, “Origin-bound
+applicable, and compatible with existing Cloud software. Even                  certificates: A fresh approach to strong client authentication for the web,”
+                                                                               in Proc. USENIX Security, 2012.
+so, compared to previous mechanisms, macaroons can support                [22] I. T. Foster, C. Kesselman, G. Tsudik, and S. Tuecke, “A security archi-
+equally expressive authorization policies, even more precisely,                tecture for computational grids,” in ACM Computer and Communications
+with fresh, short-lived credentials for each access request.                   Security (CCS)), 1998.
+                                                                          [23] Y. Fu, J. Chase, B. Chun, S. Schwab, and A. Vahdat, “Sharp: An
+                     ACKNOWLEDGMENT                                            architecture for secure resource peering,” in Symp. on Operating Systems
+                                                                               Principles (SOSP), 2003.
+Macaroons originated in the Belay research project at                     [24] M. Gasser and E. McDermott, “An architecture for practical delegation
+Google [27], and, thus, benefitted from the work of Arjun                      in a distributed system,” in IEEE Symp. on Security & Privacy, 1990.
+Guha, Iain McGinniss, Ben Laurie, and Mark Miller. Our                    [25] H. Gobioff, “Security for a high performance commodity storage sub-
+                                                                               system,” Ph.D. dissertation, Carnegie Mellon University, 1999.
+NDSS reviewers and shepherd, as well as Martı́n Abadi,                    [26] L. Gong, “A secure identity-based capability system,” in IEEE Symp. on
+Adriana López-Alt, Domagoj Babic, Mike Burrows, Michael                       Security & Privacy, 1989.
+R. Clarkson, Sergio Maffeis, Robbert van Renesse, and Ben                 [27] Google Inc., “Belay research project,” 2012, https://code.google.com/p/
+Sittler, all gave feedback that improved this paper’s content.                 google-belay/.
+
+
+                                                                     14
+[28] ——, “YouTube video privacy settings,” 2013, http://support.google.                                               A PPENDIX
+     com/youtube/bin/answer.py?hl=en&answer=157177.
+[29] E. Grosse and M. Upadhyay, “Authentication at scale,” IEEE Security                    This appendix presents a formalization of macaroons using
+     & Privacy Magazine, vol. 11, no. 1, 2013.                                          a variant of Abadi’s authorization logic from [1], originally
+[30] P. Hallam-Baker, C. Kaler, R. Monzillo, and A. Nadalin, “Web Services              in [2, 37]. A macaroon is seen as an assertion made by a
+     Security: SAML Token Profile,” OASIS, 2004, http://docs.oasis-open.                target service, saying that the holder of certain keys can speak
+     org/wss/oasis-wss-saml-token-profile-1.0.pdf.                                      for the target service regarding all access requests, as long as
+[31] E. Hammer-Lahav, A. Barth, and B. Adida, “HTTP authentication:
+     MAC access authentication,” IETF Draft, http://tools.ietf.org/html/draft-
+                                                                                        all relevant predicates for the macaroon’s embedded caveats
+     hammer-oauth-v2-mac-token.                                                         can be seen to be valid.
+[32] M. A. Harrison, W. L. Ruzzo, and J. D. Ullman, “Protection in operating                The effects of caveat predicates cannot be directly captured
+     systems,” Comm. of the ACM (CACM), vol. 19, no. 8, 1976.
+[33] J. Howell and D. Kotz, “An access-control calculus for spanning admin-
+                                                                                        in standard authorization logic and, therefore, the logic used in
+     istrative domains,” Dartmouth College, Tech. Rep., 1999.                           this appendix is extended with two new types of principals—
+[34] ——, “A formal semantics for SPKI,” in European Symp. on Research                   predicate principals and request principals—and a special
+     in Computer Security, 2000.                                                        axiom that characterizes their behavior. Using these new prin-
+[35] T. Jim, “SD3: A trust management system with certified evaluation,” in             cipals and regular principal compounding, this extended logic
+     IEEE Symp. on Security & Privacy, 2001.                                            can, in a simple manner, express the speaks-for restrictions
+[36] B. W. Lampson, “Protection,” Operating Systems Review, vol. 8, no. 1,              imposed by macaroons’ caveats and their predicates. (In par-
+     1974.
+                                                                                        ticular, this logic is considerably simpler than the authorization
+[37] B. W. Lampson, M. Abadi, M. Burrows, and E. Wobber, “Authentication
+     in distributed systems: Theory and practice,” ACM Trans. on Computer               logic extended with new speaks-for primitives, previously used
+     Systems, vol. 10, no. 4, 1992.                                                     to express similarly-predicated authority in [34].)
+[38] C. Lesniewski-Laas, B. Ford, J. Strauss, R. Morris, and M. F. Kaashoek,
+     “Alpaca: Extensible authorization for distributed services,” in ACM                An Extended Authorization Logic for Macaroons: Here,
+     Computer and Communications Security (CCS)), 2007.                                 an extended authorization logic is defined for the purpose of
+[39] N. Li and C. Mitchell, “Understanding SPKI/SDSI using first-order                  formalizing the semantics of macaroons and the assertions
+     logic,” Intl. Journal of Inf. Security, vol. 5, no. 1, 2006.                       made by the principals relevant to a target-service request that
+[40] T. Lodderstedt, M. McGloin, and P. Hunt, “OAuth 2.0 Threat Model                   is authorized using macaroons.
+     and Security Considerations,” IETF RFC 6819 (Informational), 2013,
+     http://www.ietf.org/rfc/rfc6819.txt.                                                   First, the set PropCavs is assumed to contain all atomic
+[41] A. López-Alt, “Cryptographic security of macaroon authorization cre-              propositions relevant to target service requests, including re-
+     dentials,” New York University, Tech. Rep. TR2013-962, 2013, http:
+     //cs.nyu.edu/web/Research/TechReports/TR2013-962/TR2013-962.pdf.
+                                                                                        quest parameters, such as chunk and operation, and contex-
+[42] Mozilla, “BrowserID specification,” https://github.com/mozilla/id-specs/           tual attributes, such as time. Examples of such propositions
+     blob/prod/browserid/index.md.                                                      might be “chunk is in [100, 500]”, “action is read”, etc. These
+[43] National Institute of Standards and Technology, “FIPS PUB 198-                     propositions serve as the building blocks for the first-party
+     1: The keyed-hash message authentication code (HMAC),” 2008.                       caveat predicates that restrict macaroons’ authority.
+     [Online]. Available: http://csrc.nist.gov/publications/fips/fips198-1/FIPS-
+     198-1 final.pdf                                                                         The syntax, axioms and deduction rules for the autho-
+[44] B. C. Neuman, “Proxy-based authorization and accounting for distributed            rization logic are defined in Figure 11. Principals A, B, . . .
+     systems,” in Conf. on Distributed Computing Systems, 1993.                         can be atomic principals from P ∈ Prncs, keys k ∈ Keys,
+[45] A. Project, “Automated validation of Internet security protocols and               compound principals of the form A ∧ B, or special predicate
+     applications,” http://avispa-project.org/.
+                                                                                        or request principals (discussed later). Here, p ranges over the
+[46] D. D. Redell, “Naming and protection in extendable operating systems,”
+     Ph.D. dissertation, Massachusetts Institute of Technology, 1974.                   set of propositions in PropCavs, and X ranges over the set
+[47] E. S. Tuecke, “Internet X.509 public key infrastructure (PKI) proxy                of propositional variables. The says modality for principals is
+     certificate profile,” IETF RFC 3820 (Standards track), 2004. [Online].             standard from [37], with A says φ meaning that principal A
+     Available: http://www.ietf.org/rfc/rfc3820.txt                                     asserts φ. While ⊃ is used for logical implication, the statement
+[48] F. B. Schneider, “Untitled Textbook on Cybersecurity. Chapter 9:                   A ⇒ B expands to A speaks-for B, for principals A and B,
+     Credentials-based authorization,” 2013, http://www.cs.cornell.edu/fbs/             meaning that B also makes all assertions that A makes. A
+     publications/chptr.CredsBased.pdf.
+                                                                                        compound principal A ∧ B makes an assertion if, and only if,
+[49] E. Stark, M. Hamburg, and D. Boneh, “Stanford JavaScript crypto
+     library,” 2013, http://crypto.stanford.edu/sjcl/.                                  it is also made by both A and B. To establish that a request is
+[50] S.-T. Sun and K. Beznosov, “The Devil is in the (Implementation)                   authorized, a proposition valid is included, with A says valid
+     Details: An Empirical Analysis of OAuth SSO Systems,” in ACM                       meaning that principal A considers the request to be valid.
+     Computer and Communications Security (CCS)), 2012.
+[51] A. Tanenbaum, M. Kaashoek, R. van Renesse, and H. Bal, “The amoeba                     This logic is a normal modal logic that includes the
+     distributed operating system–a status report,” Computer communications,            [D ISTRIBUTION ] axiom, the [N ECESSISTION ] rule, the [M ODUS -P ONENS ]
+     vol. 14, no. 6, 1991.                                                              rule, and all standard axioms of propositional constructive
+[52] R. van Renesse, H. D. Johansen, N. Naigaonkar, and D. Johansen,                    logic, as used in [1]. Also included, as in [37], are the standard
+     “Secure abstraction with code capabilities,” in Intl. Conf. on Parallel,           [S PEAKS - FOR ] axiom, the [H ANDOFF ] axiom, and the expected ax-
+     Distributed, and Network-Based Processing, 2013.
+                                                                                        ioms for characteristics of principal conjunction. From these,
+[53] E. Wobber, M. Abadi, M. Burrows, and B. Lampson, “Authentication in
+     the Taos operating system,” ACM Trans. on Computer Systems, vol. 12,               the monotonicity of ∧ over ⇒ and the transitivity of ⇒, follow:
+     no. 1, 1994.                                                                                 ` (A ⇒ B) ⊃ (A ∧ C) ⇒ (B ∧ C),
+[54] M. Zalewski, The tangled Web: A guide to securing modern web                                 ` (A ⇒ B) ∧ (B ⇒ C) ⊃ (A ⇒ C).
+     applications. No Starch Press, 2011.
+[55] ZDNet: Between the Lines, “Dropbox adds Facebook sharing,” 2012,                   The logic also includes a special axiom [ PPRIN ] relating request
+     http://www.zdnet.com/facebook-gets-involved-with-cloud-storage-via-                and predicate principals, which is discussed next.
+     dropbox-integration-7000004861/.
+
+
+                                                                                   15
+Syntax:
+                                                                                      the macaroon signatures verify using this root key, and that
+  Compound principals A, B            ::=     P | k | A∧B | φb
+                                                                                      all embedded caveat predicates are satisfied. Before formally
+            Formulas ψ, φ             ::=     valid | true                            defining macaroon formulas, it’s worth giving some examples.
+                                              | p | X | ∀X.φ
+                                              | ψ∧φ | ψ∨φ | ψ ⊃φ                          Consider a macaroon M1 := macaroon@L hkId , [ ], k1 i that
+                                              | A says φ | A ⇒ B                      is minted from root key k0 without any caveats. This macaroon
+                                                                                      M1 represents a complete delegation from the key k0 to the
+Axioms:
+  All the axioms of propositional constructive logic          [P ROP ]
+                                                                                      empty caveat principal true,
+                                                                                                             d which considers all requests valid.
+                                                                                      Thus, M1 is modeled by the formula k0 says true d ⇒ k0 .
+  ` (A says (ψ ⊃ φ)) ⊃ (A says ψ ⊃ A says φ) [D ISTRIBUTION ]
+  ` (A says B ⇒ A) ⊃ B ⇒ A                               [H ANDOFF ]                     A macaroon M2 := macaroon@L hkId , [cav@> hφ, 0i], k2 i
+  `A∧A≡A                                                    [C ONJ 1]                 can be obtained by extending M1 with a first-party caveat
+  `A∧B ≡B∧A                                                 [C ONJ 2]                 whose predicate is φ, to represent a delegation from the root
+  ` (A ∧ B) ∧ C ≡ A ∧ (B ∧ C)                               [C ONJ 3]                 key k0 to the caveat principal b
+                                                                                                                     φ. This macaroon M2 is modeled
+  ` (A ∧ B says φ) ≡ (A says φ) ∧ (B says φ)                [C ONJ 4]                 by the formula k0 says φb ⇒ k0 .
+  ` A ⇒ B ≡ (A ∧ B = A)                              [S PEAKS - FOR ]                     Finally, the macaroon M2 can be extended with a third-
+  ` (TR says φ) ⊃ (φ  b says valid)                          [PP RIN ]                party caveat whose root key is cK, to obtain the macaroon
+Rules:            `ψ     `ψ⊃φ                                                         M3 := macaroon@L hkId , [cav@> hφ, 0i, cav@l hcId, vIdi], k3 i.
+                                            [M ODUS -P ONENS ]
+                         `φ                                                           This macaroon M3 represents a delegation from the root key
+                         `φ                                                           k0 to the conjunction of the cK and φb principals—i.e., that
+                                            [N ECESSITATION ]
+                      ` A says φ                                                      k0 says that a request is valid only if both cK and φb say so.
+                                                                                      Thus, M3 is modeled by the formula k0 says cK ∧ φb ⇒ k0 .
+Fig. 11. The syntax, axioms and rules for an authorization logic suitable for         The formula for an arbitrary macaroon M can now be defined.
+macaroons. Here, TR and φb are request and predicate principals, respectively,
+P ∈ Prncs, k ∈ Keys, and X is a variable in a proposition p ∈ PropCavs.                   Definition 1 (Macaroon formulas): A macaroon M whose
+                                                                                      root key is k0 , embedding first-party caveats whose predicates
+Request principals and predicate principals: A request                                are φ1 , . . . , φm , and embedding third-party caveats whose root
+principal TR is a special principal that makes the strongest                          keys are cK1 , . . . , cKn , is modeled using the formula
+possible assertion—using propositions from PropCavs—that                                                c1 ∧. . .∧ φc
+                                                                                      α(M ) := k0 says (φ           m ∧ cK1 ∧. . .∧ cKn ) ⇒ k0 .
+a target service can see to be true for the context of a request.
+Such principals are completely controlled by the target service.                      For a set M, the formulas are α(M) := {α(M ) | M ∈ M}.
+For example,
+                 “chunk is 250” ∧ “operation is read”                                 Macaroon verification: To verify that a request is authorized
+     TR says                                                                          by a macaroon M , the target service must verify—using a
+                   ∧ “IP is 172.12.34.4”
+                                                                                      root key k0 for M , known only to the target service—the
+indicates that the target service is seeing a request to read                         set M of macaroons presented with the request, including
+chunk 250 being made from the IP address 172.12.3.44.                                 M and all third-party discharges, and establish that all their
+                                                                                      embedded first-party caveats are satisfied. The verification of a
+    A predicate principal φb is a special principal introduced                        first-party caveat with a predicate φ is modeled by having the
+to model the effect of a first-party caveat with predicate φ.                         request principal TR assert the strongest possible formula ψreq
+Informally, the principal φb says that a request is valid, and the                    about the request context, and, if ψreq ⊃ φ, apply the derived
+caveat is satisfied, if the request principal TR asserts φ. This
+                                                                                      rule [FC AV D ISCHARGE ] to show that the principal φb considers the
+characteristic is formalized by the axiom [PP RIN ].
+                                                                                      request to be valid. In general, a request accompanied by such
+   By combining the axiom [PP RIN ], the [D ISTRIBUTION ] axiom                       a macaroon set M is authorized if the formulas α(M) together
+and the [N ECESSITATION ] rule, the following rule can be derived:                    with the formula TR says ψreq imply that k0 says valid for
+                                                                                      the root key k0 . Recursively, this requires that M contain
+           ` ψ ⊃ φ ` TR says ψ                                                        discharge macaroons for any third-party caveats involved, and
+                                                 [FC AV D ISCHARGE ].
+               ` φb says valid                                                        that TR says ψreq allows cK says valid to be established for
+This rule means that if TR asserts a predicate for a request,                         the root key cK of each of those discharge macaroons.
+and this predicate logically implies a weaker predicate in a                             Definition 2 (Macaroon verification): A set of macaroons
+first-party caveat, then that caveat is satisfied for this request.                   M, whose distinguished authorizing macaroon M has the root
+                                                                                      key k0 , authorizes a request whose target-service context is
+Macaroon formulas: In this logic, macaroons are defined by                            described by the propositional assertion ψreq , if, and only if
+formulas that describe restricted speaks-for delegations from                                                   ^
+the target service to certain caveat principals (corresponding                           ` (TR says ψreq ∧          α(M )) ⊃ (k0 says valid).
+to embedded first-party caveats), and certain keys (correspond-                                                  M ∈M
+ing to the root keys of embedded third-party caveats). A
+request made using macaroon credentials is authorized if it                              In addition to being a basis for the formal analysis of
+can be proven—from the macaroon’s formulas, and the request                           macaroon-based protocols, the above definition makes it clear
+principal TR’s assertion about the request context—that the                           how macaroons only grant authority for a target-service re-
+root key of the macaroon says valid, which implies that                               quest, as long as all caveats have been discharged in its context.
+
+                                                                                 16
+

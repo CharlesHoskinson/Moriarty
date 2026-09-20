@@ -1,0 +1,222 @@
+Swaps
+Copy page
+Swaps
+Anoma Pay can swap one shielded token for another in a single atomic transaction. The user’s token A leaves the shielded pool, is traded on a public venue, and the proceeds re-enter the shielded pool as token B in one on-chain execution. If any step fails, the whole transaction reverts and the user keeps their original balance.
+private resource (token A) → [unwrap → swap on venue → wrap] → private resource (token B)
+Swaps are currently filled through
+Bebop
+, an RFQ (request-for-quote) venue where professional market makers quote a firm price. The quote’s minimum buy amount is exactly what the user receives. Additional on-chain routing sources are planned, which will extend swaps to a wider set of tokens and venues.
+How a swap executes
+A swap transaction is composed of three balanced resource legs:
+Leg
+What happens
+Token A unwrap
+The sell amount is unwrapped from the user’s shielded balance to the
+GenericCallForwarder
+contract.
+Generic call
+The
+GenericCallForwarder
+executes three pre-committed EVM calls: approve the venue, execute the swap, and approve
+Permit2
+for the buy amount.
+Token B wrap
+The guaranteed buy amount is pulled from the forwarder via Permit2 and wrapped into a new private resource for the user.
+All three legs are proven and executed atomically. The forwarder holds funds only transiently, inside the transaction, meaning that it has no custody of user funds before or after. See
+Generic Calls
+for how this mechanism works at the protocol level.
+The venue leg of a swap is public. The forwarder’s trade on the venue is visible on-chain, including tokens and amounts. What stays private is who swapped. The trade cannot be linked to a specific Anoma Pay user and both the source and destination balances remain shielded.
+The quote lifecycle
+Bebop quotes are firm but short-lived. Because the swap’s out-amount is signed into the action tree before proving starts, the quote must remain valid through the entire proving window. The backend enforces this twice:
+At validation
+: the quote must have enough lifetime left to cover proof generation (a configurable safety margin). Too-old quotes are rejected before any proving cost is incurred.
+Before broadcast
+: a quote that expired while proofs were being generated aborts the submission rather than reverting on-chain.
+Both rejections surface the stable error code
+SWAP_QUOTE_EXPIRED
+. On this error, fetch a fresh quote, rebuild, and resubmit.
+Building a swap
+Fetch a quote
+Quotes are fetched through the backend proxy. The taker and receiver of the quote is the chain’s
+GenericCallForwarder
+, not the user’s wallet:
+import
+{ TransferBackendClient }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+backend
+=
+new
+TransferBackendClient
+(
+"https://backend.anoma.money"
+);
+const
+quote
+=
+await
+backend.
+swapQuote
+(chain.network, {
+sellTokenAddress: tokenA.address,
+buyTokenAddress: tokenB.address,
+sellAmount:
+10_000_000
+n
+,
+// 10 USDC (6 decimals)
+genericForwarderAddress: chain.genericCallForwarderAddress,
+});
+// quote.buyAmount      — expected amount of token B
+// quote.minBuyAmount   — guaranteed minimum (what the swap actually fills at)
+// quote.expiry         — Unix timestamp; the quote is executable until then
+// quote.approvalTarget — contract the sell token must be approved to
+// quote.tx             — { to, value, data }: the venue transaction to execute
+Both tokens must be supported, wrappable registry tokens on the same chain. Only ERC-20 ↔ ERC-20 pairs are supported, native ETH cannot be a swap leg. Tokens eligible for swapping are tagged with
+swapProviders
+in the network configuration.
+Refetch the quote whenever it expires as a stale quote will be rejected at submission.
+Build the forwarder calls
+buildSwapCalls
+produces the three EVM calls the
+GenericCallForwarder
+will execute. They are committed into the signed action tree, so nothing about the execution can change after signing:
+import
+{ buildSwapCalls }
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+calls
+=
+buildSwapCalls
+({
+tokenA: tokenA.address,
+tokenB: tokenB.address,
+sellAmount:
+10_000_000
+n
+,
+minBuyAmount:
+BigInt
+(quote.minBuyAmount),
+txData: quote.tx.data,
+// opaque venue calldata
+destinationAddress: quote.tx.to,
+// venue settlement contract
+txAmount:
+BigInt
+(quote.tx.value),
+approvalTarget: quote.approvalTarget,
+});
+// calls[0] — tokenA.approve(approvalTarget, sellAmount)
+// calls[1] — the venue swap transaction
+// calls[2] — tokenB.approve(Permit2, minBuyAmount)
+Resolve the swap resources
+SwapResolver
+assembles all three legs into a
+ResolvedParameters
+, reusing the standard resource selection for the token A side:
+import
+{
+TransferBuilder,
+SwapResolver,
+PayloadBuilder,
+}
+from
+"@anomaorg/anoma-app-sdk"
+;
+const
+transferBuilder
+=
+await
+TransferBuilder.
+init
+(
+chain.transferLogicVerifyingKey,
+chain.trivialLogicVerifyingKey
+);
+const
+resolver
+=
+new
+SwapResolver
+(transferBuilder, keyring, chain);
+const
+resolved
+=
+resolver.
+resolve
+({
+senderResources: resources,
+// the user's token A resources
+tokenA,
+tokenB,
+swapAmount:
+10_000_000
+n
+,
+// excludes the fee
+minBuyAmount:
+BigInt
+(quote.minBuyAmount),
+calls,
+fee,
+// Relayer fee, paid in token A
+});
+Sign and submit
+const
+parameters
+=
+new
+PayloadBuilder
+(resolved)
+.
+withAuthorization
+(keyring.authorityKeyPair.privateKey)
+.
+build
+();
+const
+{
+transaction_hash
+:
+txId
+}
+=
+await
+backend.
+transfer
+(parameters);
+After submission the transaction follows the same lifecycle as a transfer, see
+Transaction lifecycle
+.
+Slippage settings
+By default (“auto”), the committed minimum is the quote’s own
+minBuyAmount
+(the market maker’s firm price). A custom slippage tolerance recomputes the committed minimum as
+buyAmount × (1 − slippage)
+instead.
+With a firm RFQ quote, setting a custom slippage below the quoted minimum only lowers your guaranteed amount, it cannot improve the fill. “Auto” is the right choice for RFQ swaps.
+Errors
+Error
+Meaning
+Handling
+SWAP_QUOTE_EXPIRED
+The quote’s remaining lifetime cannot cover proving, or it expired before broadcast
+Fetch a fresh quote and resubmit
+InsufficientLiquidity
+The venue cannot fill the requested size for this pair
+Change the amount or try later
+Insufficient resources
+The user’s token A balance cannot cover
+swapAmount + fee
+Change the swap amount
+What’s next
+RFQ is the first swap venue, chosen because firm, longer-lived quotes fit naturally with proving-time constraints. Support for on-chain routing sources (DEX aggregation) is in the works, the execution model described above already accommodates them, and the SDK surface is venue-agnostic. Quotes arrive in the same shape regardless of where they are filled.
+Last updated on
+April 2, 2026
+Transfers
+Earn

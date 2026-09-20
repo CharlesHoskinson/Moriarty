@@ -1,0 +1,160 @@
+On this page
+DA.Action.State
+Data Types
+data State s a
+Functions
+evalState
+execState
+Orphan Typeclass Instances
+Daml Standard Library
+Modules
+DA.Action.State
+Copy page
+Copy page
+Reference documentation for Daml module DA.Action.State.
+Copy page
+Copy page
+Daml module
+​
+DA.Action.State
+DA.Action.State
+Daml
+​
+Data Types
+​
+data State s a
+A value of type `State s a` represents a computation that has access to a state variable
+of type `s` and produces a value of type `a`.
+>>> runState (modify (+1)) 0
+((), 1)
+>>> evalState (modify (+1)) 0
+()
+>>> execState (modify (+1)) 0
+1
+>>> runState (do x <- get; modify (+1); pure x) 0
+(0, 1)
+>>> runState (put 1) 0
+((), 1)
+>>> runState (modify (+1)) 0
+((), 1)
+Note that values of type `State s a` are not serializable.
+Constructors:
+State
+​
+runState
+s -> (a, s)
+Instances:
+instance
+ActionState
+s
+(
+State
+s
+)
+instance
+Action
+(
+State
+s
+)
+instance
+Applicative
+(
+State
+s
+)
+instance
+GetField
+runState
+(
+State
+s
+a
+) (
+s
+-> (
+a
+,
+s
+))
+instance
+SetField
+runState
+(
+State
+s
+a
+) (
+s
+-> (
+a
+,
+s
+))
+instance
+Functor
+(
+State
+s
+)
+​
+Functions
+​
+evalState
+evalState
+:
+State
+s
+a
+->
+s
+->
+a
+Special case of
+runState
+that does not return the final state.
+​
+execState
+execState
+:
+State
+s
+a
+->
+s
+->
+s
+Special case of
+runState
+that does only retun the final state.
+​
+Orphan Typeclass Instances
+instance
+Functor
+(
+State
+s
+)
+instance
+Applicative
+(
+State
+s
+)
+instance
+Action
+(
+State
+s
+)
+instance
+ActionState
+s
+(
+State
+s
+)
+Suggest edits
+Raise issue
+DA.Action
+DA.Action.State.Class

@@ -1,0 +1,642 @@
+On this page
+Prerequisites
+Pay-to address
+1. Install the SDKs
+2. Price a route
+3. Start the server and confirm x402 is set up
+4. Test the payment
+5. Move to production
+Runnable examples
+What to read next
+Seller
+Quickstart: charge for an endpoint
+Copy page
+Copy page
+Copy page
+Copy page
+This guide takes you from an unprotected HTTP route to an x402-gated endpoint with one successful payment.
+Selling products to people and agents?
+The
+Business Checkouts API
+creates one
+checkout with a hosted payment URL for people and an
+x402_url
+for agents. Use it to support
+both payment flows without running your own x402 server or facilitator. See
+Accept agentic payments with x402
+.
+Charging for an MCP tool instead?
+Follow
+Charge over MCP
+. This
+quickstart covers HTTP routes.
+Using a coding agent?
+Install the matching skill and your agent runs this guide in your own
+project:
+npx
+skills
+add
+coinbase/cdp-sdk
+--skill
+build-x402-server
+​
+Prerequisites
+A
+CDP API key
+. The API key authenticates
+your server to the
+CDP Facilitator
+for verify and settle. It
+does
+not
+decide where funds land.
+A
+payTo
+address that can receive the asset on each network you advertise. The
+CDP Facilitator
+settles on multiple EVM networks and on
+Solana: one EVM address covers every EVM network you list; Solana needs a separate
+Solana address. Examples in this guide use a single EVM address on Base Sepolia. See
+Pay-to address
+.
+Node.js 22 or later.
+Set the facilitator credentials and your receiving address before running anything:
+export
+CDP_API_KEY_ID
+=
+"your-api-key-id"
+export
+CDP_API_KEY_SECRET
+=
+"your-api-key-secret"
+export
+X402_PAY_TO
+=
+"0xYourReceivingAddress"
+If you have no receiving address, create one following the
+alternate path
+.
+​
+Pay-to address
+Set
+X402_PAY_TO
+to an onchain address that can receive the asset. Use one you
+already control: a
+CDP custodial wallet
+, a
+CDP non-custodial wallet
+,
+Coinbase Prime
+,
+Coinbase Business
+, a Coinbase retail
+deposit address, or a wallet you custody. This guide uses Base Sepolia; switch to
+a mainnet address in production. See
+Configure who receives payment
+.
+​
+1. Install the SDKs
+The CDP SDK authenticates the facilitator. The x402 packages handle the protocol and the
+framework middleware.
+TypeScript
+Python
+npm
+install
+express
+@coinbase/cdp-sdk
+@x402/core
+@x402/evm
+@x402/svm
+@x402/extensions
+@x402/express
+This guide uses Express. For Hono and Next.js, see
+Runnable examples
+.
+Python 3.10 or later is required.
+pip
+install
+"cdp-sdk"
+"x402[evm,svm,fastapi]"
+uvicorn
+This guide uses FastAPI. For Flask, see
+Runnable examples
+.
+​
+2. Price a route
+The following servers charge $0.01 for
+GET /report
+and settle to
+X402_PAY_TO
+.
+TypeScript
+Python
+createX402Server
+connects to the CDP Facilitator, registers payment schemes, and
+returns a server object that any x402 framework adapter accepts.
+payToConfig
+with
+type: "address"
+sends funds to the address you provide.
+// server.ts
+import
+{
+createX402Server
+}
+from
+"@coinbase/cdp-sdk/x402"
+;
+import
+{
+paymentMiddlewareFromHTTPServer
+}
+from
+"@x402/express"
+;
+import
+express
+from
+"express"
+;
+const
+app
+=
+express
+();
+const
+payTo
+=
+process
+.
+env
+.
+X402_PAY_TO
+as
+`0x
+${
+string
+}
+`
+;
+if
+(
+!
+payTo
+) {
+throw
+new
+Error
+(
+"Set X402_PAY_TO to the address that should receive payments"
+);
+}
+const
+server
+=
+await
+createX402Server
+({
+environment:
+"development"
+,
+// uses testnets and test funds
+payToConfig:
+{
+type:
+"address"
+,
+evm:
+payTo
+,
+// reuse on any additional EVM networks the facilitator supports
+},
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+,
+networks:
+[
+"eip155:84532"
+],
+// Base Sepolia; add other eip155: IDs or a solana: network
+description:
+"Generate a concise research report"
+,
+},
+},
+});
+app
+.
+use
+(
+paymentMiddlewareFromHTTPServer
+(
+server
+));
+app
+.
+get
+(
+"/report"
+, (
+_req
+,
+res
+)
+=>
+res
+.
+json
+({
+report:
+"..."
+}));
+app
+.
+listen
+(
+8402
+, ()
+=>
+console
+.
+log
+(
+`Receiving payments at
+${
+server
+.
+payToEvmAddress
+}
+`
+),
+);
+Every route you add to
+routes
+is protected; everything else stays free. To accept Solana
+as well, pass
+solana
+on
+payToConfig
+(a Solana address, not the EVM one) and include a
+solana:
+network on the route. See
+supported networks
+.
+Python has no
+createX402Server
+, so you assemble the same pieces: an address to
+receive payments, and the x402 Foundation middleware pointed at the CDP Facilitator
+with
+create_facilitator_config
+.
+# server.py
+import
+os
+from
+cdp.x402
+import
+create_facilitator_config
+from
+fastapi
+import
+FastAPI
+from
+x402.http
+import
+HTTPFacilitatorClient, PaymentOption
+from
+x402.http.middleware.fastapi
+import
+PaymentMiddlewareASGI
+from
+x402.http.types
+import
+RouteConfig
+from
+x402.mechanisms.evm.exact
+import
+ExactEvmServerScheme
+from
+x402.server
+import
+x402ResourceServer
+NETWORK
+=
+"eip155:84532"
+# Base Sepolia
+PAY_TO
+=
+os.environ[
+"X402_PAY_TO"
+]
+# create_facilitator_config() reads your CDP API key and authenticates verify
+# and settle against the CDP Facilitator. It does not create a receiving wallet.
+server
+=
+x402ResourceServer(HTTPFacilitatorClient(create_facilitator_config()))
+server.register(
+NETWORK
+, ExactEvmServerScheme())
+routes
+=
+{
+"GET /report"
+: RouteConfig(
+accepts
+=
+[
+PaymentOption(
+scheme
+=
+"exact"
+,
+pay_to
+=
+PAY_TO
+,
+price
+=
+"$0.01"
+,
+network
+=
+NETWORK
+)
+],
+mime_type
+=
+"application/json"
+,
+description
+=
+"AI-generated report"
+,
+),
+}
+app
+=
+FastAPI()
+app.add_middleware(PaymentMiddlewareASGI,
+routes
+=
+routes,
+server
+=
+server)
+@app.get
+(
+"/report"
+)
+async
+def
+get_report
+() ->
+dict
+:
+return
+{
+"report"
+:
+"..."
+}
+if
+__name__
+==
+"__main__"
+:
+import
+uvicorn
+print
+(
+f
+"Receiving payments at
+{
+PAY_TO
+}
+"
+)
+uvicorn.run(app,
+port
+=
+8402
+)
+Every route you list in
+routes
+is protected; everything else stays free.
+Alternative: let CDP provision an API Key Wallet
+If you do
+not
+already have a receiving address, CDP can create one. This replaces
+the address path above rather than adding to it: the SDK provisions an
+API Key Wallet
+— the API key variant of CDP
+non-custodial wallets — and that wallet’s address becomes your
+payTo
+. It is not
+required to sell over x402.
+Instead of exporting
+X402_PAY_TO
+, add a
+wallet secret
+:
+export
+CDP_API_KEY_ID
+=
+"your-api-key-id"
+export
+CDP_API_KEY_SECRET
+=
+"your-api-key-secret"
+export
+CDP_WALLET_SECRET
+=
+"your-wallet-secret"
+TypeScript
+Python
+In
+server.ts
+, delete the
+payTo
+lookup and its
+throw
+, and drop
+payToConfig
+so
+createX402Server
+provisions the wallet:
+const
+server
+=
+await
+createX402Server
+({
+environment:
+"development"
+,
+routes:
+{
+"GET /report"
+:
+{
+price:
+"$0.01"
+,
+networks:
+[
+"eip155:84532"
+],
+description:
+"Generate a concise research report"
+,
+},
+},
+});
+The rest of the file is unchanged;
+server.payToEvmAddress
+reports the
+provisioned address.
+In
+server.py
+, replace
+PAY_TO = os.environ["X402_PAY_TO"]
+(and the now-unused
+import os
+) with a lookup that resolves the account before
+routes
+is built:
+import
+asyncio
+from
+cdp
+import
+CdpClient
+async
+def
+resolve_pay_to
+() ->
+str
+:
+"""Provision (or reuse) the API Key Wallet that receives payments."""
+async
+with
+CdpClient()
+as
+cdp:
+account
+=
+await
+cdp.evm.get_or_create_account(
+name
+=
+"x402-receiver-wallet-1"
+)
+return
+account.address
+PAY_TO
+=
+asyncio.run(resolve_pay_to())
+Keep this above the
+routes
+definition, since each
+PaymentOption
+reads
+PAY_TO
+.
+​
+3. Start the server and confirm x402 is set up
+In a new terminal, start the server:
+TypeScript
+Python
+npx
+tsx
+server.ts
+python
+server.py
+From a second terminal, request the route without paying:
+curl
+-i
+http://localhost:8402/report
+HTTP/1.1 402 Payment Required
+Content-Type: application/json; charset=utf-8
+PAYMENT-REQUIRED: eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwi...
+{}
+The
+402 Payment Required
+response confirms that the route is protected.
+​
+4. Test the payment
+Choose either testing path:
+Ask your agent to use the
+Pay for Service skill
+with
+http://localhost:8402/report
+.
+Build a basic client with the
+buyer quickstart
+, then point its
+request at
+http://localhost:8402/report
+.
+Both paths fund a buyer wallet and make the paid request. A successful call returns
+HTTP 200
+.
+​
+5. Move to production
+After the test payment succeeds, switch the route to a mainnet before accepting real payments:
+TypeScript
+Python
+- environment: "development",
++ environment: "production",
+Routes without an explicit
+networks
+list switch from Base Sepolia and Solana Devnet to Base
+and Solana mainnets.
+- NETWORK = "eip155:84532"  # Base Sepolia
++ NETWORK = "eip155:8453"   # Base
+Confirm that each
+payTo
+address can receive funds on its mainnet — for example your
+Coinbase Business, Prime, or entity deposit address, not a testnet wallet. Dollar prices
+such as
+"$0.01"
+automatically use the network’s default USDC asset. If you specify a
+token address and amount directly, replace any testnet asset address with its mainnet
+equivalent and verify its decimals.
+See
+Production configuration
+for custom networks, assets,
+receiving destinations, and payment schemes.
+​
+Runnable examples
+Complete versions of the server cover more frameworks:
+TypeScript
+Python
+Express
+Hono
+Next.js
+FastAPI
+Flask
+​
+What to read next
+Your endpoint is priced and paid. The next step is making it
+discoverable
+.
+What settled your payment?
+CDP Facilitator
+covers
+the supported networks, schemes, and pricing.
+Need production networks, another scheme, or a different receiving destination?
+See
+Production configuration
+.
+Was this page helpful?
+Yes
+No
+How x402 works
+Previous
+Get discovered (Bazaar)
+Next

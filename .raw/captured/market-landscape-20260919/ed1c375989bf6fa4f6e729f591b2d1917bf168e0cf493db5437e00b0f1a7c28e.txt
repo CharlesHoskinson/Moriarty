@@ -1,0 +1,329 @@
+On this page
+Overview
+When to Use What
+Minimal Endpoint Set
+1. Get a Quote
+2. Check Transfer Status
+3. List Supported Chains
+4. List Supported Tokens
+5. List Available Tools
+Decision Rules
+Choosing Between Quote and Routes
+Handling Status Responses
+Error Handling
+Rate Limits
+Common Chain IDs
+Common Token Addresses
+Next Steps
+Getting Started
+Agent Integration
+Copy page
+Copy page
+The starting point for AI agents integrating LI.FI cross-chain functionality
+Copy page
+Copy page
+​
+Overview
+LI.FI provides cross-chain swaps and bridging across 58 blockchains (EVM, Solana, Bitcoin, SUI), aggregating 27 bridges and 31 exchanges. This page is the entry point for AI agents that need to execute token transfers, check transaction status, or query supported chains and tokens. Whether you work directly with the REST API or connect through the
+LI.FI MCP Server
+, you get access to the same powerful routing engine.
+Machine-readable resources:
+llms.txt
+- Structured overview for LLM consumption
+OpenAPI Spec
+- Full API specification
+AI Plugin
+- Standard discovery format
+​
+When to Use What
+Use Case
+Recommended
+Why
+Execute transfers from backend
+API
+Direct HTTP calls, full control
+Build frontend with swaps
+SDK
+Handles wallets, signing, execution
+Embed ready-made UI
+Widget
+Zero-code, instant deployment
+AI agent in an MCP-compatible host
+MCP Server
+Zero-config tool discovery, structured inputs/outputs
+AI agent preferring token efficiency
+CLI
+Compact text output, lower token usage than raw JSON
+AI agent integration (general)
+API
+Simple HTTP, no dependencies
+For AI agents running inside MCP-compatible hosts like Claude, Cursor, or Windsurf, the
+LI.FI MCP Server
+is the most streamlined option — it exposes every core endpoint as a discoverable tool with typed parameters so the agent never has to construct raw HTTP requests. Agents that prefer lower token usage can use the
+LI.FI CLI
+instead — its human-readable output is more compact than raw API JSON, reducing context window consumption while still providing full access to quotes, routes, and status tracking. For all other agents, the
+REST API
+is recommended since it requires only HTTP calls without additional dependencies.
+LI.FI capabilities are also published as pre-built
+agent skills
+on
+ClawHub
+,
+skills.sh
+, and
+Playbooks
+, so you can add cross-chain execution to your agent as a native capability without writing integration code.
+​
+Minimal Endpoint Set
+These 5 endpoints cover most agent use cases:
+​
+1. Get a Quote
+Returns a ready-to-execute transaction for transferring tokens.
+GET
+https://li.quest/v1/quote?fromChain=
+1
+&
+toChain
+=
+42161
+&
+fromToken
+=
+USDC
+&
+toToken
+=
+USDC
+&
+fromAmount
+=
+1000000
+&
+fromAddress
+=
+0x...
+Required parameters:
+fromChain
+- Source chain ID (e.g.,
+1
+for Ethereum)
+toChain
+- Destination chain ID (e.g.,
+42161
+for Arbitrum)
+fromToken
+- Token symbol or address
+toToken
+- Token symbol or address
+fromAmount
+- Amount in smallest unit (wei)
+fromAddress
+- Sender wallet address
+Returns:
+Quote object with
+transactionRequest
+ready for signing.
+Full Quote Documentation
+See all parameters and response schema
+​
+2. Check Transfer Status
+Poll this endpoint to track cross-chain transfer progress.
+GET
+https://li.quest/v1/status?txHash=0x...
+Required parameters:
+txHash
+- Transaction hash from the source chain
+Optional parameters (recommended for faster response):
+fromChain
+- Source chain ID
+toChain
+- Destination chain ID
+bridge
+- Bridge name from the quote (e.g.,
+stargateV2
+)
+Returns:
+Status object with
+status
+field:
+NOT_FOUND
+,
+PENDING
+,
+DONE
+, or
+FAILED
+.
+Full Status Documentation
+See all status values and substatus details
+​
+3. List Supported Chains
+Get all chains LI.FI supports.
+GET
+https://li.quest/v1/chains
+Optional parameters:
+chainTypes
+- Filter by type:
+EVM
+,
+SVM
+,
+UTXO
+,
+MVM
+Returns:
+Array of chain objects with
+id
+,
+key
+,
+name
+,
+chainType
+.
+​
+4. List Supported Tokens
+Get tokens available for a specific chain.
+GET
+https://li.quest/v1/tokens?chains=1,42161
+Required parameters:
+chains
+- Comma-separated chain IDs
+Returns:
+Map of chain IDs to token arrays with
+address
+,
+symbol
+,
+decimals
+.
+​
+5. List Available Tools
+Get bridges and DEXs available for routing.
+GET
+https://li.quest/v1/tools
+Returns:
+Object with
+bridges
+and
+exchanges
+arrays, each containing
+key
+,
+name
+, and
+supportedChains
+.
+​
+Decision Rules
+​
+Choosing Between Quote and Routes
+Use
+/quote
+for simple transfers - returns single best route with transaction data
+Use
+/advanced/routes
+when you need multiple options or complex multi-step transfers
+​
+Handling Status Responses
+Status: PENDING
+├── Keep polling every 10-30 seconds
+└── Check substatus for detailed progress
+Status: DONE
+├── substatus: COMPLETED → Transfer successful
+├── substatus: PARTIAL → User received different token (still success)
+└── substatus: REFUNDED → Tokens returned to sender
+Status: FAILED
+└── Check error message, may need user intervention
+​
+Error Handling
+Rate limited (429):
+Back off and retry with exponential delay
+No route found:
+Try different token pairs or reduce amount
+Insufficient balance:
+Verify user has enough tokens + gas
+Slippage exceeded:
+Increase
+slippage
+parameter (default: 0.005)
+​
+Rate Limits
+Tier
+Limit
+Without API key
+200 requests / 2 hours
+With API key
+200 requests / minute
+Agents that poll status or execute high-frequency workflows should
+request an API key
+to avoid throttling.
+​
+Common Chain IDs
+Chain
+ID
+Key
+Ethereum
+1
+eth
+Arbitrum
+42161
+arb
+Optimism
+10
+opt
+Base
+8453
+bas
+Polygon
+137
+pol
+BSC
+56
+bsc
+Avalanche
+43114
+ava
+Solana
+1151111081099710
+sol
+​
+Common Token Addresses
+Token
+Ethereum
+Arbitrum
+Base
+USDC
+0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+USDT
+0xdAC17F958D2ee523a2206206994597C13D831ec7
+0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9
+-
+WETH
+0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+0x82aF49447D8a07e3bd95BD0d56f35241523fBab1
+0x4200000000000000000000000000000000000006
+Use token symbols (
+USDC
+,
+ETH
+) for convenience - the API resolves them to addresses automatically.
+​
+Next Steps
+MCP Server
+Connect AI tools directly to LI.FI with zero-config tool discovery
+CLI
+Token-efficient alternative to MCP — compact output, lower context usage
+Concepts & Objects
+Understand Quote, Route, Step, Status, and other core objects
+API Reference
+Complete API documentation with all endpoints
+Error Codes
+Handle errors gracefully
+Status Tracking
+Detailed guide on monitoring transfers
+LI.FI's API for Agentic Commerce
+Read the full vision behind LI.FI’s agent infrastructure
+Concepts and Objects

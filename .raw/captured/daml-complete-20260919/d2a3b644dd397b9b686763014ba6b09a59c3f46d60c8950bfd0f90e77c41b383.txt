@@ -1,0 +1,142 @@
+On this page
+0.8.0
+Release Notes
+Wallet SDK
+0.8.0
+Copy page
+Copy page
+Wallet SDK 0.8.0 release notes.
+Copy page
+Copy page
+​
+0.8.0
+Release on September 24th, 2025
+Important!: The flow has been simplified for prepare and execute of commands, however this means code needs to be converted
+// previous prepare and submit flow
+const
+[
+tapCommand
+,
+disclosedContracts
+]
+=
+await
+sdk.tokenStandard
+!
+.
+createTap
+(
+sender
+!
+.partyId,
+'2000000'
+,
+{
+instrumentId:
+'Amulet'
+,
+instrumentAdmin: instrumentAdminPartyId,
+}
+)
+await
+sdk.userLedger?.
+prepareSignAndExecuteTransaction
+(
+[{ ExerciseCommand: tapCommand }],
+keyPairSender.privateKey,
+v4
+(),
+disclosedContracts
+)
+in the new flow it is no longer needed to perform the array wrapping
+[{ ExerciseCommand: tapCommand }]
+and you can instead pass the
+tapCommand
+directly
+// new prepare and submit flow
+const
+[
+tapCommand
+,
+disclosedContracts
+]
+=
+await
+sdk.tokenStandard
+!
+.
+createTap
+(
+sender
+!
+.partyId,
+'2000000'
+,
+{
+instrumentId:
+'Amulet'
+,
+instrumentAdmin: instrumentAdminPartyId,
+}
+)
+await
+sdk.userLedger?.
+prepareSignAndExecuteTransaction
+(
+tapCommand,
+keyPairSender.privateKey,
+v4
+(),
+disclosedContracts
+)
+this goes for all transaction!
+Support Withdrawal flow for 2-step transfer
+it is now possible for sender to withdraw a 2-step transfer that have previously been send
+// Alice withdraws the transfer
+const
+[
+withdrawTransferCommand
+,
+disclosedContracts
+]
+=
+await
+sdk.tokenStandard
+!
+.
+exerciseTransferInstructionChoice
+(
+transferCid
+!
+,
+'Withdraw'
+)
+note: this does not work if the receiver have already perform
+Accept
+or
+Reject
+Allow validating if receiver have set up transfer pre-approval before performing a transaction
+//check if bob have set up transfer pre approval before sending
+const
+transferPreApprovalStatus
+=
+await
+sdk.tokenStandard?.
+getTransferPreApprovalByParty
+(
+receiver
+!
+.partyId,
+'Amulet'
+)
+logger.
+info
+(transferPreApprovalStatus,
+'[BOB] transfer preapproval status'
+)
+Tested and verified against Splice 0.4.17
+Fix endless loop bug when onboarding a party
+Suggest edits
+Raise issue
+0.9.0
+0.7.0

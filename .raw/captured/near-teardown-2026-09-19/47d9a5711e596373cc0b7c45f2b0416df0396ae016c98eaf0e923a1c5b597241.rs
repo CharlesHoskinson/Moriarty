@@ -1,0 +1,185 @@
+pub mod account;
+pub mod auth;
+pub mod token_diff;
+pub mod tokens;
+
+#[cfg(feature = "imt")]
+pub mod imt;
+
+use derive_more::derive::From;
+use serde::{Deserialize, Serialize};
+use serde_with::{base58::Base58, serde_as};
+
+#[cfg(feature = "imt")]
+use crate::intents::imt::{ImtBurn, ImtMint};
+
+use crate::{
+    AccountIdRef, Result,
+    engine::{Engine, Inspector, State},
+    intents::{account::SetAuthByPredecessorId, auth::AuthCall},
+};
+
+use self::{
+    account::{AddPublicKey, RemovePublicKey},
+    token_diff::TokenDiff,
+    tokens::{FtWithdraw, MtWithdraw, NativeWithdraw, NftWithdraw, StorageDeposit, Transfer},
+};
+
+#[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DefuseIntents {
+    /// Sequence of intents to execute in given order. Empty list is also
+    /// a valid sequence, i.e. it doesn't do anything, but still invalidates
+    /// the `nonce` for the signer
+    /// WARNING: Promises created by different intents are executed concurrently and does not rely on the order of the intents in this structure
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub intents: Vec<Intent>,
+}
+
+#[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize, From)]
+#[serde(tag = "intent", rename_all = "snake_case")]
+pub enum Intent {
+    /// See [`AddPublicKey`]
+    AddPublicKey(AddPublicKey),
+
+    /// See [`RemovePublicKey`]
+    RemovePublicKey(RemovePublicKey),
+
+    /// See [`Transfer`]
+    Transfer(Transfer),
+
+    /// See [`FtWithdraw`]
+    FtWithdraw(FtWithdraw),
+
+    /// See [`NftWithdraw`]
+    NftWithdraw(NftWithdraw),
+
+    /// See [`MtWithdraw`]
+    MtWithdraw(MtWithdraw),
+
+    /// See [`NativeWithdraw`]
+    NativeWithdraw(NativeWithdraw),
+
+    /// See [`StorageDeposit`]
+    StorageDeposit(StorageDeposit),
+
+    /// See [`TokenDiff`]
+    TokenDiff(TokenDiff),
+
+    /// See [`SetAuthByPredecessorId`]
+    SetAuthByPredecessorId(SetAuthByPredecessorId),
+
+    /// See [`AuthCall`]
+    AuthCall(AuthCall),
+
+    // See [`ImtMint`]
+    #[cfg(feature = "imt")]
+    ImtMint(ImtMint),
+
+    // See [`ImtBurn`]
+    #[cfg(feature = "imt")]
+    ImtBurn(ImtBurn),
+}
+
+pub trait ExecutableIntent {
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: [u8; 32],
+    ) -> Result<()>
+    where
+        S: State,
+        I: Inspector;
+}
+
+impl ExecutableIntent for DefuseIntents {
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: [u8; 32],
+    ) -> Result<()>
+    where
+        S: State,
+        I: Inspector,
+    {
+        for intent in self.intents {
+            intent.execute_intent(signer_id, engine, intent_hash)?;
+        }
+        Ok(())
+    }
+}
+
+impl ExecutableIntent for Intent {
+    fn execute_intent<S, I>(
+        self,
+        signer_id: &AccountIdRef,
+        engine: &mut Engine<S, I>,
+        intent_hash: [u8; 32],
+    ) -> Result<()>
+    where
+        S: State,
+        I: Inspector,
+    {
+        match self {
+            Self::AddPublicKey(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::RemovePublicKey(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::Transfer(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::FtWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::NftWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::MtWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::NativeWithdraw(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::StorageDeposit(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::TokenDiff(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            Self::SetAuthByPredecessorId(intent) => {
+                intent.execute_intent(signer_id, engine, intent_hash)
+            }
+            Self::AuthCall(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            #[cfg(feature = "imt")]
+            Self::ImtMint(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+            #[cfg(feature = "imt")]
+            Self::ImtBurn(intent) => intent.execute_intent(signer_id, engine, intent_hash),
+        }
+    }
+}
+
+/// Event that can be emitted either from a
+/// function call or after intent execution
+#[must_use = "make sure to `.emit()` this event"]
+#[serde_as]
+#[cfg_attr(feature = "schemars-v0_8", derive(::schemars::JsonSchema))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MaybeIntentEvent<T> {
+    #[serde_as(as = "Option<Base58>")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent_hash: Option<[u8; 32]>,
+
+    #[serde(flatten)]
+    pub event: T,
+}
+
+impl<T> MaybeIntentEvent<T> {
+    #[inline]
+    pub const fn new_fn_call(event: T) -> Self {
+        Self {
+            intent_hash: None,
+            event,
+        }
+    }
+
+    #[inline]
+    pub const fn new_intent(event: T, intent_hash: [u8; 32]) -> Self {
+        Self {
+            intent_hash: Some(intent_hash),
+            event,
+        }
+    }
+}
+
+impl<T> From<T> for MaybeIntentEvent<T> {
+    fn from(event: T) -> Self {
+        Self::new_fn_call(event)
+    }
+}

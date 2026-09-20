@@ -1,0 +1,504 @@
+Products
+Confidential VM
+GPU TEE
+Confidential AI Models
+Model Catalog
+dstack
+GPU Marketplace
+H100
+H200
+B300
+Solutions
+AI Agents
+Private AI Inference
+Private AI Training
+Private AI Data
+Phala vs AWS Nitro
+Phala vs GCP Confidential VM
+Phala vs Tinfoil
+Financial Services
+Healthcare Research
+AI SaaS Platform
+Decentralized AI
+Legal AI
+All use cases
+Developers
+Docs
+Quickstart
+CLI
+Templates
+Deploy CVM
+Deploy dstack
+Run GPU TEE
+Verify Attestation
+API Reference
+Research
+GitHub
+DeepWiki
+Service Status
+Resources
+Blog
+Research
+Learn
+Tags
+By use case
+Trust Center
+Security
+Subprocessors
+Startups
+Enterprise AI
+GPU Providers
+Partnerships
+About Us
+About Phala
+Build History
+Contact
+Wallet, Stake, Bridge
+About Phala Network
+Careers
+Pricing
+Contact
+Sign in
+Start building
+Products
+Solutions
+Developers
+Resources
+About Us
+Pricing
+Language
+en
+zh
+fr
+de
+nl
+tr
+Contact
+Sign in
+Start building
+Private AI Agents
+AI agents need privacy the most.
+Agents hold your keys, your tokens, your inbox, and your wallet — and act on your behalf. Run them inside an attested CVM where the compose-hash is the scope and every action is signed.
+Vibe coding
+Read agent docs
+Talk to experts
+Confidential agents, in production.
+Personal, coding, security, financial, social, memory, MCP — pick a category, then drill into a specific framework to see how Phala slots into the runtime.
+Personal agents
+phone · sealed sessions
+Coding agents
+terminal · sealed repo
+Security
+on-chain revoke · verifiable CI
+Financial
+wallet scope = compose-hash
+Social
+browser · attested post
+Agent memory
+sealed memory shards
+MCP runtime
+mutual RA-TLS tools
+9:41
+▮▮ 5G ▰
+‹
+OpenClaw
+bot
+⌕
+Hey, can you triage today's inbox and summarise threads with Stanford?
+＋
+Write a message...
+◉
+Clawdi
+Hermes
+Visit Clawdi
+Personal computer-use agent. Sessions, calendars, and inbox sealed in a CVM whose compose-hash IS the permission scope.
+Agents · live on Phala Cloud.
+Verified counts from Phala Cloud + ClickHouse. Compose-hashes are observed in the Cloud DB; trust-by-construction primitives sit in an attested CVM.
+Agent CVMs deployed
+12,783
+cumulative · all frameworks
+Compute hours
+16.9M
+fleet-wide · since Feb 2025
+TDX quotes verified
+1.10M
+KMS attestation
+Compose-hashes observed
+2,591
+distinct agent builds
+Total CVMs deployed by framework
+cumulative · since first deploy
+1,585
+1,545
+604
+279
+168
+98
+Eliza
+character agents
+7 live · since 2024-12
+Clawdi
+OpenClaw
+193 live · since 2026-01
+BlueNexus
+MCP servers
+5 live · since 2025-10
+Vijil
+verifiable CI
+since 2025-04
+Agent Wallet
+x402 · ERC-8004
+1 live · since 2025-05
+Hermes
+Nous Research
+7 live · since 2025-01
+TDX nodes
+17
+GPU TEE teepods
+8 · 64 GPUs
+Regions
+5
+KMS instances
+34
+Failed quotes / 24h
+1 / 35
+Run any agent framework. Sealed by construction.
+Coding agents
+Claude Code, Codex, and verifiable CI agents like Vijil run in a CVM where the repo, secrets, and tool tokens stay sealed against the registered compose-hash. Every diff signed before merge.
+CODING
+marvin@Mac ~/ai-agent % claude code
+Claude Code
+sealed CVM
+· [marvin@Mac] % claude
+✓ scope: github.write
+› refactor agents/...
+⏺ sealed-token: github.pat ✓
+✓ Sign-RPC 0x9c1a…
+COMPUTER-USE
+OpenClaw
+bot
+Triage today's inbox — Stanford threads.
+tool · gmail.search
+3 threads · 11 messages
+sealed-token gmail.compose ✓
+Computer-use agents
+OpenClaw, Hermes, and Pi take over the browser, GUI, and OS — bounded by an attested compose-hash and KMS-gated credentials. Sessions, calendars, inbox stay sealed in the CVM.
+Tool & memory agents
+MCP servers (BlueNexus) attest to clients before they accept a connection — mutual RA-TLS. Long-term memory backends (Xtrace) seal shards per app-id; revoking the build evicts memory cleanly.
+MCP · MEMORY
+BlueNexus MCP
+$ mcp connect mcp.bluenexus.ai
+▸ verifying TDX quote
+✓ mutual RA-TLS bound
+• search.web (sealed)
+• vault.unlock (multi-sig)
+WALLET · SECURITY
+Agent Wallet
+x402
+payment request
+$24.00 USDC
+api.confidential-llm.ai
+scope
+≤ $50/day
+multi-sig
+2/2 ✓
+Wallet & on-chain agents
+Agent Wallet (ERC-8004 + Coinbase x402) and Ironclaw (NEAR security) bind spending scope to the compose-hash. Multi-sig DstackApp gates every signing key; revoke compose-hash → kill access.
+permission as identity · scope as compose-hash
+Permission is identity. Identity is the compose-hash.
+On dstack, an agent’s tool list and credential scope can’t drift from what its build authorizes — there’s no runtime path that widens privilege.
+01
+Attested launch
+dstack-vmm boots the agent CVM. The TDX quote covers the full compose-hash — including system prompt, model digest, and tool list (all in the docker-compose).
+02
+Sealed credentials
+User previously sealed OAuth tokens against this exact compose-hash. dstack-kms releases the wrap key only after the quote matches. No host process ever sees plaintext.
+03
+Mutual RA-TLS
+When Agent A delegates to Agent B, each cert embeds a fresh TDX quote. Both sides run dcap-qvl on the peer and check DstackApp.sol for the allowed-delegates whitelist.
+04
+Bounded outbound
+External tool (Gmail, Stripe, etc.) is outside the trust boundary. The OAuth token leaves only inside the outbound TLS handshake, scope upper-bounded by compose-hash.
+05
+Signed action log
+Every tool call is appended inside the CVM and signed via Sign RPC. Tamper breaks the chain. Auditors verify without trusting Phala or the operator.
+How it works
+Step through a multi-agent pipeline.
+Toggle dstack off to see credentials and tool scope drift loose.
+Confidential AI Agents on dstack
+Agent computer in a CVM · per-subagent sandboxes · sealed vault · scoped outbound channel
+dstack TEE
+Protection active · click to compare
+active edge
+inactive
+new in step
+step 1 of 5 · scroll-aware
+1
+Step 1 / 5
+Attested Boot — TDX Quote Verifies the Whole Computer
+dstack-vmm boots the agent runtime as one TDX CVM. dstack-guest-agent emits a combined TDX quote covering MRTD + RTMR0–3 + GPU Confidential mode. The user fetches the quote via RA-TLS and runs dcap-qvl locally — the trust decision is client-side, anchored in Intel's TDX hardware root and DstackKms.sol on-chain. Phala Network is not asked to vouch for itself.
+With dstack:
+The trust root is Intel's TDX hardware signature, anchored on-chain — any client can verify without trusting Phala or the cloud operator.
+Reset
+1
+2
+3
+4
+5
+Prev
+Next
+Press enter or space to select a node. You can then use the arrow keys to move the node around. Press delete to remove it and escape to cancel.
+Press enter or space to select an edge. You can then press delete to remove it or escape to cancel.
+live · Sign-RPC action log
+Every tool call leaves a tamper-evident receipt.
+Each row is a real-shaped Sign-RPC entry: agent identity, tool, args hash, and a per-app key signature that chains to the TDX root. Auditors verify the log offline — Phala isn't in the trust chain.
+all
+14
+email
+3
+calendar
+2
+CRM
+2
+finance
+3
+ops
+2
+research
+2
+action.log · streaming
+tamper detected · 0
+ts
+agent
+tool
+args
+signature
+verify
+14:00:01
+support-bot-v3.2
+crm.read
+lookup(account=acme)
+0x9c1a…f7e2
+✓
+14:00:03
+inbox-triage
+gmail.read
+list(after=09:00)
+0x4f2c…a91e
+✓
+14:00:04
+support-bot-v3.2
+stripe.read
+charge(id=ch_3O…)
+0xc3d4…f7e2
+✓
+14:00:08
+cal-bot
+calendar.read
+free(2026-05-05, 30m)
+0xa1b2…d4f6
+✓
+14:00:11
+pnl-monitor
+wallet.read
+balance(addr=0xab…)
+0xe5f6…b8c0
+✓
+14:00:14
+inbox-triage
+gmail.compose
+draft(thread=18b4…)
+0x7d8e…2f1a
+✓
+14:00:18
+research-bot
+web.search
+"phala dstack v0.6"
+0x6e9f…c3d4
+✓
+14:00:21
+devops-bot
+github.write
+pr.merge(123)
+0xb1a2…f0e7
+✓
+14:00:24
+support-bot-v3.2
+zendesk.write
+ticket.reply(8421)
+0x3d4e…7a8b
+✓
+14:00:27
+cal-bot
+calendar.write
+create(slot=15:00)
+0x8c9d…e1f2
+✓
+14:00:31
+pnl-monitor
+webhook.send
+alert(threshold=2.5%)
+0xf2e3…d4c5
+✓
+14:00:35
+devops-bot
+sentry.read
+errors(env=prod)
+0x5b6c…7d8e
+✓
+14:00:39
+inbox-triage
+gmail.read
+list(label=INBOX)
+0xa9b8…c7d6
+✓
+14:00:43
+research-bot
+doc.write
+append(notes.md)
+0x4e5f…6a7b
+✓
+14:00:47
+awaiting next call
+—
+—
+—
+—
+chain · per-app key → KMS root → TDX root + DstackApp.sol
+14 rows · all verified offline
+AI solution paths
+Use private models where AI touches secrets.
+The private model endpoint is the first entry point. The same privacy primitive extends to agents, data workflows, and training.
+LLM API
+Private AI inference
+Serve OpenAI-compatible model calls where prompts, outputs, and customer context need encrypted-in-use protection.
+Open solution
+encrypted
+DeepSeek V3.1
+128K
+$0.27/M input
+encrypted
+Qwen3 Coder
+256K
+$0.40/M input
+encrypted
+Llama 3.3 70B
+128K
+$0.15/M input
+encrypted
+GPT OSS 120B
+128K
+$0.10/M input
+encrypted
+Claude Sonnet 4.5
+200K
+$3.00/M input
+encrypted
+Gemini 2.5 Pro
+1M
+$1.25/M input
+Training
+Private model training
+Adapt models on proprietary data while keeping datasets, gradients, checkpoints, and evaluation traces inside the boundary.
+Open solution
+private training run
+Observe without exposing weights.
+H100 CC
+01
+dataset
+sealed
+02
+fine-tune
+running
+03
+eval
+private
+04
+checkpoint
+verified
+loss curve
+proof attached
+attestation.json
+Data
+Private AI data
+Move models to sensitive records and return approved outputs without exposing raw data to the model operator.
+Open solution
+source
+EHR data
+source
+Customer records
+source
+Internal docs
+TEE clean room
+query without raw access
+approved output
+aggregate only
+no row export
+proof linked
+Deploy a confidential agent
+Permission as identity. Scope as compose-hash.
+Ship the agent as a docker-compose. Register the compose-hash. Seal the OAuth tokens. Every cross-agent call re-verifies the peer over RA-TLS.
+$
+Deploy recipe
+Vibe-code with Claude / Cursor / Codex
+View docs
+Talk to sales
+01
+Mutual RA-TLS between agent CVMs
+02
+Sealed OAuth tokens, KMS-gated
+03
+Compose-hash IS the scope
+04
+Outbound tools bounded by attested code
+05
+Sign-RPC action log
+Private execution. Verifiable results.
+Newsletter
+Subscribe
+Build
+Documentation
+dStack SDK
+CLI
+GitHub
+Community
+Platform
+Confidential AI Models
+Model Catalog
+GPU TEE
+Confidential VM
+H100 GPU
+H200 GPU
+B300 GPU
+Solutions
+Private AI Data
+Private AI Inference
+Private Training
+AI Agents
+Proof
+By use case
+Financial Services
+Healthcare
+AI SaaS
+Decentralized AI
+Learn
+Explore Learn
+Research
+Blog
+vs AWS Nitro
+vs Google Cloud
+vs Tinfoil
+What is Confidential AI?
+What is TEE?
+Company
+About
+Partnerships
+Pricing
+Contact
+Careers
+Responsible Disclosure
+© 2026 Hashforest Technology. All rights reserved.
+Privacy
+•
+Terms
+Private AI Agents — Sealed Autonomous AI on TEE | Phala

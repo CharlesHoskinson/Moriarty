@@ -1,0 +1,139 @@
+Intents, solvers, RFQ and fillers: where Enso fits in onchain execution
+Enso
+25 Aug 2026
+•
+9 min read
+Share
+Onchain execution is moving from choosing a transaction path to specifying an outcome and finding the best way to deliver it. That shift brought a set of terms with it: intents, solvers, solver networks, RFQs, fillers, auctions and market makers. They are closely related, and they are not interchangeable.
+An intent describes what the user wants. A solver works out how to fulfill it. An RFQ asks liquidity providers what price they will offer. An auction creates competition between potential executors. An execution system decides how those mechanisms, alongside conventional liquidity and routing, combine to deliver the best available outcome.
+That last layer is where Enso sits. Enso is not tied to a single execution mechanism. Its infrastructure turns a desired onchain outcome into an executable route across available liquidity, protocols, chains and execution paths, then validates that route before it reaches the user. To see why that matters, it helps to understand the mechanisms underneath it.
+What is intent-based execution?
+Intent-based execution lets a user or application specify the outcome it wants without defining every transaction required to achieve it.
+Traditional transactions are specific. They name contracts, calldata and the exact sequence of interactions the user expects to run. An intent changes the abstraction: instead of describing every step, the user describes constraints around the final state. For example, convert this asset into USDC on Base and deliver at least this amount.
+The user cares about the result. Whether it comes from a DEX, a bridge, a market maker or some combination becomes an execution decision. That separation between desired outcome and execution path is the core idea behind intent-based execution.
+What is intent routing?
+Intent routing is the process of determining how a requested outcome should be fulfilled.
+Once the user is no longer picking the path, infrastructure has to find one.
+An intent router may weigh:
+Available DEX liquidity
+Private liquidity
+Market-maker inventory
+Cross-chain liquidity
+Bridges
+Solvers
+Fees
+Gas
+Execution speed
+Minimum output requirements
+Intent systems solve this differently. Some route an order to one solver, some broadcast it to a solver network, some run auctions, and some request quotes directly from market makers. More systems now combine several of these models in the same flow.
+What is a solver?
+A solver is an actor or system that works out how to satisfy an order or intent and then executes the solution.
+It receives the constraints of an order and searches for a profitable way to meet them.
+For a swap, that might mean sourcing liquidity from an AMM. For a cross-chain order, a solver might already hold inventory on the destination chain, deliver it immediately and rebalance later. For more complex transactions, it may combine several liquidity sources.
+The economic idea underneath is competition. When multiple solvers can fulfill the same order, they compete on price, speed or another execution parameter. The user does not need to know which path the winning solver took, only what arrived.
+What is a solver network?
+A solver network is a market in which multiple solvers compete to execute user orders or intents.
+Networks differ in how they pick the winner. One accepts the first valid fill, another takes the best submitted price, another runs an auction. Systems associated with solver-based execution include CoW Protocol, UniswapX, Across and 1inch Fusion.
+The mechanisms vary a lot, but the principle is the same: execution is opened to competition rather than assigned to one fixed route. That is powerful for large orders and cross-chain transactions, where private liquidity or pre-positioned inventory can beat a purely pool-based route.
+What is an RFQ?
+RFQ stands for Request for Quote.
+Rather than calculating a price entirely from public onchain liquidity, an RFQ system asks one or more professional liquidity providers what price they will offer for a specific order: what price will you give me for selling 1,000 ETH for USDC right now?
+Market makers respond with executable quotes, and the routing system compares those quotes against each other or against public DEX liquidity. RFQ liquidity is useful for larger trades, because a market maker can often execute from its own inventory instead of pushing the order along an AMM curve, which reduces price impact.
+RFQ vs solver execution: what is the difference?
+An RFQ asks for a price. A solver is responsible for finding and delivering a whole solution. A market maker answering an RFQ may also run a solver, which is why the terms get used loosely.
+The practical difference: RFQ focuses on requesting executable prices from known liquidity providers, while solver systems give executors more freedom in how the outcome gets produced. Both exist as alternatives to sending every order into a public AMM.
+What are fillers?
+A filler is an entity that executes or fills an order
+, a term used particularly in systems such as UniswapX. Fillers sit in roughly the same part of the stack as solvers. They evaluate an order, decide whether they can satisfy it profitably and execute if the economics work, using their own inventory, DEX liquidity or other sources. For the user, what matters is the outcome rather than the implementation.
+What role do auctions play in onchain execution?
+Auctions create competition for order flow.
+Instead of picking one liquidity source in advance, the execution system gives multiple participants a shot at filling the order.
+CoW Protocol uses batch auctions, where solvers compete to settle groups of orders. UniswapX can use Dutch auctions, changing the economics of an order over time until a filler is willing to execute it. Other systems request competing quotes or apply their own solver-selection logic. The goal in each case is to make execution providers compete for the right to execute the transaction.
+Why do market makers matter?
+A market maker provides liquidity using inventory and active pricing rather than relying only on passive AMM pools.
+That gives execution infrastructure another source of liquidity, and for large transactions a market maker can often quote a better price than routing the whole order through public pools.
+Market makers now play several roles at once. They can:
+Respond to RFQs
+Operate solvers
+Act as fillers
+Maintain inventory across chains
+Rebalance after executing cross-chain orders
+The line between a traditional market maker and a solver keeps getting blurrier.
+What is order flow?
+Order flow is the stream of transactions or trade requests generated by users of wallets, exchanges, aggregators and financial applications.
+Execution providers compete for it.
+For a wallet processing millions of swaps, order flow is economically valuable, because every transaction is an opportunity for a DEX, aggregator, solver or market maker to execute it. That is why execution architecture is a commercial decision and not just a backend one. Routing determines who receives the transaction, what price the user gets, how reliably it executes and whether the application's order flow is being used efficiently.
+Quote APIs are becoming execution APIs
+Early aggregation infrastructure was built around a simple pattern: send parameters, receive quote, submit transaction. That model is changing.
+A quote API tells an application what an execution provider claims a transaction should return. It does not guarantee the same result when the transaction runs. Liquidity moves, routes revert, quotes decay, and a source can behave differently between simulation and execution. A competitive quote is one input into best execution, not proof of it.
+What does best execution mean onchain?
+Best execution means selecting the path expected to produce the best realistic outcome for the user, not the highest headline quote.
+Price matters, obviously. Production execution also has to account for:
+Price impact
+Gas
+Fees
+Liquidity depth
+Execution probability
+Quote decay
+Slippage
+Transaction failure
+Cross-chain settlement
+Reliability of the liquidity source
+This is the difference between quote quality and execution quality. A route quoting 1,001 USDC and reliably delivering 995 is worse than a route quoting 1,000 and delivering 1,000. For wallets, fintechs and trading applications, the number that counts is the one that lands in the user's account.
+Where Enso fits
+Enso works one level above any individual liquidity or execution mechanism. Its job is to find and execute the path between the position a user has and the position they want.
+Enso's Route API is a DeFi aggregation and smart order routing API that finds optimized paths between tokens and DeFi positions, across different protocols and, where needed, different chains. That makes it broader than a traditional DEX aggregator: swaps, deposits, redemptions and cross-chain movement can all be components of the same execution flow. As a meta-aggregator, Enso can also pull external routing infrastructure into that execution surface instead of making an application depend on one liquidity architecture.
+The point is that no transaction has to fit a single model. The execution path depends on the outcome being requested.
+How does Enso relate to intent-based execution?
+The model fits intent-based execution naturally: specify the outcome, then determine the path to reach it.
+A user does not need to construct
+swap → bridge → swap → deposit
+by hand. They start with one asset and name the position they want, and Enso works out the steps underneath. For simple transactions that may be a single swap. For others it can involve several protocol interactions, or a bridge followed by actions on the destination chain. The application stays focused on the outcome while the complexity sits below it.
+How does Enso relate to solver infrastructure?
+Solvers can deliver very competitive execution, especially where private liquidity or inventory is available. A solver is still one possible source of execution, though. Applications may also have AMMs, DEX aggregators, bridges, primary markets and other liquidity systems available at the same time.
+That raises a higher-level question: when should each mechanism be used? Aggregation and orchestration are the layer that answers it. Rather than treating "solver" as the destination architecture, Enso focuses on the best executable path across the broader onchain market.
+Public Enso infrastructure also supports bot integrations, including Dutch-auction fills, liquidations and automated trading strategies. Enso is useful both for products consuming execution and for sophisticated actors participating in execution markets.
+How does Enso use RFQ liquidity?
+RFQ adds another execution option. For certain assets and sizes, requesting a price directly from professional liquidity providers beats routing entirely through public pools.
+It is not universally better. For a smaller trade, public AMM liquidity may be stronger. For some onchain assets, direct minting or redemption is preferable. For other transactions, the best route combines several mechanisms. So the useful abstraction for an application is not which RFQ provider to integrate. It is how to deliver a given outcome in the best available way, which is the level Enso's aggregation model operates at.
+Why does cross-chain execution make mechanism selection harder?
+Across chains the differences get sharper, because one cross-chain transaction can be executed in several fundamentally different ways.
+One route runs
+swap → bridge → swap
+. A solver might instead deliver inventory directly on the destination chain and rebalance afterwards. Another system uses a different bridge. A more complex Enso flow might bridge an asset and then immediately mint or deposit into a protocol on the destination chain.
+No mechanism is correct for every transaction. The right one depends on the transaction, which is why cross-chain execution needs both route optimization and flexibility about the mechanism.
+Execution quality sits above routing
+Finding possible routes is not enough. They have to be executable.
+Enso simulates transactions against live blockchain state before returning them for execution, checking what the proposed transaction is actually expected to produce under current conditions. Enso also compares quoted against simulated outcomes and monitors liquidity behavior for sources that consistently produce unreliable results.
+That applies across every execution model. An AMM route can fail, an aggregator can overquote, a solver can fail to settle, an RFQ can go stale, and a cross-chain path can hit changing conditions between origin and destination. The mechanism changes, but the requirement does not: the user should receive the outcome the application showed them.
+From routing competition to execution competition
+The direction of the market is fairly clear. The first generation of DeFi infrastructure created competition between liquidity pools. DEX aggregators created competition between DEXs, meta-aggregators created competition between routers, RFQ systems brought in private market makers, intent systems added competitive solvers and fillers, and cross-chain systems spread that competition across networks.
+The next stage is not picking one of those approaches as the universal answer. It is making the available mechanisms compete on the thing that matters, which is the final outcome delivered to the user. That is what Enso is building toward: the infrastructure required to find, construct and verify the best available execution path across onchain finance, rather than a bet on any single pool, bridge, solver or execution model.
+Frequently asked questions
+What is intent-based execution?
+Intent-based execution lets a user specify the outcome they want rather than defining every transaction used to reach it.
+What is a solver in DeFi?
+A solver is an actor or system that determines how to satisfy a user's order or intent and executes the resulting solution.
+What is a solver network?
+A solver network lets multiple solvers compete for orders based on parameters such as price, speed or execution capability.
+What does RFQ mean in crypto?
+RFQ means Request for Quote. An RFQ system asks professional liquidity providers or market makers for executable prices on a specific order.
+What is the difference between RFQ and an auction?
+An RFQ requests quotes directly from liquidity providers. An auction uses a competitive process to decide which solver or filler receives the order.
+What are fillers?
+Fillers are entities that execute orders in systems such as UniswapX. They can use their own inventory or other liquidity sources to satisfy an order.
+What is best execution in DeFi?
+Best execution means finding the path expected to deliver the best realistic result after accounting for price, fees, gas, liquidity, slippage and execution reliability.
+What is execution quality?
+Execution quality measures how well the final transaction delivers the outcome shown to the user. It covers price accuracy, successful completion, slippage, latency and reliability.
+Is Enso a solver?
+Enso is broader than a standalone solver. It provides routing, aggregation and execution infrastructure that determines how to move between onchain assets and positions across protocols and chains.
+How does Enso approach intent-based execution?
+Applications specify the starting asset or position and the desired output, and Enso determines the execution path underneath. Depending on the request, that path can include swaps, protocol interactions, cross-chain movement and other actions.
+What is a quote API?
+A quote API returns an expected price or transaction outcome. Production execution infrastructure should also verify that the quoted transaction is realistically executable before showing it to the user.
+Links
+Explore Enso
+Start building
+Follow us on X
+Join the community

@@ -1,0 +1,65 @@
+mod auth_call;
+mod execute;
+mod relayer;
+pub mod simulate;
+mod state;
+
+use defuse_core::{
+    DefuseError,
+    engine::{Engine, StateView},
+    payload::multi::MultiPayload,
+};
+use execute::ExecuteInspector;
+use near_plugins::{Pausable, pause};
+use near_sdk::{FunctionError, near};
+use simulate::SimulateInspector;
+
+use crate::{
+    intents::Intents,
+    simulation_output::{SimulationOutput, StateOutput},
+};
+
+use super::{Contract, ContractExt};
+
+#[near]
+impl Intents for Contract {
+    #[pause(name = "intents")]
+    fn execute_intents(&mut self, signed: Vec<MultiPayload>) {
+        if let Some(event) = Engine::new(self, ExecuteInspector::default())
+            .execute_signed_intents(signed)
+            .unwrap_or_else(|e| e.panic())
+            .as_mt_event()
+        {
+            // NOTE: Not all `mt_transfer` events are refundable, but it's safe to check them
+            // all at once since non-refundable transfers only increase the potential refund
+            // log size without affecting correctness. This can actually prevent resolve transfer
+            // from failing due to too long event log !!!
+            event
+                .check_refund()
+                .unwrap_or_else(|err| err.panic())
+                .emit();
+        }
+    }
+
+    #[pause(name = "intents")]
+    fn simulate_intents(&self, signed: Vec<MultiPayload>) -> SimulationOutput {
+        let mut inspector = SimulateInspector::default();
+        let engine = Engine::new(self.cached(), &mut inspector);
+
+        let invariant_violated = match engine.execute_signed_intents(signed) {
+            // do not log transfers
+            Ok(_) => None,
+            Err(DefuseError::InvariantViolated(v)) => Some(v),
+            Err(err) => err.panic(),
+        };
+
+        SimulationOutput {
+            report: inspector.into_report(),
+            invariant_violated,
+            state: StateOutput {
+                fee: self.fee(),
+                current_salt: self.salts.current(),
+            },
+        }
+    }
+}

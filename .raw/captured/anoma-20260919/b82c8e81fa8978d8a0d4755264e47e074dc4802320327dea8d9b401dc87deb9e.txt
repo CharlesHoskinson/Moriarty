@@ -1,0 +1,519 @@
+Juvix Docs
+anoma/juvix
+Home
+How-to guides
+Tutorials
+Reference
+Reference
+Language reference
+Language reference
+Functions
+Builtins
+Data types
+Records
+Records
+Table of contents
+Record declaration
+Examples
+Record creation
+Record projections
+Record update
+Record puns
+Record patterns
+Traits
+Modules
+Local definitions
+Control structures
+Comments
+Pragmas
+Axioms
+Syntax extensions
+Standard library
+Example programs
+Tooling
+Compiler implementation
+Standard library
+Packages and Projects
+Blog
+Talks
+Table of contents
+Record declaration
+Examples
+Record creation
+Record projections
+Record update
+Record puns
+Record patterns
+Reference
+Language reference
+Records
+¶
+Records are a special kind of
+data type
+. Each
+data constructor within a record has named type arguments. Records are
+smilar to structures from languages such as C++ or Java, or to records in
+database systems.
+Record declaration
+¶
+In the context of record types, a
+field
+is a named argument of an
+inductive type constructor.
+The general syntax for declaring a record type is as follows:
+trait
+type <record name> <type parameters> :=
+    | <type-constructor-1>@{
+        <field1-1> : <type-1-1>;
+        ...
+        <field1-n> : <type-1-n>
+        }
+    | ...
+    | <type-constructor-n>@{
+        <fieldn-1> : <type-n-1>;
+        ...
+        <fieldn-n> : <type-n-n>
+    };
+In this syntax:
+<record name>
+is a unique identifier for the declared record type. This name should be unique within its scope and it is case sensitive.
+<type parameters>
+are optional and represent the generic parameters that the
+  record type may take, see
+data types
+for more information.
+  They allow for greater flexibility and reusability of the record type.
+<type-constructor-k>
+is the
+k
+th constructors of the record type. Each constructor can have a different set of fields.
+<field1-1>
+,
+<field1-n>
+,
+<fieldn-1>
+,
+<fieldn-n>
+are the names of the fields in each constructor. These names should be unique within their constructor.
+<type-1-n>
+,
+<type-n-1>
+,
+<type-n-n>
+represent the type of the corresponding field.
+Typically, a record has exactly one constructor. The record
+declaration syntax, however, can be used to define arbitrary inductive
+types with named constructor arguments.
+Examples
+¶
+We declare the
+NewType
+record type with the
+NewType.mk
+type
+constructor and one field
+f
+.
+type
+T
+:=
+construct
+:
+T
+;
+type
+NewType
+:=
+mk
+@
+{
+f
+:
+T
+;
+}
+;
+Consider the
+Pair
+record type that models pairs of values. The
+Pair
+type has a single
+mkPair
+constructor that takes two arguments
+fst
+and
+snd
+of type
+A
+and
+B
+respectively.
+type
+Pair
+(
+A
+B
+:
+Type
+)
+:=
+mk
+@
+{
+fst
+:
+A
+;
+snd
+:
+B
+;
+}
+;
+Here is a declaration of a "record" with multiple constructors.
+type
+EnumRecord
+:=
+|
+C1
+@
+{
+c1a
+:
+T
+;
+c1b
+:
+T
+;
+}
+|
+C2
+@
+{
+c2a
+:
+T
+;
+c2b
+:
+T
+;
+}
+;
+Record creation
+¶
+To create a value of type
+Pair
+from above, use the
+mkPair
+type
+constructor and provide values for each field.
+p1
+:
+Pair
+T
+T
+:=
+Pair
+.
+mk
+@
+{
+fst
+:=
+T
+.
+construct
+;
+snd
+:=
+T
+.
+construct
+;
+}
+;
+An pair of
+EnumRecord
+s can be created as follows.
+p2
+:
+Pair
+EnumRecord
+EnumRecord
+:=
+Pair
+.
+mk
+@
+{
+fst
+:=
+EnumRecord
+.
+C1
+@
+{
+c1a
+:=
+T
+.
+construct
+;
+c1b
+:=
+T
+.
+construct
+;
+}
+;
+snd
+:=
+EnumRecord
+.
+C2
+@
+{
+c2a
+:=
+T
+.
+construct
+;
+c2b
+:=
+T
+.
+construct
+;
+}
+;
+}
+;
+Record projections
+¶
+For single-constructor records, an implicit module named
+<record
+name>
+is defined with
+record projections
+, i.e., functions which
+allow to access the values of corresponding record fields. The record
+projection for field
+f
+in record
+R
+is referred to by
+R.f
+.
+For example, a new pair equal to
+p1
+defined above can be created
+using values retrieved with record projections.
+p1'
+:
+Pair
+T
+T
+:=
+Pair
+.
+mk
+@
+{
+fst
+:=
+Pair
+.
+fst
+p1
+;
+snd
+:=
+Pair
+.
+snd
+p1
+;
+}
+;
+By default, the record projections are qualified by the record type name. To
+access the fields without specifying the type name, use the
+open
+keyword to
+bring record projection names into scope.
+open
+Pair
+;
+flipP
+:
+Pair
+T
+T
+:=
+Pair
+.
+mk
+(
+snd
+p1
+)
+(
+fst
+p1
+)
+;
+Record update
+¶
+The values of record fields can be updated. For example consider a pair of
+natural numbers:
+natPair
+:
+Pair
+Nat
+Nat
+:=
+Pair
+.
+mk
+@
+{
+fst
+:=
+1
+;
+snd
+:=
+2
+;
+}
+;
+We can update the value of the
+fst
+field from
+1
+to
+2
+as follows:
+updatedNatPair
+:
+Pair
+Nat
+Nat
+:=
+natPair
+@
+Pair
+{
+fst
+:=
+2
+}
+;
+Record puns
+¶
+When using records, one often defines variables with the same names as record fields, e.g.,
+p3
+:
+Pair
+Nat
+Nat
+:=
+let
+fst
+:=
+1
+;
+snd
+:=
+2
+;
+in
+Pair
+.
+mk
+@
+{
+fst
+:=
+fst
+;
+snd
+:=
+snd
+;
+}
+;
+With record punning, the assignment to a record field of a variable with the same name can be simplified by omitting the assignment right-hand side and the assignment symbol. For example, the above definition of
+p3
+can be abbreviated to:
+p3'
+:
+Pair
+Nat
+Nat
+:=
+let
+fst
+:=
+1
+;
+snd
+:=
+2
+;
+in
+Pair
+.
+mk
+@
+{
+fst
+;
+snd
+;
+}
+;
+Record patterns
+¶
+Record syntax can be used in pattern matching, e.g.,
+f
+:
+Pair
+Nat
+Nat
+->
+Nat
+|
+Pair
+.
+mk
+@
+{
+fst
+:=
+zero
+;
+snd
+}
+:=
+snd
+|
+Pair
+.
+mk
+@
+{
+fst
+}
+:=
+fst
+;
+2025-06-10
+2023-09-15
+Was this page helpful?
+Thanks for your feedback!
+Thanks for your feedback! Help us improve this page by opening an issue on GitHub.
+Comments

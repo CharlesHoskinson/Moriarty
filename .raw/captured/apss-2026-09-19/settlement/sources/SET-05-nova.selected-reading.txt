@@ -1,0 +1,102 @@
+PDF page 2:
+this approach is impractical [7, 21]. Alternatively, one can use SNARKs without
+trusted setup [19, 23, 41, 44] but their verifiers are more expensive than those
+of SNARKs with trusted setup, both asymptotically and concretely. Recent
+works [11, 13, 17, 18] aim to address the inefficiency of SNARK-based IVC, with
+an innovative approach: at each step, the verifier circuit “defers” expensive steps
+in verifying a SNARK for NP instances (e.g., verifying polynomial evaluation
+proofs) by accumulating those steps into a single instance that is later checked
+efficiently. However, these works still require the prover to produce a SNARK at
+each step and the verifier circuit to partially verify that SNARK.
+     We introduce a new approach that avoids SNARKs (and more generally
+arguments of knowledge) entirely and relies purely on deferral to realize IVC. In
+a nutshell, instead of accumulating expensive steps of verifying a SNARK for
+NP instances, the verifier circuit in our approach accumulates the NP instances
+themselves. We formalize this technique as a new and minimal primitive, which we
+refer to as a folding scheme. A folding scheme is weaker, simpler, and far more ef-
+ficient compared to arguments of knowledge including SNARKs. Indeed, realizing
+IVC via folding schemes results in improved efficiency over prior work (Figure 2):
+(1) the verifier circuit is constant-sized and its size is dominated by two group
+scalar multiplications; this is the smallest verifier circuit in the literature (in the
+context of recursive proof composition); and (2) the prover’s work at each step
+is dominated by two multiexponentiations of size O(|F |), providing the fastest
+prover in the literature, both asymptotically and concretely. Section 1.4 provides
+a detailed comparison between our approach and prior work.
+
+
+1.1   Folding Schemes
+
+A folding scheme is defined with respect to an NP relation, and it is a protocol
+between an untrusted prover and a verifier. Both entities hold two N -sized NP
+instances, and the prover in addition holds purported witnesses for both instances.
+The protocol enables the prover and the verifier to output a single N -sized NP
+instance, which we refer to as a folded instance. Furthermore, the prover privately
+outputs a purported witness to the folded instance using purported witnesses for
+the original instances. Informally, a folding scheme guarantees that the folded
+instance is satisfiable only if the original instances are satisfiable. A folding
+scheme is said to be non-trivial if the verifier’s costs and the communication are
+lower in the case where the verifier participates in the folding scheme and then
+verifies a purported NP witness for the folded instance than the case where the
+verifier verifies purported NP witnesses for each of the original instances.
+    Several existing techniques exhibit the two-to-one reduction pattern of folding
+schemes. Examples include the sumcheck protocol [38] and the split-and-fold
+techniques in inner product arguments [12]. Appendix A provides further details.
+
+Remark 1 (Folding Schemes vs. SNARKs). SNARKs for NP [8, 26, 27, 33, 39]
+trivially imply a folding scheme for NP: given two NP instances u1 and u2 and
+the corresponding witnesses, the prover proves u1 by producing a SNARK. The
+verifier checks that SNARK and then sets u2 to be the folded instance. However,
+
+
+                                          2
+
+PDF page 3:
+we construct a folding scheme for NP without relying on SNARKs (or more
+generally arguments of knowledge). Specifically, our folding scheme is weaker
+than any argument of knowledge (succinct or otherwise) because it merely reduces
+the satisfiability of two NP instances to the satisfiability of a single NP instance.1
+
+    To design a folding scheme for NP, we start with a popular NP-complete
+language that generalizes arithmetic circuit satisfiability: R1CS (Definition 10).
+As we illustrate later, it is difficult to devise a folding scheme for R1CS. To
+address this, we introduce a variant of R1CS, called relaxed R1CS, which, like
+R1CS, not only characterizes NP, but, unlike R1CS, can support a folding scheme.
+The following theorem captures the cryptographic and efficiency characteristics
+of our folding scheme for relaxed R1CS.
+Theorem 1. There exists a constant-round, public-coin, zero-knowledge folding
+scheme for relaxed R1CS where for N -sized relaxed R1CS instances over a finite
+field F with the same “structure” (i.e., R1CS coefficient matrices), the prover’s
+work is Oλ (N ), and the verifier’s work and the communication are both Oλ (1),
+assuming the existence of any additively-homomorphic commitment scheme that
+provides Oλ (1)-sized commitments to N -sized vectors over F (e.g., Pedersen’s
+commitments), where λ is the security parameter.
+   Because our folding scheme is public coin, it can be made non-interactive in the
+random oracle model using the Fiat-Shamir transform [25], and be instantiated
+(heuristically) in the standard model using a concrete hash function. We rely on
+such a non-interactive folding scheme to construct IVC.
+
+1.2   IVC from Non-Interactive Folding Schemes
+We show how to realize IVC using a non-interactive version of our folding scheme
+for relaxed R1CS. We refer to our construction as Nova.
+    Recall that an IVC is an argument of knowledge [33, 39]2 for incremental
+computations of the form y = F (ℓ) (x), where F is a (possibly non-deterministic)
+computation, ℓ > 0, x is a public input, and y is the public output. At each
+incremental step, the IVC prover produces a proof that the step was computed
+correctly and it has verified a proof for the prior step. In other words, at
+each incremental step, the IVC prover produces a proof of satisfiability for
+an augmented circuit that augments the circuit for F with a “verifier circuit”
+that verifies the proof of the prior step. Recursively, the final proof proves the
+correctness of the entire incremental computation. A key aspect of IVC is that
+neither the IVC verifier’s work nor the IVC proof size depends on the number of
+1
+  This work realizes IVC using our folding scheme. As IVC implies SNARKs (e.g.,
+  see [7]), one might wonder whether folding schemes are in general weaker than
+  SNARKs. However, existing constructions of IVC (including our own) rely on addi-
+  tional assumptions (§4.2), which the resulting IVC-based SNARK inherits.
+2
+  An argument of knowledge for circuit satisfiability enables an untrusted polynomial-
+  time prover to prove to a verifier the knowledge of a witness w such that C(w, x) = y,
+  where C is a circuit, x is some public input, and y is some public output.
+
+
+                                          3

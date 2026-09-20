@@ -1,5 +1,9 @@
 ## ADDED Requirements
 
+Product predicates govern objective semantics, proofs, participant authorization and ledger validity. Package promotion, reviewer identities and RP01/RP02/RP03 dispatch conditions govern internal maintainer delivery and project-operated resources only. They SHALL NOT be required to author, compile, prove or deploy an independently authored supported program. The [product contract](../../../../../docs/MORIARTY-PRODUCT-CONTRACT.md) and [roadmap reconciliation](../../../../../docs/ROADMAP-RECONCILIATION-2026-09-19.md) control scope; this correction establishes no new implementation evidence.
+
+The fixed ACTUS and DeFi inventories below are mandatory project conformance targets, not a public program allowlist or the complete expressivity of Moriarty. Developers may compose new programs from supported constructs.
+
 ### Requirement: Complete ACTUS evidence
 Coverage SHALL include all 18 executable types and 277 fixtures with every present result field.
 
@@ -44,16 +48,16 @@ All 32 ACTUS taxonomy dispositions and DS-01 through DS-07 SHALL remain visible 
 - **WHEN** a source-gap disposition is submitted as a passing fixture or permission to reduce coverage
 - **THEN** the coverage gate rejects the substitution and preserves the unresolved requirement.
 
-### Requirement: Independent audit and provenance
-The package SHALL bind acceptance evidence to exact sources, commands, environment, outputs, and both required audit identities.
+### Requirement: Internal maintainer audit and provenance
+For internal delivery, the package SHALL bind release evidence to exact sources, commands, environment, outputs, and the independent audit identities selected by the current task. Reviewer records SHALL NOT enter public program or transaction validity.
 
 #### Scenario: Audited result
 - **WHEN** deterministic checks pass and both independent reviewers have no unresolved blocking finding
 - **THEN** the package records accepted scope with the exact reviewed candidate digest.
 
 #### Scenario: Missing or stale audit
-- **WHEN** Fable 5.1 or GPT-6 is unavailable, substituted, stale, or lacks a substantive identity-bound verdict
-- **THEN** the package remains pending audit and cannot promote dependent acceptance.
+- **WHEN** an independently selected internal reviewer is unavailable or lacks a fresh substantive identity-bound verdict
+- **THEN** the internal package remains pending audit; public validation does not reject a supported program solely because that maintainer audit is absent.
 
 ### Requirement: Failed predicate stops promotion
 The package SHALL remain incomplete if any required positive or rejection predicate fails.
@@ -63,7 +67,7 @@ The package SHALL remain incomplete if any required positive or rejection predic
 - **THEN** verification fails and dependent acceptance remains blocked.
 
 ### Requirement: Extended native predicate evidence
-The package SHALL implement, review, prove, and independently verify its allocated native relation before proof-dependent acceptance.
+The package SHALL implement, prove, and independently verify its native relation before claiming proof-dependent behavior. Internal review and campaign allocation remain separate delivery conditions.
 
 #### Scenario: Reviewed extension executes
 - **WHEN** both auditors approve the implemented relation and contract, and the allocated campaign passes

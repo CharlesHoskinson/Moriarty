@@ -1,0 +1,365 @@
+On this page
+Typeclasses
+Orphan Typeclass Instances
+Data Types
+Functions
+Splice APIs
+Splice Daml Packages
+splice-amulet
+Splice.Amulet.TokenApiUtils
+Copy page
+Copy page
+Documentation for Splice.Amulet.TokenApiUtils
+Copy page
+Copy page
+Common utilities for implementing the token APIs for Amulet.
+​
+Typeclasses
+class
+ToAnyValue a
+where
+Values that can be converted to AnyValue
+toAnyValue
+: a -> AnyValue
+instance
+ToAnyValue TimeLock
+instance
+ToAnyValue
+Bool
+instance
+ToAnyValue
+Decimal
+instance
+ToAnyValue
+Int
+instance
+ToAnyValue
+Text
+instance
+ToAnyValue (
+ContractId
+t)
+instance
+ToAnyValue
+Date
+instance
+ToAnyValue
+Party
+instance
+ToAnyValue
+Time
+instance
+ToAnyValue
+RelTime
+instance
+ToAnyValue ChoiceContext
+instance
+ToAnyValue a => ToAnyValue [a]
+class
+FromAnyValue a
+where
+Attempt to parse a value from AnyValue.
+If a type implements both
+ToAnyValue
+and
+FromAnyValue
+then it must hold that
+fromAnyValue (toAnyValue x) = Right x
+for all
+x
+.
+fromAnyValue
+: AnyValue ->
+Either
+Text
+a
+instance
+FromAnyValue TimeLock
+instance
+FromAnyValue
+Bool
+instance
+FromAnyValue
+Decimal
+instance
+FromAnyValue
+Int
+instance
+FromAnyValue
+Text
+instance
+Template
+t => FromAnyValue (
+ContractId
+t)
+instance
+FromAnyValue
+Date
+instance
+FromAnyValue
+Party
+instance
+FromAnyValue
+Time
+instance
+FromAnyValue
+RelTime
+instance
+FromAnyValue ChoiceContext
+instance
+FromAnyValue a => FromAnyValue [a]
+​
+Orphan Typeclass Instances
+instance
+Semigroup
+Metadata
+instance
+Monoid
+Metadata
+​
+Data Types
+data
+TxKind
+Internal type for the transaction kind.
+TxKind_Transfer
+TxKind_Unlock
+TxKind_MergeSplit
+TxKind_Burn
+TxKind_Mint
+TxKind_ExpireDust
+instance
+Eq
+TxKind
+​
+Functions
+splicePrefix
+:
+Text
+amuletPrefix
+:
+Text
+amuletInstrumentId
+:
+Party
+-> InstrumentId
+Shared definition of the instrument-id used for amulets.
+optionalMetadata
+:
+Text
+-> (a ->
+Text
+) ->
+Optional
+a ->
+TextMap
+Text
+->
+TextMap
+Text
+Add an optional metadata entry.
+nonZeroMetadata
+: (
+Eq
+a,
+Additive
+a,
+Show
+a) =>
+Text
+-> a ->
+TextMap
+Text
+->
+TextMap
+Text
+Add an metadata entry if it is non-zero number.
+optionalNonZeroMetadata
+: (
+Eq
+a,
+Additive
+a,
+Show
+a) =>
+Text
+->
+Optional
+a ->
+TextMap
+Text
+->
+TextMap
+Text
+Add an metadata entry for an optional value if it is non-zero number.
+createdInRoundMetaKey
+:
+Text
+ratePerRoundMetaKey
+:
+Text
+svRewardAmountMetaKey
+:
+Text
+appRewardAmountMetaKey
+:
+Text
+unclaimedActivityRecordAmountMetaKey
+:
+Text
+validatorRewardAmountMetaKey
+:
+Text
+appRewardBeneficiariesMetaKey
+:
+Text
+appRewardBeneficiaryWeightsMetaKey
+:
+Text
+developmentFundAmountMetaKey
+:
+Text
+reasonMetaKey
+:
+Text
+Short, human-readable reason for the transaction.
+txKindMetaKey
+:
+Text
+Kind of the transaction.
+senderMetaKey
+:
+Text
+The sender of a transfer.
+burnedMetaKey
+:
+Text
+The amount of token holdings burned as part of a transaction.
+holdingTxMeta
+: TxKind ->
+Optional
+Text
+->
+Optional
+Party
+->
+Optional
+Decimal
+-> Metadata
+Build the metadata for a transaction affecting the amulet holdings.
+txKindToText
+: TxKind ->
+Text
+Exported for testing only
+simpleHoldingTxMeta
+: TxKind ->
+Optional
+Text
+->
+Optional
+Decimal
+-> Metadata
+Simplified version for a few of the common cases.
+externalPartyConfigStateContextKey
+:
+Text
+featuredAppRightContextKey
+:
+Text
+transferPreapprovalContextKey
+:
+Text
+lockContextKey
+:
+Text
+The key used to embed all the lock specification in the choice context.
+lockExpiresAtContextKey
+:
+Text
+lockHoldersContextKey
+:
+Text
+lockContextContextKey
+:
+Text
+The context description of a lock.
+expireLockKey
+:
+Text
+Key used to signal to a choice whether an expired locked amulet should be unlocked.
+beneficiariesFromMetadata
+: Metadata ->
+Either
+Text
+(
+Optional
+[AppRewardBeneficiary])
+parseCommaSeparated
+:
+Text
+-> (
+Text
+->
+Optional
+a) ->
+Text
+->
+Either
+Text
+[a]
+addOptionalAnyValue
+: ToAnyValue a =>
+Text
+->
+Optional
+a ->
+TextMap
+AnyValue ->
+TextMap
+AnyValue
+Convenience function to create maps that contain an optional value if it is set. See its use sites for examples.
+lookupFromContext
+: FromAnyValue a => ChoiceContext ->
+Text
+->
+Either
+Text
+(
+Optional
+a)
+Lookup and decode a value within a choice context.
+getFromContext
+: FromAnyValue a => ChoiceContext ->
+Text
+->
+Either
+Text
+a
+Get a value from a choice context, failing if it is not present or fails to parse.
+lookupFromContextU
+: FromAnyValue a => ChoiceContext ->
+Text
+->
+Update
+(
+Optional
+a)
+Convenience version of
+lookupFromContext
+that raises the failure within the
+Update
+.
+getFromContextU
+: FromAnyValue a => ChoiceContext ->
+Text
+->
+Update
+a
+Convenience version of
+getFromContext
+that raises the failure within the
+Update
+.
+Suggest edits
+Raise issue
+Splice Daml Models
+Splice.Amulet.TwoStepTransfer

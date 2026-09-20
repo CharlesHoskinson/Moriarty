@@ -1,0 +1,536 @@
+{
+  "model": "GPT-6 Astra",
+  "effort": "medium",
+  "pin": "c8c71f244c0d45a6a4fd990a96c69aa34781cd05",
+  "claims": [
+    {
+      "id": "X402-01",
+      "statement": "Version 1 advertises exact, maxAmountRequired and named networks; version 2 uses amount, CAIP-2 networks, separated resource and accepted objects; client budget management remains outside the core.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/x402-specification-v1.md",
+          "sha256": "4484cd856f3add013ba64485b5234364429fe46dc8f846e9bcc72f50eb80b7b6",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/x402-specification-v1.md",
+          "lines": [
+            1,
+            95
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-02",
+      "statement": "Version 2 separates scheme/network logic from transport, excludes client budget management, and defines versioned amount and resource objects.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/x402-specification-v2.md",
+          "sha256": "cb66bdef710298233316b02d48fce4a9417ec5449ed9cab7f5d9fe6a454920cd",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/x402-specification-v2.md",
+          "lines": [
+            1,
+            170
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-03",
+      "statement": "verify is read-only; settle durably commits scheme-dependent state and need not be the final charge. Flow models include authorization, upfront, and escrow.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/x402-specification-v2.md",
+          "sha256": "cb66bdef710298233316b02d48fce4a9417ec5449ed9cab7f5d9fe6a454920cd",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/x402-specification-v2.md",
+          "lines": [
+            283,
+            401
+          ]
+        }
+      ],
+      "limits": "Core finality wording is resource-server-relative; does not imply independent-chain or service-delivery finality."
+    },
+    {
+      "id": "X402-04",
+      "statement": "settlement_pending is nonterminal and carries the broadcast transaction hash and network for reconciliation.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/x402-specification-v2.md",
+          "sha256": "cb66bdef710298233316b02d48fce4a9417ec5449ed9cab7f5d9fe6a454920cd",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/x402-specification-v2.md",
+          "lines": [
+            599,
+            610
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-05",
+      "statement": "Exact authorization executes the handler before settling; upfront charges first with no protocol refund. Network replay prevents double-spend but not necessarily double delivery.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/exact/scheme_exact.md",
+          "sha256": "ffbac28df2e3c3bdfd2edf8512f22d0ddc26500f6d5c7c028c266f91ca27b97a",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/exact/scheme_exact.md",
+          "lines": [
+            13,
+            66
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-06",
+      "statement": "Client-submitted exact proofs require request binding, atomic single-use claim, retention bounds and a declared finality event; unmet reachable finality must not consume proof or deliver resource.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/exact/scheme_exact.md",
+          "sha256": "ffbac28df2e3c3bdfd2edf8512f22d0ddc26500f6d5c7c028c266f91ca27b97a",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/exact/scheme_exact.md",
+          "lines": [
+            42,
+            66
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-07",
+      "statement": "Upto is single-use, time-bounded and recipient-bound with actual charge at most the signed maximum; it is not multi-settlement streaming.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/upto/scheme_upto.md",
+          "sha256": "9610bfbfb3d5c6d38f30448daa69eef66455096c51cff320c0206b764d434aa5",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/upto/scheme_upto.md",
+          "lines": [
+            17,
+            78
+          ]
+        }
+      ],
+      "limits": "SVM binding implements ceiling escrow and states validity fields are not client-bound; do not erase binding differences."
+    },
+    {
+      "id": "X402-08",
+      "statement": "SVM upto funds a one-request channel, splits facilitator closure authority from receiver-signed payment authority, and exposes early-seal credit risk; validAfter is offchain policy and voucher expiry is not client-bound.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/upto/scheme_upto_svm.md",
+          "sha256": "601dd4cf957085cc110781841dc5cd6cae793e7daf117567084ab807c6c4f98e",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/upto/scheme_upto_svm.md",
+          "lines": [
+            10,
+            81
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-09",
+      "statement": "Auth-capture supports holds, repeatable partial captures/refunds, void and payer reclaim after capture expiry; server consent and refund funding are binding requirements.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/auth-capture/scheme_auth_capture.md",
+          "sha256": "ad1dfd097da8079f6bb3215a5a53d42dccf36eedc784a1262fc72a869f8b04f3",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/auth-capture/scheme_auth_capture.md",
+          "lines": [
+            3,
+            102
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-10",
+      "statement": "EVM auth-capture delegated operator relies on facilitator consent checks; custom operator lifecycle is outside facilitator validation; policy type is reserved future.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "sha256": "ec7b14356ffa294d754b4d9f28cd3a2a9492f0f1dd097eafacce8ce302441558",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "lines": [
+            17,
+            75
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-11",
+      "statement": "Capture/refund sign both expected balances to avoid recurring single-balance snapshots; delegated checks remain best-effort due to check/inclusion races.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "sha256": "ec7b14356ffa294d754b4d9f28cd3a2a9492f0f1dd097eafacce8ce302441558",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "lines": [
+            331,
+            370
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-12",
+      "statement": "Capture-and-void can use two transactions; a raced empty hold is capture-only success. Refund from a delegated operator requires a separate funding agreement, not just receiver signature.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "sha256": "ec7b14356ffa294d754b4d9f28cd3a2a9492f0f1dd097eafacce8ce302441558",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "lines": [
+            487,
+            528
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-13",
+      "statement": "Operator key rotation must preserve ability to submit for outstanding payments through refundDeadline; delegated authorizer requires out-of-band request authentication.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "sha256": "ec7b14356ffa294d754b4d9f28cd3a2a9492f0f1dd097eafacce8ce302441558",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/auth-capture/scheme_auth_capture_evm.md",
+          "lines": [
+            530,
+            566
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-14",
+      "statement": "Batch-settlement success records a commitment before later redemption; capital-backed and credit-backed models have different trust assumptions.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/batch-settlement/scheme_batch_settlement.md",
+          "sha256": "a73967b8da5b9e773587d988bab6c72a9d36c0e6e8a6c3fdae3bf24a258f0331",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/batch-settlement/scheme_batch_settlement.md",
+          "lines": [
+            3,
+            77
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-15",
+      "statement": "EVM batch processing serializes each channel, advances its offchain charge only after handler success, and distinguishes voucher-only charges from deposited/refunded onchain amounts.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/batch-settlement/scheme_batch_settlement_evm.md",
+          "sha256": "b2881c8f5ef7c788c09afd59454a69db9bcaba9636a540b6307c919bea430cb5",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/batch-settlement/scheme_batch_settlement_evm.md",
+          "lines": [
+            244,
+            298
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-16",
+      "statement": "EVM batch old vouchers have no expiry; ceiling overclaim within the signature is a trust violation rather than protocol violation. Withdrawal creates a claim-inclusion race.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/batch-settlement/scheme_batch_settlement_evm.md",
+          "sha256": "b2881c8f5ef7c788c09afd59454a69db9bcaba9636a540b6307c919bea430cb5",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/batch-settlement/scheme_batch_settlement_evm.md",
+          "lines": [
+            664,
+            674
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-17",
+      "statement": "EVM batch onchain totalClaimed omits outstanding offchain vouchers; claim watcher and withdrawal-delay policies mitigate but do not eliminate censorship risk.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/contracts/evm/docs/x402-batch-settlement-implementers.md",
+          "sha256": "1f500507cb9ed6112ef1477603a9b5042a1bfd0d110ad7b374e9d81ec80df36a",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/contracts/evm/docs/x402-batch-settlement-implementers.md",
+          "lines": [
+            9,
+            38
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-18",
+      "statement": "Refund nonce advances even when no value moves; partial refunds preserve remaining timed withdrawal; permissionless settle pays claimed but unsettled value.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/contracts/evm/docs/x402-batch-settlement-implementers.md",
+          "sha256": "1f500507cb9ed6112ef1477603a9b5042a1bfd0d110ad7b374e9d81ec80df36a",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/contracts/evm/docs/x402-batch-settlement-implementers.md",
+          "lines": [
+            56,
+            91
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-19",
+      "statement": "SVM batch is explicitly draft and signs client cumulative vouchers; facilitator early closure can defeat unclaimed value although it cannot mint a payer voucher.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/batch-settlement/scheme_batch_settlement_svm.md",
+          "sha256": "a64d4ff0224233cbc97871abc8b159a7f3dda6283ff8979620119db10bcfe475",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/batch-settlement/scheme_batch_settlement_svm.md",
+          "lines": [
+            1,
+            105
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-20",
+      "statement": "Cloudflare batch is identity/credit-backed and intermediary billed, with HTTP signature authentication; missing price timeout provides no price-validity timing guarantee.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/schemes/batch-settlement/scheme_batch_settlement_cloudflare.md",
+          "sha256": "783ea0a05608f059e15262d770b064d4676c26ff198914f1ff3f1b0c43e49290",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/schemes/batch-settlement/scheme_batch_settlement_cloudflare.md",
+          "lines": [
+            3,
+            126
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-21",
+      "statement": "Payment identifiers support fingerprint-bound idempotency, cached same-request responses and conflicting-payload rejection; use by server/facilitator is optional.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/extensions/payment_identifier.md",
+          "sha256": "a48b79d0c1fc10f82b0939efdabfa363e9367391664bb00bf6fed0beb193d2d3",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/extensions/payment_identifier.md",
+          "lines": [
+            80,
+            121
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-22",
+      "statement": "Offer/receipt signatures require a separate service-key authorization check and temporal evidence after rotation; a receipt is a server statement of delivery.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/extensions/extension-offer-and-receipt.md",
+          "sha256": "51151bd2b7dd174bc4a44b712234c074e45ca6c752c44ce077a94a4d97596ae9",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/extensions/extension-offer-and-receipt.md",
+          "lines": [
+            235,
+            265
+          ]
+        }
+      ],
+      "limits": "Authenticity of a statement is not proof of external delivery or correct computation."
+    },
+    {
+      "id": "X402-23",
+      "statement": "MCP paid tools return payment requirements in tool error data and carry authorization and response in metadata.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/transports-v2/mcp.md",
+          "sha256": "4f1e0bb50c60e3fe384142f589cd6323b8a9ec4432335ef29053d1220f9e2146",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/transports-v2/mcp.md",
+          "lines": [
+            1,
+            28
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-24",
+      "statement": "A2A uses input-required tasks and task-correlated payment metadata.",
+      "classification": "source-specification",
+      "evidence": [
+        {
+          "path": "repo/specs/transports-v2/a2a.md",
+          "sha256": "bbf078363a2fc4eeeb8f6e9b66cf36033f5acfc3984c0e8f427143368979d878",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/specs/transports-v2/a2a.md",
+          "lines": [
+            1,
+            78
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-25",
+      "statement": "Chatbot example automatically approves payment in the host client; the model sees tool definitions/results and does not itself operate MCP.",
+      "classification": "source-example",
+      "evidence": [
+        {
+          "path": "repo/examples/typescript/clients/mcp-chatbot/README.md",
+          "sha256": "e3e4b26b3e6927ad8e80a09b994926466755ecc1b83e965233ca644b45e8dd53",
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/examples/typescript/clients/mcp-chatbot/README.md",
+          "lines": [
+            195,
+            231
+          ]
+        }
+      ],
+      "limits": "Integration example is not a formal solver, budget proof or proof-carrying intention."
+    },
+    {
+      "id": "X402-26",
+      "statement": "Current docs describe one retry with payload-keyed pending transaction reconciliation; in-memory storage requires same process, shared storage is needed across replicas.",
+      "classification": "source-documentation",
+      "evidence": [
+        {
+          "path": "captures/279bd805e3ea0110230c2602.txt",
+          "sha256": "22dba745881ac656a3453112aa9ace21de0fcf6a4ba265334771a25bb7922dca",
+          "url": "https://docs.x402.org/core-concepts/facilitator",
+          "lines": [
+            153,
+            259
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-27",
+      "statement": "CDP pending settlement may be HTTP500/success:false without terminal payment failure; preserve the original request and reconcile before authorizing another payment.",
+      "classification": "source-documentation",
+      "evidence": [
+        {
+          "path": "captures/601828eafe35f27fd1dff0dd.txt",
+          "sha256": "90d4e0f997a71f473e37b837f67c0ce3fc4357f122e88ad69e9d29afc7ac08f2",
+          "url": "https://docs.cdp.coinbase.com/x402/seller/settlement-pending",
+          "lines": [
+            5,
+            125
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-28",
+      "statement": "CDP hosted facilitator documents provider screening and a narrower advertised scheme/network support set; protocol availability is not hosted support.",
+      "classification": "source-documentation",
+      "evidence": [
+        {
+          "path": "captures/e0beb3fd54d7b6ed54a6eed3.txt",
+          "sha256": "62a2e8035bffa58c56fdbe035eeb56d7c4a3e936ddf6d4ccc060e311e480c1ce",
+          "url": "https://docs.cdp.coinbase.com/x402/seller/facilitator",
+          "lines": [
+            2,
+            182
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-29",
+      "statement": "CDP buyer configuration documents spend-limit policy outside the core protocol.",
+      "classification": "source-documentation",
+      "evidence": [
+        {
+          "path": "captures/0171dc842137ef48a2ac1930.txt",
+          "sha256": "071b21453950134392e24173b6ef5dee2ae8385ac0b43b23163004cf7aa7cf49",
+          "url": "https://docs.cdp.coinbase.com/x402/buyer/client-configuration",
+          "lines": [
+            165,
+            345
+          ]
+        }
+      ],
+      "limits": null
+    },
+    {
+      "id": "X402-30",
+      "statement": "May Cantina audit acknowledges persistent voucher lifetime/top-up exposure, and treats withdrawal-race documentation and watcher guidance as remediation rather than removal of the race.",
+      "classification": "historical-audit-report",
+      "evidence": [
+        {
+          "path": "pdf-text/cantina_x402_may2026.txt",
+          "sha256": "4dcaf6b26955844329adc04451455d304f61c3e32afc605ea43c41c184f06aca",
+          "lines": [
+            368,
+            420
+          ],
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/contracts/evm/audits/cantina_x402_may2026.pdf",
+          "pdf_path": "repo/contracts/evm/audits/cantina_x402_may2026.pdf",
+          "pdf_sha256": "eeb10937b551e4964c3bd3875306f21fca8fcacf7a748bfce7335d792a963947",
+          "pdf_pages_1_based": [
+            7,
+            8
+          ]
+        },
+        {
+          "path": "pdf-text/cantina_x402_may2026.txt",
+          "sha256": "4dcaf6b26955844329adc04451455d304f61c3e32afc605ea43c41c184f06aca",
+          "lines": [
+            499,
+            595
+          ],
+          "url": "https://github.com/x402-foundation/x402/blob/c8c71f244c0d45a6a4fd990a96c69aa34781cd05/contracts/evm/audits/cantina_x402_may2026.pdf",
+          "pdf_pages_1_based": [
+            9,
+            10
+          ]
+        }
+      ],
+      "limits": "Historical pin ca60063c; not certification of current source/deployments. Text passages read, these pages not visually inspected."
+    }
+  ]
+}
