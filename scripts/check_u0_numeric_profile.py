@@ -36,20 +36,11 @@ FORMULA = (
     "second rounding of an already rounded reciprocal."
 )
 
-DECISION_PHRASES = (
-    "base-per-quote",
-    "`ceil`",
-    "`floor`",
-    "`none`",
-    "protocol reserve",
-    "never become field elements",
-    "exact domain-qualified integers",
-)
-ROLE_DIRECTION = {
-    "obligation": "ceil",
-    "receipt": "floor",
-    "exact": "none",
-}
+# Schema enum for the D4 sentence "They never become field elements".
+# The checker emits this only when that sentence is the unique field-element
+# sentence in D4. A different sentence does not produce this value.
+FIELD_ELEMENT_PROHIBITION = "forbidden"
+MISSING_RESERVE_POSTING = "missing protocol-reserve posting"
 
 # An operand on each side of `/`, after comments and string literals are blanked.
 # Spacing does not matter. `//` and `/*` are not division operators.
@@ -57,20 +48,17 @@ _OPERAND = r"(?:[A-Za-z_$][\w$]*|\d+n?|\)|\])"
 DIVISION = re.compile(rf"{_OPERAND}\s*/(?!/|\*)\s*{_OPERAND}")
 ROUNDING_WORD = re.compile(r"\bfloor\b|\bceil\b")
 ROUNDING_OR_SCALE = re.compile(r"\bfloor\b|\bceil\b|Rounding|\bscale\b|\bdiv\b")
-BENEFICIARY_CAVEAT = re.compile(
-    r"remainder is not posted to (?:a |the )?protocol reserve",
-    re.IGNORECASE,
-)
-BENEFICIARY_POSTED = re.compile(
-    r"remainder is posted to (?:a |the )?protocol reserve",
-    re.IGNORECASE,
+# Spec clarification for §3 overflow-checked helpers. Their cited lines reject
+# overflow. They do not contain '/', floor, ceil, Rounding, scale, or div.
+# The search uses the comment-masked line, so a comment cannot satisfy it.
+OVERFLOW_LINE = re.compile(
+    r"numericFits\s*\(|UINT(?:64|128)_MAX|\?\s*null\s*:"
 )
 # floor(256 * log10(2)). 10^77 fits in UInt256 and 10^78 does not.
 # The reciprocal numerator is 10^(s+t), so the largest checked mantissa is 10^154.
 MAX_SCALE = 77
 MAX_RECIPROCAL = 10 ** (MAX_SCALE * 2)
 REMAINDER_WINDOW = 8
-RESERVE_NAMES = frozenset({"protocolReserve", "protocol_reserve"})
 REGEX_PREFIX_KEYWORDS = frozenset({
     "return",
     "typeof",
@@ -108,9 +96,6 @@ DIVISION_ASSIGN = re.compile(
     r"(?:(?:const|let|var)\s+)?(?P<quotient>[A-Za-z_]\w*)\s*=\s*"
     r"(?P<numerator>[A-Za-z_]\w*)\s*/\s*(?P<divisor>[A-Za-z_]\w*)\b"
 )
-OVERFLOW_LINE = re.compile(
-    r"numericFits\s*\(|UINT(?:64|128)_MAX|\?\s*null\s*:"
-)
 OVERFLOW_RETURN = re.compile(
     r"return\s+(?:"
     r"(?P<sum>[A-Za-z_]\w*)\s*>\s*UINT(?:64|128)_MAX\s*\?\s*null\s*:\s*(?P=sum)"
@@ -118,10 +103,6 @@ OVERFLOW_RETURN = re.compile(
     r"(?P<right>[A-Za-z_]\w*)\s*>\s*(?P<left>[A-Za-z_]\w*)\s*\?\s*null\s*:\s*"
     r"(?P=left)\s*-\s*(?P=right)"
     r")\s*;"
-)
-UPDATE = re.compile(
-    r"(?P<lhs>[A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)\s*"
-    r"(?P<op>\+=|=(?!=))\s*(?P<rhs>[^;]+)"
 )
 FUNCTION_START = re.compile(
     r"^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_]\w*)\s*\("
@@ -131,6 +112,8 @@ METHOD_START = re.compile(
 )
 CONTROL_WORDS = {"if", "for", "while", "switch", "catch", "else"}
 WIDTH_NAME = re.compile(r"^(?:UInt|SInt)(\d+)$")
+AUTHOR_SELECT = re.compile(r"\b(?:author|program)\b[\s\S]{0,120}\bselect")
+_SECTION = re.compile(r"(?m)^##\s+D([1-4])\b[^\n]*")
 
 # floor/ceil lines inside an arithmetic helper that are not a source/5 primitive.
 # repayment.ts convertNominal is the earlier kernel. Source/5 uses financial-lifecycle.ts.
@@ -203,12 +186,12 @@ IGNORED_OVERFLOW_SITES: tuple[tuple[str, int, str], ...] = (
 
 
 class RoleEvidence(NamedTuple):
-    """One fail-closed role entry.
+    """One fail-closed source entry.
 
-    A division receives a result role only when an entry's pattern matches the
-    cited region. The checker re-reads that region from source. A division with
-    no matching entry fails closed with "no derived result role".
-    region is "division-function" or "caller". caller is empty for the former.
+    division-function and caller entries assign result role when pattern matches
+    the cited region. author-selected-both-roles does not assign a role. Its
+    pattern proves the reducer takes rounding from the constructor. The checker
+    then requires one obligation row and one receipt row at that line.
     """
 
     file: str
@@ -219,7 +202,9 @@ class RoleEvidence(NamedTuple):
     pattern: str
 
 
-# Deliberate fail-closed allowlist. Patterns are source evidence, not a guess.
+# division-function and caller patterns are role evidence re-read from source.
+# author-selected-both-roles is not role evidence. FloorDiv and CeilDiv names
+# in the reducer do not prove which result role the quotient has.
 ROLE_EVIDENCE: tuple[RoleEvidence, ...] = (
     RoleEvidence(
         "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
@@ -232,18 +217,10 @@ ROLE_EVIDENCE: tuple[RoleEvidence, ...] = (
     RoleEvidence(
         "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
         404,
-        "obligation",
-        "division-function",
         "",
-        r"\bFloorDiv\b",
-    ),
-    RoleEvidence(
-        "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-        404,
-        "receipt",
-        "division-function",
+        "author-selected-both-roles",
         "",
-        r"\bCeilDiv\b",
+        r"k\s*===\s*'CeilDiv'\s*&&\s*r\s*!==\s*0n\s*\?\s*q\s*\+\s*1n\s*:\s*q",
     ),
     RoleEvidence(
         "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
@@ -278,6 +255,16 @@ class Division(NamedTuple):
     divisor: str
 
 
+class DerivedPolicy(NamedTuple):
+    canonical: str | None
+    obligation: str | None
+    receipt: str | None
+    exact: str | None
+    beneficiary: str | None
+    representation: str | None
+    field_element_coercion: str | None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -295,13 +282,12 @@ def main(argv: list[str] | None = None) -> int:
         for failure in failures:
             print(failure)
         return 1
-    primitives, gaps, beneficiary_gaps = counts or (0, 0, 0)
+    primitives, gaps = counts or (0, 0)
     print(f"OK: {primitives} primitives, {gaps} open conformance gaps")
-    print(f"beneficiary gaps: {beneficiary_gaps}")
     return 0
 
 
-def check(root: Path) -> tuple[str | None, list[str], tuple[int, int, int] | None]:
+def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
     decision_path = root / DECISION_FILE
     if not decision_path.is_file():
         return "decision file missing", [], None
@@ -321,9 +307,7 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int, int] | Non
     if decision is None:
         return None, failures, None
     decision_bytes, decision_text = decision
-    for phrase in DECISION_PHRASES:
-        if phrase not in decision_text:
-            failures.append(f"FAIL: decision file does not state {phrase}")
+    derived = derive_policy(decision_text, failures)
 
     schema, schema_text = load_json(
         schema_path, "numeric profile schema", SCHEMA_FILE, failures
@@ -374,13 +358,7 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int, int] | Non
             "FAIL: decisionSha256 does not match "
             f"{DECISION_FILE} ({digest})"
         )
-    if profile["defaultPolicy"] != {
-        "obligation": "ceil",
-        "receipt": "floor",
-        "exact": "none",
-        "remainderBeneficiary": "protocol-reserve",
-    }:
-        failures.append("FAIL: defaultPolicy does not match the decision phrases")
+    compare_derived(profile, derived, failures)
     if profile["overrides"] != []:
         failures.append("FAIL: U0 overrides must be empty")
     if profile["defiformalConversion"]["formula"] != FORMULA:
@@ -395,18 +373,242 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int, int] | Non
         sources[relative] = loaded[1].splitlines()
     try:
         masked = {name: masked_lines(lines) for name, lines in sources.items()}
+        comments = {name: comment_masked_lines(lines) for name, lines in sources.items()}
     except ValueError as error:
         failures.append(f"FAIL: {error}")
         return None, failures, None
+    reserve_absent = check_reserve_mechanism(profile, sources, comments, failures)
     check_price_types(profile, sources, failures)
     check_price_orientation(profile, sources, masked, failures)
     check_widths(profile, sources, failures)
     check_vectors(profile, failures)
-    primitive_count, gap_count, beneficiary_gaps = check_primitives(
-        profile, sources, masked, failures
+    role_direction = {
+        "obligation": derived.obligation,
+        "receipt": derived.receipt,
+        "exact": derived.exact,
+    }
+    primitive_count, gap_count = check_primitives(
+        profile,
+        sources,
+        masked,
+        comments,
+        role_direction,
+        reserve_absent,
+        derived.beneficiary,
+        failures,
     )
     check_coverage(profile, sources, masked, failures)
-    return None, failures, (primitive_count, gap_count, beneficiary_gaps)
+    return None, failures, (primitive_count, gap_count)
+
+
+def decision_sections(text: str) -> dict[str, str] | None:
+    matches = list(_SECTION.finditer(text))
+    keys = [match.group(1) for match in matches]
+    if len(keys) != len(set(keys)):
+        return None
+    bodies: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        bodies[match.group(1)] = text[start:end]
+    return bodies
+
+
+def sole_group(pattern: str, text: str) -> str | None:
+    found = re.findall(pattern, text)
+    if len(found) != 1:
+        return None
+    value = found[0]
+    if isinstance(value, tuple):
+        value = value[0]
+    value = str(value).strip()
+    if not value:
+        return None
+    return value
+
+
+def hyphenate(value: str) -> str:
+    return "-".join(value.strip().lower().split())
+
+
+def representation_slug(section: str) -> str | None:
+    found = re.findall(r"Amounts are ([^.]+)", section)
+    if len(found) != 1:
+        return None
+    head = found[0].split(" in ", 1)[0].strip()
+    if not head:
+        return None
+    slug = hyphenate(head)
+    if slug.endswith("s"):
+        slug = slug[:-1]
+    return slug or None
+
+
+def field_element_coercion(section: str) -> str | None:
+    parts = [
+        part.strip()
+        for part in re.split(r"\.(?:\s+|$)", section.strip())
+        if part.strip()
+    ]
+    mentions = [part for part in parts if "field elements" in part]
+    prohibitions = [
+        part
+        for part in mentions
+        if re.search(r"\bnever become field elements\b", part) is not None
+    ]
+    if len(prohibitions) == 1 and len(mentions) == 1:
+        return FIELD_ELEMENT_PROHIBITION
+    return None
+
+
+def derive_policy(text: str, failures: list[str]) -> DerivedPolicy:
+    """Read D1, D2, and D4 normative markers. Do not use phrases from elsewhere."""
+    sections = decision_sections(text)
+    if sections is None:
+        failures.append("FAIL: decision section headings are duplicated")
+        sections = {}
+    for key, label in (("1", "D1"), ("2", "D2"), ("4", "D4")):
+        if key not in sections:
+            failures.append(f"FAIL: decision {label} is missing or ambiguous")
+    d1 = sections.get("1", "")
+    d2 = sections.get("2", "")
+    d4 = sections.get("4", "")
+    bolds = re.findall(r"\*\*([^*]+)\*\*", d1) if d1 else []
+    canonical = bolds[0].strip() if len(bolds) == 1 and bolds[0].strip() else None
+    if d1 and canonical is None:
+        failures.append(
+            "FAIL: decision D1 canonical orientation is missing or ambiguous"
+        )
+    obligation = (
+        sole_group(r"rounds\s+\*\*up\*\*\s+\(`([a-z]+)`\)", d2) if d2 else None
+    )
+    if d2 and obligation is None:
+        failures.append("FAIL: decision D2 obligation direction is missing or ambiguous")
+    receipt = (
+        sole_group(r"rounds\s+\*\*down\*\*\s+\(`([a-z]+)`\)", d2) if d2 else None
+    )
+    if d2 and receipt is None:
+        failures.append("FAIL: decision D2 receipt direction is missing or ambiguous")
+    exact = sole_group(r"no rounding\s+\(`([a-z]+)`\)", d2) if d2 else None
+    if d2 and exact is None:
+        failures.append("FAIL: decision D2 exact direction is missing or ambiguous")
+    beneficiary_text = (
+        sole_group(r"accrues to the \*\*([^*]+)\*\*", d2) if d2 else None
+    )
+    beneficiary = hyphenate(beneficiary_text) if beneficiary_text else None
+    if d2 and beneficiary is None:
+        failures.append(
+            "FAIL: decision D2 remainder beneficiary is missing or ambiguous"
+        )
+    representation = representation_slug(d4) if d4 else None
+    if d4 and representation is None:
+        failures.append("FAIL: decision D4 representation is missing or ambiguous")
+    coercion = field_element_coercion(d4) if d4 else None
+    if d4 and coercion is None:
+        failures.append(
+            "FAIL: decision D4 field-element rule is missing or ambiguous"
+        )
+    return DerivedPolicy(
+        canonical,
+        obligation,
+        receipt,
+        exact,
+        beneficiary,
+        representation,
+        coercion,
+    )
+
+
+def compare_derived(
+    profile: dict[str, Any], derived: DerivedPolicy, failures: list[str]
+) -> None:
+    pairs = (
+        (derived.canonical, profile["priceOrientation"]["canonical"], "priceOrientation.canonical", "D1"),
+        (derived.obligation, profile["defaultPolicy"]["obligation"], "defaultPolicy.obligation", "D2"),
+        (derived.receipt, profile["defaultPolicy"]["receipt"], "defaultPolicy.receipt", "D2"),
+        (derived.exact, profile["defaultPolicy"]["exact"], "defaultPolicy.exact", "D2"),
+        (
+            derived.beneficiary,
+            profile["defaultPolicy"]["remainderBeneficiary"],
+            "defaultPolicy.remainderBeneficiary",
+            "D2",
+        ),
+        (derived.representation, profile["units"]["representation"], "units.representation", "D4"),
+        (
+            derived.field_element_coercion,
+            profile["units"]["fieldElementCoercion"],
+            "units.fieldElementCoercion",
+            "D4",
+        ),
+    )
+    for expected, actual, label, section in pairs:
+        if expected is None:
+            continue
+        if actual != expected:
+            failures.append(
+                f"FAIL: {label} does not match derived {section} value {expected}"
+            )
+
+
+def declares(line: str, symbol: str) -> bool:
+    """True when line declares symbol as a type, field, or function.
+
+    A local variable is not a declaration. The checker does not decide whether
+    the declaration is a reserve account.
+    """
+    name = re.escape(symbol)
+    patterns = (
+        rf"^\s*(?:export\s+)?(?:async\s+)?function\s+{name}\s*\(",
+        rf"^\s*(?:export\s+)?(?:abstract\s+)?class\s+{name}\b",
+        rf"^\s*(?:export\s+)?(?:interface|type|enum)\s+{name}\b",
+        rf"^\s*(?:(?:public|private|protected|readonly|static)\s+)+{name}\s*\??\s*:",
+        rf"^\s*{name}\s*\??\s*:",
+        rf"^\s*(?:(?:public|private|protected|readonly|static|async)\s+)*{name}\s*\([^;]*\)\s*(?::\s*[^{{]+)?\{{",
+    )
+    return any(re.search(pattern, line) is not None for pattern in patterns)
+
+
+def check_reserve_mechanism(
+    profile: dict[str, Any],
+    sources: dict[str, list[str]],
+    comments: dict[str, list[str]],
+    failures: list[str],
+) -> bool:
+    """Return True when reserveMechanism.status is absent.
+
+    Citations are declaration checks only. Semantic adequacy is a reviewed claim.
+    """
+    reserve = profile["reserveMechanism"]
+    citations = reserve["citations"]
+    keys = [
+        (str(item["file"]), str(item["symbol"]), int(item["line"]))
+        for item in citations
+    ]
+    if keys != sorted(keys):
+        failures.append(
+            "FAIL: reserveMechanism.citations is not sorted by file, symbol, and line"
+        )
+    for index, citation in enumerate(citations):
+        relative = str(citation["file"])
+        symbol = str(citation["symbol"])
+        line_number = int(citation["line"])
+        lines = sources.get(relative)
+        kept = comments.get(relative)
+        if lines is None or kept is None:
+            failures.append(f"FAIL: reserve citation file {relative} is missing")
+            continue
+        if line_number < 1 or line_number > len(lines):
+            failures.append(
+                f"FAIL: reserveMechanism.citations[{index}] line {line_number} "
+                f"is past the end of {relative}"
+            )
+            continue
+        if not declares(kept[line_number - 1], symbol):
+            failures.append(
+                f"FAIL: reserveMechanism.citations[{index}] {symbol} "
+                f"is not a declaration at {relative}:{line_number}"
+            )
+    return str(reserve["status"]) == "absent"
 
 
 def read_utf8(
@@ -910,8 +1112,12 @@ def check_primitives(
     profile: dict[str, Any],
     sources: dict[str, list[str]],
     masked: dict[str, list[str]],
+    comments: dict[str, list[str]],
+    role_direction: dict[str, str | None],
+    reserve_absent: bool,
+    beneficiary: str | None,
     failures: list[str],
-) -> tuple[int, int, int]:
+) -> tuple[int, int]:
     rows = profile["primitives"]
     ids = [row["id"] for row in rows]
     if ids != sorted(ids):
@@ -919,43 +1125,55 @@ def check_primitives(
     if len(ids) != len(set(ids)):
         failures.append("FAIL: primitive ids are not unique")
     gaps = 0
-    beneficiary_gaps = 0
     for row in rows:
-        row_failures, beneficiary_gap = check_primitive(row, sources, masked)
-        failures.extend(row_failures)
+        failures.extend(
+            check_primitive(
+                row,
+                sources,
+                masked,
+                comments,
+                role_direction,
+                reserve_absent,
+                beneficiary,
+            )
+        )
         if row["conformance"] == "open-gap":
             gaps += 1
-        if beneficiary_gap:
-            beneficiary_gaps += 1
-    return len(rows), gaps, beneficiary_gaps
+    return len(rows), gaps
 
 
 def check_primitive(
     row: dict[str, Any],
     sources: dict[str, list[str]],
     masked: dict[str, list[str]],
-) -> tuple[list[str], bool]:
+    comments: dict[str, list[str]],
+    role_direction: dict[str, str | None],
+    reserve_absent: bool,
+    beneficiary: str | None,
+) -> list[str]:
     failures: list[str] = []
     identity = str(row["id"])
-    lines = sources.get(str(row["file"]))
-    code_lines = masked.get(str(row["file"]))
-    if lines is None or code_lines is None:
-        return [f"FAIL: primitive {identity} file {row['file']} is missing"], False
+    relative = str(row["file"])
+    lines = sources.get(relative)
+    code_lines = masked.get(relative)
+    comment_lines = comments.get(relative)
+    if lines is None or code_lines is None or comment_lines is None:
+        return [f"FAIL: primitive {identity} file {relative} is missing"]
     if re.search(rf"\b{re.escape(str(row['symbol']))}\b", "\n".join(lines)) is None:
         failures.append(
             f"FAIL: primitive {identity} symbol {row['symbol']} "
-            f"does not occur in {row['file']}"
+            f"does not occur in {relative}"
         )
     line_number = int(row["line"])
     if line_number > len(lines):
         return failures + [
             f"FAIL: primitive {identity} line {line_number} "
-            f"is past the end of {row['file']}"
-        ], False
-    line_text = lines[line_number - 1]
+            f"is past the end of {relative}"
+        ]
     code_text = code_lines[line_number - 1]
+    comment_text = comment_lines[line_number - 1]
     required = str(row["requiredDirection"])
-    if not line_has_operation(line_text, code_text, required):
+    if not line_has_operation(comment_text, code_text, required):
         failures.append(
             f"FAIL: primitive {identity} line {line_number} "
             "has no division, rounding, scaling, or overflow-checked operation"
@@ -969,7 +1187,7 @@ def check_primitive(
         failures.append(
             f"FAIL: primitive {identity} line {line_number} is not inside a function"
         )
-        return failures, False
+        return failures
     start, end, name = span
     body = "\n".join(lines[start - 1 : end])
     kept_body = mask_non_code(body, blank_strings=False)
@@ -984,8 +1202,8 @@ def check_primitive(
         failures.append(
             f"FAIL: primitive {identity} authorSelectable does not match the source"
         )
-    fixed = None if selectable else fixed_direction(kept_body, required)
-    reasons = conformance_reasons(selectable, required, fixed)
+    fixed = None if selectable else fixed_direction(comment_lines, line_number, required)
+    reasons = conformance_reasons(selectable, required, fixed, reserve_absent)
     expected = "open-gap" if reasons else "conforms"
     if row["conformance"] != expected:
         detail = "; ".join(reasons) if reasons else "the source matches the policy"
@@ -993,48 +1211,69 @@ def check_primitive(
             f"FAIL: primitive {identity} conformance is {row['conformance']} "
             f"but the source requires {expected} ({detail})"
         )
-    posted = remainder_posted(row, sources, masked)
-    if required != "none":
-        check_beneficiary_claim(row, identity, posted, failures)
     if DIVISION.search(code_text) and str(row["resultRole"]) != "exact":
-        roles = required_roles(str(row["file"]), line_number, sources, masked)
+        roles = required_roles(relative, line_number, sources, masked)
         if str(row["resultRole"]) not in roles:
             failures.append(
                 f"FAIL: primitive {identity} resultRole {row['resultRole']} "
-                f"is not derived for {row['file']}:{line_number}"
+                f"is not derived for {relative}:{line_number}"
             )
-    direction = ROLE_DIRECTION[str(row["resultRole"])]
-    if row["requiredDirection"] != direction:
+    derived_direction = role_direction.get(str(row["resultRole"]))
+    if derived_direction is not None and row["requiredDirection"] != derived_direction:
         failures.append(
-            f"FAIL: primitive {identity} requiredDirection does not match {row['resultRole']}"
+            f"FAIL: primitive {identity} requiredDirection does not match derived "
+            f"{row['resultRole']} value {derived_direction}"
         )
     if row["requiredDirection"] == "none":
         if row["remainderBeneficiary"] is not None:
             failures.append(
                 f"FAIL: primitive {identity} remainderBeneficiary must be null"
             )
-    elif row["remainderBeneficiary"] != "protocol-reserve":
+    elif beneficiary is not None and row["remainderBeneficiary"] != beneficiary:
         failures.append(
-            f"FAIL: primitive {identity} remainderBeneficiary must be protocol-reserve"
+            f"FAIL: primitive {identity} remainderBeneficiary does not match "
+            f"derived D2 value {beneficiary}"
         )
+    note = row["gapNote"] if isinstance(row["gapNote"], str) else ""
     if row["conformance"] == "open-gap":
-        if not isinstance(row["gapNote"], str) or not row["gapNote"].strip():
+        if not note.strip():
             failures.append(f"FAIL: primitive {identity} open-gap requires gapNote")
     elif row["gapNote"] is not None:
         failures.append(f"FAIL: primitive {identity} conforms requires a null gapNote")
-    beneficiary_gap = required != "none" and not posted
-    return failures, beneficiary_gap
+    if selectable and AUTHOR_SELECT.search(note) is None:
+        failures.append(
+            f"FAIL: primitive {identity} gapNote must name the author-selectable rounding"
+        )
+    if reserve_absent and required in {"ceil", "floor"}:
+        if MISSING_RESERVE_POSTING not in note:
+            failures.append(
+                f"FAIL: primitive {identity} gapNote must name the "
+                "missing protocol-reserve posting"
+            )
+    elif MISSING_RESERVE_POSTING in note:
+        failures.append(
+            f"FAIL: primitive {identity} gapNote names a missing "
+            "protocol-reserve posting but reserveMechanism.status is present"
+        )
+    return failures
 
 
-def line_has_operation(raw_line: str, code_line: str, required: str) -> bool:
+def line_has_operation(comment_line: str, code_line: str, required: str) -> bool:
+    """Match an operation on the comment-masked line.
+
+    Exact rows use OVERFLOW_LINE. Overflow helpers are in scope under §3 even
+    though their cited lines have no division or rounding token. Non-exact rows
+    use division on the code line, or ROUNDING_OR_SCALE on the comment-masked
+    line. A comment that contains scale or div does not count.
+    """
     if required == "none":
         return (
-            OVERFLOW_LINE.search(code_line) is not None
+            OVERFLOW_LINE.search(comment_line) is not None
             and DIVISION.search(code_line) is None
         )
     return (
         DIVISION.search(code_line) is not None
-        or ROUNDING_OR_SCALE.search(raw_line) is not None
+        or ROUNDING_OR_SCALE.search(comment_line) is not None
     )
 
 
@@ -1047,13 +1286,38 @@ def author_selectable(body: str, line_text: str, required: str) -> bool:
     return re.search(r"\.rounding\s*===", body) is not None
 
 
-def fixed_direction(body: str, required: str) -> str | None:
+def fixed_direction(
+    comment_lines: list[str], line_number: int, required: str
+) -> str | None:
+    """Classify one parsed division. Unrelated ceil tokens do not count.
+
+    Ceil requires a remainder bound to `<numerator> % <divisor>` from
+    parse_division, `<remainder> !== 0n`, and `<quotient> + 1n` or
+    `addU128(<quotient>, 1n)`, all inside the remainder window.
+    """
     if required == "none":
         return "none"
-    if DIVISION.search(body) is None:
+    if line_number < 1 or line_number > len(comment_lines):
         return None
-    if re.search(r"!==\s*0n", body) is not None and re.search(r"\+\s*1n", body) is not None:
-        return "ceil"
+    division = parse_division(comment_lines[line_number - 1])
+    if division is None:
+        return None
+    last = min(len(comment_lines), line_number + REMAINDER_WINDOW)
+    window = "\n".join(comment_lines[line_number - 1 : last])
+    remainder_names = re.findall(
+        rf"(?:const|let|var|,)\s+([A-Za-z_]\w*)\s*=\s*"
+        rf"{re.escape(division.numerator)}\s*%\s*{re.escape(division.divisor)}\b",
+        window,
+    )
+    quotient = re.escape(division.quotient)
+    increment = re.search(
+        rf"(?:\b{quotient}\s*\+\s*1n\b|\baddU128\(\s*{quotient}\s*,\s*1n\s*\))",
+        window,
+    )
+    if increment is not None:
+        for name in remainder_names:
+            if re.search(rf"\b{re.escape(name)}\s*!==\s*0n\b", window) is not None:
+                return "ceil"
     return "floor"
 
 
@@ -1061,117 +1325,22 @@ def conformance_reasons(
     selectable: bool,
     required_direction: str,
     fixed: str | None,
+    reserve_absent: bool,
 ) -> list[str]:
-    """Open-gap iff the author can select rounding or the fixed direction differs.
-
-    A missing protocol-reserve posting is a beneficiary gap. It does not change
-    this direction result.
-    """
+    """Open-gap when rounding is selectable, the fixed direction differs, or the reserve is absent."""
+    reasons: list[str] = []
     if selectable:
-        return ["author can select the rounding"]
-    if fixed is None:
-        return ["the source has no fixed direction"]
-    if fixed != required_direction:
-        return [
+        reasons.append("author can select the rounding")
+    elif fixed is None:
+        reasons.append("the source has no fixed direction")
+    elif fixed != required_direction:
+        reasons.append(
             f"fixed direction {fixed} differs from required {required_direction}"
-        ]
-    return []
-
-
-def check_beneficiary_claim(
-    row: dict[str, Any],
-    identity: str,
-    posted: bool,
-    failures: list[str],
-) -> None:
-    description = str(row["description"])
-    says_posted = BENEFICIARY_POSTED.search(description) is not None
-    says_caveat = BENEFICIARY_CAVEAT.search(description) is not None
-    if says_posted == says_caveat:
-        failures.append(
-            f"FAIL: primitive {identity} description must state whether "
-            "the remainder is posted to a protocol reserve"
         )
-    elif says_posted != posted:
-        if posted:
-            failures.append(
-                f"FAIL: primitive {identity} description must state that "
-                "the remainder is posted to a protocol reserve"
-            )
-        else:
-            failures.append(
-                f"FAIL: primitive {identity} description must state that "
-                "the remainder is not posted to a protocol reserve"
-            )
-    if row["conformance"] != "open-gap":
-        return
-    note = row["gapNote"] if isinstance(row["gapNote"], str) else ""
-    note_caveat = BENEFICIARY_CAVEAT.search(note) is not None
-    if posted and note_caveat:
-        failures.append(
-            f"FAIL: primitive {identity} gapNote still says that "
-            "the remainder is not posted to a protocol reserve"
-        )
-    if not posted and not note_caveat:
-        failures.append(
-            f"FAIL: primitive {identity} gapNote must state that "
-            "the remainder is not posted to a protocol reserve"
-        )
+    if reserve_absent and required_direction in {"ceil", "floor"}:
+        reasons.append("protocol-reserve posting is absent")
+    return reasons
 
-
-def remainder_posted(
-    row: dict[str, Any],
-    sources: dict[str, list[str]],
-    masked: dict[str, list[str]],
-) -> bool:
-    """True when this division's own remainder is posted to a protocol reserve.
-
-    The posting must name the remainder bound beside this division, or the
-    modulus of this division's numerator and divisor. The reserve name must be
-    in scope, and a later reachable read or a parameter-object write must
-    observe it. closureReserve is not that reserve. A posting in a caller
-    counts only for the caller that supplies this row's role, and only when
-    the posted value is still this division's remainder.
-    """
-    if str(row["requiredDirection"]) == "none":
-        return True
-    relative = str(row["file"])
-    raw = sources.get(relative)
-    code = masked.get(relative)
-    if raw is None or code is None:
-        return False
-    number = int(row["line"])
-    if number < 1 or number > len(code):
-        return False
-    division = parse_division(code[number - 1])
-    if division is None:
-        return False
-    span = enclosing_function(raw, number)
-    if span is None:
-        return False
-    if region_posts_remainder(raw, code, span[0], span[1], number, division, ""):
-        return True
-    for entry in ROLE_EVIDENCE:
-        if (
-            entry.file != relative
-            or entry.line != number
-            or entry.role != str(row["resultRole"])
-            or entry.region != "caller"
-        ):
-            continue
-        caller = named_function(raw, entry.caller)
-        if caller is None:
-            continue
-        if not re.search(rf"\b{re.escape(span[2])}\s*\(", "\n".join(code[caller[0] - 1 : caller[1]])):
-            continue
-        result = call_result_name(code[caller[0] - 1 : caller[1]], span[2])
-        if result is None:
-            continue
-        if region_posts_remainder(
-            raw, code, caller[0], caller[1], number, division, result
-        ):
-            return True
-    return False
 
 
 def parse_division(line: str) -> Division | None:
@@ -1180,188 +1349,6 @@ def parse_division(line: str) -> Division | None:
         return None
     return Division(match.group("quotient"), match.group("numerator"), match.group("divisor"))
 
-
-def region_posts_remainder(
-    raw: list[str],
-    code: list[str],
-    start: int,
-    end: int,
-    division_line: int,
-    division: Division,
-    result_name: str,
-) -> bool:
-    """Look for a real posting. division_line may lie outside a caller region."""
-    blocks = block_ids(code)
-    dead = dead_block_ids(code, blocks)
-    scope_params = parameter_names(raw, start)
-    functions = {item[2] for item in function_spans(raw)}
-    division_inside = start <= division_line <= end
-    names = remainder_bindings(
-        code, blocks, dead, start, end, division_line, division
-    )
-    direct = re.sub(r"\s+", "", f"{division.numerator}%{division.divisor}")
-    for index in range(start - 1, end):
-        if division_inside and not on_path(code, blocks, dead, division_line - 1, index):
-            continue
-        for match in UPDATE.finditer(code[index]):
-            lhs = match.group("lhs")
-            if reserve_component(lhs) is None:
-                continue
-            rhs = match.group("rhs")
-            if not rhs_is_remainder(match.group("op"), lhs, rhs, names, direct):
-                continue
-            if result_name and re.search(rf"\b{re.escape(result_name)}\b", rhs) is None:
-                continue
-            scope = names_in_scope(
-                code, blocks, scope_params, index, match.start()
-            )
-            if not lhs_is_valid(lhs, scope, raw) or not rhs_is_in_scope(rhs, scope, functions):
-                continue
-            if effect_escapes(lhs, scope_params, code, blocks, dead, index, match.end()):
-                return True
-    return False
-
-
-def remainder_bindings(
-    code: list[str],
-    blocks: list[tuple[int, ...]],
-    dead: set[tuple[int, ...]],
-    start: int,
-    end: int,
-    division_line: int,
-    division: Division,
-) -> dict[str, int]:
-    """Names bound to this division's modulus within a few lines of it."""
-    if not (start <= division_line <= end):
-        return {}
-    binding = re.compile(
-        rf"(?:const|let|var|,)\s*([A-Za-z_]\w*)\s*=\s*"
-        rf"{re.escape(division.numerator)}\s*%\s*{re.escape(division.divisor)}\b"
-    )
-    found: dict[str, int] = {}
-    last = min(end, division_line + REMAINDER_WINDOW) 
-    for number in range(division_line, last + 1):
-        index = number - 1
-        if not on_path(code, blocks, dead, division_line - 1, index):
-            continue
-        for match in binding.finditer(code[index]):
-            found[match.group(1)] = index
-    return found
-
-
-def rhs_is_remainder(
-    op: str,
-    lhs: str,
-    rhs: str,
-    names: dict[str, int],
-    direct: str,
-) -> bool:
-    compact = re.sub(r"\s+", "", rhs)
-    lhs_compact = re.sub(r"\s+", "", lhs)
-    atoms = set(names) | {direct}
-    if op == "+=":
-        return compact in atoms
-    if compact in atoms:
-        return True
-    return any(
-        compact == f"{lhs_compact}+{atom}"
-        or compact == f"addU128({lhs_compact},{atom})"
-        or compact == f"addU64({lhs_compact},{atom})"
-        for atom in atoms
-    )
-
-
-def rhs_identifiers(rhs: str) -> list[str]:
-    return re.findall(r"[A-Za-z_]\w*", rhs)
-
-
-def rhs_is_in_scope(rhs: str, scope: set[str], functions: set[str]) -> bool:
-    for name in rhs_identifiers(rhs):
-        if name in scope or name in functions or name in {"BigInt"}:
-            continue
-        return False
-    return True
-
-
-def reserve_component(lhs: str) -> str | None:
-    parts = re.split(r"\s*\.\s*", lhs.strip())
-    last = parts[-1]
-    if last in RESERVE_NAMES:
-        return last
-    return None
-
-
-def lhs_is_valid(lhs: str, scope: set[str], raw: list[str]) -> bool:
-    parts = re.split(r"\s*\.\s*", lhs.strip())
-    if parts[0] not in scope:
-        return False
-    if len(parts) == 1:
-        return True
-    text = "\n".join(raw)
-    prop = parts[-1]
-    if re.search(rf"^\s*{re.escape(prop)}\s*:", text, re.M):
-        return True
-    return re.search(rf"['\"]{re.escape(prop)}['\"]", text) is not None
-
-
-def effect_escapes(
-    lhs: str,
-    params: set[str],
-    code: list[str],
-    blocks: list[tuple[int, ...]],
-    dead: set[tuple[int, ...]],
-    posting_index: int,
-    after_column: int,
-) -> bool:
-    parts = re.split(r"\s*\.\s*", lhs.strip())
-    if len(parts) > 1 and parts[0] in params:
-        return True
-    pattern = re.compile(rf"\b{re.escape(parts[0])}\b")
-    if pattern.search(code[posting_index][after_column:]):
-        return True
-    for index in range(posting_index + 1, len(code)):
-        if not on_path(code, blocks, dead, posting_index, index):
-            continue
-        if pattern.search(code[index]):
-            return True
-    return False
-
-
-def names_in_scope(
-    code: list[str],
-    blocks: list[tuple[int, ...]],
-    params: set[str],
-    index: int,
-    before_column: int,
-) -> set[str]:
-    scope = set(params)
-    decl = re.compile(r"(?:(?:const|let|var)\s+|,\s*)([A-Za-z_]\w*)\s*=")
-    for earlier in range(index):
-        if not is_prefix(blocks[earlier], blocks[index]):
-            continue
-        scope.update(decl.findall(code[earlier]))
-    scope.update(decl.findall(code[index][:before_column]))
-    return scope
-
-
-def parameter_names(lines: list[str], start: int) -> set[str]:
-    chunk = "\n".join(lines[start - 1 : start + 20])
-    brace = chunk.find("{")
-    header = chunk if brace < 0 else chunk[:brace]
-    paren = header.find("(")
-    if paren < 0:
-        return set()
-    return set(re.findall(r"\b([A-Za-z_]\w*)\s*:", header[paren + 1 :]))
-
-
-def call_result_name(lines: list[str], callee: str) -> str | None:
-    match = re.search(
-        rf"(?:const|let)\s+([A-Za-z_]\w*)\s*=\s*{re.escape(callee)}\s*\(",
-        "\n".join(lines),
-    )
-    if match is None:
-        return None
-    return match.group(1)
 
 
 def named_function(
@@ -1372,57 +1359,6 @@ def named_function(
         return None
     return matches[0]
 
-
-def block_ids(lines: list[str]) -> list[tuple[int, ...]]:
-    stack = [0]
-    next_id = 1
-    ids: list[tuple[int, ...]] = []
-    for line in lines:
-        ids.append(tuple(stack))
-        for ch in line:
-            if ch == "{":
-                stack.append(next_id)
-                next_id += 1
-            elif ch == "}" and len(stack) > 1:
-                stack.pop()
-    return ids
-
-
-def dead_block_ids(
-    lines: list[str], blocks: list[tuple[int, ...]]
-) -> set[tuple[int, ...]]:
-    dead: set[tuple[int, ...]] = set()
-    for index, line in enumerate(lines):
-        if re.search(r"\bif\s*\(\s*(?:false|0|0n)\s*\)", line) is None or "{" not in line:
-            continue
-        if index + 1 < len(lines) and len(blocks[index + 1]) > len(blocks[index]):
-            dead.add(blocks[index + 1])
-    return dead
-
-
-def is_prefix(outer: tuple[int, ...], inner: tuple[int, ...]) -> bool:
-    return inner[: len(outer)] == outer
-
-
-def on_path(
-    lines: list[str],
-    blocks: list[tuple[int, ...]],
-    dead: set[tuple[int, ...]],
-    origin: int,
-    index: int,
-) -> bool:
-    if index < origin or index >= len(lines):
-        return False
-    source = blocks[origin]
-    dest = blocks[index]
-    if not (is_prefix(source, dest) or is_prefix(dest, source)):
-        return False
-    if any(is_prefix(item, dest) for item in dead):
-        return False
-    for between in range(origin, index):
-        if re.match(r"\s*return\b", lines[between]) and is_prefix(blocks[between], dest):
-            return False
-    return True
 
 
 def check_coverage(
@@ -1439,6 +1375,7 @@ def check_coverage(
     check_ignored(IGNORED_ROUNDING_SITES, sources, ROUNDING_WORD, "rounding", failures)
     check_ignored(IGNORED_DIVISION_SITES, masked, DIVISION, "division", failures)
     check_role_evidence(sources, masked, failures)
+    check_constructor_role_rows(rows, sources, masked, failures)
     detected = overflow_sites(sources, masked)
     check_overflow_coverage(rows, detected, failures)
     ignored_rounding = {(site[0], site[1]) for site in IGNORED_ROUNDING_SITES}
@@ -1493,15 +1430,51 @@ def required_roles(
     sources: dict[str, list[str]],
     masked: dict[str, list[str]],
 ) -> set[str]:
-    """Roles from ROLE_EVIDENCE entries whose patterns still match the source."""
+    """Rows a division must have.
+
+    division-function and caller patterns contribute their role.
+    author-selected-both-roles does not identify a role. When its constructor
+    pattern matches, the site still needs one obligation row and one receipt row.
+    """
     roles: set[str] = set()
     for entry in ROLE_EVIDENCE:
         if entry.file != relative or entry.line != number:
             continue
         text = evidence_text(entry, sources, masked)
-        if text is not None and re.search(entry.pattern, text) is not None:
+        if text is None or re.search(entry.pattern, text) is None:
+            continue
+        if entry.region == "author-selected-both-roles":
+            roles.update(("obligation", "receipt"))
+        elif entry.role:
             roles.add(entry.role)
     return roles
+
+
+def check_constructor_role_rows(
+    rows: list[dict[str, Any]],
+    sources: dict[str, list[str]],
+    masked: dict[str, list[str]],
+    failures: list[str],
+) -> None:
+    for entry in ROLE_EVIDENCE:
+        if entry.region != "author-selected-both-roles":
+            continue
+        text = evidence_text(entry, sources, masked)
+        if text is None or re.search(entry.pattern, text) is None:
+            continue
+        for role in ("obligation", "receipt"):
+            matched = [
+                row
+                for row in rows
+                if str(row["file"]) == entry.file
+                and int(row["line"]) == entry.line
+                and str(row["resultRole"]) == role
+            ]
+            if len(matched) != 1:
+                failures.append(
+                    f"FAIL: division site {entry.file}:{entry.line} "
+                    f"requires exactly one {role} row at that line"
+                )
 
 
 def check_role_evidence(
@@ -1509,28 +1482,38 @@ def check_role_evidence(
     masked: dict[str, list[str]],
     failures: list[str],
 ) -> None:
+    allowed = {"division-function", "caller", "author-selected-both-roles"}
     for entry in ROLE_EVIDENCE:
-        if entry.region not in {"division-function", "caller"}:
+        label = (
+            "author-selected-both-roles"
+            if entry.region == "author-selected-both-roles"
+            else "role evidence"
+        )
+        if entry.region not in allowed:
             failures.append(
-                f"FAIL: role evidence {entry.file}:{entry.line} has region {entry.region}"
+                f"FAIL: {label} {entry.file}:{entry.line} has region {entry.region}"
             )
             continue
         lines = masked.get(entry.file)
         if lines is None or entry.line < 1 or entry.line > len(lines):
-            failures.append(
-                f"FAIL: role evidence {entry.file}:{entry.line} does not exist"
-            )
+            failures.append(f"FAIL: {label} {entry.file}:{entry.line} does not exist")
             continue
         if DIVISION.search(lines[entry.line - 1]) is None:
             failures.append(
-                f"FAIL: role evidence {entry.file}:{entry.line} is not a division"
+                f"FAIL: {label} {entry.file}:{entry.line} is not a division"
             )
         text = evidence_text(entry, sources, masked)
         if text is None or re.search(entry.pattern, text) is None:
-            failures.append(
-                f"FAIL: role evidence {entry.file}:{entry.line} "
-                f"{entry.role} does not match the source"
-            )
+            if entry.region == "author-selected-both-roles":
+                failures.append(
+                    f"FAIL: author-selected-both-roles {entry.file}:{entry.line} "
+                    "does not match the source"
+                )
+            else:
+                failures.append(
+                    f"FAIL: role evidence {entry.file}:{entry.line} "
+                    f"{entry.role} does not match the source"
+                )
 
 
 def evidence_text(
@@ -1542,7 +1525,7 @@ def evidence_text(
     if raw is None or entry.file not in masked:
         return None
     kept = comment_masked_lines(raw)
-    if entry.region == "division-function":
+    if entry.region in {"division-function", "author-selected-both-roles"}:
         span = enclosing_function(raw, entry.line)
         if span is None:
             return None

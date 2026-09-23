@@ -1,3 +1,4 @@
+import hashlib
 import json
 import shutil
 import subprocess
@@ -38,11 +39,14 @@ OPEN_GAPS = [
     "expression-obligation-division",
     "expression-receipt-division",
     "origination-settlement-conversion",
+    "prorata-principal-share",
     "repayment-settlement-conversion",
 ]
-BENEFICIARY_GAPS = 6
-CAVEAT = "The remainder is not posted to a protocol reserve."
-POSTED = "The remainder is posted to a protocol reserve."
+MISSING_RESERVE = "missing protocol-reserve posting"
+RESERVE_SENTENCE = (
+    "The successor sources have a missing protocol-reserve posting."
+)
+LIFECYCLE = "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
 SHARED_LINE_ROWS = {
     "expression-obligation-division": "obligation",
     "expression-receipt-division": "receipt",
@@ -82,18 +86,6 @@ def load_profile(root: Path) -> dict[str, Any]:
     return json.loads((root / PROFILE).read_text(encoding="utf-8"))
 
 
-def claim_beneficiary(row: dict[str, Any], posted: bool) -> None:
-    text = row["description"].replace(CAVEAT, "").replace(POSTED, "").rstrip()
-    row["description"] = f"{text} {POSTED if posted else CAVEAT}"
-    if row["conformance"] != "open-gap":
-        return
-    note = str(row["gapNote"] or "").replace(CAVEAT, "").replace(POSTED, "").strip()
-    if posted:
-        row["gapNote"] = note or "The author can select the rounding."
-    else:
-        row["gapNote"] = f"{note} {CAVEAT}".strip()
-
-
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     count = text.count(old)
@@ -115,9 +107,17 @@ def test_checker_accepts_real_profile() -> None:
     assert ids == EXPECTED_IDS
     assert gaps == OPEN_GAPS
     assert profile["overrides"] == []
+    assert profile["reserveMechanism"]["status"] == "absent"
+    assert profile["reserveMechanism"]["citations"] == []
+    for row in profile["primitives"]:
+        if row["requiredDirection"] == "none":
+            assert row["conformance"] == "conforms"
+            assert row["gapNote"] is None
+        else:
+            assert row["conformance"] == "open-gap"
+            assert MISSING_RESERVE in row["gapNote"]
     assert process.stdout == (
         f"OK: {len(ids)} primitives, {len(gaps)} open conformance gaps\n"
-        f"beneficiary gaps: {BENEFICIARY_GAPS}\n"
     )
 
 
@@ -178,68 +178,28 @@ def test_forbidden_conformance_fails(tmp_path: Path) -> None:
     assert process.stderr == ""
 
 
-def test_direction_match_is_not_an_open_gap(tmp_path: Path) -> None:
+def mark_conforms(profile: dict[str, Any], primitive_id: str) -> None:
+    for row in profile["primitives"]:
+        if row["id"] == primitive_id:
+            row["conformance"] = "conforms"
+            row["gapNote"] = None
+
+
+def test_floor_match_stays_open_while_reserve_is_absent(tmp_path: Path) -> None:
     root = copy_tree(tmp_path)
     profile = load_profile(root)
-    for row in profile["primitives"]:
-        if row["id"] == "prorata-principal-share":
-            row["conformance"] = "open-gap"
-            row["gapNote"] = CAVEAT
+    mark_conforms(profile, "prorata-principal-share")
     write_profile(root, profile)
 
     process = run(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "prorata-principal-share" in process.stdout
-    assert "source requires conforms" in process.stdout
+    assert "protocol-reserve posting is absent" in process.stdout
     assert process.stderr == ""
 
 
-def test_undeclared_reserve_posting_does_not_clear_gap(tmp_path: Path) -> None:
-    root = copy_tree(tmp_path)
-    replace_once(
-        root / SUCCESSOR / "financial-lifecycle.ts",
-        "    dP = product / total;",
-        "    dP = product / total; protocolReserve += remainder;",
-    )
-    profile = load_profile(root)
-    for row in profile["primitives"]:
-        if row["id"] == "prorata-principal-share":
-            claim_beneficiary(row, posted=True)
-    write_profile(root, profile)
-
-    process = run(root)
-
-    assert process.returncode == 1, process.stdout + process.stderr
-    assert "prorata-principal-share" in process.stdout
-    assert "remainder is not posted to a protocol reserve" in process.stdout
-    assert process.stderr == ""
-
-
-def test_closure_reserve_is_not_the_protocol_reserve(tmp_path: Path) -> None:
-    root = copy_tree(tmp_path)
-    replace_once(
-        root / SUCCESSOR / "financial-lifecycle.ts",
-        "    dP = product / total;",
-        "    dP = product / total; const divisionRemainder = product % total; "
-        "let closureReserve = 0n; closureReserve += divisionRemainder; "
-        "if (closureReserve > product) return bad('INVARIANT');",
-    )
-    profile = load_profile(root)
-    for row in profile["primitives"]:
-        if row["id"] == "prorata-principal-share":
-            claim_beneficiary(row, posted=True)
-    write_profile(root, profile)
-
-    process = run(root)
-
-    assert process.returncode == 1, process.stdout + process.stderr
-    assert "prorata-principal-share" in process.stdout
-    assert "remainder is not posted to a protocol reserve" in process.stdout
-    assert process.stderr == ""
-
-
-def test_compiling_reserve_posting_clears_only_that_division(tmp_path: Path) -> None:
+def test_local_reserve_variable_does_not_clear_the_gap(tmp_path: Path) -> None:
     root = copy_tree(tmp_path)
     replace_once(
         root / SUCCESSOR / "financial-lifecycle.ts",
@@ -249,40 +209,70 @@ def test_compiling_reserve_posting_clears_only_that_division(tmp_path: Path) -> 
         "if (protocolReserve > product) return bad('INVARIANT');",
     )
     profile = load_profile(root)
+    mark_conforms(profile, "prorata-principal-share")
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "prorata-principal-share" in process.stdout
+    assert "protocol-reserve posting is absent" in process.stdout
+    assert "not a declaration" not in process.stdout
+    assert process.stderr == ""
+
+
+def test_local_variable_is_not_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    path = root / SUCCESSOR / "financial-lifecycle.ts"
+    replace_once(
+        path,
+        "    dP = product / total;",
+        "    dP = product / total;\n"
+        "    let protocolReserve = 0n; protocolReserve += 0n;\n"
+        "    if (protocolReserve > product) return bad('INVARIANT');",
+    )
+    line_no = (
+        path.read_text(encoding="utf-8").splitlines().index(
+            "    let protocolReserve = 0n; protocolReserve += 0n;"
+        )
+        + 1
+    )
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "protocolReserve" in process.stdout
+    assert "is not a declaration" in process.stdout
+    assert process.stderr == ""
+
+
+def test_declared_symbol_lifts_absence_without_a_posting(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    line_no = add_reserve_function(root)
+    profile = load_profile(root)
+    cite_reserve(profile, line_no)
     for row in profile["primitives"]:
+        if isinstance(row["gapNote"], str):
+            row["gapNote"] = row["gapNote"].replace(RESERVE_SENTENCE, "").strip()
         if row["id"] == "prorata-principal-share":
-            claim_beneficiary(row, posted=True)
+            row["conformance"] = "conforms"
+            row["gapNote"] = None
     write_profile(root, profile)
 
     process = run(root)
 
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == (
-        "OK: 14 primitives, 5 open conformance gaps\n"
-        "beneficiary gaps: 5\n"
-    )
+    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
     assert process.stderr == ""
 
 
-def test_compiling_posting_must_be_reported(tmp_path: Path) -> None:
-    root = copy_tree(tmp_path)
-    replace_once(
-        root / SUCCESSOR / "financial-lifecycle.ts",
-        "    dP = product / total;",
-        "    dP = product / total; const divisionRemainder = product % total; "
-        "let protocolReserve = 0n; protocolReserve += divisionRemainder; "
-        "if (protocolReserve > product) return bad('INVARIANT');",
-    )
-
-    process = run(root)
-
-    assert process.returncode == 1, process.stdout + process.stderr
-    assert "prorata-principal-share" in process.stdout
-    assert "remainder is posted to a protocol reserve" in process.stdout
-    assert process.stderr == ""
-
-
-def test_caller_modulus_does_not_cover_another_division(tmp_path: Path) -> None:
+def test_caller_local_reserve_does_not_clear_conversion_gaps(tmp_path: Path) -> None:
     root = copy_tree(tmp_path)
     replace_once(
         root / SUCCESSOR / "financial-lifecycle.ts",
@@ -293,13 +283,12 @@ def test_caller_modulus_does_not_cover_another_division(tmp_path: Path) -> None:
         "if (protocolReserve > nominal) return bad('INVARIANT');",
     )
     profile = load_profile(root)
-    for row in profile["primitives"]:
-        if row["id"] in {
-            "origination-settlement-conversion",
-            "repayment-settlement-conversion",
-            "prorata-principal-share",
-        }:
-            claim_beneficiary(row, posted=True)
+    for primitive_id in (
+        "origination-settlement-conversion",
+        "repayment-settlement-conversion",
+        "prorata-principal-share",
+    ):
+        mark_conforms(profile, primitive_id)
     write_profile(root, profile)
 
     process = run(root)
@@ -308,10 +297,11 @@ def test_caller_modulus_does_not_cover_another_division(tmp_path: Path) -> None:
     assert "origination-settlement-conversion" in process.stdout
     assert "repayment-settlement-conversion" in process.stdout
     assert "prorata-principal-share" in process.stdout
+    assert "protocol-reserve posting is absent" in process.stdout
     assert process.stderr == ""
 
 
-def test_reserve_posting_is_tied_to_the_cited_division(tmp_path: Path) -> None:
+def test_local_remainder_write_does_not_remove_reserve_gap_note(tmp_path: Path) -> None:
     root = copy_tree(tmp_path)
     replace_once(
         root / SUCCESSOR / "financial-lifecycle.ts",
@@ -326,20 +316,21 @@ def test_reserve_posting_is_tied_to_the_cited_division(tmp_path: Path) -> None:
             "origination-settlement-conversion",
             "repayment-settlement-conversion",
         }:
-            claim_beneficiary(row, posted=True)
+            row["gapNote"] = (
+                "Conversion.rounding lets the author select none, floor, or ceil."
+            )
     write_profile(root, profile)
 
     process = run(root)
 
-    assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == (
-        "OK: 14 primitives, 5 open conformance gaps\n"
-        "beneficiary gaps: 4\n"
-    )
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "origination-settlement-conversion" in process.stdout
+    assert "repayment-settlement-conversion" in process.stdout
+    assert MISSING_RESERVE in process.stdout
     assert process.stderr == ""
 
 
-def test_ceil_path_requires_beneficiary_caveat(tmp_path: Path) -> None:
+def test_absent_reserve_gap_note_is_required(tmp_path: Path) -> None:
     root = copy_tree(tmp_path)
     profile = load_profile(root)
     for row in profile["primitives"]:
@@ -354,8 +345,38 @@ def test_ceil_path_requires_beneficiary_caveat(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "accrual-interest" in process.stdout
-    assert "remainder is not posted to a protocol reserve" in process.stdout
+    assert MISSING_RESERVE in process.stdout
     assert process.stderr == ""
+
+
+def add_reserve_function(root: Path) -> int:
+    path = root / SUCCESSOR / "financial-lifecycle.ts"
+    addition = (
+        "\nexport function protocolReserveAccount(): bigint {\n"
+        "  return 0n;\n"
+        "}\n"
+    )
+    text = path.read_text(encoding="utf-8") + addition
+    path.write_text(text, encoding="utf-8")
+    return text.splitlines().index("export function protocolReserveAccount(): bigint {") + 1
+
+
+def cite_reserve(profile: dict[str, Any], line_no: int) -> None:
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {
+            "file": LIFECYCLE,
+            "symbol": "protocolReserveAccount",
+            "line": line_no,
+        }
+    ]
+
+
+def write_decision(root: Path, text: str) -> None:
+    (root / DECISION).write_text(text, encoding="utf-8")
+    profile = load_profile(root)
+    profile["decisionSha256"] = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    write_profile(root, profile)
 
 
 @pytest.mark.parametrize("dropped,role", list(SHARED_LINE_ROWS.items()))
@@ -701,4 +722,207 @@ def test_keyword_prefixed_regex_does_not_hide_a_division(
     assert process.returncode == 1, process.stdout + process.stderr
     assert f"financial-lifecycle.ts:{division_line}" in process.stdout
     assert f"financial-lifecycle.ts:{regex_line}" not in process.stdout
+    assert process.stderr == ""
+
+
+def test_reversed_obligation_keeps_vocabulary_and_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    text = (root / DECISION).read_text(encoding="utf-8")
+    text = "`ceil` remains as vocabulary.\n\n" + text.replace(
+        "rounds **up** (`ceil`)",
+        "rounds **up** (`floor`)",
+        1,
+    )
+    write_decision(root, text)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "defaultPolicy.obligation does not match derived D2 value floor"
+        in process.stdout
+    )
+    assert process.stderr == ""
+
+
+def test_reversed_beneficiary_keeps_vocabulary_and_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    text = (root / DECISION).read_text(encoding="utf-8")
+    text = "protocol reserve remains as vocabulary.\n\n" + text.replace(
+        "accrues to the **protocol reserve**",
+        "accrues to the **solver wallet**",
+        1,
+    )
+    write_decision(root, text)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "defaultPolicy.remainderBeneficiary does not match derived D2 value solver-wallet"
+        in process.stdout
+    )
+    assert process.stderr == ""
+
+
+def test_reversed_representation_keeps_vocabulary_and_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    text = (root / DECISION).read_text(encoding="utf-8")
+    text = "exact domain-qualified integers remains as vocabulary.\n\n" + text.replace(
+        "Amounts are exact domain-qualified integers",
+        "Amounts are modular residues",
+        1,
+    )
+    write_decision(root, text)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "units.representation does not match derived D4 value modular-residue"
+        in process.stdout
+    )
+    assert process.stderr == ""
+
+
+def test_reversed_field_element_rule_keeps_vocabulary_and_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    text = (root / DECISION).read_text(encoding="utf-8")
+    text = "They never become field elements remains as vocabulary.\n\n" + text.replace(
+        "They never become field elements",
+        "They can become field elements",
+        1,
+    )
+    write_decision(root, text)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "D4 field-element rule is missing or ambiguous" in process.stdout
+    assert process.stderr == ""
+
+
+def test_two_d1_bolds_are_ambiguous(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    text = (root / DECISION).read_text(encoding="utf-8")
+    text = text.replace(
+        "**base-per-quote**",
+        "**base-per-quote** and **quote-per-base**",
+        1,
+    )
+    write_decision(root, text)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "D1 canonical orientation is missing or ambiguous" in process.stdout
+    assert process.stderr == ""
+
+
+def test_constructor_names_alone_are_not_role_evidence(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    path = root / SUCCESSOR / "financial-expression-v1.ts"
+    replace_once(
+        path,
+        "n = k === 'CeilDiv' && r !== 0n ? q + 1n : q;",
+        "n = q;",
+    )
+    source = path.read_text(encoding="utf-8")
+    assert "FloorDiv" in source
+    assert "CeilDiv" in source
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "author-selected-both-roles" in process.stdout
+    assert "financial-expression-v1.ts:404" in process.stdout
+    assert process.stderr == ""
+
+
+def test_shared_division_rejects_a_second_obligation_row(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    original = next(
+        row
+        for row in profile["primitives"]
+        if row["id"] == "expression-obligation-division"
+    )
+    extra = dict(original)
+    extra["id"] = "expression-obligation-division-extra"
+    profile["primitives"].append(extra)
+    profile["primitives"].sort(key=lambda row: row["id"])
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "requires exactly one obligation row at that line" in process.stdout
+    assert process.stderr == ""
+
+
+def test_comment_does_not_satisfy_operation_regex(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-lifecycle.ts",
+        "    dP = product / total;",
+        "    dP = product; // scale div floor ceil Rounding",
+    )
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "has no division, rounding, scaling, or overflow-checked operation"
+        in process.stdout
+    )
+    assert process.stderr == ""
+
+
+def lift_reserve(root: Path, profile: dict[str, Any]) -> None:
+    line_no = add_reserve_function(root)
+    cite_reserve(profile, line_no)
+    for row in profile["primitives"]:
+        if isinstance(row["gapNote"], str):
+            row["gapNote"] = row["gapNote"].replace(RESERVE_SENTENCE, "").strip()
+        if row["id"] == "prorata-principal-share":
+            row["conformance"] = "conforms"
+            row["gapNote"] = None
+
+
+def test_unrelated_ceil_tokens_do_not_flip_floor(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-lifecycle.ts",
+        "    dP = product / total;",
+        "    dP = product / total; if (n !== 0n) { const bump = n + 1n; void bump; }",
+    )
+    profile = load_profile(root)
+    lift_reserve(root, profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
+    assert process.stderr == ""
+
+
+def test_ceil_increment_must_use_the_parsed_remainder(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-lifecycle.ts",
+        "    dP = product / total;",
+        "    dP = product / total; const dust = product % total; "
+        "if (dust !== 0n) { dP = dP + 1n; }",
+    )
+    profile = load_profile(root)
+    lift_reserve(root, profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "prorata-principal-share" in process.stdout
+    assert "fixed direction ceil differs from required floor" in process.stdout
+    assert "protocol-reserve posting is absent" not in process.stdout
     assert process.stderr == ""

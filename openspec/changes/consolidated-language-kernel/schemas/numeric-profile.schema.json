@@ -10,6 +10,7 @@
     "priceOrientation",
     "units",
     "defaultPolicy",
+    "reserveMechanism",
     "primitives",
     "overrides",
     "defiformalConversion"
@@ -116,6 +117,62 @@
           "const": "protocol-reserve"
         }
       }
+    },
+    "reserveMechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "citations", "note"],
+      "properties": {
+        "status": {
+          "enum": ["absent", "present"]
+        },
+        "citations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "symbol", "line"],
+            "properties": {
+              "file": {
+                "type": "string",
+                "pattern": "^experiments/moriarty-language/src/successor/[^/]+\\.ts$"
+              },
+              "symbol": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"status": {"const": "absent"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {"citations": {"maxItems": 0}}
+          }
+        },
+        {
+          "if": {
+            "properties": {"status": {"const": "present"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {"citations": {"minItems": 1}}
+          }
+        }
+      ]
     },
     "primitives": {
       "type": "array",
