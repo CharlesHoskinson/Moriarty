@@ -4,9 +4,11 @@
 Semantic fit of a quote to its statement label is a reviewed claim, not
 mechanically proven. The checker verifies structure, literal quote occurrence,
 identifier resolution, required topics, label length, one sentence without
-', and' or a semicolon, and closure-word absence. Source paths under the U0
-deliverable, kernel schemas, scripts or tests are rejected. A missing cited
-file is a check failure.
+', and' or a semicolon, and closure-word absence. A source path must be a
+tracked repository document: git ls-files lists it, Path.resolve stays inside
+the repository, and the path is outside the U0 deliverable, kernel schemas,
+scripts and tests. A missing cited file is a check failure. Unavailable git
+or repository metadata blocks the check.
 """
 
 from __future__ import annotations
@@ -14,7 +16,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -51,7 +55,7 @@ REQUIRED_PATHS = (
     MATRIX_SCHEMA_REL,
     TRUST_SCHEMA_REL,
 )
-# Amendment 2: citations must be repository documents outside these trees.
+# Citations must be tracked repository documents outside these trees.
 FORBIDDEN_SOURCE_PREFIXES = (
     ("deliverables", "u0-semantic-contract-2026-09-23"),
     ("openspec", "changes", "consolidated-language-kernel", "schemas"),
@@ -73,15 +77,28 @@ REQUIRED_TOPICS = (
     "intent-auth-boundary",
 )
 ALLOWED_PREMISE_STATUS = ("open", "accepted-assumption")
+# Exact whole words only. "closing", "provable", "provide" and "completeness" stay allowed.
 CLOSURE_WORDS = (
     "closed",
-    "satisfied",
-    "established",
-    "verified",
-    "proven",
+    "closes",
     "complete",
+    "completed",
+    "completes",
+    "verified",
+    "verifies",
+    "proven",
+    "proves",
+    "proved",
     "resolved",
+    "resolves",
     "guaranteed",
+    "guarantees",
+    "established",
+    "establishes",
+    "satisfied",
+    "satisfies",
+    "validated",
+    "certified",
 )
 REVIEW_MARKERS = ("reviewed claim", "not mechanically proven")
 SENTENCE = re.compile(r"^[^.!?;\n]+[.!?]$")
@@ -378,7 +395,62 @@ def source_path_is_forbidden(relative: str) -> bool:
     return any(parts[: len(prefix)] == prefix for prefix in FORBIDDEN_SOURCE_PREFIXES)
 
 
-def quote_failures(root: Path, payload: Any) -> list[str]:
+def load_tracked_paths(root: Path) -> tuple[set[str] | None, str | None]:
+    """Return paths from one offline git ls-files call, or a blocked reason."""
+
+    if not (root / ".git").exists():
+        return None, "blocked: git metadata unavailable"
+    env = os.environ.copy()
+    env.pop("GIT_DIR", None)
+    env.pop("GIT_WORK_TREE", None)
+    try:
+        completed = subprocess.run(
+            ["git", "-c", "safe.directory=*", "-C", str(root), "ls-files", "-z"],
+            capture_output=True,
+            check=False,
+            env=env,
+        )
+    except OSError:
+        return None, "blocked: git metadata unavailable"
+    if completed.returncode != 0:
+        return None, "blocked: git metadata unavailable"
+    try:
+        tracked = {item.decode("utf-8") for item in completed.stdout.split(b"\0") if item}
+    except UnicodeDecodeError:
+        return None, "blocked: git metadata unavailable"
+    return tracked, None
+
+
+def citation_path_failure(
+    root: Path,
+    premise_id: str,
+    relative: str,
+    tracked: set[str],
+) -> str | None:
+    path = Path(relative)
+    if path.is_absolute() or ".." in path.parts:
+        return f"FAIL: {premise_id} quote path escapes root: {relative}"
+    lexical = relative.replace("\\", "/")
+    if source_path_is_forbidden(lexical):
+        return f"FAIL: {premise_id} source ref path is not an allowed document: {relative}"
+    cited = root / path
+    if not cited.is_file():
+        return f"FAIL: {premise_id} cited file missing: {relative}"
+    try:
+        resolved_rel = cited.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return f"FAIL: {premise_id} quote path escapes root: {relative}"
+    if source_path_is_forbidden(resolved_rel):
+        return f"FAIL: {premise_id} source ref path is not an allowed document: {relative}"
+    if lexical not in tracked or resolved_rel not in tracked:
+        return (
+            f"FAIL: {premise_id} source ref path is not a tracked repository document: "
+            f"{relative}"
+        )
+    return None
+
+
+def quote_failures(root: Path, payload: Any, tracked: set[str]) -> list[str]:
     if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
         return ["FAIL: trust premises are missing"]
     failures: list[str] = []
@@ -408,19 +480,11 @@ def quote_failures(root: Path, payload: Any) -> list[str]:
             if not isinstance(relative, str) or not isinstance(quote, str):
                 failures.append(f"FAIL: {premise_id} source ref is incomplete")
                 continue
-            path = Path(relative)
-            if path.is_absolute() or ".." in path.parts:
-                failures.append(f"FAIL: {premise_id} quote path escapes root: {relative}")
+            path_failure = citation_path_failure(root, premise_id, relative, tracked)
+            if path_failure is not None:
+                failures.append(path_failure)
                 continue
-            if source_path_is_forbidden(relative):
-                failures.append(
-                    f"FAIL: {premise_id} source ref path is not an allowed document: {relative}"
-                )
-                continue
-            cited = root / path
-            if not cited.is_file():
-                failures.append(f"FAIL: {premise_id} cited file missing: {relative}")
-                continue
+            cited = root / relative
             try:
                 text = cited.read_text(encoding="utf-8")
             except UnicodeDecodeError:
@@ -486,10 +550,10 @@ def serialization_failures(path: Path, payload: Any, schema: Any) -> list[str]:
     return failures
 
 
-def check(root: Path) -> tuple[int, list[str]]:
-    missing = [relative for relative in REQUIRED_PATHS if not (root / relative).is_file()]
-    if missing:
-        return 2, [f"blocked: missing {relative}" for relative in missing]
+def typed_input_failures(
+    root: Path,
+) -> tuple[Any, Any, Any, Any, list[str]]:
+    """Validate schemas and artifacts before any dependent check."""
 
     failures: list[str] = []
     matrix_schema, matrix_schema_error = load_json(root / MATRIX_SCHEMA_REL, MATRIX_SCHEMA_REL)
@@ -499,19 +563,33 @@ def check(root: Path) -> tuple[int, list[str]]:
     for error in (matrix_schema_error, trust_schema_error, matrix_error, premises_error):
         if error is not None:
             failures.append(error)
-
     if matrix_schema_error is None:
         problem = schema_object_failure(MATRIX_SCHEMA_REL, matrix_schema)
         if problem is not None:
             failures.append(problem)
-        elif matrix is not None:
+        elif matrix_error is None and matrix is not None:
             failures.extend(schema_failures(MATRIX_REL, matrix_schema, matrix))
     if trust_schema_error is None:
         problem = schema_object_failure(TRUST_SCHEMA_REL, trust_schema)
         if problem is not None:
             failures.append(problem)
-        elif premises is not None:
+        elif premises_error is None and premises is not None:
             failures.extend(schema_failures(TRUST_REL, trust_schema, premises))
+    return matrix_schema, trust_schema, matrix, premises, failures
+
+
+def check(root: Path) -> tuple[int, list[str]]:
+    missing = [relative for relative in REQUIRED_PATHS if not (root / relative).is_file()]
+    if missing:
+        return 2, [f"blocked: missing {relative}" for relative in missing]
+
+    matrix_schema, trust_schema, matrix, premises, failures = typed_input_failures(root)
+    if failures:
+        return 1, failures
+
+    tracked, blocked = load_tracked_paths(root)
+    if blocked is not None or tracked is None:
+        return 2, [blocked or "blocked: git metadata unavailable"]
 
     source_path = root / SOURCE_REL
     source_bytes = source_path.read_bytes()
@@ -549,7 +627,7 @@ def check(root: Path) -> tuple[int, list[str]]:
             "FAIL: backend row ids are not exactly ZR01-ZR16 and MNR01-MNR08"
         )
     failures.extend(status_failures(matrix))
-    failures.extend(quote_failures(root, premises))
+    failures.extend(quote_failures(root, premises, tracked))
     if isinstance(premises, dict):
         failures.extend(
             serialization_failures(
@@ -573,8 +651,12 @@ def check(root: Path) -> tuple[int, list[str]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
-    code, lines = check(args.root.resolve())
+    try:
+        args = parse_args(argv)
+        code, lines = check(args.root.resolve())
+    except Exception as exc:
+        print(f"FAIL: internal error: {type(exc).__name__}: {exc}")
+        return 1
     for line in lines:
         print(line)
     return code

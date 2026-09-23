@@ -299,7 +299,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
+def run(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     root = args.root.resolve()
     source = root / SOURCE_REL
@@ -326,6 +326,14 @@ def main(argv: list[str] | None = None) -> int:
     target.write_bytes(rendered)
     print(f"Wrote {MATRIX_REL}")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    try:
+        return run(argv)
+    except Exception as exc:
+        print(f"FAIL: internal error: {type(exc).__name__}: {exc}")
+        return 1
 
 
 if __name__ == "__main__":

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +26,48 @@ TRUST_SCHEMA_REL = (
     "openspec/changes/consolidated-language-kernel/schemas/"
     "trust-premises.schema.json"
 )
+CLOSURE_WORDS = (
+    "closed",
+    "closes",
+    "complete",
+    "completed",
+    "completes",
+    "verified",
+    "verifies",
+    "proven",
+    "proves",
+    "proved",
+    "resolved",
+    "resolves",
+    "guaranteed",
+    "guarantees",
+    "established",
+    "establishes",
+    "satisfied",
+    "satisfies",
+    "validated",
+    "certified",
+)
+
+
+def git_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env.pop("GIT_DIR", None)
+    env.pop("GIT_WORK_TREE", None)
+    return env
+
+
+def git_add(root: Path, *paths: str) -> None:
+    result = subprocess.run(
+        ["git", "-c", "safe.directory=*", "add", "--", *paths],
+        cwd=root,
+        env=git_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr)
 
 
 def run_script(script: Path, root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -53,6 +97,17 @@ def materialize(tmp_path: Path) -> Path:
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / relative).read_bytes())
+    init = subprocess.run(
+        ["git", "-c", "safe.directory=*", "init", "-q"],
+        cwd=root,
+        env=git_env(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if init.returncode != 0:
+        raise RuntimeError(init.stderr)
+    git_add(root, ".")
     return root
 
 
@@ -125,16 +180,6 @@ def test_matrix_rows_match_source_document_text() -> None:
 def test_trust_premises_cover_required_topics() -> None:
     premises = json.loads((ROOT / TRUST_REL).read_text(encoding="utf-8"))
     by_id = {premise["id"]: premise for premise in premises["premises"]}
-    closure_words = (
-        "closed",
-        "satisfied",
-        "established",
-        "verified",
-        "proven",
-        "complete",
-        "resolved",
-        "guaranteed",
-    )
     sentence = re.compile(r"^[^.!?;\n]+[.!?]$")
 
     assert premises["limitation"] == (
@@ -213,7 +258,7 @@ def test_trust_premises_cover_required_topics() -> None:
         assert ", and " not in premise["statement"]
         assert ";" not in premise["statement"]
         assert sentence.fullmatch(premise["statement"])
-        for word in closure_words:
+        for word in CLOSURE_WORDS:
             assert re.search(rf"\b{word}\b", premise["statement"], re.IGNORECASE) is None
         assert any(ref["quoteRole"] == "states-premise" for ref in premise["sourceRefs"])
         for ref in premise["sourceRefs"]:
@@ -234,8 +279,27 @@ def test_checker_rejects_deleted_matrix_row(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "Traceback" not in result.stderr
+    assert f"FAIL: {MATRIX_REL} rows:" in result.stdout
+    assert "is too short" in result.stdout
+    assert "FAIL: backend matrix drifted" not in result.stdout
+    assert "OK:" not in result.stdout
+
+
+def test_checker_rejects_matrix_id_outside_expected_set(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    matrix_path = root / MATRIX_REL
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    assert matrix["rows"][0]["id"] == "ZR01"
+    matrix["rows"][0]["id"] = "ZR99"
+    write_json(matrix_path, matrix)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert "Traceback" not in result.stderr
     assert "FAIL: backend matrix drifted" in result.stdout
     assert "FAIL: backend row ids are not exactly ZR01-ZR16 and MNR01-MNR08" in result.stdout
+    assert "OK:" not in result.stdout
 
 
 def test_checker_rejects_forbidden_status(tmp_path: Path) -> None:
@@ -249,7 +313,10 @@ def test_checker_rejects_forbidden_status(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "Traceback" not in result.stderr
-    assert "FAIL: ZR01 status is not specified-only" in result.stdout
+    assert f"FAIL: {MATRIX_REL} rows/0/status:" in result.stdout
+    assert "'specified-only' was expected" in result.stdout
+    assert "FAIL: ZR01 status is not specified-only" not in result.stdout
+    assert "OK:" not in result.stdout
 
 
 def test_checker_rejects_quote_not_in_source(tmp_path: Path) -> None:
@@ -433,8 +500,9 @@ def test_checker_rejects_deleted_trust_premises(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1
-    assert "FAIL: missing required topic recursion-horizon" in result.stdout
-    assert "FAIL: missing required topic intent-auth-boundary" in result.stdout
+    assert f"FAIL: {TRUST_REL} premises:" in result.stdout
+    assert "is too short" in result.stdout
+    assert "FAIL: missing required topic" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -456,6 +524,11 @@ def test_checker_rejects_false_premise_claim(tmp_path: Path) -> None:
             "This tuple is not verified.",
             "FAIL: TP01 statement contains closure word: verified",
         ),
+        (
+            "TP01",
+            "The tuple is completed and proves soundness.",
+            "FAIL: TP01 statement contains closure word: completed",
+        ),
     )
     for premise_id, statement, message in cases:
         root = materialize(tmp_path / premise_id / statement[:12])
@@ -475,17 +548,7 @@ def test_checker_rejects_false_premise_claim(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_each_closure_word(tmp_path: Path) -> None:
-    words = (
-        "closed",
-        "satisfied",
-        "established",
-        "verified",
-        "proven",
-        "complete",
-        "resolved",
-        "guaranteed",
-    )
-    for word in words:
+    for word in CLOSURE_WORDS:
         root = materialize(tmp_path / word)
         trust_path = root / TRUST_REL
         premises = json.loads(trust_path.read_text(encoding="utf-8"))
@@ -512,7 +575,9 @@ def test_checker_rejects_statement_over_160_characters(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1, result.stdout + result.stderr
-    assert "FAIL: TP01 statement exceeds 160 characters" in result.stdout
+    assert f"FAIL: {TRUST_REL} premises/0/statement:" in result.stdout
+    assert "is too long" in result.stdout
+    assert "FAIL: TP01 statement exceeds 160 characters" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -567,9 +632,9 @@ def test_checker_rejects_spliced_unsupported_claim(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1, result.stdout + result.stderr
-    assert "FAIL: TP01 statement is spliced" in result.stdout
-    assert "FAIL: TP01 statement is not one sentence" in result.stdout
-    assert "FAIL: TP01 statement exceeds 160 characters" in result.stdout
+    assert f"FAIL: {TRUST_REL} premises/0/statement:" in result.stdout
+    assert "does not match" in result.stdout
+    assert "FAIL: TP01 statement is spliced" not in result.stdout
     assert "not source-backed" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -586,7 +651,9 @@ def test_checker_rejects_unsupported_premise_status(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1
-    assert "FAIL: TP01 status is not open or accepted-assumption" in result.stdout
+    assert f"FAIL: {TRUST_REL} premises/0/status:" in result.stdout
+    assert "is not one of" in result.stdout
+    assert "FAIL: TP01 status is not open or accepted-assumption" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -781,14 +848,14 @@ def test_checker_rejects_missing_cited_file(tmp_path: Path) -> None:
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premise = next(item for item in premises["premises"] if item["id"] == "TP02")
     assert premise["status"] == "accepted-assumption"
-    premise["status"] = "closed"
+    premise["statement"] = "This planning note is verified."
     write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1, result.stdout + result.stderr
     assert f"FAIL: TP01 cited file missing: {relative}" in result.stdout
-    assert "FAIL: TP02 status is not open or accepted-assumption" in result.stdout
+    assert "FAIL: TP02 statement contains closure word: verified" in result.stdout
     assert f"blocked: missing {relative}" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -804,7 +871,7 @@ def test_checker_rejects_missing_requirement_catalog(tmp_path: Path) -> None:
         ]
         assert premise["sourceRefs"]
     closed = next(item for item in premises["premises"] if item["id"] == "TP02")
-    closed["status"] = "closed"
+    closed["statement"] = "This planning note is verified."
     write_json(trust_path, premises)
     changes = root / "openspec" / "changes"
     catalog_files = [
@@ -826,7 +893,7 @@ def test_checker_rejects_missing_requirement_catalog(tmp_path: Path) -> None:
         "FAIL: requirement catalog missing: openspec/changes/*/traceability.md"
         in result.stdout
     )
-    assert "FAIL: TP02 status is not open or accepted-assumption" in result.stdout
+    assert "FAIL: TP02 statement contains closure word: verified" in result.stdout
     assert "blocked:" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -868,6 +935,7 @@ def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> 
     weak_rel = "docs/zr14-broad-topic.md"
     weak_quote = "ZR14 \u2014 selection of the federated kernel"
     (root / weak_rel).write_text(weak_quote + "\n", encoding="utf-8")
+    git_add(root, weak_rel)
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premise = next(item for item in premises["premises"] if item["id"] == "TP04")
@@ -1017,3 +1085,170 @@ def test_checker_rejects_self_cited_and_forbidden_sources(tmp_path: Path) -> Non
         assert f"quote not in {relative}" not in result.stdout
         assert "OK:" not in result.stdout
         assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_wrong_typed_source_path(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"][0]["sourceRefs"][0]["path"] = 12
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert (
+        f"FAIL: {TRUST_REL} premises/0/sourceRefs/0/path: 12 is not of type 'string'"
+        in result.stdout
+    )
+    assert "quote not in" not in result.stdout
+    assert "source ref is incomplete" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_untracked_source(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    quote = "repositoryformatversion = 0"
+    assert quote in (root / ".git" / "config").read_text(encoding="utf-8")
+    report_rel = "FOREMAN_REPORT.md"
+    report_quote = "This untracked report is not a repository document."
+    (root / report_rel).write_text(report_quote + "\n", encoding="utf-8")
+    cases = (
+        (".git/config", quote),
+        (report_rel, report_quote),
+    )
+    for relative, used_quote in cases:
+        trust_path = root / TRUST_REL
+        premises = json.loads((ROOT / TRUST_REL).read_text(encoding="utf-8"))
+        premise = premises["premises"][0]
+        premise["sourceRefs"] = [
+            {"path": relative, "quoteRole": "states-premise", "quote": used_quote}
+        ]
+        premises["premises"][1]["statement"] = "This planning note is verified."
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert (
+            "FAIL: TP01 source ref path is not a tracked repository document: "
+            f"{relative}" in result.stdout
+        )
+        assert "FAIL: TP02 statement contains closure word: verified" in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_symlink_into_forbidden_tree(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    quote = "Validate U0 trust premises and the generated backend requirement matrix."
+    target_rel = "scripts/check_u0_trust_backend_matrix.py"
+    target = root / target_rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(quote + "\n", encoding="utf-8")
+    link_rel = "docs/alias-to-checker.md"
+    (root / link_rel).symlink_to(Path("..") / "scripts" / "check_u0_trust_backend_matrix.py")
+    git_add(root, target_rel, link_rel)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"][0]["sourceRefs"] = [
+        {"path": link_rel, "quoteRole": "states-premise", "quote": quote}
+    ]
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert (
+        f"FAIL: TP01 source ref path is not an allowed document: {link_rel}"
+        in result.stdout
+    )
+    assert f"quote not in {link_rel}" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_symlink_that_escapes_root(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    quote = "This outside file is not inside the repository."
+    outside = tmp_path / "outside.md"
+    outside.write_text(quote + "\n", encoding="utf-8")
+    link_rel = "docs/outside-link.md"
+    (root / link_rel).symlink_to(outside)
+    git_add(root, link_rel)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"][0]["sourceRefs"] = [
+        {"path": link_rel, "quoteRole": "states-premise", "quote": quote}
+    ]
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert f"FAIL: TP01 quote path escapes root: {link_rel}" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_blocks_when_git_metadata_missing(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    shutil.rmtree(root / ".git")
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert result.stdout == "blocked: git metadata unavailable\n"
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_accepts_neutral_words_outside_closure_list(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    statement = "The plan will provide a closing completeness note for a provable bound."
+    assert len(statement) <= 160
+    assert ", and " not in statement
+    assert ";" not in statement
+    for word in CLOSURE_WORDS:
+        assert re.search(rf"\b{word}\b", statement, re.IGNORECASE) is None
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"][0]["statement"] = statement
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == "OK: 24 backend rows specified-only, 9 trust premises\n"
+
+
+def test_main_reports_internal_error(monkeypatch, capsys) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import check_u0_trust_backend_matrix as checker
+
+    def boom(root: Path) -> tuple[int, list[str]]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(checker, "check", boom)
+    code = checker.main(["--root", str(ROOT)])
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert captured.out == "FAIL: internal error: RuntimeError: boom\n"
+    assert captured.err == ""
+
+
+def test_generator_main_reports_internal_error(monkeypatch, capsys) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import build_u0_backend_matrix as generator
+
+    def boom(source: bytes) -> dict[str, object]:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(generator, "build_matrix", boom)
+    code = generator.main(["--root", str(ROOT), "--check"])
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert captured.out == "FAIL: internal error: RuntimeError: boom\n"
+    assert captured.err == ""
