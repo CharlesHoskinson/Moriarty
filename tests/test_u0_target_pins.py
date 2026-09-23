@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -69,6 +71,11 @@ def test_real_ledger_passes() -> None:
     assert ledger["asOf"] == "2026-09-23"
     assert ledger["compatibleTupleEstablished"] is False
     assert ledger["absenceSearch"]["limitation"] == LIMITATION
+    assert ledger["absenceSearch"]["pinPatterns"] == [
+        "[0-9a-f]{64}",
+        "[0-9a-f]{40}",
+        r"[0-9]+\.[0-9]+\.[0-9]+",
+    ]
     assert [row["component"] for row in ledger["pins"]] == COMPONENTS
     assert any("transcript" in item for item in ledger["unresolved"])
     assert any("do not uniquely select" in item for item in ledger["unresolved"])
@@ -161,6 +168,8 @@ def stage_ledger(tmp_path: Path) -> tuple[Path, dict[str, object]]:
         target = tmp_path / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(source.read_bytes())
+    for relative_root in ("deliverables", "experiments", "docs", "openspec"):
+        (tmp_path / relative_root).mkdir(parents=True, exist_ok=True)
     return tmp_path, ledger
 
 
@@ -180,6 +189,20 @@ def test_deleted_row_fails(tmp_path: Path) -> None:
     pins = ledger["pins"]
     assert isinstance(pins, list)
     ledger["pins"] = [item for item in pins if item["component"] != "ledger"]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "schema pins:" in process.stdout
+    assert "too short" in process.stdout
+
+
+def test_duplicate_component_fails(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    pins = ledger["pins"]
+    assert isinstance(pins, list)
+    pins[0]["component"] = "compact-compiler"
     write_ledger(root, ledger)
 
     process = run_checker(root)
@@ -273,16 +296,14 @@ def test_near_version_does_not_contain_pin(tmp_path: Path) -> None:
     relative = "deliverables/consolidated-design-2026-09-19/longer-token.txt"
     evidence = tmp_path / relative
     evidence.write_text("compiler 0.31.2 and token xx0.32.1yy\n", encoding="utf-8")
-    evidence_rows = compact["sourceEvidence"]
-    assert isinstance(evidence_rows, list)
-    compact["sourceEvidence"] = [*evidence_rows, relative]
+    compact["sourceEvidence"] = [relative]
     write_ledger(root, ledger)
 
     process = run_checker(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "does not contain pin" in process.stdout
-    assert relative in process.stdout
+    assert "0.31.1" in process.stdout
 
 
 def test_embedded_version_token_counts(tmp_path: Path) -> None:
@@ -294,6 +315,20 @@ def test_embedded_version_token_counts(tmp_path: Path) -> None:
         "archive compactc_v0.31.1_x86_64-unknown-linux-musl.zip\n",
         encoding="utf-8",
     )
+    compact["sourceEvidence"] = [relative]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_supporting_file_without_pin_is_ok(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compact = row(ledger, "compact-compiler")
+    relative = "deliverables/consolidated-design-2026-09-19/date-only.txt"
+    evidence = tmp_path / relative
+    evidence.write_text("observed_at 2026-09-17 with no compiler pin\n", encoding="utf-8")
     evidence_rows = compact["sourceEvidence"]
     assert isinstance(evidence_rows, list)
     compact["sourceEvidence"] = [*evidence_rows, relative]
@@ -374,7 +409,18 @@ def test_absent_verifier_keys_unexcluded_hit_fails(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "word",
-    ["verified", "reverified", "re-verified", "compatible", "current", "validated"],
+    [
+        "verified",
+        "reverified",
+        "re-verified",
+        "compatible",
+        "current",
+        "validated",
+        "currently",
+        "unverified",
+        "incompatible",
+        "compatibility",
+    ],
 )
 def test_banned_word_in_note_fails(tmp_path: Path, word: str) -> None:
     root, ledger = stage_ledger(tmp_path)
@@ -396,7 +442,8 @@ def test_long_note_fails(tmp_path: Path) -> None:
     process = run_checker(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
-    assert "160" in process.stdout
+    assert "schema pins/2/note:" in process.stdout
+    assert "too long" in process.stdout
 
 
 def test_malformed_pin_kind_fails_without_traceback(tmp_path: Path) -> None:
@@ -408,6 +455,7 @@ def test_malformed_pin_kind_fails_without_traceback(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "FAIL:" in process.stdout
+    assert "pins/2/pinKind" in process.stdout
     assert "Traceback" not in process.stderr
     assert "Traceback" not in process.stdout
 
@@ -440,8 +488,8 @@ def test_non_canonical_json_fails(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("mutate", "expected"),
     [
-        ("compatible-true", "compatibleTupleEstablished is not false"),
-        ("empty-unresolved", "unresolved is empty"),
+        ("compatible-true", "schema compatibleTupleEstablished:"),
+        ("empty-unresolved", "schema unresolved:"),
         ("absent-with-pin", "absent <=> pin null <=> pinKind none"),
     ],
 )
@@ -531,7 +579,7 @@ def test_changed_pin_must_appear_in_found_in_quote(tmp_path: Path) -> None:
     assert "independently records" not in process.stdout
 
 
-def test_schema_rejection_still_checks_evidence(tmp_path: Path) -> None:
+def test_schema_rejection_skips_dependent_checks(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     ledger["extra"] = True
     row(ledger, "zkir")["pin"] = "0123456789abcdef0123456789abcdef01234567"
@@ -541,7 +589,9 @@ def test_schema_rejection_still_checks_evidence(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "Additional properties" in process.stdout
-    assert "does not contain pin" in process.stdout
+    assert "<root>" in process.stdout
+    assert "does not contain pin" not in process.stdout
+    assert "Traceback" not in process.stderr
 
 
 @pytest.mark.parametrize("payload", ["{", ""])
@@ -646,22 +696,49 @@ def test_weakened_pin_patterns_fail(tmp_path: Path) -> None:
     assert "pinPatterns are not the required" in process.stdout
 
 
-def test_weakened_search_terms_fail(tmp_path: Path) -> None:
+def _not_found_claim() -> dict[str, object]:
+    return {
+        "kind": "not-found",
+        "text": "This negative row records no selected pin.",
+        "evidencePath": None,
+        "evidenceQuote": None,
+    }
+
+
+def test_absent_search_terms_come_from_the_row(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     compact = row(ledger, "compact-compiler")
     compact["status"] = "absent"
     compact["pin"] = None
     compact["pinKind"] = "none"
     compact["sourceEvidence"] = []
-    compact["searchTerms"] = ["nonsense-term-aaa", "nonsense-term-bbb"]
+    compact["searchTerms"] = ["zz-no-such-compact-term", "yy-no-such-compiler-term"]
     compact["excludedHits"] = []
+    compact["claims"] = [_not_found_claim()]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert "omit required term" not in process.stdout
+
+
+def test_fewer_than_two_search_terms_fails(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compact = row(ledger, "compact-compiler")
+    compact["status"] = "absent"
+    compact["pin"] = None
+    compact["pinKind"] = "none"
+    compact["sourceEvidence"] = []
+    compact["searchTerms"] = ["zz-no-such-compact-term"]
+    compact["excludedHits"] = []
+    compact["claims"] = [_not_found_claim()]
     write_ledger(root, ledger)
 
     process = run_checker(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
-    assert "omit required term" in process.stdout
-    assert "compact_compiler" in process.stdout
+    assert "fewer than 2" in process.stdout
 
 
 def test_bogus_exclusion_fails(tmp_path: Path) -> None:
@@ -768,6 +845,92 @@ def test_non_utf8_absence_hit_is_not_skipped(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert relative in process.stdout
+
+
+def test_prose_pin_text_is_not_scanned(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    unresolved = ledger["unresolved"]
+    assert isinstance(unresolved, list)
+    unresolved.append("Version 0.31.1 remains unresolved. Byte count 25166212.")
+    zkir = row(ledger, "zkir")
+    zkir["note"] = "See deliverables/missing-prose.md. Version 0.31.1 remains unresolved."
+    zkir["selectionReason"] = "Version 0.31.1 remains unresolved."
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert "does not occur" not in process.stdout
+    assert "missing-prose.md" not in process.stdout
+
+
+def test_embedded_version_absence_hit_fails_unless_excluded(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    relative = "deliverables/embedded-absence-version.txt"
+    (root / relative).write_text(
+        "zz-probe-compactc compactc_v0.31.1_x86\n",
+        encoding="utf-8",
+    )
+    compact = row(ledger, "compact-compiler")
+    compact["status"] = "absent"
+    compact["pin"] = None
+    compact["pinKind"] = "none"
+    compact["sourceEvidence"] = []
+    compact["searchTerms"] = ["zz-probe-compactc", "zz-probe-other"]
+    compact["excludedHits"] = []
+    compact["claims"] = [_not_found_claim()]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert relative in process.stdout
+    assert "0.31.1" in process.stdout
+    assert "matches a search term and a pin pattern" in process.stdout
+
+    compact["excludedHits"] = [
+        {
+            "path": relative,
+            "line": 1,
+            "reason": "planted embedded version for the absence-pattern test",
+            "match": "0.31.1",
+        }
+    ]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_missing_absence_root_is_blocked(tmp_path: Path) -> None:
+    root, _ledger = stage_ledger(tmp_path)
+    shutil.rmtree(root / "docs")
+
+    process = run_checker(root)
+
+    assert process.returncode == 2, process.stdout + process.stderr
+    assert process.stdout == "blocked: missing absence root docs\n"
+    assert process.stderr == ""
+
+
+def test_unexpected_exception_is_internal_error(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    spec = importlib.util.spec_from_file_location("check_u0_target_pins", CHECKER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def boom(_root: Path) -> int:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(module, "check", boom)
+
+    assert module.main([]) == 1
+    captured = capsys.readouterr()
+    assert captured.out == "FAIL: internal error: RuntimeError: boom\n"
+    assert captured.err == ""
 
 
 def test_unknown_schema_type_fails_without_traceback(tmp_path: Path) -> None:
