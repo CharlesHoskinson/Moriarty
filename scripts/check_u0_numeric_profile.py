@@ -3,15 +3,23 @@
 
 Cited lines use two separate tests. A rounding or scaling primitive must cite a
 line that contains a division, rounding, or scaling operation (`/`, floor, ceil,
-Rounding, scale, or div). An overflow-checked exact primitive must cite a line
-that contains the bound check (`numericFits(`, `UINT64_MAX`, `UINT128_MAX`, or
-a null rejection such as `b > a ? null :`). A comment cannot satisfy either
-test, and one test does not satisfy the other.
+Rounding, scale, or div). An overflow-checked exact primitive must cite a code
+line that contains `numericFits(`, `UINT64_MAX`, or `UINT128_MAX`, or the
+operand underflow form `b > a ? null : a - b`. Comments and string literals are
+removed before that test. A comment cannot satisfy either test, and one test
+does not satisfy the other.
 
-Reserve citations, and any other declaration check, are type-level. A
-declaration is a top-level function, const, class, type, interface, or enum
-name, or a member of an interface body, a `type Name = { ... }` body, or a
-class body. Object-literal keys and labels are not declarations.
+`symbol` is the declared function whose body contains `line`. A reducer case
+sets `constructor` to its label. That label must be a string literal within
+8 lines of `line`. Eight is the smallest window that reaches `Add` at line 399
+from the `numericFits` guard at line 407, and `FloorDiv` at line 397 from the
+division at line 404.
+
+Reserve citations are type-level. A declaration is a top-level function, const,
+class, type, interface, or enum name, or a member that starts a line in an
+interface body or a `type Name = { ... }` body. Method parameters,
+property-initializer calls, class-body members, object-literal keys, and labels
+are not declarations.
 """
 
 from __future__ import annotations
@@ -61,14 +69,25 @@ _OPERAND = r"(?:[A-Za-z_$][\w$]*|\d+n?|\)|\])"
 DIVISION = re.compile(rf"{_OPERAND}\s*/(?!/|\*)\s*{_OPERAND}")
 ROUNDING_WORD = re.compile(r"\bfloor\b|\bceil\b")
 ROUNDING_OR_SCALE = re.compile(r"\bfloor\b|\bceil\b|Rounding|\bscale\b|\bdiv\b")
-# Bound check for an overflow-checked exact primitive. subU128 rejects
-# underflow with `b > a ? null :` and has no UINT128_MAX token on that line.
-# The search uses the comment-masked line, so a comment cannot satisfy it.
-OVERFLOW_LINE = re.compile(
-    r"numericFits\s*\(|UINT(?:64|128)_MAX|\?\s*null\s*:"
+# Bound tokens for an overflow-checked exact primitive. The search uses the
+# code line with comments and string literals removed.
+OVERFLOW_LINE = re.compile(r"numericFits\s*\(|UINT(?:64|128)_MAX")
+# subU128 rejects underflow as `b > a ? null : a - b`. Its body has no
+# UINT128_MAX token. A bare `? null :` ternary does not match.
+UNDERFLOW_RETURN = re.compile(
+    r"\b(\w+)\s*>\s*(\w+)\s*\?\s*null\s*:\s*\2\s*-\s*\1\b"
 )
-_TYPE_BODY_INTERFACE_OR_CLASS = re.compile(
-    r"\b(?:interface|class)\s+[A-Za-z_$][\w$]*\b[^;{}]*$"
+_NUMERIC_FITS_CALL = re.compile(r"(?<![\w$])numericFits\s*\(")
+_FUNCTION_NUMERIC_FITS = re.compile(r"\bfunction\s+numericFits\s*\(")
+_CONSTRUCTOR_LABEL = re.compile(
+    r"\bk\s*===\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]"
+)
+# Add at financial-expression-v1.ts:399 is 8 lines from numericFits at :407.
+# FloorDiv at :397 is 7 lines from the division at :404. A window of 3 cannot
+# cite the operation line and the constructor label for those rows.
+CONSTRUCTOR_WINDOW = 8
+_TYPE_BODY_INTERFACE = re.compile(
+    r"\binterface\s+[A-Za-z_$][\w$]*\b[^;{}]*$"
 )
 _TYPE_BODY_ALIAS = re.compile(
     r"\btype\s+[A-Za-z_$][\w$]*\s*(?:<[^;]{0,400}>)?\s*=[^;{}]*$"
@@ -207,6 +226,26 @@ IGNORED_OVERFLOW_SITES: tuple[tuple[str, int, str], ...] = (
         "Same Add, Sub, and Mul numericFits guard as financial-expression-v1.ts. "
         "Source/5 evaluates contract/4 in that file.",
     ),
+    (
+        "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+        435,
+        "numericFits on a stored obligation-field read. "
+        "It rejects a value that does not fit. "
+        "It does not round or narrow a computed amount.",
+    ),
+    (
+        "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        181,
+        "valueDomain calls numericFits on an existing value. "
+        "This is not a source/5 arithmetic operation. "
+        "Reducer call sites are listed as primitives.",
+    ),
+    (
+        "experiments/moriarty-language/src/successor/expression-types-v1.ts",
+        158,
+        "Same valueDomain numericFits call as financial-expression-types-v1.ts. "
+        "Source/5 does not use this file.",
+    ),
 )
 
 
@@ -291,6 +330,17 @@ class DerivedPolicy(NamedTuple):
 
 
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except Exception as error:
+        print(
+            "FAIL: internal error: "
+            f"{type(error).__name__}: {one_line(str(error))}"
+        )
+        return 1
+
+
+def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root",
@@ -332,9 +382,8 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
     if decision is None:
         return None, failures, None
     decision_bytes, decision_text = decision
-    derived = derive_policy(decision_text, failures)
 
-    schema, schema_text = load_json(
+    schema, _schema_text = load_json(
         schema_path, "numeric profile schema", SCHEMA_FILE, failures
     )
     profile, profile_text = load_json(
@@ -343,8 +392,36 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
     if schema is None or profile is None:
         return None, failures, None
     if not isinstance(schema, dict) or not isinstance(profile, dict):
-        failures.append("FAIL: numeric profile and its schema must be JSON objects")
+        failures.append(
+            "FAIL: <root> numeric profile and its schema must be JSON objects"
+        )
         return None, failures, None
+
+    if schema.get("$schema") != SCHEMA_DIALECT:
+        failures.append("FAIL: schema is not draft 2020-12")
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as error:
+        failures.append(
+            f"FAIL: numeric profile schema is invalid: {one_line(error.message)}"
+        )
+        return None, failures, None
+
+    assert_schema_closed(schema, "<schema>", failures)
+    validator = Draft202012Validator(schema)
+    schema_errors = sorted(
+        validator.iter_errors(profile),
+        key=lambda error: ([str(part) for part in error.absolute_path], error.message),
+    )
+    if schema_errors:
+        typed = [
+            "FAIL: "
+            + ("/".join(str(part) for part in error.absolute_path) or "<root>")
+            + " "
+            + one_line(error.message)
+            for error in schema_errors
+        ]
+        return None, typed, None
 
     if not profile_text.endswith("\n") or profile_text.endswith("\n\n"):
         failures.append(
@@ -356,26 +433,8 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
             "FAIL: numeric profile is not UTF-8 JSON with 2-space indent "
             "and unescaped non-ASCII"
         )
-    if schema.get("$schema") != SCHEMA_DIALECT:
-        failures.append("FAIL: schema is not draft 2020-12")
-    try:
-        Draft202012Validator.check_schema(schema)
-    except SchemaError as error:
-        failures.append(f"FAIL: numeric profile schema is invalid: {one_line(error.message)}")
-        return None, failures, None
 
-    assert_schema_closed(schema, "<schema>", failures)
-    validator = Draft202012Validator(schema)
-    schema_errors = sorted(
-        validator.iter_errors(profile),
-        key=lambda error: ([str(part) for part in error.absolute_path], error.message),
-    )
-    if schema_errors:
-        for error in schema_errors:
-            location = "/".join(str(part) for part in error.absolute_path) or "<root>"
-            failures.append(f"FAIL: {location} {one_line(error.message)}")
-        return None, failures, None
-
+    derived = derive_policy(decision_text, failures)
     check_key_order(profile, schema, "<root>", failures)
     digest = hashlib.sha256(decision_bytes).hexdigest()
     if profile["decisionSha256"] != digest:
@@ -576,9 +635,9 @@ def compare_derived(
 
 
 def _opens_type_body(pretext: str) -> bool:
-    """True when `{` opens an interface, class, or `type Name =` body."""
+    """True when `{` opens an interface or `type Name =` body."""
     tail = pretext[-500:]
-    if _TYPE_BODY_INTERFACE_OR_CLASS.search(tail) is not None:
+    if _TYPE_BODY_INTERFACE.search(tail) is not None:
         return True
     return _TYPE_BODY_ALIAS.search(tail) is not None
 
@@ -599,10 +658,11 @@ def declares_type_level(lines: list[str], line_number: int, symbol: str) -> bool
     """True when symbol is a type-level declaration on line_number.
 
     Accepted sites are a top-level function, const, class, type, interface, or
-    enum name, or a member of an interface body, a `type Name = { ... }` body,
-    or a class body. Object-literal keys and labels are rejected. A local
-    variable is rejected. The checker does not decide whether the declaration
-    is a reserve account.
+    enum name, or a member of an interface body or a `type Name = { ... }`
+    body. The member name starts the line, after optional access modifiers.
+    A method parameter, a property-initializer call, a class-body member, an
+    object-literal key, a label, and a local variable are rejected. The checker
+    does not decide whether the declaration is a reserve account.
     """
     if line_number < 1 or line_number > len(lines):
         return False
@@ -612,7 +672,13 @@ def declares_type_level(lines: list[str], line_number: int, symbol: str) -> bool
         return False
     line = parts[line_number - 1]
     name = re.escape(symbol)
-    member = re.search(rf"(?:^|[^\w$])(?P<name>{name})\s*\??\s*(?::|\()", line)
+    member = re.match(
+        rf"^\s*(?:(?:readonly|public|private|protected|static)\s+)*"
+        rf"(?P<name>{name})\s*\??\s*[:(]",
+        line,
+    )
+    if member is not None and re.search(r"[,(=]\s*$", line[: member.start("name")]):
+        member = None
     top = _TOP_LEVEL_DECLARATION.match(line)
     top_hit = top is not None and top.group("name") == symbol
     if member is None and not top_hit:
@@ -1303,10 +1369,19 @@ def check_primitive(
     body = "\n".join(lines[start - 1 : end])
     kept_body = mask_non_code(body, blank_strings=False)
     symbol = str(row["symbol"])
-    if symbol != name and re.search(rf"\b{re.escape(symbol)}\b", body) is None:
+    if symbol != name:
         failures.append(
             f"FAIL: primitive {identity} symbol {symbol} "
-            f"is not in function {name}"
+            f"is not the declared function whose body contains line {line_number}"
+        )
+    constructor = row["constructor"]
+    if constructor is not None and not constructor_literal_near(
+        comment_lines, line_number, str(constructor)
+    ):
+        failures.append(
+            f"FAIL: primitive {identity} constructor {constructor} "
+            f"is not a string literal within {CONSTRUCTOR_WINDOW} lines "
+            f"of {relative}:{line_number}"
         )
     selectable = author_selectable(kept_body, code_text, required)
     if bool(row["authorSelectable"]) != selectable:
@@ -1369,17 +1444,36 @@ def check_primitive(
     return failures
 
 
+def constructor_literal_near(
+    comment_lines: list[str], line_number: int, label: str
+) -> bool:
+    """True when label is a string literal within CONSTRUCTOR_WINDOW lines."""
+    if line_number < 1 or line_number > len(comment_lines):
+        return False
+    start = max(1, line_number - CONSTRUCTOR_WINDOW)
+    end = min(len(comment_lines), line_number + CONSTRUCTOR_WINDOW)
+    pattern = re.compile("['\"]" + re.escape(label) + "['\"]")
+    return any(
+        pattern.search(comment_lines[number - 1]) is not None
+        for number in range(start, end + 1)
+    )
+
+
 def line_has_operation(comment_line: str, code_line: str, required: str) -> bool:
     """Apply the cited-line split.
 
-    Exact rows match OVERFLOW_LINE on the comment-masked line and reject a
-    division on that same line. Rounding and scaling rows match division on
-    the code line, or ROUNDING_OR_SCALE on the comment-masked line. A comment
-    cannot satisfy either test, and a bound check is not a rounding operation.
+    Exact rows match OVERFLOW_LINE or UNDERFLOW_RETURN on the code line, with
+    comments and string literals removed, and reject a division on that line.
+    Rounding and scaling rows match division on the code line, or
+    ROUNDING_OR_SCALE on the comment-masked line. A comment cannot satisfy
+    either test, and a bound check is not a rounding operation.
     """
     if required == "none":
         return (
-            OVERFLOW_LINE.search(comment_line) is not None
+            (
+                OVERFLOW_LINE.search(code_line) is not None
+                or UNDERFLOW_RETURN.search(code_line) is not None
+            )
             and DIVISION.search(code_line) is None
         )
     return (
@@ -1655,20 +1749,30 @@ def overflow_sites(
     sources: dict[str, list[str]],
     masked: dict[str, list[str]],
 ) -> list[tuple[str, int, frozenset[str]]]:
-    """Overflow-checked helper definitions and Add/Sub/Mul numericFits guards."""
-    found: list[tuple[str, int, frozenset[str]]] = []
+    """Overflow helpers, reducer guards, and every numericFits( call.
+
+    Helper sites carry the declared function name. The Add, Sub, and Mul guard
+    carries those constructor labels. Every other numericFits( call carries
+    constructor labels from the three lines above it, or the enclosing function
+    name when that window has no label. A string cannot create a site.
+    """
+    found: dict[tuple[str, int], set[str]] = {}
+
+    def add(relative: str, line: int, symbols: frozenset[str] | set[str]) -> None:
+        found.setdefault((relative, line), set()).update(symbols)
+
     for relative, raw in sources.items():
-        code = comment_masked_lines(raw)
+        kept = comment_masked_lines(raw)
         spans = function_spans(raw)
         for start, end, name in spans:
-            body = "\n".join(code[start - 1 : end])
+            body = "\n".join(kept[start - 1 : end])
             match = OVERFLOW_RETURN.search(body)
             if match is not None:
                 line = start + body[: match.start()].count("\n")
                 owner = innermost(spans, line)
                 if owner is not None and owner[0] == start and owner[2] == name:
-                    found.append((relative, line, frozenset({name})))
-            body_lines = code[start - 1 : end]
+                    add(relative, line, {name})
+            body_lines = kept[start - 1 : end]
             add_at = next(
                 (
                     index
@@ -1693,8 +1797,34 @@ def overflow_sites(
             line = start + add_at + fits
             owner = innermost(spans, line)
             if owner is not None and owner[0] == start and owner[2] == name:
-                found.append((relative, line, frozenset({"Add", "Sub", "Mul"})))
-    return found
+                add(relative, line, {"Add", "Sub", "Mul"})
+        code = masked.get(relative, [])
+        for number, line_text in enumerate(code, start=1):
+            if _NUMERIC_FITS_CALL.search(line_text) is None:
+                continue
+            if number <= len(raw) and _FUNCTION_NUMERIC_FITS.search(raw[number - 1]):
+                continue
+            if (relative, number) in found:
+                continue
+            labels = constructor_labels_above(kept, number)
+            if labels:
+                add(relative, number, labels)
+                continue
+            owner = innermost(spans, number)
+            add(relative, number, {owner[2]} if owner is not None else {"numericFits"})
+    return [
+        (relative, number, frozenset(symbols))
+        for (relative, number), symbols in sorted(found.items())
+    ]
+
+
+def constructor_labels_above(kept: list[str], number: int) -> set[str]:
+    """Constructor labels in `k === 'Label'` on this line and the three above."""
+    start = max(1, number - 3)
+    labels: set[str] = set()
+    for index in range(start, number + 1):
+        labels.update(_CONSTRUCTOR_LABEL.findall(kept[index - 1]))
+    return labels
 
 
 def check_overflow_coverage(
@@ -1731,11 +1861,18 @@ def check_overflow_coverage(
                 )
             continue
         for symbol in sorted(symbols):
-            if not any(str(row["symbol"]) == symbol for row in covered):
+            if not any(exact_row_covers_symbol(row, symbol) for row in covered):
                 failures.append(
                     f"FAIL: overflow site {relative}:{number} symbol {symbol} "
                     "is not covered by an exact primitive within 15 lines"
                 )
+
+
+def exact_row_covers_symbol(row: dict[str, Any], symbol: str) -> bool:
+    """Match a constructor label on reducer rows and the function name on helpers."""
+    if row.get("constructor") is not None:
+        return str(row["constructor"]) == symbol
+    return str(row["symbol"]) == symbol
 
 
 def role_covered(

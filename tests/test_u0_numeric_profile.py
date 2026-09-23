@@ -26,6 +26,9 @@ EXPECTED_IDS = [
     "checked-mul-u64",
     "checked-sub-u128",
     "expression-checked-add",
+    "expression-checked-construct-amount",
+    "expression-checked-construct-shares",
+    "expression-checked-convert-uint",
     "expression-checked-mul",
     "expression-checked-sub",
     "expression-obligation-division",
@@ -134,6 +137,18 @@ def test_checker_accepts_real_profile() -> None:
     ]
     assert "LitPrice" in profile["priceOrientation"]["note"]
     assert "financial-expression-v1.ts:230" in profile["priceOrientation"]["note"]
+    by_id = {row["id"]: row for row in profile["primitives"]}
+    assert by_id["expression-checked-add"]["symbol"] == "reduce"
+    assert by_id["expression-checked-add"]["constructor"] == "Add"
+    assert by_id["expression-checked-sub"]["constructor"] == "Sub"
+    assert by_id["expression-checked-mul"]["constructor"] == "Mul"
+    assert by_id["expression-obligation-division"]["constructor"] == "CeilDiv"
+    assert by_id["expression-receipt-division"]["constructor"] == "FloorDiv"
+    assert by_id["expression-checked-convert-uint"]["constructor"] == "ConvertUInt"
+    assert by_id["expression-checked-convert-uint"]["line"] == 380
+    assert by_id["expression-checked-construct-amount"]["line"] == 380
+    assert by_id["expression-checked-construct-shares"]["constructor"] == "ConstructShares"
+    assert by_id["checked-sub-u128"]["constructor"] is None
 
 
 def test_missing_decision_file_is_blocked(tmp_path: Path) -> None:
@@ -283,7 +298,7 @@ def test_declared_symbol_lifts_absence_without_a_posting(tmp_path: Path) -> None
     process = run(root)
 
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
+    assert process.stdout == "OK: 17 primitives, 5 open conformance gaps\n"
     assert process.stderr == ""
 
 
@@ -918,7 +933,7 @@ def test_unrelated_ceil_tokens_do_not_flip_floor(tmp_path: Path) -> None:
     process = run(root)
 
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
+    assert process.stdout == "OK: 17 primitives, 5 open conformance gaps\n"
     assert process.stderr == ""
 
 
@@ -1056,5 +1071,264 @@ def test_type_alias_field_is_a_reserve_declaration(tmp_path: Path) -> None:
     process = run(root)
 
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
+    assert process.stdout == "OK: 17 primitives, 5 open conformance gaps\n"
+    assert process.stderr == ""
+
+
+def test_wrong_typed_line_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    profile["primitives"][0]["line"] = "1779"
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "primitives/0/line" in process.stdout
+    assert "integer" in process.stdout
+    assert "internal error" not in process.stdout
+    assert "applyAccrue" not in process.stdout
+    assert "open conformance gaps" not in process.stdout
+    assert process.stderr == ""
+
+
+def test_method_parameter_is_not_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport class ReserveProbe {\n"
+        "  m(protocolReserve: bigint): void {\n"
+        "    void protocolReserve;\n"
+        "  }\n"
+        "}\n",
+    )
+    line_no = lines.index("  m(protocolReserve: bigint): void {") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "protocolReserve" in process.stdout
+    assert "is not a declaration" in process.stdout
+    assert "no type-level declaration is cited" in process.stdout
+    assert process.stderr == ""
+
+
+def test_property_initializer_call_is_not_a_reserve_declaration(
+    tmp_path: Path,
+) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport class ReserveProbe {\n"
+        "  x = protocolReserve();\n"
+        "}\n",
+    )
+    line_no = lines.index("  x = protocolReserve();") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "protocolReserve" in process.stdout
+    assert "is not a declaration" in process.stdout
+    assert process.stderr == ""
+
+
+def test_class_field_is_not_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport class ReserveProbe {\n"
+        "  protocolReserve: bigint = 0n;\n"
+        "}\n",
+    )
+    line_no = lines.index("  protocolReserve: bigint = 0n;") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "protocolReserve" in process.stdout
+    assert "is not a declaration" in process.stdout
+    assert process.stderr == ""
+
+
+def test_interface_field_is_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport interface ProtocolReserveAccount {\n"
+        "  readonly protocolReserve?: bigint;\n"
+        "}\n",
+    )
+    line_no = lines.index("  readonly protocolReserve?: bigint;") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert process.stdout == "OK: 17 primitives, 5 open conformance gaps\n"
+    assert process.stderr == ""
+
+
+def test_broad_null_ternary_is_not_an_overflow_bound(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-lifecycle.ts",
+        "  return b > a ? null : a - b;",
+        "  return flag ? null : a;",
+    )
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "checked-sub-u128" in process.stdout
+    assert "has no overflow bound check" in process.stdout
+    assert process.stderr == ""
+
+
+def test_string_bound_token_does_not_satisfy_exact_row(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-lifecycle.ts",
+        "  return b > a ? null : a - b;",
+        '  const label = "UINT128_MAX"; return a - b; // ? null :',
+    )
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "checked-sub-u128" in process.stdout
+    assert "has no overflow bound check" in process.stdout
+    assert process.stderr == ""
+
+
+def test_constructor_label_is_not_a_declared_symbol(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    for row in profile["primitives"]:
+        if row["id"] == "expression-checked-mul":
+            row["symbol"] = "Mul"
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "expression-checked-mul" in process.stdout
+    assert "is not the declared function" in process.stdout
+    assert "Mul" in process.stdout
+    assert process.stderr == ""
+
+
+def test_constructor_label_outside_window_fails(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    for row in profile["primitives"]:
+        if row["id"] == "expression-checked-add":
+            row["line"] = 380
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "expression-checked-add" in process.stdout
+    assert "Add" in process.stdout
+    assert "within 8 lines" in process.stdout
+    assert process.stderr == ""
+
+
+def test_comment_does_not_satisfy_constructor_label(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    replace_once(
+        root / SUCCESSOR / "financial-expression-v1.ts",
+        "result = String(n); if (!numericFits(type, result)) fail('ARITH_RANGE');",
+        "result = String(n); if (!numericFits(type, result)) fail('ARITH_RANGE'); "
+        "// 'OnlyInComment'",
+    )
+    profile = load_profile(root)
+    for row in profile["primitives"]:
+        if row["id"] == "expression-checked-mul":
+            row["constructor"] = "OnlyInComment"
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "OnlyInComment" in process.stdout
+    assert "string literal" in process.stdout
+    assert process.stderr == ""
+
+
+@pytest.mark.parametrize(
+    "dropped,label",
+    [
+        ("expression-checked-construct-amount", "ConstructAmount"),
+        ("expression-checked-construct-shares", "ConstructShares"),
+        ("expression-checked-convert-uint", "ConvertUInt"),
+    ],
+)
+def test_deleting_width_narrowing_row_fails(
+    tmp_path: Path, dropped: str, label: str
+) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    profile["primitives"] = [
+        row for row in profile["primitives"] if row["id"] != dropped
+    ]
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "financial-expression-v1.ts:380" in process.stdout
+    assert label in process.stdout
+    assert process.stderr == ""
+
+
+def test_new_numeric_fits_call_is_classified(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nfunction narrowU64(value: bigint): bigint | null {\n"
+        "  if (!numericFits(['UInt64'], String(value))) return null;\n"
+        "  return value;\n"
+        "}\n",
+    )
+    line_no = (
+        lines.index(
+            "  if (!numericFits(['UInt64'], String(value))) return null;"
+        )
+        + 1
+    )
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"financial-lifecycle.ts:{line_no}" in process.stdout
+    assert "narrowU64" in process.stdout
     assert process.stderr == ""
