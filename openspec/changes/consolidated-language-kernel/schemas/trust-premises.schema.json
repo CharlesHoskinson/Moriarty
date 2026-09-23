@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "moriarty-u0-trust-premises/1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "premises"],
+  "properties": {
+    "schemaVersion": {
+      "const": "moriarty-u0-trust-premises/1"
+    },
+    "premises": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/premise"
+      }
+    }
+  },
+  "$defs": {
+    "premise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "kind", "sourceRefs", "relatedIds", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^TP[0-9]{2}$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 20
+        },
+        "kind": {
+          "enum": ["trust-assumption", "unresolved-interface", "planning-assumption"]
+        },
+        "sourceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceRef"
+          }
+        },
+        "relatedIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(ZR[0-9]{2}|MNR[0-9]{2}|UNI-[0-9]{3}|MPLR-[0-9]{3})$"
+          }
+        },
+        "status": {
+          "enum": ["open", "accepted-assumption"]
+        }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "quote"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 20
+        }
+      }
+    }
+  }
+}
