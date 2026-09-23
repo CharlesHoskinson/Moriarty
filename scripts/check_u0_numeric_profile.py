@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Check the U0 numeric profile against the owner decision and successor sources."""
+"""Check the U0 numeric profile against the owner decision and successor sources.
+
+Cited lines use two separate tests. A rounding or scaling primitive must cite a
+line that contains a division, rounding, or scaling operation (`/`, floor, ceil,
+Rounding, scale, or div). An overflow-checked exact primitive must cite a line
+that contains the bound check (`numericFits(`, `UINT64_MAX`, `UINT128_MAX`, or
+a null rejection such as `b > a ? null :`). A comment cannot satisfy either
+test, and one test does not satisfy the other.
+
+Reserve citations, and any other declaration check, are type-level. A
+declaration is a top-level function, const, class, type, interface, or enum
+name, or a member of an interface body, a `type Name = { ... }` body, or a
+class body. Object-literal keys and labels are not declarations.
+"""
 
 from __future__ import annotations
 
@@ -48,11 +61,23 @@ _OPERAND = r"(?:[A-Za-z_$][\w$]*|\d+n?|\)|\])"
 DIVISION = re.compile(rf"{_OPERAND}\s*/(?!/|\*)\s*{_OPERAND}")
 ROUNDING_WORD = re.compile(r"\bfloor\b|\bceil\b")
 ROUNDING_OR_SCALE = re.compile(r"\bfloor\b|\bceil\b|Rounding|\bscale\b|\bdiv\b")
-# Spec clarification for §3 overflow-checked helpers. Their cited lines reject
-# overflow. They do not contain '/', floor, ceil, Rounding, scale, or div.
+# Bound check for an overflow-checked exact primitive. subU128 rejects
+# underflow with `b > a ? null :` and has no UINT128_MAX token on that line.
 # The search uses the comment-masked line, so a comment cannot satisfy it.
 OVERFLOW_LINE = re.compile(
     r"numericFits\s*\(|UINT(?:64|128)_MAX|\?\s*null\s*:"
+)
+_TYPE_BODY_INTERFACE_OR_CLASS = re.compile(
+    r"\b(?:interface|class)\s+[A-Za-z_$][\w$]*\b[^;{}]*$"
+)
+_TYPE_BODY_ALIAS = re.compile(
+    r"\btype\s+[A-Za-z_$][\w$]*\s*(?:<[^;]{0,400}>)?\s*=[^;{}]*$"
+)
+_TOP_LEVEL_DECLARATION = re.compile(
+    r"^\s*(?:export\s+)?(?:declare\s+)?(?:default\s+)?"
+    r"(?:async\s+)?(?:abstract\s+)?"
+    r"(?:function|const|class|type|interface|enum)\s+"
+    r"(?P<name>[A-Za-z_$][\w$]*)\b"
 )
 # floor(256 * log10(2)). 10^77 fits in UInt256 and 10^78 does not.
 # The reciprocal numerator is 10^(s+t), so the largest checked mantissa is 10^154.
@@ -550,22 +575,60 @@ def compare_derived(
             )
 
 
-def declares(line: str, symbol: str) -> bool:
-    """True when line declares symbol as a type, field, or function.
+def _opens_type_body(pretext: str) -> bool:
+    """True when `{` opens an interface, class, or `type Name =` body."""
+    tail = pretext[-500:]
+    if _TYPE_BODY_INTERFACE_OR_CLASS.search(tail) is not None:
+        return True
+    return _TYPE_BODY_ALIAS.search(tail) is not None
 
-    A local variable is not a declaration. The checker does not decide whether
-    the declaration is a reserve account.
+
+def _type_body_stack(text: str, stop: int) -> list[bool]:
+    stack: list[bool] = []
+    for index, ch in enumerate(text):
+        if index >= stop:
+            break
+        if ch == "{":
+            stack.append(_opens_type_body(text[:index]))
+        elif ch == "}" and stack:
+            stack.pop()
+    return stack
+
+
+def declares_type_level(lines: list[str], line_number: int, symbol: str) -> bool:
+    """True when symbol is a type-level declaration on line_number.
+
+    Accepted sites are a top-level function, const, class, type, interface, or
+    enum name, or a member of an interface body, a `type Name = { ... }` body,
+    or a class body. Object-literal keys and labels are rejected. A local
+    variable is rejected. The checker does not decide whether the declaration
+    is a reserve account.
     """
+    if line_number < 1 or line_number > len(lines):
+        return False
+    masked = mask_non_code("\n".join(lines), blank_strings=True)
+    parts = masked.split("\n")
+    if len(parts) != len(lines):
+        return False
+    line = parts[line_number - 1]
     name = re.escape(symbol)
-    patterns = (
-        rf"^\s*(?:export\s+)?(?:async\s+)?function\s+{name}\s*\(",
-        rf"^\s*(?:export\s+)?(?:abstract\s+)?class\s+{name}\b",
-        rf"^\s*(?:export\s+)?(?:interface|type|enum)\s+{name}\b",
-        rf"^\s*(?:(?:public|private|protected|readonly|static)\s+)+{name}\s*\??\s*:",
-        rf"^\s*{name}\s*\??\s*:",
-        rf"^\s*(?:(?:public|private|protected|readonly|static|async)\s+)*{name}\s*\([^;]*\)\s*(?::\s*[^{{]+)?\{{",
-    )
-    return any(re.search(pattern, line) is not None for pattern in patterns)
+    member = re.search(rf"(?:^|[^\w$])(?P<name>{name})\s*\??\s*(?::|\()", line)
+    top = _TOP_LEVEL_DECLARATION.match(line)
+    top_hit = top is not None and top.group("name") == symbol
+    if member is None and not top_hit:
+        return False
+    if member is not None:
+        name_at = member.start("name")
+    else:
+        assert top is not None
+        name_at = top.start("name")
+    prefix = "\n".join(parts[: line_number - 1])
+    if line_number > 1:
+        prefix += "\n"
+    stack = _type_body_stack(prefix + line, len(prefix) + name_at)
+    if not stack:
+        return top_hit
+    return bool(stack[-1]) and member is not None
 
 
 def check_reserve_mechanism(
@@ -574,9 +637,13 @@ def check_reserve_mechanism(
     comments: dict[str, list[str]],
     failures: list[str],
 ) -> bool:
-    """Return True when reserveMechanism.status is absent.
+    """Return True when the reserve mechanism is absent.
 
-    Citations are declaration checks only. Semantic adequacy is a reviewed claim.
+    A present status counts only when at least one citation is a type-level
+    declaration. An object-literal key or a label does not establish a reserve.
+    Semantic adequacy of a cited declaration is a reviewed claim. This checker
+    does not decide whether that declaration is a reserve account or whether a
+    division posts its remainder there.
     """
     reserve = profile["reserveMechanism"]
     citations = reserve["citations"]
@@ -588,6 +655,7 @@ def check_reserve_mechanism(
         failures.append(
             "FAIL: reserveMechanism.citations is not sorted by file, symbol, and line"
         )
+    valid = 0
     for index, citation in enumerate(citations):
         relative = str(citation["file"])
         symbol = str(citation["symbol"])
@@ -603,12 +671,21 @@ def check_reserve_mechanism(
                 f"is past the end of {relative}"
             )
             continue
-        if not declares(kept[line_number - 1], symbol):
-            failures.append(
-                f"FAIL: reserveMechanism.citations[{index}] {symbol} "
-                f"is not a declaration at {relative}:{line_number}"
-            )
-    return str(reserve["status"]) == "absent"
+        if declares_type_level(lines, line_number, symbol):
+            valid += 1
+            continue
+        failures.append(
+            f"FAIL: reserveMechanism.citations[{index}] {symbol} "
+            f"is not a declaration at {relative}:{line_number}"
+        )
+    status_absent = str(reserve["status"]) == "absent"
+    if not status_absent and valid == 0:
+        failures.append(
+            "FAIL: reserveMechanism.status is present but no type-level "
+            "declaration is cited"
+        )
+        return True
+    return status_absent
 
 
 def read_utf8(
@@ -810,6 +887,22 @@ def check_key_order(
                 check_key_order(item, items, f"{path}[{index}]", failures)
 
 
+def is_price_type(text: str, symbol: str) -> bool:
+    """True when symbol is a type declaration or a type-tag check.
+
+    A literal constructor (`case 'LitPrice'`, an operand-table key) is not a
+    price type. The symbol must be declared with type, interface, class, or
+    enum, or tested as a type tag (`tag === 'Price'`, `t.name === 'Price'`,
+    or `other[0] === 'Price'`).
+    """
+    name = re.escape(symbol)
+    declared = re.compile(rf"\b(?:type|interface|class|enum)\s+{name}\b")
+    tested = re.compile(
+        rf"(?:\btag\b|\.name|\[\s*0\s*\])\s*===\s*['\"]{name}['\"]"
+    )
+    return declared.search(text) is not None or tested.search(text) is not None
+
+
 def check_price_types(
     profile: dict[str, Any],
     sources: dict[str, list[str]],
@@ -823,7 +916,22 @@ def check_price_types(
     if keys != sorted(keys):
         failures.append("FAIL: priceOrientation.sourceTypes is not sorted by file and symbol")
     for row in rows:
-        require_symbol(str(row["file"]), str(row["symbol"]), sources, "price type", failures)
+        relative = str(row["file"])
+        symbol = str(row["symbol"])
+        lines = sources.get(relative)
+        if lines is None:
+            failures.append(f"FAIL: price type file {relative} is missing")
+            continue
+        if re.search(rf"\b{re.escape(symbol)}\b", "\n".join(lines)) is None:
+            failures.append(
+                f"FAIL: price type symbol {symbol} does not occur in {relative}"
+            )
+            continue
+        if not is_price_type("\n".join(comment_masked_lines(lines)), symbol):
+            failures.append(
+                f"FAIL: price type symbol {symbol} in {relative} "
+                "is not a type declaration or type-tag check"
+            )
 
 
 def check_price_orientation(
@@ -1174,9 +1282,12 @@ def check_primitive(
     comment_text = comment_lines[line_number - 1]
     required = str(row["requiredDirection"])
     if not line_has_operation(comment_text, code_text, required):
+        if required == "none":
+            detail = "has no overflow bound check"
+        else:
+            detail = "has no division, rounding, or scaling operation"
         failures.append(
-            f"FAIL: primitive {identity} line {line_number} "
-            "has no division, rounding, scaling, or overflow-checked operation"
+            f"FAIL: primitive {identity} line {line_number} {detail}"
         )
     if DIVISION.search(code_text) and required == "none":
         failures.append(
@@ -1259,12 +1370,12 @@ def check_primitive(
 
 
 def line_has_operation(comment_line: str, code_line: str, required: str) -> bool:
-    """Match an operation on the comment-masked line.
+    """Apply the cited-line split.
 
-    Exact rows use OVERFLOW_LINE. Overflow helpers are in scope under §3 even
-    though their cited lines have no division or rounding token. Non-exact rows
-    use division on the code line, or ROUNDING_OR_SCALE on the comment-masked
-    line. A comment that contains scale or div does not count.
+    Exact rows match OVERFLOW_LINE on the comment-masked line and reject a
+    division on that same line. Rounding and scaling rows match division on
+    the code line, or ROUNDING_OR_SCALE on the comment-masked line. A comment
+    cannot satisfy either test, and a bound check is not a rounding operation.
     """
     if required == "none":
         return (
