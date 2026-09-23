@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -22,6 +23,10 @@ CHECKER = MORIARTY_ROOT / "scripts" / "check_u0_k_reconciliation.py"
 LIMITATION = (
     "Coverage is a reviewed claim; the checker proves citations and evidence quotes only."
 )
+PREVIEW_QUOTE = (
+    "The separate September 17 Preview delivery targets the existing fixed LAM test-asset loan."
+)
+ROUND_QUOTE = '{"case": 33, "id": "round-floor", "matchesExpected": true}'
 
 
 def run_checker(root: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -46,8 +51,16 @@ def copy_root(tmp_path: Path) -> Path:
     for rel in (K_ROOT, EXECUTION):
         destination = root / rel
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.symlink_to(MORIARTY_ROOT / rel, target_is_directory=True)
+        shutil.copytree(MORIARTY_ROOT / rel, destination, symlinks=False)
     return root
+
+
+def load_checker():
+    spec = importlib.util.spec_from_file_location("check_u0_k_reconciliation", CHECKER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load(root: Path) -> dict:
@@ -195,3 +208,164 @@ def test_c7_execution_quote_must_occur_verbatim(tmp_path: Path) -> None:
         "FAIL: executionEvidence quote does not occur in "
         "deliverables/k-lifecycle-execution-2026-09-17/RESULT.md"
     ) in process.stdout
+
+
+def test_c1_null_artifact_is_validated(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    (root / ARTIFACT).write_text("null\n", encoding="utf-8")
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL:" in process.stdout
+    assert "schema" in process.stdout
+
+
+def test_c1_null_schema_is_validated(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    (root / SCHEMA).write_text("null\n", encoding="utf-8")
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: reconciliation schema is not an object" in process.stdout
+
+
+def test_c3_not_covered_note_must_name_the_gap(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    row(payload, "UNI-001")["note"] = "lacks"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: UNI-001 not-covered note does not say what K lacks" in process.stdout
+    row(payload, "UNI-001")["note"] = "n/a"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: UNI-001 not-covered note does not say what K lacks" in process.stdout
+
+
+def test_c3_covered_unrelated_quote_is_not_execution(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    target = row(payload, "UNI-014")
+    target["status"] = "covered"
+    target["evidence"] = [
+        {
+            "path": "deliverables/k-lifecycle-execution-2026-09-17/RESULT.md",
+            "quote": PREVIEW_QUOTE,
+        }
+    ]
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "FAIL: UNI-014 covered evidence does not show execution of a cited declaration"
+        in process.stdout
+    )
+    target["evidence"] = [
+        {
+            "path": "deliverables/k-lifecycle-execution-2026-09-17/RESULT.md",
+            "quote": "Both complete suites exited zero.",
+        }
+    ]
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "FAIL: UNI-014 covered evidence does not show execution of a cited declaration"
+        in process.stdout
+    )
+
+
+def test_c3_covered_round_floor_record_passes(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    target = row(payload, "UNI-014")
+    target["status"] = "covered"
+    target["evidence"] = [
+        {
+            "path": "deliverables/k-lifecycle-execution-2026-09-17/lifecycle104-02.stdout",
+            "quote": ROUND_QUOTE,
+        }
+    ]
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_symlink_outside_root_is_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    outside = tmp_path / "outside.md"
+    outside.write_text(PREVIEW_QUOTE + "\n", encoding="utf-8")
+    link = root / "deliverables" / "outside-evidence.md"
+    link.symlink_to(Path("..") / ".." / "outside.md")
+    payload = load(root)
+    item = row(payload, "UNI-005")["evidence"][0]
+    item["path"] = "deliverables/outside-evidence.md"
+    item["quote"] = PREVIEW_QUOTE
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: UNI-005 path escapes the root: deliverables/outside-evidence.md" in process.stdout
+
+
+def test_failures_print_before_blocked(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    row(payload, "UNI-001")["title"] = "Wrong title"
+    row(payload, "UNI-005")["kCitations"][0]["file"] = (
+        "experiments/moriarty-language/formal/k/missing-declaration.k"
+    )
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 2, process.stdout + process.stderr
+    assert "FAIL: UNI-001 title is 'Wrong title'" in process.stdout
+    assert (
+        "blocked: missing experiments/moriarty-language/formal/k/missing-declaration.k"
+        in process.stdout
+    )
+    assert process.stdout.index("FAIL:") < process.stdout.index("blocked:")
+
+
+def test_invalid_arguments_are_blocked() -> None:
+    process = subprocess.run(
+        [sys.executable, str(CHECKER), "--not-a-real-flag"],
+        cwd=MORIARTY_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert process.returncode == 2, process.stdout + process.stderr
+    assert process.stdout.startswith("blocked:")
+
+
+def test_c5_quoted_terminal_is_not_a_constructor(tmp_path: Path) -> None:
+    checker = load_checker()
+    declared = checker.module_symbols('module M\n syntax S ::= "fake()" | real()\nendmodule')
+    assert declared == {"M": {"M", "real"}}
+    lexical = checker.module_symbols(
+        'module M\n syntax lexical L ::= r"fake()" | lexicalCtor()\n syntax S ::= real()\nendmodule'
+    )
+    assert "fake" not in lexical["M"]
+    assert "lexicalCtor" not in lexical["M"]
+    assert "real" in lexical["M"]
+    root = copy_root(tmp_path)
+    k_rel = K_ROOT / "quoted-terminal.k"
+    (root / k_rel).write_text(
+        "module QUOTED-TERMINAL\n"
+        '  syntax lexical Lex ::= r"fake()" | lexicalCtor()\n'
+        '  syntax S ::= "fake()" | real()\n'
+        "endmodule\n",
+        encoding="utf-8",
+    )
+    payload = load(root)
+    citation = row(payload, "UNI-005")["kCitations"][0]
+    citation["file"] = k_rel.as_posix()
+    citation["context"] = "QUOTED-TERMINAL"
+    citation["symbol"] = "fake"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "symbol 'fake' is not declared in module QUOTED-TERMINAL" in process.stdout
+    citation["symbol"] = "real"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 0, process.stdout + process.stderr
