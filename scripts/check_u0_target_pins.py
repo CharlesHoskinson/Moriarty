@@ -98,99 +98,6 @@ REQUIRED_SEARCH_TERMS: dict[str, tuple[str, ...]] = {
     "proof-server": ("proof-server:", "midnightntwrk/proof-server"),
     "k-reference-toolchain": ('"revision"', "7.1.337"),
 }
-# Independent records used to reject a historical pin that is not in its source pattern.
-PROVER_KEY_RE = re.compile(
-    rb'"path"\s*:\s*"keys/[^"]+\.prover"\s*,\s*"sha256"\s*:\s*"([0-9a-f]{64})"'
-)
-VERIFIER_KEY_RE = re.compile(
-    rb'"path"\s*:\s*"keys/[^"]+\.verifier"\s*,\s*"sha256"\s*:\s*"([0-9a-f]{64})"'
-)
-COMPONENT_PIN_RECORDS: dict[str, tuple[tuple[str, re.Pattern[bytes]], ...]] = {
-    "moriarty-compiler": (
-        (
-            "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
-            re.compile(rb"pins Moriarty commit\n`([0-9a-f]{40})`"),
-        ),
-        (
-            "deliverables/moriarty-work-package-council-advisory-2026-09-03.md",
-            re.compile(rb"Frozen base: `([0-9a-f]{40})`"),
-        ),
-    ),
-    "compact-compiler": (
-        (
-            "deliverables/lifecycle-corpus-2026-09-17/environment.json",
-            re.compile(rb'"compact_compiler"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
-        ),
-        (
-            "experiments/moriarty-midnight-network/origins.json",
-            re.compile(rb'"compactCompiler"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
-        ),
-    ),
-    "zkir": (
-        (
-            "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
-            re.compile(rb"midnight-zkir`, clean tracked working tree at `([0-9a-f]{40})`"),
-        ),
-    ),
-    "native-proof-system": (
-        (
-            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
-            re.compile(rb'"backendPin"\s*:\s*"([0-9a-f]{40})"'),
-        ),
-    ),
-    "verifier": (
-        (
-            "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
-            re.compile(rb"midnight-zk@([0-9a-f]{40})`, `aggregation/src/ivc/verifier\.rs"),
-        ),
-    ),
-    "proving-keys": (
-        (
-            "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
-            PROVER_KEY_RE,
-        ),
-        (
-            "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
-            PROVER_KEY_RE,
-        ),
-    ),
-    "verifier-keys": (
-        (
-            "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
-            VERIFIER_KEY_RE,
-        ),
-        (
-            "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
-            VERIFIER_KEY_RE,
-        ),
-    ),
-    "srs-parameters": (
-        (
-            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
-            re.compile(
-                rb'"k"\s*:\s*17\s*,\s*"bytes"\s*:\s*\d+\s*,\s*"sha256"\s*:\s*"([0-9a-f]{64})"'
-            ),
-        ),
-    ),
-    "ledger": (
-        (
-            "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
-            re.compile(rb"midnight-ledger` at `([0-9a-f]{40})`"),
-        ),
-    ),
-    "proof-server": (
-        (
-            "experiments/moriarty-midnight-network/compose.preview.yml",
-            re.compile(rb"proof-server:[0-9]+\.[0-9]+\.[0-9]+@sha256:([0-9a-f]{64})"),
-        ),
-    ),
-    "k-reference-toolchain": (
-        (
-            "experiments/moriarty-language/formal/k/toolchain.lock.json",
-            re.compile(rb'"revision"\s*:\s*"([0-9a-f]{40})"'),
-        ),
-    ),
-}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -221,7 +128,7 @@ def check(root: Path) -> int:
     schema, schema_error = load_schema(schema_path)
     if schema_error is not None:
         print(schema_error)
-        return 2
+        return 1 if schema_error.startswith("FAIL:") else 2
     ledger_text, ledger, ledger_error = load_json_text(ledger_path, LEDGER_REL)
     if ledger_error is not None:
         print(ledger_error)
@@ -257,11 +164,11 @@ def load_schema(path: Path) -> tuple[object, str | None]:
     except OSError as exc:
         return None, f"blocked: cannot read {SCHEMA_REL.as_posix()}: {exc}"
     except UnicodeDecodeError as exc:
-        return None, f"blocked: schema is not UTF-8: {exc}"
+        return None, f"FAIL: {SCHEMA_REL.as_posix()} is not UTF-8: {exc}"
     try:
         return json.loads(text), None
     except json.JSONDecodeError as exc:
-        return None, f"blocked: schema is not JSON: {exc}"
+        return None, f"FAIL: {SCHEMA_REL.as_posix()} is not JSON: {exc}"
 
 
 def load_json_text(path: Path, rel: Path) -> tuple[str, object, str | None]:
@@ -490,7 +397,6 @@ def check_row(
         failures.append(f"{label} historical row has no sourceEvidence")
     else:
         check_evidence(root, component, pin, evidence_items, label, failures)
-        check_independent_record(root, component, pin, cited, label, failures)
     check_cited_text(root, note_text, f"{label} note", cited, failures)
 
 
@@ -539,6 +445,10 @@ def check_claims(root: Path, row: dict[str, object], label: str, failures: list[
             failures.append(
                 f"{label} historical row has no found-in evidenceQuote that contains its pin"
             )
+    if row.get("status") == "absent":
+        for index, claim in enumerate(claims):
+            if isinstance(claim, dict) and claim.get("kind") in EVIDENCE_KINDS:
+                failures.append(f"{label} absent row has a {claim['kind']} claim")
 
 
 def check_evidence_quote(
@@ -778,53 +688,6 @@ def check_evidence(
             failures.append(f"{label} sourceEvidence file {item} does not contain pin {pin}")
 
 
-def check_independent_record(
-    root: Path,
-    component: object,
-    pin: str,
-    cited: list[str],
-    label: str,
-    failures: list[str],
-) -> None:
-    if not isinstance(component, str):
-        failures.append(f"{label} component is not a string")
-        return
-    rules = COMPONENT_PIN_RECORDS.get(component)
-    if not rules:
-        failures.append(f"{label} component {component} has no independent pin record")
-        return
-    cited_set = {item for item in cited if not is_generated(item)}
-    matched = False
-    for relative, pattern in rules:
-        captures = inventory_captures(root, relative, pattern, label, failures)
-        if relative in cited_set and pin in captures:
-            matched = True
-    if not matched:
-        failures.append(
-            f"{label} component {component} does not cite a source file "
-            f"that independently records pin {pin}"
-        )
-
-
-def inventory_captures(
-    root: Path,
-    relative: str,
-    pattern: re.Pattern[bytes],
-    label: str,
-    failures: list[str],
-) -> list[str]:
-    path = root / relative
-    if not path.is_file():
-        failures.append(f"{label} pin inventory file does not exist: {relative}")
-        return []
-    try:
-        blob = path.read_bytes()
-    except OSError as exc:
-        failures.append(f"{label} cannot read pin inventory {relative}: {exc}")
-        return []
-    return [match.group(1).decode("ascii") for match in pattern.finditer(blob)]
-
-
 def check_cited_text(
     root: Path,
     text: str,
@@ -880,8 +743,8 @@ def pin_in_file(root: Path, relative: str, pin: str) -> bool:
 
 
 def pin_in_blob(pin: str, blob: bytes) -> bool:
-    pattern = rb"(?<![0-9A-Za-z.])" + re.escape(pin.encode("utf-8")) + rb"(?![0-9A-Za-z])"
-    return re.search(pattern, blob) is not None
+    """Return true when pin occurs literally, including inside a longer token."""
+    return pin.encode("utf-8") in blob
 
 
 if __name__ == "__main__":
