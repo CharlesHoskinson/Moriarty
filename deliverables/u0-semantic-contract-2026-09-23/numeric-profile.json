@@ -56,6 +56,11 @@
     "exact": "none",
     "remainderBeneficiary": "protocol-reserve"
   },
+  "reserveMechanism": {
+    "status": "absent",
+    "citations": [],
+    "note": "Successor sources declare no protocol-reserve type, field, or function. status is absent and citations is empty. Every ceil or floor primitive is an open conformance gap because the rounding remainder has nowhere to post. A present status is a reviewed claim. The checker only checks that each citation line declares the named symbol. It does not decide whether that declaration is a reserve account or whether a division posts its remainder there."
+  },
   "primitives": [
     {
       "id": "accrual-interest",
@@ -68,7 +73,7 @@
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": true,
       "conformance": "open-gap",
-      "gapNote": "AccrualTerms.rounding lets the author select floor or ceil. D2 requires ceil for interest that increases a liability. A floor selection is an open conformance gap. The remainder is not posted to a protocol reserve."
+      "gapNote": "AccrualTerms.rounding lets the author select floor or ceil. D2 requires ceil for interest that increases a liability. A floor selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
     },
     {
       "id": "checked-add-u128",
@@ -185,7 +190,7 @@
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": true,
       "conformance": "open-gap",
-      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires ceil when the result is an amount owed. The author can select floor. That selection is an open conformance gap. The remainder is not posted to a protocol reserve."
+      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires ceil when the result is an amount owed. The author can select floor. That selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
     },
     {
       "id": "expression-receipt-division",
@@ -198,7 +203,7 @@
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": true,
       "conformance": "open-gap",
-      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires floor when the result is an amount received. The author can select ceil. That selection is an open conformance gap. The remainder is not posted to a protocol reserve."
+      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires floor when the result is an amount received. The author can select ceil. That selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
     },
     {
       "id": "origination-settlement-conversion",
@@ -211,11 +216,11 @@
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": true,
       "conformance": "open-gap",
-      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires floor for the settlement the debtor receives at origination. Another selection is an open conformance gap. The remainder is not posted to a protocol reserve."
+      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires floor for the settlement the debtor receives at origination. Another selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
     },
     {
       "id": "prorata-principal-share",
-      "description": "allocateNominal ProRata divides nominal times principal by principal plus accrued. The author can select the allocation rule but cannot select a rounding mode for this quotient. The quotient is the nonnegative truncating division, which is floor. D2 treats the principal discharge as a reduction of liability in the payer's favour, so the required direction is floor. The truncated unit is not posted to a protocol-reserve balance. It stays in the same nominal repayment as accrued discharge, and the nominal total is unchanged. repayment.ts allocateNominal is the same earlier helper and is not a second source/5 primitive. The remainder is not posted to a protocol reserve.",
+      "description": "allocateNominal ProRata divides nominal times principal by principal plus accrued. The author can select the allocation rule but cannot select a rounding mode for this quotient. The quotient is the nonnegative truncating division, which is floor. D2 treats the principal discharge as a reduction of liability in the payer's favour, so the required direction is floor. The truncated unit is not posted to a protocol-reserve balance. It stays in the same nominal repayment as accrued discharge, and the nominal total is unchanged. repayment.ts allocateNominal is the same earlier helper and is not a second source/5 primitive. No protocol-reserve declaration exists, so the beneficiary rule is an open conformance gap.",
       "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
       "symbol": "allocateNominal",
       "line": 1423,
@@ -223,8 +228,8 @@
       "requiredDirection": "floor",
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": false,
-      "conformance": "conforms",
-      "gapNote": null
+      "conformance": "open-gap",
+      "gapNote": "allocateNominal floors the principal share. That direction matches D2 for a receipt. The truncated unit stays in the accrued discharge of the same nominal repayment. The successor sources have a missing protocol-reserve posting."
     },
     {
       "id": "repayment-settlement-conversion",
@@ -237,7 +242,7 @@
       "remainderBeneficiary": "protocol-reserve",
       "authorSelectable": true,
       "conformance": "open-gap",
-      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires ceil for the settlement the payer must fund. Another selection is an open conformance gap. The remainder is not posted to a protocol reserve."
+      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires ceil for the settlement the payer must fund. Another selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
     }
   ],
   "overrides": [],
