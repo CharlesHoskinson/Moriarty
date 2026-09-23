@@ -3,13 +3,59 @@
   "sourceProfile": "moriarty-financial-agreement-source/5",
   "coreProfile": "moriarty-financial-lifecycle/1",
   "classificationRule": "present = the cited declaration(s) realise the field's full meaning in the named context; partial = a declaration in the declared source/Core profiles realises a named aspect (note: `Exists: ...; Missing: ...`); absent = no declaration found",
+  "profileFiles": {
+    "moriarty-financial-agreement-source/5": [
+      "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
+      "experiments/moriarty-language/src/successor/frontend.ts"
+    ],
+    "moriarty-financial-lifecycle/1": [
+      "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    ]
+  },
+  "classificationTable": [
+    {
+      "context": "Allowance",
+      "realisationClass": "partial",
+      "rationale": "Allowance.spent and Allowance.remaining are the consumed and unused amounts of one spending permission, not an authority record. Work.spent is a separate computation budget."
+    },
+    {
+      "context": "LifecycleObligation",
+      "realisationClass": "partial",
+      "rationale": "LifecycleObligation.id, debtor, creditor, settlementAsset, and outstanding name one obligation's identity, parties, asset, and amount. The type does not distinguish opening from closing."
+    },
+    {
+      "context": "LifecycleState",
+      "realisationClass": "partial",
+      "rationale": "LifecycleState.usedTransferIds records transfer identifiers that have already been consumed. It is not a general replay-policy state."
+    },
+    {
+      "context": "ProfileDecl",
+      "realisationClass": "present",
+      "rationale": "ProfileDecl.value is the semantic profile identifier on the source profile declaration. frontend.ts also declares source/1 through source/4, and profileFiles allowlists the file for this field."
+    },
+    {
+      "context": "RepayAction",
+      "realisationClass": "partial",
+      "rationale": "RepayAction.obligationId identifies the obligation named by a repay action. It does not bind that identifier to an obligation commitment."
+    },
+    {
+      "context": "TransferAction",
+      "realisationClass": "partial",
+      "rationale": "TransferAction.asset, amount, from, and to are the asset, amount, and accounts of one gross transfer. The type is not a fee, net, or supply-change line, and it has no single account field."
+    },
+    {
+      "context": "financialRead",
+      "realisationClass": "partial",
+      "rationale": "The financialRead terminals allowance_spent, allowance_remaining, and outstanding are source/5 reads of allowance and obligation amount. They are not authority or liability records."
+    }
+  ],
   "absenceSearch": {
     "roots": [
       "experiments/moriarty-language/spec/successor",
       "experiments/moriarty-language/src/successor",
       "experiments/moriarty-language/formal/k"
     ],
-    "method": "Tokenize each file under the roots, require the bare leaf in searchTerms, and record every case-insensitive declared match in reviewedNonRealisations.",
+    "method": "The recorded search reads source/5 and lifecycle/1 declarations under the three successor roots, and absence is the reviewed result of that reading.",
     "limitation": "absence means not found by this recorded search; it is not a proof of non-realisation. Semantic adequacy of a cited declaration is a reviewed claim; the checker proves declaration, context, and profile membership only."
   },
   "rows": [
@@ -23,7 +69,7 @@
       "coreContext": "Allowance",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: financialRead.allowance_spent is the source grammar terminal for spent allowance, and Allowance.spent is the Core spending-permission field. Missing: there is no authority.consumed record. Work.spent is computation budget."
+      "note": "Exists: financialRead.allowance_spent is the source grammar terminal for spent allowance, and Allowance.spent is the Core spending-permission field; Missing: there is no authority.consumed record. Work.spent is computation budget."
     },
     {
       "schemaField": "authority.remaining",
@@ -35,7 +81,7 @@
       "coreContext": "Allowance",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: financialRead.allowance_remaining is the source grammar terminal for unused allowance, and Allowance.remaining is the Core spending-permission field. Missing: there is no authority.remaining record. Work.remaining is computation budget."
+      "note": "Exists: financialRead.allowance_remaining is the source grammar terminal for unused allowance, and Allowance.remaining is the Core spending-permission field; Missing: there is no authority.remaining record. Work.remaining is computation budget."
     },
     {
       "schemaField": "authority.replayState",
@@ -47,7 +93,7 @@
       "coreContext": "LifecycleState",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleState.usedTransferIds records consumed transfer identifiers. Missing: there is no general replay-policy state."
+      "note": "Exists: LifecycleState.usedTransferIds records consumed transfer identifiers; Missing: there is no general replay-policy state."
     },
     {
       "schemaField": "circuitIdentity.circuitId",
@@ -59,12 +105,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "circuitIdentity.circuitId",
-        "circuitId",
-        "circuit"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No circuit identifier exists in source/5 or core/1."
     },
     {
@@ -77,12 +117,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "circuitIdentity.compilerPin",
-        "compilerPin",
-        "compiler"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No compiler pin exists in source/5 or core/1."
     },
     {
@@ -95,12 +129,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "circuitIdentity.verifierKeyId",
-        "verifierKeyId",
-        "verifier"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No verifier key identifier exists in source/5 or core/1."
     },
     {
@@ -113,12 +141,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "circuitIdentity.zkirVersion",
-        "zkirVersion",
-        "zkir"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No ZKIR version exists in source/5 or core/1."
     },
     {
@@ -131,63 +153,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "disclosures[].fields[]",
-        "fields",
-        "disclosedField"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/core.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on CoreEmission in experiments/moriarty-language/src/successor/core.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/elaborate.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/elaborate.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/evaluate.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/evaluate.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-source-types.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/expression-source-types.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-v1.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on Machine in experiments/moriarty-language/src/successor/expression-v1.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-source-types.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-source-types.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on Machine in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on RecordDecl, Emit, RecordExpression, Parser in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise disclosures[].fields[]."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "fields",
-          "reason": "fields is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise disclosures[].fields[]."
-        }
-      ],
       "note": "No disclosure field-set identifier exists in source/5 or core/1."
     },
     {
@@ -200,68 +165,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "disclosures[].party",
-        "party",
-        "participant"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "party",
-          "reason": "party is declared on partyDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "party",
-          "reason": "party is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "party",
-          "reason": "party is declared on Balance, Allowance in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise disclosures[].party."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "party",
-          "reason": "party is declared on Balance, Allowance in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise disclosures[].party."
-        }
-      ],
       "note": "No disclosure-party identifier exists in source/5 or core/1. The semantic contract names disclosure as future work, which is prose, not an identifier."
     },
     {
@@ -274,18 +177,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "domain.chainId",
-        "chainId",
-        "chain"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "chainId",
-          "reason": "chainId is a const binding that labels an alternate fixture chain in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. It does not realise domain.chainId."
-        }
-      ],
       "note": "No ledger chain identifier exists in source/5 or core/1."
     },
     {
@@ -298,12 +189,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "domain.domainId",
-        "domainId",
-        "domainIdentifier"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No execution-domain identifier exists in source/5 or core/1."
     },
     {
@@ -316,12 +201,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "domain.stateFrameRef",
-        "stateFrameRef",
-        "frameRef"
-      ],
-      "reviewedNonRealisations": [],
       "note": "LifecycleState and the K cell financialPre hold a local lifecycle projection. The source/5 contract states that this projection is not authenticated ledger state. No state-frame reference identifier exists."
     },
     {
@@ -334,13 +213,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.fees[].account",
-        "account",
-        "holder"
-      ],
-      "reviewedNonRealisations": [],
-      "note": "No fee-effect identifier exists in source/5 or core/1."
+      "note": "No fee account exists in source/5 or core/1. TransferAction.from and TransferAction.to are accounts of the gross transfer, not a fee line."
     },
     {
       "schemaField": "effects.fees[].amount",
@@ -352,104 +225,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.fees[].amount",
-        "amount",
-        "quantity"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise effects.fees[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.fees[].amount."
-        }
-      ],
-      "note": "No fee-effect identifier exists in source/5 or core/1."
+      "note": "No fee amount exists in source/5 or core/1. TransferAction.amount is the gross transfer amount, not a fee."
     },
     {
       "schemaField": "effects.fees[].asset",
@@ -461,102 +237,19 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.fees[].asset",
-        "asset",
-        "token"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/expression_codec.py",
-          "symbol": "token",
-          "reason": "token is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/expression_codec.py. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Token",
-          "reason": "Token is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise effects.fees[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.fees[].asset."
-        }
-      ],
-      "note": "No fee-effect identifier exists in source/5 or core/1."
+      "note": "No fee asset exists in source/5 or core/1. TransferAction.asset is the gross transfer asset, not a fee."
     },
     {
       "schemaField": "effects.gross[].account",
       "sourceFile": null,
       "sourceSymbol": null,
       "sourceContext": null,
-      "coreFile": null,
-      "coreSymbol": null,
-      "coreContext": null,
-      "realisation": "absent",
-      "present": false,
-      "searchTerms": [
-        "effects.gross[].account",
-        "account",
-        "holder"
-      ],
-      "reviewedNonRealisations": [],
-      "note": "No gross-effect record exists in source/5 or core/1. PreparedLifecycle.effects is an Effect list, and Effect includes TransferAction. No account field exists on an effect line. TransferAction uses from and to. Balance uses party."
+      "coreFile": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "coreSymbol": "from",
+      "coreContext": "TransferAction",
+      "realisation": "partial",
+      "present": true,
+      "note": "Exists: TransferAction.from names one account of the gross transfer, and TransferAction.to names the other; Missing: there is no single account field."
     },
     {
       "schemaField": "effects.gross[].amount",
@@ -568,7 +261,7 @@
       "coreContext": "TransferAction",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: TransferAction.amount is the transfer amount on an effect inside PreparedLifecycle.effects. Missing: there is no effects.gross array separate from fees, net, and supplyChanges."
+      "note": "Exists: TransferAction.amount is the transfer amount on an effect inside PreparedLifecycle.effects; Missing: there is no effects.gross array separate from fees, net, and supplyChanges."
     },
     {
       "schemaField": "effects.gross[].asset",
@@ -580,7 +273,7 @@
       "coreContext": "TransferAction",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: TransferAction.asset is the transferred asset on an effect inside PreparedLifecycle.effects. Missing: there is no effects.gross array separate from fees, net, and supplyChanges."
+      "note": "Exists: TransferAction.asset is the transferred asset on an effect inside PreparedLifecycle.effects; Missing: there is no effects.gross array separate from fees, net, and supplyChanges."
     },
     {
       "schemaField": "effects.net[].account",
@@ -592,13 +285,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.net[].account",
-        "account",
-        "holder"
-      ],
-      "reviewedNonRealisations": [],
-      "note": "No net-effect record exists in source/5 or core/1. NetAmount is a numeric type tag, not a net effect line."
+      "note": "No net-effect account exists in source/5 or core/1. Balance.party is a token-balance party, and TransferAction.from is a gross-transfer account. Neither is a net line."
     },
     {
       "schemaField": "effects.net[].amount",
@@ -610,104 +297,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.net[].amount",
-        "amount",
-        "quantity"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise effects.net[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.net[].amount."
-        }
-      ],
-      "note": "No net-effect record exists in source/5 or core/1. NetAmount is a numeric type tag, not a net effect line."
+      "note": "No net-effect amount exists in source/5 or core/1. Balance.amount is a post-state token balance, and TransferAction.amount is the gross transfer amount. Neither is a net line."
     },
     {
       "schemaField": "effects.net[].asset",
@@ -719,84 +309,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.net[].asset",
-        "asset",
-        "token"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/expression_codec.py",
-          "symbol": "token",
-          "reason": "token is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/expression_codec.py. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Token",
-          "reason": "Token is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise effects.net[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.net[].asset."
-        }
-      ],
-      "note": "No net-effect record exists in source/5 or core/1. NetAmount is a numeric type tag, not a net effect line."
+      "note": "No net-effect asset exists in source/5 or core/1. Balance.asset is a token-balance asset, and TransferAction.asset is the gross transfer asset. Neither is a net line."
     },
     {
       "schemaField": "effects.supplyChanges[].account",
@@ -808,13 +321,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.supplyChanges[].account",
-        "account",
-        "holder"
-      ],
-      "reviewedNonRealisations": [],
-      "note": "No supply-change effect identifier exists in source/5 or core/1."
+      "note": "No supply-change account exists in source/5 or core/1. TransferAction.from and TransferAction.to are gross-transfer accounts, not a supply change."
     },
     {
       "schemaField": "effects.supplyChanges[].amount",
@@ -826,104 +333,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.supplyChanges[].amount",
-        "amount",
-        "quantity"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise effects.supplyChanges[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.supplyChanges[].amount."
-        }
-      ],
-      "note": "No supply-change effect identifier exists in source/5 or core/1."
+      "note": "No supply-change amount exists in source/5 or core/1. TransferAction.amount is the gross transfer amount, not a supply change."
     },
     {
       "schemaField": "effects.supplyChanges[].asset",
@@ -935,84 +345,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "effects.supplyChanges[].asset",
-        "asset",
-        "token"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/expression_codec.py",
-          "symbol": "token",
-          "reason": "token is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/expression_codec.py. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Token",
-          "reason": "Token is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise effects.supplyChanges[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise effects.supplyChanges[].asset."
-        }
-      ],
-      "note": "No supply-change effect identifier exists in source/5 or core/1."
+      "note": "No supply-change asset exists in source/5 or core/1. TransferAction.asset is the gross transfer asset, not a supply change."
     },
     {
       "schemaField": "failurePolicy.phasePolicy",
@@ -1024,12 +357,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "failurePolicy.phasePolicy",
-        "phasePolicy",
-        "phase"
-      ],
-      "reviewedNonRealisations": [],
       "note": "RejectedLifecycle and the K constructor lcKernelRejected record rejection. They do not record a phase policy, retained effects, or retained fees. A failed suffix publishes no state and clears effects."
     },
     {
@@ -1042,12 +369,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "failurePolicy.retainedEffects",
-        "retainedEffects",
-        "keptEffect"
-      ],
-      "reviewedNonRealisations": [],
       "note": "RejectedLifecycle and the K constructor lcKernelRejected record rejection. They do not record a phase policy, retained effects, or retained fees. A failed suffix publishes no state and clears effects."
     },
     {
@@ -1060,12 +381,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "failurePolicy.retainedFees",
-        "retainedFees",
-        "keptFee"
-      ],
-      "reviewedNonRealisations": [],
       "note": "RejectedLifecycle and the K constructor lcKernelRejected record rejection. They do not record a phase policy, retained effects, or retained fees. A failed suffix publishes no state and clears effects."
     },
     {
@@ -1078,12 +393,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.authority.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1096,33 +405,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.authority.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.authority.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.authority.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.authority.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.authority.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
@@ -1135,12 +417,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.effect.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1153,33 +429,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.effect.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.effect.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.effect.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.effect.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.effect.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
@@ -1192,12 +441,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.failure.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1210,33 +453,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.failure.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.failure.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.failure.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.failure.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.failure.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
@@ -1249,12 +465,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.history.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1267,33 +477,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.history.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.history.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.history.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.history.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.history.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
@@ -1306,12 +489,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.intent.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1324,33 +501,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.intent.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.intent.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.intent.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.intent.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.intent.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
@@ -1363,12 +513,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.stage.enforcementRef",
-        "enforcementRef",
-        "enforcement"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No enforcement-reference identifier exists in source/5 or core/1 for this judgment."
     },
     {
@@ -1381,232 +525,31 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "judgments.stage.status",
-        "status",
-        "verdict"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on V3SuffixReady, V3PrefixReady in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise judgments.stage.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "status",
-          "reason": "status is declared on LifecycleObligation, PreparedLifecycle, RejectedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise judgments.stage.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "status",
-          "reason": "status is declared on PreparedEnvelope, OperationBindingFailure in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise judgments.stage.status."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "status",
-          "reason": "status is declared on Obligation, PreparedRepayment, RejectedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise judgments.stage.status."
-        }
-      ],
       "note": "No held, violated, or unchecked judgment status exists in source/5 or core/1. AgreementSourceV5Checked.judgmentResult is SourceChecked, and AgreementSourceV5Elaborated.judgmentResult is SourceElaborated. Both are elaboration results."
     },
     {
       "schemaField": "liabilities.closing[].amount",
-      "sourceFile": null,
-      "sourceSymbol": null,
-      "sourceContext": null,
-      "coreFile": null,
-      "coreSymbol": null,
-      "coreContext": null,
-      "realisation": "absent",
-      "present": false,
-      "searchTerms": [
-        "liabilities.closing[].amount",
-        "amount",
-        "quantity"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise liabilities.closing[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise liabilities.closing[].amount."
-        }
-      ],
-      "note": "No closing-liability array exists in source/5 or core/1. The published post-state LifecycleObligation has principal, accrued, outstanding, and liabilityIncurred. It has no single amount field. Balance.amount is a token balance."
+      "sourceFile": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
+      "sourceSymbol": "outstanding",
+      "sourceContext": "financialRead",
+      "coreFile": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "coreSymbol": "outstanding",
+      "coreContext": "LifecycleObligation",
+      "realisation": "partial",
+      "present": true,
+      "note": "Exists: LifecycleObligation.outstanding and LifecycleObligation.principal name obligation amounts, and financialRead outstanding is the source/5 read of outstanding; Missing: the type does not record a closing liability, and it has no field named amount."
     },
     {
       "schemaField": "liabilities.closing[].asset",
       "sourceFile": null,
       "sourceSymbol": null,
       "sourceContext": null,
-      "coreFile": null,
-      "coreSymbol": null,
-      "coreContext": null,
-      "realisation": "absent",
-      "present": false,
-      "searchTerms": [
-        "liabilities.closing[].asset",
-        "asset",
-        "token"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/expression_codec.py",
-          "symbol": "token",
-          "reason": "token is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/expression_codec.py. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Token",
-          "reason": "Token is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise liabilities.closing[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise liabilities.closing[].asset."
-        }
-      ],
-      "note": "The published post-state LifecycleObligation has denomination and settlementAsset. It has no single asset field."
+      "coreFile": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "coreSymbol": "settlementAsset",
+      "coreContext": "LifecycleObligation",
+      "realisation": "partial",
+      "present": true,
+      "note": "Exists: LifecycleObligation.settlementAsset names the obligation settlement asset, and LifecycleObligation.denomination names its denomination; Missing: the type does not record a closing liability, and it has no field named asset."
     },
     {
       "schemaField": "liabilities.closing[].creditor",
@@ -1618,7 +561,7 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.creditor names the counterparty copied through PreparedLifecycle.post, the published post-state. Missing: there is no closing-liability array."
+      "note": "Exists: LifecycleObligation.creditor names the counterparty copied through PreparedLifecycle.post, the published post-state; Missing: there is no closing-liability array."
     },
     {
       "schemaField": "liabilities.closing[].debtor",
@@ -1630,7 +573,7 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.debtor names the liable party copied through PreparedLifecycle.post, the published post-state. Missing: there is no closing-liability array."
+      "note": "Exists: LifecycleObligation.debtor names the liable party copied through PreparedLifecycle.post, the published post-state; Missing: there is no closing-liability array."
     },
     {
       "schemaField": "liabilities.closing[].liabilityId",
@@ -1642,205 +585,31 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.id identifies one obligation copied through PreparedLifecycle.post. Missing: there is no closing-liability array and no liabilityId field."
+      "note": "Exists: LifecycleObligation.id identifies one obligation copied through PreparedLifecycle.post; Missing: there is no closing-liability array and no liabilityId field."
     },
     {
       "schemaField": "liabilities.opening[].amount",
-      "sourceFile": null,
-      "sourceSymbol": null,
-      "sourceContext": null,
-      "coreFile": null,
-      "coreSymbol": null,
-      "coreContext": null,
-      "realisation": "absent",
-      "present": false,
-      "searchTerms": [
-        "liabilities.opening[].amount",
-        "amount",
-        "quantity"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "amount",
-          "reason": "amount is declared on ordinaryPrimaryName, dynamicOrLiteral in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "quantity",
-          "reason": "quantity is declared on ordinaryPrimaryName, genericCall in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/funded-expression-source-v1.ts. That declaration does not realise liabilities.opening[].amount."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "amount",
-          "reason": "amount is declared on Balance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise liabilities.opening[].amount."
-        }
-      ],
-      "note": "No opening-liability array exists in source/5 or core/1. The admitted pre-state LifecycleObligation has principal, accrued, outstanding, and liabilityIncurred. It has no single amount field. Balance.amount is a token balance."
+      "sourceFile": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
+      "sourceSymbol": "outstanding",
+      "sourceContext": "financialRead",
+      "coreFile": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "coreSymbol": "outstanding",
+      "coreContext": "LifecycleObligation",
+      "realisation": "partial",
+      "present": true,
+      "note": "Exists: LifecycleObligation.outstanding and LifecycleObligation.principal name obligation amounts, and financialRead outstanding is the source/5 read of outstanding; Missing: the type does not record an opening liability, and it has no field named amount."
     },
     {
       "schemaField": "liabilities.opening[].asset",
       "sourceFile": null,
       "sourceSymbol": null,
       "sourceContext": null,
-      "coreFile": null,
-      "coreSymbol": null,
-      "coreContext": null,
-      "realisation": "absent",
-      "present": false,
-      "searchTerms": [
-        "liabilities.opening[].asset",
-        "asset",
-        "token"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/expression_codec.py",
-          "symbol": "token",
-          "reason": "token is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/expression_codec.py. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "asset",
-          "reason": "asset is declared on assetDecl in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-v1.ts. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Token",
-          "reason": "Token is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise liabilities.opening[].asset."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "asset",
-          "reason": "asset is declared on Balance, Allowance, TransferAction, StepTransfer in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise liabilities.opening[].asset."
-        }
-      ],
-      "note": "The admitted pre-state LifecycleObligation has denomination and settlementAsset. It has no single asset field."
+      "coreFile": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "coreSymbol": "settlementAsset",
+      "coreContext": "LifecycleObligation",
+      "realisation": "partial",
+      "present": true,
+      "note": "Exists: LifecycleObligation.settlementAsset names the obligation settlement asset, and LifecycleObligation.denomination names its denomination; Missing: the type does not record an opening liability, and it has no field named asset."
     },
     {
       "schemaField": "liabilities.opening[].creditor",
@@ -1852,7 +621,7 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.creditor names the counterparty on an obligation in LifecycleState.obligations, the admitted pre-state. Missing: there is no opening-liability array."
+      "note": "Exists: LifecycleObligation.creditor names the counterparty on an obligation in LifecycleState.obligations, the admitted pre-state; Missing: there is no opening-liability array."
     },
     {
       "schemaField": "liabilities.opening[].debtor",
@@ -1864,7 +633,7 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.debtor names the liable party on an obligation in LifecycleState.obligations, the admitted pre-state. Missing: there is no opening-liability array."
+      "note": "Exists: LifecycleObligation.debtor names the liable party on an obligation in LifecycleState.obligations, the admitted pre-state; Missing: there is no opening-liability array."
     },
     {
       "schemaField": "liabilities.opening[].liabilityId",
@@ -1876,7 +645,7 @@
       "coreContext": "LifecycleObligation",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: LifecycleObligation.id identifies one obligation in LifecycleState.obligations. Missing: there is no opening-liability array and no liabilityId field."
+      "note": "Exists: LifecycleObligation.id identifies one obligation in LifecycleState.obligations; Missing: there is no opening-liability array and no liabilityId field."
     },
     {
       "schemaField": "lifecycleIds.lifecycleId",
@@ -1888,12 +657,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "lifecycleIds.lifecycleId",
-        "lifecycleId",
-        "lifecycle"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No lifecycle instance identifier, stage identifier, or logical request identifier exists in source/5 or core/1. LIFECYCLE_VERSION is the core profile version, not an instance identifier."
     },
     {
@@ -1906,12 +669,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "lifecycleIds.logicalRequestId",
-        "logicalRequestId",
-        "requestKey"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No lifecycle instance identifier, stage identifier, or logical request identifier exists in source/5 or core/1. LIFECYCLE_VERSION is the core profile version, not an instance identifier."
     },
     {
@@ -1924,18 +681,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "lifecycleIds.stageId",
-        "stageId",
-        "stage"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/lifecycle-corpus.mjs",
-          "symbol": "stage",
-          "reason": "stage is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/lifecycle-corpus.mjs. That declaration does not realise lifecycleIds.stageId."
-        }
-      ],
       "note": "No lifecycle instance identifier, stage identifier, or logical request identifier exists in source/5 or core/1. LIFECYCLE_VERSION is the core profile version, not an instance identifier."
     },
     {
@@ -1948,12 +693,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "obligationCommitments[].commitment",
-        "commitment",
-        "commitHash"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No obligation-commitment digest exists in source/5 or core/1."
     },
     {
@@ -1966,7 +705,7 @@
       "coreContext": "RepayAction",
       "realisation": "partial",
       "present": true,
-      "note": "Exists: RepayAction.obligationId identifies an obligation on a repay action. Missing: no obligation-commitment record binds that identifier to a commitment."
+      "note": "Exists: RepayAction.obligationId identifies an obligation on a repay action; Missing: no obligation-commitment record binds that identifier to a commitment."
     },
     {
       "schemaField": "observations[].domain",
@@ -1978,12 +717,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "observations[].domain",
-        "domain",
-        "domainName"
-      ],
-      "reviewedNonRealisations": [],
       "note": "The expression schema key observations and the snapshot field Obs exist. They do not carry an observation domain."
     },
     {
@@ -1996,12 +729,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "observations[].finality",
-        "finality",
-        "finalized"
-      ],
-      "reviewedNonRealisations": [],
       "note": "The expression schema key observations and the snapshot field Obs exist. They do not carry an observation finality."
     },
     {
@@ -2014,12 +741,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "observations[].issuer",
-        "issuer",
-        "observer"
-      ],
-      "reviewedNonRealisations": [],
       "note": "The expression schema key observations and the snapshot field Obs exist. They do not carry an observation issuer."
     },
     {
@@ -2032,58 +753,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "observations[].kind",
-        "kind",
-        "category"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/formal/k/lifecycle-corpus.mjs",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/lifecycle-corpus.mjs. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/formal/k/test_codec.py",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/test_codec.py. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/core.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on CoreEmission in experiments/moriarty-language/src/successor/core.ts. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/elaborate.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/elaborate.ts. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-wire-v1.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on ExpressionSpan in experiments/moriarty-language/src/successor/expression-wire-v1.ts. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on TransferAction, RepayAction, OriginateAction, AccrueAction, RepaymentEffect, OriginationEffect in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise observations[].kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on TransferAction, RepayAction, RepaymentEffect in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise observations[].kind."
-        }
-      ],
       "note": "The expression schema key observations and the snapshot field Obs exist, and source/5 sets observations to an empty object. They do not carry an observation kind."
     },
     {
@@ -2096,12 +765,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "observations[].time",
-        "time",
-        "timestamp"
-      ],
-      "reviewedNonRealisations": [],
       "note": "The expression schema key observations and the snapshot field Obs exist. AccrueAction.observedTime is an accrual input, not an observation time."
     },
     {
@@ -2114,18 +777,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "outcome.continuations[]",
-        "continuations",
-        "continuation"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/test_lifecycle_codec.py",
-          "symbol": "continuation",
-          "reason": "continuation is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/test_lifecycle_codec.py. That declaration does not realise outcome.continuations[]."
-        }
-      ],
       "note": "No stage-continuation identifier exists in source/5 or core/1. The K codec uses continuation for an evaluation continuation, not a list of next stage identifiers."
     },
     {
@@ -2138,58 +789,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "outcome.kind",
-        "kind",
-        "category"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/formal/k/lifecycle-corpus.mjs",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/lifecycle-corpus.mjs. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/formal/k/test_codec.py",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/test_codec.py. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/core.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on CoreEmission in experiments/moriarty-language/src/successor/core.ts. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/elaborate.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/elaborate.ts. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-wire-v1.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on ExpressionSpan in experiments/moriarty-language/src/successor/expression-wire-v1.ts. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on TransferAction, RepayAction, OriginateAction, AccrueAction, RepaymentEffect, OriginationEffect in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on Token in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise outcome.kind."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "kind",
-          "reason": "kind is declared on TransferAction, RepayAction, RepaymentEffect in experiments/moriarty-language/src/successor/repayment.ts. That declaration does not realise outcome.kind."
-        }
-      ],
       "note": "PreparedLifecycle status Prepared and RejectedLifecycle status Rejected are kernel results. They are not the continuation or terminal outcome kind."
     },
     {
@@ -2202,12 +801,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "predecessorCommitments[].commitment",
-        "commitment",
-        "commitHash"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No predecessor-commitment identifier exists in source/5 or core/1. formal/k/run.py uses a local name predecessor to chain fixture posts in tests. That name is not a language commitment field."
     },
     {
@@ -2220,18 +813,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "predecessorCommitments[].predecessorId",
-        "predecessorId",
-        "predecessor"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/formal/k/lifecycle-corpus.mjs",
-          "symbol": "predecessor",
-          "reason": "predecessor is declared on a const, let, var, or module binding in experiments/moriarty-language/formal/k/lifecycle-corpus.mjs. That declaration does not realise predecessorCommitments[].predecessorId."
-        }
-      ],
       "note": "No predecessor-commitment identifier exists in source/5 or core/1. formal/k/run.py uses a local name predecessor to chain fixture posts in tests. That name is not a language commitment field."
     },
     {
@@ -2244,38 +825,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "profiles.numericProfile",
-        "numericProfile",
-        "numeric"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-source-types.ts",
-          "symbol": "numeric",
-          "reason": "numeric is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/expression-source-types.ts. That declaration does not realise profiles.numericProfile."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-types-v1.ts",
-          "symbol": "NUMERIC",
-          "reason": "NUMERIC is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/expression-types-v1.ts. That declaration does not realise profiles.numericProfile."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-source-types.ts",
-          "symbol": "numeric",
-          "reason": "numeric is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-source-types.ts. That declaration does not realise profiles.numericProfile."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
-          "symbol": "NUMERIC",
-          "reason": "NUMERIC is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-types-v1.ts. That declaration does not realise profiles.numericProfile."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "numeric",
-          "reason": "numeric is declared on TypeNode, Parser in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise profiles.numericProfile."
-        }
-      ],
       "note": "No numeric-profile identifier exists in source/5 or core/1. experiments/moriarty-language/spec/numeric-profile.json is proposed-not-frozen for moriarty-bounded-atomic/1, and source/5 does not use that profile."
     },
     {
@@ -2300,12 +849,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "programIdentity.coreRef",
-        "coreRef",
-        "corePointer"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No program-specific Core reference exists in source/5 or core/1. LIFECYCLE_VERSION is the moriarty-financial-lifecycle/1 profile version, not the identity of one Core program."
     },
     {
@@ -2318,12 +861,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "programIdentity.entryPoint",
-        "entryPoint",
-        "entrySymbol"
-      ],
-      "reviewedNonRealisations": [],
       "note": "ActionDecl names a source action, and prepareFinancialLifecycle runs an action list. No deployed entry-point identifier exists in source/5 or core/1."
     },
     {
@@ -2336,89 +873,7 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "programIdentity.programId",
-        "programId",
-        "program"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/expression-source-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-agreement-source-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-agreement-source-v2-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-agreement-source-v3-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-agreement-source-v4-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/financial-expression-source-grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/spec/successor/grammar.ebnf",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/spec/successor/grammar.ebnf. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/elaborate.ts",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/elaborate.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/expression-source-v1.ts",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/expression-source-v1.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-expression-source-v1.ts",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/financial-expression-source-v1.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/format.ts",
-          "symbol": "Program",
-          "reason": "Program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/format.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/format.ts",
-          "symbol": "program",
-          "reason": "program is declared on a const, let, var, or module binding in experiments/moriarty-language/src/successor/format.ts. That declaration does not realise programIdentity.programId."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/frontend.ts",
-          "symbol": "Program",
-          "reason": "Program is declared on Program in experiments/moriarty-language/src/successor/frontend.ts. That declaration does not realise programIdentity.programId."
-        }
-      ],
-      "note": "AgreementDecl.name is the syntactic agreement name. The design doc requires distinct pinned identities for source, Core, ZKIR, and verifier keys, so that name does not fill programIdentity.programId."
+      "note": "AgreementDecl.name is the syntactic agreement name. The EBNF production program is the grammar start symbol, not a program identifier. No programId declaration exists in source/5 or core/1."
     },
     {
       "schemaField": "programIdentity.sourceRef",
@@ -2430,12 +885,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "programIdentity.sourceRef",
-        "sourceRef",
-        "sourcePointer"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No program-specific source reference exists in source/5 or core/1. FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE is the moriarty-financial-agreement-source/5 profile version, not the identity of one source program."
     },
     {
@@ -2448,12 +897,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "resources.cumulativeReservations",
-        "cumulativeReservations",
-        "reservationTotal"
-      ],
-      "reviewedNonRealisations": [],
       "note": "Work records remaining, spent, and closureReserve. These quantities are not a cumulative reservation record."
     },
     {
@@ -2466,12 +909,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "resources.resourceCertificate",
-        "resourceCertificate",
-        "certificate"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No resource-certificate identifier exists in source/5 or core/1."
     },
     {
@@ -2484,27 +921,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "schemaVersion",
-        "stageVersion"
-      ],
-      "reviewedNonRealisations": [
-        {
-          "file": "experiments/moriarty-language/src/successor/core.ts",
-          "symbol": "schemaVersion",
-          "reason": "schemaVersion is declared on FundedCore in experiments/moriarty-language/src/successor/core.ts. That document version is not moriarty-stage-relation/1 and does not realise schemaVersion."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
-          "symbol": "schemaVersion",
-          "reason": "schemaVersion is declared on LifecycleState, LifecycleInput, PreparedLifecycle in experiments/moriarty-language/src/successor/financial-lifecycle.ts. That document version is not moriarty-stage-relation/1 and does not realise schemaVersion."
-        },
-        {
-          "file": "experiments/moriarty-language/src/successor/repayment.ts",
-          "symbol": "schemaVersion",
-          "reason": "schemaVersion is declared on RepaymentInput, PreparedRepayment in experiments/moriarty-language/src/successor/repayment.ts. That document version is not moriarty-stage-relation/1 and does not realise schemaVersion."
-        }
-      ],
       "note": "No moriarty-stage-relation/1 schemaVersion declaration exists in source/5 or core/1. LifecycleState.schemaVersion, LifecycleInput.schemaVersion, and PreparedLifecycle.schemaVersion are lifecycle document versions. FundedCore.schemaVersion is the moriarty-funded-source/0 document version, outside moriarty-financial-lifecycle/1. RepaymentInput.schemaVersion and PreparedRepayment.schemaVersion belong to the repayment module."
     },
     {
@@ -2517,12 +933,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.assetIdentities[]",
-        "assetIdentities",
-        "assetList"
-      ],
-      "reviewedNonRealisations": [],
       "note": "AssetDecl and the elaborated assets array declare program assets. They are not a signed-intent asset identity list."
     },
     {
@@ -2535,12 +945,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.consentPolicy",
-        "consentPolicy",
-        "consent"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No consent-policy identifier exists in source/5 or core/1."
     },
     {
@@ -2553,12 +957,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.delegationPolicy",
-        "delegationPolicy",
-        "delegation"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No delegation-policy identifier exists in source/5 or core/1."
     },
     {
@@ -2571,12 +969,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.feeCap",
-        "feeCap",
-        "feeLimit"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No fee cap identifier exists in source/5 or core/1."
     },
     {
@@ -2589,12 +981,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.grossDebitCap",
-        "grossDebitCap",
-        "debitLimit"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No gross debit cap identifier exists in source/5 or core/1. Allowance.remaining bounds spending, and it is not a signed gross debit cap."
     },
     {
@@ -2607,12 +993,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.intentId",
-        "intentId",
-        "intent"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No signed-intent identifier exists in source/5 or core/1."
     },
     {
@@ -2625,12 +1005,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.minNetOutcome",
-        "minNetOutcome",
-        "netFloor"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No minimum-net-outcome identifier exists in source/5 or core/1. NetAmount is a numeric type tag, not a signed minimum."
     },
     {
@@ -2643,12 +1017,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.recipients[]",
-        "recipients",
-        "payee"
-      ],
-      "reviewedNonRealisations": [],
       "note": "PartyDecl declares parties, and TransferAction.to names a transfer destination. Neither is a signed-intent recipient list."
     },
     {
@@ -2661,12 +1029,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.recoveryPolicy",
-        "recoveryPolicy",
-        "recovery"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No recovery-policy identifier exists in source/5 or core/1. Work.closureReserve is a closure-reserve quantity, not a signed recovery policy."
     },
     {
@@ -2679,12 +1041,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.replayPolicy",
-        "replayPolicy",
-        "replay"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No replay-policy identifier exists in source/5 or core/1. usedTransferIds records consumed transfer identifiers, and it is authority state, not a signed replay policy."
     },
     {
@@ -2697,12 +1053,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.signer",
-        "signer",
-        "signatory"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No signer identifier exists in source/5 or core/1."
     },
     {
@@ -2715,12 +1065,6 @@
       "coreContext": null,
       "realisation": "absent",
       "present": false,
-      "searchTerms": [
-        "signedIntent.validity",
-        "validity",
-        "validUntil"
-      ],
-      "reviewedNonRealisations": [],
       "note": "No validity-window identifier exists in source/5 or core/1."
     }
   ]
