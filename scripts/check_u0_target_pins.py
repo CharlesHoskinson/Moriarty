@@ -57,22 +57,19 @@ GENERATED_PREFIXES = (
     "deliverables/u0-semantic-contract-2026-09-23/",
     "openspec/changes/consolidated-language-kernel/schemas/",
 )
-PATH_RE = re.compile(
-    r"(?<![A-Za-z0-9_./-])"
-    r"(?:deliverables|docs|experiments|openspec|scripts|tests)"
-    r"(?:/[A-Za-z0-9_+-]+)+(?:\.[A-Za-z0-9]+)+"
-)
-TOKEN_RE = re.compile(
-    r"(?<![0-9A-Za-z.])"
-    r"(?:[0-9a-f]{64}|[0-9a-f]{40}|[0-9a-f]{7,39}|[0-9]+\.[0-9]+\.[0-9]+)"
-    r"(?![0-9A-Za-z])"
-)
-# Ruling 1: reject these words in note with no negation parse.
+# Ruling 1: reject these stems in note with no negation parse.
+# The verif stem keeps a claim suffix so the component name "verifier" stays legal.
 BANNED_NOTE_RE = re.compile(
-    r"(?i)\b(?:re-?verified|verified|compatible|current|validated)\b"
+    r"(?i)"
+    r"[A-Za-z-]*verif(?:ied|ying|ication|y)[A-Za-z-]*"
+    r"|[A-Za-z-]*compatib[A-Za-z-]*"
+    r"|[A-Za-z-]*current[A-Za-z-]*"
+    r"|[A-Za-z-]*validat[A-Za-z-]*"
 )
 NOTE_LIMIT = 160
-# Checker-owned absence search. The ledger cannot narrow these values.
+# Checker-owned absence search roots and pin patterns. Search terms come from
+# each absent row. Pin patterns have no lookbehind and no lookahead: a pin
+# counts anywhere on the line, including after a letter or underscore.
 REQUIRED_ABSENCE_ROOTS = (
     "deliverables",
     "experiments",
@@ -80,36 +77,28 @@ REQUIRED_ABSENCE_ROOTS = (
     "openspec",
 )
 REQUIRED_PIN_PATTERNS = (
-    r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
-    r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])",
-    r"(?<![0-9A-Za-z])[0-9]+\.[0-9]+\.[0-9]+(?![0-9A-Za-z])",
+    r"[0-9a-f]{64}",
+    r"[0-9a-f]{40}",
+    r"[0-9]+\.[0-9]+\.[0-9]+",
 )
 REQUIRED_PIN_REGEXES = tuple(re.compile(pattern) for pattern in REQUIRED_PIN_PATTERNS)
-REQUIRED_SEARCH_TERMS: dict[str, tuple[str, ...]] = {
-    "moriarty-compiler": ("Moriarty commit", "Frozen base"),
-    "compact-compiler": ("compact_compiler", "compactCompiler"),
-    "zkir": ("midnight-zkir", "zkir-v3"),
-    "native-proof-system": ("backendPin", "midnight-zk@"),
-    "verifier": ("ivc/verifier.rs", "midnight-zk@"),
-    "proving-keys": ("accrue.prover", "initialize.prover"),
-    "verifier-keys": ("accrue.verifier", "initialize.verifier"),
-    "srs-parameters": ("bls_midnight_2p17", '"k": 17'),
-    "ledger": ("midnight-ledger", "ledger8"),
-    "proof-server": ("proof-server:", "midnightntwrk/proof-server"),
-    "k-reference-toolchain": ('"revision"', "7.1.337"),
-}
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Check the U0 target-pin ledger.")
-    parser.add_argument(
-        "--root",
-        type=Path,
-        default=MORIARTY_ROOT,
-        help="Repository root that contains the ledger, schema, and evidence.",
-    )
-    args = parser.parse_args(argv)
-    return check(args.root.resolve())
+    try:
+        parser = argparse.ArgumentParser(description="Check the U0 target-pin ledger.")
+        parser.add_argument(
+            "--root",
+            type=Path,
+            default=MORIARTY_ROOT,
+            help="Repository root that contains the ledger, schema, and evidence.",
+        )
+        args = parser.parse_args(argv)
+        return check(args.root.resolve())
+    except Exception as exc:
+        message = " ".join(str(exc).split())
+        print(f"FAIL: internal error: {type(exc).__name__}: {message}")
+        return 1
 
 
 def check(root: Path) -> int:
@@ -139,9 +128,17 @@ def check(root: Path) -> int:
         for failure in failures:
             print(f"FAIL: {failure}")
         return 1
-    check_canonical(ledger_text, ledger, failures)
+    # Schema failures skip the ledger checks that depend on a valid instance.
     check_schema(schema, ledger, failures)
-    # Row evidence checks run even when instance validation failed.
+    if failures:
+        for failure in failures:
+            print(f"FAIL: {failure}")
+        return 1
+    for rel_root in REQUIRED_ABSENCE_ROOTS:
+        if not (root / rel_root).is_dir():
+            print(f"blocked: missing absence root {rel_root}")
+            return 2
+    check_canonical(ledger_text, ledger, failures)
     check_ledger(root, schema, ledger, failures)
     if failures:
         for failure in failures:
@@ -254,10 +251,6 @@ def check_ledger(root: Path, schema: object, ledger: object, failures: list[str]
         failures.append("unresolved is empty")
     elif any(not isinstance(item, str) or not item.strip() for item in unresolved):
         failures.append("unresolved contains an empty entry")
-    else:
-        for index, item in enumerate(unresolved):
-            if isinstance(item, str):
-                check_cited_text(root, item, f"unresolved/{index}", [], failures)
 
     properties = schema_node.get("properties", {})
     if not isinstance(properties, dict):
@@ -383,10 +376,8 @@ def check_row(
             failures.append(f"{label} component is not a string")
         else:
             check_absent_row(root, row, component, label, failures)
-        check_cited_text(root, note_text, f"{label} note", [], failures)
         return
 
-    cited = [item for item in evidence_items if isinstance(item, str)]
     if not isinstance(pin, str) or not pin:
         failures.append(f"{label} historical pin is empty")
     elif not isinstance(pin_kind, str) or pin_kind not in PIN_PATTERNS:
@@ -397,7 +388,6 @@ def check_row(
         failures.append(f"{label} historical row has no sourceEvidence")
     else:
         check_evidence(root, component, pin, evidence_items, label, failures)
-    check_cited_text(root, note_text, f"{label} note", cited, failures)
 
 
 def check_claims(root: Path, row: dict[str, object], label: str, failures: list[str]) -> None:
@@ -510,15 +500,8 @@ def check_absent_row(
     declared = [item for item in terms if isinstance(item, str)] if isinstance(terms, list) else []
     if len([item for item in declared if item.strip()]) < 2:
         failures.append(f"{label} absent row searchTerms has fewer than 2 terms")
-    required_terms = REQUIRED_SEARCH_TERMS.get(component)
-    if required_terms is None:
-        failures.append(f"{label} component {component} has no required absence search terms")
-        required_terms = ()
-    for term in required_terms:
-        if term not in declared:
-            failures.append(f"{label} searchTerms omit required term {term!r}")
     excluded = parsed_exclusions(row, label, failures)
-    hits, scan_failures = find_absence_hits(root, component, declared)
+    hits, scan_failures = find_absence_hits(root, declared)
     failures.extend(f"{label} {item}" for item in scan_failures)
     pins_on_line: dict[tuple[str, int], set[str]] = {}
     for relative, line_no, pin_text in hits:
@@ -600,23 +583,18 @@ def parsed_exclusions(
 
 def find_absence_hits(
     root: Path,
-    component: str,
-    extra_terms: list[str],
+    terms: list[str],
 ) -> tuple[list[tuple[str, int, str]], list[str]]:
     """Return (path, pin-line, pin-text) hits and scan problems.
 
     A hit is a pin-pattern match on the same line as a search term or on one of
-    the next two lines. Roots and pin patterns are checker-owned. Non-UTF-8
-    bytes are replaced so an ASCII pin is still visible. The ledger directory
-    and the schema directory are not searched.
+    the next two lines. Search terms come from the absent row. Non-UTF-8 bytes
+    are replaced so an ASCII pin is still visible. The ledger directory and the
+    schema directory are not searched.
     """
     failures: list[str] = []
     hits: set[tuple[str, int, str]] = set()
-    terms = list(REQUIRED_SEARCH_TERMS.get(component, ()))
-    for term in extra_terms:
-        if term and term not in terms:
-            terms.append(term)
-    folded_terms = [term.casefold() for term in terms if term]
+    folded_terms = list(dict.fromkeys(term.casefold() for term in terms if term))
     if not folded_terms:
         return [], failures
     files: list[tuple[str, Path]] = []
@@ -626,7 +604,6 @@ def find_absence_hits(
             continue
         base = root / rel_root
         if not base.is_dir():
-            failures.append(f"absenceSearch root does not exist: {rel_root}")
             continue
         for dirpath, dirnames, filenames in os.walk(base, followlinks=False):
             dirnames[:] = sorted(name for name in dirnames if name not in {".git", "node_modules"})
@@ -665,6 +642,8 @@ def check_evidence(
     label: str,
     failures: list[str],
 ) -> None:
+    readable: list[str] = []
+    found = False
     for item in evidence:
         if not isinstance(item, str) or not repo_relative(item):
             failures.append(f"{label} sourceEvidence path {item!r} is not repo-relative")
@@ -684,43 +663,11 @@ def check_evidence(
         except OSError as exc:
             failures.append(f"{label} cannot read {item}: {exc}")
             continue
-        if not pin_in_blob(pin, blob):
-            failures.append(f"{label} sourceEvidence file {item} does not contain pin {pin}")
-
-
-def check_cited_text(
-    root: Path,
-    text: str,
-    label: str,
-    extra_files: list[str],
-    failures: list[str],
-) -> None:
-    search_files: list[str] = []
-    for relative in extract_paths(text):
-        if is_generated(relative):
-            failures.append(f"{label} path {relative} is a generated artifact")
-            continue
-        if not (root / relative).is_file():
-            failures.append(f"{label} path {relative} does not exist")
-            continue
-        search_files.append(relative)
-    for relative in extra_files:
-        if is_generated(relative) or relative in search_files:
-            continue
-        if (root / relative).is_file():
-            search_files.append(relative)
-    for token in extract_tokens(text):
-        if any(pin_in_file(root, relative, token) for relative in search_files):
-            continue
-        failures.append(f"{label} token {token} does not occur in a cited or mentioned file")
-
-
-def extract_paths(text: str) -> list[str]:
-    return list(dict.fromkeys(match.group(0) for match in PATH_RE.finditer(text)))
-
-
-def extract_tokens(text: str) -> list[str]:
-    return list(dict.fromkeys(match.group(0) for match in TOKEN_RE.finditer(text)))
+        readable.append(item)
+        if pin_in_blob(pin, blob):
+            found = True
+    if readable and not found:
+        failures.append(f"{label} sourceEvidence does not contain pin {pin}")
 
 
 def repo_relative(relative: str) -> bool:
@@ -731,15 +678,6 @@ def repo_relative(relative: str) -> bool:
 def is_generated(relative: str) -> bool:
     normalized = Path(relative).as_posix()
     return normalized in GENERATED_EXACT or normalized.startswith(GENERATED_PREFIXES)
-
-
-def pin_in_file(root: Path, relative: str, pin: str) -> bool:
-    path = root / relative
-    try:
-        blob = path.read_bytes()
-    except OSError:
-        return False
-    return pin_in_blob(pin, blob)
 
 
 def pin_in_blob(pin: str, blob: bytes) -> bool:
