@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import subprocess
@@ -14,7 +15,10 @@ JUDGMENTS = Path("deliverables/u0-semantic-contract-2026-09-23/judgments.json")
 CHECKER = MORIARTY_ROOT / "scripts" / "check_u0_stage_schema.py"
 LANGUAGE = "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
 GRAMMAR = "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf"
+FRONTEND = "experiments/moriarty-language/src/successor/frontend.ts"
+OUTSIDE = "experiments/moriarty-developer-mock/src/model.ts"
 SOURCE_PROFILE = "moriarty-financial-agreement-source/5"
+CORE_PROFILE = "moriarty-financial-lifecycle/1"
 LIMITATION = (
     "absence means not found by this recorded search; it is not a proof of non-realisation. "
     "Semantic adequacy of a cited declaration is a reviewed claim; the checker proves "
@@ -67,9 +71,10 @@ def test_real_artifacts_pass() -> None:
     partial = sum(row["realisation"] == "partial" for row in rows)
     absent = sum(row["realisation"] == "absent" for row in rows)
     assert (present, partial, absent) == (1, 17, 66)
+    digest = hashlib.sha256((MORIARTY_ROOT / SCHEMA).read_bytes()).hexdigest()
+    assert embeddings["stageSchemaSha256"] == digest
     assert process.stdout == (
-        f"OK: 84 leaf fields, {present + partial} present, {absent} absent\n"
-        f"partial: {partial}\n"
+        f"OK: 84 leaf fields, {present} present, {partial} partial, {absent} absent\n"
         f"{LIMITATION}\n"
     )
     assert all("searchTerms" not in row and "reviewedNonRealisations" not in row for row in rows)
@@ -101,8 +106,13 @@ def test_real_artifacts_pass() -> None:
         assert cited["coreSymbol"] == symbol
         assert "Exists:" in cited["note"] and "; Missing:" in cited["note"]
     opening_amount = embedding_row(embeddings, "liabilities.opening[].amount")
-    assert opening_amount["sourceContext"] == "financialRead"
-    assert opening_amount["sourceSymbol"] == "outstanding"
+    assert opening_amount["sourceContext"] is None
+    assert opening_amount["sourceSymbol"] is None
+    assert opening_amount["coreContext"] == "LifecycleObligation"
+    assert opening_amount["coreSymbol"] == "outstanding"
+    terminals = {"allowance_spent", "allowance_remaining", "outstanding"}
+    assert all(row["sourceSymbol"] not in terminals for row in rows)
+    assert "financialRead" not in classes
     profile = embedding_row(embeddings, "profiles.semanticProfile")
     assert profile["realisation"] == "present"
     assert profile["sourceContext"] == "ProfileDecl"
@@ -113,11 +123,14 @@ def test_c1_open_object_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     schema = load(root, SCHEMA)
     schema["additionalProperties"] = True
+    del schema["properties"]["signedIntent"]
+    schema["required"] = [key for key in schema["required"] if key != "signedIntent"]
     write_json(root / SCHEMA, schema)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
+    assert "FAIL: stageSchemaSha256 does not match the schema bytes" in process.stdout
     assert "FAIL: <root> additionalProperties is not false" in process.stdout
     assert "OK:" not in process.stdout
 
@@ -147,8 +160,39 @@ def test_c3_partial_note_form_fails(tmp_path: Path) -> None:
     assert "FAIL: authority.consumed partial note is not 'Exists: ...; Missing: ...'" in process.stdout
 
 
-def test_c4_missing_cited_file_is_blocked(tmp_path: Path) -> None:
-    root = copy_root(tmp_path)
+def test_c4_cited_file_outside_roots_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path / "outside")
+    mock = root / OUTSIDE
+    mock.parent.mkdir(parents=True)
+    mock.write_text("export interface Allowance {\n  spent: string;\n}\n", encoding="utf-8")
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = OUTSIDE
+    payload["profileFiles"][CORE_PROFILE].append(OUTSIDE)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"FAIL: authority.consumed cited file {OUTSIDE} is outside the declared roots" in process.stdout
+    assert f"FAIL: profileFiles entry {OUTSIDE} is outside the declared roots" in process.stdout
+    assert "blocked:" not in process.stdout
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "dotdot")
+    escaped = "experiments/moriarty-language/src/successor/../successor/financial-lifecycle.ts"
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = escaped
+    payload["profileFiles"][CORE_PROFILE].append(escaped)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"FAIL: authority.consumed cited file {escaped} is outside the declared roots" in process.stdout
+
+    root = copy_root(tmp_path / "missing")
     payload = load(root, EMBEDDINGS)
     missing = "experiments/moriarty-language/src/successor/missing-lifecycle.ts"
     embedding_row(payload, "authority.consumed")["coreFile"] = missing
@@ -161,7 +205,67 @@ def test_c4_missing_cited_file_is_blocked(tmp_path: Path) -> None:
 
 
 def test_c5_ternary_branch_is_not_a_declaration(tmp_path: Path) -> None:
-    root = copy_root(tmp_path)
+    root = copy_root(tmp_path / "terminal")
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["sourceFile"] = GRAMMAR
+    cited["sourceSymbol"] = "allowance_spent"
+    cited["sourceContext"] = "financialRead"
+    payload["classificationTable"].append({
+        "context": "financialRead",
+        "realisationClass": "partial",
+        "rationale": "Probe: a financialRead terminal is not a production name.",
+    })
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        "FAIL: authority.consumed source symbol allowance_spent is not a declaration in "
+        f"financialRead in {GRAMMAR}"
+    ) in process.stdout
+
+    root = copy_root(tmp_path / "kprobe")
+    link = root / "experiments" / "moriarty-language"
+    target = link.resolve()
+    link.unlink()
+    shutil.copytree(target, link, symlinks=True)
+    k_rel = "experiments/moriarty-language/formal/k/u0-parser-probe.k"
+    (root / k_rel).write_text(
+        "module PROBE\n"
+        "  syntax Exp ::= Int | Exp\n"
+        "  syntax Exp ::=\n"
+        "      bar(Int)\n"
+        "    | \"lit\"\n"
+        "endmodule\n",
+        encoding="utf-8",
+    )
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = k_rel
+    cited["coreSymbol"] = "Int"
+    cited["coreContext"] = "Exp"
+    payload["profileFiles"][CORE_PROFILE].append(k_rel)
+    payload["classificationTable"].append({
+        "context": "Exp",
+        "realisationClass": "partial",
+        "rationale": "Probe: a bare sort reference is not a K constructor.",
+    })
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        f"FAIL: authority.consumed core symbol Int is not a declaration in Exp in {k_rel}"
+    ) in process.stdout
+    cited["coreSymbol"] = "bar"
+    write_json(root / EMBEDDINGS, payload)
+    process = run_checker("--root", str(root))
+    assert process.returncode == 0, process.stdout + process.stderr
+
+    root = copy_root(tmp_path / "ternary")
     link = root / "experiments" / "moriarty-language"
     target = link.resolve()
     link.unlink()
@@ -193,14 +297,14 @@ def test_c6_unlisted_profile_file_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
     listed = payload["profileFiles"][SOURCE_PROFILE]
-    payload["profileFiles"][SOURCE_PROFILE] = [item for item in listed if item != GRAMMAR]
+    payload["profileFiles"][SOURCE_PROFILE] = [item for item in listed if item != FRONTEND]
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
     assert (
-        f"FAIL: authority.consumed source file {GRAMMAR} is not listed for {SOURCE_PROFILE}"
+        f"FAIL: profiles.semanticProfile source file {FRONTEND} is not listed for {SOURCE_PROFILE}"
     ) in process.stdout
 
 
@@ -239,7 +343,7 @@ def test_c8_missing_root_is_blocked(tmp_path: Path) -> None:
 
 
 def test_c9_judgment_order_fails(tmp_path: Path) -> None:
-    root = copy_root(tmp_path)
+    root = copy_root(tmp_path / "order")
     payload = load(root, JUDGMENTS)
     payload["judgments"][0], payload["judgments"][1] = payload["judgments"][1], payload["judgments"][0]
     write_json(root / JUDGMENTS, payload)
@@ -250,3 +354,33 @@ def test_c9_judgment_order_fails(tmp_path: Path) -> None:
     assert (
         "FAIL: judgments keys are ['intent', 'stage', 'effect', 'authority', 'history', 'failure']"
     ) in process.stdout
+
+    root = copy_root(tmp_path / "type")
+    payload = load(root, JUDGMENTS)
+    payload["judgments"][0]["schemaFields"] = 42
+    write_json(root / JUDGMENTS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: judgments.stage schemaFields is not a list" in process.stdout
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "object")
+    write_json(root / EMBEDDINGS, [1, 2, 3])
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert f"FAIL: {EMBEDDINGS.as_posix()} is not a JSON object" in process.stdout
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "utf")
+    (root / JUDGMENTS).write_bytes(b"\xff\xfe")
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert f"FAIL: {JUDGMENTS.as_posix()} is not UTF-8" in process.stdout
+    assert "Traceback" not in process.stderr
+    assert process.stderr == ""
