@@ -52,25 +52,26 @@ class TableFormatError(Exception):
 def split_cells(line: str) -> list[str]:
     """Split a markdown row on unescaped pipes.
 
-    A backslash escapes the next character, so an escaped pipe stays in the cell.
+    Only the two-character sequence ``\\|`` is an escape, and it yields one
+    pipe. Every other backslash stays in the cell text.
     """
 
     cells: list[str] = []
     current: list[str] = []
-    escaped = False
-    for char in line:
-        if escaped:
-            current.append(char)
-            escaped = False
-            continue
-        if char == "\\":
-            escaped = True
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == "\\" and index + 1 < len(line) and line[index + 1] == "|":
+            current.append("|")
+            index += 2
             continue
         if char == "|":
             cells.append("".join(current).strip())
             current = []
+            index += 1
             continue
         current.append(char)
+        index += 1
     cells.append("".join(current).strip())
     if cells and cells[0] == "":
         cells.pop(0)
@@ -80,10 +81,9 @@ def split_cells(line: str) -> list[str]:
 
 
 def extract_table(lines: list[str], header: str) -> list[list[str]]:
-    try:
-        start = lines.index(header)
-    except ValueError:
-        raise TableFormatError(f"FAIL: table format changed: {header}") from None
+    if lines.count(header) != 1:
+        raise TableFormatError(f"FAIL: table format changed: {header}")
+    start = lines.index(header)
     expected_columns = len(split_cells(header))
     rows: list[list[str]] = []
     for line in lines[start + 1 :]:
@@ -243,6 +243,12 @@ def build_matrix(source_bytes: bytes) -> dict[str, Any]:
     if actual_ids != EXPECTED_IDS:
         raise TableFormatError(
             "FAIL: id set is not exactly ZR01-ZR16 and MNR01-MNR08"
+        )
+    extra_owner_ids = [row_id for row_id in owners if row_id not in set(actual_ids)]
+    if extra_owner_ids:
+        names = ", ".join(sorted(extra_owner_ids, key=id_sort_key))
+        raise TableFormatError(
+            f"FAIL: responsibility table ids outside requirement set: {names}"
         )
     return {
         "schemaVersion": SCHEMA_VERSION,

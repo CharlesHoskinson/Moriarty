@@ -133,6 +133,9 @@ def test_trust_premises_cover_required_topics() -> None:
     assert by_id["TP03"]["kind"] == "trust-assumption"
     assert "oracle" in by_id["TP03"]["statement"]
     assert "federation" in by_id["TP04"]["statement"].lower()
+    assert by_id["TP04"]["relatedIds"] == ["MPLR-030", "UNI-011", "ZR14"]
+    assert "ZR15" not in by_id["TP04"]["statement"]
+    assert "UNI-015" not in by_id["TP04"]["statement"]
     assert "nonexecution" in by_id["TP05"]["statement"]
     assert "witness" in by_id["TP06"]["statement"]
     assert "circuit" in by_id["TP07"]["statement"]
@@ -189,3 +192,244 @@ def test_checker_rejects_quote_not_in_source(tmp_path: Path) -> None:
         "FAIL: TP01 quote not in docs/MORIARTY-PRODUCT-CONTRACT.md" in result.stdout
     )
     assert "OK:" not in result.stdout
+
+
+def test_split_cells_unescapes_only_pipes() -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_u0_backend_matrix import split_cells
+
+    assert split_cells("| a\\|b | c\\d |") == ["a|b", "c\\d"]
+
+
+def test_generator_rejects_changed_capability_header(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_u0_backend_matrix import CAPABILITY_HEADER
+
+    root = materialize(tmp_path)
+    source = root / SOURCE_REL
+    text = source.read_text(encoding="utf-8")
+    assert text.count(CAPABILITY_HEADER) == 1
+    source.write_text(
+        text.replace(CAPABILITY_HEADER, CAPABILITY_HEADER + " changed", 1),
+        encoding="utf-8",
+    )
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    result = run_script(GENERATOR, root)
+
+    assert result.returncode == 1
+    assert result.stdout == f"FAIL: table format changed: {CAPABILITY_HEADER}\n"
+    assert "Traceback" not in result.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_generator_rejects_duplicate_capability_header(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_u0_backend_matrix import CAPABILITY_HEADER
+
+    root = materialize(tmp_path)
+    source = root / SOURCE_REL
+    text = source.read_text(encoding="utf-8")
+    source.write_text(
+        text.replace(CAPABILITY_HEADER, CAPABILITY_HEADER + "\n" + CAPABILITY_HEADER, 1),
+        encoding="utf-8",
+    )
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    result = run_script(GENERATOR, root)
+
+    assert result.returncode == 1
+    assert result.stdout == f"FAIL: table format changed: {CAPABILITY_HEADER}\n"
+    assert "Traceback" not in result.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_source_edit_fails_check_and_reports_hash_mismatch(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    source = root / SOURCE_REL
+    text = source.read_text(encoding="utf-8")
+    assert text.count("SRS provenance") == 1
+    source.write_text(text.replace("SRS provenance", "SRS provenances", 1), encoding="utf-8")
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    generated = run_script(GENERATOR, root, "--check")
+    checked = run_script(CHECKER, root)
+
+    assert generated.returncode == 1
+    assert generated.stdout == "FAIL: backend matrix drifted\n"
+    assert checked.returncode == 1
+    assert "FAIL: backend matrix drifted" in checked.stdout
+    assert (
+        "FAIL: sourceSha256 does not match docs/MORIARTY-BACKEND-REQUIREMENTS.md"
+        in checked.stdout
+    )
+    assert "OK:" not in checked.stdout
+    assert "Traceback" not in generated.stderr
+    assert "Traceback" not in checked.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_generator_rejects_responsibility_id_outside_requirement_set(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    source = root / SOURCE_REL
+    text = source.read_text(encoding="utf-8")
+    needle = (
+        "| ZR16 | Native library/tooling and actual ledger configuration | "
+        "Independent retained proof and effect verification; U4/U7 |"
+    )
+    assert needle in text
+    source.write_text(
+        text.replace(needle, needle + "\n| ZR99 | Extra owner | Extra milestone |", 1),
+        encoding="utf-8",
+    )
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    result = run_script(GENERATOR, root)
+
+    assert result.returncode == 1
+    assert result.stdout == (
+        "FAIL: responsibility table ids outside requirement set: ZR99\n"
+    )
+    assert "Traceback" not in result.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_checker_rejects_unresolved_related_ids(tmp_path: Path) -> None:
+    cases = (
+        ("ZR99", "FAIL: TP01 related id ZR99 is not in the backend matrix"),
+        ("MNR42", "FAIL: TP01 related id MNR42 is not in the backend matrix"),
+        (
+            "UNI-999",
+            "FAIL: TP01 related id UNI-999 is not a requirement heading or traceability row",
+        ),
+    )
+    for related_id, message in cases:
+        root = materialize(tmp_path / related_id)
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premises["premises"][0]["relatedIds"] = [related_id]
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert message in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_related_id_missing_from_quotes(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = premises["premises"][0]
+    premise["sourceRefs"] = [
+        ref
+        for ref in premise["sourceRefs"]
+        if all(token not in ref["quote"] for token in ("ZR01", "UNI-003", "UNI-017"))
+    ]
+    assert premise["sourceRefs"]
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert "FAIL: TP01 related id ZR01 is not in a cited quote" in result.stdout
+    assert "FAIL: TP01 related id UNI-017 is not in a cited quote" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_deleted_trust_premises(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"] = premises["premises"][:1]
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert "FAIL: missing trust premise TP02" in result.stdout
+    assert "FAIL: missing trust premise TP07" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_false_premise_claim(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = premises["premises"][0]
+    premise["statement"] += " This release is verified and closed."
+    assert "a comprehensive compatible release tuple is unknown." in premise["statement"]
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert "FAIL: TP01 statement does not match the source-backed contract" in result.stdout
+    assert "lacks source-backed claim" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_claim_not_in_cited_quote(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = premises["premises"][0]
+    replacement = (
+        "Separate local pins and the historical contract/inner transcript mismatch are known"
+    )
+    replaced = False
+    for ref in premise["sourceRefs"]:
+        if ref["quote"] == "a comprehensive compatible release tuple is unknown.":
+            ref["quote"] = replacement
+            replaced = True
+    assert replaced
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert (
+        "FAIL: TP01 claim is not in a cited quote: "
+        "a comprehensive compatible release tuple is unknown."
+        in result.stdout
+    )
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_unsupported_premise_status(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    assert premises["premises"][0]["status"] == "open"
+    premises["premises"][0]["status"] = "accepted-assumption"
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1
+    assert "FAIL: TP01 status is not open" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_schema_that_is_not_an_object(tmp_path: Path) -> None:
+    for name, relative in (("trust", TRUST_SCHEMA_REL), ("matrix", MATRIX_SCHEMA_REL)):
+        root = materialize(tmp_path / name)
+        (root / relative).write_text("[]\n", encoding="utf-8")
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert f"FAIL: {relative} schema is not an object" in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
