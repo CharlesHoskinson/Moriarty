@@ -134,6 +134,10 @@ def test_trust_premises_cover_required_topics() -> None:
     assert "oracle" in by_id["TP03"]["statement"]
     assert "federation" in by_id["TP04"]["statement"].lower()
     assert "Moriarty can also run on Midnight without this federation." in by_id["TP04"]["statement"]
+    assert "ZR14, UNI-011 and MPLR-030 record that boundary" not in by_id["TP04"]["statement"]
+    assert "without the federated kernel" in by_id["TP04"]["statement"]
+    assert "ZR14 keeps the kernel optional" in by_id["TP04"]["statement"]
+    assert "threshold, hardware, observation and recovery assumptions" in by_id["TP04"]["statement"]
     assert by_id["TP04"]["relatedIds"] == ["MPLR-030", "UNI-011", "ZR14"]
     assert all(
         "no federation requirement for direct Midnight use" not in ref["quote"]
@@ -383,7 +387,10 @@ def test_checker_rejects_false_premise_claim(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1
-    assert "FAIL: TP01 statement does not match the source-backed contract" in result.stdout
+    assert (
+        "FAIL: TP01 statement is not source-backed: This release is verified and closed."
+        in result.stdout
+    )
     assert "lacks source-backed claim" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
@@ -608,6 +615,152 @@ def test_checker_rejects_trust_premise_key_order(tmp_path: Path) -> None:
     assert "FAIL: TP01 key order does not match the schema" in result.stdout
     assert "FAIL: trust premises are not canonically serialised" not in result.stdout
     assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_blocks_when_cited_file_missing(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    relative = "docs/MORIARTY-PRODUCT-CONTRACT.md"
+    cited = root / relative
+    assert cited.is_file()
+    cited.unlink()
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 2
+    assert result.stdout == f"blocked: missing {relative}\n"
+    assert "FAIL:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_blocks_when_requirement_catalog_missing(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    for premise in premises["premises"]:
+        premise["sourceRefs"] = [
+            ref for ref in premise["sourceRefs"] if not ref["path"].startswith("openspec/")
+        ]
+        assert premise["sourceRefs"]
+    write_json(trust_path, premises)
+    changes = root / "openspec" / "changes"
+    catalog_files = [
+        *changes.glob("*/specs/**/spec.md"),
+        *changes.glob("*/traceability.md"),
+    ]
+    assert catalog_files
+    for path in catalog_files:
+        path.unlink()
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 2
+    assert "blocked: missing openspec/changes/*/specs/**/spec.md\n" in result.stdout
+    assert "blocked: missing openspec/changes/*/traceability.md\n" in result.stdout
+    assert "FAIL:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_accepts_extra_source_backed_premise(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    quote = (
+        "ZR03 — C, complete statement binding | Recursive verification SHALL bind "
+        "canonical public inputs or binding commitments for program/semantics, property, "
+        "signed intent"
+    )
+    assert quote in (root / SOURCE_REL).read_text(encoding="utf-8")
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"].append(
+        {
+            "id": "TP08",
+            "statement": quote,
+            "kind": "unresolved-interface",
+            "sourceRefs": [{"path": SOURCE_REL, "quote": quote}],
+            "relatedIds": ["ZR03"],
+            "status": "open",
+        }
+    )
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == "OK: 24 backend rows specified-only, 8 trust premises\n"
+
+
+def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    weak_rel = "docs/zr14-broad-topic.md"
+    (root / weak_rel).write_text(
+        "| ZR14 | selection of the federated kernel |\n",
+        encoding="utf-8",
+    )
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = next(item for item in premises["premises"] if item["id"] == "TP04")
+    replaced = False
+    for ref in premise["sourceRefs"]:
+        if "ZR14" in ref["quote"] and "without the federated kernel" in ref["quote"]:
+            ref["path"] = weak_rel
+            ref["quote"] = "| ZR14 | selection of the federated kernel |"
+            replaced = True
+    assert replaced
+    premise["sourceRefs"].append(
+        {
+            "path": "docs/MORIARTY-CONSOLIDATED-DESIGN.md",
+            "quote": (
+                "MC06 private handoff and split/join must be demonstrable between "
+                "independently controlled participants without the federated kernel."
+            ),
+        }
+    )
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert (
+        "FAIL: TP04 related id ZR14 is not tied to a premise claim in a cited quote"
+        in result.stdout
+    )
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_imports_when_scripts_directory_is_not_on_path(tmp_path: Path) -> None:
+    probe = (
+        "import importlib.util\n"
+        "from pathlib import Path\n"
+        f"path = Path({str(CHECKER)!r})\n"
+        "spec = importlib.util.spec_from_file_location('u0_checker_probe', path)\n"
+        "module = importlib.util.module_from_spec(spec)\n"
+        "assert spec.loader is not None\n"
+        "spec.loader.exec_module(module)\n"
+        "assert module.build_matrix.__name__ == 'build_matrix'\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_checker_runs_as_package_module() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "scripts.check_u0_trust_backend_matrix", "--root", str(ROOT)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout == "OK: 24 backend rows specified-only, 7 trust premises\n"
     assert "Traceback" not in result.stderr
 
 
