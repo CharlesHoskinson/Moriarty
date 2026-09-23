@@ -133,7 +133,16 @@ def test_trust_premises_cover_required_topics() -> None:
     assert by_id["TP03"]["kind"] == "trust-assumption"
     assert "oracle" in by_id["TP03"]["statement"]
     assert "federation" in by_id["TP04"]["statement"].lower()
+    assert "Moriarty can also run on Midnight without this federation." in by_id["TP04"]["statement"]
     assert by_id["TP04"]["relatedIds"] == ["MPLR-030", "UNI-011", "ZR14"]
+    assert all(
+        "no federation requirement for direct Midnight use" not in ref["quote"]
+        for ref in by_id["TP04"]["sourceRefs"]
+    )
+    assert any(
+        ref["path"] == "docs/MORIARTY-CONSOLIDATED-DESIGN.md" for ref in by_id["TP04"]["sourceRefs"]
+    )
+    assert any(ref["path"].endswith("/proposal.md") for ref in by_id["TP04"]["sourceRefs"])
     assert "ZR15" not in by_id["TP04"]["statement"]
     assert "UNI-015" not in by_id["TP04"]["statement"]
     assert "nonexecution" in by_id["TP05"]["statement"]
@@ -199,6 +208,8 @@ def test_split_cells_unescapes_only_pipes() -> None:
     from build_u0_backend_matrix import split_cells
 
     assert split_cells("| a\\|b | c\\d |") == ["a|b", "c\\d"]
+    assert split_cells("| a\\\\|b | c |") == ["a\\", "b", "c"]
+    assert split_cells("| a\\\\\\|b |") == ["a\\|b"]
 
 
 def test_generator_rejects_changed_capability_header(tmp_path: Path) -> None:
@@ -383,13 +394,14 @@ def test_checker_rejects_claim_not_in_cited_quote(tmp_path: Path) -> None:
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premise = premises["premises"][0]
+    needle = "a comprehensive compatible release tuple is unknown."
     replacement = (
         "Separate local pins and the historical contract/inner transcript mismatch are known"
     )
     replaced = False
     for ref in premise["sourceRefs"]:
-        if ref["quote"] == "a comprehensive compatible release tuple is unknown.":
-            ref["quote"] = replacement
+        if needle in ref["quote"]:
+            ref["quote"] = ref["quote"].replace(needle, replacement)
             replaced = True
     assert replaced
     write_json(trust_path, premises)
@@ -433,3 +445,184 @@ def test_checker_rejects_schema_that_is_not_an_object(tmp_path: Path) -> None:
         assert f"FAIL: {relative} schema is not an object" in result.stdout
         assert "OK:" not in result.stdout
         assert "Traceback" not in result.stderr
+
+
+def test_generator_rejects_refines_outside_zr_set(tmp_path: Path) -> None:
+    cases = (
+        (
+            "zr99",
+            "| ZR01/03/99 |",
+            "FAIL: refines id outside ZR01-ZR16: MNR01: ZR99\n",
+        ),
+        (
+            "zr00",
+            "| ZR00/03/06 |",
+            "FAIL: refines id outside ZR01-ZR16: MNR01: ZR00\n",
+        ),
+    )
+    for name, replacement, message in cases:
+        root = materialize(tmp_path / name)
+        source = root / SOURCE_REL
+        text = source.read_text(encoding="utf-8")
+        needle = "| ZR01/03/06 |"
+        assert text.count(needle) == 1
+        source.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+        matrix = root / MATRIX_REL
+        before = matrix.read_bytes()
+
+        result = run_script(GENERATOR, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert result.stdout == message
+        assert "Traceback" not in result.stderr
+        assert matrix.read_bytes() == before
+
+
+def test_generator_rejects_pipe_after_two_backslashes(tmp_path: Path) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from build_u0_backend_matrix import CAPABILITY_HEADER
+
+    root = materialize(tmp_path)
+    source = root / SOURCE_REL
+    text = source.read_text(encoding="utf-8")
+    needle = "The native interface SHALL identify"
+    assert text.count(needle) == 1
+    source.write_text(text.replace(needle, needle + "\\\\|", 1), encoding="utf-8")
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    result = run_script(GENERATOR, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert result.stdout == f"FAIL: table format changed: {CAPABILITY_HEADER}\n"
+    assert "Traceback" not in result.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_generator_blocks_when_source_missing(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    (root / SOURCE_REL).unlink()
+    matrix = root / MATRIX_REL
+    before = matrix.read_bytes()
+
+    result = run_script(GENERATOR, root)
+
+    assert result.returncode == 2
+    assert result.stdout == f"blocked: missing {SOURCE_REL}\n"
+    assert "Traceback" not in result.stderr
+    assert matrix.read_bytes() == before
+
+
+def test_generator_blocks_when_matrix_missing_on_check(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    matrix = root / MATRIX_REL
+    matrix.unlink()
+
+    result = run_script(GENERATOR, root, "--check")
+
+    assert result.returncode == 2
+    assert result.stdout == f"blocked: missing {MATRIX_REL}\n"
+    assert "Traceback" not in result.stderr
+    assert not matrix.exists()
+
+
+def test_checker_blocks_when_input_missing(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    (root / TRUST_REL).unlink()
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 2
+    assert result.stdout == f"blocked: missing {TRUST_REL}\n"
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_related_id_supported_only_by_heading(tmp_path: Path) -> None:
+    cases = (
+        (
+            "TP04",
+            "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+            "ZR14 — C, private continuation interface",
+            "FAIL: TP04 related id ZR14 is not tied to a premise claim in a cited quote",
+        ),
+        (
+            "TP03",
+            "openspec/changes/partial-and-conditional-transactions/specs/"
+            "partial-conditional-transactions/spec.md",
+            "Requirement: MPLR-010 Time finality and unresolved outcomes",
+            "FAIL: TP03 related id MPLR-010 is not tied to a premise claim in a cited quote",
+        ),
+    )
+    for premise_id, path, quote, message in cases:
+        root = materialize(tmp_path / premise_id)
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premise = next(item for item in premises["premises"] if item["id"] == premise_id)
+        premise["sourceRefs"] = [{"path": path, "quote": quote}]
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert message in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_noncanonical_trust_premises(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    trust_path.write_text(
+        json.dumps(premises, indent=4, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: trust premises are not canonically serialised" in result.stdout
+    assert "key order does not match the schema" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_trust_premise_key_order(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = premises["premises"][0]
+    premises["premises"][0] = {
+        "status": premise["status"],
+        "id": premise["id"],
+        "statement": premise["statement"],
+        "kind": premise["kind"],
+        "sourceRefs": premise["sourceRefs"],
+        "relatedIds": premise["relatedIds"],
+    }
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 key order does not match the schema" in result.stdout
+    assert "FAIL: trust premises are not canonically serialised" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_source_ref_key_order(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    ref = premises["premises"][0]["sourceRefs"][0]
+    premises["premises"][0]["sourceRefs"][0] = {"quote": ref["quote"], "path": ref["path"]}
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 source ref key order does not match the schema" in result.stdout
+    assert "FAIL: trust premises are not canonically serialised" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
