@@ -42,9 +42,12 @@ LIMITATION = (
     "absent means no pin found by this recorded search; not a proof that none exists"
 )
 OK_LINE = (
-    "OK: 10 historical, 1 absent, compatible tuple NOT established; "
+    "OK: 11 historical, 0 absent, compatible tuple NOT established; "
     f"{LIMITATION}\n"
 )
+COMPILER_PIN = "006c4d91ed09c0a89261861b6e7203b3efa3e2df"
+COMPILER_HEAD = "f702692895e8be811fb9eac2a1c0bfafca5dea70"
+SRS_PIN = "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74"
 
 
 def run_checker(root: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -71,19 +74,16 @@ def test_real_ledger_passes() -> None:
     assert any("006c4d91ed09c0a89261861b6e7203b3efa3e2df" in item for item in ledger["unresolved"])
     historical = [row["component"] for row in ledger["pins"] if row["status"] == "historical"]
     absent = [row["component"] for row in ledger["pins"] if row["status"] == "absent"]
-    assert historical == [
-        "compact-compiler",
-        "zkir",
-        "native-proof-system",
-        "verifier",
-        "proving-keys",
-        "verifier-keys",
-        "srs-parameters",
-        "ledger",
-        "proof-server",
-        "k-reference-toolchain",
-    ]
-    assert absent == ["moriarty-compiler"]
+    assert historical == COMPONENTS
+    assert absent == []
+    compiler = row(ledger, "moriarty-compiler")
+    assert compiler["status"] == "historical"
+    assert compiler["pinKind"] == "git-commit"
+    assert compiler["pin"] == COMPILER_PIN
+    assert any(
+        item["kind"] == "conflict" and COMPILER_HEAD in (item.get("evidenceQuote") or "")
+        for item in compiler["claims"]
+    )
     proving = row(ledger, "proving-keys")
     verifier_keys = row(ledger, "verifier-keys")
     assert proving["status"] == "historical"
@@ -101,6 +101,22 @@ def test_real_ledger_passes() -> None:
         isinstance(item.get("evidenceQuote"), str) and "bls_midnight_2p17" in item["evidenceQuote"]
         for item in srs["claims"]
     )
+    srs_quote = next(
+        item["evidenceQuote"]
+        for item in srs["claims"]
+        if item["text"] == "Checked encoding resources record this digest for k=17."
+    )
+    assert isinstance(srs_quote, str)
+    assert SRS_PIN in srs_quote
+    assert "positiveProvingSteps" not in srs_quote
+    for component in ("proving-keys", "verifier-keys"):
+        differing = [
+            item
+            for item in row(ledger, component)["claims"]
+            if isinstance(item.get("text"), str) and "different" in item["text"]
+        ]
+        assert differing
+        assert all(item["kind"] == "conflict" for item in differing)
     for item in ledger["pins"]:
         assert len(item["note"]) <= 160
 
@@ -293,7 +309,7 @@ def test_absent_compact_compiler_fails_when_source_records_pin(tmp_path: Path) -
     compact["pin"] = None
     compact["pinKind"] = "none"
     compact["sourceEvidence"] = []
-    compact["searchTerms"] = ["compact_compiler", "compact compiler"]
+    compact["searchTerms"] = ["compact_compiler", "compactCompiler"]
     compact["excludedHits"] = []
     write_ledger(root, ledger)
 
@@ -312,7 +328,7 @@ def test_absent_verifier_keys_unexcluded_hit_fails(tmp_path: Path) -> None:
     verifier_keys["pin"] = None
     verifier_keys["pinKind"] = "none"
     verifier_keys["sourceEvidence"] = []
-    verifier_keys["searchTerms"] = ["accrue.verifier", "verifier-keys"]
+    verifier_keys["searchTerms"] = ["accrue.verifier", "initialize.verifier"]
     verifier_keys["excludedHits"] = []
     write_ledger(root, ledger)
 
@@ -405,7 +421,11 @@ def test_ledger_rule_failures(tmp_path: Path, mutate: str, expected: str) -> Non
         ledger["unresolved"] = []
     elif mutate == "absent-with-pin":
         compiler = row(ledger, "moriarty-compiler")
+        compiler["status"] = "absent"
+        compiler["pinKind"] = "none"
+        compiler["sourceEvidence"] = []
         compiler["pin"] = "not-a-recorded-pin"
+        compiler["searchTerms"] = ["Moriarty commit", "Frozen base"]
     else:
         raise AssertionError(mutate)
     write_ledger(root, ledger)
@@ -419,9 +439,13 @@ def test_ledger_rule_failures(tmp_path: Path, mutate: str, expected: str) -> Non
 def test_absent_row_with_evidence_fails(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     compiler = row(ledger, "moriarty-compiler")
+    compiler["status"] = "absent"
+    compiler["pin"] = None
+    compiler["pinKind"] = "none"
     compiler["sourceEvidence"] = [
-        "experiments/moriarty-language/package.json",
+        "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
     ]
+    compiler["searchTerms"] = ["Moriarty commit", "Frozen base"]
     write_ledger(root, ledger)
 
     process = run_checker(root)
@@ -483,3 +507,207 @@ def test_missing_schema_is_blocked(tmp_path: Path) -> None:
 
     assert process.returncode == 2, process.stdout + process.stderr
     assert "blocked:" in process.stdout
+
+
+def test_found_in_quote_must_contain_pin(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    zkir = row(ledger, "zkir")
+    pin = zkir["pin"]
+    assert isinstance(pin, str)
+    claims = zkir["claims"]
+    assert isinstance(claims, list)
+    zkir["claims"] = [
+        item
+        for item in claims
+        if item["kind"] != "found-in" or pin not in (item.get("evidenceQuote") or "")
+    ]
+    assert any(item["kind"] == "found-in" for item in zkir["claims"])
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "contains its pin" in process.stdout
+
+
+def test_moriarty_record_rejects_other_commit(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compiler = row(ledger, "moriarty-compiler")
+    other = "11e7ec5abeecb99297c4faa74d30ef9adc7b51f3"
+    relative = "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md"
+    compiler["pin"] = other
+    compiler["sourceEvidence"] = [relative]
+    compiler["claims"] = [
+        {
+            "kind": "found-in",
+            "text": "The same sentence records a different Compact commit.",
+            "evidencePath": relative,
+            "evidenceQuote": f"`{other}`, and ZKIR commit",
+        }
+    ]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "independently records" in process.stdout
+
+
+def test_weakened_absence_roots_fail(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    ledger["absenceSearch"]["roots"] = ["openspec"]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "absenceSearch roots are not deliverables, experiments, docs, openspec" in process.stdout
+
+
+def test_weakened_pin_patterns_fail(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    ledger["absenceSearch"]["pinPatterns"] = ["(?!)", "(?!)", "(?!)"]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "pinPatterns are not the required" in process.stdout
+
+
+def test_weakened_search_terms_fail(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compact = row(ledger, "compact-compiler")
+    compact["status"] = "absent"
+    compact["pin"] = None
+    compact["pinKind"] = "none"
+    compact["sourceEvidence"] = []
+    compact["searchTerms"] = ["nonsense-term-aaa", "nonsense-term-bbb"]
+    compact["excludedHits"] = []
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "omit required term" in process.stdout
+    assert "compact_compiler" in process.stdout
+
+
+def test_bogus_exclusion_fails(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compact = row(ledger, "compact-compiler")
+    compact["status"] = "absent"
+    compact["pin"] = None
+    compact["pinKind"] = "none"
+    compact["sourceEvidence"] = []
+    compact["searchTerms"] = ["compact_compiler", "compactCompiler"]
+    compact["excludedHits"] = [
+        {
+            "path": "deliverables/lifecycle-corpus-2026-09-17/environment.json",
+            "line": 1,
+            "reason": "this line is not a pin hit",
+        }
+    ]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "is not an absence hit" in process.stdout
+    assert "environment.json:1" in process.stdout
+
+
+def test_line_exclusion_does_not_mask_second_pin(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    relative = "deliverables/two-pins-one-line.txt"
+    pin_a = "a" * 64
+    pin_b = "b" * 64
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"accrue.prover {pin_a} {pin_b}\n", encoding="utf-8")
+    proving = row(ledger, "proving-keys")
+    proving["status"] = "absent"
+    proving["pin"] = None
+    proving["pinKind"] = "none"
+    proving["sourceEvidence"] = []
+    proving["searchTerms"] = ["accrue.prover", "initialize.prover"]
+    proving["excludedHits"] = [
+        {
+            "path": relative,
+            "line": 1,
+            "reason": "one digest on a line that also has another digest",
+            "match": pin_a,
+        }
+    ]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert pin_b in process.stdout
+    assert "is not an absence hit" not in process.stdout
+
+
+def test_unmatched_line_exclusion_rejects_multiple_pins(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    relative = "deliverables/two-pins-one-line.txt"
+    pin_a = "a" * 64
+    pin_b = "b" * 64
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"accrue.prover {pin_a} {pin_b}\n", encoding="utf-8")
+    proving = row(ledger, "proving-keys")
+    proving["status"] = "absent"
+    proving["pin"] = None
+    proving["pinKind"] = "none"
+    proving["sourceEvidence"] = []
+    proving["searchTerms"] = ["accrue.prover", "initialize.prover"]
+    proving["excludedHits"] = [
+        {
+            "path": relative,
+            "line": 1,
+            "reason": "whole line, which hides every digest on it",
+        }
+    ]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "has multiple pins" in process.stdout
+    assert pin_b in process.stdout
+
+
+def test_non_utf8_absence_hit_is_not_skipped(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    relative = "deliverables/latin1-pin.txt"
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"compact_compiler 0.31.1\n" + bytes([0xFF]))
+    compact = row(ledger, "compact-compiler")
+    compact["status"] = "absent"
+    compact["pin"] = None
+    compact["pinKind"] = "none"
+    compact["sourceEvidence"] = []
+    compact["searchTerms"] = ["compact_compiler", "compactCompiler"]
+    compact["excludedHits"] = []
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert relative in process.stdout
+
+
+def test_unknown_schema_type_fails_without_traceback(tmp_path: Path) -> None:
+    root, _ledger = stage_ledger(tmp_path)
+    (root / SCHEMA_REL).write_text('{"type": "nonexistent"}\n', encoding="utf-8")
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert process.stdout.startswith("FAIL: schema is not a valid Draft 2020-12 document:")
+    assert process.stdout.count("\n") == 1
+    assert "Traceback" not in process.stdout
+    assert "Traceback" not in process.stderr
+    assert process.stderr == ""
