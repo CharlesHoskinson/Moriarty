@@ -3,11 +3,12 @@
   "stageSchema": "openspec/changes/consolidated-language-kernel/schemas/stage-relation.schema.json",
   "stageSchemaSha256": "6703e98b6a1336b663beed736431ac5303a48796e82115dc062dfaea03467184",
   "nativeRoots": [
+    "experiments/moriarty-language/compact",
     "experiments/moriarty-midnight-financial",
     "experiments/moriarty-midnight-network",
     "experiments/moriarty-native-ivc-r3"
   ],
-  "limitation": "Whether a cited line truly enforces the field is a reviewed claim. This map cites no line. Signed-intent authentication was not found in a circuit, a bound ledger primitive, or another native boundary under the declared native roots.",
+  "limitation": "Whether a cited line truly enforces the field is a reviewed claim. Mechanisms cite no line. Signed-intent authentication was not found in a circuit, a bound ledger primitive, or another native boundary under the declared native roots. experiments/moriarty-language/compact is included. Its arithmetic helpers and generated loan and swap kernels constrain anonymous Uint fields of two restricted Core programs. They do not name a canonical stage-relation leaf. Copies under deliverables/preview-loan-2026-09-17 are snapshots, not native roots.",
   "rows": [
     {
       "schemaField": "authority.consumed",
@@ -19,7 +20,7 @@
       "schemaField": "authority.remaining",
       "status": "NOT_ENFORCED",
       "mechanisms": [],
-      "note": "The R3 harness states that dynamic authority is not recomputed in that circuit. Lifecycle allowance and usedTransferIds checks address a different host state object. No check binds this stage-relation field."
+      "note": "The R3 harness states that dynamic authority is not recomputed in that circuit. Lifecycle allowance and usedTransferIds checks address a different host state object. Generated loan and swap kernels assert remaining > 0 on a program-local lifetime counter, at loan kernel.compact:15 and swap kernel.compact:15. That counter is not this stage-relation field. No check binds this stage-relation field."
     },
     {
       "schemaField": "authority.replayState",
@@ -361,7 +362,7 @@
       "schemaField": "observations[].time",
       "status": "NOT_ENFORCED",
       "mechanisms": [],
-      "note": "constrainNow in the custody compact bounds a call argument against block time. No circuit constraint, ledger primitive, signature check, or language-host check binds this observation field."
+      "note": "constrainNow in the custody compact bounds a call argument against block time. Generated kernels assert observations.o0 < 2000000000 at loan kernel.compact:16. That anonymous observation is not this stage-relation field. No circuit constraint, ledger primitive, signature check, or language-host check binds this observation field."
     },
     {
       "schemaField": "outcome.continuations[]",
@@ -469,7 +470,7 @@
       "schemaField": "signedIntent.grossDebitCap",
       "status": "NOT_ENFORCED",
       "mechanisms": [],
-      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. No language-host check binds this field."
+      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. evaluate.ts:290-295 checks gross-debit caps, minimum net credits and permitted recipients on the OutcomeStatement authority object. evaluate.ts:294 bounds each grossDebitCaps entry by maximumLedgerAmount. That host check does not bind this stage-relation field."
     },
     {
       "schemaField": "signedIntent.intentId",
@@ -481,13 +482,13 @@
       "schemaField": "signedIntent.minNetOutcome",
       "status": "NOT_ENFORCED",
       "mechanisms": [],
-      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. No language-host check binds this field."
+      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. evaluate.ts:290-295 checks gross-debit caps, minimum net credits and permitted recipients on the OutcomeStatement authority object. evaluate.ts:295 bounds each minimumNetCredits entry by minimumLedgerAmount. The swap kernel assert at kernel.compact:74 (minimum output not met) constrains one program-local output. Neither check binds this stage-relation field."
     },
     {
       "schemaField": "signedIntent.recipients[]",
       "status": "NOT_ENFORCED",
       "mechanisms": [],
-      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. No language-host check binds this field."
+      "note": "Signed-intent authentication is absent from the circuit, ledger-primitive, and other native-boundary code under the declared native roots. evaluate.ts:290-295 checks gross-debit caps, minimum net credits and permitted recipients on the OutcomeStatement authority object. evaluate.ts:290 requires permittedRecipients to include each transfer recipient. The swap kernel assert at kernel.compact:32 (recipient must be trader) constrains one anonymous argument. Neither check binds this stage-relation field."
     },
     {
       "schemaField": "signedIntent.recoveryPolicy",

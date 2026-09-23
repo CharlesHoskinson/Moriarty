@@ -58,10 +58,27 @@ def test_real_artifacts_pass() -> None:
     assert artifact["schemaVersion"] == "moriarty-u0-enforcement-map/1"
     assert artifact["stageSchema"] == STAGE_SCHEMA.as_posix()
     assert artifact["nativeRoots"] == [
+        "experiments/moriarty-language/compact",
         "experiments/moriarty-midnight-financial",
         "experiments/moriarty-midnight-network",
         "experiments/moriarty-native-ivc-r3",
     ]
+    notes = {item["schemaField"]: item["note"] for item in artifact["rows"]}
+    for field in (
+        "signedIntent.grossDebitCap",
+        "signedIntent.minNetOutcome",
+        "signedIntent.recipients[]",
+    ):
+        assert "evaluate.ts:290-295" in notes[field]
+        assert "OutcomeStatement" in notes[field]
+        assert "does not bind" in notes[field] or "Neither check binds" in notes[field]
+    assert "grossDebitCaps" in notes["signedIntent.grossDebitCap"]
+    assert "minimumNetCredits" in notes["signedIntent.minNetOutcome"]
+    assert "kernel.compact:74" in notes["signedIntent.minNetOutcome"]
+    assert "permittedRecipients" in notes["signedIntent.recipients[]"]
+    assert "kernel.compact:32" in notes["signedIntent.recipients[]"]
+    assert "program-local lifetime counter" in notes["authority.remaining"]
+    assert "observations.o0" in notes["observations[].time"]
     assert len(artifact["rows"]) == 84
     assert [item["schemaField"] for item in artifact["rows"]] == sorted(
         item["schemaField"] for item in artifact["rows"]
@@ -143,6 +160,29 @@ def test_c5_line_outside_file_fails(tmp_path: Path) -> None:
     assert "line 10000000 is outside the file" in process.stdout
 
 
+def test_c5_missing_cited_file_is_blocked(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    target = row(payload, "schemaVersion")
+    target["status"] = "host-only"
+    missing = "experiments/moriarty-language/src/missing-u0-citation.ts"
+    target["mechanisms"] = [
+        {
+            "kind": "hostCheck",
+            "file": missing,
+            "line": 1,
+            "symbol": "missing",
+            "note": "The cited host file does not exist.",
+        }
+    ]
+    write(root, payload)
+
+    process = run_checker(root)
+
+    assert process.returncode == 2, process.stdout + process.stderr
+    assert f"blocked: missing {missing}" in process.stdout
+
+
 def test_c6_symbol_absent_on_line_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root)
@@ -165,6 +205,49 @@ def test_c6_symbol_absent_on_line_fails(tmp_path: Path) -> None:
     assert "symbol notASymbol is not an identifier on line 17" in process.stdout
 
 
+def test_c6_symbol_inside_multiline_comment_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    target = row(payload, "schemaVersion")
+    target["status"] = "host-only"
+    target["mechanisms"] = [
+        {
+            "kind": "hostCheck",
+            "file": "experiments/moriarty-language/src/runtime-types.ts",
+            "line": 34,
+            "symbol": "MC05",
+            "note": "MC05 occurs only inside a block comment opened on line 33.",
+        }
+    ]
+    write(root, payload)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "symbol MC05 is not an identifier on line 34" in process.stdout
+
+
+def test_c6_symbol_after_closed_block_comment_passes(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    target = row(payload, "schemaVersion")
+    target["status"] = "host-only"
+    target["mechanisms"] = [
+        {
+            "kind": "hostCheck",
+            "file": "experiments/moriarty-language/src/runtime-types.ts",
+            "line": 42,
+            "symbol": "authenticate",
+            "note": "authenticate is code after the block comment closes on line 40.",
+        }
+    ]
+    write(root, payload)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
 def test_c7_circuit_file_outside_native_roots_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root)
@@ -185,3 +268,15 @@ def test_c7_circuit_file_outside_native_roots_fails(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert "circuit file is outside nativeRoots" in process.stdout
+
+
+def test_c7_missing_native_root_is_blocked(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    payload["nativeRoots"] = [*payload["nativeRoots"], "experiments/moriarty-u0-absent-native-root"]
+    write(root, payload)
+
+    process = run_checker(root)
+
+    assert process.returncode == 2, process.stdout + process.stderr
+    assert "blocked: missing native root experiments/moriarty-u0-absent-native-root" in process.stdout
