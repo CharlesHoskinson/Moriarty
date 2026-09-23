@@ -8,7 +8,9 @@ type is a leaf. An array whose items are not objects is the leaf ``a[]``.
 Whether a cited line truly enforces its field is a reviewed claim. This checker
 proves C1-C7 only: schema validity, the frozen-schema hash, a sorted bijection
 with those leaves, the status and mechanism rules, file and line existence,
-a whole-identifier citation, and native-root membership.
+a whole-identifier citation, and native-root membership. The citation ignores
+``//`` and ``#`` line comments and ``/* */`` block comments, including a block
+comment opened on an earlier line.
 """
 
 from __future__ import annotations
@@ -308,7 +310,7 @@ def check_mechanism(
     if not isinstance(symbol, str) or IDENTIFIER.fullmatch(symbol) is None:
         failures.append(f"FAIL: {field} symbol {symbol!r} is not an identifier")
         return
-    if not has_identifier(lines[line_number - 1], symbol):
+    if not has_identifier(lines, line_number, symbol):
         failures.append(
             f"FAIL: {field} symbol {symbol} is not an identifier on line {line_number} "
             f"of {relative.as_posix()}"
@@ -328,28 +330,55 @@ def under_root(path: Path, root: Path) -> bool:
     return path != root and path.is_relative_to(root)
 
 
-def has_identifier(line: str, symbol: str) -> bool:
-    return re.search(rf"\b{re.escape(symbol)}\b", strip_comments(line), flags=re.ASCII) is not None
+def has_identifier(lines: list[str], line_number: int, symbol: str) -> bool:
+    visible = strip_comments(lines[line_number - 1], comment_open_before(lines, line_number))
+    return re.search(rf"\b{re.escape(symbol)}\b", visible, flags=re.ASCII) is not None
 
 
-def strip_comments(line: str) -> str:
-    """Drop ``//`` and ``#`` line comments and ``/* */`` comments on this line."""
+def comment_open_before(lines: list[str], line_number: int) -> bool:
+    """True when a ``/*`` block comment opened on an earlier line is still open."""
+
+    open_comment = False
+    for line in lines[: line_number - 1]:
+        open_comment = scan_comments(line, open_comment)[1]
+    return open_comment
+
+
+def strip_comments(line: str, open_comment: bool = False) -> str:
+    """Drop ``//`` and ``#`` line comments and ``/* */`` block comments."""
+
+    return scan_comments(line, open_comment)[0]
+
+
+def scan_comments(line: str, open_comment: bool) -> tuple[str, bool]:
+    """Return code text and whether a block comment continues after this line.
+
+    ``//`` and ``#`` end the line only outside a block comment. A block comment
+    opened on an earlier line stays open until ``*/``.
+    """
 
     pieces: list[str] = []
     index = 0
     length = len(line)
     while index < length:
+        if open_comment:
+            end = line.find("*/", index)
+            if end < 0:
+                return "".join(pieces), True
+            open_comment = False
+            index = end + 2
+            continue
         if line.startswith("/*", index):
             end = line.find("*/", index + 2)
             if end < 0:
-                break
+                return "".join(pieces), True
             index = end + 2
             continue
         if line.startswith("//", index) or line[index] == "#":
             break
         pieces.append(line[index])
         index += 1
-    return "".join(pieces)
+    return "".join(pieces), open_comment
 
 
 if __name__ == "__main__":
