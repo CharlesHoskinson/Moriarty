@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moriarty U0 numeric profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "decisionFile",
+    "decisionSha256",
+    "priceOrientation",
+    "units",
+    "defaultPolicy",
+    "primitives",
+    "overrides",
+    "defiformalConversion"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "moriarty-u0-numeric-profile/1"
+    },
+    "decisionFile": {
+      "const": "docs/decisions/u0-numeric-profile-decision.md"
+    },
+    "decisionSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "priceOrientation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical", "sourceTypes", "note"],
+      "properties": {
+        "canonical": {
+          "const": "base-per-quote"
+        },
+        "sourceTypes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "symbol"],
+            "properties": {
+              "file": {
+                "type": "string",
+                "pattern": "^experiments/moriarty-language/src/successor/[^/]+\\.ts$"
+              },
+              "symbol": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["representation", "fieldElementCoercion", "widths"],
+      "properties": {
+        "representation": {
+          "const": "exact-domain-qualified-integer"
+        },
+        "fieldElementCoercion": {
+          "const": "forbidden"
+        },
+        "widths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "bits", "file", "symbol"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^(?:UInt|SInt)[0-9]+$"
+              },
+              "bits": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "file": {
+                "type": "string",
+                "pattern": "^experiments/moriarty-language/src/successor/[^/]+\\.ts$"
+              },
+              "symbol": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "defaultPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["obligation", "receipt", "exact", "remainderBeneficiary"],
+      "properties": {
+        "obligation": {
+          "const": "ceil"
+        },
+        "receipt": {
+          "const": "floor"
+        },
+        "exact": {
+          "const": "none"
+        },
+        "remainderBeneficiary": {
+          "const": "protocol-reserve"
+        }
+      }
+    },
+    "primitives": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "file",
+          "symbol",
+          "line",
+          "resultRole",
+          "requiredDirection",
+          "remainderBeneficiary",
+          "authorSelectable",
+          "conformance",
+          "gapNote"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "file": {
+            "type": "string",
+            "pattern": "^experiments/moriarty-language/src/successor/[^/]+\\.ts$"
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "resultRole": {
+            "enum": ["obligation", "receipt", "exact"]
+          },
+          "requiredDirection": {
+            "enum": ["ceil", "floor", "none"]
+          },
+          "remainderBeneficiary": {
+            "anyOf": [
+              {"const": "protocol-reserve"},
+              {"type": "null"}
+            ]
+          },
+          "authorSelectable": {
+            "type": "boolean"
+          },
+          "conformance": {
+            "enum": ["conforms", "open-gap"]
+          },
+          "gapNote": {
+            "anyOf": [
+              {"type": "string", "minLength": 1},
+              {"type": "null"}
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {"resultRole": {"const": "obligation"}},
+              "required": ["resultRole"]
+            },
+            "then": {
+              "properties": {"requiredDirection": {"const": "ceil"}}
+            }
+          },
+          {
+            "if": {
+              "properties": {"resultRole": {"const": "receipt"}},
+              "required": ["resultRole"]
+            },
+            "then": {
+              "properties": {"requiredDirection": {"const": "floor"}}
+            }
+          },
+          {
+            "if": {
+              "properties": {"resultRole": {"const": "exact"}},
+              "required": ["resultRole"]
+            },
+            "then": {
+              "properties": {"requiredDirection": {"const": "none"}}
+            }
+          },
+          {
+            "if": {
+              "properties": {"requiredDirection": {"const": "none"}},
+              "required": ["requiredDirection"]
+            },
+            "then": {
+              "properties": {"remainderBeneficiary": {"type": "null"}}
+            },
+            "else": {
+              "properties": {"remainderBeneficiary": {"const": "protocol-reserve"}}
+            }
+          },
+          {
+            "if": {
+              "properties": {"conformance": {"const": "open-gap"}},
+              "required": ["conformance"]
+            },
+            "then": {
+              "properties": {"gapNote": {"type": "string", "minLength": 1}}
+            },
+            "else": {
+              "properties": {"gapNote": {"type": "null"}}
+            }
+          }
+        ]
+      }
+    },
+    "overrides": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "defiformalConversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceOrientation",
+        "targetOrientation",
+        "formula",
+        "testVectors"
+      ],
+      "properties": {
+        "sourceOrientation": {
+          "const": "quote-per-base"
+        },
+        "targetOrientation": {
+          "const": "base-per-quote"
+        },
+        "formula": {
+          "type": "string",
+          "minLength": 1
+        },
+        "testVectors": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "quotePerBaseMantissa",
+              "quotePerBaseScale",
+              "targetScale",
+              "role",
+              "expectedBasePerQuoteMantissa"
+            ],
+            "properties": {
+              "quotePerBaseMantissa": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "quotePerBaseScale": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "targetScale": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "role": {
+                "enum": ["obligation", "receipt"]
+              },
+              "expectedBasePerQuoteMantissa": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
