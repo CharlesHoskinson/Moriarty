@@ -87,7 +87,7 @@ def test_checker_accepts_committed_artifacts() -> None:
     assert generated.returncode == 0, generated.stdout + generated.stderr
     assert generated.stdout == "OK: backend matrix matches source\n"
     assert checked.returncode == 0, checked.stdout + checked.stderr
-    assert checked.stdout == "OK: 24 backend rows specified-only, 7 trust premises\n"
+    assert checked.stdout == "OK: 24 backend rows specified-only, 9 trust premises\n"
     assert checked.stderr == ""
 
 
@@ -140,12 +140,12 @@ def test_trust_premises_cover_required_topics() -> None:
     assert premises["limitation"] == (
         "Semantic fit of a quote to its statement label is a reviewed claim, not "
         "mechanically proven. The checker verifies structure, literal quote occurrence, "
-        "identifier resolution, required topics, label length, one unspliced sentence, "
-        "and closure-word absence."
+        "identifier resolution, required topics, label length, one sentence without "
+        "', and' or a semicolon, and closure-word absence."
     )
     assert "reviewed claim" in premises["limitation"]
     assert "not mechanically proven" in premises["limitation"]
-    assert list(by_id) == [f"TP{number:02d}" for number in range(1, 8)]
+    assert list(by_id) == [f"TP{number:02d}" for number in range(1, 10)]
     assert [premise["topic"] for premise in premises["premises"]] == [
         "native-target",
         "recursion-horizon",
@@ -154,13 +154,17 @@ def test_trust_premises_cover_required_topics() -> None:
         "timeout-not-nonexecution",
         "private-handoff",
         "intent-auth-boundary",
+        "witness-availability",
+        "compatible-tuple",
     ]
     assert by_id["TP01"]["kind"] == "unresolved-interface"
     assert by_id["TP01"]["status"] == "open"
-    assert by_id["TP01"]["statement"] == (
-        "The native execution target is Midnight ZKIRv3, and a comprehensive "
-        "compatible release tuple is unknown."
-    )
+    assert by_id["TP01"]["statement"] == "The native execution target is Midnight ZKIRv3."
+    assert by_id["TP09"]["topic"] == "compatible-tuple"
+    assert by_id["TP09"]["kind"] == "unresolved-interface"
+    assert by_id["TP09"]["status"] == "open"
+    assert by_id["TP09"]["statement"] == "A comprehensive compatible release tuple is unknown."
+    assert by_id["TP09"]["relatedIds"] == ["ZR01"]
     assert by_id["TP02"]["kind"] == "planning-assumption"
     assert by_id["TP02"]["status"] == "accepted-assumption"
     assert "March 2027" in by_id["TP02"]["statement"]
@@ -171,7 +175,7 @@ def test_trust_premises_cover_required_topics() -> None:
     assert by_id["TP04"]["kind"] == "trust-assumption"
     assert by_id["TP04"]["status"] == "accepted-assumption"
     assert by_id["TP04"]["statement"] == (
-        "Federation is optional, and Moriarty can also run on Midnight without this federation."
+        "Moriarty can also run on Midnight without this federation."
     )
     assert by_id["TP04"]["relatedIds"] == ["MPLR-030", "UNI-011", "ZR14"]
     assert all(
@@ -184,14 +188,21 @@ def test_trust_premises_cover_required_topics() -> None:
     assert any(ref["path"].endswith("/proposal.md") for ref in by_id["TP04"]["sourceRefs"])
     assert by_id["TP05"]["kind"] == "trust-assumption"
     assert by_id["TP05"]["status"] == "accepted-assumption"
-    assert by_id["TP05"]["statement"] == (
-        "Timeout is not evidence of nonexecution, and it does not prove that "
-        "another chain did not execute."
-    )
+    assert by_id["TP05"]["statement"] == "Timeout is not evidence of nonexecution."
     assert by_id["TP05"]["statement"].count("Timeout is not evidence of nonexecution") == 1
     assert by_id["TP06"]["kind"] == "unresolved-interface"
     assert by_id["TP06"]["status"] == "open"
+    assert by_id["TP06"]["statement"] == (
+        "Native ZK is a foundation, not a private handoff theorem."
+    )
     assert by_id["TP06"]["statement"].count("private handoff theorem") == 1
+    assert by_id["TP08"]["topic"] == "witness-availability"
+    assert by_id["TP08"]["kind"] == "unresolved-interface"
+    assert by_id["TP08"]["status"] == "open"
+    assert by_id["TP08"]["statement"] == (
+        "Witness availability is an explicit liveness assumption."
+    )
+    assert by_id["TP08"]["relatedIds"] == ["ZR14"]
     assert by_id["TP07"]["kind"] == "unresolved-interface"
     assert by_id["TP07"]["status"] == "open"
     assert "circuit" in by_id["TP07"]["statement"]
@@ -199,6 +210,8 @@ def test_trust_premises_cover_required_topics() -> None:
     for premise in premises["premises"]:
         assert premise["status"] in {"open", "accepted-assumption"}
         assert len(premise["statement"]) <= 160
+        assert ", and " not in premise["statement"]
+        assert ";" not in premise["statement"]
         assert sentence.fullmatch(premise["statement"])
         for word in closure_words:
             assert re.search(rf"\b{word}\b", premise["statement"], re.IGNORECASE) is None
@@ -546,7 +559,8 @@ def test_checker_rejects_spliced_unsupported_claim(tmp_path: Path) -> None:
     premise = premises["premises"][0]
     premise["statement"] += (
         " ZR01 is fully implemented and certified; "
-        "a comprehensive compatible release tuple is unknown."
+        "a comprehensive compatible release tuple is unknown. "
+        "Pinned tuple evidence is absent from this label."
     )
     write_json(trust_path, premises)
 
@@ -757,22 +771,30 @@ def test_checker_rejects_trust_premise_key_order(tmp_path: Path) -> None:
     assert "Traceback" not in result.stderr
 
 
-def test_checker_blocks_when_cited_file_missing(tmp_path: Path) -> None:
+def test_checker_rejects_missing_cited_file(tmp_path: Path) -> None:
     root = materialize(tmp_path)
     relative = "docs/MORIARTY-PRODUCT-CONTRACT.md"
     cited = root / relative
     assert cited.is_file()
     cited.unlink()
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = next(item for item in premises["premises"] if item["id"] == "TP02")
+    assert premise["status"] == "accepted-assumption"
+    premise["status"] = "closed"
+    write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
 
-    assert result.returncode == 2
-    assert result.stdout == f"blocked: missing {relative}\n"
-    assert "FAIL:" not in result.stdout
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert f"FAIL: TP01 cited file missing: {relative}" in result.stdout
+    assert "FAIL: TP02 status is not open or accepted-assumption" in result.stdout
+    assert f"blocked: missing {relative}" not in result.stdout
+    assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
 
-def test_checker_blocks_when_requirement_catalog_missing(tmp_path: Path) -> None:
+def test_checker_rejects_missing_requirement_catalog(tmp_path: Path) -> None:
     root = materialize(tmp_path)
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
@@ -781,6 +803,8 @@ def test_checker_blocks_when_requirement_catalog_missing(tmp_path: Path) -> None
             ref for ref in premise["sourceRefs"] if not ref["path"].startswith("openspec/")
         ]
         assert premise["sourceRefs"]
+    closed = next(item for item in premises["premises"] if item["id"] == "TP02")
+    closed["status"] = "closed"
     write_json(trust_path, premises)
     changes = root / "openspec" / "changes"
     catalog_files = [
@@ -793,10 +817,18 @@ def test_checker_blocks_when_requirement_catalog_missing(tmp_path: Path) -> None
 
     result = run_script(CHECKER, root)
 
-    assert result.returncode == 2
-    assert "blocked: missing openspec/changes/*/specs/**/spec.md\n" in result.stdout
-    assert "blocked: missing openspec/changes/*/traceability.md\n" in result.stdout
-    assert "FAIL:" not in result.stdout
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert (
+        "FAIL: requirement catalog missing: openspec/changes/*/specs/**/spec.md"
+        in result.stdout
+    )
+    assert (
+        "FAIL: requirement catalog missing: openspec/changes/*/traceability.md"
+        in result.stdout
+    )
+    assert "FAIL: TP02 status is not open or accepted-assumption" in result.stdout
+    assert "blocked:" not in result.stdout
+    assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
 
@@ -812,7 +844,7 @@ def test_checker_accepts_extra_source_backed_premise(tmp_path: Path) -> None:
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premises["premises"].append(
         {
-            "id": "TP08",
+            "id": "TP10",
             "topic": "signed-intent-note",
             "statement": "Signed intent stays bound to canonical public inputs.",
             "kind": "unresolved-interface",
@@ -828,7 +860,7 @@ def test_checker_accepts_extra_source_backed_premise(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout == "OK: 24 backend rows specified-only, 8 trust premises\n"
+    assert result.stdout == "OK: 24 backend rows specified-only, 10 trust premises\n"
 
 
 def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> None:
@@ -902,7 +934,7 @@ def test_checker_runs_as_package_module() -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout == "OK: 24 backend rows specified-only, 7 trust premises\n"
+    assert result.stdout == "OK: 24 backend rows specified-only, 9 trust premises\n"
     assert "Traceback" not in result.stderr
 
 
@@ -925,3 +957,63 @@ def test_checker_rejects_source_ref_key_order(tmp_path: Path) -> None:
     assert "FAIL: trust premises are not canonically serialised" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_statement_joined_with_comma_and(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    statement = "The native target is Midnight ZKIRv3, and the release tuple is unknown."
+    assert ", and " in statement
+    assert len(statement) <= 160
+    premises["premises"][0]["statement"] = statement
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 statement joins claims with ', and'" in result.stdout
+    assert "FAIL: TP01 statement is spliced" not in result.stdout
+    assert "FAIL: TP01 statement is not one sentence" not in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_self_cited_and_forbidden_sources(tmp_path: Path) -> None:
+    script_rel = "scripts/check_u0_trust_backend_matrix.py"
+    test_rel = "tests/test_u0_trust_and_backend_matrix.py"
+    cases = (
+        (TRUST_REL, None),
+        (TRUST_SCHEMA_REL, "moriarty-u0-trust-premises/1"),
+        (script_rel, "Validate U0 trust premises and the generated backend requirement matrix."),
+        (test_rel, "Checker and content tests for the U0 trust premises and backend matrix."),
+    )
+    for relative, quote in cases:
+        root = materialize(tmp_path / relative.replace("/", "-"))
+        if quote is not None and not (root / relative).is_file():
+            target = root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((ROOT / relative).read_bytes())
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premise = premises["premises"][0]
+        used_quote = premise["statement"] if quote is None else quote
+        assert len(used_quote) >= 20
+        source = root / relative
+        assert source.is_file()
+        assert used_quote in source.read_text(encoding="utf-8")
+        premise["sourceRefs"].append(
+            {"path": relative, "quoteRole": "states-premise", "quote": used_quote}
+        )
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert (
+            f"FAIL: TP01 source ref path is not an allowed document: {relative}"
+            in result.stdout
+        )
+        assert f"quote not in {relative}" not in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr

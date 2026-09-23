@@ -3,8 +3,10 @@
 
 Semantic fit of a quote to its statement label is a reviewed claim, not
 mechanically proven. The checker verifies structure, literal quote occurrence,
-identifier resolution, required topics, label length, one unspliced sentence,
-and closure-word absence.
+identifier resolution, required topics, label length, one sentence without
+', and' or a semicolon, and closure-word absence. Source paths under the U0
+deliverable, kernel schemas, scripts or tests are rejected. A missing cited
+file is a check failure.
 """
 
 from __future__ import annotations
@@ -48,6 +50,13 @@ REQUIRED_PATHS = (
     TRUST_REL,
     MATRIX_SCHEMA_REL,
     TRUST_SCHEMA_REL,
+)
+# Amendment 2: citations must be repository documents outside these trees.
+FORBIDDEN_SOURCE_PREFIXES = (
+    ("deliverables", "u0-semantic-contract-2026-09-23"),
+    ("openspec", "changes", "consolidated-language-kernel", "schemas"),
+    ("scripts",),
+    ("tests",),
 )
 REQUIREMENT_HEADING = re.compile(
     r"^#{1,6}\s+Requirement:\s+((?:UNI|MPLR)-\d{3})\b"
@@ -130,13 +139,13 @@ def load_requirement_ids(root: Path) -> tuple[set[str], list[str]]:
     found: set[str] = set()
     change_root = root / "openspec" / "changes"
     if not change_root.is_dir():
-        return found, ["blocked: missing openspec/changes"]
+        return found, ["FAIL: requirement catalog missing: openspec/changes"]
     paths = sorted(change_root.glob("*/specs/**/spec.md"))
     paths.extend(sorted(change_root.glob("*/traceability.md")))
     if not paths:
         return found, [
-            "blocked: missing openspec/changes/*/specs/**/spec.md",
-            "blocked: missing openspec/changes/*/traceability.md",
+            "FAIL: requirement catalog missing: openspec/changes/*/specs/**/spec.md",
+            "FAIL: requirement catalog missing: openspec/changes/*/traceability.md",
         ]
     for path in paths:
         relative = path.relative_to(root).as_posix()
@@ -224,9 +233,11 @@ def statement_failures(payload: Any) -> list[str]:
             continue
         if len(statement) > 160:
             failures.append(f"FAIL: {label} statement exceeds 160 characters")
+        if ";" in statement:
+            failures.append(f"FAIL: {label} statement is spliced")
+        if ", and " in statement:
+            failures.append(f"FAIL: {label} statement joins claims with ', and'")
         if not SENTENCE.fullmatch(statement):
-            if ";" in statement:
-                failures.append(f"FAIL: {label} statement is spliced")
             failures.append(f"FAIL: {label} statement is not one sentence")
         for word in CLOSURE_WORDS:
             if re.search(rf"\b{word}\b", statement, re.IGNORECASE):
@@ -273,7 +284,7 @@ def related_id_failures(
     related_ids: list[Any],
     quotes: list[str],
     matrix_ids: set[str] | None,
-    catalog: set[str],
+    catalog: set[str] | None,
 ) -> list[str]:
     failures: list[str] = []
     for related_id in related_ids:
@@ -286,7 +297,7 @@ def related_id_failures(
                     f"FAIL: {premise_id} related id {related_id} is not in the backend matrix"
                 )
         elif related_id.startswith(("UNI-", "MPLR-")):
-            if related_id not in catalog:
+            if catalog is not None and related_id not in catalog:
                 failures.append(
                     f"FAIL: {premise_id} related id {related_id} is not a "
                     "requirement heading or traceability row"
@@ -317,6 +328,9 @@ def premise_rule_failures(
         return failures
     catalog, catalog_failures = load_requirement_ids(root)
     failures.extend(catalog_failures)
+    catalog_missing = any(
+        line.startswith("FAIL: requirement catalog missing:") for line in catalog_failures
+    )
     for premise in payload["premises"]:
         if not isinstance(premise, dict):
             continue
@@ -330,7 +344,7 @@ def premise_rule_failures(
                 related,
                 quoted_strings(premise),
                 matrix_ids,
-                catalog,
+                None if catalog_missing else catalog,
             )
         )
     return failures
@@ -357,6 +371,11 @@ def status_failures(payload: Any) -> list[str]:
         if row.get("status") != "specified-only":
             failures.append(f"FAIL: {row_id} status is not specified-only")
     return failures
+
+
+def source_path_is_forbidden(relative: str) -> bool:
+    parts = Path(relative).parts
+    return any(parts[: len(prefix)] == prefix for prefix in FORBIDDEN_SOURCE_PREFIXES)
 
 
 def quote_failures(root: Path, payload: Any) -> list[str]:
@@ -393,9 +412,14 @@ def quote_failures(root: Path, payload: Any) -> list[str]:
             if path.is_absolute() or ".." in path.parts:
                 failures.append(f"FAIL: {premise_id} quote path escapes root: {relative}")
                 continue
+            if source_path_is_forbidden(relative):
+                failures.append(
+                    f"FAIL: {premise_id} source ref path is not an allowed document: {relative}"
+                )
+                continue
             cited = root / path
             if not cited.is_file():
-                failures.append(f"blocked: missing {relative}")
+                failures.append(f"FAIL: {premise_id} cited file missing: {relative}")
                 continue
             try:
                 text = cited.read_text(encoding="utf-8")
@@ -462,50 +486,10 @@ def serialization_failures(path: Path, payload: Any, schema: Any) -> list[str]:
     return failures
 
 
-def missing_cited_and_catalog(root: Path) -> list[str]:
-    """Return blocked lines for absent cited files and an absent requirement catalog."""
-
-    blocked: list[str] = []
-    seen: set[str] = set()
-    try:
-        payload = json.loads((root / TRUST_REL).read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        payload = None
-    if isinstance(payload, dict) and isinstance(payload.get("premises"), list):
-        for premise in payload["premises"]:
-            if not isinstance(premise, dict) or not isinstance(premise.get("sourceRefs"), list):
-                continue
-            for ref in premise["sourceRefs"]:
-                if not isinstance(ref, dict) or not isinstance(ref.get("path"), str):
-                    continue
-                relative = ref["path"]
-                path = Path(relative)
-                if path.is_absolute() or ".." in path.parts or relative in seen:
-                    continue
-                seen.add(relative)
-                if not (root / path).is_file():
-                    blocked.append(f"blocked: missing {relative}")
-    change_root = root / "openspec" / "changes"
-    if not change_root.is_dir():
-        blocked.append("blocked: missing openspec/changes")
-    else:
-        catalog = [
-            *change_root.glob("*/specs/**/spec.md"),
-            *change_root.glob("*/traceability.md"),
-        ]
-        if not catalog:
-            blocked.append("blocked: missing openspec/changes/*/specs/**/spec.md")
-            blocked.append("blocked: missing openspec/changes/*/traceability.md")
-    return blocked
-
-
 def check(root: Path) -> tuple[int, list[str]]:
     missing = [relative for relative in REQUIRED_PATHS if not (root / relative).is_file()]
     if missing:
         return 2, [f"blocked: missing {relative}" for relative in missing]
-    blocked = missing_cited_and_catalog(root)
-    if blocked:
-        return 2, blocked
 
     failures: list[str] = []
     matrix_schema, matrix_schema_error = load_json(root / MATRIX_SCHEMA_REL, MATRIX_SCHEMA_REL)
@@ -577,6 +561,8 @@ def check(root: Path) -> tuple[int, list[str]]:
     matrix_ids = {str(row["id"]) for row in parsed["rows"]} if parsed is not None else None
     failures.extend(premise_rule_failures(root, premises, matrix_ids))
 
+    if any(line.startswith("FAIL:") for line in failures):
+        return 1, failures
     blocked_lines = [line for line in failures if line.startswith("blocked:")]
     if blocked_lines:
         return 2, blocked_lines
