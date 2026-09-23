@@ -119,6 +119,21 @@ def test_checker_accepts_real_profile() -> None:
     assert process.stdout == (
         f"OK: {len(ids)} primitives, {len(gaps)} open conformance gaps\n"
     )
+    assert [
+        (row["file"], row["symbol"])
+        for row in profile["priceOrientation"]["sourceTypes"]
+    ] == [
+        (
+            "experiments/moriarty-language/src/successor/financial-expression-source-types.ts",
+            "Price",
+        ),
+        (
+            "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+            "Price",
+        ),
+    ]
+    assert "LitPrice" in profile["priceOrientation"]["note"]
+    assert "financial-expression-v1.ts:230" in profile["priceOrientation"]["note"]
 
 
 def test_missing_decision_file_is_blocked(tmp_path: Path) -> None:
@@ -872,7 +887,7 @@ def test_comment_does_not_satisfy_operation_regex(tmp_path: Path) -> None:
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert (
-        "has no division, rounding, scaling, or overflow-checked operation"
+        "has no division, rounding, or scaling operation"
         in process.stdout
     )
     assert process.stderr == ""
@@ -925,4 +940,121 @@ def test_ceil_increment_must_use_the_parsed_remainder(tmp_path: Path) -> None:
     assert "prorata-principal-share" in process.stdout
     assert "fixed direction ceil differs from required floor" in process.stdout
     assert "protocol-reserve posting is absent" not in process.stdout
+    assert process.stderr == ""
+
+
+def _clear_reserve_gaps(profile: dict[str, Any]) -> None:
+    for row in profile["primitives"]:
+        if isinstance(row["gapNote"], str):
+            row["gapNote"] = row["gapNote"].replace(RESERVE_SENTENCE, "").strip()
+        if row["id"] == "prorata-principal-share":
+            row["conformance"] = "conforms"
+            row["gapNote"] = None
+
+
+def _append_lifecycle(root: Path, addition: str) -> list[str]:
+    path = root / SUCCESSOR / "financial-lifecycle.ts"
+    text = path.read_text(encoding="utf-8") + addition
+    path.write_text(text, encoding="utf-8")
+    return text.splitlines()
+
+
+def test_exact_row_requires_an_overflow_bound_check(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    source = (root / SUCCESSOR / "financial-lifecycle.ts").read_text(encoding="utf-8")
+    signature = "function subU128(a: bigint, b: bigint): bigint | null {"
+    line_no = source.splitlines().index(signature) + 1
+    profile = load_profile(root)
+    for row in profile["primitives"]:
+        if row["id"] == "checked-sub-u128":
+            row["line"] = line_no
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "checked-sub-u128" in process.stdout
+    assert "has no overflow bound check" in process.stdout
+    assert process.stderr == ""
+
+
+def test_literal_constructor_is_not_a_price_type(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    profile = load_profile(root)
+    profile["priceOrientation"]["sourceTypes"].extend(
+        [
+            {
+                "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+                "symbol": "LitPrice",
+            },
+            {
+                "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+                "symbol": "LitRate",
+            },
+        ]
+    )
+    profile["priceOrientation"]["sourceTypes"].sort(
+        key=lambda row: (row["file"], row["symbol"])
+    )
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "LitPrice" in process.stdout
+    assert "LitRate" in process.stdout
+    assert process.stdout.count("is not a type declaration or type-tag check") == 2
+    assert process.stderr == ""
+
+
+def test_object_literal_key_is_not_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport function unusedReserveProbe(): bigint {\n"
+        "  return {\n"
+        "    protocolReserve: 0n,\n"
+        "  };\n"
+        "}\n",
+    )
+    line_no = lines.index("    protocolReserve: 0n,") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "protocolReserve" in process.stdout
+    assert "is not a declaration" in process.stdout
+    assert "no type-level declaration is cited" in process.stdout
+    assert "protocol-reserve posting is absent" in process.stdout
+    assert process.stderr == ""
+
+
+def test_type_alias_field_is_a_reserve_declaration(tmp_path: Path) -> None:
+    root = copy_tree(tmp_path)
+    lines = _append_lifecycle(
+        root,
+        "\nexport type ProtocolReserveAccount = {\n"
+        "  protocolReserve: bigint;\n"
+        "};\n",
+    )
+    line_no = lines.index("  protocolReserve: bigint;") + 1
+    profile = load_profile(root)
+    profile["reserveMechanism"]["status"] = "present"
+    profile["reserveMechanism"]["citations"] = [
+        {"file": LIFECYCLE, "symbol": "protocolReserve", "line": line_no}
+    ]
+    _clear_reserve_gaps(profile)
+    write_profile(root, profile)
+
+    process = run(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert process.stdout == "OK: 14 primitives, 5 open conformance gaps\n"
     assert process.stderr == ""
