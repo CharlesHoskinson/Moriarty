@@ -45,8 +45,9 @@ OK_LINE = (
     "OK: 11 historical, 0 absent, compatible tuple NOT established; "
     f"{LIMITATION}\n"
 )
-COMPILER_PIN = "006c4d91ed09c0a89261861b6e7203b3efa3e2df"
-COMPILER_HEAD = "f702692895e8be811fb9eac2a1c0bfafca5dea70"
+COMPILER_BASE = "006c4d91ed09c0a89261861b6e7203b3efa3e2df"
+COMPILER_PIN = "f702692895e8be811fb9eac2a1c0bfafca5dea70"
+KEY_SELECTION = "first circuit in receipt order; all digests are equally current"
 SRS_PIN = "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74"
 
 
@@ -71,7 +72,9 @@ def test_real_ledger_passes() -> None:
     assert [row["component"] for row in ledger["pins"]] == COMPONENTS
     assert any("transcript" in item for item in ledger["unresolved"])
     assert any("do not uniquely select" in item for item in ledger["unresolved"])
-    assert any("006c4d91ed09c0a89261861b6e7203b3efa3e2df" in item for item in ledger["unresolved"])
+    assert any(COMPILER_BASE in item for item in ledger["unresolved"])
+    assert any(COMPILER_PIN in item for item in ledger["unresolved"])
+    assert any("no single key identity" in item for item in ledger["unresolved"])
     historical = [row["component"] for row in ledger["pins"] if row["status"] == "historical"]
     absent = [row["component"] for row in ledger["pins"] if row["status"] == "absent"]
     assert historical == COMPONENTS
@@ -80,8 +83,13 @@ def test_real_ledger_passes() -> None:
     assert compiler["status"] == "historical"
     assert compiler["pinKind"] == "git-commit"
     assert compiler["pin"] == COMPILER_PIN
+    assert compiler["selectionReason"] == "Frozen head is later than the frozen base."
     assert any(
-        item["kind"] == "conflict" and COMPILER_HEAD in (item.get("evidenceQuote") or "")
+        item["kind"] == "found-in" and COMPILER_PIN in (item.get("evidenceQuote") or "")
+        for item in compiler["claims"]
+    )
+    assert any(
+        item["kind"] == "conflict" and COMPILER_BASE in (item.get("evidenceQuote") or "")
         for item in compiler["claims"]
     )
     proving = row(ledger, "proving-keys")
@@ -89,8 +97,10 @@ def test_real_ledger_passes() -> None:
     assert proving["status"] == "historical"
     assert proving["pinKind"] == "sha256"
     assert proving["pin"] == PROVER_PIN
+    assert proving["selectionReason"] == KEY_SELECTION
     assert verifier_keys["pinKind"] == "sha256"
     assert verifier_keys["pin"] == VERIFIER_PIN
+    assert verifier_keys["selectionReason"] == KEY_SELECTION
     zkir = row(ledger, "zkir")
     ledger_row = row(ledger, "ledger")
     srs = row(ledger, "srs-parameters")
@@ -119,6 +129,9 @@ def test_real_ledger_passes() -> None:
         assert all(item["kind"] == "conflict" for item in differing)
     for item in ledger["pins"]:
         assert len(item["note"]) <= 160
+        reason = item["selectionReason"]
+        assert isinstance(reason, str) and reason
+        assert len(reason) <= 160
 
 
 def stage_ledger(tmp_path: Path) -> tuple[Path, dict[str, object]]:
@@ -254,12 +267,12 @@ def test_found_in_quote_missing_fails(tmp_path: Path) -> None:
     assert "bls_midnight_2p19" in process.stdout
 
 
-def test_pin_inside_longer_token_fails(tmp_path: Path) -> None:
+def test_near_version_does_not_contain_pin(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     compact = row(ledger, "compact-compiler")
     relative = "deliverables/consolidated-design-2026-09-19/longer-token.txt"
     evidence = tmp_path / relative
-    evidence.write_text("compiler 10.31.12 and token xx0.31.1yy\n", encoding="utf-8")
+    evidence.write_text("compiler 0.31.2 and token xx0.32.1yy\n", encoding="utf-8")
     evidence_rows = compact["sourceEvidence"]
     assert isinstance(evidence_rows, list)
     compact["sourceEvidence"] = [*evidence_rows, relative]
@@ -270,6 +283,25 @@ def test_pin_inside_longer_token_fails(tmp_path: Path) -> None:
     assert process.returncode == 1, process.stdout + process.stderr
     assert "does not contain pin" in process.stdout
     assert relative in process.stdout
+
+
+def test_embedded_version_token_counts(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compact = row(ledger, "compact-compiler")
+    relative = "deliverables/consolidated-design-2026-09-19/embedded-version.txt"
+    evidence = tmp_path / relative
+    evidence.write_text(
+        "archive compactc_v0.31.1_x86_64-unknown-linux-musl.zip\n",
+        encoding="utf-8",
+    )
+    evidence_rows = compact["sourceEvidence"]
+    assert isinstance(evidence_rows, list)
+    compact["sourceEvidence"] = [*evidence_rows, relative]
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
 
 
 def test_ledger_self_citation_fails(tmp_path: Path) -> None:
@@ -436,6 +468,29 @@ def test_ledger_rule_failures(tmp_path: Path, mutate: str, expected: str) -> Non
     assert expected in process.stdout
 
 
+def test_absent_row_with_found_in_or_conflict_claim_fails(tmp_path: Path) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    compiler = row(ledger, "moriarty-compiler")
+    compiler["status"] = "absent"
+    compiler["pin"] = None
+    compiler["pinKind"] = "none"
+    compiler["sourceEvidence"] = []
+    compiler["searchTerms"] = ["Moriarty commit", "Frozen base"]
+    compiler["excludedHits"] = []
+    claims = compiler["claims"]
+    assert isinstance(claims, list)
+    kinds = {item["kind"] for item in claims}
+    assert "found-in" in kinds
+    assert "conflict" in kinds
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "absent row has a found-in claim" in process.stdout
+    assert "absent row has a conflict claim" in process.stdout
+
+
 def test_absent_row_with_evidence_fails(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     compiler = row(ledger, "moriarty-compiler")
@@ -454,7 +509,7 @@ def test_absent_row_with_evidence_fails(tmp_path: Path) -> None:
     assert "absent row has sourceEvidence" in process.stdout
 
 
-def test_srs_independent_record_rejects_other_sha256(tmp_path: Path) -> None:
+def test_changed_pin_must_appear_in_found_in_quote(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     srs = row(ledger, "srs-parameters")
     relative = "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json"
@@ -472,7 +527,8 @@ def test_srs_independent_record_rejects_other_sha256(tmp_path: Path) -> None:
     process = run_checker(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
-    assert "independently records" in process.stdout
+    assert "contains its pin" in process.stdout
+    assert "independently records" not in process.stdout
 
 
 def test_schema_rejection_still_checks_evidence(tmp_path: Path) -> None:
@@ -488,15 +544,30 @@ def test_schema_rejection_still_checks_evidence(tmp_path: Path) -> None:
     assert "does not contain pin" in process.stdout
 
 
-def test_unparseable_schema_is_blocked(tmp_path: Path) -> None:
+@pytest.mark.parametrize("payload", ["{", ""])
+def test_unparseable_schema_is_check_failure(tmp_path: Path, payload: str) -> None:
     root, _ledger = stage_ledger(tmp_path)
-    (root / SCHEMA_REL).write_text("{", encoding="utf-8")
+    (root / SCHEMA_REL).write_text(payload, encoding="utf-8")
 
     process = run_checker(root)
 
-    assert process.returncode == 2, process.stdout + process.stderr
-    assert process.stdout.startswith("blocked:")
-    assert "FAIL:" not in process.stdout
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert process.stdout.startswith("FAIL:")
+    assert "is not JSON" in process.stdout
+    assert "blocked:" not in process.stdout
+
+
+def test_undecodable_schema_is_check_failure(tmp_path: Path) -> None:
+    root, _ledger = stage_ledger(tmp_path)
+    (root / SCHEMA_REL).write_bytes(b"\xff")
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert process.stdout.startswith("FAIL:")
+    assert "not UTF-8" in process.stdout
+    assert "blocked:" not in process.stdout
+    assert "Traceback" not in process.stderr
 
 
 def test_missing_schema_is_blocked(tmp_path: Path) -> None:
@@ -530,7 +601,7 @@ def test_found_in_quote_must_contain_pin(tmp_path: Path) -> None:
     assert "contains its pin" in process.stdout
 
 
-def test_moriarty_record_rejects_other_commit(tmp_path: Path) -> None:
+def test_literal_commit_in_cited_file_is_accepted(tmp_path: Path) -> None:
     root, ledger = stage_ledger(tmp_path)
     compiler = row(ledger, "moriarty-compiler")
     other = "11e7ec5abeecb99297c4faa74d30ef9adc7b51f3"
@@ -549,8 +620,8 @@ def test_moriarty_record_rejects_other_commit(tmp_path: Path) -> None:
 
     process = run_checker(root)
 
-    assert process.returncode == 1, process.stdout + process.stderr
-    assert "independently records" in process.stdout
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert "independently records" not in process.stdout
 
 
 def test_weakened_absence_roots_fail(tmp_path: Path) -> None:
