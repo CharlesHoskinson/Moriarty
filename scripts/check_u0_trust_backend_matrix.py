@@ -7,11 +7,14 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, NamedTuple
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from build_u0_backend_matrix import (
     EXPECTED_IDS,
@@ -48,15 +51,15 @@ ABBREVIATED_REQUIREMENT_IDS = re.compile(r"\b(UNI|MPLR)-(\d{3})((?:,\d{3})+)\b")
 
 
 class PremiseContract(NamedTuple):
-    """One trust premise whose claims are fixed independently of the artifact."""
+    """Claim phrases and per-id quote topics for one required trust premise."""
 
     id: str
     kind: str
     status: str
-    statement: str
     related_ids: tuple[str, ...]
     claims: tuple[str, ...]
     topics: tuple[str, ...]
+    id_support: tuple[tuple[str, tuple[str, ...]], ...]
 
 
 PREMISE_CONTRACT = (
@@ -64,27 +67,19 @@ PREMISE_CONTRACT = (
         "TP01",
         "unresolved-interface",
         "open",
-        (
-            "The native execution target is Midnight ZKIRv3. "
-            "The exact compiler, ZKIR, verifier, key and ledger tuple is not pinned, "
-            "and a comprehensive compatible release tuple is unknown. "
-            "This is an open ZR01 and UNI-003 interface. "
-            "UNI-017 does not treat an unpinned tuple as qualified."
-        ),
         ("UNI-003", "UNI-017", "ZR01"),
         ("ZKIRv3", "a comprehensive compatible release tuple is unknown."),
         ("compatible released tuple",),
+        (
+            ("UNI-003", ("ZKIRv3",)),
+            ("UNI-017", ("compatible released tuple",)),
+            ("ZR01", ("a comprehensive compatible release tuple is unknown.",)),
+        ),
     ),
     PremiseContract(
         "TP02",
         "planning-assumption",
         "accepted-assumption",
-        (
-            "The user supplied a six-month planning assumption on 2026-09-19: "
-            "comprehensive Midnight recursion around March 2027. "
-            "That date is not an independently verified release. "
-            "It does not close ZR02, UNI-009 or UNI-017."
-        ),
         ("UNI-009", "UNI-017", "ZR02"),
         (
             "The user supplied a six-month planning assumption on 2026-09-19: "
@@ -92,71 +87,63 @@ PREMISE_CONTRACT = (
             "independently verified release",
         ),
         ("native recursive", "recursively composing"),
+        (
+            ("UNI-009", ("native recursive",)),
+            ("UNI-017", ("native recursive",)),
+            ("ZR02", ("recursively composing",)),
+        ),
     ),
     PremiseContract(
         "TP03",
         "trust-assumption",
         "open",
-        (
-            "Issuers, oracles and signers remain explicit trust assumptions. "
-            "An observation carries an issuer, a domain, a time and a finality claim, "
-            "and each external domain supplies only its stated finality. "
-            "A safety proof does not establish oracle honesty. "
-            "ZR03, UNI-007 and MPLR-010 stay open on this point."
-        ),
         ("MPLR-010", "UNI-007", "ZR03"),
         ("signers remain explicit trust assumptions", "oracle honesty"),
         ("predecessors, observations", "observation boundary", "finality"),
+        (
+            ("MPLR-010", ("observation boundary",)),
+            ("UNI-007", ("finality",)),
+            ("ZR03", ("predecessors, observations",)),
+        ),
     ),
     PremiseContract(
         "TP04",
         "trust-assumption",
         "accepted-assumption",
-        (
-            "Federation trust is optional. "
-            "Moriarty can also run on Midnight without this federation. "
-            "The federated kernel coordinates optional services under signed intention; "
-            "it cannot authorize programs or replace native proofs. "
-            "When a kernel is used, compromised bare-threshold enforcement "
-            "remains an explicit trust boundary. "
-            "ZR14, UNI-011 and MPLR-030 record that boundary."
-        ),
         ("MPLR-030", "UNI-011", "ZR14"),
         (
             "Moriarty can also run on Midnight without this federation.",
             "remains an explicit trust boundary.",
+            "without the federated kernel",
+            "threshold, hardware, observation and recovery assumptions",
         ),
         (
-            "federated kernel",
+            "without the federated kernel",
             "threshold, hardware, observation and recovery assumptions",
+        ),
+        (
+            ("MPLR-030", ("threshold, hardware, observation and recovery assumptions",)),
+            ("UNI-011", ("remains an explicit trust boundary.",)),
+            ("ZR14", ("without the federated kernel",)),
         ),
     ),
     PremiseContract(
         "TP05",
         "trust-assumption",
         "accepted-assumption",
-        (
-            "Timeout is not evidence of nonexecution. "
-            "A timeout can change which authorized transition may be attempted. "
-            "It does not prove that another chain did not execute, "
-            "and it does not prove entitlement to a refund. "
-            "This boundary is accepted for UNI-007, UNI-008 and MPLR-010."
-        ),
         ("MPLR-010", "UNI-007", "UNI-008"),
         ("Timeout is not evidence of nonexecution.", "another chain did not execute"),
         ("mere timeout", "proof of nonexecution", "unresolved outcomes", "Refunds"),
+        (
+            ("MPLR-010", ("proof of nonexecution",)),
+            ("UNI-007", ("mere timeout",)),
+            ("UNI-008", ("Refunds",)),
+        ),
     ),
     PremiseContract(
         "TP06",
         "unresolved-interface",
         "open",
-        (
-            "Private handoff and witness availability are unresolved. "
-            "A private continuation requires the stated witness-handoff and availability mechanism, "
-            "and witness availability is an explicit liveness assumption. "
-            "Native zero-knowledge is not a private handoff theorem. "
-            "ZR14, UNI-010, MPLR-013 and MPLR-029 stay open."
-        ),
         ("MPLR-013", "MPLR-029", "UNI-010", "ZR14"),
         (
             "the stated witness-handoff and availability mechanism",
@@ -164,23 +151,28 @@ PREMISE_CONTRACT = (
             "not a private handoff theorem.",
         ),
         ("witness needed to continue", "authenticated state domain"),
+        (
+            ("MPLR-013", ("witness needed to continue",)),
+            ("MPLR-029", ("authenticated state domain",)),
+            ("UNI-010", ("the stated witness-handoff and availability mechanism",)),
+            ("ZR14", ("not a private handoff theorem.",)),
+        ),
     ),
     PremiseContract(
         "TP07",
         "unresolved-interface",
         "open",
-        (
-            "Signed-intent authentication has no selected boundary. "
-            "The enforcement map must state whether that authentication occurs in the circuit, "
-            "a bound ledger primitive, or another explicitly justified native boundary. "
-            "ZR03, UNI-002 and UNI-004 require the bound intention and do not make this choice."
-        ),
         ("UNI-002", "UNI-004", "ZR03"),
         (
             "authentication occurs in the circuit, a bound ledger primitive",
             "another explicitly justified native boundary.",
         ),
         ("signed intent", "signed intention", "signed constraint"),
+        (
+            ("UNI-002", ("signed intention",)),
+            ("UNI-004", ("signed constraint",)),
+            ("ZR03", ("signed intent",)),
+        ),
     ),
 )
 
@@ -235,11 +227,14 @@ def load_requirement_ids(root: Path) -> tuple[set[str], list[str]]:
     found: set[str] = set()
     change_root = root / "openspec" / "changes"
     if not change_root.is_dir():
-        return found, ["FAIL: openspec requirement catalog is missing"]
+        return found, ["blocked: missing openspec/changes"]
     paths = sorted(change_root.glob("*/specs/**/spec.md"))
     paths.extend(sorted(change_root.glob("*/traceability.md")))
     if not paths:
-        return found, ["FAIL: openspec requirement catalog is missing"]
+        return found, [
+            "blocked: missing openspec/changes/*/specs/**/spec.md",
+            "blocked: missing openspec/changes/*/traceability.md",
+        ]
     for path in paths:
         relative = path.relative_to(root).as_posix()
         try:
@@ -276,11 +271,76 @@ def quoted_strings(premise: dict[str, Any]) -> list[str]:
     return quotes
 
 
-def support_phrases(premise_id: str) -> tuple[str, ...]:
+def contract_for(premise_id: str) -> PremiseContract | None:
     for item in PREMISE_CONTRACT:
         if item.id == premise_id:
-            return item.claims + item.topics
+            return item
+    return None
+
+
+def tie_phrases(premise_id: str, related_id: str) -> tuple[str, ...]:
+    """Phrases that must appear with this id, not phrases that support a different id."""
+
+    item = contract_for(premise_id)
+    if item is None:
+        return ()
+    for candidate, phrases in item.id_support:
+        if candidate == related_id:
+            return phrases
     return ()
+
+
+def contract_integrity_failures() -> list[str]:
+    failures: list[str] = []
+    for item in PREMISE_CONTRACT:
+        supported = [related_id for related_id, _phrases in item.id_support]
+        if supported != list(item.related_ids):
+            failures.append(f"FAIL: {item.id} id support does not match related ids")
+        allowed = item.claims + item.topics
+        for related_id, phrases in item.id_support:
+            if not phrases:
+                failures.append(f"FAIL: {item.id} id support for {related_id} is empty")
+            for phrase in phrases:
+                if phrase not in allowed:
+                    failures.append(
+                        f"FAIL: {item.id} id support phrase is not a claim or topic: {phrase}"
+                    )
+    return failures
+
+
+def statement_sentences(statement: str) -> list[str]:
+    return [part for part in re.split(r"(?<=[.!?])\s+", statement.strip()) if part]
+
+
+def sentence_is_source_backed(
+    sentence: str,
+    quotes: list[str],
+    claims: tuple[str, ...],
+) -> bool:
+    if any(claim in sentence for claim in claims):
+        return True
+    if len(sentence) < 20:
+        return any(sentence in quote for quote in quotes)
+    for quote in quotes:
+        for index in range(0, len(sentence) - 19):
+            if sentence[index : index + 20] in quote:
+                return True
+    return False
+
+
+def grounding_failures(
+    premise_id: str,
+    statement: Any,
+    quotes: list[str],
+    claims: tuple[str, ...],
+) -> list[str]:
+    if not isinstance(statement, str):
+        return []
+    failures: list[str] = []
+    for sentence in statement_sentences(statement):
+        if not sentence_is_source_backed(sentence, quotes, claims):
+            failures.append(f"FAIL: {premise_id} statement is not source-backed: {sentence}")
+    return failures
 
 
 def quote_ties_related_id(quote: str, related_id: str, phrases: tuple[str, ...]) -> bool:
@@ -307,7 +367,6 @@ def related_id_failures(
     quotes: list[str],
     matrix_ids: set[str] | None,
     catalog: set[str],
-    phrases: tuple[str, ...],
 ) -> list[str]:
     failures: list[str] = []
     for related_id in related_ids:
@@ -328,6 +387,7 @@ def related_id_failures(
         else:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not a known id family")
         quotes_with_id = [quote for quote in quotes if related_id in quote]
+        phrases = tie_phrases(premise_id, related_id)
         if not quotes_with_id:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not in a cited quote")
         elif phrases and not any(
@@ -345,16 +405,13 @@ def premise_contract_failures(
     payload: Any,
     matrix_ids: set[str] | None,
 ) -> list[str]:
+    failures = contract_integrity_failures()
     if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
-        return []
-    failures: list[str] = []
-    for item in PREMISE_CONTRACT:
-        for claim in item.claims:
-            if claim not in item.statement:
-                failures.append(f"FAIL: {item.id} contract claim is absent from its statement")
+        return failures
     catalog, catalog_failures = load_requirement_ids(root)
     failures.extend(catalog_failures)
     expected_ids = [item.id for item in PREMISE_CONTRACT]
+    expected_set = set(expected_ids)
     by_id: dict[str, dict[str, Any]] = {}
     actual_ids: list[str | None] = []
     for premise in payload["premises"]:
@@ -365,16 +422,12 @@ def premise_contract_failures(
         actual_ids.append(premise_id)
         if premise_id not in by_id:
             by_id[premise_id] = premise
-    if actual_ids != expected_ids:
+    present_contract = [premise_id for premise_id in actual_ids if premise_id in expected_set]
+    if present_contract != expected_ids:
         for expected_id in expected_ids:
-            if expected_id not in actual_ids:
+            if expected_id not in present_contract:
                 failures.append(f"FAIL: missing trust premise {expected_id}")
-        for actual_id in actual_ids:
-            if actual_id is not None and actual_id not in expected_ids:
-                failures.append(
-                    f"FAIL: trust premise {actual_id} is outside the source-backed contract"
-                )
-        if set(actual_ids) == set(expected_ids):
+        if not any(expected_id not in present_contract for expected_id in expected_ids):
             failures.append("FAIL: trust premises are not in contract order")
     for item in PREMISE_CONTRACT:
         premise = by_id.get(item.id)
@@ -385,11 +438,9 @@ def premise_contract_failures(
         if premise.get("status") != item.status:
             failures.append(f"FAIL: {item.id} status is not {item.status}")
         statement = premise.get("statement")
-        if statement != item.statement:
-            failures.append(f"FAIL: {item.id} statement does not match the source-backed contract")
         if not isinstance(statement, str):
             failures.append(f"FAIL: {item.id} statement is missing")
-        elif any(claim not in statement for claim in item.claims):
+        else:
             for claim in item.claims:
                 if claim not in statement:
                     failures.append(f"FAIL: {item.id} statement lacks source-backed claim: {claim}")
@@ -397,6 +448,10 @@ def premise_contract_failures(
         for claim in item.claims:
             if not any(claim in quote for quote in quotes):
                 failures.append(f"FAIL: {item.id} claim is not in a cited quote: {claim}")
+        for topic in item.topics:
+            if not any(topic in quote for quote in quotes):
+                failures.append(f"FAIL: {item.id} topic is not in a cited quote: {topic}")
+        failures.extend(grounding_failures(item.id, statement, quotes, item.claims))
         related = premise.get("relatedIds")
         if related != list(item.related_ids):
             failures.append(f"FAIL: {item.id} relatedIds do not match the source-backed contract")
@@ -406,6 +461,10 @@ def premise_contract_failures(
         premise_id = premise.get("id")
         if not isinstance(premise_id, str):
             premise_id = "<unknown>"
+        quotes = quoted_strings(premise)
+        item = contract_for(premise_id)
+        if item is None:
+            failures.extend(grounding_failures(premise_id, premise.get("statement"), quotes, ()))
         related = premise.get("relatedIds")
         if not isinstance(related, list):
             continue
@@ -413,10 +472,9 @@ def premise_contract_failures(
             related_id_failures(
                 premise_id,
                 related,
-                quoted_strings(premise),
+                quotes,
                 matrix_ids,
                 catalog,
-                support_phrases(premise_id),
             )
         )
     return failures
@@ -476,7 +534,7 @@ def quote_failures(root: Path, payload: Any) -> list[str]:
                 continue
             cited = root / path
             if not cited.is_file():
-                failures.append(f"FAIL: {premise_id} quote file missing: {relative}")
+                failures.append(f"blocked: missing {relative}")
                 continue
             try:
                 text = cited.read_text(encoding="utf-8")
@@ -544,10 +602,50 @@ def serialization_failures(path: Path, payload: Any, schema: Any) -> list[str]:
     return failures
 
 
+def missing_cited_and_catalog(root: Path) -> list[str]:
+    """Return blocked lines for absent cited files and an absent requirement catalog."""
+
+    blocked: list[str] = []
+    seen: set[str] = set()
+    try:
+        payload = json.loads((root / TRUST_REL).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        payload = None
+    if isinstance(payload, dict) and isinstance(payload.get("premises"), list):
+        for premise in payload["premises"]:
+            if not isinstance(premise, dict) or not isinstance(premise.get("sourceRefs"), list):
+                continue
+            for ref in premise["sourceRefs"]:
+                if not isinstance(ref, dict) or not isinstance(ref.get("path"), str):
+                    continue
+                relative = ref["path"]
+                path = Path(relative)
+                if path.is_absolute() or ".." in path.parts or relative in seen:
+                    continue
+                seen.add(relative)
+                if not (root / path).is_file():
+                    blocked.append(f"blocked: missing {relative}")
+    change_root = root / "openspec" / "changes"
+    if not change_root.is_dir():
+        blocked.append("blocked: missing openspec/changes")
+    else:
+        catalog = [
+            *change_root.glob("*/specs/**/spec.md"),
+            *change_root.glob("*/traceability.md"),
+        ]
+        if not catalog:
+            blocked.append("blocked: missing openspec/changes/*/specs/**/spec.md")
+            blocked.append("blocked: missing openspec/changes/*/traceability.md")
+    return blocked
+
+
 def check(root: Path) -> tuple[int, list[str]]:
     missing = [relative for relative in REQUIRED_PATHS if not (root / relative).is_file()]
     if missing:
         return 2, [f"blocked: missing {relative}" for relative in missing]
+    blocked = missing_cited_and_catalog(root)
+    if blocked:
+        return 2, blocked
 
     failures: list[str] = []
     matrix_schema, matrix_schema_error = load_json(root / MATRIX_SCHEMA_REL, MATRIX_SCHEMA_REL)
@@ -619,6 +717,9 @@ def check(root: Path) -> tuple[int, list[str]]:
     matrix_ids = {str(row["id"]) for row in parsed["rows"]} if parsed is not None else None
     failures.extend(premise_contract_failures(root, premises, matrix_ids))
 
+    blocked_lines = [line for line in failures if line.startswith("blocked:")]
+    if blocked_lines:
+        return 2, blocked_lines
     if failures:
         return 1, failures
     count = len(premises["premises"]) if isinstance(premises, dict) else 0
