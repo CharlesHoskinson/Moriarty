@@ -39,6 +39,107 @@ PIN_PATTERNS = {
     "sha256": re.compile(r"^[0-9a-f]{64}$"),
     "version": re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$"),
 }
+# Files produced by this U0 package are not independent pin evidence.
+GENERATED_EXACT = {
+    SCHEMA_REL.as_posix(),
+    LEDGER_REL.as_posix(),
+    "scripts/check_u0_target_pins.py",
+    "tests/test_u0_target_pins.py",
+    "FOREMAN_REPORT.md",
+}
+GENERATED_PREFIX = "deliverables/u0-semantic-contract-2026-09-23/"
+PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_./-])"
+    r"(?:deliverables|docs|experiments|openspec|scripts|tests)"
+    r"(?:/[A-Za-z0-9_+-]+)+(?:\.[A-Za-z0-9]+)+"
+)
+TOKEN_RE = re.compile(
+    r"(?<![0-9A-Za-z.])"
+    r"(?:[0-9a-f]{64}|[0-9a-f]{40}|[0-9a-f]{7,39}|[0-9]+\.[0-9]+\.[0-9]+)"
+    r"(?![0-9A-Za-z])"
+)
+CLAIM_RE = re.compile(
+    r"(?i)\bre-?verified\b|\bre-?verify\b|\bverified\b|\bcompatible\b|"
+    r"\bcompatibility\s+is\s+established\b"
+)
+NEGATION_RE = re.compile(r"(?i)\b(?:not|never|no|without|unknown|unresolved|false)\b|n't")
+# Independent records used to reject a false absent row and a self-cited pin.
+COMPONENT_PIN_RECORDS: dict[str, tuple[tuple[str, re.Pattern[bytes]], ...]] = {
+    "moriarty-compiler": (
+        (
+            "experiments/moriarty-language/package.json",
+            re.compile(rb'"version"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
+        ),
+    ),
+    "compact-compiler": (
+        (
+            "deliverables/lifecycle-corpus-2026-09-17/environment.json",
+            re.compile(rb'"compact_compiler"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
+        ),
+        (
+            "experiments/moriarty-midnight-network/origins.json",
+            re.compile(rb'"compactCompiler"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
+        ),
+    ),
+    "zkir": (
+        (
+            "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+            re.compile(rb"midnight-zkir`, clean tracked working tree at `([0-9a-f]{40})`"),
+        ),
+    ),
+    "native-proof-system": (
+        (
+            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+            re.compile(rb'"backendPin"\s*:\s*"([0-9a-f]{40})"'),
+        ),
+    ),
+    "verifier": (
+        (
+            "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
+            re.compile(rb"midnight-zk@([0-9a-f]{40})`, `aggregation/src/ivc/verifier\.rs"),
+        ),
+    ),
+    "proving-keys": (
+        (
+            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+            re.compile(
+                rb'"(?:provingKey|proving_key|proving-key)[^"\n]{0,40}"\s*:\s*"([0-9a-f]{40,64})"'
+            ),
+        ),
+    ),
+    "verifier-keys": (
+        (
+            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+            re.compile(
+                rb'"(?:verifierKey|verifier_key|verifier-key)[^"\n]{0,40}"\s*:\s*"([0-9a-f]{40,64})"'
+            ),
+        ),
+    ),
+    "srs-parameters": (
+        (
+            "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+            re.compile(rb'"sha256"\s*:\s*"([0-9a-f]{64})"'),
+        ),
+    ),
+    "ledger": (
+        (
+            "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+            re.compile(rb"midnight-ledger` at `([0-9a-f]{40})`"),
+        ),
+    ),
+    "proof-server": (
+        (
+            "experiments/moriarty-midnight-network/compose.preview.yml",
+            re.compile(rb"proof-server:[0-9]+\.[0-9]+\.[0-9]+@sha256:([0-9a-f]{64})"),
+        ),
+    ),
+    "k-reference-toolchain": (
+        (
+            "experiments/moriarty-language/formal/k/toolchain.lock.json",
+            re.compile(rb'"revision"\s*:\s*"([0-9a-f]{40})"'),
+        ),
+    ),
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,8 +178,8 @@ def check(root: Path) -> int:
 
     failures: list[str] = []
     check_canonical(ledger_text, ledger, failures)
-    check_schema(schema, ledger, failures)
-    check_ledger(root, schema, ledger, failures)
+    schema_ok = check_schema(schema, ledger, failures)
+    check_ledger(root, schema, ledger, failures, check_rows=schema_ok)
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")
@@ -114,30 +215,33 @@ def load_json_text(path: Path, rel: Path) -> tuple[str, object, str | None]:
 
 
 def check_canonical(text: str, ledger: object, failures: list[str]) -> None:
-    if text != json.dumps(ledger, indent=2) + "\n":
-        failures.append(
-            f"{LEDGER_REL.as_posix()} is not UTF-8 JSON with 2-space indent "
-            "and a trailing newline"
-        )
+    if text != json.dumps(ledger, indent=2, ensure_ascii=False) + "\n":
+        failures.append(f"{LEDGER_REL.as_posix()} is not canonical 2-space JSON")
 
 
-def check_schema(schema: object, ledger: object, failures: list[str]) -> None:
+def check_schema(schema: object, ledger: object, failures: list[str]) -> bool:
     if not isinstance(schema, dict):
         failures.append("schema is not an object")
-        return
+        return False
     try:
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
     except SchemaError as exc:
         failures.append(f"schema is not a valid Draft 2020-12 document: {exc.message}")
-        return
+        return False
     errors = sorted(validator.iter_errors(ledger), key=lambda item: list(item.absolute_path))
     for error in errors:
         location = "/".join(str(part) for part in error.absolute_path) or "<root>"
         failures.append(f"schema {location}: {error.message}")
+    return not errors
 
 
 def check_ledger(
-    root: Path, schema: object, ledger: object, failures: list[str]
+    root: Path,
+    schema: object,
+    ledger: object,
+    failures: list[str],
+    *,
+    check_rows: bool,
 ) -> None:
     if not isinstance(schema, dict):
         return
@@ -156,6 +260,10 @@ def check_ledger(
         failures.append("unresolved is empty")
     elif any(not isinstance(item, str) or not item.strip() for item in unresolved):
         failures.append("unresolved contains an empty entry")
+    elif isinstance(unresolved, list):
+        for index, item in enumerate(unresolved):
+            if isinstance(item, str):
+                check_cited_text(root, item, f"unresolved/{index}", [], failures)
 
     pin_item_schema = schema.get("properties", {}).get("pins", {}).get("items", {})
     if not isinstance(pin_item_schema, dict):
@@ -186,6 +294,8 @@ def check_ledger(
             "pins do not contain exactly one row per component in enum order: "
             + ", ".join(str(component) for component in components)
         )
+    if not check_rows:
+        return
     for index, row in enumerate(pins):
         if not isinstance(row, dict):
             failures.append(f"pins/{index} is not an object")
@@ -213,11 +323,17 @@ def check_row(root: Path, row: dict[str, object], index: int, failures: list[str
     pin = row.get("pin")
     pin_kind = row.get("pinKind")
     evidence = row.get("sourceEvidence")
-    if status not in STATUSES:
+    note = row.get("note")
+    if not isinstance(status, str) or status not in STATUSES:
         failures.append(f"{label} status {status!r} is not historical or absent")
     if not isinstance(evidence, list):
         failures.append(f"{label} sourceEvidence is not an array")
-        evidence = []
+        evidence_items: list[object] = []
+    else:
+        evidence_items = list(evidence)
+    note_text = note if isinstance(note, str) else ""
+    if not note_text.strip():
+        failures.append(f"{label} note is empty")
 
     absent = status == "absent"
     pin_absent = pin is None
@@ -228,21 +344,28 @@ def check_row(root: Path, row: dict[str, object], index: int, failures: list[str
             f"(status={status!r}, pin={pin!r}, pinKind={pin_kind!r})"
         )
     if absent:
-        if evidence:
+        if evidence_items:
             failures.append(f"{label} absent row has sourceEvidence")
+        if isinstance(component, str):
+            check_absent_inventory(root, component, label, failures)
+        else:
+            failures.append(f"{label} component is not a string")
+        check_cited_text(root, note_text, f"{label} note", [], failures)
         return
+
+    cited = [item for item in evidence_items if isinstance(item, str)]
     if not isinstance(pin, str) or not pin:
         failures.append(f"{label} historical pin is empty")
-        return
-    if pin_kind not in PIN_PATTERNS:
+    elif not isinstance(pin_kind, str) or pin_kind not in PIN_PATTERNS:
         failures.append(f"{label} historical pinKind {pin_kind!r} is not a pin kind")
-        return
-    if PIN_PATTERNS[pin_kind].fullmatch(pin) is None:
+    elif PIN_PATTERNS[pin_kind].fullmatch(pin) is None:
         failures.append(f"{label} pin {pin!r} does not match pinKind {pin_kind}")
-    if not evidence:
+    elif not evidence_items:
         failures.append(f"{label} historical row has no sourceEvidence")
-        return
-    check_evidence(root, component, pin, evidence, label, failures)
+    else:
+        check_evidence(root, component, pin, evidence_items, label, failures)
+        check_independent_record(root, component, pin, cited, label, failures)
+    check_cited_text(root, note_text, f"{label} note", cited, failures)
 
 
 def check_evidence(
@@ -253,28 +376,156 @@ def check_evidence(
     label: str,
     failures: list[str],
 ) -> None:
-    found = False
-    opened = 0
     for item in evidence:
         if not isinstance(item, str) or not item or Path(item).is_absolute() or ".." in Path(item).parts:
             failures.append(f"{label} sourceEvidence path {item!r} is not repo-relative")
+            continue
+        if is_generated(item):
+            failures.append(
+                f"{label} sourceEvidence {item} is a generated artifact "
+                f"and is not an independent record of {component}"
+            )
             continue
         path = root / item
         if not path.is_file():
             failures.append(f"{label} sourceEvidence file does not exist: {item}")
             continue
-        opened += 1
         try:
             blob = path.read_bytes()
         except OSError as exc:
             failures.append(f"{label} cannot read {item}: {exc}")
             continue
-        if pin.encode("utf-8") in blob:
-            found = True
-    if opened and not found:
+        if not pin_in_blob(pin, blob):
+            failures.append(f"{label} sourceEvidence file {item} does not contain pin {pin}")
+
+
+def check_independent_record(
+    root: Path,
+    component: object,
+    pin: str,
+    cited: list[str],
+    label: str,
+    failures: list[str],
+) -> None:
+    if not isinstance(component, str):
+        failures.append(f"{label} component is not a string")
+        return
+    rules = COMPONENT_PIN_RECORDS.get(component)
+    if not rules:
+        failures.append(f"{label} component {component} has no independent pin record")
+        return
+    cited_set = {item for item in cited if not is_generated(item)}
+    matched = False
+    for relative, pattern in rules:
+        captures = inventory_captures(root, relative, pattern, label, failures)
+        if relative in cited_set and pin in captures:
+            matched = True
+    if not matched:
         failures.append(
-            f"{label} component {component} pin {pin} does not occur in any sourceEvidence file"
+            f"{label} component {component} does not cite a source file "
+            f"that independently records pin {pin}"
         )
+
+
+def check_absent_inventory(
+    root: Path, component: str, label: str, failures: list[str]
+) -> None:
+    rules = COMPONENT_PIN_RECORDS.get(component, ())
+    reported: set[tuple[str, str]] = set()
+    for relative, pattern in rules:
+        for captured in inventory_captures(root, relative, pattern, label, failures):
+            key = (relative, captured)
+            if key in reported:
+                continue
+            reported.add(key)
+            failures.append(
+                f"{label} component {component} is absent but {relative} records pin {captured}"
+            )
+
+
+def inventory_captures(
+    root: Path,
+    relative: str,
+    pattern: re.Pattern[bytes],
+    label: str,
+    failures: list[str],
+) -> list[str]:
+    path = root / relative
+    if not path.is_file():
+        failures.append(f"{label} pin inventory file does not exist: {relative}")
+        return []
+    try:
+        blob = path.read_bytes()
+    except OSError as exc:
+        failures.append(f"{label} cannot read pin inventory {relative}: {exc}")
+        return []
+    return [match.group(1).decode("ascii") for match in pattern.finditer(blob)]
+
+
+def check_cited_text(
+    root: Path,
+    text: str,
+    label: str,
+    extra_files: list[str],
+    failures: list[str],
+) -> None:
+    check_claims(text, label, failures)
+    search_files: list[str] = []
+    for relative in extract_paths(text):
+        if is_generated(relative):
+            failures.append(f"{label} path {relative} is a generated artifact")
+            continue
+        if not (root / relative).is_file():
+            failures.append(f"{label} path {relative} does not exist")
+            continue
+        search_files.append(relative)
+    for relative in extra_files:
+        if is_generated(relative) or relative in search_files:
+            continue
+        if (root / relative).is_file():
+            search_files.append(relative)
+    for token in extract_tokens(text):
+        if any(pin_in_file(root, relative, token) for relative in search_files):
+            continue
+        failures.append(f"{label} token {token} does not occur in a cited or mentioned file")
+
+
+def check_claims(text: str, label: str, failures: list[str]) -> None:
+    for match in CLAIM_RE.finditer(text):
+        start = max(0, match.start() - 80)
+        end = min(len(text), match.end() + 80)
+        if NEGATION_RE.search(text[start:end]):
+            continue
+        failures.append(
+            f"{label} claims re-verification or compatibility near {match.group()!r}"
+        )
+
+
+def extract_paths(text: str) -> list[str]:
+    return list(dict.fromkeys(match.group(0) for match in PATH_RE.finditer(text)))
+
+
+def extract_tokens(text: str) -> list[str]:
+    return list(dict.fromkeys(match.group(0) for match in TOKEN_RE.finditer(text)))
+
+
+def is_generated(relative: str) -> bool:
+    normalized = Path(relative).as_posix()
+    return normalized in GENERATED_EXACT or normalized.startswith(GENERATED_PREFIX)
+
+
+def pin_in_file(root: Path, relative: str, pin: str) -> bool:
+    path = root / relative
+    try:
+        blob = path.read_bytes()
+    except OSError:
+        return False
+    return pin_in_blob(pin, blob)
+
+
+def pin_in_blob(pin: str, blob: bytes) -> bool:
+    pattern = rb"(?<![0-9A-Za-z.])" + re.escape(pin.encode("utf-8")) + rb"(?![0-9A-Za-z])"
+    return re.search(pattern, blob) is not None
 
 
 if __name__ == "__main__":
