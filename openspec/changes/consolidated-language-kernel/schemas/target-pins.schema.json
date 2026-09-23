@@ -7,6 +7,7 @@
     "schemaVersion",
     "asOf",
     "compatibleTupleEstablished",
+    "absenceSearch",
     "pins",
     "unresolved"
   ],
@@ -23,6 +24,32 @@
       "type": "boolean",
       "const": false
     },
+    "absenceSearch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roots", "pinPatterns", "limitation"],
+      "properties": {
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pinPatterns": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "limitation": {
+          "const": "absent means no pin found by this recorded search; not a proof that none exists"
+        }
+      }
+    },
     "pins": {
       "type": "array",
       "minItems": 11,
@@ -37,7 +64,10 @@
           "pinKind",
           "status",
           "sourceEvidence",
-          "note"
+          "note",
+          "claims",
+          "searchTerms",
+          "excludedHits"
         ],
         "properties": {
           "component": {
@@ -60,24 +90,13 @@
             "minLength": 1
           },
           "pin": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "pinKind": {
-            "enum": [
-              "git-commit",
-              "version",
-              "sha256",
-              "none"
-            ]
+            "enum": ["git-commit", "version", "sha256", "none"]
           },
           "status": {
-            "enum": [
-              "historical",
-              "absent"
-            ]
+            "enum": ["historical", "absent"]
           },
           "sourceEvidence": {
             "type": "array",
@@ -88,7 +107,63 @@
           },
           "note": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "claims": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "text", "evidencePath", "evidenceQuote"],
+              "properties": {
+                "kind": {
+                  "enum": ["found-in", "conflict", "not-found", "unresolved"]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidencePath": {
+                  "type": ["string", "null"],
+                  "minLength": 1
+                },
+                "evidenceQuote": {
+                  "type": ["string", "null"],
+                  "minLength": 12
+                }
+              }
+            }
+          },
+          "searchTerms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 2
+            }
+          },
+          "excludedHits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "line", "reason"],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "line": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
           }
         }
       }

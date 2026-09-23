@@ -2,6 +2,20 @@
   "schemaVersion": "moriarty-u0-target-pins/1",
   "asOf": "2026-09-23",
   "compatibleTupleEstablished": false,
+  "absenceSearch": {
+    "roots": [
+      "deliverables",
+      "experiments",
+      "docs",
+      "openspec"
+    ],
+    "pinPatterns": [
+      "(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
+      "(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])",
+      "(?<![0-9A-Za-z])[0-9]+\\.[0-9]+\\.[0-9]+(?![0-9A-Za-z])"
+    ],
+    "limitation": "absent means no pin found by this recorded search; not a proof that none exists"
+  },
   "pins": [
     {
       "component": "moriarty-compiler",
@@ -10,7 +24,54 @@
       "pinKind": "none",
       "status": "absent",
       "sourceEvidence": [],
-      "note": "No version, git commit, or content digest of the Moriarty compiler was found. experiments/moriarty-language/package.json has no version field. deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md records Moriarty checkout 006c4d91ed09c0a89261861b6e7203b3efa3e2df for an early reproduction. That checkout is not a compiler artifact pin, so this row does not copy it."
+      "note": "No compiler artifact pin. The reproduction checkout is excluded.",
+      "claims": [
+        {
+          "kind": "unresolved",
+          "text": "Clean-reproduction Moriarty checkout is not a compiler artifact pin.",
+          "evidencePath": "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+          "evidenceQuote": "The clean reproduction pins Moriarty commit"
+        },
+        {
+          "kind": "unresolved",
+          "text": "The following line of that sentence records the Compact commit.",
+          "evidencePath": "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+          "evidenceQuote": "`006c4d91ed09c0a89261861b6e7203b3efa3e2df`, Compact commit"
+        },
+        {
+          "kind": "unresolved",
+          "text": "Council advisory records the same checkout as a frozen base.",
+          "evidencePath": "deliverables/moriarty-work-package-council-advisory-2026-09-03.md",
+          "evidenceQuote": "Frozen base: `006c4d91ed09c0a89261861b6e7203b3efa3e2df`"
+        }
+      ],
+      "searchTerms": [
+        "moriarty-compiler",
+        "Moriarty compiler",
+        "Moriarty commit"
+      ],
+      "excludedHits": [
+        {
+          "path": "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+          "line": 43,
+          "reason": "clean-reproduction checkout, not a compiler artifact pin"
+        },
+        {
+          "path": "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+          "line": 44,
+          "reason": "Compact commit beside that checkout, not a compiler artifact pin"
+        },
+        {
+          "path": "deliverables/near-teardown-2026-09-19/panel/fable-3-study.json",
+          "line": 1,
+          "reason": "panel transcript line, nearcore commit, not a compiler pin"
+        },
+        {
+          "path": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/opus-build-result-prompt.txt",
+          "line": 3,
+          "reason": "skill path version, not a compiler artifact pin"
+        }
+      ]
     },
     {
       "component": "compact-compiler",
@@ -19,11 +80,57 @@
       "pinKind": "version",
       "status": "historical",
       "sourceEvidence": [
-        "deliverables/consolidated-design-2026-09-19/evidence-packet.md",
         "deliverables/lifecycle-corpus-2026-09-17/environment.json",
-        "experiments/moriarty-midnight-network/origins.json"
+        "experiments/moriarty-midnight-network/origins.json",
+        "deliverables/consolidated-design-2026-09-19/evidence-packet.md"
       ],
-      "note": "Observed compactc version 0.31.1. deliverables/lifecycle-corpus-2026-09-17/environment.json records that version and release zip sha256 e291b4bab4d4e857707008f8b1c25c2b8e0c843f6c737d0ee6c0d9ac69a6bbfb. experiments/moriarty-midnight-network/origins.json records the same version. An earlier Compact source commit 11e7ec5abeecb99297c4faa74d30ef9adc7b51f3 is recorded in deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md. deliverables/consolidated-design-2026-09-19/evidence-packet.md cites compactc-v0.34.0 release notes and does not record that token as the observed compiler version. These identifiers are historical. Their compatibility is unresolved. U0 did not re-verify this pin."
+      "note": "Historical compactc version from the lifecycle corpus.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Lifecycle corpus records this compactc version.",
+          "evidencePath": "deliverables/lifecycle-corpus-2026-09-17/environment.json",
+          "evidenceQuote": "\"compact_compiler\": \"0.31.1\""
+        },
+        {
+          "kind": "found-in",
+          "text": "That observation is dated 2026-09-17.",
+          "evidencePath": "deliverables/lifecycle-corpus-2026-09-17/environment.json",
+          "evidenceQuote": "\"observed_at\": \"2026-09-17T14:44:03.044172+00:00\""
+        },
+        {
+          "kind": "found-in",
+          "text": "The same version is in the network origins file.",
+          "evidencePath": "experiments/moriarty-midnight-network/origins.json",
+          "evidenceQuote": "\"compactCompiler\": \"0.31.1\""
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-19 evidence packet also records compiler 0.31.1.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/evidence-packet.md",
+          "evidenceQuote": "compiler 0.31.1, proved offline on proof server 8.1.0."
+        },
+        {
+          "kind": "found-in",
+          "text": "The lifecycle corpus also records the release zip digest.",
+          "evidencePath": "deliverables/lifecycle-corpus-2026-09-17/environment.json",
+          "evidenceQuote": "\"compactc_v0.31.1_x86_64-unknown-linux-musl.zip\": \"e291b4bab4d4e857707008f8b1c25c2b8e0c843f6c737d0ee6c0d9ac69a6bbfb\""
+        },
+        {
+          "kind": "conflict",
+          "text": "An earlier Compact source commit is a different identifier.",
+          "evidencePath": "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+          "evidenceQuote": "`11e7ec5abeecb99297c4faa74d30ef9adc7b51f3`, and ZKIR commit"
+        },
+        {
+          "kind": "conflict",
+          "text": "The evidence packet cites compactc-v0.34.0 release notes.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/evidence-packet.md",
+          "evidenceQuote": "`compactc-v0.34.0` release notes"
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "zkir",
@@ -35,7 +142,65 @@
         "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
         "docs/MORIARTY-BACKEND-REQUIREMENTS.md"
       ],
-      "note": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md records a 2026-09-19 local inspection of midnight-zkir at 7dff84a685cd8baed2e69a2b66ae63573fe5a575. docs/MORIARTY-BACKEND-REQUIREMENTS.md records the same hash. deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md and deliverables/moriarty-decision-study-2026-09-02.md record zkir-v3 snapshot 2ffe2d17bbb736aec36fb300aeaca679a10d2278. This row selects the hash named by the 2026-09-19 requirements inspection. No file in this repository orders 7dff84a685cd8baed2e69a2b66ae63573fe5a575 relative to 2ffe2d17bbb736aec36fb300aeaca679a10d2278. deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md names another surface only as 5b593d1 and gives no full hash. Compatibility is unresolved. U0 did not re-verify this pin."
+      "note": "Historical ZKIR checkout from the 19 September 2026 inspection.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Requirements inspection names this clean tracked working tree.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+          "evidenceQuote": "clean tracked working tree at `7dff84a685cd8baed2e69a2b66ae63573fe5a575`"
+        },
+        {
+          "kind": "found-in",
+          "text": "That requirements inspection is dated 19 September 2026.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+          "evidenceQuote": "Independent PL semantics supplement, 19 September 2026."
+        },
+        {
+          "kind": "found-in",
+          "text": "Backend requirements record the same ZKIR hash.",
+          "evidencePath": "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+          "evidenceQuote": "ZKIR `7dff84a685cd8baed2e69a2b66ae63573fe5a575`"
+        },
+        {
+          "kind": "found-in",
+          "text": "That backend requirements document is dated 2026-09-19.",
+          "evidencePath": "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+          "evidenceQuote": "Date: 2026-09-19."
+        },
+        {
+          "kind": "conflict",
+          "text": "PR17 records a different zkir-v3 snapshot on the same assessment date.",
+          "evidencePath": "deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md",
+          "evidenceQuote": "| PR base/current `zkir-v3` branch snapshot | `2ffe2d17bbb736aec36fb300aeaca679a10d2278` | Contains a later instruction/type batch, not covered merely by sharing major version 3 |"
+        },
+        {
+          "kind": "conflict",
+          "text": "The PR17 assessment date is 2026-09-19.",
+          "evidencePath": "deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md",
+          "evidenceQuote": "Assessment date: 2026-09-19."
+        },
+        {
+          "kind": "conflict",
+          "text": "The 2026-09-02 decision study records the same other snapshot.",
+          "evidencePath": "deliverables/moriarty-decision-study-2026-09-02.md",
+          "evidenceQuote": "`2ffe2d17bbb736aec36fb300aeaca679a10d2278`;"
+        },
+        {
+          "kind": "conflict",
+          "text": "The decision study date is 2026-09-02.",
+          "evidencePath": "deliverables/moriarty-decision-study-2026-09-02.md",
+          "evidenceQuote": "research cut 2026-09-02"
+        },
+        {
+          "kind": "unresolved",
+          "text": "The 2026-09-19 observations do not uniquely select one ZKIR git object.",
+          "evidencePath": null,
+          "evidenceQuote": null
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "native-proof-system",
@@ -48,7 +213,29 @@
         "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
         "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json"
       ],
-      "note": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md records midnight-zk 695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7. docs/MORIARTY-BACKEND-REQUIREMENTS.md records the same hash as the native proof library. experiments/moriarty-native-ivc-r3/checked-encoding-resources.json records the same hash as backendPin. This is a historical source pin. U0 did not re-verify it."
+      "note": "Historical midnight-zk source checkout.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Requirements inspection names this midnight-zk checkout.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+          "evidenceQuote": "`/home/charl/midnight/midnight-zk` at `695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`"
+        },
+        {
+          "kind": "found-in",
+          "text": "Backend requirements name the same hash as the native proof library.",
+          "evidencePath": "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
+          "evidenceQuote": "native proof library `695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`"
+        },
+        {
+          "kind": "found-in",
+          "text": "Checked encoding resources record the same backend pin.",
+          "evidencePath": "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+          "evidenceQuote": "\"backendPin\": \"695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7\""
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "verifier",
@@ -59,25 +246,158 @@
       "sourceEvidence": [
         "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md"
       ],
-      "note": "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md inspects midnight-zk aggregation/src/ivc/verifier.rs at 695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7. That is the same git object as the native proof library, not a separate verifier release. Ledger proof-verifying build configuration is unresolved. U0 did not re-verify this pin."
+      "note": "Historical IVC verifier source at the midnight-zk checkout.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Integration note inspects ivc/verifier.rs at this git object.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
+          "evidenceQuote": "`midnight-zk@695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7`, `aggregation/src/ivc/verifier.rs`"
+        },
+        {
+          "kind": "unresolved",
+          "text": "That source says verifier context and parameters are crate-private. This is not a separate verifier release.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
+          "evidenceQuote": "Its context/key/parameters are crate-private."
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "proving-keys",
       "name": "Proving keys",
-      "pin": null,
-      "pinKind": "none",
-      "status": "absent",
-      "sourceEvidence": [],
-      "note": "No proving-key commit, version, or content digest was found. Native IVC key fields are described as crate-private, and no persisted proving-key pin is recorded."
+      "pin": "d4fa2e27af43f4947537bbfb56c5834e691906b8b3d14a4552f39aadf9c10122",
+      "pinKind": "sha256",
+      "status": "historical",
+      "sourceEvidence": [
+        "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+        "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json"
+      ],
+      "note": "Loan accrue.prover digest from the 2026-09-17 build receipt.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "2026-09-17 loan receipt records the accrue prover digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/accrue.prover\",\n      \"sha256\": \"d4fa2e27af43f4947537bbfb56c5834e691906b8b3d14a4552f39aadf9c10122\","
+        },
+        {
+          "kind": "found-in",
+          "text": "That receipt names compiler 0.31.1.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"compiler\": \"0.31.1\""
+        },
+        {
+          "kind": "found-in",
+          "text": "That receipt limits scope to compiler key artifacts.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "compiler key artifacts only; no transaction proof was generated"
+        },
+        {
+          "kind": "found-in",
+          "text": "That receipt finished at 2026-09-17T18:14:43.863Z.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"finishedAt\": \"2026-09-17T18:14:43.863Z\""
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-09 loan receipt records the same accrue prover digest.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/accrue.prover\",\n      \"sha256\": \"d4fa2e27af43f4947537bbfb56c5834e691906b8b3d14a4552f39aadf9c10122\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-09 loan receipt finished at 2026-09-09T22:19:18.716Z.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
+          "evidenceQuote": "\"finishedAt\": \"2026-09-09T22:19:18.716Z\""
+        },
+        {
+          "kind": "found-in",
+          "text": "The same 2026-09-17 receipt records a different initialize prover digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/initialize.prover\",\n      \"sha256\": \"7df149a357f8dba27e35aa63d4f813e63ffc0c13bfbc3b8e39a1f0b564800b52\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The same 2026-09-17 receipt records a different settle prover digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/settle.prover\",\n      \"sha256\": \"ec6923461a83bee654a9ab7f52620a511358bdc49a88eb122c74a362250ecbaa\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-09 swap receipt records a different swap prover digest.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/swap-build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/swap.prover\",\n      \"sha256\": \"bf9e92334d9c81e94041eaf9277d5caf3a85ab012369752a193354c8f170ccd8\","
+        },
+        {
+          "kind": "unresolved",
+          "text": "These are per-contract Compact compiler keys, not native IVC keys. Their relation to the native target is unresolved.",
+          "evidencePath": null,
+          "evidenceQuote": null
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "verifier-keys",
       "name": "Verifier keys",
-      "pin": null,
-      "pinKind": "none",
-      "status": "absent",
-      "sourceEvidence": [],
-      "note": "No verifier-key commit, version, or content digest was found. Historical notes describe pinned inner-key hashes and do not record a key digest."
+      "pin": "0b34023794ee8a7c7a9cb9d99c35d457cc4dad4e0757e4c2472eb1c98c059722",
+      "pinKind": "sha256",
+      "status": "historical",
+      "sourceEvidence": [
+        "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+        "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
+        "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/historical-readback-01/probe-result.json"
+      ],
+      "note": "Loan accrue.verifier digest from the 2026-09-17 build receipt.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "2026-09-17 loan receipt records the accrue verifier digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/accrue.verifier\",\n      \"sha256\": \"0b34023794ee8a7c7a9cb9d99c35d457cc4dad4e0757e4c2472eb1c98c059722\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-09 loan receipt records the same accrue verifier digest.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/accrue.verifier\",\n      \"sha256\": \"0b34023794ee8a7c7a9cb9d99c35d457cc4dad4e0757e4c2472eb1c98c059722\","
+        },
+        {
+          "kind": "found-in",
+          "text": "Historical readback lists the same accrue verifier digest.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/local-command-execution-proposal-01/loan/historical-readback-01/probe-result.json",
+          "evidenceQuote": "\"operation\": \"accrue\",\n          \"sha256\": \"0b34023794ee8a7c7a9cb9d99c35d457cc4dad4e0757e4c2472eb1c98c059722\""
+        },
+        {
+          "kind": "found-in",
+          "text": "The same 2026-09-17 receipt records a different initialize verifier digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/initialize.verifier\",\n      \"sha256\": \"5de6c86dbc1692fd9b3741ec9b7e9ee13e4500bca6bf26a557696c9cf4bf5985\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The same 2026-09-17 receipt records a different settle verifier digest.",
+          "evidencePath": "deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/settle.verifier\",\n      \"sha256\": \"325daff0161bcc55b7938dab68e01c5bb93f3a500ed5e3244b5e5ebcae3558ec\","
+        },
+        {
+          "kind": "found-in",
+          "text": "The 2026-09-09 swap receipt records a different swap verifier digest.",
+          "evidencePath": "deliverables/sp05-financial-integration-2026-09-09/full-build-01/swap-build-receipt.json",
+          "evidenceQuote": "\"path\": \"keys/swap.verifier\",\n      \"sha256\": \"d0243f7981b50f06462f96fab997a46ebf74a95136a45998f37632a107c624bb\","
+        },
+        {
+          "kind": "unresolved",
+          "text": "These are per-contract Compact compiler keys, not native IVC keys. Their relation to the native target is unresolved.",
+          "evidencePath": null,
+          "evidenceQuote": null
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "srs-parameters",
@@ -89,7 +409,35 @@
         "deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json",
         "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json"
       ],
-      "note": "Historical k=17 parameter digest 4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74 from experiments/moriarty-native-ivc-r3/checked-encoding-resources.json. That file says the hash does not audit ceremony trust and the record is source-preparation-only. deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json quotes the ledger8 data_provider catalog at a8ab82ba2124c36f92795c683e70bd888bc1d1fb. That catalog lists bls_midnight_2p17 with the same digest. The same catalog records different public-parameter digests for k=14, k=15, k=16, and k=18. The degree used by the ledger and the proof server is unresolved. Ceremony trust is not audited. U0 did not re-verify this pin."
+      "note": "Historical k=17 parameter digest.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Checked encoding resources record this digest for k=17.",
+          "evidencePath": "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+          "evidenceQuote": "\"k\": 17,\n    \"positiveProvingSteps\": 2,\n    \"retainedOutputBytes\": 268435456,"
+        },
+        {
+          "kind": "found-in",
+          "text": "The ledger8 catalog lists bls_midnight_2p17 with this digest.",
+          "evidencePath": "deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json",
+          "evidenceQuote": "bls_midnight_2p17\\\",\\n        hexhash(b\\\"4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74"
+        },
+        {
+          "kind": "unresolved",
+          "text": "The catalog binding does not audit ceremony trust.",
+          "evidencePath": "experiments/moriarty-native-ivc-r3/checked-encoding-resources.json",
+          "evidenceQuote": "hash/catalog binding does not audit ceremony trust"
+        },
+        {
+          "kind": "unresolved",
+          "text": "The same catalog records other parameter degrees.",
+          "evidencePath": "deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json",
+          "evidenceQuote": "public parameters for k=14"
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "ledger",
@@ -102,7 +450,77 @@
         "deliverables/consolidated-design-2026-09-19/evidence-packet.md",
         "docs/MORIARTY-BACKEND-REQUIREMENTS.md"
       ],
-      "note": "This row selects 3fa0d1d15a3cfabd41c806546a006b1ce406b7b2 because deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md names that hash as the historical ledger-8 checkout. docs/MORIARTY-BACKEND-REQUIREMENTS.md and deliverables/consolidated-design-2026-09-19/evidence-packet.md record the same hash. Conflicting historical object a8ab82ba2124c36f92795c683e70bd888bc1d1fb is recorded in deliverables/consolidated-design-2026-09-19/astra-backend-integration.md and docs/MORIARTY-BACKEND-REQUIREMENTS.md. The recency order of 3fa0d1d15a3cfabd41c806546a006b1ce406b7b2 and a8ab82ba2124c36f92795c683e70bd888bc1d1fb is unverified. deliverables/moriarty-decision-study-2026-09-02.md records ledger dependency 9a8777c4d035fc7f38ae286bcf5f8656668efd9f. This row does not order that object. experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json records npm package @midnight-ntwrk/ledger-v8 version 8.1.0, which is not either git commit. Compatibility is unresolved. U0 did not re-verify this pin."
+      "note": "Historical ledger-8 checkout with commit date 2026-09-10.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Requirements inspection names this midnight-ledger checkout.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+          "evidenceQuote": "`/home/charl/midnight/midnight-ledger` at `3fa0d1d15a3cfabd41c806546a006b1ce406b7b2`"
+        },
+        {
+          "kind": "found-in",
+          "text": "That requirements inspection is dated 19 September 2026.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md",
+          "evidenceQuote": "Independent PL semantics supplement, 19 September 2026."
+        },
+        {
+          "kind": "found-in",
+          "text": "The evidence packet records Commit 2026-09-10 for this object.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/evidence-packet.md",
+          "evidenceQuote": "3fa0d1d15a3cfabd41c806546a006b1ce406b7b2`, `ledger/src/verify.rs:1802-1937`, `ledger/src/structure.rs:435-472`, `transient-crypto/src/proofs.rs:566-583`. Commit 2026-09-10"
+        },
+        {
+          "kind": "conflict",
+          "text": "The 2026-09-19 integration note records a different ledger object.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
+          "evidenceQuote": "`midnight-ledger@a8ab82ba2124c36f92795c683e70bd888bc1d1fb`"
+        },
+        {
+          "kind": "conflict",
+          "text": "That integration note is dated 2026-09-19.",
+          "evidencePath": "deliverables/consolidated-design-2026-09-19/astra-backend-integration.md",
+          "evidenceQuote": "2026-09-19. Advisory supplement to `astra-kernel.md`."
+        },
+        {
+          "kind": "conflict",
+          "text": "Source evidence records the same other object as ledger8.",
+          "evidencePath": "deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json",
+          "evidenceQuote": "\"ledger8\": \"a8ab82ba2124c36f92795c683e70bd888bc1d1fb\""
+        },
+        {
+          "kind": "conflict",
+          "text": "That source evidence observation time is 2026-09-10.",
+          "evidencePath": "deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json",
+          "evidenceQuote": "\"atUtc\": \"2026-09-10T18:33:04.318824+00:00\""
+        },
+        {
+          "kind": "conflict",
+          "text": "The 2026-09-02 decision study records an older ledger dependency.",
+          "evidencePath": "deliverables/moriarty-decision-study-2026-09-02.md",
+          "evidenceQuote": "`9a8777c4d035fc7f38ae286bcf5f8656668efd9f`, showing tight backend coupling;"
+        },
+        {
+          "kind": "conflict",
+          "text": "The decision study date is 2026-09-02.",
+          "evidencePath": "deliverables/moriarty-decision-study-2026-09-02.md",
+          "evidenceQuote": "research cut 2026-09-02"
+        },
+        {
+          "kind": "conflict",
+          "text": "Launch runtime pins record ledger-v8 package version 8.1.0.",
+          "evidencePath": "experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json",
+          "evidenceQuote": "\"@midnight-ntwrk/ledger-v8\": {\n    \"version\": \"8.1.0\","
+        },
+        {
+          "kind": "unresolved",
+          "text": "The 2026-09-19 observations do not uniquely select one ledger git object.",
+          "evidencePath": null,
+          "evidenceQuote": null
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "proof-server",
@@ -114,7 +532,23 @@
         "experiments/moriarty-midnight-network/compose.digests.yml",
         "experiments/moriarty-midnight-network/compose.preview.yml"
       ],
-      "note": "Image digest 801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531 for tag 8.1.0 in experiments/moriarty-midnight-network/compose.preview.yml and experiments/moriarty-midnight-network/compose.digests.yml. experiments/moriarty-midnight-network/hello-world/docker-compose.yml records tag 8.1.0 without that digest. This is a historical image pin. U0 did not re-verify it."
+      "note": "Historical proof-server image digest.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Preview compose pins this proof-server image digest.",
+          "evidencePath": "experiments/moriarty-midnight-network/compose.preview.yml",
+          "evidenceQuote": "midnightntwrk/proof-server:8.1.0@sha256:801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531"
+        },
+        {
+          "kind": "found-in",
+          "text": "Digest compose repeats this proof-server image digest.",
+          "evidencePath": "experiments/moriarty-midnight-network/compose.digests.yml",
+          "evidenceQuote": "midnightntwrk/proof-server:8.1.0@sha256:801bbc0340e9e96f16735f77b523f23c7459e3359842f7c79c2c53f4e994d531"
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     },
     {
       "component": "k-reference-toolchain",
@@ -125,19 +559,53 @@
       "sourceEvidence": [
         "experiments/moriarty-language/formal/k/toolchain.lock.json"
       ],
-      "note": "experiments/moriarty-language/formal/k/toolchain.lock.json records K version 7.1.337 revision 4a46d1231473b599c699160132fd6e76a5c46406 and kompile sha256 386e0502d63a10a6b0e9ddb46ef842a97be7bc61c4d4149ce66f51b3f3548632. experiments/moriarty-language/formal/k/expression-toolchain.lock.json records a Debian build of version 7.1.337 with kompile sha256 71fc9e9d890bdf09df7d9f33bcf247202ccd73cfe669457b743ed62aa7314fbd and no revision. The executable digests conflict. This row selects the reference revision. U0 did not re-verify this pin."
+      "note": "Historical K revision from the reference lockfile.",
+      "claims": [
+        {
+          "kind": "found-in",
+          "text": "Reference lock records this K revision.",
+          "evidencePath": "experiments/moriarty-language/formal/k/toolchain.lock.json",
+          "evidenceQuote": "\"revision\": \"4a46d1231473b599c699160132fd6e76a5c46406\""
+        },
+        {
+          "kind": "found-in",
+          "text": "Reference lock records K version 7.1.337.",
+          "evidencePath": "experiments/moriarty-language/formal/k/toolchain.lock.json",
+          "evidenceQuote": "\"version\": \"7.1.337\""
+        },
+        {
+          "kind": "found-in",
+          "text": "Reference lock records this kompile digest.",
+          "evidencePath": "experiments/moriarty-language/formal/k/toolchain.lock.json",
+          "evidenceQuote": "\"sha256\": \"386e0502d63a10a6b0e9ddb46ef842a97be7bc61c4d4149ce66f51b3f3548632\""
+        },
+        {
+          "kind": "conflict",
+          "text": "Expression lock records a different kompile digest.",
+          "evidencePath": "experiments/moriarty-language/formal/k/expression-toolchain.lock.json",
+          "evidenceQuote": "\"sha256\": \"71fc9e9d890bdf09df7d9f33bcf247202ccd73cfe669457b743ed62aa7314fbd\""
+        },
+        {
+          "kind": "conflict",
+          "text": "Expression lock describes a Debian build with no revision.",
+          "evidencePath": "experiments/moriarty-language/formal/k/expression-toolchain.lock.json",
+          "evidenceQuote": "New Debian K7.1.337 build; not historical Nix artifact"
+        }
+      ],
+      "searchTerms": [],
+      "excludedHits": []
     }
   ],
   "unresolved": [
-    "The historical contract/inner transcript mismatch is unresolved. deliverables/consolidated-design-2026-09-19/fable-kernel.md records that ledger-accepted proofs use a Blake2b transcript that the PR 738 verifier cannot read. deliverables/consolidated-design-2026-09-19/astra-backend-integration.md records Poseidon-transcript proof preparation in the native verifier. docs/MORIARTY-BACKEND-REQUIREMENTS.md ZR01 records that separate local pins and this mismatch are known, and that a comprehensive compatible release tuple is unknown.",
-    "Ledger hashes conflict. This ledger selects 3fa0d1d15a3cfabd41c806546a006b1ce406b7b2 because deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md names that hash as the historical ledger-8 checkout. Also recorded: a8ab82ba2124c36f92795c683e70bd888bc1d1fb in deliverables/consolidated-design-2026-09-19/astra-backend-integration.md, and 9a8777c4d035fc7f38ae286bcf5f8656668efd9f in deliverables/moriarty-decision-study-2026-09-02.md. The recency order of these ledger objects is unverified. experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json records npm package @midnight-ntwrk/ledger-v8 version 8.1.0, which is a separate identifier. Compatibility among these pins is unresolved.",
-    "ZKIR hashes conflict. This ledger selects 7dff84a685cd8baed2e69a2b66ae63573fe5a575 because deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md records that local inspection hash. Also recorded: 2ffe2d17bbb736aec36fb300aeaca679a10d2278 in deliverables/moriarty-decision-study-2026-09-02.md and deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md. The recency order of these two objects is unverified. deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md names a different surface as 5b593d1 and does not give a full hash. Compatibility is unresolved.",
-    "Compact compiler identifiers conflict. This ledger selects observed version 0.31.1 recorded in deliverables/lifecycle-corpus-2026-09-17/environment.json. Also recorded: Compact source commit 11e7ec5abeecb99297c4faa74d30ef9adc7b51f3 in deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md. deliverables/consolidated-design-2026-09-19/evidence-packet.md cites compactc-v0.34.0 release notes. Compatibility is unresolved.",
-    "K reference executable identity conflicts. This ledger selects revision 4a46d1231473b599c699160132fd6e76a5c46406 for version 7.1.337 recorded in experiments/moriarty-language/formal/k/toolchain.lock.json. That file records kompile sha256 386e0502d63a10a6b0e9ddb46ef842a97be7bc61c4d4149ce66f51b3f3548632. experiments/moriarty-language/formal/k/expression-toolchain.lock.json records a Debian build of version 7.1.337 with kompile sha256 71fc9e9d890bdf09df7d9f33bcf247202ccd73cfe669457b743ed62aa7314fbd and no revision. The executable digests conflict. Compatibility is unresolved.",
-    "SRS identity is unresolved beyond a historical k=17 digest. deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json quotes a ledger8 data_provider catalog that lists bls_midnight_2p17 with that same digest and different digests for other degrees. Ceremony trust is not audited. The degree used by the ledger and the proof server is unknown.",
-    "Proving keys and verifier keys have no content pin in the repository.",
-    "The Moriarty compiler has no version, commit, or content-digest pin.",
-    "The verifier row uses the native proof library git object recorded in deliverables/consolidated-design-2026-09-19/astra-backend-integration.md. It is not a separate verifier release. Ledger proof-verifying build configuration is unresolved.",
-    "No pin in this ledger was re-verified. compatibleTupleEstablished is false."
+    "Ledger-accepted proofs use a Blake2b transcript that the PR 738 verifier cannot read. deliverables/consolidated-design-2026-09-19/fable-kernel.md records that limit. deliverables/consolidated-design-2026-09-19/astra-backend-integration.md records Poseidon-transcript proof preparation in the native verifier. docs/MORIARTY-BACKEND-REQUIREMENTS.md records that a compatible release tuple is unknown.",
+    "This row keeps 3fa0d1d15a3cfabd41c806546a006b1ce406b7b2. deliverables/consolidated-design-2026-09-19/evidence-packet.md records Commit 2026-09-10 for that object. deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md names it as the inspected midnight-ledger checkout on 19 September 2026. The same observation date also records a8ab82ba2124c36f92795c683e70bd888bc1d1fb in deliverables/consolidated-design-2026-09-19/astra-backend-integration.md. deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json records that second object at 2026-09-10T18:33:04Z. The 2026-09-19 observations do not uniquely select one ledger git object. deliverables/moriarty-decision-study-2026-09-02.md records the older object 9a8777c4d035fc7f38ae286bcf5f8656668efd9f. experiments/moriarty-midnight-financial/ledger/launch-runtime-pins.json records @midnight-ntwrk/ledger-v8 version 8.1.0.",
+    "This row keeps 7dff84a685cd8baed2e69a2b66ae63573fe5a575. deliverables/consolidated-design-2026-09-19/astra-backend-requirements.md records that clean tracked working tree on 19 September 2026. docs/MORIARTY-BACKEND-REQUIREMENTS.md records the same hash. deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md records 2ffe2d17bbb736aec36fb300aeaca679a10d2278 with assessment date 2026-09-19. deliverables/moriarty-decision-study-2026-09-02.md records that same object on 2026-09-02. The 2026-09-19 observations do not uniquely select one ZKIR git object. deliverables/aeon-study-2026-09-19/PR17-APPLICABILITY.md also names an older surface as 5b593d1.",
+    "This row keeps observed compactc version 0.31.1 from deliverables/lifecycle-corpus-2026-09-17/environment.json. deliverables/consolidated-design-2026-09-19/evidence-packet.md also records compiler 0.31.1. That environment file records release zip sha256 e291b4bab4d4e857707008f8b1c25c2b8e0c843f6c737d0ee6c0d9ac69a6bbfb. deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md records Compact source commit 11e7ec5abeecb99297c4faa74d30ef9adc7b51f3. deliverables/consolidated-design-2026-09-19/evidence-packet.md cites compactc-v0.34.0 release notes.",
+    "This row keeps revision 4a46d1231473b599c699160132fd6e76a5c46406 for version 7.1.337 in experiments/moriarty-language/formal/k/toolchain.lock.json. That file records kompile sha256 386e0502d63a10a6b0e9ddb46ef842a97be7bc61c4d4149ce66f51b3f3548632. experiments/moriarty-language/formal/k/expression-toolchain.lock.json records a Debian build of version 7.1.337 with kompile sha256 71fc9e9d890bdf09df7d9f33bcf247202ccd73cfe669457b743ed62aa7314fbd and no revision.",
+    "The row pin is the historical k=17 digest 4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74 in experiments/moriarty-native-ivc-r3/checked-encoding-resources.json. deliverables/sp04-native-finalizer-source-2026-09-10/source-evidence.json quotes a ledger8 catalog that lists bls_midnight_2p17 with that digest and other degrees. Ceremony trust is not audited. The degree used by the ledger and the proof server is unknown.",
+    "Proving-keys pin d4fa2e27af43f4947537bbfb56c5834e691906b8b3d14a4552f39aadf9c10122 and verifier-keys pin 0b34023794ee8a7c7a9cb9d99c35d457cc4dad4e0757e4c2472eb1c98c059722 are loan accrue key digests. deliverables/preview-loan-2026-09-17/build-run01/build-receipt.json records both, with compiler 0.31.1, and says the proof scope is compiler key artifacts only. deliverables/sp05-financial-integration-2026-09-09/full-build-01/loan-build-receipt.json records the same two digests. deliverables/sp05-financial-integration-2026-09-09/full-build-01/swap-build-receipt.json records other per-contract key digests. These are Compact compiler keys, not native IVC keys. Their relation to the native target is unresolved.",
+    "The Moriarty compiler row stays absent. deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md records clean-reproduction checkout 006c4d91ed09c0a89261861b6e7203b3efa3e2df. deliverables/moriarty-work-package-council-advisory-2026-09-03.md records that object as a frozen base and records frozen head f702692895e8be811fb9eac2a1c0bfafca5dea70. Those commits are repository checkouts, not compiler artifact pins.",
+    "The verifier row uses native proof library git object 695351f1cdb3909affd1c89fef0a5eb3e9fa3ab7 from deliverables/consolidated-design-2026-09-19/astra-backend-integration.md. It is not a separate verifier release. Ledger proof-verifying build configuration is unresolved.",
+    "No row establishes a compatible tuple. compatibleTupleEstablished is false."
   ]
 }
