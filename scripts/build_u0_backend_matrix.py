@@ -52,26 +52,40 @@ class TableFormatError(Exception):
 def split_cells(line: str) -> list[str]:
     """Split a markdown row on unescaped pipes.
 
-    Only the two-character sequence ``\\|`` is an escape, and it yields one
-    pipe. Every other backslash stays in the cell text.
+    A pipe is escaped only when an odd number of backslashes precedes it.
+    An even number leaves the pipe as a column delimiter. Each pair of
+    backslashes contributes one literal backslash to the cell text.
     """
 
     cells: list[str] = []
     current: list[str] = []
     index = 0
-    while index < len(line):
+    length = len(line)
+    while index < length:
         char = line[index]
-        if char == "\\" and index + 1 < len(line) and line[index + 1] == "|":
-            current.append("|")
-            index += 2
-            continue
-        if char == "|":
-            cells.append("".join(current).strip())
-            current = []
+        if char != "\\":
+            if char == "|":
+                cells.append("".join(current).strip())
+                current = []
+            else:
+                current.append(char)
             index += 1
             continue
-        current.append(char)
-        index += 1
+        count = 0
+        while index < length and line[index] == "\\":
+            count += 1
+            index += 1
+        if index < length and line[index] == "|":
+            pairs, escaped = divmod(count, 2)
+            current.extend("\\" * pairs)
+            index += 1
+            if escaped:
+                current.append("|")
+                continue
+            cells.append("".join(current).strip())
+            current = []
+            continue
+        current.extend("\\" * count)
     cells.append("".join(current).strip())
     if cells and cells[0] == "":
         cells.pop(0)
@@ -250,6 +264,16 @@ def build_matrix(source_bytes: bytes) -> dict[str, Any]:
         raise TableFormatError(
             f"FAIL: responsibility table ids outside requirement set: {names}"
         )
+    zr_ids = set(ZR_IDS)
+    for row in rows:
+        if row["family"] != "MNR":
+            continue
+        outside = [refined for refined in row["refines"] if refined not in zr_ids]
+        if outside:
+            names = ", ".join(outside)
+            raise TableFormatError(
+                f"FAIL: refines id outside ZR01-ZR16: {row['id']}: {names}"
+            )
     return {
         "schemaVersion": SCHEMA_VERSION,
         "source": SOURCE_REL,
@@ -279,8 +303,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     root = args.root.resolve()
     source = root / SOURCE_REL
+    target = root / MATRIX_REL
     if not source.is_file():
         print(f"blocked: missing {SOURCE_REL}")
+        return 2
+    if args.check and not target.is_file():
+        print(f"blocked: missing {MATRIX_REL}")
         return 2
     try:
         payload = build_matrix(source.read_bytes())
@@ -288,11 +316,7 @@ def main(argv: list[str] | None = None) -> int:
         print(exc.message)
         return 1
     rendered = canonical_matrix(payload).encode("utf-8")
-    target = root / MATRIX_REL
     if args.check:
-        if not target.is_file():
-            print(f"FAIL: committed matrix missing: {MATRIX_REL}")
-            return 1
         if target.read_bytes() != rendered:
             print("FAIL: backend matrix drifted")
             return 1

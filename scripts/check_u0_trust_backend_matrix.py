@@ -56,6 +56,7 @@ class PremiseContract(NamedTuple):
     statement: str
     related_ids: tuple[str, ...]
     claims: tuple[str, ...]
+    topics: tuple[str, ...]
 
 
 PREMISE_CONTRACT = (
@@ -72,6 +73,7 @@ PREMISE_CONTRACT = (
         ),
         ("UNI-003", "UNI-017", "ZR01"),
         ("ZKIRv3", "a comprehensive compatible release tuple is unknown."),
+        ("compatible released tuple",),
     ),
     PremiseContract(
         "TP02",
@@ -89,6 +91,7 @@ PREMISE_CONTRACT = (
             "comprehensive Midnight recursion around March 2027.",
             "independently verified release",
         ),
+        ("native recursive", "recursively composing"),
     ),
     PremiseContract(
         "TP03",
@@ -103,6 +106,7 @@ PREMISE_CONTRACT = (
         ),
         ("MPLR-010", "UNI-007", "ZR03"),
         ("signers remain explicit trust assumptions", "oracle honesty"),
+        ("predecessors, observations", "observation boundary", "finality"),
     ),
     PremiseContract(
         "TP04",
@@ -110,13 +114,22 @@ PREMISE_CONTRACT = (
         "accepted-assumption",
         (
             "Federation trust is optional. "
-            "Direct Midnight use has no federation requirement, "
-            "and Moriarty can run on Midnight without the federated kernel. "
-            "When a kernel is used, bare-threshold compromise remains an explicit trust boundary. "
+            "Moriarty can also run on Midnight without this federation. "
+            "The federated kernel coordinates optional services under signed intention; "
+            "it cannot authorize programs or replace native proofs. "
+            "When a kernel is used, compromised bare-threshold enforcement "
+            "remains an explicit trust boundary. "
             "ZR14, UNI-011 and MPLR-030 record that boundary."
         ),
         ("MPLR-030", "UNI-011", "ZR14"),
-        ("no federation requirement", "remains an explicit trust boundary."),
+        (
+            "Moriarty can also run on Midnight without this federation.",
+            "remains an explicit trust boundary.",
+        ),
+        (
+            "federated kernel",
+            "threshold, hardware, observation and recovery assumptions",
+        ),
     ),
     PremiseContract(
         "TP05",
@@ -131,6 +144,7 @@ PREMISE_CONTRACT = (
         ),
         ("MPLR-010", "UNI-007", "UNI-008"),
         ("Timeout is not evidence of nonexecution.", "another chain did not execute"),
+        ("mere timeout", "proof of nonexecution", "unresolved outcomes", "Refunds"),
     ),
     PremiseContract(
         "TP06",
@@ -149,6 +163,7 @@ PREMISE_CONTRACT = (
             "explicit liveness assumption",
             "not a private handoff theorem.",
         ),
+        ("witness needed to continue", "authenticated state domain"),
     ),
     PremiseContract(
         "TP07",
@@ -165,6 +180,7 @@ PREMISE_CONTRACT = (
             "authentication occurs in the circuit, a bound ledger primitive",
             "another explicitly justified native boundary.",
         ),
+        ("signed intent", "signed intention", "signed constraint"),
     ),
 )
 
@@ -260,12 +276,38 @@ def quoted_strings(premise: dict[str, Any]) -> list[str]:
     return quotes
 
 
+def support_phrases(premise_id: str) -> tuple[str, ...]:
+    for item in PREMISE_CONTRACT:
+        if item.id == premise_id:
+            return item.claims + item.topics
+    return ()
+
+
+def quote_ties_related_id(quote: str, related_id: str, phrases: tuple[str, ...]) -> bool:
+    """Require the id and a claim or topic outside that id's own heading or title."""
+
+    if related_id not in quote or not phrases:
+        return False
+    reduced = re.sub(
+        rf"Requirement:\s+{re.escape(related_id)}\b[^\n|]*",
+        "\n",
+        quote,
+    )
+    reduced = re.sub(
+        rf"{re.escape(related_id)} \u2014 [^\n|]*",
+        "\n",
+        reduced,
+    )
+    return any(phrase in reduced for phrase in phrases)
+
+
 def related_id_failures(
     premise_id: str,
     related_ids: list[Any],
     quotes: list[str],
     matrix_ids: set[str] | None,
     catalog: set[str],
+    phrases: tuple[str, ...],
 ) -> list[str]:
     failures: list[str] = []
     for related_id in related_ids:
@@ -285,8 +327,16 @@ def related_id_failures(
                 )
         else:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not a known id family")
-        if not any(related_id in quote for quote in quotes):
+        quotes_with_id = [quote for quote in quotes if related_id in quote]
+        if not quotes_with_id:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not in a cited quote")
+        elif phrases and not any(
+            quote_ties_related_id(quote, related_id, phrases) for quote in quotes_with_id
+        ):
+            failures.append(
+                f"FAIL: {premise_id} related id {related_id} "
+                "is not tied to a premise claim in a cited quote"
+            )
     return failures
 
 
@@ -366,6 +416,7 @@ def premise_contract_failures(
                 quoted_strings(premise),
                 matrix_ids,
                 catalog,
+                support_phrases(premise_id),
             )
         )
     return failures
@@ -437,6 +488,62 @@ def quote_failures(root: Path, payload: Any) -> list[str]:
     return failures
 
 
+def required_key_order(node: Any) -> list[str] | None:
+    if not isinstance(node, dict):
+        return None
+    required = node.get("required")
+    if not isinstance(required, list) or not all(isinstance(key, str) for key in required):
+        return None
+    return list(required)
+
+
+def key_order_failures(payload: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    definitions = schema.get("$defs")
+    if not isinstance(definitions, dict):
+        definitions = {}
+    root_keys = required_key_order(schema)
+    premise_keys = required_key_order(definitions.get("premise"))
+    ref_keys = required_key_order(definitions.get("sourceRef"))
+    if root_keys is not None and list(payload) != root_keys:
+        failures.append("FAIL: trust premises key order does not match the schema")
+    premises = payload.get("premises")
+    if not isinstance(premises, list) or premise_keys is None:
+        return failures
+    for premise in premises:
+        if not isinstance(premise, dict):
+            continue
+        premise_id = premise.get("id")
+        label = premise_id if isinstance(premise_id, str) else "<unknown>"
+        if list(premise) != premise_keys:
+            failures.append(f"FAIL: {label} key order does not match the schema")
+        refs = premise.get("sourceRefs")
+        if not isinstance(refs, list) or ref_keys is None:
+            continue
+        for ref in refs:
+            if isinstance(ref, dict) and list(ref) != ref_keys:
+                failures.append(
+                    f"FAIL: {label} source ref key order does not match the schema"
+                )
+    return failures
+
+
+def canonical_premises(payload: Any) -> str:
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
+
+
+def serialization_failures(path: Path, payload: Any, schema: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    failures: list[str] = []
+    if isinstance(schema, dict):
+        failures.extend(key_order_failures(payload, schema))
+    rendered = canonical_premises(payload).encode("utf-8")
+    if path.read_bytes() != rendered:
+        failures.append("FAIL: trust premises are not canonically serialised")
+    return failures
+
+
 def check(root: Path) -> tuple[int, list[str]]:
     missing = [relative for relative in REQUIRED_PATHS if not (root / relative).is_file()]
     if missing:
@@ -478,6 +585,8 @@ def check(root: Path) -> tuple[int, list[str]]:
         if (root / MATRIX_REL).read_bytes() != fresh:
             failures.append("FAIL: backend matrix drifted")
         parsed_ids = [row["id"] for row in parsed["rows"]]
+        # build_matrix raises TableFormatError unless the parsed ids are exactly
+        # EXPECTED_IDS. Keep this as a defensive assertion of that guarantee.
         if parsed_ids != EXPECTED_IDS:
             failures.append(
                 "FAIL: source document ids are not exactly ZR01-ZR16 and MNR01-MNR08"
@@ -499,6 +608,14 @@ def check(root: Path) -> tuple[int, list[str]]:
         )
     failures.extend(status_failures(matrix))
     failures.extend(quote_failures(root, premises))
+    if isinstance(premises, dict):
+        failures.extend(
+            serialization_failures(
+                root / TRUST_REL,
+                premises,
+                trust_schema if isinstance(trust_schema, dict) else None,
+            )
+        )
     matrix_ids = {str(row["id"]) for row in parsed["rows"]} if parsed is not None else None
     failures.extend(premise_contract_failures(root, premises, matrix_ids))
 
