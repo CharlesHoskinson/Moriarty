@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -48,30 +49,94 @@ def load(root: Path, rel: Path) -> dict:
     return json.loads((root / rel).read_text(encoding="utf-8"))
 
 
+OK_LINE = (
+    "OK: 84 leaf fields, 1 present, 9 partial, 74 absent. "
+    "absence means not found by this recorded search; it is not a proof of non-realisation\n"
+)
+
+
 def embedding_row(payload: dict, field: str) -> dict:
     return next(row for row in payload["rows"] if row["schemaField"] == field)
+
+
+def replace_row(payload: dict, field: str, row: dict) -> None:
+    payload["rows"] = [
+        row if item["schemaField"] == field else item for item in payload["rows"]
+    ]
+
+
+def citation_row(row: dict, realisation: str) -> dict:
+    return {
+        "schemaField": row["schemaField"],
+        "sourceFile": None,
+        "sourceSymbol": None,
+        "sourceContext": None,
+        "coreFile": None,
+        "coreSymbol": None,
+        "coreContext": None,
+        "realisation": realisation,
+        "note": row["note"],
+    }
+
+
+def absent_row(row: dict, terms: list[str], note: str) -> dict:
+    return {
+        "schemaField": row["schemaField"],
+        "sourceFile": None,
+        "sourceSymbol": None,
+        "sourceContext": None,
+        "coreFile": None,
+        "coreSymbol": None,
+        "coreContext": None,
+        "realisation": "absent",
+        "searchTerms": terms,
+        "note": note,
+    }
+
+
+def materialize_language(root: Path) -> None:
+    link = root / "experiments" / "moriarty-language"
+    if not link.is_symlink():
+        return
+    target = link.resolve()
+    link.unlink()
+    shutil.copytree(target, link, symlinks=True)
 
 
 def test_real_artifacts_pass() -> None:
     process = run_checker()
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == "OK: 84 leaf fields, 4 present, 80 absent\n"
+    assert process.stdout == OK_LINE
     embeddings = json.loads((MORIARTY_ROOT / EMBEDDINGS).read_text(encoding="utf-8"))
+    assert embeddings["absenceSearch"]["limitation"] == (
+        "absence means not found by this recorded search; it is not a proof of non-realisation"
+    )
     consumed = embedding_row(embeddings, "authority.consumed")
-    assert consumed["sourceSymbol"] == "financialRead.allowance_spent"
-    assert consumed["coreSymbol"] == "Allowance.spent"
-    assert "Classification: partial-proxy." in consumed["note"]
-    assert "Presence rule:" in consumed["note"]
+    assert consumed["realisation"] == "partial"
+    assert consumed["sourceSymbol"] == "allowance_spent"
+    assert consumed["sourceContext"] == "financialRead"
+    assert consumed["coreSymbol"] == "spent"
+    assert consumed["coreContext"] == "Allowance"
+    assert "Exists:" in consumed["note"]
+    assert "Missing:" in consumed["note"]
     remaining = embedding_row(embeddings, "authority.remaining")
-    assert remaining["coreSymbol"] == "Allowance.remaining"
+    assert remaining["coreSymbol"] == "remaining"
+    assert remaining["coreContext"] == "Allowance"
     replay = embedding_row(embeddings, "authority.replayState")
-    assert replay["coreSymbol"] == "LifecycleState.usedTransferIds"
+    assert replay["coreSymbol"] == "usedTransferIds"
+    assert replay["coreContext"] == "LifecycleState"
     profile = embedding_row(embeddings, "profiles.semanticProfile")
-    assert profile["sourceSymbol"] == "ProfileDecl.value"
-    assert "Classification: exact-field." in profile["note"]
+    assert profile["realisation"] == "present"
+    assert profile["sourceSymbol"] == "value"
+    assert profile["sourceContext"] == "ProfileDecl"
+    debtor = embedding_row(embeddings, "liabilities.opening[].debtor")
+    assert debtor["realisation"] == "partial"
+    assert debtor["coreSymbol"] == "debtor"
+    assert debtor["coreContext"] == "LifecycleObligation"
     program = embedding_row(embeddings, "programIdentity.programId")
-    assert program["present"] is False
+    assert program["realisation"] == "absent"
     assert program["sourceSymbol"] is None
+    assert "programId" in program["searchTerms"]
     assert process.stderr == ""
 
 
@@ -110,15 +175,15 @@ def test_partial_identifier_citation_fails(tmp_path: Path) -> None:
     path = root / EMBEDDINGS
     payload = load(root, EMBEDDINGS)
     target = embedding_row(payload, "authority.remaining")
-    target["coreSymbol"] = "Allowance.remain"
+    target["coreSymbol"] = "remain"
     write_json(path, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
     assert (
-        "FAIL: authority.remaining core symbol Allowance.remain does not occur as a declaration in "
-        "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+        "FAIL: authority.remaining core symbol remain does not occur as a declaration in "
+        "Allowance in experiments/moriarty-language/src/successor/financial-lifecycle.ts"
     ) in process.stdout
 
 
@@ -242,14 +307,18 @@ def test_removed_mandatory_field_fails(tmp_path: Path) -> None:
 def test_profile_version_constant_is_not_program_identity(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
-    core = embedding_row(payload, "programIdentity.coreRef")
-    core["present"] = True
+    core = citation_row(embedding_row(payload, "programIdentity.coreRef"), "present")
     core["coreFile"] = LANGUAGE.as_posix()
     core["coreSymbol"] = "LIFECYCLE_VERSION"
-    source = embedding_row(payload, "programIdentity.sourceRef")
-    source["present"] = True
+    core["coreContext"] = "LIFECYCLE_VERSION"
+    core["note"] = "LIFECYCLE_VERSION is a profile version."
+    source = citation_row(embedding_row(payload, "programIdentity.sourceRef"), "present")
     source["sourceFile"] = FRONTEND.as_posix()
     source["sourceSymbol"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
+    source["sourceContext"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
+    source["note"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE is a profile version."
+    replace_row(payload, "programIdentity.coreRef", core)
+    replace_row(payload, "programIdentity.sourceRef", source)
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
@@ -344,31 +413,28 @@ def test_work_spent_does_not_fill_authority(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
     target = embedding_row(payload, "authority.consumed")
-    target["coreSymbol"] = "Work.spent"
-    target["note"] = target["note"].replace("Allowance.spent", "Work.spent")
+    target["coreContext"] = "Balance"
+    target["coreSymbol"] = "spent"
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
     assert (
-        "FAIL: authority.consumed core symbol Work.spent "
-        "is not a field of the record that fills that slot"
+        "FAIL: authority.consumed core symbol spent does not occur as a declaration in "
+        "Balance in experiments/moriarty-language/src/successor/financial-lifecycle.ts"
     ) in process.stdout
 
 
 def test_comment_only_citation_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
-    target = embedding_row(payload, "circuitIdentity.circuitId")
-    target["present"] = True
+    target = citation_row(embedding_row(payload, "circuitIdentity.circuitId"), "present")
     target["coreFile"] = LANGUAGE.as_posix()
     target["coreSymbol"] = "signing"
-    target["note"] = (
-        "Presence rule: a row is present only when every cited symbol is a declared "
-        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
-        "Classification: exact-field. signing"
-    )
+    target["coreContext"] = "Allowance"
+    target["note"] = "signing appears only in a file comment."
+    replace_row(payload, "circuitIdentity.circuitId", target)
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
@@ -376,80 +442,64 @@ def test_comment_only_citation_fails(tmp_path: Path) -> None:
     assert process.returncode == 1
     assert (
         "FAIL: circuitIdentity.circuitId core symbol signing does not occur as a declaration in "
-        "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+        "Allowance in experiments/moriarty-language/src/successor/financial-lifecycle.ts"
     ) in process.stdout
 
 
 def test_false_absence_of_realised_authority_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
-    target = embedding_row(payload, "authority.consumed")
-    target["present"] = False
-    target["sourceFile"] = None
-    target["sourceSymbol"] = None
-    target["coreFile"] = None
-    target["coreSymbol"] = None
-    target["note"] = (
-        "Presence rule: a row is present only when every cited symbol is a declared "
-        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
-        "No allowance or spent field exists. "
-        "|| evidence declares=- missing=consumed,allowance_spent,spent"
+    target = absent_row(
+        embedding_row(payload, "authority.consumed"),
+        ["authority.consumed", "spent", "allowance_spent"],
+        "No allowance or spent field exists.",
     )
+    replace_row(payload, "authority.consumed", target)
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
-    assert (
-        "FAIL: false absence: authority.consumed is realised by Allowance.spent in "
-        "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
-    ) in process.stdout
-    assert (
-        "FAIL: false absence: authority.consumed is realised by financialRead.allowance_spent in "
-        "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf"
-    ) in process.stdout
+    assert "FAIL: authority.consumed search term 'spent' is declared" in process.stdout
+    assert "FAIL: authority.consumed search term 'allowance_spent' is declared" in process.stdout
 
 
 def test_false_absence_denies_declared_leaf_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
-    target = embedding_row(payload, "liabilities.opening[].debtor")
-    target["note"] = (
-        "Presence rule: a row is present only when every cited symbol is a declared "
-        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
-        "No debtor exists in source/5 or core/1. "
-        "|| evidence declares=- missing=debtor"
+    target = absent_row(
+        embedding_row(payload, "liabilities.opening[].debtor"),
+        ["liabilities.opening[].debtor", "debtor"],
+        "No debtor exists in source/5 or core/1.",
     )
+    replace_row(payload, "liabilities.opening[].debtor", target)
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
     assert (
-        "FAIL: false absence: liabilities.opening[].debtor claims debtor is missing but it is declared"
+        "FAIL: liabilities.opening[].debtor search term 'debtor' is declared"
     ) in process.stdout
 
 
 def test_imported_profile_constant_is_not_identity(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
     payload = load(root, EMBEDDINGS)
-    core = embedding_row(payload, "programIdentity.coreRef")
-    core["present"] = True
+    core = citation_row(embedding_row(payload, "programIdentity.coreRef"), "present")
     core["coreFile"] = "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts"
     core["coreSymbol"] = "LIFECYCLE_VERSION"
-    core["note"] = (
-        "Presence rule: a row is present only when every cited symbol is a declared "
-        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
-        "Classification: exact-field. LIFECYCLE_VERSION"
+    core["coreContext"] = "LIFECYCLE_VERSION"
+    core["note"] = "LIFECYCLE_VERSION is a profile version."
+    source = citation_row(embedding_row(payload, "profiles.semanticProfile"), "present")
+    source["sourceFile"] = (
+        "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts"
     )
-    source = embedding_row(payload, "profiles.semanticProfile")
-    source["sourceFile"] = "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts"
     source["sourceSymbol"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
-    source["note"] = (
-        "Presence rule: a row is present only when every cited symbol is a declared "
-        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
-        "Classification: exact-field. FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
-    )
+    source["sourceContext"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
+    source["note"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE is a profile version."
+    replace_row(payload, "programIdentity.coreRef", core)
+    replace_row(payload, "profiles.semanticProfile", source)
     write_json(root / EMBEDDINGS, payload)
 
     process = run_checker("--root", str(root))
@@ -491,3 +541,80 @@ def test_noncanonical_indent_fails(tmp_path: Path) -> None:
         "FAIL: deliverables/u0-semantic-contract-2026-09-23/source-core-embeddings.json "
         "is not canonical UTF-8 JSON (2-space indent, trailing newline)"
     ) in process.stdout
+
+
+def test_comment_only_mention_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    materialize_language(root)
+    path = root / "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    text = path.read_text(encoding="utf-8")
+    old = "export interface Allowance {\n  party: Identifier;\n"
+    new = "export interface Allowance {\n  // ghostSpent: Identifier;\n  party: Identifier;\n"
+    assert old in text
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["coreSymbol"] = "ghostSpent"
+    target["coreContext"] = "Allowance"
+    target["note"] = (
+        "Exists: ghostSpent is named only in a comment inside Allowance. "
+        "Missing: Allowance does not declare ghostSpent."
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: authority.consumed core symbol ghostSpent does not occur as a declaration in "
+        "Allowance in experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    ) in process.stdout
+
+
+def test_same_leaf_in_different_record_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = citation_row(embedding_row(payload, "effects.fees[].amount"), "partial")
+    target["coreFile"] = LANGUAGE.as_posix()
+    target["coreSymbol"] = "amount"
+    target["coreContext"] = "Allowance"
+    target["note"] = (
+        "Exists: amount is a field of Balance. "
+        "Missing: Allowance does not declare amount, so this is not a fee amount."
+    )
+    replace_row(payload, "effects.fees[].amount", target)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: effects.fees[].amount core symbol amount does not occur as a declaration in "
+        "Allowance in experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    ) in process.stdout
+
+
+def test_absent_search_term_declared_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "circuitIdentity.circuitId")
+    target["searchTerms"] = ["circuitIdentity.circuitId", "spent"]
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: circuitIdentity.circuitId search term 'spent' is declared" in process.stdout
+
+
+def test_partial_empty_note_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["note"] = ""
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: authority.consumed partial note is empty" in process.stdout
