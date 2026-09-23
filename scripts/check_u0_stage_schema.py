@@ -1,31 +1,28 @@
 #!/usr/bin/env python3
 """Check the U0 stage relation, embeddings, and judgments. Proves only C1-C9.
-
 Absence means not found by the recorded search. It is not a proof of non-realisation.
 Semantic adequacy of a cited declaration is a reviewed claim. The checker proves
-only declaration, context, and profile membership.
-
-Parser subset, after comments are removed. TypeScript and K string literals are
-removed. EBNF double quotes are kept because they are terminals.
-TypeScript: ``interface`` and ``type X = {...}`` members that start a depth-0
-``;`` segment, plus top-level function, const, class, type, and interface names.
-Ternaries, case labels, parameters, and locals are not declarations.
-EBNF: ``name =`` declares ``name`` and its quoted identifier terminals. A
-referenced nonterminal is not a declaration. K: ``syntax Sort ::=`` constructors
-belong to Sort, and ``<cell>`` belongs to that cell.
+only declaration, context, and profile membership. C1 requires stageSchemaSha256
+to equal the sha256 of the schema bytes. C4 requires every cited file and every
+profileFiles entry, with no '.' or '..' segment, to resolve under an absenceSearch
+root. A missing root or file is blocked.
+Parser subset, after comments are removed. TypeScript string literals are removed.
+EBNF keeps quotes, but a quoted terminal is not a declaration. K keeps quotes.
+TypeScript: interface and type object members at depth 0, plus top-level function,
+const, class, type, and interface names. Ternaries, case labels, parameters, and
+locals are not declarations. EBNF: only `name =` at line start is a declaration.
+K syntax continues until the next syntax, rule, configuration, or endmodule. A
+constructor is an identifier before '(', a quoted terminal, or a klabel or symbol
+attribute. A bare sort reference is a subsort, not a constructor. <cell> belongs to that cell.
 """
-
 from __future__ import annotations
-
 import argparse
+import hashlib
 import json
 import re
 from pathlib import Path
-
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
-
-
 MORIARTY_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_REL = Path("openspec/changes/consolidated-language-kernel/schemas/stage-relation.schema.json")
 EMBEDDINGS_REL = Path("deliverables/u0-semantic-contract-2026-09-23/source-core-embeddings.json")
@@ -61,9 +58,10 @@ TOP_LEVEL = re.compile(
 OBJECT_TYPE = re.compile(rf"(?m)^(?:export\s+)?(?:interface|type)\s+({IDENT})\b")
 MEMBER = re.compile(rf"\s*(?:readonly\s+)?({IDENT})\s*\??\s*:")
 PRODUCTION = re.compile(rf"(?m)^({IDENT})\s*=")
-SYNTAX = re.compile(rf"syntax\s+({IDENT})\s*::=\s*([^\n]+)")
+K_SYNTAX = re.compile(rf"(?m)^[ \t]*syntax\s+({IDENT})\s*::=")
+K_STOP = re.compile(r"(?m)^[ \t]*(?:syntax|rule|configuration|endmodule)\b")
 CELL = re.compile(rf"<({IDENT})>")
-
+FILE_KEYS = ("sourceFile", "coreFile")
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=MORIARTY_ROOT)
@@ -77,13 +75,13 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(blocked))
         return 2
     failures: list[str] = []
-    schema = read_json(root / SCHEMA_REL, SCHEMA_REL.as_posix(), failures)
-    embeddings = read_json(root / EMBEDDINGS_REL, EMBEDDINGS_REL.as_posix(), failures)
-    judgments = read_json(root / JUDGMENTS_REL, JUDGMENTS_REL.as_posix(), failures)
+    schema_bytes, schema = load_json(root / SCHEMA_REL, SCHEMA_REL.as_posix(), failures)
+    _, embeddings = load_json(root / EMBEDDINGS_REL, EMBEDDINGS_REL.as_posix(), failures)
+    _, judgments = load_json(root / JUDGMENTS_REL, JUDGMENTS_REL.as_posix(), failures)
     if not isinstance(schema, dict) or not isinstance(embeddings, dict) or not isinstance(judgments, dict):
         print("\n".join(failures))
         return 1
-    check_c1(schema, failures)
+    check_c1(schema, embeddings, schema_bytes, failures)
     leaves = collect_leaves(schema, "", failures)
     rows = embeddings.get("rows") if isinstance(embeddings.get("rows"), list) else []
     if not isinstance(embeddings.get("rows"), list):
@@ -92,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     check_c3(rows, failures)
     if block_on_inputs(root, embeddings, rows):
         return 2
+    check_c4(root, embeddings, rows, failures)
     check_c5(root, rows, failures)
     check_c6(embeddings, rows, failures)
     check_c7(embeddings, rows, failures)
@@ -100,22 +99,30 @@ def main(argv: list[str] | None = None) -> int:
     if failures:
         print("\n".join(failures))
         return 1
-    present = sum(isinstance(row, dict) and row.get("present") is True for row in rows)
-    absent = sum(isinstance(row, dict) and row.get("realisation") == "absent" for row in rows)
+    present = sum(isinstance(row, dict) and row.get("realisation") == "present" for row in rows)
     partial = sum(isinstance(row, dict) and row.get("realisation") == "partial" for row in rows)
-    print(f"OK: {len(leaves)} leaf fields, {present} present, {absent} absent")
-    print(f"partial: {partial}")
+    absent = sum(isinstance(row, dict) and row.get("realisation") == "absent" for row in rows)
+    print(f"OK: {len(leaves)} leaf fields, {present} present, {partial} partial, {absent} absent")
     print(LIMITATION)
     return 0
-
-def read_json(path: Path, label: str, failures: list[str]) -> object | None:
+def load_json(path: Path, label: str, failures: list[str]) -> tuple[bytes, dict | None]:
+    raw = path.read_bytes()
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(raw.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        failures.append(f"FAIL: {label} is not UTF-8 ({exc.reason})")
+        return raw, None
     except json.JSONDecodeError as exc:
         failures.append(f"FAIL: {label} is not JSON ({exc.msg})")
-        return None
-
-def check_c1(schema: dict, failures: list[str]) -> None:
+        return raw, None
+    if not isinstance(value, dict):
+        failures.append(f"FAIL: {label} is not a JSON object")
+        return raw, None
+    return raw, value
+def check_c1(schema: dict, embeddings: dict, schema_bytes: bytes, failures: list[str]) -> None:
+    digest = hashlib.sha256(schema_bytes).hexdigest()
+    if embeddings.get("stageSchemaSha256") != digest:
+        failures.append("FAIL: stageSchemaSha256 does not match the schema bytes")
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
@@ -128,7 +135,6 @@ def check_c1(schema: dict, failures: list[str]) -> None:
     keys = judgments.get("properties") if isinstance(judgments, dict) else None
     if not isinstance(keys, dict) or list(keys) != JUDGMENT_KEYS:
         failures.append(f"FAIL: judgments properties are {list(keys) if isinstance(keys, dict) else None!r}")
-
 def walk_closed_objects(node: object, path: str, failures: list[str]) -> None:
     if not isinstance(node, dict):
         return
@@ -142,7 +148,6 @@ def walk_closed_objects(node: object, path: str, failures: list[str]) -> None:
             walk_closed_objects(child, key if path == "<root>" else f"{path}.{key}", failures)
     if node.get("type") == "array" and isinstance(node.get("items"), dict):
         walk_closed_objects(node["items"], f"{path}[]", failures)
-
 def collect_leaves(node: object, path: str, failures: list[str]) -> list[str]:
     if not isinstance(node, dict):
         failures.append(f"FAIL: cannot walk {path or '<root>'}")
@@ -169,13 +174,12 @@ def collect_leaves(node: object, path: str, failures: list[str]) -> list[str]:
         failures.append("FAIL: stage schema root is not an object")
         return []
     return [path]
-
 def check_c2(rows: list, leaves: list[str], failures: list[str]) -> None:
     fields = [row.get("schemaField") if isinstance(row, dict) else None for row in rows]
-    duplicates = sorted({field for field in fields if field is not None and fields.count(field) > 1})
+    names = [field for field in fields if isinstance(field, str)]
+    duplicates = sorted({field for field in names if names.count(field) > 1})
     if duplicates:
         failures.append(f"FAIL: duplicate embedding rows for {duplicates!r}")
-    names = [field for field in fields if isinstance(field, str)]
     if fields != sorted(names):
         failures.append("FAIL: embedding rows are not sorted by schemaField")
     missing = [leaf for leaf in leaves if leaf not in fields]
@@ -184,7 +188,6 @@ def check_c2(rows: list, leaves: list[str], failures: list[str]) -> None:
         failures.append(f"FAIL: embeddings missing leaf fields {missing!r}")
     if extra:
         failures.append(f"FAIL: embeddings extra fields {extra!r}")
-
 def check_c3(rows: list, failures: list[str]) -> None:
     for row in rows:
         if not isinstance(row, dict) or list(row) != ROW_KEYS:
@@ -208,7 +211,6 @@ def check_c3(rows: list, failures: list[str]) -> None:
             failures.append(f"FAIL: {label} citation sides are incomplete")
         if realisation == "partial" and (not isinstance(row["note"], str) or not PARTIAL_NOTE.fullmatch(row["note"])):
             failures.append(f"FAIL: {label} partial note is not 'Exists: ...; Missing: ...'")
-
 def block_on_inputs(root: Path, embeddings: dict, rows: list) -> bool:
     search = embeddings.get("absenceSearch")
     roots = search.get("roots") if isinstance(search, dict) else None
@@ -218,18 +220,53 @@ def block_on_inputs(root: Path, embeddings: dict, rows: list) -> bool:
             print("\n".join(f"blocked: missing {item}" for item in missing))
             return True
     missing_files = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        for key in ("sourceFile", "coreFile"):
-            rel = row.get(key)
-            if isinstance(rel, str) and rel not in missing_files and not (root / rel).is_file():
-                missing_files.append(rel)
+    for rel in iter_rels(embeddings, rows):
+        if rel not in missing_files and not (root / rel).is_file():
+            missing_files.append(rel)
     if missing_files:
         print("\n".join(f"blocked: missing {item}" for item in missing_files))
         return True
     return False
-
+def iter_rels(embeddings: dict, rows: list) -> list[str]:
+    rels: list[str] = []
+    for row in rows:
+        if isinstance(row, dict):
+            for key in FILE_KEYS:
+                rel = row.get(key)
+                if isinstance(rel, str):
+                    rels.append(rel)
+    profiles = embeddings.get("profileFiles")
+    if isinstance(profiles, dict):
+        for files in profiles.values():
+            if isinstance(files, list):
+                rels.extend(item for item in files if isinstance(item, str))
+    return rels
+def check_c4(root: Path, embeddings: dict, rows: list, failures: list[str]) -> None:
+    search = embeddings.get("absenceSearch")
+    raw_roots = search.get("roots") if isinstance(search, dict) else None
+    roots = [item for item in raw_roots if isinstance(item, str)] if isinstance(raw_roots, list) else []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        for key in FILE_KEYS:
+            rel = row.get(key)
+            if isinstance(rel, str) and not contained(root, rel, roots):
+                failures.append(f"FAIL: {row.get('schemaField')} cited file {rel} is outside the declared roots")
+    profiles = embeddings.get("profileFiles")
+    if not isinstance(profiles, dict):
+        return
+    for files in profiles.values():
+        if not isinstance(files, list):
+            continue
+        for rel in files:
+            if isinstance(rel, str) and not contained(root, rel, roots):
+                failures.append(f"FAIL: profileFiles entry {rel} is outside the declared roots")
+def contained(root: Path, rel: str, roots: list[str]) -> bool:
+    path = Path(rel)
+    if path.is_absolute() or any(part in {".", ".."} for part in path.parts):
+        return False
+    resolved = (root / path).resolve()
+    return any(resolved.is_relative_to((root / item).resolve()) for item in roots)
 def check_c8_shape(embeddings: dict, failures: list[str]) -> None:
     node = embeddings.get("absenceSearch")
     if not isinstance(node, dict) or list(node) != ["roots", "method", "limitation"]:
@@ -241,7 +278,6 @@ def check_c8_shape(embeddings: dict, failures: list[str]) -> None:
         failures.append("FAIL: absenceSearch method is not one sentence")
     if node.get("limitation") != LIMITATION:
         failures.append("FAIL: absenceSearch limitation is not the required sentence")
-
 def check_c6(embeddings: dict, rows: list, failures: list[str]) -> None:
     profiles = embeddings.get("profileFiles")
     if embeddings.get("sourceProfile") != SOURCE_PROFILE or embeddings.get("coreProfile") != CORE_PROFILE:
@@ -250,8 +286,8 @@ def check_c6(embeddings: dict, rows: list, failures: list[str]) -> None:
         failures.append("FAIL: profileFiles keys are not the declared source and Core profiles")
         return
     allowed = {
-        "source": set(profiles[SOURCE_PROFILE]) if isinstance(profiles[SOURCE_PROFILE], list) else set(),
-        "core": set(profiles[CORE_PROFILE]) if isinstance(profiles[CORE_PROFILE], list) else set(),
+        "source": string_set(profiles.get(SOURCE_PROFILE)),
+        "core": string_set(profiles.get(CORE_PROFILE)),
     }
     for row in rows:
         if not isinstance(row, dict) or row.get("realisation") == "absent":
@@ -261,7 +297,8 @@ def check_c6(embeddings: dict, rows: list, failures: list[str]) -> None:
             if isinstance(rel, str) and rel not in allowed[side]:
                 profile = SOURCE_PROFILE if side == "source" else CORE_PROFILE
                 failures.append(f"FAIL: {row.get('schemaField')} {side} file {rel} is not listed for {profile}")
-
+def string_set(value: object) -> set[str]:
+    return {item for item in value if isinstance(item, str)} if isinstance(value, list) else set()
 def check_c7(embeddings: dict, rows: list, failures: list[str]) -> None:
     table = embeddings.get("classificationTable")
     if not isinstance(table, list):
@@ -301,7 +338,6 @@ def check_c7(embeddings: dict, rows: list, failures: list[str]) -> None:
     for context in classes:
         if context not in cited:
             failures.append(f"FAIL: classificationTable context {context} is not cited")
-
 def check_c9(judgments: dict, leaves: set[str], failures: list[str]) -> None:
     rows = judgments.get("judgments")
     if not isinstance(rows, list):
@@ -312,11 +348,15 @@ def check_c9(judgments: dict, leaves: set[str], failures: list[str]) -> None:
         failures.append(f"FAIL: judgments keys are {keys!r}")
     for row in rows:
         if not isinstance(row, dict):
+            failures.append("FAIL: judgments row is not an object")
             continue
-        for field in row.get("schemaFields") or []:
+        fields = row.get("schemaFields")
+        if not isinstance(fields, list):
+            failures.append(f"FAIL: judgments.{row.get('key')} schemaFields is not a list")
+            continue
+        for field in fields:
             if field not in leaves:
                 failures.append(f"FAIL: judgments.{row.get('key')} schemaFields entry {field!r} is not a leaf")
-
 def check_c5(root: Path, rows: list, failures: list[str]) -> None:
     cache: dict[str, dict[str, set[str]]] = {}
     for row in rows:
@@ -331,66 +371,43 @@ def check_c5(root: Path, rows: list, failures: list[str]) -> None:
             declared = cache.setdefault(rel, declarations(root / rel))
             if symbol not in declared.get(context, set()):
                 failures.append(f"FAIL: {row.get('schemaField')} {side} symbol {symbol} is not a declaration in {context} in {rel}")
-
 def declarations(path: Path) -> dict[str, set[str]]:
     text = path.read_text(encoding="utf-8")
     if path.suffix == ".ebnf":
         return ebnf_declarations(strip_ebnf(text))
     if path.suffix == ".k":
-        return k_declarations(strip_code(text))
+        return k_declarations(text)
     if path.suffix in {".ts", ".tsx", ".js", ".mjs", ".cjs"}:
         return ts_declarations(strip_code(text))
     return {}
-
-def strip_code(text: str) -> str:
-    chars = list(text)
-    index, length = 0, len(chars)
+def strip_code(text: str, *, strings: bool = True) -> str:
+    chars, index, length = list(text), 0, len(text)
     def blank(start: int, end: int) -> None:
         for cursor in range(start, end):
             if chars[cursor] != "\n":
                 chars[cursor] = " "
     while index < length:
-        char = chars[index]
-        nxt = chars[index + 1] if index + 1 < length else ""
-        if char == "/" and nxt == "/":
-            end = index
-            while end < length and chars[end] != "\n":
-                end += 1
+        pair = text[index:index + 2]
+        if pair in ("//", "/*"):
+            marker = "\n" if pair == "//" else "*/"
+            end = text.find(marker, index + 2)
+            end = length if end < 0 else end + (0 if pair == "//" else 2)
             blank(index, end)
             index = end
             continue
-        if char == "/" and nxt == "*":
-            end = text.find("*/", index + 2)
-            end = length if end < 0 else end + 2
-            blank(index, end)
-            index = end
-            continue
-        if char in "'\"`":
-            end = index + 1
-            while end < length and chars[end] != char:
+        if strings and chars[index] in "'\"`":
+            quote, end = chars[index], index + 1
+            while end < length and chars[end] != quote:
                 end += 2 if chars[end] == "\\" else 1
             blank(index, min(length, end + 1))
             index = min(length, end + 1)
             continue
         index += 1
     return "".join(chars)
-
 def strip_ebnf(text: str) -> str:
-    chars = list(text)
-    index = 0
-    while index < len(chars):
-        if text.startswith("(*", index):
-            end = text.find("*)", index + 2)
-            if end < 0:
-                break
-            for cursor in range(index, end + 2):
-                if chars[cursor] != "\n":
-                    chars[cursor] = " "
-            index = end + 2
-            continue
-        index += 1
-    return "".join(chars)
-
+    def blank(match: re.Match[str]) -> str:
+        return "".join("\n" if char == "\n" else " " for char in match.group(0))
+    return re.sub(r"\(\*.*?\*\)", blank, text, flags=re.DOTALL)
 def ts_declarations(text: str) -> dict[str, set[str]]:
     found: dict[str, set[str]] = {}
     for match in TOP_LEVEL.finditer(text):
@@ -400,7 +417,6 @@ def ts_declarations(text: str) -> dict[str, set[str]]:
         if body is not None:
             found.setdefault(match.group(1), set()).update(object_members(body))
     return found
-
 def object_body(text: str, start: int) -> str | None:
     index, length = start, len(text)
     while index < length and text[index].isspace():
@@ -426,12 +442,10 @@ def object_body(text: str, start: int) -> str | None:
         depth -= text[end] == "}"
         end += 1
     return text[index + 1:end - 1]
-
 def object_members(body: str) -> set[str]:
     members: set[str] = set()
-    depth = 0
-    start = 0
-    for index, char in enumerate(body):
+    depth = start = 0
+    for index, char in enumerate(body + ";"):
         if char == "{":
             depth += 1
         elif char == "}":
@@ -441,60 +455,45 @@ def object_members(body: str) -> set[str]:
             if match:
                 members.add(match.group(1))
             start = index + 1
-    match = MEMBER.match(body, start)
-    if match:
-        members.add(match.group(1))
     return members
-
 def ebnf_declarations(text: str) -> dict[str, set[str]]:
-    found: dict[str, set[str]] = {}
-    for match in PRODUCTION.finditer(text):
-        body = production_body(text, match.end())
-        symbols = {match.group(1), *(set(re.findall(rf'"({IDENT})"', body)))}
-        found.setdefault(match.group(1), set()).update(symbols)
-    return found
-
-def production_body(text: str, start: int) -> str:
-    depth = 0
-    quote = False
-    for index in range(start, len(text)):
-        char = text[index]
-        if char == '"':
-            quote = not quote
-        elif not quote and char in "([{":
-            depth += 1
-        elif not quote and char in ")]}":
-            depth = max(0, depth - 1)
-        elif not quote and char == ";" and depth == 0:
-            return text[start:index]
-    return text[start:]
-
+    return {match.group(1): {match.group(1)} for match in PRODUCTION.finditer(text)}
 def k_declarations(text: str) -> dict[str, set[str]]:
+    commented = strip_code(text, strings=False)
     found: dict[str, set[str]] = {}
-    for match in SYNTAX.finditer(text):
-        found.setdefault(match.group(1), set()).update(constructors(match.group(2)))
-    for cell in CELL.findall(text):
+    for match in K_SYNTAX.finditer(commented):
+        stop = K_STOP.search(commented, match.end())
+        rhs = commented[match.end(): stop.start() if stop else len(commented)]
+        found.setdefault(match.group(1), set()).update(k_constructors(rhs))
+    for cell in CELL.findall(strip_code(commented)):
         found.setdefault(cell, set()).add(cell)
     return found
-
-def constructors(rhs: str) -> set[str]:
-    names: set[str] = set()
-    depth = 0
-    index = 0
+def k_constructors(rhs: str) -> set[str]:
+    names = {item for group in re.findall(r"\[([^\[\]]*)\]", rhs) for item in re.findall(rf"(?:klabel|symbol)\(\s*({IDENT})", group)}
+    depth = index = 0
     while index < len(rhs):
         char = rhs[index]
+        if char in "'\"":
+            end = index + 1
+            while end < len(rhs) and rhs[end] != char:
+                end += 2 if rhs[end] == "\\" else 1
+            if char == '"' and re.fullmatch(IDENT, rhs[index + 1:end]):
+                names.add(rhs[index + 1:end])
+            index = min(len(rhs), end + 1)
+            continue
         if char in "([{":
             depth += 1
         elif char in ")]}":
             depth = max(0, depth - 1)
-        else:
-            match = re.match(IDENT, rhs[index:])
-            if match and depth == 0:
+        elif (match := re.match(IDENT, rhs[index:])) and depth == 0:
+            cursor = index + match.end()
+            while cursor < len(rhs) and rhs[cursor].isspace():
+                cursor += 1
+            if cursor < len(rhs) and rhs[cursor] == "(":
                 names.add(match.group(0))
-                index += match.end()
-                continue
+            index += match.end()
+            continue
         index += 1
     return names
-
 if __name__ == "__main__":
     raise SystemExit(main())
