@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Moriarty U0 target pins",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "asOf",
+    "compatibleTupleEstablished",
+    "pins",
+    "unresolved"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "moriarty-u0-target-pins/1"
+    },
+    "asOf": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "compatibleTupleEstablished": {
+      "type": "boolean",
+      "const": false
+    },
+    "pins": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "component",
+          "name",
+          "pin",
+          "pinKind",
+          "status",
+          "sourceEvidence",
+          "note"
+        ],
+        "properties": {
+          "component": {
+            "enum": [
+              "moriarty-compiler",
+              "compact-compiler",
+              "zkir",
+              "native-proof-system",
+              "verifier",
+              "proving-keys",
+              "verifier-keys",
+              "srs-parameters",
+              "ledger",
+              "proof-server",
+              "k-reference-toolchain"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pinKind": {
+            "enum": [
+              "git-commit",
+              "version",
+              "sha256",
+              "none"
+            ]
+          },
+          "status": {
+            "enum": [
+              "historical",
+              "absent"
+            ]
+          },
+          "sourceEvidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}
