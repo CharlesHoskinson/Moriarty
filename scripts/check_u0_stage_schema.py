@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
@@ -17,6 +18,7 @@ SCHEMA_REL = Path(
 )
 EMBEDDINGS_REL = Path("deliverables/u0-semantic-contract-2026-09-23/source-core-embeddings.json")
 JUDGMENTS_REL = Path("deliverables/u0-semantic-contract-2026-09-23/judgments.json")
+DESIGN_DOC_REL = Path("docs/MORIARTY-CONSOLIDATED-DESIGN.md")
 LANGUAGE_ROOT = Path("experiments/moriarty-language")
 
 METASCHEMA = "https://json-schema.org/draft/2020-12/schema"
@@ -30,6 +32,7 @@ CORE_PROFILE = "moriarty-financial-lifecycle/1"
 JUDGMENT_KEYS = ["stage", "intent", "effect", "authority", "history", "failure"]
 STATUS_ENUM = ["held", "violated", "unchecked"]
 OUTCOME_ENUM = ["continuation", "terminal"]
+AMOUNT_PATTERN = "^-?[0-9]+$"
 DESIGN_DOC_JUDGMENT = {
     "stage": "contract properties",
     "intent": "intent refinement",
@@ -38,6 +41,7 @@ DESIGN_DOC_JUDGMENT = {
     "history": "compliant history",
     "failure": "rejection/partial failure transition",
 }
+CANONICAL_HEADING = "## Canonical stage statement"
 EMBEDDING_KEYS = [
     "schemaVersion",
     "sourceProfile",
@@ -55,6 +59,119 @@ ROW_KEYS = [
 ]
 JUDGMENT_FILE_KEYS = ["schemaVersion", "judgments"]
 JUDGMENT_ROW_KEYS = ["key", "designDocJudgment", "definition", "schemaFields"]
+IDENTITY_FIELDS = {"programIdentity.coreRef", "programIdentity.sourceRef"}
+
+EFFECT_LINE = [
+    "object",
+    {"asset": "string", "account": "string", "amount": "amount"},
+]
+LIABILITY_LINE = [
+    "object",
+    {
+        "liabilityId": "string",
+        "debtor": "string",
+        "creditor": "string",
+        "asset": "string",
+        "amount": "amount",
+    },
+]
+JUDGMENT_OBJECT = {"status": "status", "enforcementRef": "nullable"}
+# Property names and nesting required by the U0 specification. Leaf discovery
+# still walks the schema file. This tree does not.
+EXPECTED_STAGE: dict[str, object] = {
+    "schemaVersion": "version",
+    "profiles": {
+        "semanticProfile": "string",
+        "numericProfile": "string",
+    },
+    "programIdentity": {
+        "sourceRef": "string",
+        "coreRef": "string",
+        "programId": "string",
+        "entryPoint": "string",
+    },
+    "circuitIdentity": {
+        "compilerPin": "string",
+        "zkirVersion": "string",
+        "circuitId": "string",
+        "verifierKeyId": "string",
+    },
+    "domain": {
+        "chainId": "string",
+        "domainId": "string",
+        "stateFrameRef": "string",
+    },
+    "signedIntent": {
+        "intentId": "string",
+        "signer": "string",
+        "consentPolicy": "string",
+        "delegationPolicy": "string",
+        "assetIdentities": ["strings"],
+        "recipients": ["strings"],
+        "grossDebitCap": "amount",
+        "feeCap": "amount",
+        "minNetOutcome": "amount",
+        "validity": "string",
+        "replayPolicy": "string",
+        "recoveryPolicy": "string",
+    },
+    "lifecycleIds": {
+        "lifecycleId": "string",
+        "stageId": "string",
+        "logicalRequestId": "string",
+    },
+    "predecessorCommitments": [
+        "object",
+        {"predecessorId": "string", "commitment": "string"},
+    ],
+    "obligationCommitments": [
+        "object",
+        {"obligationId": "string", "commitment": "string"},
+    ],
+    "observations": [
+        "object",
+        {
+            "kind": "string",
+            "issuer": "string",
+            "domain": "string",
+            "time": "string",
+            "finality": "string",
+        },
+    ],
+    "effects": {
+        "gross": EFFECT_LINE,
+        "fees": EFFECT_LINE,
+        "net": EFFECT_LINE,
+        "supplyChanges": EFFECT_LINE,
+    },
+    "liabilities": {
+        "opening": LIABILITY_LINE,
+        "closing": LIABILITY_LINE,
+    },
+    "authority": {
+        "consumed": "string",
+        "remaining": "string",
+        "replayState": "string",
+    },
+    "resources": {
+        "resourceCertificate": "string",
+        "cumulativeReservations": "string",
+    },
+    "disclosures": [
+        "object",
+        {"party": "string", "fields": ["strings"]},
+    ],
+    "failurePolicy": {
+        "phasePolicy": "string",
+        "retainedEffects": "string",
+        "retainedFees": "string",
+    },
+    "outcome": {
+        "kind": "outcome",
+        "continuations": ["strings"],
+    },
+    "judgments": {key: JUDGMENT_OBJECT for key in JUDGMENT_KEYS},
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,17 +185,23 @@ def check_root(root: Path) -> int:
     if not root.is_dir():
         print("blocked: root is not a directory")
         return 2
-    missing = [rel for rel in (SCHEMA_REL, EMBEDDINGS_REL, JUDGMENTS_REL) if not (root / rel).is_file()]
-    if missing:
-        for rel in missing:
-            print(f"blocked: missing {rel.as_posix()}")
+    blocked = missing_inputs(root)
+    if blocked:
+        for line in blocked:
+            print(line)
+        return 2
+    try:
+        design_text = (root / DESIGN_DOC_REL).read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        print(f"blocked: {DESIGN_DOC_REL.as_posix()} is not readable UTF-8 ({error})")
         return 2
 
     failures: list[str] = []
     schema = load_json(root / SCHEMA_REL, SCHEMA_REL, failures)
     embeddings = load_json(root / EMBEDDINGS_REL, EMBEDDINGS_REL, failures)
     judgments = load_json(root / JUDGMENTS_REL, JUDGMENTS_REL, failures)
-    if failures or schema is None or embeddings is None or judgments is None:
+    check_design_doc(design_text, failures)
+    if schema is None or embeddings is None or judgments is None:
         return report(failures)
 
     leaves = check_stage_schema(schema, failures)
@@ -90,6 +213,16 @@ def check_root(root: Path) -> int:
     absent = len(leaves) - present
     print(f"OK: {len(leaves)} leaf fields, {present} present, {absent} absent")
     return 0
+
+
+def missing_inputs(root: Path) -> list[str]:
+    blocked: list[str] = []
+    for rel in (SCHEMA_REL, EMBEDDINGS_REL, JUDGMENTS_REL, DESIGN_DOC_REL):
+        if not (root / rel).is_file():
+            blocked.append(f"blocked: missing {rel.as_posix()}")
+    if not (root / LANGUAGE_ROOT).is_dir():
+        blocked.append("blocked: missing experiments/moriarty-language")
+    return blocked
 
 
 def report(failures: list[str]) -> int:
@@ -124,6 +257,7 @@ def check_stage_schema(schema: object, failures: list[str]) -> list[str]:
     check_closed_objects(schema, "", failures)
     leaves = collect_leaves(schema, "", failures)
     check_identity_and_enums(schema, failures)
+    check_specified_shape(schema, failures)
     return leaves
 
 
@@ -212,6 +346,105 @@ def check_identity_and_enums(schema: dict, failures: list[str]) -> None:
         if not isinstance(ref, dict) or ref.get("type") != ["string", "null"]:
             found = ref.get("type") if isinstance(ref, dict) else None
             failures.append(f"FAIL: judgments.{key}.enforcementRef type is {found!r}")
+
+
+def check_specified_shape(schema: dict, failures: list[str]) -> None:
+    expect_object(schema, "", EXPECTED_STAGE, failures)
+
+
+def expect_node(node: object, path: str, expected: object, failures: list[str]) -> None:
+    if isinstance(expected, dict):
+        expect_object(node, path, expected, failures)
+        return
+    if isinstance(expected, list):
+        expect_array(node, path, expected, failures)
+        return
+    if isinstance(expected, str):
+        expect_scalar(node, path, expected, failures)
+        return
+    failures.append(f"FAIL: {path or '<root>'} has no expected shape")
+
+
+def expect_object(node: object, path: str, fields: dict[str, object], failures: list[str]) -> None:
+    label = path or "<root>"
+    if not isinstance(node, dict) or node.get("type") != "object":
+        found = node.get("type") if isinstance(node, dict) else None
+        failures.append(f"FAIL: {label} type is {found!r}")
+        return
+    properties = node.get("properties")
+    if not isinstance(properties, dict):
+        failures.append(f"FAIL: {label} has no properties")
+        return
+    expected_names = list(fields)
+    actual_names = list(properties)
+    for name in expected_names:
+        if name not in properties:
+            child = f"{path}.{name}" if path else name
+            failures.append(f"FAIL: missing required property {child}")
+    for name in actual_names:
+        if name not in fields:
+            child = f"{path}.{name}" if path else name
+            failures.append(f"FAIL: unexpected property {child}")
+    if actual_names != expected_names:
+        failures.append(f"FAIL: {label} properties are {actual_names!r}")
+    for name, child_expected in fields.items():
+        if name not in properties:
+            continue
+        child_path = f"{path}.{name}" if path else name
+        expect_node(properties[name], child_path, child_expected, failures)
+
+
+def expect_array(node: object, path: str, expected: list[object], failures: list[str]) -> None:
+    label = path or "<root>"
+    if not isinstance(node, dict) or node.get("type") != "array":
+        found = node.get("type") if isinstance(node, dict) else None
+        failures.append(f"FAIL: {label} type is {found!r}")
+        return
+    items = node.get("items")
+    if expected == ["strings"]:
+        if not isinstance(items, dict) or items.get("type") != "string":
+            failures.append(f"FAIL: {label} items are not strings")
+        return
+    if len(expected) == 2 and expected[0] == "object" and isinstance(expected[1], dict):
+        if not isinstance(items, dict):
+            failures.append(f"FAIL: {label} array has no single item schema")
+            return
+        expect_object(items, f"{path}[]", expected[1], failures)
+        return
+    failures.append(f"FAIL: {label} array shape is unsupported")
+
+
+def expect_scalar(node: object, path: str, kind: str, failures: list[str]) -> None:
+    label = path or "<root>"
+    if not isinstance(node, dict):
+        failures.append(f"FAIL: {label} is not a schema object")
+        return
+    declared = node.get("type")
+    if kind == "nullable":
+        if declared != ["string", "null"]:
+            failures.append(f"FAIL: {label} type is {declared!r}")
+        return
+    if declared != "string":
+        failures.append(f"FAIL: {label} type is {declared!r}")
+        return
+    if kind == "version":
+        if node.get("const") != STAGE_VERSION:
+            failures.append("FAIL: schemaVersion const is not moriarty-stage-relation/1")
+        return
+    if kind == "amount":
+        if node.get("pattern") != AMOUNT_PATTERN:
+            failures.append(f"FAIL: {label} pattern is {node.get('pattern')!r}")
+        return
+    if kind == "status":
+        if node.get("enum") != STATUS_ENUM:
+            failures.append(f"FAIL: {label} enum is {node.get('enum')!r}")
+        return
+    if kind == "outcome":
+        if node.get("enum") != OUTCOME_ENUM:
+            failures.append(f"FAIL: {label} enum is {node.get('enum')!r}")
+        return
+    if kind != "string":
+        failures.append(f"FAIL: {label} has unknown shape {kind}")
 
 
 def object_at(schema: dict, keys: list[str]) -> object:
@@ -307,6 +540,29 @@ def check_row(root: Path, row: object, index: int, failures: list[str]) -> str |
     return field
 
 
+def profile_version_assignment(symbol: str, text: str) -> str | None:
+    """Return the profile id when ``symbol`` is assigned a ``moriarty-…/N`` string."""
+
+    match = re.search(
+        rf"(?<![A-Za-z0-9_]){re.escape(symbol)}(?![A-Za-z0-9_])"
+        r"""\s*=\s*(['"])(moriarty-[A-Za-z0-9-]+/\d+)\1""",
+        text,
+    )
+    if match is None:
+        return None
+    return match.group(2)
+
+
+def symbol_pattern(symbol: str) -> re.Pattern[str] | None:
+    """Accept an identifier, or a K configuration cell such as ``<financialPre>``."""
+
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", symbol):
+        return re.compile(rf"(?<![A-Za-z0-9_]){re.escape(symbol)}(?![A-Za-z0-9_])")
+    if re.fullmatch(r"<(?:[A-Za-z_][A-Za-z0-9_]*)>", symbol):
+        return re.compile(rf"(?<![A-Za-z0-9_<]){re.escape(symbol)}(?![A-Za-z0-9_>])")
+    return None
+
+
 def check_symbol(
     root: Path,
     field: str,
@@ -341,8 +597,49 @@ def check_symbol(
     except (OSError, UnicodeError) as error:
         failures.append(f"FAIL: {field} {side} file is not readable UTF-8 ({error})")
         return
-    if symbol not in text:
+    pattern = symbol_pattern(symbol)
+    if pattern is None:
+        failures.append(f"FAIL: {field} {side} symbol {symbol!r} is not an identifier or K cell")
+        return
+    if pattern.search(text) is None:
         failures.append(f"FAIL: {field} {side} symbol {symbol} does not occur in {file_name}")
+        return
+    if field in IDENTITY_FIELDS:
+        profile = profile_version_assignment(symbol, text)
+        if profile is not None:
+            failures.append(
+                f"FAIL: {field} {side} symbol {symbol} is a profile version constant, not a program identity"
+            )
+
+
+def canonical_stage_section(text: str) -> str | None:
+    match = re.search(rf"(?m)^{re.escape(CANONICAL_HEADING)}[ \t]*\n", text)
+    if match is None:
+        return None
+    rest = text[match.end():]
+    next_heading = re.search(r"(?m)^#{1,6} ", rest)
+    if next_heading is None:
+        return rest
+    return rest[: next_heading.start()]
+
+
+def check_design_doc(text: str, failures: list[str]) -> None:
+    section = canonical_stage_section(text)
+    if section is None:
+        failures.append("FAIL: Canonical stage statement section is missing")
+        return
+    seen: list[str] = []
+    for key in JUDGMENT_KEYS:
+        if key == "failure":
+            continue
+        phrase = DESIGN_DOC_JUDGMENT[key]
+        if phrase not in seen:
+            seen.append(phrase)
+    for phrase in seen:
+        if phrase not in section:
+            failures.append(f"FAIL: Canonical stage statement lacks {phrase!r}")
+    if re.search(r"rejection/partial failure", section, re.IGNORECASE) is None:
+        failures.append("FAIL: Canonical stage statement lacks 'Rejection/partial failure'")
 
 
 def check_judgments(judgments: object, leaves: list[str], failures: list[str]) -> None:
