@@ -2,7 +2,9 @@
 """Check the U0 stage-relation schema, source/Core embeddings, and judgments.
 
 Absence means not found by this recorded search; it is not a proof of non-realisation.
-A citation is checked only as a declaration inside the named context.
+Semantic adequacy of a cited declaration is a reviewed claim.
+The checker proves only that the symbol is declared in the named context
+and that the file belongs to the declared source or Core profile.
 """
 
 from __future__ import annotations
@@ -46,10 +48,16 @@ DESIGN_DOC_JUDGMENT = {
     "failure": "rejection/partial failure transition",
 }
 CANONICAL_HEADING = "## Canonical stage statement"
+CLASSIFICATION_RULE = (
+    "present = the cited declaration(s) realise the field's full meaning in the named context; "
+    "partial = a declaration in the declared source/Core profiles realises a named aspect "
+    "(note: `Exists: ...; Missing: ...`); absent = no declaration found"
+)
 EMBEDDING_KEYS = [
     "schemaVersion",
     "sourceProfile",
     "coreProfile",
+    "classificationRule",
     "absenceSearch",
     "rows",
 ]
@@ -60,7 +68,9 @@ SEARCH_ROOTS = [
     "experiments/moriarty-language/formal/k",
 ]
 ABSENCE_LIMITATION = (
-    "absence means not found by this recorded search; it is not a proof of non-realisation"
+    "absence means not found by this recorded search; it is not a proof of non-realisation. "
+    "Semantic adequacy of a cited declaration is a reviewed claim; the checker proves "
+    "declaration, context, and profile membership only."
 )
 CITED_ROW_KEYS = [
     "schemaField",
@@ -71,6 +81,7 @@ CITED_ROW_KEYS = [
     "coreSymbol",
     "coreContext",
     "realisation",
+    "present",
     "note",
 ]
 ABSENT_ROW_KEYS = [
@@ -82,9 +93,12 @@ ABSENT_ROW_KEYS = [
     "coreSymbol",
     "coreContext",
     "realisation",
+    "present",
     "searchTerms",
+    "reviewedNonRealisations",
     "note",
 ]
+REVIEW_KEYS = ["file", "symbol", "reason"]
 REALISATIONS = ("present", "partial", "absent")
 JUDGMENT_FILE_KEYS = ["schemaVersion", "judgments"]
 JUDGMENT_ROW_KEYS = ["key", "designDocJudgment", "definition", "schemaFields"]
@@ -100,8 +114,16 @@ QUALIFIED_SYMBOL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]
 CELL_SYMBOL = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>$")
 BARE_SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
 MENTIONED_QUALIFIED = re.compile(
-    r"\b([A-Z][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b"
+    r"(?<![\w./-])([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\b"
 )
+TOP_DECL_RE = re.compile(
+    r"(?m)^[ \t]*(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function|const|let|var|class|interface|enum|type)\s+([A-Za-z_][A-Za-z0-9_]*)\b"
+)
+CONST_DECL_RE = re.compile(r"(?:export\s+)?(?:declare\s+)?\b(?:const|let|var)\s+")
+EBNF_RULE_RE = re.compile(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*=")
+EBNF_TERMINAL_RE = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"')
+CELL_RE = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>")
+PATH_EXTENSIONS = {"ts", "tsx", "js", "mjs", "cjs", "ebnf", "k", "md", "json", "py", "txt"}
 ROOT_SCHEMA_KEYS = [
     "$schema",
     "$id",
@@ -263,17 +285,18 @@ def check_root(root: Path) -> int:
     check_judgments(judgments, leaves, failures)
     if failures:
         return report(failures)
-    present, partial, absent = realisation_counts(embeddings)
-    if present + partial + absent != len(leaves):
+    full, partial, absent = realisation_counts(embeddings)
+    if full + partial + absent != len(leaves):
         failures.append(
-            f"FAIL: realisation counts {present} present + {partial} partial + {absent} absent "
+            f"FAIL: realisation counts {full} present + {partial} partial + {absent} absent "
             f"do not equal {len(leaves)} leaf fields"
         )
         return report(failures)
-    print(
-        f"OK: {len(leaves)} leaf fields, {present} present, {partial} partial, {absent} absent. "
-        f"{ABSENCE_LIMITATION}"
-    )
+    boolean_present = full + partial
+    print(f"OK: {len(leaves)} leaf fields, {boolean_present} present, {absent} absent")
+    print(f"partial: {partial}")
+    print(f"reviewed non-realisations: {reviewed_count(embeddings)}")
+    print(ABSENCE_LIMITATION)
     return 0
 
 
@@ -592,6 +615,18 @@ def realisation_counts(embeddings: object) -> tuple[int, int, int]:
     return present, partial, absent
 
 
+def reviewed_count(embeddings: object) -> int:
+    rows = embeddings.get("rows") if isinstance(embeddings, dict) else None
+    if not isinstance(rows, list):
+        return 0
+    total = 0
+    for row in rows:
+        reviews = row.get("reviewedNonRealisations") if isinstance(row, dict) else None
+        if isinstance(reviews, list):
+            total += len(reviews)
+    return total
+
+
 def check_embeddings(
     root: Path,
     embeddings: object,
@@ -609,6 +644,8 @@ def check_embeddings(
         failures.append(f"FAIL: embeddings sourceProfile is {embeddings.get('sourceProfile')!r}")
     if embeddings.get("coreProfile") != CORE_PROFILE:
         failures.append(f"FAIL: embeddings coreProfile is {embeddings.get('coreProfile')!r}")
+    if embeddings.get("classificationRule") != CLASSIFICATION_RULE:
+        failures.append("FAIL: embeddings classificationRule is not the required rule")
     check_absence_search(embeddings.get("absenceSearch"), failures)
     rows = embeddings.get("rows")
     if not isinstance(rows, list):
@@ -683,6 +720,11 @@ def check_row(
     if realisation not in REALISATIONS:
         failures.append(f"FAIL: {label} realisation is not present, partial, or absent")
         return field
+    expected_present = realisation != "absent"
+    if row.get("present") is not expected_present:
+        failures.append(
+            f"FAIL: {label} present is {row.get('present')!r}, expected {expected_present}"
+        )
     note = row.get("note")
     if not isinstance(note, str) or not note.strip():
         if realisation == "partial":
@@ -698,7 +740,7 @@ def check_row(
         )
     note_declarations(scan, label, note, failures)
     if realisation == "absent":
-        check_absent_row(row, label, note, scan, failures)
+        check_absent_row(row, label, scan, failures)
         return field
     cited = 0
     for side, file_key, symbol_key, context_key in CITATION_SIDES:
@@ -740,11 +782,9 @@ def check_row(
 def check_absent_row(
     row: dict,
     field: str,
-    note: str,
     scan: "LanguageScan",
     failures: list[str],
 ) -> None:
-    del note
     for side, file_key, symbol_key, _context_key in CITATION_SIDES:
         if row.get(file_key) is not None or row.get(symbol_key) is not None:
             failures.append(f"FAIL: {field} is absent but {file_key} or {symbol_key} is set")
@@ -752,21 +792,48 @@ def check_absent_row(
             failures.append(f"FAIL: {field} is absent but {side} context is set")
     terms = row.get("searchTerms")
     if not isinstance(terms, list) or len(terms) < 2:
-        failures.append(f"FAIL: {field} searchTerms needs the field name and a synonym")
+        failures.append(f"FAIL: {field} searchTerms needs the bare leaf and a synonym")
         return
     if any(not isinstance(term, str) or not term.strip() for term in terms):
         failures.append(f"FAIL: {field} searchTerms has an empty term")
         return
     if len(terms) != len(set(terms)):
         failures.append(f"FAIL: {field} searchTerms has a duplicate")
-    if field not in terms:
-        failures.append(f"FAIL: {field} searchTerms does not include the field name")
-    synonyms = [term for term in terms if term != field]
-    if not any(isinstance(term, str) and BARE_SYMBOL.fullmatch(term) for term in synonyms):
-        failures.append(f"FAIL: {field} searchTerms synonym is not an identifier")
-    for term in terms:
-        if isinstance(term, str) and BARE_SYMBOL.fullmatch(term) and term in scan.names:
-            failures.append(f"FAIL: {field} search term {term!r} is declared")
+    leaf = bare_leaf(field)
+    parts = path_parts(field)
+    if leaf not in terms:
+        failures.append(f"FAIL: {field} searchTerms does not include the bare leaf {leaf}")
+    synonyms = [
+        term
+        for term in terms
+        if isinstance(term, str) and term != field and term != leaf and not is_path_compound(term, parts)
+    ]
+    if not any(BARE_SYMBOL.fullmatch(term) for term in synonyms):
+        if any(isinstance(term, str) and is_path_compound(term, parts) for term in terms):
+            failures.append(f"FAIL: {field} searchTerms synonym is an invented compound")
+        else:
+            failures.append(f"FAIL: {field} searchTerms synonym is not an identifier")
+    expected = declared_matches(scan, [term for term in terms if isinstance(term, str)])
+    reviews = row.get("reviewedNonRealisations")
+    if not isinstance(reviews, list):
+        failures.append(f"FAIL: {field} reviewedNonRealisations is not an array")
+        found: list[tuple[str, str]] = []
+    else:
+        found = review_pairs(field, reviews, failures)
+        if found != sorted(found):
+            failures.append(f"FAIL: {field} reviewedNonRealisations is not sorted")
+    missing = [item for item in expected if item not in found]
+    for file_name, symbol in missing:
+        failures.append(
+            f"FAIL: {field} search term {symbol!r} is declared in {file_name} "
+            "without reviewedNonRealisations"
+        )
+    for file_name, symbol in found:
+        if (file_name, symbol) not in expected:
+            failures.append(
+                f"FAIL: {field} reviewedNonRealisations entry {file_name} {symbol} "
+                "is not a declared match"
+            )
 
 
 def citation_state(row: dict, file_key: str, symbol_key: str, context_key: str) -> str:
@@ -806,6 +873,9 @@ def check_citation(
     text = read_citation(root, field, side, file_name, failures)
     if text is None or not isinstance(file_name, str):
         return
+    needed = SOURCE_PROFILE if side == "source" else CORE_PROFILE
+    if needed not in scan.profiles.get(file_name, set()):
+        failures.append(f"FAIL: {field} {side} file does not belong to {needed}")
     code = tokenize(text, Path(file_name).suffix)
     if not declared_in_context(code, Path(file_name).suffix, context, symbol):
         failures.append(
@@ -853,6 +923,11 @@ def read_citation(
 
 def note_declarations(scan: "LanguageScan", field: str, note: str, failures: list[str]) -> None:
     for owner, member in MENTIONED_QUALIFIED.findall(note):
+        if member in PATH_EXTENSIONS:
+            continue
+        qualified = f"{owner}.{member}"
+        if qualified == field or field.startswith(qualified + ".") or field.startswith(qualified + "[]"):
+            continue
         if any(
             declared_in_context(code, Path(path).suffix, owner, member)
             for path, code in scan.files.items()
@@ -880,15 +955,26 @@ def search_path(file_name: str) -> bool:
 
 
 class LanguageScan:
-    def __init__(self, names: set[str], constants: set[str], files: dict[str, str]) -> None:
+    def __init__(
+        self,
+        names: set[str],
+        constants: set[str],
+        files: dict[str, str],
+        profiles: dict[str, set[str]],
+        declarations: dict[str, list[tuple[str, str]]],
+    ) -> None:
         self.names = names
         self.constants = constants
         self.files = files
+        self.profiles = profiles
+        self.declarations = declarations
 
 
 def scan_language(root: Path) -> LanguageScan:
     names: set[str] = set()
     files: dict[str, str] = {}
+    profiles: dict[str, set[str]] = {}
+    declarations: dict[str, list[tuple[str, str]]] = {}
     language_root = (root / LANGUAGE_ROOT).resolve()
     for search_root in SEARCH_ROOTS:
         base = (root / search_root).resolve()
@@ -905,8 +991,22 @@ def scan_language(root: Path) -> LanguageScan:
             code = tokenize(text, path.suffix)
             key = repo_rel.as_posix()
             files[key] = code
-            names.update(declared_names(code, path.suffix))
-    return LanguageScan(names, profile_constant_names(root), files)
+            profiles[key] = profile_ids(text)
+            for name in declared_names(code, path.suffix):
+                names.add(name)
+                declarations.setdefault(name.casefold(), []).append((key, name))
+    for folded in declarations:
+        declarations[folded] = sorted(set(declarations[folded]))
+    return LanguageScan(names, profile_constant_names(root), files, profiles, declarations)
+
+
+def profile_ids(text: str) -> set[str]:
+    found: set[str] = set()
+    if SOURCE_PROFILE in text:
+        found.add(SOURCE_PROFILE)
+    if CORE_PROFILE in text:
+        found.add(CORE_PROFILE)
+    return found
 
 
 def profile_constant_names(root: Path) -> set[str]:
@@ -964,8 +1064,191 @@ def declared_in_context(code: str, suffix: str, context: str, symbol: str) -> bo
     return False
 
 
+def bare_leaf(field: str) -> str:
+    leaf = field.split(".")[-1]
+    while leaf.endswith("[]"):
+        leaf = leaf[:-2]
+    return leaf
+
+
+def path_parts(field: str) -> list[str]:
+    parts: list[str] = []
+    for piece in field.split("."):
+        piece = piece.replace("[]", "")
+        if piece:
+            parts.append(piece)
+    return parts
+
+
+def is_path_compound(term: str, parts: list[str]) -> bool:
+    folded = term.casefold().replace("_", "")
+    lowered = [part.casefold() for part in parts]
+    for start in range(len(lowered)):
+        joined = ""
+        for end in range(start, len(lowered)):
+            joined += lowered[end]
+            if end > start and folded == joined:
+                return True
+    return False
+
+
+def declared_matches(scan: "LanguageScan", terms: list[str]) -> list[tuple[str, str]]:
+    found: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for term in terms:
+        if BARE_SYMBOL.fullmatch(term) is None:
+            continue
+        for item in scan.declarations.get(term.casefold(), []):
+            if item not in seen:
+                seen.add(item)
+                found.append(item)
+    return sorted(found)
+
+
+def review_pairs(field: str, reviews: list[object], failures: list[str]) -> list[tuple[str, str]]:
+    found: list[tuple[str, str]] = []
+    for index, review in enumerate(reviews):
+        if not isinstance(review, dict) or list(review) != REVIEW_KEYS:
+            shown = list(review) if isinstance(review, dict) else type(review).__name__
+            failures.append(f"FAIL: {field} reviewedNonRealisations[{index}] keys are {shown!r}")
+            continue
+        file_name = review.get("file")
+        symbol = review.get("symbol")
+        reason = review.get("reason")
+        if (
+            not isinstance(file_name, str)
+            or not file_name
+            or not isinstance(symbol, str)
+            or BARE_SYMBOL.fullmatch(symbol) is None
+        ):
+            failures.append(f"FAIL: {field} reviewedNonRealisations[{index}] is not a file and symbol")
+            continue
+        if not isinstance(reason, str) or not reason.strip():
+            failures.append(f"FAIL: {field} reviewedNonRealisations[{index}] reason is empty")
+        pair = (file_name, symbol)
+        if pair in found:
+            failures.append(f"FAIL: {field} reviewedNonRealisations duplicates {file_name} {symbol}")
+        found.append(pair)
+    return found
+
+
+def read_ident(code: str, index: int) -> tuple[str | None, int]:
+    if index >= len(code) or not (code[index].isalpha() or code[index] == "_"):
+        return None, index
+    end = index + 1
+    while end < len(code) and (code[end].isalnum() or code[end] == "_"):
+        end += 1
+    return code[index:end], end
+
+
+def preceded_by_ident(code: str, index: int) -> bool:
+    cursor = index - 1
+    while cursor >= 0 and code[cursor] in " \t":
+        cursor -= 1
+    return cursor >= 0 and (code[cursor].isalnum() or code[cursor] == "_")
+
+
+def try_generic(code: str, index: int) -> int | None:
+    """Return the index after a generic '<...>', or None when '<' is a comparison."""
+
+    if index >= len(code) or code[index] != "<":
+        return None
+    if index + 1 < len(code) and code[index + 1] in "=<":
+        return None
+    if not preceded_by_ident(code, index):
+        return None
+    angles = 1
+    groups = 0
+    cursor = index + 1
+    length = len(code)
+    while cursor < length and angles:
+        char = code[cursor]
+        if char in {"'", '"', "`"}:
+            cursor = skip_quote(code, cursor, char)
+            continue
+        if char in "([{":
+            groups += 1
+        elif char in ")]}":
+            groups = max(0, groups - 1)
+        elif char == "<":
+            angles += 1
+        elif char == ">":
+            angles -= 1
+            if angles == 0:
+                return cursor + 1
+        elif char in "=;" and groups == 0:
+            return None
+        cursor += 1
+    return None
+
+
+def comma_declarators(code: str) -> set[str]:
+    """Names in const, let, and var lists, including declarators after the first comma."""
+
+    names: set[str] = set()
+    length = len(code)
+    for match in CONST_DECL_RE.finditer(code):
+        index = match.end()
+        while index < length:
+            while index < length and code[index] in " \t\r\n":
+                index += 1
+            if index >= length or code[index] == ";":
+                break
+            if code[index] == "{":
+                depth = 1
+                index += 1
+                while index < length and depth:
+                    char = code[index]
+                    if char in {"'", '"', "`"}:
+                        index = skip_quote(code, index, char)
+                        continue
+                    if char == "{":
+                        depth += 1
+                    elif char == "}":
+                        depth -= 1
+                        if depth == 0:
+                            index += 1
+                            break
+                    elif depth == 1 and (char.isalpha() or char == "_"):
+                        name, index = read_ident(code, index)
+                        if name:
+                            names.add(name)
+                        continue
+                    index += 1
+            elif code[index].isalpha() or code[index] == "_":
+                name, index = read_ident(code, index)
+                if name:
+                    names.add(name)
+            else:
+                break
+            depth = 0
+            while index < length:
+                char = code[index]
+                if char in {"'", '"', "`"}:
+                    index = skip_quote(code, index, char)
+                    continue
+                if char == "<" and depth == 0:
+                    after = try_generic(code, index)
+                    if after is not None:
+                        index = after
+                        continue
+                if char in "([{":
+                    depth += 1
+                elif char in ")]}":
+                    depth = max(0, depth - 1)
+                elif depth == 0 and char in ",;":
+                    break
+                index += 1
+            if index < length and code[index] == ",":
+                index += 1
+                continue
+            break
+    return names
+
+
 def ts_declared(code: str) -> set[str]:
     names = set(TOP_DECL_RE.findall(code))
+    names.update(comma_declarators(code))
     for body in ts_bodies(code):
         names.update(member_fields(body))
     for match in re.finditer(r"\bfunction\s+[A-Za-z_][A-Za-z0-9_]*\b", code):
@@ -1187,14 +1470,6 @@ def k_syntax_body(code: str, sort: str) -> str | None:
     if end is None:
         return rest
     return rest[: end.start()]
-
-
-TOP_DECL_RE = re.compile(
-    r"(?m)^[ \t]*(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function|const|let|var|class|interface|enum|type)\s+([A-Za-z_][A-Za-z0-9_]*)\b"
-)
-EBNF_RULE_RE = re.compile(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*=")
-EBNF_TERMINAL_RE = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"')
-CELL_RE = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>")
 
 
 def member_fields(body: str) -> set[str]:
@@ -1493,6 +1768,8 @@ def skip_quote(text: str, start: int, quote: str) -> int:
             return index + 1
         index += 1
     return len(text)
+
+
 def canonical_stage_section(text: str) -> str | None:
     match = re.search(rf"(?m)^{re.escape(CANONICAL_HEADING)}[ \t]*\n", text)
     if match is None:
