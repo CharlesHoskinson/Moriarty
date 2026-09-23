@@ -51,12 +51,22 @@ ROLE_DIRECTION = {
     "exact": "none",
 }
 
-# A slash between spaces is the division operator in this tree.
-# Comment markers and identifiers such as source/5 do not match.
-DIVISION = re.compile(r" / ")
+# An operand on each side of `/`, after comments and string literals are blanked.
+# Spacing does not matter. `//` and `/*` are not division operators.
+_OPERAND = r"(?:[A-Za-z_$][\w$]*|\d+n?|\)|\])"
+DIVISION = re.compile(rf"{_OPERAND}\s*/(?!/|\*)\s*{_OPERAND}")
 ROUNDING_WORD = re.compile(r"\bfloor\b|\bceil\b")
-OPERATION_LINE = re.compile(
-    r" / |\bfloor\b|\bceil\b|Rounding|\bscale\b|\bdiv\b"
+ROUNDING_OR_SCALE = re.compile(r"\bfloor\b|\bceil\b|Rounding|\bscale\b|\bdiv\b")
+BENEFICIARY_CAVEAT = re.compile(
+    r"remainder is not posted to (?:a |the )?protocol reserve",
+    re.IGNORECASE,
+)
+# A posting of the modulus or remainder onto a protocol-reserve name.
+# closureReserve is work accounting and does not match this name.
+RESERVE_POSTING = re.compile(
+    r"protocol[-_ ]?reserve\w*(?:\s*\.\s*\w+)*\s*(?:\+=|=(?!=))"
+    r"\s*[^=;\n]*(?:remainder|%\s*\w+)",
+    re.IGNORECASE,
 )
 FUNCTION_START = re.compile(
     r"^(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_]\w*)\s*\("
@@ -146,14 +156,20 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
         return "successor sources missing", [], None
 
     failures: list[str] = []
-    decision_bytes = decision_path.read_bytes()
-    decision_text = decision_bytes.decode("utf-8")
+    decision = read_utf8(decision_path, DECISION_FILE, failures)
+    if decision is None:
+        return None, failures, None
+    decision_bytes, decision_text = decision
     for phrase in DECISION_PHRASES:
         if phrase not in decision_text:
             failures.append(f"FAIL: decision file does not state {phrase}")
 
-    schema, schema_text = load_json(schema_path, "numeric profile schema", failures)
-    profile, profile_text = load_json(profile_path, "numeric profile", failures)
+    schema, schema_text = load_json(
+        schema_path, "numeric profile schema", SCHEMA_FILE, failures
+    )
+    profile, profile_text = load_json(
+        profile_path, "numeric profile", PROFILE_FILE, failures
+    )
     if schema is None or profile is None:
         return None, failures, None
     if not isinstance(schema, dict) or not isinstance(profile, dict):
@@ -208,10 +224,13 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
     if profile["defiformalConversion"]["formula"] != FORMULA:
         failures.append("FAIL: defiformalConversion.formula does not match the checker formula")
 
-    sources = {
-        path.relative_to(root).as_posix(): path.read_text(encoding="utf-8").splitlines()
-        for path in sorted(successor.glob("*.ts"))
-    }
+    sources: dict[str, list[str]] = {}
+    for path in sorted(successor.glob("*.ts")):
+        relative = path.relative_to(root).as_posix()
+        loaded = read_utf8(path, relative, failures)
+        if loaded is None:
+            return None, failures, None
+        sources[relative] = loaded[1].splitlines()
     check_price_types(profile, sources, failures)
     check_widths(profile, sources, failures)
     check_vectors(profile, failures)
@@ -220,10 +239,24 @@ def check(root: Path) -> tuple[str | None, list[str], tuple[int, int] | None]:
     return None, failures, (primitive_count, gap_count)
 
 
+def read_utf8(
+    path: Path, display: str, failures: list[str]
+) -> tuple[bytes, str] | None:
+    data = path.read_bytes()
+    try:
+        return data, data.decode("utf-8")
+    except UnicodeDecodeError:
+        failures.append(f"FAIL: {display} is not UTF-8")
+        return None
+
+
 def load_json(
-    path: Path, label: str, failures: list[str]
+    path: Path, label: str, display: str, failures: list[str]
 ) -> tuple[object | None, str]:
-    text = path.read_text(encoding="utf-8")
+    loaded = read_utf8(path, display, failures)
+    if loaded is None:
+        return None, ""
+    text = loaded[1]
     try:
         return json.loads(text), text
     except json.JSONDecodeError as error:
@@ -233,6 +266,108 @@ def load_json(
 
 def one_line(message: str) -> str:
     return " ".join(message.split())
+
+
+def operand_before(emitted: list[str]) -> bool:
+    for ch in reversed(emitted):
+        if ch in " \t":
+            continue
+        return ch.isalnum() or ch in "_$)]"
+    return False
+
+
+def mask_non_code(text: str, *, blank_strings: bool = True) -> str:
+    """Blank comments, and optionally string literals, without moving newlines."""
+    out: list[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if ch == "/" and nxt == "/":
+            while i < n and text[i] != "\n":
+                out.append(" ")
+                i += 1
+            continue
+        if ch == "/" and nxt == "*":
+            out.append(" ")
+            out.append(" ")
+            i += 2
+            while i < n and not (text[i] == "*" and i + 1 < n and text[i + 1] == "/"):
+                out.append("\n" if text[i] == "\n" else " ")
+                i += 1
+            if i < n:
+                out.append(" ")
+                i += 1
+            if i < n:
+                out.append(" ")
+                i += 1
+            continue
+        if ch == "/" and not operand_before(out):
+            # A slash that does not follow an operand is a regex literal,
+            # including its flags. It is not the division operator.
+            out.append(" ")
+            i += 1
+            in_class = False
+            while i < n:
+                current = text[i]
+                if current == "\\":
+                    out.append(" ")
+                    i += 1
+                    if i < n:
+                        out.append("\n" if text[i] == "\n" else " ")
+                        i += 1
+                    continue
+                if current == "[" and not in_class:
+                    in_class = True
+                elif current == "]" and in_class:
+                    in_class = False
+                elif current == "/" and not in_class:
+                    out.append(" ")
+                    i += 1
+                    break
+                if current == "\n":
+                    out.append("\n")
+                    i += 1
+                    break
+                out.append(" ")
+                i += 1
+            while i < n and text[i].isascii() and text[i].isalpha():
+                out.append(" ")
+                i += 1
+            continue
+        if blank_strings and ch in "'\"`":
+            quote = ch
+            out.append(" ")
+            i += 1
+            while i < n:
+                current = text[i]
+                if current == "\\":
+                    out.append(" ")
+                    i += 1
+                    if i < n:
+                        out.append("\n" if text[i] == "\n" else " ")
+                        i += 1
+                    continue
+                if current == quote:
+                    out.append(" ")
+                    i += 1
+                    break
+                out.append("\n" if current == "\n" else " ")
+                i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def masked_lines(lines: list[str]) -> list[str]:
+    if not lines:
+        return []
+    masked = mask_non_code("\n".join(lines)).split("\n")
+    if len(masked) != len(lines):
+        raise ValueError("mask changed the line count")
+    return masked
 
 
 def assert_schema_closed(schema: object, path: str, failures: list[str]) -> None:
@@ -330,11 +465,122 @@ def check_widths(
             failures.append(
                 f"FAIL: width symbol {row['symbol']} does not occur in {row['file']}"
             )
-        evidence = f"{row['bits'] - 1}n" if name.startswith("SInt") else f"{row['bits']}n"
-        if evidence not in text:
+        span = numeric_fits_span(lines)
+        if span is None:
             failures.append(
-                f"FAIL: width {name} has no {evidence} bound in {row['file']}"
+                f"FAIL: width {name} has no numericFits function in {row['file']}"
             )
+            continue
+        start, end = span
+        reason = width_bound_mismatch(name, int(row["bits"]), "\n".join(lines[start - 1 : end]))
+        if reason is not None:
+            failures.append(
+                f"FAIL: width {name} numericFits at {row['file']}:{start} {reason}"
+            )
+
+
+def numeric_fits_span(lines: list[str]) -> tuple[int, int] | None:
+    spans = [span for span in function_spans(lines) if span[2] == "numericFits"]
+    if len(spans) != 1:
+        return None
+    return spans[0][0], spans[0][1]
+
+
+def width_bound_mismatch(name: str, bits: int, body: str) -> str | None:
+    """Match the numericFits range, not an unrelated constant in the same file."""
+    code = mask_non_code(body, blank_strings=False)
+    if name.startswith("SInt"):
+        shift = bits - 1
+        signed = re.compile(
+            rf"'{re.escape(name)}'[\s\S]{{0,240}}"
+            rf"return\s+n\s*>=\s*-\(\s*1n\s*<<\s*{shift}n\s*\)\s*&&\s*"
+            rf"n\s*<\s*\(\s*1n\s*<<\s*{shift}n\s*\)"
+        )
+        if signed.search(code) is None:
+            return f"does not bound {name} with 1n << {shift}n"
+        return None
+    match = re.search(
+        r"return\s+n\s*>=\s*0n\s*&&\s*n\s*<\s*\(\s*1n\s*<<\s*\((?P<expr>.*)\)\s*\)\s*;",
+        code,
+        re.S,
+    )
+    if match is None:
+        return "has no unsigned numericFits return"
+    if re.search(rf"'{re.escape(name)}'", code[: match.start()]) is not None:
+        return f"handles {name} before the unsigned return"
+    mapped = unsigned_shift_bits(match.group("expr"), name)
+    if mapped != bits:
+        shown = "no width" if mapped is None else f"{mapped}n"
+        return f"maps {name} to {shown}, not {bits}n"
+    return None
+
+
+def unsigned_shift_bits(expr: str, tag: str) -> int | None:
+    token = eval_shift_ternary(expr.strip(), tag)
+    if token is None:
+        return None
+    match = re.fullmatch(r"(\d+)n", token)
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def eval_shift_ternary(expr: str, tag: str) -> str | None:
+    expr = expr.strip()
+    question = top_level(expr, "?")
+    if question is None:
+        compact = re.sub(r"\s+", "", expr)
+        if re.fullmatch(r"\d+n", compact):
+            return compact
+        return None
+    rest = expr[question + 1 :]
+    colon = top_level(rest, ":")
+    if colon is None:
+        return None
+    if condition_selects(expr[:question], tag):
+        return eval_shift_ternary(rest[:colon], tag)
+    return eval_shift_ternary(rest[colon + 1 :], tag)
+
+
+def top_level(expr: str, token: str) -> int | None:
+    depth = 0
+    quote: str | None = None
+    index = 0
+    while index < len(expr):
+        ch = expr[index]
+        if quote is not None:
+            if ch == "\\":
+                index += 2
+                continue
+            if ch == quote:
+                quote = None
+            index += 1
+            continue
+        if ch in "'\"`":
+            quote = ch
+            index += 1
+            continue
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        elif depth == 0 and expr.startswith(token, index):
+            return index
+        index += 1
+    return None
+
+
+def condition_selects(condition: str, tag: str) -> bool:
+    if re.search(rf"\btag\s*===\s*'{re.escape(tag)}'", condition):
+        return True
+    listed = re.search(
+        r"\[(.*?)\]\s*\.\s*includes\(\s*tag\s*\)",
+        condition,
+        re.S,
+    )
+    if listed is None:
+        return False
+    return tag in re.findall(r"'([^']*)'", listed.group(1))
 
 
 def check_vectors(profile: dict[str, Any], failures: list[str]) -> None:
@@ -395,7 +641,9 @@ def check_primitives(
     return len(rows), gaps
 
 
-def check_primitive(row: dict[str, Any], sources: dict[str, list[str]]) -> list[str]:
+def check_primitive(
+    row: dict[str, Any], sources: dict[str, list[str]]
+) -> list[str]:
     failures: list[str] = []
     identity = str(row["id"])
     lines = sources.get(str(row["file"]))
@@ -412,13 +660,18 @@ def check_primitive(row: dict[str, Any], sources: dict[str, list[str]]) -> list[
             f"FAIL: primitive {identity} line {line_number} "
             f"is past the end of {row['file']}"
         ]
+    try:
+        code_lines = masked_lines(lines)
+    except ValueError as error:
+        return failures + [f"FAIL: {row['file']} {error}"]
     line_text = lines[line_number - 1]
-    if OPERATION_LINE.search(line_text) is None:
+    code_text = code_lines[line_number - 1]
+    if DIVISION.search(code_text) is None and ROUNDING_OR_SCALE.search(line_text) is None:
         failures.append(
             f"FAIL: primitive {identity} line {line_number} "
             "has no division, rounding, or scaling operation"
         )
-    if DIVISION.search(line_text) and row["requiredDirection"] == "none":
+    if DIVISION.search(code_text) and row["requiredDirection"] == "none":
         failures.append(
             f"FAIL: primitive {identity} divides and cannot use requiredDirection none"
         )
@@ -442,12 +695,23 @@ def check_primitive(row: dict[str, Any], sources: dict[str, list[str]]) -> list[
             f"FAIL: primitive {identity} authorSelectable does not match the source"
         )
     fixed = None if selectable else fixed_direction(body)
-    expected = expected_conformance(selectable, str(row["requiredDirection"]), fixed)
+    beneficiary_ok = remainder_reaches_protocol_reserve(row, name, body, sources)
+    reasons = conformance_reasons(
+        selectable, str(row["requiredDirection"]), fixed, beneficiary_ok
+    )
+    expected = "open-gap" if reasons else "conforms"
     if row["conformance"] != expected:
+        detail = "; ".join(reasons) if reasons else "the source matches the policy"
         failures.append(
             f"FAIL: primitive {identity} conformance is {row['conformance']} "
-            f"but the source requires {expected}"
+            f"but the source requires {expected} ({detail})"
         )
+    if str(row["requiredDirection"]) != "none" and not beneficiary_ok:
+        note = row["gapNote"]
+        if not isinstance(note, str) or BENEFICIARY_CAVEAT.search(note) is None:
+            failures.append(
+                f"FAIL: primitive {identity} remainder is not posted to a protocol reserve"
+            )
     direction = ROLE_DIRECTION[str(row["resultRole"])]
     if row["requiredDirection"] != direction:
         failures.append(
@@ -477,7 +741,7 @@ def author_selectable(body: str) -> bool:
 
 
 def fixed_direction(body: str) -> str | None:
-    if " / " not in body:
+    if DIVISION.search(mask_non_code(body)) is None:
         return None
     if (
         re.search(r"remainder\s*!==\s*0n", body) is not None
@@ -487,12 +751,41 @@ def fixed_direction(body: str) -> str | None:
     return "floor"
 
 
-def expected_conformance(
-    selectable: bool, required_direction: str, fixed: str | None
-) -> str:
-    if selectable or fixed is None or fixed != required_direction:
-        return "open-gap"
-    return "conforms"
+def conformance_reasons(
+    selectable: bool,
+    required_direction: str,
+    fixed: str | None,
+    beneficiary_ok: bool,
+) -> list[str]:
+    reasons: list[str] = []
+    if selectable:
+        reasons.append("author can select the rounding")
+    elif fixed is None:
+        reasons.append("the source has no fixed direction")
+    elif fixed != required_direction:
+        reasons.append(
+            f"fixed direction {fixed} differs from required {required_direction}"
+        )
+    if required_direction != "none" and not beneficiary_ok:
+        reasons.append("remainder is not posted to a protocol reserve")
+    return reasons
+
+
+def remainder_reaches_protocol_reserve(
+    row: dict[str, Any],
+    name: str,
+    body: str,
+    sources: dict[str, list[str]],
+) -> bool:
+    """True only when this division's remainder is posted to a protocol reserve.
+
+    requiredDirection none has no dust. closureReserve is not that reserve.
+    A comment that names the reserve is not a posting.
+    """
+    if str(row["requiredDirection"]) == "none":
+        return True
+    texts = [body, *caller_bodies(str(row["file"]), name, sources)]
+    return any(RESERVE_POSTING.search(mask_non_code(text)) is not None for text in texts)
 
 
 def check_coverage(
@@ -505,14 +798,22 @@ def check_coverage(
         (str(row["file"]), int(row["line"]))
         for row in rows
     ]
+    try:
+        masked = {name: masked_lines(lines) for name, lines in sources.items()}
+    except ValueError as error:
+        failures.append(f"FAIL: {error}")
+        return
     check_ignored(IGNORED_ROUNDING_SITES, sources, ROUNDING_WORD, "rounding", failures)
-    check_ignored(IGNORED_DIVISION_SITES, sources, DIVISION, "division", failures)
+    check_ignored(IGNORED_DIVISION_SITES, masked, DIVISION, "division", failures)
     ignored_rounding = {(site[0], site[1]) for site in IGNORED_ROUNDING_SITES}
     ignored_division = {(site[0], site[1]) for site in IGNORED_DIVISION_SITES}
     for relative, lines in sources.items():
+        code_lines = masked[relative]
         spans = function_spans(lines)
         for number, line in enumerate(lines, start=1):
-            if ROUNDING_WORD.search(line) and in_arithmetic_helper(spans, lines, number):
+            if ROUNDING_WORD.search(line) and in_arithmetic_helper(
+                spans, lines, code_lines, number
+            ):
                 site = (relative, number)
                 covered = covered_by(site, citations)
                 if site in ignored_rounding:
@@ -526,15 +827,122 @@ def check_coverage(
                         f"FAIL: rounding site {relative}:{number} "
                         "is not covered by a primitive within 15 lines"
                     )
-            if DIVISION.search(line) and not line.lstrip().startswith(("//", "*", "/*")):
-                site = (relative, number)
-                if site in ignored_division:
-                    continue
-                if not covered_by(site, citations):
+            if DIVISION.search(code_lines[number - 1]) is None:
+                continue
+            site = (relative, number)
+            if site in ignored_division:
+                continue
+            if not covered_by(site, citations):
+                failures.append(
+                    f"FAIL: division site {relative}:{number} "
+                    "is not covered by a primitive within 15 lines"
+                )
+            roles = required_roles(relative, number, sources)
+            if not roles:
+                failures.append(
+                    f"FAIL: division site {relative}:{number} has no derived result role"
+                )
+                continue
+            for role in sorted(roles):
+                if not role_covered(relative, number, role, rows):
                     failures.append(
-                        f"FAIL: division site {relative}:{number} "
+                        f"FAIL: division site {relative}:{number} role {role} "
                         "is not covered by a primitive within 15 lines"
                     )
+
+
+def required_roles(
+    relative: str, number: int, sources: dict[str, list[str]]
+) -> set[str]:
+    """Result roles D2 requires at this division, derived from the source."""
+    lines = sources[relative]
+    span = enclosing_function(lines, number)
+    if span is None:
+        return set()
+    start, end, name = span
+    body = "\n".join(lines[start - 1 : end])
+    roles = roles_from_division_body(body)
+    for caller in caller_bodies(relative, name, sources):
+        roles |= roles_from_call(caller, name)
+    return roles
+
+
+def caller_bodies(
+    relative: str, name: str, sources: dict[str, list[str]]
+) -> list[str]:
+    """Same-file callers. A same spelling in another file is a different function."""
+    lines = sources.get(relative)
+    if lines is None:
+        return []
+    pattern = re.compile(rf"\b{re.escape(name)}\s*\(")
+    spans = function_spans(lines)
+    bodies: list[str] = []
+    seen: set[tuple[int, int]] = set()
+    for number, line in enumerate(lines, start=1):
+        if pattern.search(line) is None:
+            continue
+        span = innermost(spans, number)
+        if span is None or span[2] == name:
+            continue
+        key = (span[0], span[1])
+        if key in seen:
+            continue
+        seen.add(key)
+        bodies.append("\n".join(lines[span[0] - 1 : span[1]]))
+    return bodies
+
+
+def roles_from_division_body(body: str) -> set[str]:
+    roles: set[str] = set()
+    if re.search(
+        r"\baddU128\(\s*previous(?:Accrued|Outstanding|Incurred)\s*,\s*interest\s*\)",
+        body,
+    ):
+        roles.add("obligation")
+    if (
+        re.search(r"\bFloorDiv\b", body) is not None
+        and re.search(r"\bCeilDiv\b", body) is not None
+        and DIVISION.search(mask_non_code(body)) is not None
+    ):
+        # The reducer implements both directions and does not separate
+        # an amount owed from an amount received.
+        roles.update(("obligation", "receipt"))
+    return roles
+
+
+def roles_from_call(body: str, callee: str) -> set[str]:
+    roles: set[str] = set()
+    assign = re.compile(
+        rf"(?:const|let)\s+(\w+)\s*=\s*{re.escape(callee)}\s*\("
+    )
+    for match in assign.finditer(body):
+        var = re.escape(match.group(1))
+        if re.search(
+            rf"\bsubU128\(\s*funded\.remaining\s*,\s*{var}\.value\s*\)",
+            body,
+        ):
+            roles.add("obligation")
+        if re.search(rf"\b{var}\.value\s*>\s*funded\.remaining\b", body):
+            roles.add("obligation")
+        if re.search(
+            rf"\b{var}\.value\s*!==\s*funded\.amount\b",
+            body,
+        ) and re.search(r"\bfunded\.to\s*!==\s*action\.debtor\b", body):
+            roles.add("receipt")
+        if re.search(rf"\bprincipal\s*-\s*{var}\.value\.dP\b", body):
+            roles.add("receipt")
+    return roles
+
+
+def role_covered(
+    relative: str, number: int, role: str, rows: list[dict[str, Any]]
+) -> bool:
+    return any(
+        str(row["file"]) == relative
+        and str(row["resultRole"]) == role
+        and abs(int(row["line"]) - number) <= 15
+        for row in rows
+    )
 
 
 def check_ignored(
@@ -570,14 +978,18 @@ def covered_by(site: tuple[str, int], citations: list[tuple[str, int]]) -> bool:
 
 
 def in_arithmetic_helper(
-    spans: list[tuple[int, int, str]], lines: list[str], number: int
+    spans: list[tuple[int, int, str]],
+    lines: list[str],
+    masked: list[str],
+    number: int,
 ) -> bool:
     span = innermost(spans, number)
     if span is None:
         return False
     start, end, _name = span
-    body = "\n".join(lines[start - 1 : end])
-    return DIVISION.search(body) is not None and ROUNDING_WORD.search(body) is not None
+    raw_body = "\n".join(lines[start - 1 : end])
+    code_body = "\n".join(masked[start - 1 : end])
+    return DIVISION.search(code_body) is not None and ROUNDING_WORD.search(raw_body) is not None
 
 
 def enclosing_function(
