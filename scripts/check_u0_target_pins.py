@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
-from jsonschema.exceptions import SchemaError
+from jsonschema.exceptions import SchemaError, UnknownType
 
 
 MORIARTY_ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +72,32 @@ BANNED_NOTE_RE = re.compile(
     r"(?i)\b(?:re-?verified|verified|compatible|current|validated)\b"
 )
 NOTE_LIMIT = 160
+# Checker-owned absence search. The ledger cannot narrow these values.
+REQUIRED_ABSENCE_ROOTS = (
+    "deliverables",
+    "experiments",
+    "docs",
+    "openspec",
+)
+REQUIRED_PIN_PATTERNS = (
+    r"(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])",
+    r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])",
+    r"(?<![0-9A-Za-z])[0-9]+\.[0-9]+\.[0-9]+(?![0-9A-Za-z])",
+)
+REQUIRED_PIN_REGEXES = tuple(re.compile(pattern) for pattern in REQUIRED_PIN_PATTERNS)
+REQUIRED_SEARCH_TERMS: dict[str, tuple[str, ...]] = {
+    "moriarty-compiler": ("Moriarty commit", "Frozen base"),
+    "compact-compiler": ("compact_compiler", "compactCompiler"),
+    "zkir": ("midnight-zkir", "zkir-v3"),
+    "native-proof-system": ("backendPin", "midnight-zk@"),
+    "verifier": ("ivc/verifier.rs", "midnight-zk@"),
+    "proving-keys": ("accrue.prover", "initialize.prover"),
+    "verifier-keys": ("accrue.verifier", "initialize.verifier"),
+    "srs-parameters": ("bls_midnight_2p17", '"k": 17'),
+    "ledger": ("midnight-ledger", "ledger8"),
+    "proof-server": ("proof-server:", "midnightntwrk/proof-server"),
+    "k-reference-toolchain": ('"revision"', "7.1.337"),
+}
 # Independent records used to reject a historical pin that is not in its source pattern.
 PROVER_KEY_RE = re.compile(
     rb'"path"\s*:\s*"keys/[^"]+\.prover"\s*,\s*"sha256"\s*:\s*"([0-9a-f]{64})"'
@@ -82,8 +108,12 @@ VERIFIER_KEY_RE = re.compile(
 COMPONENT_PIN_RECORDS: dict[str, tuple[tuple[str, re.Pattern[bytes]], ...]] = {
     "moriarty-compiler": (
         (
-            "experiments/moriarty-language/package.json",
-            re.compile(rb'"version"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"'),
+            "deliverables/moriarty-compact-dsl-feasibility-and-sdk-specification.md",
+            re.compile(rb"pins Moriarty commit\n`([0-9a-f]{40})`"),
+        ),
+        (
+            "deliverables/moriarty-work-package-council-advisory-2026-09-03.md",
+            re.compile(rb"Frozen base: `([0-9a-f]{40})`"),
         ),
     ),
     "compact-compiler": (
@@ -198,9 +228,13 @@ def check(root: Path) -> int:
         return 1 if ledger_error.startswith("FAIL:") else 2
 
     failures: list[str] = []
+    if not schema_document_ok(schema, failures):
+        for failure in failures:
+            print(f"FAIL: {failure}")
+        return 1
     check_canonical(ledger_text, ledger, failures)
     check_schema(schema, ledger, failures)
-    # Row evidence checks run even when schema validation failed.
+    # Row evidence checks run even when instance validation failed.
     check_ledger(root, schema, ledger, failures)
     if failures:
         for failure in failures:
@@ -248,6 +282,27 @@ def check_canonical(text: str, ledger: object, failures: list[str]) -> None:
         failures.append(f"{LEDGER_REL.as_posix()} is not canonical 2-space JSON")
 
 
+def _one_line(exc: BaseException) -> str:
+    message = getattr(exc, "message", "")
+    if not isinstance(message, str) or not message.strip():
+        message = str(exc)
+    return " ".join(message.split())
+
+
+def schema_document_ok(schema: object, failures: list[str]) -> bool:
+    if not isinstance(schema, dict):
+        failures.append("schema is not an object")
+        return False
+    try:
+        Draft202012Validator.check_schema(schema)
+    except SchemaError as exc:
+        failures.append(
+            "schema is not a valid Draft 2020-12 document: " + _one_line(exc)
+        )
+        return False
+    return True
+
+
 def check_schema(schema: object, ledger: object, failures: list[str]) -> bool:
     if not isinstance(schema, dict):
         failures.append("schema is not an object")
@@ -255,9 +310,20 @@ def check_schema(schema: object, ledger: object, failures: list[str]) -> bool:
     try:
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
     except SchemaError as exc:
-        failures.append(f"schema is not a valid Draft 2020-12 document: {exc.message}")
+        failures.append(
+            "schema is not a valid Draft 2020-12 document: " + _one_line(exc)
+        )
         return False
-    errors = sorted(validator.iter_errors(ledger), key=lambda item: list(item.absolute_path))
+    try:
+        errors = sorted(
+            validator.iter_errors(ledger),
+            key=lambda item: list(item.absolute_path),
+        )
+    except (SchemaError, UnknownType) as exc:
+        failures.append(
+            "schema is not a valid Draft 2020-12 document: " + _one_line(exc)
+        )
+        return False
     for error in errors:
         location = "/".join(str(part) for part in error.absolute_path) or "<root>"
         failures.append(f"schema {location}: {error.message}")
@@ -292,7 +358,7 @@ def check_ledger(root: Path, schema: object, ledger: object, failures: list[str]
     absence_schema = properties.get("absenceSearch", {})
     if not isinstance(absence_schema, dict):
         absence_schema = {}
-    pin_patterns = check_absence_search(ledger.get("absenceSearch"), absence_schema, failures)
+    check_absence_search(ledger.get("absenceSearch"), absence_schema, failures)
 
     pins_schema = properties.get("pins", {})
     if not isinstance(pins_schema, dict):
@@ -326,50 +392,31 @@ def check_ledger(root: Path, schema: object, ledger: object, failures: list[str]
             "pins do not contain exactly one row per component in enum order: "
             + ", ".join(str(component) for component in components)
         )
-    search_roots = absence_roots(ledger.get("absenceSearch"))
     for index, row in enumerate(pins):
         if not isinstance(row, dict):
             failures.append(f"pins/{index} is not an object")
             continue
         check_key_order(pin_item_schema, row, f"pins/{index}", failures)
-        check_row(root, row, index, search_roots, pin_patterns, failures)
+        check_row(root, row, index, failures)
 
 
 def check_absence_search(
     absence: object, schema_node: dict[str, object], failures: list[str]
-) -> list[re.Pattern[str]]:
+) -> None:
     if not isinstance(absence, dict):
         failures.append("absenceSearch is not an object")
-        return []
+        return
     check_key_order(schema_node, absence, "absenceSearch", failures)
     if absence.get("limitation") != LIMITATION:
         failures.append("absenceSearch limitation is not the required sentence")
-    patterns = absence.get("pinPatterns")
-    compiled: list[re.Pattern[str]] = []
-    if not isinstance(patterns, list) or len(patterns) < 3:
-        failures.append("absenceSearch pinPatterns does not contain the three recorded patterns")
-        return []
-    for index, pattern in enumerate(patterns):
-        if not isinstance(pattern, str) or not pattern:
-            failures.append(f"absenceSearch pinPatterns/{index} is not a string")
-            continue
-        try:
-            compiled.append(re.compile(pattern))
-        except re.error as exc:
-            failures.append(f"absenceSearch pinPatterns/{index} is not a regex: {exc}")
-    roots = absence.get("roots")
-    if not isinstance(roots, list) or not roots:
-        failures.append("absenceSearch roots is empty")
-    return compiled
-
-
-def absence_roots(absence: object) -> list[str]:
-    if not isinstance(absence, dict):
-        return []
-    roots = absence.get("roots")
-    if not isinstance(roots, list):
-        return []
-    return [item for item in roots if isinstance(item, str)]
+    if absence.get("pinPatterns") != list(REQUIRED_PIN_PATTERNS):
+        failures.append(
+            "absenceSearch pinPatterns are not the required 64-hex, 40-hex, and semver patterns"
+        )
+    if absence.get("roots") != list(REQUIRED_ABSENCE_ROOTS):
+        failures.append(
+            "absenceSearch roots are not deliverables, experiments, docs, openspec"
+        )
 
 
 def check_key_order(
@@ -388,8 +435,6 @@ def check_row(
     root: Path,
     row: dict[str, object],
     index: int,
-    search_roots: list[str],
-    pin_patterns: list[re.Pattern[str]],
     failures: list[str],
 ) -> None:
     label = f"pins/{index}"
@@ -430,7 +475,7 @@ def check_row(
         if not isinstance(component, str):
             failures.append(f"{label} component is not a string")
         else:
-            check_absent_row(root, row, component, label, search_roots, pin_patterns, failures)
+            check_absent_row(root, row, component, label, failures)
         check_cited_text(root, note_text, f"{label} note", [], failures)
         return
 
@@ -483,6 +528,17 @@ def check_claims(root: Path, row: dict[str, object], label: str, failures: list[
             check_evidence_quote(root, evidence_path, quote, claim_label, required=False, failures=failures)
     if row.get("status") == "historical" and found_in < 1:
         failures.append(f"{label} historical row has no found-in claim")
+    pin = row.get("pin")
+    if row.get("status") == "historical" and isinstance(pin, str) and pin:
+        quotes = [
+            claim.get("evidenceQuote")
+            for claim in claims
+            if isinstance(claim, dict) and claim.get("kind") == "found-in"
+        ]
+        if not any(isinstance(quote, str) and pin in quote for quote in quotes):
+            failures.append(
+                f"{label} historical row has no found-in evidenceQuote that contains its pin"
+            )
 
 
 def check_evidence_quote(
@@ -538,45 +594,77 @@ def check_absent_row(
     row: dict[str, object],
     component: str,
     label: str,
-    search_roots: list[str],
-    pin_patterns: list[re.Pattern[str]],
     failures: list[str],
 ) -> None:
     terms = row.get("searchTerms")
-    if not isinstance(terms, list) or len([item for item in terms if isinstance(item, str) and item.strip()]) < 2:
+    declared = [item for item in terms if isinstance(item, str)] if isinstance(terms, list) else []
+    if len([item for item in declared if item.strip()]) < 2:
         failures.append(f"{label} absent row searchTerms has fewer than 2 terms")
-        term_list: list[str] = []
-    else:
-        term_list = [item for item in terms if isinstance(item, str)]
-    excluded = exclusion_set(row, label, failures)
-    if not search_roots or not pin_patterns or not term_list:
-        return
-    hits, scan_failures = find_absence_hits(root, search_roots, term_list, pin_patterns)
+    required_terms = REQUIRED_SEARCH_TERMS.get(component)
+    if required_terms is None:
+        failures.append(f"{label} component {component} has no required absence search terms")
+        required_terms = ()
+    for term in required_terms:
+        if term not in declared:
+            failures.append(f"{label} searchTerms omit required term {term!r}")
+    excluded = parsed_exclusions(row, label, failures)
+    hits, scan_failures = find_absence_hits(root, component, declared)
     failures.extend(f"{label} {item}" for item in scan_failures)
-    for relative, line_no in hits:
-        if (relative, line_no) in excluded:
+    pins_on_line: dict[tuple[str, int], set[str]] = {}
+    for relative, line_no, pin_text in hits:
+        pins_on_line.setdefault((relative, line_no), set()).add(pin_text)
+    suppressed: set[tuple[str, int, str]] = set()
+    for item in excluded:
+        key = (item["path"], item["line"])
+        pins_here = pins_on_line.get(key)
+        hit_label = f"{label} excludedHits/{item['index']}"
+        if not pins_here:
+            failures.append(f"{hit_label} is not an absence hit: {item['path']}:{item['line']}")
+            continue
+        match = item["match"]
+        if match is None:
+            if len(pins_here) > 1:
+                failures.append(
+                    f"{hit_label} omits match and {item['path']}:{item['line']} has multiple pins"
+                )
+                continue
+            suppressed.add((item["path"], item["line"], next(iter(pins_here))))
+            continue
+        if match not in pins_here:
+            failures.append(
+                f"{hit_label} match is not a pin on {item['path']}:{item['line']}"
+            )
+            continue
+        suppressed.add((item["path"], item["line"], match))
+    for relative, line_no, pin_text in hits:
+        if (relative, line_no, pin_text) in suppressed:
             continue
         failures.append(
             f"{label} component {component} is absent but {relative}:{line_no} "
-            "matches a search term and a pin pattern"
+            f"matches a search term and a pin pattern: {pin_text}"
         )
 
 
-def exclusion_set(
+def parsed_exclusions(
     row: dict[str, object], label: str, failures: list[str]
-) -> set[tuple[str, int]]:
-    excluded: set[tuple[str, int]] = set()
+) -> list[dict[str, object]]:
+    parsed: list[dict[str, object]] = []
     hits = row.get("excludedHits")
     if not isinstance(hits, list):
         failures.append(f"{label} excludedHits is not an array")
-        return excluded
+        return parsed
     for index, item in enumerate(hits):
         hit_label = f"{label} excludedHits/{index}"
         if not isinstance(item, dict):
             failures.append(f"{hit_label} is not an object")
             continue
-        if list(item) != ["path", "line", "reason"]:
-            failures.append(f"{hit_label} keys {list(item)} are not schema order ['path', 'line', 'reason']")
+        expected = ["path", "line", "reason"]
+        if "match" in item:
+            expected.append("match")
+        if list(item) != expected:
+            failures.append(
+                f"{hit_label} keys {list(item)} are not schema order {expected}"
+            )
         path = item.get("path")
         line_no = item.get("line")
         reason = item.get("reason")
@@ -589,27 +677,40 @@ def exclusion_set(
         if not isinstance(reason, str) or not reason.strip():
             failures.append(f"{hit_label} reason is empty")
             continue
-        excluded.add((path, line_no))
-    return excluded
+        match: str | None = None
+        if "match" in item:
+            raw_match = item.get("match")
+            if not isinstance(raw_match, str) or not raw_match.strip():
+                failures.append(f"{hit_label} match is empty")
+                continue
+            match = raw_match
+        parsed.append({"path": path, "line": line_no, "match": match, "index": index})
+    return parsed
 
 
 def find_absence_hits(
     root: Path,
-    search_roots: list[str],
-    terms: list[str],
-    pin_patterns: list[re.Pattern[str]],
-) -> tuple[list[tuple[str, int]], list[str]]:
-    """Return (path, pin-line) hits and scan problems.
+    component: str,
+    extra_terms: list[str],
+) -> tuple[list[tuple[str, int, str]], list[str]]:
+    """Return (path, pin-line, pin-text) hits and scan problems.
 
     A hit is a pin-pattern match on the same line as a search term or on one of
-    the next two lines. The ledger directory and the schema directory are not
-    searched: a ledger cannot be evidence for itself.
+    the next two lines. Roots and pin patterns are checker-owned. Non-UTF-8
+    bytes are replaced so an ASCII pin is still visible. The ledger directory
+    and the schema directory are not searched.
     """
     failures: list[str] = []
-    hits: set[tuple[str, int]] = set()
+    hits: set[tuple[str, int, str]] = set()
+    terms = list(REQUIRED_SEARCH_TERMS.get(component, ()))
+    for term in extra_terms:
+        if term and term not in terms:
+            terms.append(term)
     folded_terms = [term.casefold() for term in terms if term]
+    if not folded_terms:
+        return [], failures
     files: list[tuple[str, Path]] = []
-    for rel_root in search_roots:
+    for rel_root in REQUIRED_ABSENCE_ROOTS:
         if Path(rel_root).is_absolute() or ".." in Path(rel_root).parts:
             failures.append(f"absenceSearch root {rel_root!r} is not a relative directory")
             continue
@@ -629,9 +730,7 @@ def find_absence_hits(
                 files.append((relative, path))
     for relative, path in files:
         try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
+            text = path.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
             failures.append(f"cannot read {relative} during absence search: {exc}")
             continue
@@ -642,8 +741,9 @@ def find_absence_hits(
                 continue
             end = min(len(lines), index + 3)
             for offset in range(index, end):
-                if any(pattern.search(lines[offset]) for pattern in pin_patterns):
-                    hits.add((relative, offset + 1))
+                for pattern in REQUIRED_PIN_REGEXES:
+                    for found in pattern.finditer(lines[offset]):
+                        hits.add((relative, offset + 1, found.group(0)))
     return sorted(hits), failures
 
 
