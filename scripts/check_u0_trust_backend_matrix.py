@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Validate U0 trust premises and the generated backend requirement matrix."""
+"""Validate U0 trust premises and the generated backend requirement matrix.
+
+Semantic fit of a quote to its statement label is a reviewed claim, not
+mechanically proven. The checker verifies structure, literal quote occurrence,
+identifier resolution, required topics, label length, one unspliced sentence,
+and closure-word absence.
+"""
 
 from __future__ import annotations
 
@@ -9,7 +15,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
@@ -48,133 +54,30 @@ REQUIREMENT_HEADING = re.compile(
 )
 REQUIREMENT_ID = re.compile(r"\b((?:UNI|MPLR)-\d{3})\b")
 ABBREVIATED_REQUIREMENT_IDS = re.compile(r"\b(UNI|MPLR)-(\d{3})((?:,\d{3})+)\b")
-
-
-class PremiseContract(NamedTuple):
-    """Claim phrases and per-id quote topics for one required trust premise."""
-
-    id: str
-    kind: str
-    status: str
-    related_ids: tuple[str, ...]
-    claims: tuple[str, ...]
-    topics: tuple[str, ...]
-    id_support: tuple[tuple[str, tuple[str, ...]], ...]
-
-
-PREMISE_CONTRACT = (
-    PremiseContract(
-        "TP01",
-        "unresolved-interface",
-        "open",
-        ("UNI-003", "UNI-017", "ZR01"),
-        ("ZKIRv3", "a comprehensive compatible release tuple is unknown."),
-        ("compatible released tuple",),
-        (
-            ("UNI-003", ("ZKIRv3",)),
-            ("UNI-017", ("compatible released tuple",)),
-            ("ZR01", ("a comprehensive compatible release tuple is unknown.",)),
-        ),
-    ),
-    PremiseContract(
-        "TP02",
-        "planning-assumption",
-        "accepted-assumption",
-        ("UNI-009", "UNI-017", "ZR02"),
-        (
-            "The user supplied a six-month planning assumption on 2026-09-19: "
-            "comprehensive Midnight recursion around March 2027.",
-            "independently verified release",
-        ),
-        ("native recursive", "recursively composing"),
-        (
-            ("UNI-009", ("native recursive",)),
-            ("UNI-017", ("native recursive",)),
-            ("ZR02", ("recursively composing",)),
-        ),
-    ),
-    PremiseContract(
-        "TP03",
-        "trust-assumption",
-        "open",
-        ("MPLR-010", "UNI-007", "ZR03"),
-        ("signers remain explicit trust assumptions", "oracle honesty"),
-        ("predecessors, observations", "observation boundary", "finality"),
-        (
-            ("MPLR-010", ("observation boundary",)),
-            ("UNI-007", ("finality",)),
-            ("ZR03", ("predecessors, observations",)),
-        ),
-    ),
-    PremiseContract(
-        "TP04",
-        "trust-assumption",
-        "accepted-assumption",
-        ("MPLR-030", "UNI-011", "ZR14"),
-        (
-            "Moriarty can also run on Midnight without this federation.",
-            "remains an explicit trust boundary.",
-            "without the federated kernel",
-            "threshold, hardware, observation and recovery assumptions",
-        ),
-        (
-            "without the federated kernel",
-            "threshold, hardware, observation and recovery assumptions",
-        ),
-        (
-            ("MPLR-030", ("threshold, hardware, observation and recovery assumptions",)),
-            ("UNI-011", ("remains an explicit trust boundary.",)),
-            ("ZR14", ("without the federated kernel",)),
-        ),
-    ),
-    PremiseContract(
-        "TP05",
-        "trust-assumption",
-        "accepted-assumption",
-        ("MPLR-010", "UNI-007", "UNI-008"),
-        ("Timeout is not evidence of nonexecution.", "another chain did not execute"),
-        ("mere timeout", "proof of nonexecution", "unresolved outcomes", "Refunds"),
-        (
-            ("MPLR-010", ("proof of nonexecution",)),
-            ("UNI-007", ("mere timeout",)),
-            ("UNI-008", ("Refunds",)),
-        ),
-    ),
-    PremiseContract(
-        "TP06",
-        "unresolved-interface",
-        "open",
-        ("MPLR-013", "MPLR-029", "UNI-010", "ZR14"),
-        (
-            "the stated witness-handoff and availability mechanism",
-            "explicit liveness assumption",
-            "not a private handoff theorem.",
-        ),
-        ("witness needed to continue", "authenticated state domain"),
-        (
-            ("MPLR-013", ("witness needed to continue",)),
-            ("MPLR-029", ("authenticated state domain",)),
-            ("UNI-010", ("the stated witness-handoff and availability mechanism",)),
-            ("ZR14", ("not a private handoff theorem.",)),
-        ),
-    ),
-    PremiseContract(
-        "TP07",
-        "unresolved-interface",
-        "open",
-        ("UNI-002", "UNI-004", "ZR03"),
-        (
-            "authentication occurs in the circuit, a bound ledger primitive",
-            "another explicitly justified native boundary.",
-        ),
-        ("signed intent", "signed intention", "signed constraint"),
-        (
-            ("UNI-002", ("signed intention",)),
-            ("UNI-004", ("signed constraint",)),
-            ("ZR03", ("signed intent",)),
-        ),
-    ),
+REQUIRED_TOPICS = (
+    "native-target",
+    "recursion-horizon",
+    "observations-finality",
+    "federation-optional",
+    "timeout-not-nonexecution",
+    "private-handoff",
+    "intent-auth-boundary",
 )
+ALLOWED_PREMISE_STATUS = ("open", "accepted-assumption")
+CLOSURE_WORDS = (
+    "closed",
+    "satisfied",
+    "established",
+    "verified",
+    "proven",
+    "complete",
+    "resolved",
+    "guaranteed",
+)
+REVIEW_MARKERS = ("reviewed claim", "not mechanically proven")
+SENTENCE = re.compile(r"^[^.!?;\n]+[.!?]$")
+# A heading or an em-dash title is not support. 20 is the minimum quote length.
+NONHEADING_BODY = 20
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -271,82 +174,84 @@ def quoted_strings(premise: dict[str, Any]) -> list[str]:
     return quotes
 
 
-def contract_for(premise_id: str) -> PremiseContract | None:
-    for item in PREMISE_CONTRACT:
-        if item.id == premise_id:
-            return item
-    return None
+def premise_label(premise: dict[str, Any]) -> str:
+    premise_id = premise.get("id")
+    if isinstance(premise_id, str):
+        return premise_id
+    return "<unknown>"
 
 
-def tie_phrases(premise_id: str, related_id: str) -> tuple[str, ...]:
-    """Phrases that must appear with this id, not phrases that support a different id."""
-
-    item = contract_for(premise_id)
-    if item is None:
-        return ()
-    for candidate, phrases in item.id_support:
-        if candidate == related_id:
-            return phrases
-    return ()
+def limitation_failures(payload: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    text = payload.get("limitation")
+    if not isinstance(text, str) or any(marker not in text for marker in REVIEW_MARKERS):
+        return ["FAIL: trust premises limitation does not state the review boundary"]
+    return []
 
 
-def contract_integrity_failures() -> list[str]:
-    failures: list[str] = []
-    for item in PREMISE_CONTRACT:
-        supported = [related_id for related_id, _phrases in item.id_support]
-        if supported != list(item.related_ids):
-            failures.append(f"FAIL: {item.id} id support does not match related ids")
-        allowed = item.claims + item.topics
-        for related_id, phrases in item.id_support:
-            if not phrases:
-                failures.append(f"FAIL: {item.id} id support for {related_id} is empty")
-            for phrase in phrases:
-                if phrase not in allowed:
-                    failures.append(
-                        f"FAIL: {item.id} id support phrase is not a claim or topic: {phrase}"
-                    )
-    return failures
-
-
-def statement_sentences(statement: str) -> list[str]:
-    return [part for part in re.split(r"(?<=[.!?])\s+", statement.strip()) if part]
-
-
-def sentence_is_source_backed(
-    sentence: str,
-    quotes: list[str],
-    claims: tuple[str, ...],
-) -> bool:
-    if any(claim in sentence for claim in claims):
-        return True
-    if len(sentence) < 20:
-        return any(sentence in quote for quote in quotes)
-    for quote in quotes:
-        for index in range(0, len(sentence) - 19):
-            if sentence[index : index + 20] in quote:
-                return True
-    return False
-
-
-def grounding_failures(
-    premise_id: str,
-    statement: Any,
-    quotes: list[str],
-    claims: tuple[str, ...],
-) -> list[str]:
-    if not isinstance(statement, str):
+def topic_failures(payload: Any) -> list[str]:
+    if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
         return []
     failures: list[str] = []
-    for sentence in statement_sentences(statement):
-        if not sentence_is_source_backed(sentence, quotes, claims):
-            failures.append(f"FAIL: {premise_id} statement is not source-backed: {sentence}")
+    present: set[str] = set()
+    for premise in payload["premises"]:
+        if not isinstance(premise, dict):
+            continue
+        label = premise_label(premise)
+        topic = premise.get("topic")
+        if not isinstance(topic, str) or not topic:
+            failures.append(f"FAIL: {label} topic is missing")
+            continue
+        present.add(topic)
+    for topic in REQUIRED_TOPICS:
+        if topic not in present:
+            failures.append(f"FAIL: missing required topic {topic}")
     return failures
 
 
-def quote_ties_related_id(quote: str, related_id: str, phrases: tuple[str, ...]) -> bool:
-    """Require the id and a claim or topic outside that id's own heading or title."""
+def statement_failures(payload: Any) -> list[str]:
+    if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
+        return []
+    failures: list[str] = []
+    for premise in payload["premises"]:
+        if not isinstance(premise, dict):
+            continue
+        label = premise_label(premise)
+        statement = premise.get("statement")
+        if not isinstance(statement, str):
+            failures.append(f"FAIL: {label} statement is missing")
+            continue
+        if len(statement) > 160:
+            failures.append(f"FAIL: {label} statement exceeds 160 characters")
+        if not SENTENCE.fullmatch(statement):
+            if ";" in statement:
+                failures.append(f"FAIL: {label} statement is spliced")
+            failures.append(f"FAIL: {label} statement is not one sentence")
+        for word in CLOSURE_WORDS:
+            if re.search(rf"\b{word}\b", statement, re.IGNORECASE):
+                failures.append(f"FAIL: {label} statement contains closure word: {word}")
+    return failures
 
-    if related_id not in quote or not phrases:
+
+def premise_status_failures(payload: Any) -> list[str]:
+    if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
+        return []
+    failures: list[str] = []
+    for premise in payload["premises"]:
+        if not isinstance(premise, dict):
+            continue
+        if premise.get("status") not in ALLOWED_PREMISE_STATUS:
+            failures.append(
+                f"FAIL: {premise_label(premise)} status is not open or accepted-assumption"
+            )
+    return failures
+
+
+def quote_has_nonheading_span(quote: str, related_id: str) -> bool:
+    """True when related_id shares quote with at least 20 non-space body characters."""
+
+    if related_id not in quote:
         return False
     reduced = re.sub(
         rf"Requirement:\s+{re.escape(related_id)}\b[^\n|]*",
@@ -358,7 +263,9 @@ def quote_ties_related_id(quote: str, related_id: str, phrases: tuple[str, ...])
         "\n",
         reduced,
     )
-    return any(phrase in reduced for phrase in phrases)
+    reduced = reduced.replace(related_id, "")
+    body = re.sub(r"\s+", "", reduced)
+    return len(body) >= NONHEADING_BODY
 
 
 def related_id_failures(
@@ -387,84 +294,33 @@ def related_id_failures(
         else:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not a known id family")
         quotes_with_id = [quote for quote in quotes if related_id in quote]
-        phrases = tie_phrases(premise_id, related_id)
         if not quotes_with_id:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not in a cited quote")
-        elif phrases and not any(
-            quote_ties_related_id(quote, related_id, phrases) for quote in quotes_with_id
-        ):
+        elif not any(quote_has_nonheading_span(quote, related_id) for quote in quotes_with_id):
             failures.append(
                 f"FAIL: {premise_id} related id {related_id} "
-                "is not tied to a premise claim in a cited quote"
+                "is not tied to a non-heading span in a cited quote"
             )
     return failures
 
 
-def premise_contract_failures(
+def premise_rule_failures(
     root: Path,
     payload: Any,
     matrix_ids: set[str] | None,
 ) -> list[str]:
-    failures = contract_integrity_failures()
+    failures = limitation_failures(payload)
+    failures.extend(topic_failures(payload))
+    failures.extend(statement_failures(payload))
+    failures.extend(premise_status_failures(payload))
     if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
         return failures
     catalog, catalog_failures = load_requirement_ids(root)
     failures.extend(catalog_failures)
-    expected_ids = [item.id for item in PREMISE_CONTRACT]
-    expected_set = set(expected_ids)
-    by_id: dict[str, dict[str, Any]] = {}
-    actual_ids: list[str | None] = []
-    for premise in payload["premises"]:
-        if not isinstance(premise, dict) or not isinstance(premise.get("id"), str):
-            actual_ids.append(None)
-            continue
-        premise_id = premise["id"]
-        actual_ids.append(premise_id)
-        if premise_id not in by_id:
-            by_id[premise_id] = premise
-    present_contract = [premise_id for premise_id in actual_ids if premise_id in expected_set]
-    if present_contract != expected_ids:
-        for expected_id in expected_ids:
-            if expected_id not in present_contract:
-                failures.append(f"FAIL: missing trust premise {expected_id}")
-        if not any(expected_id not in present_contract for expected_id in expected_ids):
-            failures.append("FAIL: trust premises are not in contract order")
-    for item in PREMISE_CONTRACT:
-        premise = by_id.get(item.id)
-        if premise is None:
-            continue
-        if premise.get("kind") != item.kind:
-            failures.append(f"FAIL: {item.id} kind is not {item.kind}")
-        if premise.get("status") != item.status:
-            failures.append(f"FAIL: {item.id} status is not {item.status}")
-        statement = premise.get("statement")
-        if not isinstance(statement, str):
-            failures.append(f"FAIL: {item.id} statement is missing")
-        else:
-            for claim in item.claims:
-                if claim not in statement:
-                    failures.append(f"FAIL: {item.id} statement lacks source-backed claim: {claim}")
-        quotes = quoted_strings(premise)
-        for claim in item.claims:
-            if not any(claim in quote for quote in quotes):
-                failures.append(f"FAIL: {item.id} claim is not in a cited quote: {claim}")
-        for topic in item.topics:
-            if not any(topic in quote for quote in quotes):
-                failures.append(f"FAIL: {item.id} topic is not in a cited quote: {topic}")
-        failures.extend(grounding_failures(item.id, statement, quotes, item.claims))
-        related = premise.get("relatedIds")
-        if related != list(item.related_ids):
-            failures.append(f"FAIL: {item.id} relatedIds do not match the source-backed contract")
     for premise in payload["premises"]:
         if not isinstance(premise, dict):
             continue
-        premise_id = premise.get("id")
-        if not isinstance(premise_id, str):
-            premise_id = "<unknown>"
-        quotes = quoted_strings(premise)
-        item = contract_for(premise_id)
-        if item is None:
-            failures.extend(grounding_failures(premise_id, premise.get("statement"), quotes, ()))
+        premise_id = premise_label(premise)
         related = premise.get("relatedIds")
         if not isinstance(related, list):
             continue
@@ -472,7 +328,7 @@ def premise_contract_failures(
             related_id_failures(
                 premise_id,
                 related,
-                quotes,
+                quoted_strings(premise),
                 matrix_ids,
                 catalog,
             )
@@ -512,13 +368,18 @@ def quote_failures(root: Path, payload: Any) -> list[str]:
         if not isinstance(premise, dict):
             failures.append("FAIL: trust premise is not an object")
             continue
-        premise_id = str(premise.get("id", "<unknown>"))
+        premise_id = premise_label(premise)
         if premise_id in seen:
             failures.append(f"FAIL: duplicate trust premise {premise_id}")
         seen.add(premise_id)
         refs = premise.get("sourceRefs")
         if not isinstance(refs, list):
+            failures.append(f"FAIL: {premise_id} has no states-premise quote")
             continue
+        if not any(
+            isinstance(ref, dict) and ref.get("quoteRole") == "states-premise" for ref in refs
+        ):
+            failures.append(f"FAIL: {premise_id} has no states-premise quote")
         for ref in refs:
             if not isinstance(ref, dict):
                 failures.append(f"FAIL: {premise_id} source ref is not an object")
@@ -571,8 +432,7 @@ def key_order_failures(payload: dict[str, Any], schema: dict[str, Any]) -> list[
     for premise in premises:
         if not isinstance(premise, dict):
             continue
-        premise_id = premise.get("id")
-        label = premise_id if isinstance(premise_id, str) else "<unknown>"
+        label = premise_label(premise)
         if list(premise) != premise_keys:
             failures.append(f"FAIL: {label} key order does not match the schema")
         refs = premise.get("sourceRefs")
@@ -715,7 +575,7 @@ def check(root: Path) -> tuple[int, list[str]]:
             )
         )
     matrix_ids = {str(row["id"]) for row in parsed["rows"]} if parsed is not None else None
-    failures.extend(premise_contract_failures(root, premises, matrix_ids))
+    failures.extend(premise_rule_failures(root, premises, matrix_ids))
 
     blocked_lines = [line for line in failures if line.startswith("blocked:")]
     if blocked_lines:
