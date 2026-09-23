@@ -49,9 +49,15 @@ def load(root: Path, rel: Path) -> dict:
     return json.loads((root / rel).read_text(encoding="utf-8"))
 
 
-OK_LINE = (
-    "OK: 84 leaf fields, 1 present, 9 partial, 74 absent. "
-    "absence means not found by this recorded search; it is not a proof of non-realisation\n"
+LIMITATION = (
+    "absence means not found by this recorded search; it is not a proof of non-realisation. "
+    "Semantic adequacy of a cited declaration is a reviewed claim; the checker proves "
+    "declaration, context, and profile membership only."
+)
+CLASSIFICATION_RULE = (
+    "present = the cited declaration(s) realise the field's full meaning in the named context; "
+    "partial = a declaration in the declared source/Core profiles realises a named aspect "
+    "(note: `Exists: ...; Missing: ...`); absent = no declaration found"
 )
 
 
@@ -75,6 +81,7 @@ def citation_row(row: dict, realisation: str) -> dict:
         "coreSymbol": None,
         "coreContext": None,
         "realisation": realisation,
+        "present": realisation != "absent",
         "note": row["note"],
     }
 
@@ -89,7 +96,9 @@ def absent_row(row: dict, terms: list[str], note: str) -> dict:
         "coreSymbol": None,
         "coreContext": None,
         "realisation": "absent",
+        "present": False,
         "searchTerms": terms,
+        "reviewedNonRealisations": [],
         "note": note,
     }
 
@@ -106,13 +115,24 @@ def materialize_language(root: Path) -> None:
 def test_real_artifacts_pass() -> None:
     process = run_checker()
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == OK_LINE
     embeddings = json.loads((MORIARTY_ROOT / EMBEDDINGS).read_text(encoding="utf-8"))
-    assert embeddings["absenceSearch"]["limitation"] == (
-        "absence means not found by this recorded search; it is not a proof of non-realisation"
+    rows = embeddings["rows"]
+    full = sum(row["realisation"] == "present" for row in rows)
+    partial = sum(row["realisation"] == "partial" for row in rows)
+    absent = sum(row["realisation"] == "absent" for row in rows)
+    reviewed = sum(len(row.get("reviewedNonRealisations") or []) for row in rows)
+    assert (full, partial, absent) == (1, 12, 71)
+    assert process.stdout == (
+        f"OK: 84 leaf fields, {full + partial} present, {absent} absent\n"
+        f"partial: {partial}\n"
+        f"reviewed non-realisations: {reviewed}\n"
+        f"{LIMITATION}\n"
     )
+    assert embeddings["classificationRule"] == CLASSIFICATION_RULE
+    assert embeddings["absenceSearch"]["limitation"] == LIMITATION
     consumed = embedding_row(embeddings, "authority.consumed")
     assert consumed["realisation"] == "partial"
+    assert consumed["present"] is True
     assert consumed["sourceSymbol"] == "allowance_spent"
     assert consumed["sourceContext"] == "financialRead"
     assert consumed["coreSymbol"] == "spent"
@@ -135,8 +155,43 @@ def test_real_artifacts_pass() -> None:
     assert debtor["coreContext"] == "LifecycleObligation"
     program = embedding_row(embeddings, "programIdentity.programId")
     assert program["realisation"] == "absent"
+    assert program["present"] is False
     assert program["sourceSymbol"] is None
     assert "programId" in program["searchTerms"]
+    assert "program" in program["searchTerms"]
+    version = embedding_row(embeddings, "schemaVersion")
+    assert version["realisation"] == "absent"
+    assert version["present"] is False
+    assert version["coreFile"] is None
+    assert "schemaVersion" in version["searchTerms"]
+    assert any(
+        item["symbol"] == "schemaVersion" and item["file"].endswith("/core.ts")
+        for item in version["reviewedNonRealisations"]
+    )
+    gross_amount = embedding_row(embeddings, "effects.gross[].amount")
+    assert gross_amount["realisation"] == "partial"
+    assert gross_amount["present"] is True
+    assert gross_amount["coreSymbol"] == "amount"
+    assert gross_amount["coreContext"] == "TransferAction"
+    gross_asset = embedding_row(embeddings, "effects.gross[].asset")
+    assert gross_asset["realisation"] == "partial"
+    assert gross_asset["coreContext"] == "TransferAction"
+    liability = embedding_row(embeddings, "liabilities.opening[].liabilityId")
+    assert liability["realisation"] == "partial"
+    assert liability["coreSymbol"] == "id"
+    assert liability["coreContext"] == "LifecycleObligation"
+    closing = embedding_row(embeddings, "liabilities.closing[].liabilityId")
+    assert closing["realisation"] == "partial"
+    assert closing["coreContext"] == "LifecycleObligation"
+    chain = embedding_row(embeddings, "domain.chainId")
+    assert "chainId" in chain["searchTerms"]
+    assert any(
+        item["symbol"] == "chainId" and item["file"].endswith("/build-lifecycle.mjs")
+        for item in chain["reviewedNonRealisations"]
+    )
+    assert "K constructor lcKernelRejected" in embedding_row(
+        embeddings, "failurePolicy.phasePolicy"
+    )["note"]
     assert process.stderr == ""
 
 
@@ -618,3 +673,116 @@ def test_partial_empty_note_rejected(tmp_path: Path) -> None:
 
     assert process.returncode == 1
     assert "FAIL: authority.consumed partial note is empty" in process.stdout
+
+
+def test_present_boolean_must_match_realisation(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["present"] = False
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: authority.consumed present is False, expected True" in process.stdout
+
+
+def test_absent_present_boolean_must_stay_false(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "domain.chainId")
+    target["present"] = True
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: domain.chainId present is True, expected False" in process.stdout
+
+
+def test_absent_search_must_include_bare_leaf(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "domain.chainId")
+    target["searchTerms"] = ["domain.chainId", "chain"]
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: domain.chainId searchTerms does not include the bare leaf chainId" in process.stdout
+
+
+def test_comma_declarator_requires_review(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "domain.chainId")
+    target["reviewedNonRealisations"] = []
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: domain.chainId search term 'chainId' is declared in "
+        "experiments/moriarty-language/formal/k/fixtures/build-lifecycle.mjs "
+        "without reviewedNonRealisations"
+    ) in process.stdout
+
+
+def test_other_profile_citation_is_not_a_realisation(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = citation_row(embedding_row(payload, "schemaVersion"), "partial")
+    target["coreFile"] = "experiments/moriarty-language/src/successor/core.ts"
+    target["coreSymbol"] = "schemaVersion"
+    target["coreContext"] = "FundedCore"
+    target["note"] = (
+        "Exists: FundedCore.schemaVersion is a funded-source document version. "
+        "Missing: it is not moriarty-stage-relation/1."
+    )
+    replace_row(payload, "schemaVersion", target)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: schemaVersion core file does not belong to moriarty-financial-lifecycle/1"
+    ) in process.stdout
+
+
+def test_lowercase_note_mention_must_be_declared(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["note"] = (
+        "Exists: financialRead.allowance_spent and Allowance.spent are cited, "
+        "and financialRead.notATerminal is not a terminal. "
+        "Missing: there is no authority record."
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: authority.consumed note names financialRead.notATerminal "
+        "but it is not a declaration"
+    ) in process.stdout
+
+
+def test_invented_compound_synonym_rejected(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "effects.fees[].amount")
+    target["searchTerms"] = ["effects.fees[].amount", "amount", "effectsFeesAmount"]
+    target["reviewedNonRealisations"] = []
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: effects.fees[].amount searchTerms synonym is an invented compound" in process.stdout
+    assert "FAIL: effects.fees[].amount search term 'amount' is declared" in process.stdout
