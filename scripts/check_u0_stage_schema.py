@@ -59,7 +59,75 @@ ROW_KEYS = [
 ]
 JUDGMENT_FILE_KEYS = ["schemaVersion", "judgments"]
 JUDGMENT_ROW_KEYS = ["key", "designDocJudgment", "definition", "schemaFields"]
-IDENTITY_FIELDS = {"programIdentity.coreRef", "programIdentity.sourceRef"}
+PRESENCE_RULE = (
+    "Presence rule: a row is present only when every cited symbol is a declared "
+    "field of the record that fills that schema slot, or an explicit partial proxy of that record."
+)
+PARTIAL_PROXY = "Classification: partial-proxy."
+EXACT_FIELD = "Classification: exact-field."
+IDENTITY_PREFIXES = ("programIdentity.", "profiles.", "circuitIdentity.", "lifecycleIds.")
+SEARCH_RELATIVE = (
+    Path("spec/successor"),
+    Path("src/successor"),
+    Path("formal/k"),
+)
+PROFILE_CONSTANT_RE = re.compile(
+    r"(?<![A-Za-z0-9_])([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(['\"])(moriarty-[A-Za-z0-9-]+/\d+)\2"
+)
+QUALIFIED_SYMBOL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$")
+CELL_SYMBOL = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>$")
+BARE_SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*$")
+MENTIONED_QUALIFIED = re.compile(r"\b([A-Z][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*)\b")
+EVIDENCE_RE = re.compile(r"\|\| evidence declares=(\S+) missing=(\S+)$")
+ROOT_SCHEMA_KEYS = [
+    "$schema",
+    "$id",
+    "title",
+    "type",
+    "additionalProperties",
+    "required",
+    "properties",
+]
+# Declarations that fill a slot whose leaf name differs from the field name.
+# A present citation must be one of these, or a declared field whose name is the leaf.
+# An absent row is a false absence when any of these declarations still exists.
+SLOT_FILLERS: dict[str, frozenset[tuple[str, str]]] = {
+    "authority.consumed": frozenset({
+        (
+            "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
+            "financialRead.allowance_spent",
+        ),
+        (
+            "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+            "Allowance.spent",
+        ),
+    }),
+    "authority.remaining": frozenset({
+        (
+            "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf",
+            "financialRead.allowance_remaining",
+        ),
+        (
+            "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+            "Allowance.remaining",
+        ),
+    }),
+    "authority.replayState": frozenset({
+        (
+            "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+            "LifecycleState.usedTransferIds",
+        ),
+    }),
+    "profiles.semanticProfile": frozenset({
+        (
+            "experiments/moriarty-language/src/successor/frontend.ts",
+            "ProfileDecl.value",
+        ),
+    }),
+}
+TS_SUFFIXES = {".ts", ".tsx", ".js", ".mjs", ".cjs"}
+DECLARATION_SUFFIXES = TS_SUFFIXES | {".ebnf", ".k", ".py"}
+PROFILE_SCAN_SUFFIXES = DECLARATION_SUFFIXES | {".md", ".json"}
 
 EFFECT_LINE = [
     "object",
@@ -233,10 +301,18 @@ def report(failures: list[str]) -> int:
 
 def load_json(path: Path, rel: Path, failures: list[str]) -> object | None:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+        parsed = json.loads(text)
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         failures.append(f"FAIL: {rel.as_posix()} is not UTF-8 JSON ({error})")
         return None
+    canonical = json.dumps(parsed, indent=2, ensure_ascii=False) + "\n"
+    if text != canonical:
+        failures.append(
+            f"FAIL: {rel.as_posix()} is not canonical UTF-8 JSON "
+            "(2-space indent, trailing newline)"
+        )
+    return parsed
 
 
 def check_stage_schema(schema: object, failures: list[str]) -> list[str]:
@@ -255,6 +331,7 @@ def check_stage_schema(schema: object, failures: list[str]) -> list[str]:
     if schema.get("title") != SCHEMA_TITLE:
         failures.append(f"FAIL: title is {schema.get('title')!r}")
     check_closed_objects(schema, "", failures)
+    check_schema_keywords(schema, "", failures, root=True)
     leaves = collect_leaves(schema, "", failures)
     check_identity_and_enums(schema, failures)
     check_specified_shape(schema, failures)
@@ -447,6 +524,48 @@ def expect_scalar(node: object, path: str, kind: str, failures: list[str]) -> No
         failures.append(f"FAIL: {label} has unknown shape {kind}")
 
 
+def allowed_schema_keywords(node: dict, *, root: bool) -> list[str]:
+    if root:
+        return list(ROOT_SCHEMA_KEYS)
+    declared = node.get("type")
+    if declared == "object":
+        return ["type", "additionalProperties", "required", "properties"]
+    if declared == "array":
+        return ["type", "items"]
+    if declared == "string":
+        extras = [key for key in ("const", "pattern", "enum") if key in node]
+        return ["type", *extras]
+    if declared == ["string", "null"]:
+        return ["type"]
+    return ["type"]
+
+
+def check_schema_keywords(node: object, path: str, failures: list[str], *, root: bool = False) -> None:
+    """Reject keywords that can change the stage relation, at every schema node."""
+
+    if not isinstance(node, dict):
+        return
+    allowed = allowed_schema_keywords(node, root=root)
+    allowed_set = set(allowed)
+    keys = list(node)
+    label = path or "<root>"
+    for key in keys:
+        if key not in allowed_set:
+            failures.append(f"FAIL: unapproved schema keyword {key!r} at {label}")
+    ordered = [key for key in keys if key in allowed_set]
+    expect = [key for key in allowed if key in node]
+    if ordered != expect:
+        failures.append(f"FAIL: schema keywords at {label} are {keys!r}")
+    properties = node.get("properties")
+    if isinstance(properties, dict):
+        for name, child in properties.items():
+            child_path = f"{path}.{name}" if path else name
+            check_schema_keywords(child, child_path, failures)
+    items = node.get("items")
+    if isinstance(items, dict):
+        check_schema_keywords(items, f"{path}[]", failures)
+
+
 def object_at(schema: dict, keys: list[str]) -> object:
     node: object = schema
     for key in keys:
@@ -480,9 +599,10 @@ def check_embeddings(
     if not isinstance(rows, list):
         failures.append("FAIL: embeddings rows is not an array")
         return
+    scan = scan_language(root)
     fields: list[str] = []
     for index, row in enumerate(rows):
-        field = check_row(root, row, index, failures)
+        field = check_row(root, scan, row, index, failures)
         if field is not None:
             fields.append(field)
     if len(fields) != len(set(fields)):
@@ -499,7 +619,13 @@ def check_embeddings(
         failures.append(f"FAIL: embeddings extra fields {extra}")
 
 
-def check_row(root: Path, row: object, index: int, failures: list[str]) -> str | None:
+def check_row(
+    root: Path,
+    scan: "LanguageScan",
+    row: object,
+    index: int,
+    failures: list[str],
+) -> str | None:
     label = f"embeddings row {index}"
     if not isinstance(row, dict):
         failures.append(f"FAIL: {label} is not an object")
@@ -515,11 +641,18 @@ def check_row(root: Path, row: object, index: int, failures: list[str]) -> str |
     note = row.get("note")
     if not isinstance(note, str) or not note.strip():
         failures.append(f"FAIL: {label} note is empty")
+        note = ""
+    if not note.startswith(PRESENCE_RULE):
+        failures.append(f"FAIL: {label} note does not state the presence rule")
     pairs = (
         ("sourceFile", "sourceSymbol"),
         ("coreFile", "coreSymbol"),
     )
     if present is True:
+        if PARTIAL_PROXY not in note and EXACT_FIELD not in note:
+            failures.append(
+                f"FAIL: {label} note does not classify the citation as an exact field or a partial proxy"
+            )
         cited = 0
         for file_key, symbol_key in pairs:
             file_name = row.get(file_key)
@@ -527,7 +660,7 @@ def check_row(root: Path, row: object, index: int, failures: list[str]) -> str |
             if file_name is None and symbol is None:
                 continue
             cited += 1
-            check_symbol(root, label, file_key, file_name, symbol, failures)
+            check_present_symbol(root, scan, label, file_key, file_name, symbol, note, failures)
         if cited == 0:
             failures.append(f"FAIL: {label} is present without a source or core citation")
         return field
@@ -535,81 +668,635 @@ def check_row(root: Path, row: object, index: int, failures: list[str]) -> str |
         for file_key, symbol_key in pairs:
             if row.get(file_key) is not None or row.get(symbol_key) is not None:
                 failures.append(f"FAIL: {label} is absent but {file_key} or {symbol_key} is set")
+        check_absence(root, scan, label, note, failures)
         return field
     failures.append(f"FAIL: {label} present is not a boolean")
     return field
 
 
-def profile_version_assignment(symbol: str, text: str) -> str | None:
-    """Return the profile id when ``symbol`` is assigned a ``moriarty-…/N`` string."""
-
-    match = re.search(
-        rf"(?<![A-Za-z0-9_]){re.escape(symbol)}(?![A-Za-z0-9_])"
-        r"""\s*=\s*(['"])(moriarty-[A-Za-z0-9-]+/\d+)\1""",
-        text,
-    )
-    if match is None:
-        return None
-    return match.group(2)
-
-
-def symbol_pattern(symbol: str) -> re.Pattern[str] | None:
-    """Accept an identifier, or a K configuration cell such as ``<financialPre>``."""
-
-    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", symbol):
-        return re.compile(rf"(?<![A-Za-z0-9_]){re.escape(symbol)}(?![A-Za-z0-9_])")
-    if re.fullmatch(r"<(?:[A-Za-z_][A-Za-z0-9_]*)>", symbol):
-        return re.compile(rf"(?<![A-Za-z0-9_<]){re.escape(symbol)}(?![A-Za-z0-9_>])")
-    return None
-
-
-def check_symbol(
+def check_absence(
     root: Path,
+    scan: "LanguageScan",
+    field: str,
+    note: str,
+    failures: list[str],
+) -> None:
+    for file_name, symbol in sorted(SLOT_FILLERS.get(field, ())):
+        if symbol_declared(root, scan, file_name, symbol):
+            failures.append(f"FAIL: false absence: {field} is realised by {symbol} in {file_name}")
+    match = EVIDENCE_RE.search(note)
+    if match is None:
+        failures.append(f"FAIL: {field} absent row has no verifiable absence evidence")
+        return
+    declares = parse_declares(match.group(1))
+    missing = parse_missing(match.group(2))
+    if declares is None or missing is None:
+        failures.append(f"FAIL: {field} absence evidence is malformed")
+        return
+    witnessed: set[str] = set()
+    for file_name, symbol in declares:
+        if not search_path(file_name):
+            failures.append(f"FAIL: {field} absence witness {file_name} is outside the searched trees")
+            continue
+        if not symbol_declared(root, scan, file_name, symbol):
+            failures.append(
+                f"FAIL: {field} absence witness {symbol} does not occur as a declaration in {file_name}"
+            )
+            continue
+        witnessed.add(symbol)
+    prose = note[: match.start()]
+    for symbol in MENTIONED_QUALIFIED.findall(prose):
+        if symbol not in witnessed:
+            failures.append(f"FAIL: {field} absence note names {symbol} but does not witness it")
+    leaf = leaf_name(field)
+    accounted = any(symbol_leaf(symbol) == leaf for symbol in witnessed)
+    if leaf in scan.names:
+        if leaf in missing:
+            failures.append(f"FAIL: false absence: {field} claims {leaf} is missing but it is declared")
+        if not accounted:
+            failures.append(f"FAIL: {field} absence does not account for declared {leaf}")
+    elif leaf not in missing:
+        failures.append(f"FAIL: {field} absence does not record {leaf} as missing")
+    for name in missing:
+        if name in scan.names:
+            failures.append(f"FAIL: false absence: {field} claims {name} is missing but it is declared")
+
+
+def parse_declares(text: str) -> list[tuple[str, str]] | None:
+    if text == "-":
+        return []
+    found: list[tuple[str, str]] = []
+    for item in text.split(","):
+        file_name, separator, symbol = item.partition("#")
+        if not separator or not file_name or not symbol:
+            return None
+        found.append((file_name, symbol))
+    return found
+
+
+def parse_missing(text: str) -> set[str] | None:
+    if text == "-":
+        return set()
+    names = text.split(",")
+    if any(not BARE_SYMBOL.fullmatch(name) for name in names):
+        return None
+    return set(names)
+
+
+def check_present_symbol(
+    root: Path,
+    scan: "LanguageScan",
     field: str,
     file_key: str,
     file_name: object,
     symbol: object,
+    note: str,
     failures: list[str],
 ) -> None:
     side = "source" if file_key == "sourceFile" else "core"
+    located = locate_symbol(root, field, side, file_name, symbol, failures)
+    if located is None:
+        return
+    file_text, symbol_text = located
+    if isinstance(symbol, str) and symbol not in note:
+        failures.append(f"FAIL: {field} note does not name cited {side} symbol {symbol}")
+    if is_identity_field(field) and any(name in scan.constants for name in symbol_identifiers(symbol_text)):
+        failures.append(
+            f"FAIL: {field} {side} symbol {symbol_text} "
+            "is a profile version constant, not a program identity"
+        )
+        return
+    if not declaration_in_text(file_text, Path(str(file_name)).suffix, symbol_text):
+        failures.append(
+            f"FAIL: {field} {side} symbol {symbol_text} does not occur as a declaration in {file_name}"
+        )
+        return
+    if not citation_fills_slot(field, str(file_name), symbol_text):
+        failures.append(
+            f"FAIL: {field} {side} symbol {symbol_text} "
+            "is not a field of the record that fills that slot"
+        )
+
+
+def locate_symbol(
+    root: Path,
+    field: str,
+    side: str,
+    file_name: object,
+    symbol: object,
+    failures: list[str],
+) -> tuple[str, str] | None:
     if not isinstance(file_name, str) or not isinstance(symbol, str) or not file_name or not symbol:
         failures.append(f"FAIL: {field} {side} citation is incomplete")
-        return
+        return None
+    if symbol_kind(symbol) is None:
+        failures.append(f"FAIL: {field} {side} symbol {symbol!r} is not an identifier or K cell")
+        return None
     rel = Path(file_name)
     if rel.is_absolute() or any(part == ".." for part in rel.parts):
         failures.append(f"FAIL: {field} {side} file is not a relative language path")
-        return
+        return None
     try:
         rel.relative_to(LANGUAGE_ROOT)
     except ValueError:
         failures.append(f"FAIL: {field} {side} file is outside experiments/moriarty-language")
-        return
+        return None
     language_root = (root / LANGUAGE_ROOT).resolve()
     target = (root / rel).resolve()
     if not target.is_relative_to(language_root):
         failures.append(f"FAIL: {field} {side} file escapes experiments/moriarty-language")
-        return
+        return None
     if not target.is_file():
         failures.append(f"FAIL: {field} {side} file does not exist: {file_name}")
-        return
+        return None
     try:
         text = target.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
         failures.append(f"FAIL: {field} {side} file is not readable UTF-8 ({error})")
-        return
-    pattern = symbol_pattern(symbol)
-    if pattern is None:
-        failures.append(f"FAIL: {field} {side} symbol {symbol!r} is not an identifier or K cell")
-        return
-    if pattern.search(text) is None:
-        failures.append(f"FAIL: {field} {side} symbol {symbol} does not occur in {file_name}")
-        return
-    if field in IDENTITY_FIELDS:
-        profile = profile_version_assignment(symbol, text)
-        if profile is not None:
-            failures.append(
-                f"FAIL: {field} {side} symbol {symbol} is a profile version constant, not a program identity"
+        return None
+    return text, symbol
+
+
+def citation_fills_slot(field: str, file_name: str, symbol: str) -> bool:
+    """Known slots accept only their filling declarations. Other slots accept a field of the leaf name."""
+
+    fillers = SLOT_FILLERS.get(field)
+    if fillers is not None:
+        return (file_name, symbol) in fillers
+    return symbol_leaf(symbol) == leaf_name(field)
+
+
+def is_identity_field(field: str) -> bool:
+    return field.startswith(IDENTITY_PREFIXES)
+
+
+def leaf_name(field: str) -> str:
+    return field.split(".")[-1].replace("[]", "")
+
+
+def symbol_kind(symbol: str) -> str | None:
+    if QUALIFIED_SYMBOL.fullmatch(symbol):
+        return "qualified"
+    if CELL_SYMBOL.fullmatch(symbol):
+        return "cell"
+    if BARE_SYMBOL.fullmatch(symbol):
+        return "bare"
+    return None
+
+
+def symbol_leaf(symbol: str) -> str | None:
+    qualified = QUALIFIED_SYMBOL.fullmatch(symbol)
+    if qualified:
+        return qualified.group(2)
+    cell = CELL_SYMBOL.fullmatch(symbol)
+    if cell:
+        return cell.group(1)
+    if BARE_SYMBOL.fullmatch(symbol):
+        return symbol
+    return None
+
+
+def symbol_identifiers(symbol: str) -> tuple[str, ...]:
+    qualified = QUALIFIED_SYMBOL.fullmatch(symbol)
+    if qualified:
+        return qualified.group(1), qualified.group(2)
+    leaf = symbol_leaf(symbol)
+    if leaf is None:
+        return ()
+    return (leaf,)
+
+
+def search_path(file_name: str) -> bool:
+    rel = Path(file_name)
+    try:
+        inside = rel.relative_to(LANGUAGE_ROOT)
+    except ValueError:
+        return False
+    return any(inside == root or inside.is_relative_to(root) for root in SEARCH_RELATIVE)
+
+
+class LanguageScan:
+    def __init__(self, names: set[str], constants: set[str], files: dict[str, str]) -> None:
+        self.names = names
+        self.constants = constants
+        self.files = files
+
+
+def scan_language(root: Path) -> LanguageScan:
+    language = (root / LANGUAGE_ROOT).resolve()
+    names: set[str] = set()
+    files: dict[str, str] = {}
+    if language.is_dir():
+        for path in sorted(language.rglob("*")):
+            if not path.is_file():
+                continue
+            suffix = path.suffix
+            if suffix not in DECLARATION_SUFFIXES:
+                continue
+            try:
+                inside = path.relative_to(language)
+            except ValueError:
+                continue
+            if not any(inside == rel or inside.is_relative_to(rel) for rel in SEARCH_RELATIVE):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError):
+                continue
+            code = strip_comments(text, suffix)
+            repo_rel = (LANGUAGE_ROOT / inside).as_posix()
+            files[repo_rel] = code
+            names.update(declared_names(code, suffix))
+    return LanguageScan(names, profile_constant_names(root), files)
+
+
+def profile_constant_names(root: Path) -> set[str]:
+    language = (root / LANGUAGE_ROOT).resolve()
+    names: set[str] = set()
+    if not language.is_dir():
+        return names
+    for path in language.rglob("*"):
+        if not path.is_file() or path.suffix not in PROFILE_SCAN_SUFFIXES:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        for match in PROFILE_CONSTANT_RE.finditer(text):
+            names.add(match.group(1))
+    return names
+
+
+def symbol_declared(root: Path, scan: LanguageScan, file_name: str, symbol: str) -> bool:
+    code = scan.files.get(file_name)
+    if code is None:
+        target = root / file_name
+        if not target.is_file():
+            return False
+        try:
+            code = strip_comments(target.read_text(encoding="utf-8"), Path(file_name).suffix)
+        except (OSError, UnicodeError):
+            return False
+    return declaration_in_text(code, Path(file_name).suffix, symbol)
+
+
+def declared_names(code: str, suffix: str) -> set[str]:
+    names: set[str] = set()
+    if suffix in TS_SUFFIXES:
+        names.update(BARE_DECL_RE.findall(code))
+        for body in ts_bodies(code):
+            names.update(member_fields(body))
+    elif suffix == ".ebnf":
+        names.update(match.group(1) for match in EBNF_RULE_RE.finditer(code))
+        names.update(EBNF_TERMINAL_RE.findall(code))
+    elif suffix == ".k":
+        names.update(CELL_RE.findall(code))
+        names.update(k_constructors(code))
+    elif suffix == ".py":
+        for match in PY_DEF_RE.finditer(code):
+            names.add(next(group for group in match.groups() if group))
+        names.update(PY_CONST_RE.findall(code))
+    return names
+
+
+def declaration_in_text(code: str, suffix: str, symbol: str) -> bool:
+    stripped = strip_comments(code, suffix)
+    kind = symbol_kind(symbol)
+    if kind == "cell":
+        return suffix == ".k" and re.search(
+            rf"(?<![A-Za-z0-9_<]){re.escape(symbol)}(?![A-Za-z0-9_>])",
+            stripped,
+        ) is not None
+    if kind == "qualified":
+        match = QUALIFIED_SYMBOL.fullmatch(symbol)
+        if match is None:
+            return False
+        owner, member = match.group(1), match.group(2)
+        if suffix == ".ebnf":
+            body = ebnf_body(stripped, owner)
+            return body is not None and f'"{member}"' in body
+        if suffix in TS_SUFFIXES:
+            body = ts_owner_body(stripped, owner)
+            return body is not None and field_in_body(body, member)
+        return False
+    if kind == "bare":
+        if suffix in TS_SUFFIXES:
+            return re.search(
+                rf"(?m)^(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function|const|class|interface|enum|type)\s+{re.escape(symbol)}\b",
+                stripped,
+            ) is not None
+        if suffix == ".ebnf":
+            return ebnf_body(stripped, symbol) is not None or f'"{symbol}"' in stripped
+        if suffix == ".k":
+            return f"<{symbol}>" in stripped or symbol in k_constructors(stripped)
+        if suffix == ".py":
+            return re.search(rf"(?m)^(?:async\s+)?def\s+{re.escape(symbol)}\b", stripped) is not None or (
+                symbol.isupper() and re.search(rf"(?m)^{re.escape(symbol)}\s*=", stripped) is not None
             )
+    return False
+
+
+def field_in_body(body: str, member: str) -> bool:
+    return member in member_fields(body)
+
+
+def member_fields(body: str) -> set[str]:
+    """Property names at member level. Nested method bodies and parameter lists do not count."""
+
+    names: set[str] = set()
+    index = 0
+    length = len(body)
+    depth = 0
+    paren = 0
+    quote: str | None = None
+    while index < length:
+        char = body[index]
+        if quote is not None:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            index += 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth = max(0, depth - 1)
+        elif char == "(":
+            paren += 1
+        elif char == ")":
+            paren = max(0, paren - 1)
+        elif depth == 0 and paren == 0 and (char.isalpha() or char == "_"):
+            end = index + 1
+            while end < length and (body[end].isalnum() or body[end] == "_"):
+                end += 1
+            cursor = end
+            while cursor < length and body[cursor] in " \t\r\n":
+                cursor += 1
+            if cursor < length and body[cursor] == "?":
+                cursor += 1
+                while cursor < length and body[cursor] in " \t\r\n":
+                    cursor += 1
+            if cursor < length and body[cursor] == ":":
+                names.add(body[index:end])
+            index = end
+            continue
+        index += 1
+    return names
+
+
+BARE_DECL_RE = re.compile(
+    r"(?m)^(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function|const|class|interface|enum|type)\s+([A-Za-z_][A-Za-z0-9_]*)\b"
+)
+EBNF_RULE_RE = re.compile(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*=")
+EBNF_TERMINAL_RE = re.compile(r'"([A-Za-z_][A-Za-z0-9_]*)"')
+CELL_RE = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>")
+PY_DEF_RE = re.compile(r"(?m)^(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)\b|^class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
+PY_CONST_RE = re.compile(r"(?m)^([A-Z][A-Z0-9_]*)\s*=")
+
+
+def ts_bodies(code: str) -> list[str]:
+    bodies: list[str] = []
+    for match in re.finditer(
+        r"(?m)^(?:export\s+)?(?:declare\s+)?(?:abstract\s+)?(?:interface|class|enum)\s+[A-Za-z_][A-Za-z0-9_]*\b",
+        code,
+    ):
+        body = brace_after(code, match.end())
+        if body is not None:
+            bodies.append(body)
+    for match in re.finditer(r"(?m)^(?:export\s+)?type\s+[A-Za-z_][A-Za-z0-9_]*\b", code):
+        body = type_alias_body(code, match.end())
+        if body is not None:
+            bodies.append(body)
+    return bodies
+
+
+def ts_owner_body(code: str, owner: str) -> str | None:
+    match = re.search(
+        rf"(?m)^(?:export\s+)?(?:declare\s+)?(?:abstract\s+)?(?:interface|class|enum)\s+{re.escape(owner)}\b",
+        code,
+    )
+    if match:
+        return brace_after(code, match.end())
+    match = re.search(rf"(?m)^(?:export\s+)?type\s+{re.escape(owner)}\b", code)
+    if match is None:
+        return None
+    return type_alias_body(code, match.end())
+
+
+def type_alias_body(code: str, start: int) -> str | None:
+    window = code[start : start + 4000]
+    eq = window.find("=")
+    if eq == -1:
+        return None
+    after = window[eq + 1 :].lstrip()
+    if not after.startswith("{"):
+        return None
+    offset = start + eq + 1 + (len(window[eq + 1 :]) - len(after))
+    return brace_body(code, offset)
+
+
+def brace_after(code: str, start: int) -> str | None:
+    brace = code.find("{", start)
+    if brace == -1 or brace - start > 400:
+        return None
+    return brace_body(code, brace)
+
+
+def brace_body(code: str, open_index: int) -> str | None:
+    if open_index >= len(code) or code[open_index] != "{":
+        return None
+    depth = 0
+    index = open_index
+    quote: str | None = None
+    while index < len(code):
+        char = code[index]
+        if quote is not None:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            index += 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return code[open_index + 1 : index]
+        index += 1
+    return None
+
+
+def ebnf_body(code: str, owner: str) -> str | None:
+    match = re.search(rf"(?m)^{re.escape(owner)}\s*=", code)
+    if match is None:
+        return None
+    index = match.end()
+    in_string = False
+    in_special = False
+    while index < len(code):
+        char = code[index]
+        if in_string:
+            if char == '"':
+                in_string = False
+            index += 1
+            continue
+        if in_special:
+            if char == "?":
+                in_special = False
+            index += 1
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "?":
+            in_special = True
+        elif char == ";":
+            return code[match.end() : index]
+        index += 1
+    return None
+
+
+def k_constructors(code: str) -> set[str]:
+    names: set[str] = set()
+    for match in re.finditer(
+        r"\bsyntax\s+[A-Za-z_][A-Za-z0-9_]*\s*::=\s*(.*?)(?=\n\s*syntax\s|\n\s*configuration\b|\n\s*endmodule\b|\n\s*rule\b|\Z)",
+        code,
+        re.S,
+    ):
+        names.update(item.group(1) for item in re.finditer(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(", match.group(1)))
+    return names
+
+
+def strip_comments(text: str, suffix: str) -> str:
+    if suffix == ".py":
+        return strip_hash_comments(text)
+    if suffix == ".ebnf":
+        return strip_ebnf_comments(text)
+    return strip_c_comments(text)
+
+
+def strip_c_comments(text: str) -> str:
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char in {"'", '"', "`"}:
+            end = skip_quote(text, index, char)
+            out.append(text[index:end])
+            index = end
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "/":
+            newline = text.find("\n", index)
+            if newline == -1:
+                break
+            out.append("\n")
+            index = newline + 1
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "*":
+            end = text.find("*/", index + 2)
+            if end == -1:
+                break
+            out.append("\n" * text.count("\n", index, end))
+            index = end + 2
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
+def strip_ebnf_comments(text: str) -> str:
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    while index < length:
+        if text[index] == '"':
+            end = skip_quote(text, index, '"')
+            out.append(text[index:end])
+            index = end
+            continue
+        if text[index] == "(" and index + 1 < length and text[index + 1] == "*":
+            end = text.find("*)", index + 2)
+            if end == -1:
+                break
+            out.append("\n" * text.count("\n", index, end))
+            index = end + 2
+            continue
+        out.append(text[index])
+        index += 1
+    return "".join(out)
+
+
+def strip_hash_comments(text: str) -> str:
+    out: list[str] = []
+    index = 0
+    length = len(text)
+    quote: str | None = None
+    triple = False
+    while index < length:
+        char = text[index]
+        if quote is not None:
+            out.append(char)
+            if triple and text.startswith(quote, index):
+                out.append(quote[1:])
+                index += len(quote)
+                quote = None
+                triple = False
+                continue
+            if not triple and char == "\\":
+                if index + 1 < length:
+                    out.append(text[index + 1])
+                index += 2
+                continue
+            if not triple and char == quote:
+                quote = None
+            index += 1
+            continue
+        if text.startswith(("'''", '"""'), index):
+            quote = text[index : index + 3]
+            triple = True
+            out.append(quote)
+            index += 3
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            triple = False
+            out.append(char)
+            index += 1
+            continue
+        if char == "#":
+            newline = text.find("\n", index)
+            if newline == -1:
+                break
+            out.append("\n")
+            index = newline + 1
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
+def skip_quote(text: str, start: int, quote: str) -> int:
+    index = start + 1
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == quote:
+            return index + 1
+        index += 1
+    return len(text)
 
 
 def canonical_stage_section(text: str) -> str | None:

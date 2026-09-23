@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+MORIARTY_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = Path(
     "openspec/changes/consolidated-language-kernel/schemas/stage-relation.schema.json"
 )
 EMBEDDINGS = Path("deliverables/u0-semantic-contract-2026-09-23/source-core-embeddings.json")
 JUDGMENTS = Path("deliverables/u0-semantic-contract-2026-09-23/judgments.json")
 DESIGN_DOC = Path("docs/MORIARTY-CONSOLIDATED-DESIGN.md")
-CHECKER = ROOT / "scripts" / "check_u0_stage_schema.py"
+CHECKER = MORIARTY_ROOT / "scripts" / "check_u0_stage_schema.py"
 LANGUAGE = Path("experiments/moriarty-language/src/successor/financial-lifecycle.ts")
 FRONTEND = Path("experiments/moriarty-language/src/successor/frontend.ts")
 
@@ -19,7 +21,7 @@ FRONTEND = Path("experiments/moriarty-language/src/successor/frontend.ts")
 def run_checker(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(CHECKER), *args],
-        cwd=ROOT,
+        cwd=MORIARTY_ROOT,
         capture_output=True,
         text=True,
         check=False,
@@ -31,10 +33,10 @@ def copy_root(tmp_path: Path) -> Path:
     for rel in (SCHEMA, EMBEDDINGS, JUDGMENTS, DESIGN_DOC):
         destination = root / rel
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes((ROOT / rel).read_bytes())
+        destination.write_bytes((MORIARTY_ROOT / rel).read_bytes())
     language = root / "experiments" / "moriarty-language"
     language.parent.mkdir(parents=True, exist_ok=True)
-    language.symlink_to(ROOT / "experiments" / "moriarty-language")
+    language.symlink_to(MORIARTY_ROOT / "experiments" / "moriarty-language")
     return root
 
 
@@ -53,7 +55,23 @@ def embedding_row(payload: dict, field: str) -> dict:
 def test_real_artifacts_pass() -> None:
     process = run_checker()
     assert process.returncode == 0, process.stdout + process.stderr
-    assert process.stdout == "OK: 84 leaf fields, 5 present, 79 absent\n"
+    assert process.stdout == "OK: 84 leaf fields, 4 present, 80 absent\n"
+    embeddings = json.loads((MORIARTY_ROOT / EMBEDDINGS).read_text(encoding="utf-8"))
+    consumed = embedding_row(embeddings, "authority.consumed")
+    assert consumed["sourceSymbol"] == "financialRead.allowance_spent"
+    assert consumed["coreSymbol"] == "Allowance.spent"
+    assert "Classification: partial-proxy." in consumed["note"]
+    assert "Presence rule:" in consumed["note"]
+    remaining = embedding_row(embeddings, "authority.remaining")
+    assert remaining["coreSymbol"] == "Allowance.remaining"
+    replay = embedding_row(embeddings, "authority.replayState")
+    assert replay["coreSymbol"] == "LifecycleState.usedTransferIds"
+    profile = embedding_row(embeddings, "profiles.semanticProfile")
+    assert profile["sourceSymbol"] == "ProfileDecl.value"
+    assert "Classification: exact-field." in profile["note"]
+    program = embedding_row(embeddings, "programIdentity.programId")
+    assert program["present"] is False
+    assert program["sourceSymbol"] is None
     assert process.stderr == ""
 
 
@@ -92,14 +110,14 @@ def test_partial_identifier_citation_fails(tmp_path: Path) -> None:
     path = root / EMBEDDINGS
     payload = load(root, EMBEDDINGS)
     target = embedding_row(payload, "authority.remaining")
-    target["coreSymbol"] = "remain"
+    target["coreSymbol"] = "Allowance.remain"
     write_json(path, payload)
 
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
     assert (
-        "FAIL: authority.remaining core symbol remain does not occur in "
+        "FAIL: authority.remaining core symbol Allowance.remain does not occur as a declaration in "
         "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
     ) in process.stdout
 
@@ -320,3 +338,156 @@ def test_design_doc_failure_phrase_must_occur(tmp_path: Path) -> None:
 
     assert process.returncode == 1
     assert "FAIL: Canonical stage statement lacks 'Rejection/partial failure'" in process.stdout
+
+
+def test_work_spent_does_not_fill_authority(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["coreSymbol"] = "Work.spent"
+    target["note"] = target["note"].replace("Allowance.spent", "Work.spent")
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: authority.consumed core symbol Work.spent "
+        "is not a field of the record that fills that slot"
+    ) in process.stdout
+
+
+def test_comment_only_citation_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "circuitIdentity.circuitId")
+    target["present"] = True
+    target["coreFile"] = LANGUAGE.as_posix()
+    target["coreSymbol"] = "signing"
+    target["note"] = (
+        "Presence rule: a row is present only when every cited symbol is a declared "
+        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
+        "Classification: exact-field. signing"
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: circuitIdentity.circuitId core symbol signing does not occur as a declaration in "
+        "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    ) in process.stdout
+
+
+def test_false_absence_of_realised_authority_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "authority.consumed")
+    target["present"] = False
+    target["sourceFile"] = None
+    target["sourceSymbol"] = None
+    target["coreFile"] = None
+    target["coreSymbol"] = None
+    target["note"] = (
+        "Presence rule: a row is present only when every cited symbol is a declared "
+        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
+        "No allowance or spent field exists. "
+        "|| evidence declares=- missing=consumed,allowance_spent,spent"
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: false absence: authority.consumed is realised by Allowance.spent in "
+        "experiments/moriarty-language/src/successor/financial-lifecycle.ts"
+    ) in process.stdout
+    assert (
+        "FAIL: false absence: authority.consumed is realised by financialRead.allowance_spent in "
+        "experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf"
+    ) in process.stdout
+
+
+def test_false_absence_denies_declared_leaf_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    target = embedding_row(payload, "liabilities.opening[].debtor")
+    target["note"] = (
+        "Presence rule: a row is present only when every cited symbol is a declared "
+        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
+        "No debtor exists in source/5 or core/1. "
+        "|| evidence declares=- missing=debtor"
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: false absence: liabilities.opening[].debtor claims debtor is missing but it is declared"
+    ) in process.stdout
+
+
+def test_imported_profile_constant_is_not_identity(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root, EMBEDDINGS)
+    core = embedding_row(payload, "programIdentity.coreRef")
+    core["present"] = True
+    core["coreFile"] = "experiments/moriarty-language/src/successor/funded-expression-source-v1.ts"
+    core["coreSymbol"] = "LIFECYCLE_VERSION"
+    core["note"] = (
+        "Presence rule: a row is present only when every cited symbol is a declared "
+        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
+        "Classification: exact-field. LIFECYCLE_VERSION"
+    )
+    source = embedding_row(payload, "profiles.semanticProfile")
+    source["sourceFile"] = "experiments/moriarty-language/src/successor/financial-agreement-source-compiler.ts"
+    source["sourceSymbol"] = "FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
+    source["note"] = (
+        "Presence rule: a row is present only when every cited symbol is a declared "
+        "field of the record that fills that schema slot, or an explicit partial proxy of that record. "
+        "Classification: exact-field. FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE"
+    )
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: programIdentity.coreRef core symbol LIFECYCLE_VERSION "
+        "is a profile version constant, not a program identity"
+    ) in process.stdout
+    assert (
+        "FAIL: profiles.semanticProfile source symbol FINANCIAL_AGREEMENT_SOURCE_V5_PROFILE "
+        "is a profile version constant, not a program identity"
+    ) in process.stdout
+
+
+def test_unapproved_schema_keyword_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    schema = load(root, SCHEMA)
+    schema["not"] = {}
+    write_json(root / SCHEMA, schema)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert "FAIL: unapproved schema keyword 'not' at <root>" in process.stdout
+    assert "OK:" not in process.stdout
+
+
+def test_noncanonical_indent_fails(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    path = root / EMBEDDINGS
+    payload = load(root, EMBEDDINGS)
+    path.write_text(json.dumps(payload, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1
+    assert (
+        "FAIL: deliverables/u0-semantic-contract-2026-09-23/source-core-embeddings.json "
+        "is not canonical UTF-8 JSON (2-space indent, trailing newline)"
+    ) in process.stdout
