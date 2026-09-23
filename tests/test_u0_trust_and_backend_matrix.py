@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -124,20 +125,54 @@ def test_matrix_rows_match_source_document_text() -> None:
 def test_trust_premises_cover_required_topics() -> None:
     premises = json.loads((ROOT / TRUST_REL).read_text(encoding="utf-8"))
     by_id = {premise["id"]: premise for premise in premises["premises"]}
+    closure_words = (
+        "closed",
+        "satisfied",
+        "established",
+        "verified",
+        "proven",
+        "complete",
+        "resolved",
+        "guaranteed",
+    )
+    sentence = re.compile(r"^[^.!?;\n]+[.!?]$")
 
+    assert premises["limitation"] == (
+        "Semantic fit of a quote to its statement label is a reviewed claim, not "
+        "mechanically proven. The checker verifies structure, literal quote occurrence, "
+        "identifier resolution, required topics, label length, one unspliced sentence, "
+        "and closure-word absence."
+    )
+    assert "reviewed claim" in premises["limitation"]
+    assert "not mechanically proven" in premises["limitation"]
     assert list(by_id) == [f"TP{number:02d}" for number in range(1, 8)]
+    assert [premise["topic"] for premise in premises["premises"]] == [
+        "native-target",
+        "recursion-horizon",
+        "observations-finality",
+        "federation-optional",
+        "timeout-not-nonexecution",
+        "private-handoff",
+        "intent-auth-boundary",
+    ]
     assert by_id["TP01"]["kind"] == "unresolved-interface"
-    assert "ZKIRv3" in by_id["TP01"]["statement"]
+    assert by_id["TP01"]["status"] == "open"
+    assert by_id["TP01"]["statement"] == (
+        "The native execution target is Midnight ZKIRv3, and a comprehensive "
+        "compatible release tuple is unknown."
+    )
     assert by_id["TP02"]["kind"] == "planning-assumption"
+    assert by_id["TP02"]["status"] == "accepted-assumption"
     assert "March 2027" in by_id["TP02"]["statement"]
+    assert by_id["TP02"]["statement"].count("independently") == 0
     assert by_id["TP03"]["kind"] == "trust-assumption"
-    assert "oracle" in by_id["TP03"]["statement"]
-    assert "federation" in by_id["TP04"]["statement"].lower()
-    assert "Moriarty can also run on Midnight without this federation." in by_id["TP04"]["statement"]
-    assert "ZR14, UNI-011 and MPLR-030 record that boundary" not in by_id["TP04"]["statement"]
-    assert "without the federated kernel" in by_id["TP04"]["statement"]
-    assert "ZR14 keeps the kernel optional" in by_id["TP04"]["statement"]
-    assert "threshold, hardware, observation and recovery assumptions" in by_id["TP04"]["statement"]
+    assert by_id["TP03"]["status"] == "open"
+    assert "oracle honesty" in by_id["TP03"]["statement"]
+    assert by_id["TP04"]["kind"] == "trust-assumption"
+    assert by_id["TP04"]["status"] == "accepted-assumption"
+    assert by_id["TP04"]["statement"] == (
+        "Federation is optional, and Moriarty can also run on Midnight without this federation."
+    )
     assert by_id["TP04"]["relatedIds"] == ["MPLR-030", "UNI-011", "ZR14"]
     assert all(
         "no federation requirement for direct Midnight use" not in ref["quote"]
@@ -147,14 +182,30 @@ def test_trust_premises_cover_required_topics() -> None:
         ref["path"] == "docs/MORIARTY-CONSOLIDATED-DESIGN.md" for ref in by_id["TP04"]["sourceRefs"]
     )
     assert any(ref["path"].endswith("/proposal.md") for ref in by_id["TP04"]["sourceRefs"])
-    assert "ZR15" not in by_id["TP04"]["statement"]
-    assert "UNI-015" not in by_id["TP04"]["statement"]
-    assert "nonexecution" in by_id["TP05"]["statement"]
-    assert "witness" in by_id["TP06"]["statement"]
+    assert by_id["TP05"]["kind"] == "trust-assumption"
+    assert by_id["TP05"]["status"] == "accepted-assumption"
+    assert by_id["TP05"]["statement"] == (
+        "Timeout is not evidence of nonexecution, and it does not prove that "
+        "another chain did not execute."
+    )
+    assert by_id["TP05"]["statement"].count("Timeout is not evidence of nonexecution") == 1
+    assert by_id["TP06"]["kind"] == "unresolved-interface"
+    assert by_id["TP06"]["status"] == "open"
+    assert by_id["TP06"]["statement"].count("private handoff theorem") == 1
+    assert by_id["TP07"]["kind"] == "unresolved-interface"
+    assert by_id["TP07"]["status"] == "open"
     assert "circuit" in by_id["TP07"]["statement"]
+    assert "do not make this choice" not in by_id["TP07"]["statement"]
     for premise in premises["premises"]:
         assert premise["status"] in {"open", "accepted-assumption"}
+        assert len(premise["statement"]) <= 160
+        assert sentence.fullmatch(premise["statement"])
+        for word in closure_words:
+            assert re.search(rf"\b{word}\b", premise["statement"], re.IGNORECASE) is None
+        assert any(ref["quoteRole"] == "states-premise" for ref in premise["sourceRefs"])
         for ref in premise["sourceRefs"]:
+            assert ref["quoteRole"] in {"states-premise", "states-limitation", "states-owner"}
+            assert list(ref) == ["path", "quoteRole", "quote"]
             assert len(ref["quote"]) >= 20
             assert ref["quote"] in (ROOT / ref["path"]).read_text(encoding="utf-8")
 
@@ -369,58 +420,143 @@ def test_checker_rejects_deleted_trust_premises(tmp_path: Path) -> None:
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1
-    assert "FAIL: missing trust premise TP02" in result.stdout
-    assert "FAIL: missing trust premise TP07" in result.stdout
+    assert "FAIL: missing required topic recursion-horizon" in result.stdout
+    assert "FAIL: missing required topic intent-auth-boundary" in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
 
 def test_checker_rejects_false_premise_claim(tmp_path: Path) -> None:
+    cases = (
+        (
+            "TP01",
+            "ZKIRv3 recursion is released and closed.",
+            "FAIL: TP01 statement contains closure word: closed",
+        ),
+        (
+            "TP02",
+            "UNI-009 is an independently verified release.",
+            "FAIL: TP02 statement contains closure word: verified",
+        ),
+        (
+            "TP01",
+            "This tuple is not verified.",
+            "FAIL: TP01 statement contains closure word: verified",
+        ),
+    )
+    for premise_id, statement, message in cases:
+        root = materialize(tmp_path / premise_id / statement[:12])
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premise = next(item for item in premises["premises"] if item["id"] == premise_id)
+        premise["statement"] = statement
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert message in result.stdout
+        assert "not source-backed" not in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_each_closure_word(tmp_path: Path) -> None:
+    words = (
+        "closed",
+        "satisfied",
+        "established",
+        "verified",
+        "proven",
+        "complete",
+        "resolved",
+        "guaranteed",
+    )
+    for word in words:
+        root = materialize(tmp_path / word)
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premises["premises"][0]["statement"] = f"This label is {word}."
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert f"FAIL: TP01 statement contains closure word: {word}" in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_statement_over_160_characters(tmp_path: Path) -> None:
     root = materialize(tmp_path)
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
-    premise = premises["premises"][0]
-    premise["statement"] += " This release is verified and closed."
-    assert "a comprehensive compatible release tuple is unknown." in premise["statement"]
+    statement = "A" * 160 + "."
+    assert len(statement) == 161
+    premises["premises"][0]["statement"] = statement
     write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
 
-    assert result.returncode == 1
-    assert (
-        "FAIL: TP01 statement is not source-backed: This release is verified and closed."
-        in result.stdout
-    )
-    assert "lacks source-backed claim" not in result.stdout
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 statement exceeds 160 characters" in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
 
-def test_checker_rejects_claim_not_in_cited_quote(tmp_path: Path) -> None:
+def test_checker_rejects_premise_without_states_premise_quote(tmp_path: Path) -> None:
     root = materialize(tmp_path)
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premise = premises["premises"][0]
-    needle = "a comprehensive compatible release tuple is unknown."
-    replacement = (
-        "Separate local pins and the historical contract/inner transcript mismatch are known"
-    )
-    replaced = False
+    assert any(ref["quoteRole"] == "states-premise" for ref in premise["sourceRefs"])
     for ref in premise["sourceRefs"]:
-        if needle in ref["quote"]:
-            ref["quote"] = ref["quote"].replace(needle, replacement)
-            replaced = True
-    assert replaced
+        ref["quoteRole"] = "states-limitation"
     write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
 
-    assert result.returncode == 1
-    assert (
-        "FAIL: TP01 claim is not in a cited quote: "
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 has no states-premise quote" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_missing_required_topic(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = next(item for item in premises["premises"] if item["id"] == "TP05")
+    assert premise["topic"] == "timeout-not-nonexecution"
+    premise["topic"] = "timeout-note"
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: missing required topic timeout-not-nonexecution" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_spliced_unsupported_claim(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premise = premises["premises"][0]
+    premise["statement"] += (
+        " ZR01 is fully implemented and certified; "
         "a comprehensive compatible release tuple is unknown."
-        in result.stdout
     )
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: TP01 statement is spliced" in result.stdout
+    assert "FAIL: TP01 statement is not one sentence" in result.stdout
+    assert "FAIL: TP01 statement exceeds 160 characters" in result.stdout
+    assert "not source-backed" not in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -430,13 +566,13 @@ def test_checker_rejects_unsupported_premise_status(tmp_path: Path) -> None:
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     assert premises["premises"][0]["status"] == "open"
-    premises["premises"][0]["status"] = "accepted-assumption"
+    premises["premises"][0]["status"] = "closed"
     write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
 
     assert result.returncode == 1
-    assert "FAIL: TP01 status is not open" in result.stdout
+    assert "FAIL: TP01 status is not open or accepted-assumption" in result.stdout
     assert "OK:" not in result.stdout
     assert "Traceback" not in result.stderr
 
@@ -550,14 +686,14 @@ def test_checker_rejects_related_id_supported_only_by_heading(tmp_path: Path) ->
             "TP04",
             "docs/MORIARTY-BACKEND-REQUIREMENTS.md",
             "ZR14 — C, private continuation interface",
-            "FAIL: TP04 related id ZR14 is not tied to a premise claim in a cited quote",
+            "FAIL: TP04 related id ZR14 is not tied to a non-heading span in a cited quote",
         ),
         (
             "TP03",
             "openspec/changes/partial-and-conditional-transactions/specs/"
             "partial-conditional-transactions/spec.md",
             "Requirement: MPLR-010 Time finality and unresolved outcomes",
-            "FAIL: TP03 related id MPLR-010 is not tied to a premise claim in a cited quote",
+            "FAIL: TP03 related id MPLR-010 is not tied to a non-heading span in a cited quote",
         ),
     )
     for premise_id, path, quote, message in cases:
@@ -565,7 +701,9 @@ def test_checker_rejects_related_id_supported_only_by_heading(tmp_path: Path) ->
         trust_path = root / TRUST_REL
         premises = json.loads(trust_path.read_text(encoding="utf-8"))
         premise = next(item for item in premises["premises"] if item["id"] == premise_id)
-        premise["sourceRefs"] = [{"path": path, "quote": quote}]
+        premise["sourceRefs"] = [
+            {"path": path, "quoteRole": "states-premise", "quote": quote}
+        ]
         write_json(trust_path, premises)
 
         result = run_script(CHECKER, root)
@@ -602,6 +740,7 @@ def test_checker_rejects_trust_premise_key_order(tmp_path: Path) -> None:
     premises["premises"][0] = {
         "status": premise["status"],
         "id": premise["id"],
+        "topic": premise["topic"],
         "statement": premise["statement"],
         "kind": premise["kind"],
         "sourceRefs": premise["sourceRefs"],
@@ -674,9 +813,12 @@ def test_checker_accepts_extra_source_backed_premise(tmp_path: Path) -> None:
     premises["premises"].append(
         {
             "id": "TP08",
-            "statement": quote,
+            "topic": "signed-intent-note",
+            "statement": "Signed intent stays bound to canonical public inputs.",
             "kind": "unresolved-interface",
-            "sourceRefs": [{"path": SOURCE_REL, "quote": quote}],
+            "sourceRefs": [
+                {"path": SOURCE_REL, "quoteRole": "states-premise", "quote": quote}
+            ],
             "relatedIds": ["ZR03"],
             "status": "open",
         }
@@ -692,10 +834,8 @@ def test_checker_accepts_extra_source_backed_premise(tmp_path: Path) -> None:
 def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> None:
     root = materialize(tmp_path)
     weak_rel = "docs/zr14-broad-topic.md"
-    (root / weak_rel).write_text(
-        "| ZR14 | selection of the federated kernel |\n",
-        encoding="utf-8",
-    )
+    weak_quote = "ZR14 \u2014 selection of the federated kernel"
+    (root / weak_rel).write_text(weak_quote + "\n", encoding="utf-8")
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     premise = next(item for item in premises["premises"] if item["id"] == "TP04")
@@ -703,12 +843,14 @@ def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> 
     for ref in premise["sourceRefs"]:
         if "ZR14" in ref["quote"] and "without the federated kernel" in ref["quote"]:
             ref["path"] = weak_rel
-            ref["quote"] = "| ZR14 | selection of the federated kernel |"
+            ref["quoteRole"] = "states-limitation"
+            ref["quote"] = weak_quote
             replaced = True
     assert replaced
     premise["sourceRefs"].append(
         {
             "path": "docs/MORIARTY-CONSOLIDATED-DESIGN.md",
+            "quoteRole": "states-premise",
             "quote": (
                 "MC06 private handoff and split/join must be demonstrable between "
                 "independently controlled participants without the federated kernel."
@@ -721,7 +863,7 @@ def test_checker_rejects_related_id_tied_only_by_broad_topic(tmp_path: Path) -> 
 
     assert result.returncode == 1, result.stdout + result.stderr
     assert (
-        "FAIL: TP04 related id ZR14 is not tied to a premise claim in a cited quote"
+        "FAIL: TP04 related id ZR14 is not tied to a non-heading span in a cited quote"
         in result.stdout
     )
     assert "OK:" not in result.stdout
@@ -769,7 +911,11 @@ def test_checker_rejects_source_ref_key_order(tmp_path: Path) -> None:
     trust_path = root / TRUST_REL
     premises = json.loads(trust_path.read_text(encoding="utf-8"))
     ref = premises["premises"][0]["sourceRefs"][0]
-    premises["premises"][0]["sourceRefs"][0] = {"quote": ref["quote"], "path": ref["path"]}
+    premises["premises"][0]["sourceRefs"][0] = {
+        "quote": ref["quote"],
+        "path": ref["path"],
+        "quoteRole": ref["quoteRole"],
+    }
     write_json(trust_path, premises)
 
     result = run_script(CHECKER, root)
