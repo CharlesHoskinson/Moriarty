@@ -369,3 +369,120 @@ def test_c5_quoted_terminal_is_not_a_constructor(tmp_path: Path) -> None:
     write(root, payload)
     process = run_checker(root)
     assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_wrong_typed_field_skips_dependent_checks(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    payload = load(root)
+    row(payload, "UNI-005")["kCitations"][0]["symbol"] = 123
+    row(payload, "UNI-005")["kCitations"][0]["file"] = (
+        "experiments/moriarty-language/formal/k/missing-declaration.k"
+    )
+    row(payload, "UNI-001")["title"] = "Wrong title"
+    write(root, payload)
+    process = run_checker(root)
+    combined = process.stdout + process.stderr
+    assert process.returncode == 1, combined
+    assert "FAIL: artifact schema: rows.4.kCitations.0.symbol:" in process.stdout
+    assert "Traceback" not in combined
+    assert "blocked:" not in process.stdout
+    assert "Wrong title" not in process.stdout
+    assert "not declared" not in process.stdout
+    assert process.stdout.splitlines()
+    assert all(line.startswith("FAIL: artifact schema:") for line in process.stdout.splitlines())
+
+
+def test_deeply_nested_artifact_is_internal_error(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    (root / ARTIFACT).write_text("[" * 200000, encoding="utf-8")
+    process = run_checker(root)
+    combined = process.stdout + process.stderr
+    assert process.returncode == 1, combined
+    assert "FAIL: internal error:" in process.stdout
+    assert "Traceback" not in combined
+
+
+def test_judgments_wrong_typed_key_skips_dependent_checks(tmp_path: Path) -> None:
+    root = copy_root(tmp_path)
+    judgments = json.loads((root / JUDGMENTS).read_text(encoding="utf-8"))
+    judgments["judgments"][0]["key"] = 123
+    (root / JUDGMENTS).write_text(json.dumps(judgments) + "\n", encoding="utf-8")
+    payload = load(root)
+    row(payload, "UNI-001")["title"] = "Wrong title"
+    write(root, payload)
+    process = run_checker(root)
+    combined = process.stdout + process.stderr
+    assert process.returncode == 1, combined
+    assert "FAIL: judgments.json: judgments.0.key:" in process.stdout
+    assert "Wrong title" not in process.stdout
+    assert "has an item without a key" not in process.stdout
+    assert "blocked:" not in process.stdout
+    assert "Traceback" not in combined
+    assert all(line.startswith("FAIL: judgments.json:") for line in process.stdout.splitlines())
+
+
+def test_c5_quoted_rule_label_is_not_a_declaration(tmp_path: Path) -> None:
+    checker = load_checker()
+    quoted = checker.module_symbols(
+        'module M\n syntax String ::= good() [function]\n rule good() => "rule [fake]:"\nendmodule'
+    )
+    assert quoted == {"M": {"M", "good"}}
+    labeled = checker.module_symbols(
+        'module M\n rule [real]: good() => "rule [fake]:"\nendmodule'
+    )
+    assert "real" in labeled["M"]
+    assert "fake" not in labeled["M"]
+    root = copy_root(tmp_path)
+    k_rel = K_ROOT / "quoted-rule-label.k"
+    (root / k_rel).write_text(
+        "module QUOTED-RULE\n"
+        "  syntax String ::= good() [function]\n"
+        '  rule good() => "rule [fake]:"\n'
+        "endmodule\n",
+        encoding="utf-8",
+    )
+    payload = load(root)
+    citation = row(payload, "UNI-005")["kCitations"][0]
+    citation["file"] = k_rel.as_posix()
+    citation["context"] = "QUOTED-RULE"
+    citation["symbol"] = "fake"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "symbol 'fake' is not declared in module QUOTED-RULE" in process.stdout
+    citation["symbol"] = "good"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_c5_claim_and_imports_are_not_declarations(tmp_path: Path) -> None:
+    checker = load_checker()
+    declared = checker.module_symbols(
+        "module M\n syntax S ::= real()\n claim\n  fake()\n imports note(other())\nendmodule"
+    )
+    assert declared == {"M": {"M", "real"}}
+    root = copy_root(tmp_path)
+    k_rel = K_ROOT / "claim-not-declaration.k"
+    (root / k_rel).write_text(
+        "module CLAIM-NOT-DECLARATION\n"
+        "  syntax S ::= real()\n"
+        "  claim\n"
+        "    fake()\n"
+        "  imports note(other())\n"
+        "endmodule\n",
+        encoding="utf-8",
+    )
+    payload = load(root)
+    citation = row(payload, "UNI-005")["kCitations"][0]
+    citation["file"] = k_rel.as_posix()
+    citation["context"] = "CLAIM-NOT-DECLARATION"
+    citation["symbol"] = "fake"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "symbol 'fake' is not declared in module CLAIM-NOT-DECLARATION" in process.stdout
+    citation["symbol"] = "real"
+    write(root, payload)
+    process = run_checker(root)
+    assert process.returncode == 0, process.stdout + process.stderr
