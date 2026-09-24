@@ -59,7 +59,7 @@ GENERATED_PREFIXES = (
 )
 # Amendment 4: whole words only, case-insensitive, no stem and no negation parse.
 # A hyphen is a word boundary, so "re-verified" still matches "verified".
-BANNED_NOTE_RE = re.compile(
+BANNED_PROSE_RE = re.compile(
     r"(?i)\b(?:verified|reverified|compatible|current|validated)\b"
 )
 NOTE_LIMIT = 160
@@ -352,9 +352,12 @@ def check_row(
         failures.append(f"{label} note is empty")
     elif len(note_text) > NOTE_LIMIT:
         failures.append(f"{label} note is longer than {NOTE_LIMIT} characters")
-    banned = list(dict.fromkeys(match.group(0).lower() for match in BANNED_NOTE_RE.finditer(note_text)))
-    for word in banned:
-        failures.append(f"{label} note contains banned word {word!r}")
+    for field, prose in (("note", note_text), ("selectionReason", row.get("selectionReason"))):
+        if not isinstance(prose, str):
+            continue
+        banned = dict.fromkeys(match.group(0).lower() for match in BANNED_PROSE_RE.finditer(prose))
+        for word in banned:
+            failures.append(f"{label} {field} contains banned word {word!r}")
     check_claims(root, row, label, failures)
 
     absent = status == "absent"
