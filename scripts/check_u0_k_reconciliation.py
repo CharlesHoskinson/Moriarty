@@ -19,11 +19,23 @@ SPEC_REL = Path("openspec/changes/consolidated-language-kernel/specs/consolidate
 JUDGMENTS_REL = Path("deliverables/u0-semantic-contract-2026-09-23/judgments.json")
 K_ROOT = Path("experiments/moriarty-language/formal/k")
 LIMITATION = "Coverage is a reviewed claim; the checker proves citations and evidence quotes only."
+_TEXT = {"type": "string", "minLength": 1}
+_JUDGMENT = {
+    "type": "object", "additionalProperties": False,
+    "required": ["key", "designDocJudgment", "definition", "schemaFields"],
+    "properties": {"key": _TEXT, "designDocJudgment": _TEXT, "definition": _TEXT, "schemaFields": {"type": "array", "items": _TEXT}},
+}
+JUDGMENTS_SCHEMA = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object", "additionalProperties": False, "required": ["schemaVersion", "judgments"],
+    "properties": {"schemaVersion": {"type": "string", "const": "moriarty-u0-judgments/1"}, "judgments": {"type": "array", "items": _JUDGMENT}},
+}
+Draft202012Validator.check_schema(JUDGMENTS_SCHEMA)
 UNI_HEADING = re.compile(r"^### Requirement: (UNI-\d{3}) (.+)$", re.M)
 MODULE_RE = re.compile(r"\bmodule\s+([A-Za-z0-9-]+)\b(.*?)\bendmodule\b", re.S)
-DECL_RE = re.compile(r"(?m)^[ \t]*(syntax|configuration|rule|context)\b")
+DECL_RE = re.compile(r"(?m)^[ \t]*(syntax|configuration|rule|context|claim|imports|endmodule|requires|module)\b")
 LABEL_RE = re.compile(r"\[(?:symbol|klabel)\(([A-Za-z_][A-Za-z0-9_]*)\)\]")
-RULE_LABEL_RE = re.compile(r"\brule\s*\[([A-Za-z_][A-Za-z0-9_-]*)\]\s*:")
+RULE_LABEL_RE = re.compile(r"^[ \t]*rule\s*\[([A-Za-z_][A-Za-z0-9_-]*)\]\s*:")
 CELL_RE = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>")
 CTOR_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 QUOTE_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
@@ -44,12 +56,16 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(2)
 
     parser.error = reject  # type: ignore[method-assign]
-    args = parser.parse_args(argv)
-    root = args.root.resolve()
-    if not root.is_dir():
-        print("blocked: root is not a directory")
-        return 2
-    return check_root(root)
+    try:
+        args = parser.parse_args(argv)
+        root = args.root.resolve()
+        if not root.is_dir():
+            print("blocked: root is not a directory")
+            return 2
+        return check_root(root)
+    except Exception as error:
+        print(f"FAIL: internal error: {type(error).__name__}: {error}")
+        return 1
 
 
 def check_root(root: Path) -> int:
@@ -68,22 +84,17 @@ def check_root(root: Path) -> int:
     judgments, _, judgments_ok = load_json_text(root / JUDGMENTS_REL, JUDGMENTS_REL, failures)
     if schema_ok and artifact_ok:
         check_schema(schema, artifact, artifact_text, failures)
-    rows = artifact.get("rows") if isinstance(artifact, dict) else None
-    ready = schema_ok and artifact_ok and spec is not None and judgments_ok and isinstance(artifact, dict)
-    if ready:
-        expected = expected_rows(spec, judgments, failures)
-        if expected is not None and isinstance(rows, list):
-            check_rows(root, artifact, rows, expected, failures, blocked)
+    if judgments_ok:
+        check_judgments(judgments, failures)
+    if failures or spec is None or not isinstance(artifact, dict):
+        return report(failures, [])
+    rows = artifact.get("rows")
+    blocked = []
+    if isinstance(rows, list):
+        check_rows(root, artifact, rows, expected_rows(spec, judgments), failures, blocked)
     if not failures and not blocked and isinstance(rows, list):
-        counts = {"covered": 0, "partial": 0, "not-covered": 0}
-        for row in rows:
-            status = row.get("status") if isinstance(row, dict) else None
-            if status in counts:
-                counts[status] += 1
-        print(
-            f"OK: {len(rows)} rows, {counts['covered']} covered, "
-            f"{counts['partial']} partial, {counts['not-covered']} not-covered"
-        )
+        counts = {name: sum(isinstance(row, dict) and row.get("status") == name for row in rows) for name in ("covered", "partial", "not-covered")}
+        print(f"OK: {len(rows)} rows, {counts['covered']} covered, {counts['partial']} partial, {counts['not-covered']} not-covered")
         print(LIMITATION)
     return report(failures, blocked)
 
@@ -141,6 +152,13 @@ def check_schema(schema: object, artifact: object, text: str, failures: list[str
             seen.add(row_id)
 
 
+def check_judgments(instance: object, failures: list[str]) -> None:
+    errors = sorted(Draft202012Validator(JUDGMENTS_SCHEMA).iter_errors(instance), key=lambda item: (list(item.absolute_path), item.message))
+    for error in errors:
+        location = ".".join(str(part) for part in error.absolute_path) or "<root>"
+        failures.append(f"FAIL: judgments.json: {location}: {error.message}")
+
+
 def check_key_order(instance: object, schema: object, path: str, failures: list[str]) -> None:
     if not isinstance(schema, dict):
         return
@@ -158,19 +176,10 @@ def check_key_order(instance: object, schema: object, path: str, failures: list[
             check_key_order(instance[key], child, f"{path}.{key}" if path else key, failures)
 
 
-def expected_rows(spec: str, judgments: object, failures: list[str]) -> list[tuple[str, str, str]] | None:
+def expected_rows(spec: str, judgments: object) -> list[tuple[str, str, str]]:
     rows = [(uni_id, "uni", title) for uni_id, title in sorted(UNI_HEADING.findall(spec))]
-    items = judgments.get("judgments") if isinstance(judgments, dict) else None
-    if not isinstance(items, list):
-        failures.append("FAIL: judgments.json has no judgments array")
-        return None
-    for item in items:
-        key = item.get("key") if isinstance(item, dict) else None
-        if not isinstance(key, str):
-            failures.append("FAIL: judgments.json has an item without a key")
-            return None
-        rows.append((key, "judgment", key))
-    return rows
+    items = judgments["judgments"] if isinstance(judgments, dict) else []
+    return rows + [(item["key"], "judgment", item["key"]) for item in items]
 
 
 def check_rows(
@@ -239,10 +248,7 @@ def cited_symbols(citations: list[object]) -> list[str]:
 
 
 def evidence_quotes(evidence: list[object]) -> list[tuple[str, str]]:
-    return [
-        (item["path"], item["quote"]) for item in evidence
-        if isinstance(item, dict) and isinstance(item.get("path"), str) and isinstance(item.get("quote"), str)
-    ]
+    return [(item["path"], item["quote"]) for item in evidence if isinstance(item, dict) and isinstance(item.get("path"), str) and isinstance(item.get("quote"), str)]
 
 
 def execution_quote(path: str, quote: str, symbol: str, evidence_path: str) -> bool:
@@ -344,24 +350,18 @@ def cached_text(
         return None
     return cache[rel]
 
-
 def locate(root: Path, rel: str) -> tuple[str, Path | None]:
-    path = Path(rel)
+    path, target = Path(rel), root / Path(rel)
     if not rel or path.is_absolute() or ".." in path.parts:
         return "escape", None
-    target = root / path
     if not target.is_file():
         return "missing", None
     resolved = target.resolve()
-    if not resolved.is_file() or not resolved.is_relative_to(root.resolve()):
-        return "escape", None
-    return "ok", resolved
-
+    return ("ok", resolved) if resolved.is_file() and resolved.is_relative_to(root.resolve()) else ("escape", None)
 
 def under_deliverables(rel: str) -> bool:
     path = Path(rel)
     return bool(path.parts) and not path.is_absolute() and ".." not in path.parts and path.parts[0] == "deliverables"
-
 
 def under_k(rel: str, roots: list[str]) -> bool:
     path = Path(rel)
@@ -380,8 +380,8 @@ def module_symbols(text: str) -> dict[str, set[str]]:
                 collect_syntax(block, symbols)
             elif kind == "configuration":
                 symbols.update(f"<{cell}>" for cell in CELL_RE.findall(block))
-            elif kind == "rule":
-                symbols.update(RULE_LABEL_RE.findall(block))
+            elif kind == "rule" and (match := RULE_LABEL_RE.match(QUOTE_RE.sub(" ", block))):
+                symbols.add(match.group(1))
     return found
 
 
