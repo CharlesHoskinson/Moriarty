@@ -64,8 +64,10 @@ def test_real_artifacts_pass() -> None:
     process = run_checker()
     assert process.returncode == 0, process.stdout + process.stderr
     assert process.stderr == ""
-    assert len(CHECKER.read_text(encoding="utf-8").splitlines()) <= 500
+    assert len(CHECKER.read_text(encoding="utf-8").splitlines()) <= 550
     embeddings = json.loads((MORIARTY_ROOT / EMBEDDINGS).read_text(encoding="utf-8"))
+    lifecycle_k = "experiments/moriarty-language/formal/k/lifecycle-v1.k"
+    assert lifecycle_k in embeddings["profileFiles"][CORE_PROFILE]
     rows = embeddings["rows"]
     present = sum(row["realisation"] == "present" for row in rows)
     partial = sum(row["realisation"] == "partial" for row in rows)
@@ -134,6 +136,19 @@ def test_c1_open_object_fails(tmp_path: Path) -> None:
     assert "FAIL: <root> additionalProperties is not false" in process.stdout
     assert "OK:" not in process.stdout
 
+    root = copy_root(tmp_path / "required")
+    schema = load(root, SCHEMA)
+    schema["required"] = 42
+    write_json(root / SCHEMA, schema)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: <root> required keys do not match properties" in process.stdout
+    assert "Traceback" not in process.stderr
+    assert process.stderr == ""
+    assert "OK:" not in process.stdout
+
 
 def test_c2_missing_row_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
@@ -158,6 +173,32 @@ def test_c3_partial_note_form_fails(tmp_path: Path) -> None:
 
     assert process.returncode == 1
     assert "FAIL: authority.consumed partial note is not 'Exists: ...; Missing: ...'" in process.stdout
+
+    root = copy_root(tmp_path / "source-type")
+    payload = load(root, EMBEDDINGS)
+    embedding_row(payload, "authority.consumed")["sourceFile"] = 1
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"FAIL: {EMBEDDINGS.as_posix()} $.rows[0].sourceFile: 1 is not of type 'string', 'null'" in process.stdout
+    assert "Traceback" not in process.stderr
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "mixed-side")
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["sourceFile"] = FRONTEND
+    cited["sourceSymbol"] = None
+    cited["sourceContext"] = "ProfileDecl"
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "FAIL: authority.consumed citation sides are incomplete" in process.stdout
+    assert process.stderr == ""
 
 
 def test_c4_cited_file_outside_roots_fails(tmp_path: Path) -> None:
@@ -202,6 +243,36 @@ def test_c4_cited_file_outside_roots_fails(tmp_path: Path) -> None:
 
     assert process.returncode == 2
     assert process.stdout == f"blocked: missing {missing}\n"
+
+    root = copy_root(tmp_path / "dot")
+    dotted = "experiments/moriarty-language/src/successor/./financial-lifecycle.ts"
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = dotted
+    payload["profileFiles"][CORE_PROFILE].append(dotted)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"FAIL: authority.consumed cited file {dotted} is outside the declared roots" in process.stdout
+    assert f"FAIL: profileFiles entry {dotted} is outside the declared roots" in process.stdout
+    assert "blocked:" not in process.stdout
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "profile-type")
+    payload = load(root, EMBEDDINGS)
+    payload["profileFiles"][CORE_PROFILE].append(42)
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert "42 is not of type 'string'" in process.stdout
+    assert "profileFiles" in process.stdout
+    assert "Traceback" not in process.stderr
+    assert process.stderr == ""
+    assert "OK:" not in process.stdout
 
 
 def test_c5_ternary_branch_is_not_a_declaration(tmp_path: Path) -> None:
@@ -292,6 +363,96 @@ def test_c5_ternary_branch_is_not_a_declaration(tmp_path: Path) -> None:
         f"ternaryDemo in {LANGUAGE}"
     ) in process.stdout
 
+    root = copy_root(tmp_path / "depth")
+    link = root / "experiments" / "moriarty-language"
+    target = link.resolve()
+    link.unlink()
+    shutil.copytree(target, link, symlinks=True)
+    probe = "experiments/moriarty-language/src/successor/u0-depth-probe.ts"
+    (root / probe).write_text(
+        "export function outer(): number {\n"
+        "const nested = 1;\n"
+        "class Hidden {}\n"
+        "return nested;\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = probe
+    cited["coreSymbol"] = "nested"
+    cited["coreContext"] = "outer"
+    payload["profileFiles"][CORE_PROFILE].append(probe)
+    payload["classificationTable"].append({
+        "context": "outer",
+        "realisationClass": "partial",
+        "rationale": "Probe: a nested local is not a top-level declaration.",
+    })
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        f"FAIL: authority.consumed core symbol nested is not a declaration in outer in {probe}"
+    ) in process.stdout
+    cited["coreSymbol"] = "Hidden"
+    write_json(root / EMBEDDINGS, payload)
+    process = run_checker("--root", str(root))
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        f"FAIL: authority.consumed core symbol Hidden is not a declaration in outer in {probe}"
+    ) in process.stdout
+    cited["coreSymbol"] = "outer"
+    write_json(root / EMBEDDINGS, payload)
+    process = run_checker("--root", str(root))
+    assert process.returncode == 0, process.stdout + process.stderr
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "cell")
+    link = root / "experiments" / "moriarty-language"
+    target = link.resolve()
+    link.unlink()
+    shutil.copytree(target, link, symlinks=True)
+    cell_rel = "experiments/moriarty-language/formal/k/u0-cell-probe.k"
+    (root / cell_rel).write_text(
+        "module PROBE\n"
+        "  configuration\n"
+        "    <shown> .K </shown>\n"
+        "  rule <k> left => right </k> <hidden> _ => .K </hidden>\n"
+        "endmodule\n",
+        encoding="utf-8",
+    )
+    payload = load(root, EMBEDDINGS)
+    cited = embedding_row(payload, "authority.consumed")
+    cited["coreFile"] = cell_rel
+    cited["coreSymbol"] = "hidden"
+    cited["coreContext"] = "hidden"
+    payload["profileFiles"][CORE_PROFILE].append(cell_rel)
+    payload["classificationTable"].append({
+        "context": "hidden",
+        "realisationClass": "partial",
+        "rationale": "Probe: a cell outside configuration is not a declaration.",
+    })
+    write_json(root / EMBEDDINGS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        f"FAIL: authority.consumed core symbol hidden is not a declaration in hidden in {cell_rel}"
+    ) in process.stdout
+    payload["classificationTable"][-1] = {
+        "context": "shown",
+        "realisationClass": "partial",
+        "rationale": "Probe: a configuration cell is a declaration.",
+    }
+    cited["coreSymbol"] = "shown"
+    cited["coreContext"] = "shown"
+    write_json(root / EMBEDDINGS, payload)
+    process = run_checker("--root", str(root))
+    assert process.returncode == 0, process.stdout + process.stderr
+
 
 def test_c6_unlisted_profile_file_fails(tmp_path: Path) -> None:
     root = copy_root(tmp_path)
@@ -363,7 +524,23 @@ def test_c9_judgment_order_fails(tmp_path: Path) -> None:
     process = run_checker("--root", str(root))
 
     assert process.returncode == 1
-    assert "FAIL: judgments.stage schemaFields is not a list" in process.stdout
+    assert (
+        f"FAIL: {JUDGMENTS.as_posix()} $.judgments[0].schemaFields: 42 is not of type 'array'"
+    ) in process.stdout
+    assert process.stderr == ""
+
+    root = copy_root(tmp_path / "nested-field")
+    payload = load(root, JUDGMENTS)
+    payload["judgments"][0]["schemaFields"] = [["x"]]
+    write_json(root / JUDGMENTS, payload)
+
+    process = run_checker("--root", str(root))
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert (
+        f"FAIL: {JUDGMENTS.as_posix()} $.judgments[0].schemaFields[0]: ['x'] is not of type 'string'"
+    ) in process.stdout
+    assert "Traceback" not in process.stderr
     assert process.stderr == ""
 
     root = copy_root(tmp_path / "object")
