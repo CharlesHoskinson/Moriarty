@@ -4,11 +4,15 @@
 Semantic fit of a quote to its statement label is a reviewed claim, not
 mechanically proven. The checker verifies structure, literal quote occurrence,
 identifier resolution, required topics, label length, one sentence without
-', and' or a semicolon, and closure-word absence. A source path must be a
-tracked repository document: git ls-files lists it, Path.resolve stays inside
-the repository, and the path is outside the U0 deliverable, kernel schemas,
-scripts and tests. A missing cited file is a check failure. Unavailable git
-or repository metadata blocks the check.
+', and' or a semicolon, and closure-word absence. Premise ids are contiguous
+from TP01. Each relatedIds array is sorted and has no duplicate. Every ZR, MNR,
+UNI or MPLR id in a cited quote is listed, and every listed id appears in a
+cited quote. Abbreviated ids such as UNI-007,008 expand to each id. An en-dash
+id span is not a member list. A source path must be a tracked repository
+document: git ls-files lists it, Path.resolve stays inside the repository, and
+the path is outside the U0 deliverable, kernel schemas, scripts and tests. A
+missing cited file is a check failure. Unavailable git or repository metadata
+blocks the check. Command-line errors are check failures.
 """
 
 from __future__ import annotations
@@ -67,6 +71,11 @@ REQUIREMENT_HEADING = re.compile(
 )
 REQUIREMENT_ID = re.compile(r"\b((?:UNI|MPLR)-\d{3})\b")
 ABBREVIATED_REQUIREMENT_IDS = re.compile(r"\b(UNI|MPLR)-(\d{3})((?:,\d{3})+)\b")
+# "ZR01–ZR16" is one span. Do not treat its endpoints as separate mentions.
+ID_RANGE_SPAN = re.compile(
+    r"\b(ZR|MNR)(\d{2})\s*[\u2013\u2014-]\s*(ZR|MNR)(\d{2})\b"
+)
+FULL_RELATED_ID = re.compile(r"\b((?:UNI|MPLR)-\d{3}|ZR\d{2}|MNR\d{2})\b")
 REQUIRED_TOPICS = (
     "native-target",
     "recursion-horizon",
@@ -106,8 +115,14 @@ SENTENCE = re.compile(r"^[^.!?;\n]+[.!?]$")
 NONHEADING_BODY = 20
 
 
+class FailArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        print(f"FAIL: invalid arguments: {message}")
+        raise SystemExit(1)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    parser = FailArgumentParser(
         description="Check U0 trust premises and the backend requirement matrix."
     )
     parser.add_argument("--root", type=Path, default=MORIARTY_ROOT)
@@ -276,6 +291,35 @@ def premise_status_failures(payload: Any) -> list[str]:
     return failures
 
 
+def expand_abbreviated_ids(text: str) -> str:
+    """Expand UNI-007,008 into UNI-007 and UNI-008."""
+
+    def replace(match: re.Match[str]) -> str:
+        prefix = match.group(1)
+        numbers = [match.group(2), *[part for part in match.group(3).split(",") if part]]
+        return " ".join(f"{prefix}-{number}" for number in numbers)
+
+    return ABBREVIATED_REQUIREMENT_IDS.sub(replace, text)
+
+
+def quote_ids(quote: str) -> set[str]:
+    """Return ZR, MNR, UNI and MPLR ids mentioned in one quote."""
+
+    masked = ID_RANGE_SPAN.sub(" ", quote)
+    expanded = expand_abbreviated_ids(masked)
+    return {match.group(1) for match in FULL_RELATED_ID.finditer(expanded)}
+
+
+def quotes_with_related_id(quotes: list[str], related_id: str) -> list[str]:
+    matched: list[str] = []
+    for quote in quotes:
+        if related_id in quote:
+            matched.append(quote)
+        elif related_id in quote_ids(quote):
+            matched.append(expand_abbreviated_ids(quote))
+    return matched
+
+
 def quote_has_nonheading_span(quote: str, related_id: str) -> bool:
     """True when related_id shares quote with at least 20 non-space body characters."""
 
@@ -304,6 +348,20 @@ def related_id_failures(
     catalog: set[str] | None,
 ) -> list[str]:
     failures: list[str] = []
+    if all(isinstance(item, str) for item in related_ids):
+        if related_ids != sorted(related_ids):
+            failures.append(f"FAIL: {premise_id} relatedIds are not sorted")
+        if len(related_ids) != len(set(related_ids)):
+            failures.append(f"FAIL: {premise_id} relatedIds contain a duplicate")
+    mentioned: set[str] = set()
+    for quote in quotes:
+        mentioned.update(quote_ids(quote))
+    listed = {item for item in related_ids if isinstance(item, str)}
+    for related_id in sorted(mentioned.difference(listed)):
+        failures.append(
+            f"FAIL: {premise_id} related id {related_id} appears in a cited quote "
+            "but is missing from relatedIds"
+        )
     for related_id in related_ids:
         if not isinstance(related_id, str):
             failures.append(f"FAIL: {premise_id} related id is not a string")
@@ -321,7 +379,7 @@ def related_id_failures(
                 )
         else:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not a known id family")
-        quotes_with_id = [quote for quote in quotes if related_id in quote]
+        quotes_with_id = quotes_with_related_id(quotes, related_id)
         if not quotes_with_id:
             failures.append(f"FAIL: {premise_id} related id {related_id} is not in a cited quote")
         elif not any(quote_has_nonheading_span(quote, related_id) for quote in quotes_with_id):
@@ -330,6 +388,22 @@ def related_id_failures(
                 "is not tied to a non-heading span in a cited quote"
             )
     return failures
+
+
+def premise_order_failures(payload: Any) -> list[str]:
+    if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
+        return []
+    premises = payload["premises"]
+    ids = [
+        premise_label(item) if isinstance(item, dict) else "<unknown>"
+        for item in premises
+    ]
+    expected = [f"TP{number:02d}" for number in range(1, len(premises) + 1)]
+    if ids == expected:
+        return []
+    if not expected:
+        return ["FAIL: trust premises are not contiguous TP01..TP00"]
+    return [f"FAIL: trust premises are not contiguous {expected[0]}..{expected[-1]}"]
 
 
 def premise_rule_failures(
@@ -341,6 +415,7 @@ def premise_rule_failures(
     failures.extend(topic_failures(payload))
     failures.extend(statement_failures(payload))
     failures.extend(premise_status_failures(payload))
+    failures.extend(premise_order_failures(payload))
     if not isinstance(payload, dict) or not isinstance(payload.get("premises"), list):
         return failures
     catalog, catalog_failures = load_requirement_ids(root)
@@ -405,7 +480,7 @@ def load_tracked_paths(root: Path) -> tuple[set[str] | None, str | None]:
     env.pop("GIT_WORK_TREE", None)
     try:
         completed = subprocess.run(
-            ["git", "-c", "safe.directory=*", "-C", str(root), "ls-files", "-z"],
+            ["git", "-C", str(root), "ls-files", "-z"],
             capture_output=True,
             check=False,
             env=env,
