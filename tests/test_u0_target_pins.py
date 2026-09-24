@@ -49,11 +49,14 @@ OK_LINE = (
 )
 COMPILER_BASE = "006c4d91ed09c0a89261861b6e7203b3efa3e2df"
 COMPILER_PIN = "f702692895e8be811fb9eac2a1c0bfafca5dea70"
-KEY_SELECTION = "first circuit in receipt order; all digests are equally current"
+KEY_SELECTION = (
+    "Most recent build receipt finishedAt 2026-09-17 versus 2026-09-09; "
+    "its three circuits share one timestamp, so chose the first in receipt order."
+)
 SRS_PIN = "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74"
 SRS_SELECTION = (
-    "Same catalog excerpt, so degree recency cannot decide. "
-    "Chose k=17 because checked-encoding-resources.json records it."
+    "The 2026-09-10 catalog lists tied degree digests; the 2026-09-23 U0 inspection "
+    "chose k=17 as recorded by checked-encoding-resources.json."
 )
 LEDGER_SELECTION = (
     "Tie on 2026-09-19 between 3fa0d1d and a8ab82ba. "
@@ -114,7 +117,9 @@ def test_real_ledger_passes() -> None:
     assert compiler["status"] == "historical"
     assert compiler["pinKind"] == "git-commit"
     assert compiler["pin"] == COMPILER_PIN
-    assert compiler["selectionReason"] == "Frozen head is later than the frozen base."
+    assert compiler["selectionReason"] == (
+        "The 2026-09-03 council advisory orders the frozen head after the frozen base; chose the head."
+    )
     assert any(
         item["kind"] == "found-in" and COMPILER_PIN in (item.get("evidenceQuote") or "")
         for item in compiler["claims"]
@@ -185,6 +190,33 @@ def test_real_ledger_passes() -> None:
         reason = item["selectionReason"]
         assert isinstance(reason, str) and reason
         assert len(reason) <= 160
+        assert re.search(r"2026-09-\d{2}", reason), item["component"]
+
+
+def test_key_conflicts_cover_all_build_receipts() -> None:
+    ledger = json.loads((ROOT / LEDGER_REL).read_text(encoding="utf-8"))
+    unresolved = "\n".join(ledger["unresolved"])
+    receipts = sorted((ROOT / "deliverables").rglob("*build-receipt.json"))
+    assert len(receipts) == 3
+    for kind, component in (("prover", "proving-keys"), ("verifier", "verifier-keys")):
+        key_row = row(ledger, component)
+        for receipt in receipts:
+            relative = receipt.relative_to(ROOT).as_posix()
+            data = json.loads(receipt.read_text(encoding="utf-8"))
+            for artifact in data["artifacts"]:
+                if not artifact["path"].startswith("keys/") or not artifact["path"].endswith(f".{kind}"):
+                    continue
+                digest = artifact["sha256"]
+                if digest == key_row["pin"]:
+                    continue
+                assert any(
+                    claim["kind"] == "conflict"
+                    and claim["evidencePath"] == relative
+                    and f'"path": "{artifact["path"]}"' in claim["evidenceQuote"]
+                    and digest in claim["evidenceQuote"]
+                    for claim in key_row["claims"]
+                ), (component, relative, artifact["path"], digest)
+                assert digest in unresolved, (component, digest)
 
 
 def stage_ledger(tmp_path: Path) -> tuple[Path, dict[str, object]]:
@@ -424,6 +456,7 @@ def test_absent_compact_compiler_fails_when_source_records_pin(tmp_path: Path) -
     compact["sourceEvidence"] = []
     compact["searchTerms"] = ["compact_compiler", "compactCompiler"]
     compact["excludedHits"] = []
+    compact["claims"] = [_not_found_claim()]
     write_ledger(root, ledger)
 
     process = run_checker(root)
@@ -431,6 +464,7 @@ def test_absent_compact_compiler_fails_when_source_records_pin(tmp_path: Path) -
     assert process.returncode == 1, process.stdout + process.stderr
     assert "compact-compiler" in process.stdout
     assert "absent" in process.stdout
+    assert "matches a search term and a pin pattern" in process.stdout
     assert "deliverables/lifecycle-corpus-2026-09-17/environment.json" in process.stdout
 
 
@@ -443,6 +477,7 @@ def test_absent_verifier_keys_unexcluded_hit_fails(tmp_path: Path) -> None:
     verifier_keys["sourceEvidence"] = []
     verifier_keys["searchTerms"] = ["accrue.verifier", "initialize.verifier"]
     verifier_keys["excludedHits"] = []
+    verifier_keys["claims"] = [_not_found_claim()]
     write_ledger(root, ledger)
 
     process = run_checker(root)
@@ -473,6 +508,18 @@ def test_banned_word_in_note_fails(tmp_path: Path, word: str, reported: str) -> 
 
     assert process.returncode == 1, process.stdout + process.stderr
     assert f"banned word {reported!r}" in process.stdout
+
+
+@pytest.mark.parametrize("word", ["verified", "reverified", "compatible", "current", "validated"])
+def test_banned_word_in_selection_reason_fails(tmp_path: Path, word: str) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    row(ledger, "zkir")["selectionReason"] = f"This pin is {word}."
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 1, process.stdout + process.stderr
+    assert f"selectionReason contains banned word {word!r}" in process.stdout
 
 
 @pytest.mark.parametrize(
