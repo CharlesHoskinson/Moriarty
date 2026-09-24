@@ -286,8 +286,14 @@ def canonical_matrix(payload: dict[str, Any]) -> str:
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
+class FailArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        print(f"FAIL: invalid arguments: {message}")
+        raise SystemExit(1)
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    parser = FailArgumentParser(
         description="Build the U0 backend requirement matrix from the source markdown."
     )
     parser.add_argument("--root", type=Path, default=MORIARTY_ROOT)

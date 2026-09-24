@@ -59,7 +59,7 @@ def git_env() -> dict[str, str]:
 
 def git_add(root: Path, *paths: str) -> None:
     result = subprocess.run(
-        ["git", "-c", "safe.directory=*", "add", "--", *paths],
+        ["git", "add", "--", *paths],
         cwd=root,
         env=git_env(),
         capture_output=True,
@@ -98,7 +98,7 @@ def materialize(tmp_path: Path) -> Path:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes((ROOT / relative).read_bytes())
     init = subprocess.run(
-        ["git", "-c", "safe.directory=*", "init", "-q"],
+        ["git", "init", "-q"],
         cwd=root,
         env=git_env(),
         capture_output=True,
@@ -217,6 +217,11 @@ def test_trust_premises_cover_required_topics() -> None:
     assert by_id["TP03"]["kind"] == "trust-assumption"
     assert by_id["TP03"]["status"] == "open"
     assert "oracle honesty" in by_id["TP03"]["statement"]
+    assert by_id["TP03"]["relatedIds"] == ["MPLR-010", "UNI-007", "UNI-008", "ZR03"]
+    owner_quote = next(
+        ref["quote"] for ref in by_id["TP03"]["sourceRefs"] if "UNI-007,008" in ref["quote"]
+    )
+    assert "UNI-008" not in owner_quote
     assert by_id["TP04"]["kind"] == "trust-assumption"
     assert by_id["TP04"]["status"] == "accepted-assumption"
     assert by_id["TP04"]["statement"] == (
@@ -235,6 +240,7 @@ def test_trust_premises_cover_required_topics() -> None:
     assert by_id["TP05"]["status"] == "accepted-assumption"
     assert by_id["TP05"]["statement"] == "Timeout is not evidence of nonexecution."
     assert by_id["TP05"]["statement"].count("Timeout is not evidence of nonexecution") == 1
+    assert by_id["TP05"]["relatedIds"] == ["MPLR-005", "MPLR-010", "UNI-007", "UNI-008"]
     assert by_id["TP06"]["kind"] == "unresolved-interface"
     assert by_id["TP06"]["status"] == "open"
     assert by_id["TP06"]["statement"] == (
@@ -260,6 +266,8 @@ def test_trust_premises_cover_required_topics() -> None:
         assert sentence.fullmatch(premise["statement"])
         for word in CLOSURE_WORDS:
             assert re.search(rf"\b{word}\b", premise["statement"], re.IGNORECASE) is None
+        assert premise["relatedIds"] == sorted(premise["relatedIds"])
+        assert len(premise["relatedIds"]) == len(set(premise["relatedIds"]))
         assert any(ref["quoteRole"] == "states-premise" for ref in premise["sourceRefs"])
         for ref in premise["sourceRefs"]:
             assert ref["quoteRole"] in {"states-premise", "states-limitation", "states-owner"}
@@ -1252,3 +1260,176 @@ def test_generator_main_reports_internal_error(monkeypatch, capsys) -> None:
     assert code == 1
     assert captured.out == "FAIL: internal error: RuntimeError: boom\n"
     assert captured.err == ""
+
+
+def invoke(script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(script), *args],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_checker_rejects_invalid_arguments() -> None:
+    cases = (
+        (
+            ["--definitely-unsupported"],
+            "FAIL: invalid arguments: unrecognized arguments: --definitely-unsupported\n",
+        ),
+        (
+            ["--root"],
+            "FAIL: invalid arguments: argument --root: expected one argument\n",
+        ),
+    )
+    for args, stdout in cases:
+        result = invoke(CHECKER, *args)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert result.stdout == stdout
+        assert result.stderr == ""
+        assert "Traceback" not in result.stderr
+
+
+def test_generator_rejects_invalid_arguments() -> None:
+    cases = (
+        (
+            ["--definitely-unsupported"],
+            "FAIL: invalid arguments: unrecognized arguments: --definitely-unsupported\n",
+        ),
+        (
+            ["--check=nope"],
+            "FAIL: invalid arguments: argument --check: ignored explicit argument 'nope'\n",
+        ),
+    )
+    for args, stdout in cases:
+        result = invoke(GENERATOR, *args)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert result.stdout == stdout
+        assert result.stderr == ""
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_swapped_premises(tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    trust_path = root / TRUST_REL
+    premises = json.loads(trust_path.read_text(encoding="utf-8"))
+    premises["premises"][0], premises["premises"][1] = (
+        premises["premises"][1],
+        premises["premises"][0],
+    )
+    write_json(trust_path, premises)
+
+    result = run_script(CHECKER, root)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "FAIL: trust premises are not contiguous TP01..TP09" in result.stdout
+    assert "OK:" not in result.stdout
+    assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_unsorted_and_duplicate_related_ids(tmp_path: Path) -> None:
+    cases = (
+        (
+            "unsorted",
+            lambda ids: list(reversed(ids)),
+            "FAIL: TP03 relatedIds are not sorted",
+        ),
+        (
+            "duplicate",
+            lambda ids: sorted([*ids, ids[0]]),
+            "FAIL: TP03 relatedIds contain a duplicate",
+        ),
+    )
+    for name, mutate, message in cases:
+        root = materialize(tmp_path / name)
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premise = next(item for item in premises["premises"] if item["id"] == "TP03")
+        assert premise["relatedIds"] == sorted(set(premise["relatedIds"]))
+        premise["relatedIds"] = mutate(premise["relatedIds"])
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert message in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_checker_rejects_related_id_omitted_from_cited_quote(tmp_path: Path) -> None:
+    cases = (
+        (
+            "TP03",
+            "UNI-008",
+            "FAIL: TP03 related id UNI-008 appears in a cited quote "
+            "but is missing from relatedIds",
+        ),
+        (
+            "TP05",
+            "MPLR-005",
+            "FAIL: TP05 related id MPLR-005 appears in a cited quote "
+            "but is missing from relatedIds",
+        ),
+    )
+    for premise_id, omitted, message in cases:
+        root = materialize(tmp_path / premise_id)
+        trust_path = root / TRUST_REL
+        premises = json.loads(trust_path.read_text(encoding="utf-8"))
+        premise = next(item for item in premises["premises"] if item["id"] == premise_id)
+        assert omitted in premise["relatedIds"]
+        premise["relatedIds"] = [item for item in premise["relatedIds"] if item != omitted]
+        assert premise["relatedIds"] == sorted(premise["relatedIds"])
+        write_json(trust_path, premises)
+
+        result = run_script(CHECKER, root)
+
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert message in result.stdout
+        assert "OK:" not in result.stdout
+        assert "Traceback" not in result.stderr
+
+
+def test_git_ls_files_keeps_ownership_check(monkeypatch) -> None:
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import check_u0_trust_backend_matrix as checker
+
+    commands: list[list[str]] = []
+    real_run = subprocess.run
+
+    def record(command, **kwargs):
+        if isinstance(command, list):
+            commands.append([str(part) for part in command])
+        return real_run(command, **kwargs)
+
+    monkeypatch.setattr(checker.subprocess, "run", record)
+    tracked, blocked = checker.load_tracked_paths(ROOT)
+
+    assert blocked is None
+    assert tracked is not None
+    assert TRUST_REL in tracked
+    assert commands == [["git", "-C", str(ROOT), "ls-files", "-z"]]
+    assert "safe.directory=*" not in commands[0]
+
+
+def test_git_refusal_blocks_metadata(monkeypatch, tmp_path: Path) -> None:
+    root = materialize(tmp_path)
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import check_u0_trust_backend_matrix as checker
+
+    def refuse(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command,
+            128,
+            b"",
+            b"fatal: detected dubious ownership in repository",
+        )
+
+    monkeypatch.setattr(checker.subprocess, "run", refuse)
+    code, lines = checker.check(root)
+
+    assert code == 2
+    assert lines == ["blocked: git metadata unavailable"]
