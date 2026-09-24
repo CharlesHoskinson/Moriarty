@@ -1,0 +1,336 @@
+{
+  "schemaVersion": "moriarty-u0-numeric-profile/1",
+  "decisionFile": "docs/decisions/u0-numeric-profile-decision.md",
+  "decisionSha256": "94ae764ffedc12a4d0543cfe94ed19ff8574bf19b15a43233e0615d71d6adeae",
+  "priceOrientation": {
+    "canonical": "base-per-quote",
+    "sourceTypes": [
+      {
+        "file": "experiments/moriarty-language/src/successor/financial-expression-source-types.ts",
+        "symbol": "Price"
+      },
+      {
+        "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        "symbol": "Price"
+      }
+    ],
+    "note": "Source/5 evaluates moriarty-financial-expression-contract/4. Price<A,B,S> means mantissa/10^scale units of base A for one unit of quote B. financial-expression-types-v1.ts holds that value type. financial-expression-source-types.ts accepts the same Price spelling in source text. financial-expression-v1.ts LitPrice is a literal constructor that builds the value, and it is not a price type. expression-types-v1.ts repeats Price for the non-financial expression profile and is not the source/5 path. arithmeticType at financial-expression-v1.ts:341 maps an Amount of asset B times Price base A, quote B, scale S to ScaledAmount of A at scale S. LitPrice at financial-expression-v1.ts:230 stores the Price tuple as base, quote, scale."
+  },
+  "units": {
+    "representation": "exact-domain-qualified-integer",
+    "fieldElementCoercion": "forbidden",
+    "widths": [
+      {
+        "name": "SInt128",
+        "bits": 128,
+        "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        "symbol": "SInt128"
+      },
+      {
+        "name": "UInt128",
+        "bits": 128,
+        "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        "symbol": "UInt128"
+      },
+      {
+        "name": "UInt256",
+        "bits": 256,
+        "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        "symbol": "UInt256"
+      },
+      {
+        "name": "UInt64",
+        "bits": 64,
+        "file": "experiments/moriarty-language/src/successor/financial-expression-types-v1.ts",
+        "symbol": "UInt64"
+      }
+    ]
+  },
+  "defaultPolicy": {
+    "obligation": "ceil",
+    "receipt": "floor",
+    "exact": "none",
+    "remainderBeneficiary": "protocol-reserve"
+  },
+  "reserveMechanism": {
+    "status": "absent",
+    "citations": [],
+    "note": "Successor sources declare no protocol-reserve type, field, or function. status is absent and citations is empty. Every ceil or floor primitive is an open conformance gap because the rounding remainder has nowhere to post. A present status is a reviewed claim. The checker only checks that each citation line declares the named symbol. It does not decide whether that declaration is a reserve account or whether a division posts its remainder there."
+  },
+  "primitives": [
+    {
+      "id": "accrual-interest",
+      "description": "applyAccrue divides principal times numerator by the accrual denominator. The interest increases accrued, outstanding, and liabilityIncurred. D2 requires ceil because the result increases a liability. AccrualRounding is stored on the obligation and the author can select floor or ceil. The truncating division is the floor path. The ceil path adds one when the remainder is nonzero. Source/5 uses this lifecycle kernel. The earlier repayment kernel has no accrual. The remainder is not posted to a protocol reserve.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "applyAccrue",
+      "constructor": null,
+      "line": 1779,
+      "resultRole": "obligation",
+      "requiredDirection": "ceil",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": true,
+      "conformance": "open-gap",
+      "gapNote": "AccrualTerms.rounding lets the author select floor or ceil. D2 requires ceil for interest that increases a liability. A floor selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
+    },
+    {
+      "id": "checked-add-u128",
+      "description": "addU128 adds two UInt128 values and returns null when the sum exceeds UINT128_MAX. The accepted sum is exact. The helper does not round, truncate, or wrap. D2 permits requiredDirection none because this helper cannot lose precision. Source/5 defines the helper in financial-lifecycle.ts. repayment.ts repeats the helper and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "addU128",
+      "constructor": null,
+      "line": 342,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "checked-add-u64",
+      "description": "addU64 adds two UInt64 values and returns null when the sum exceeds UINT64_MAX. The accepted sum is exact. The helper does not round, truncate, or wrap. D2 permits requiredDirection none because this helper cannot lose precision. Source/5 defines the helper in financial-lifecycle.ts. The accrual schedule uses it.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "addU64",
+      "constructor": null,
+      "line": 356,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "checked-mul-u128",
+      "description": "mulU128 multiplies two UInt128 values and returns null when the product exceeds UINT128_MAX. The accepted product is exact. The helper does not round, truncate, or wrap. D2 permits requiredDirection none because this helper cannot lose precision. Source/5 defines the helper in financial-lifecycle.ts. repayment.ts repeats the helper and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "mulU128",
+      "constructor": null,
+      "line": 351,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "checked-mul-u64",
+      "description": "mulU64 multiplies two UInt64 values and returns null when the product exceeds UINT64_MAX. The accepted product is exact. The helper does not round, truncate, or wrap. D2 permits requiredDirection none because this helper cannot lose precision. Source/5 defines the helper in financial-lifecycle.ts. The accrual schedule uses it.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "mulU64",
+      "constructor": null,
+      "line": 361,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "checked-sub-u128",
+      "description": "subU128 subtracts two UInt128 values and returns null when the result would be negative. The accepted difference is exact. The helper does not round, truncate, or wrap. D2 permits requiredDirection none because this helper cannot lose precision. Source/5 defines the helper in financial-lifecycle.ts. repayment.ts repeats the helper and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "subU128",
+      "constructor": null,
+      "line": 346,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-add",
+      "description": "reduce evaluates Add as a + b and then numericFits rejects a result outside the result type. The author can select the Add constructor. The author cannot select a rounding mode for Add. An accepted result is exact. D2 permits requiredDirection none because this operation does not round or truncate. FloorDiv and CeilDiv in this reducer are separate rows. expression-v1.ts repeats this guard and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "Add",
+      "line": 407,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-construct-amount",
+      "description": "reduce checks ConstructAmount with numericFits and rejects a magnitude outside the amount width. The author can select the ConstructAmount constructor. The author cannot select a rounding mode. An accepted result is the original integer and is exact. D2 permits requiredDirection none because this guard rejects an out-of-range value instead of rounding it. This row shares the numericFits line with ConstructShares and ConvertUInt.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "ConstructAmount",
+      "line": 380,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-construct-shares",
+      "description": "reduce checks ConstructShares with numericFits and rejects a magnitude outside the shares width. The author can select the ConstructShares constructor. The author cannot select a rounding mode. An accepted result is the original integer and is exact. D2 permits requiredDirection none because this guard rejects an out-of-range value instead of rounding it. This row shares the numericFits line with ConstructAmount and ConvertUInt.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "ConstructShares",
+      "line": 380,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-convert-uint",
+      "description": "reduce checks ConvertUInt with numericFits and rejects a value outside the destination width. ConvertUInt can narrow UInt256 to UInt64 or UInt128. The author can select the ConvertUInt constructor. The author cannot select a rounding mode. An accepted result is the original integer and is exact. D2 permits requiredDirection none because this guard rejects an out-of-range value instead of rounding it. This row shares the numericFits line with ConstructAmount and ConstructShares.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "ConvertUInt",
+      "line": 380,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-mul",
+      "description": "reduce evaluates Mul as a * b and then numericFits rejects a result outside the result type. The author can select the Mul constructor. The author cannot select a rounding mode for Mul. An accepted result is exact. D2 permits requiredDirection none because this operation does not round or truncate. FloorDiv and CeilDiv in this reducer are separate rows. expression-v1.ts repeats this guard and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "Mul",
+      "line": 407,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-checked-sub",
+      "description": "reduce evaluates Sub as a - b and then numericFits rejects a result outside the result type. The author can select the Sub constructor. The author cannot select a rounding mode for Sub. An accepted result is exact. D2 permits requiredDirection none because this operation does not round or truncate. FloorDiv and CeilDiv in this reducer are separate rows. expression-v1.ts repeats this guard and is not the source/5 path.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "Sub",
+      "line": 407,
+      "resultRole": "exact",
+      "requiredDirection": "none",
+      "remainderBeneficiary": null,
+      "authorSelectable": false,
+      "conformance": "conforms",
+      "gapNote": null
+    },
+    {
+      "id": "expression-obligation-division",
+      "description": "financial-expression-v1 reduce evaluates FloorDiv and CeilDiv at one site. The program selects the constructor through floor_div or ceil_div. A price conversion multiplies an amount by a base-per-quote Price and then divides the scaled mantissa by 10^scale at this site. D2 requires ceil when the result is an amount owed, a fee, or a collateral charge. A negative dividend is adjusted so the remainder is nonnegative before a ceil increment. expression-v1.ts repeats this reducer and is not the source/5 path. Source/5 evaluates contract/4 in this file. The remainder is not posted to a protocol reserve.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "CeilDiv",
+      "line": 404,
+      "resultRole": "obligation",
+      "requiredDirection": "ceil",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": true,
+      "conformance": "open-gap",
+      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires ceil when the result is an amount owed. The author can select floor. That selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
+    },
+    {
+      "id": "expression-receipt-division",
+      "description": "The same reduce site evaluates FloorDiv and CeilDiv when the result is an amount a party receives. That includes a payout, a withdrawal, a refund, and a price conversion into a received amount. D2 requires floor. The program can still select ceil_div. Quantity division uses this same site. This row shares the division line with expression-obligation-division because the implementation does not separate the two roles. The remainder is not posted to a protocol reserve.",
+      "file": "experiments/moriarty-language/src/successor/financial-expression-v1.ts",
+      "symbol": "reduce",
+      "constructor": "FloorDiv",
+      "line": 404,
+      "resultRole": "receipt",
+      "requiredDirection": "floor",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": true,
+      "conformance": "open-gap",
+      "gapNote": "The program selects floor_div or ceil_div at this reducer. D2 requires floor when the result is an amount received. The author can select ceil. That selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
+    },
+    {
+      "id": "origination-settlement-conversion",
+      "description": "convertNominal divides nominal times mantissa by 10^scale. applyOriginate uses that quotient as the settlement quanta the debtor receives from the creditor. D2 requires floor for a received amount. Conversion.rounding lets the author select none, floor, or ceil. none rejects a nonzero remainder instead of rounding. repayment.ts convertNominal is the same helper on the earlier repayment kernel. Source/5 uses this lifecycle copy. The repayment use of this division is repayment-settlement-conversion. The remainder is not posted to a protocol reserve.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "convertNominal",
+      "constructor": null,
+      "line": 1376,
+      "resultRole": "receipt",
+      "requiredDirection": "floor",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": true,
+      "conformance": "open-gap",
+      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires floor for the settlement the debtor receives at origination. Another selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
+    },
+    {
+      "id": "prorata-principal-share",
+      "description": "allocateNominal ProRata divides nominal times principal by principal plus accrued. The author can select the allocation rule but cannot select a rounding mode for this quotient. The quotient is the nonnegative truncating division, which is floor. D2 treats the principal discharge as a reduction of liability in the payer's favour, so the required direction is floor. The truncated unit is not posted to a protocol-reserve balance. It stays in the same nominal repayment as accrued discharge, and the nominal total is unchanged. repayment.ts allocateNominal is the same earlier helper and is not a second source/5 primitive. No protocol-reserve declaration exists, so the beneficiary rule is an open conformance gap.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "allocateNominal",
+      "constructor": null,
+      "line": 1423,
+      "resultRole": "receipt",
+      "requiredDirection": "floor",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": false,
+      "conformance": "open-gap",
+      "gapNote": "allocateNominal floors the principal share. That direction matches D2 for a receipt. The truncated unit stays in the accrued discharge of the same nominal repayment. The successor sources have a missing protocol-reserve posting."
+    },
+    {
+      "id": "repayment-settlement-conversion",
+      "description": "applyRepay uses convertNominal to turn a nominal repayment into the settlement quanta the payer must fund. D2 requires ceil because that amount is a charge that discharges debt. The division line is the same convertNominal site as origination-settlement-conversion. Conversion.rounding lets the author select none, floor, or ceil. The earlier copy of this helper is repayment.ts convertNominal, which source/5 does not call. The remainder is not posted to a protocol reserve.",
+      "file": "experiments/moriarty-language/src/successor/financial-lifecycle.ts",
+      "symbol": "convertNominal",
+      "constructor": null,
+      "line": 1376,
+      "resultRole": "obligation",
+      "requiredDirection": "ceil",
+      "remainderBeneficiary": "protocol-reserve",
+      "authorSelectable": true,
+      "conformance": "open-gap",
+      "gapNote": "Conversion.rounding lets the author select none, floor, or ceil. D2 requires ceil for the settlement the payer must fund. Another selection is an open conformance gap. The successor sources have a missing protocol-reserve posting."
+    }
+  ],
+  "overrides": [],
+  "defiformalConversion": {
+    "sourceOrientation": "quote-per-base",
+    "targetOrientation": "base-per-quote",
+    "formula": "A positive quote-per-base mantissa M at scale s denotes M/10^s quote units per one base unit. The base-per-quote mantissa at target scale t is the directed reciprocal 10^(s+t)/M. The numerator is 10^(s+t). A receipt uses floor: numerator//M. An obligation uses ceil: (numerator+M-1)//M. The source scale and the target scale stay explicit. This is not a rename and not a second rounding of an already rounded reciprocal.",
+    "testVectors": [
+      {
+        "quotePerBaseMantissa": 3,
+        "quotePerBaseScale": 1,
+        "targetScale": 1,
+        "role": "obligation",
+        "expectedBasePerQuoteMantissa": 34
+      },
+      {
+        "quotePerBaseMantissa": 3,
+        "quotePerBaseScale": 1,
+        "targetScale": 1,
+        "role": "receipt",
+        "expectedBasePerQuoteMantissa": 33
+      },
+      {
+        "quotePerBaseMantissa": 25,
+        "quotePerBaseScale": 2,
+        "targetScale": 2,
+        "role": "receipt",
+        "expectedBasePerQuoteMantissa": 400
+      },
+      {
+        "quotePerBaseMantissa": 19743,
+        "quotePerBaseScale": 4,
+        "targetScale": 6,
+        "role": "obligation",
+        "expectedBasePerQuoteMantissa": 506509
+      }
+    ]
+  }
+}
