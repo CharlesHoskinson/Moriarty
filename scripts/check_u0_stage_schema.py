@@ -3,17 +3,19 @@
 Absence means not found by the recorded search. It is not a proof of non-realisation.
 Semantic adequacy of a cited declaration is a reviewed claim. The checker proves
 only declaration, context, and profile membership. C1 requires stageSchemaSha256
-to equal the sha256 of the schema bytes. C4 requires every cited file and every
-profileFiles entry, with no '.' or '..' segment, to resolve under an absenceSearch
-root. A missing root or file is blocked.
+to equal the sha256 of the schema bytes. Embeddings and judgments are validated
+against inline draft 2020-12 schemas before C2-C9. A violation names its JSON path.
+C4 splits each raw path on '/' and rejects a '.' or '..' segment before resolving
+under an absenceSearch root. A missing root or file is blocked.
 Parser subset, after comments are removed. TypeScript string literals are removed.
 EBNF keeps quotes, but a quoted terminal is not a declaration. K keeps quotes.
-TypeScript: interface and type object members at depth 0, plus top-level function,
-const, class, type, and interface names. Ternaries, case labels, parameters, and
-locals are not declarations. EBNF: only `name =` at line start is a declaration.
-K syntax continues until the next syntax, rule, configuration, or endmodule. A
-constructor is an identifier before '(', a quoted terminal, or a klabel or symbol
-attribute. A bare sort reference is a subsort, not a constructor. <cell> belongs to that cell.
+TypeScript: function, const, class, type, and interface names only at brace depth 0.
+Direct members of an interface or type object body only. Nested locals are not
+declarations. EBNF: only `name =` at line start is a declaration.
+K syntax continues until the next syntax, rule, configuration, or endmodule.
+A constructor is an identifier before '(', a quoted terminal, or a klabel or symbol
+attribute. A bare sort reference is a subsort, not a constructor.
+A <cell> counts only inside a configuration block, until the next syntax, rule, or endmodule.
 """
 from __future__ import annotations
 import argparse
@@ -42,6 +44,37 @@ LIMITATION = (
     "Semantic adequacy of a cited declaration is a reviewed claim; the checker proves "
     "declaration, context, and profile membership only."
 )
+def closed(properties: dict) -> dict:
+    return {"type": "object", "additionalProperties": False, "required": list(properties), "properties": properties}
+STR = {"type": "string", "minLength": 1}
+NULL_STR = {"type": ["string", "null"], "minLength": 1}
+STRINGS = {"type": "array", "items": STR}
+EMBEDDINGS_SCHEMA = closed({
+    "schemaVersion": {"const": "moriarty-u0-embeddings/1"},
+    "stageSchemaSha256": {"type": "string", "minLength": 64, "maxLength": 64},
+    "sourceProfile": {"const": SOURCE_PROFILE},
+    "coreProfile": {"const": CORE_PROFILE},
+    "classificationRule": STR,
+    "profileFiles": closed({SOURCE_PROFILE: STRINGS, CORE_PROFILE: STRINGS}),
+    "classificationTable": {"type": "array", "items": closed({
+        "context": STR, "realisationClass": {"enum": ["present", "partial"]}, "rationale": STR,
+    })},
+    "absenceSearch": closed({"roots": STRINGS, "method": STR, "limitation": {"const": LIMITATION}}),
+    "rows": {"type": "array", "items": closed({
+        "schemaField": STR,
+        "sourceFile": NULL_STR, "sourceSymbol": NULL_STR, "sourceContext": NULL_STR,
+        "coreFile": NULL_STR, "coreSymbol": NULL_STR, "coreContext": NULL_STR,
+        "realisation": {"enum": ["present", "partial", "absent"]},
+        "present": {"type": "boolean"},
+        "note": STR,
+    })},
+})
+JUDGMENTS_SCHEMA = closed({
+    "schemaVersion": {"const": "moriarty-u0-judgments/1"},
+    "judgments": {"type": "array", "items": closed({
+        "key": STR, "designDocJudgment": STR, "definition": STR, "schemaFields": STRINGS,
+    })},
+})
 ROW_KEYS = [
     "schemaField", "sourceFile", "sourceSymbol", "sourceContext",
     "coreFile", "coreSymbol", "coreContext", "realisation", "present", "note",
@@ -61,8 +94,15 @@ PRODUCTION = re.compile(rf"(?m)^({IDENT})\s*=")
 K_SYNTAX = re.compile(rf"(?m)^[ \t]*syntax\s+({IDENT})\s*::=")
 K_STOP = re.compile(r"(?m)^[ \t]*(?:syntax|rule|configuration|endmodule)\b")
 CELL = re.compile(rf"<({IDENT})>")
+CONFIG = re.compile(r"(?m)^[ \t]*configuration\b")
 FILE_KEYS = ("sourceFile", "coreFile")
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return run_checks(argv)
+    except Exception as exc:
+        print(f"FAIL: internal error: {type(exc).__name__}: {exc}")
+        return 1
+def run_checks(argv: list[str] | None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=MORIARTY_ROOT)
     root = parser.parse_args(argv).root.resolve()
@@ -81,7 +121,12 @@ def main(argv: list[str] | None = None) -> int:
     if not isinstance(schema, dict) or not isinstance(embeddings, dict) or not isinstance(judgments, dict):
         print("\n".join(failures))
         return 1
+    typed = input_failures(EMBEDDINGS_REL.as_posix(), EMBEDDINGS_SCHEMA, embeddings)
+    typed += input_failures(JUDGMENTS_REL.as_posix(), JUDGMENTS_SCHEMA, judgments)
     check_c1(schema, embeddings, schema_bytes, failures)
+    if typed:
+        print("\n".join(typed + failures))
+        return 1
     leaves = collect_leaves(schema, "", failures)
     rows = embeddings.get("rows") if isinstance(embeddings.get("rows"), list) else []
     if not isinstance(embeddings.get("rows"), list):
@@ -119,6 +164,12 @@ def load_json(path: Path, label: str, failures: list[str]) -> tuple[bytes, dict 
         failures.append(f"FAIL: {label} is not a JSON object")
         return raw, None
     return raw, value
+def input_failures(label: str, schema: dict, instance: object) -> list[str]:
+    try:
+        errors = sorted(Draft202012Validator(schema).iter_errors(instance), key=lambda error: error.json_path)
+    except SchemaError as exc:
+        return [f"FAIL: {label} checker schema is invalid ({exc.message.splitlines()[0]})"]
+    return [f"FAIL: {label} {error.json_path}: {error.message.splitlines()[0]}" for error in errors]
 def check_c1(schema: dict, embeddings: dict, schema_bytes: bytes, failures: list[str]) -> None:
     digest = hashlib.sha256(schema_bytes).hexdigest()
     if embeddings.get("stageSchemaSha256") != digest:
@@ -142,7 +193,8 @@ def walk_closed_objects(node: object, path: str, failures: list[str]) -> None:
         props = node["properties"]
         if node.get("additionalProperties") is not False:
             failures.append(f"FAIL: {path} additionalProperties is not false")
-        if list(node.get("required") or []) != list(props):
+        required = node.get("required")
+        if not isinstance(required, list) or required != list(props):
             failures.append(f"FAIL: {path} required keys do not match properties")
         for key, child in props.items():
             walk_closed_objects(child, key if path == "<root>" else f"{path}.{key}", failures)
@@ -200,72 +252,51 @@ def check_c3(rows: list, failures: list[str]) -> None:
             continue
         if row["present"] is not (realisation != "absent"):
             failures.append(f"FAIL: {label} present is not (realisation != absent)")
+        note = row["note"]
+        if not isinstance(note, str) or not note.strip():
+            failures.append(f"FAIL: {label} note is not a non-empty string")
+        elif realisation == "partial" and not PARTIAL_NOTE.fullmatch(note):
+            failures.append(f"FAIL: {label} partial note is not 'Exists: ...; Missing: ...'")
         sides = [(row[file_key], row[symbol_key], row[context_key]) for _side, file_key, symbol_key, context_key in SIDES]
         if realisation == "absent":
             if any(value is not None for side in sides for value in side):
                 failures.append(f"FAIL: {label} is absent but a citation field is set")
             continue
-        good = [all(isinstance(value, str) and value for value in side) for side in sides]
-        partial = [any(value is not None for value in side) and not all(value is not None for value in side) for side in sides]
-        if not any(good) or any(partial):
+        whole = [all(value is None for value in side) or all(isinstance(value, str) and value for value in side) for side in sides]
+        cited = [all(isinstance(value, str) and value for value in side) for side in sides]
+        if not all(whole) or not any(cited):
             failures.append(f"FAIL: {label} citation sides are incomplete")
-        if realisation == "partial" and (not isinstance(row["note"], str) or not PARTIAL_NOTE.fullmatch(row["note"])):
-            failures.append(f"FAIL: {label} partial note is not 'Exists: ...; Missing: ...'")
 def block_on_inputs(root: Path, embeddings: dict, rows: list) -> bool:
-    search = embeddings.get("absenceSearch")
-    roots = search.get("roots") if isinstance(search, dict) else None
-    if isinstance(roots, list):
-        missing = [item for item in roots if isinstance(item, str) and not (root / item).is_dir()]
-        if missing:
-            print("\n".join(f"blocked: missing {item}" for item in missing))
-            return True
-    missing_files = []
-    for rel in iter_rels(embeddings, rows):
-        if rel not in missing_files and not (root / rel).is_file():
-            missing_files.append(rel)
+    missing = [item for item in embeddings["absenceSearch"]["roots"] if not (root / item).is_dir()]
+    if missing:
+        print("\n".join(f"blocked: missing {item}" for item in missing))
+        return True
+    missing_files = [rel for rel in dict.fromkeys(iter_rels(embeddings, rows)) if not (root / rel).is_file()]
     if missing_files:
         print("\n".join(f"blocked: missing {item}" for item in missing_files))
         return True
     return False
 def iter_rels(embeddings: dict, rows: list) -> list[str]:
-    rels: list[str] = []
-    for row in rows:
-        if isinstance(row, dict):
-            for key in FILE_KEYS:
-                rel = row.get(key)
-                if isinstance(rel, str):
-                    rels.append(rel)
-    profiles = embeddings.get("profileFiles")
-    if isinstance(profiles, dict):
-        for files in profiles.values():
-            if isinstance(files, list):
-                rels.extend(item for item in files if isinstance(item, str))
+    rels = [row[key] for row in rows for key in FILE_KEYS if isinstance(row[key], str)]
+    for files in embeddings["profileFiles"].values():
+        rels.extend(item for item in files if isinstance(item, str))
     return rels
 def check_c4(root: Path, embeddings: dict, rows: list, failures: list[str]) -> None:
-    search = embeddings.get("absenceSearch")
-    raw_roots = search.get("roots") if isinstance(search, dict) else None
-    roots = [item for item in raw_roots if isinstance(item, str)] if isinstance(raw_roots, list) else []
+    roots = embeddings["absenceSearch"]["roots"]
     for row in rows:
-        if not isinstance(row, dict):
-            continue
         for key in FILE_KEYS:
-            rel = row.get(key)
+            rel = row[key]
             if isinstance(rel, str) and not contained(root, rel, roots):
-                failures.append(f"FAIL: {row.get('schemaField')} cited file {rel} is outside the declared roots")
-    profiles = embeddings.get("profileFiles")
-    if not isinstance(profiles, dict):
-        return
-    for files in profiles.values():
-        if not isinstance(files, list):
-            continue
+                failures.append(f"FAIL: {row['schemaField']} cited file {rel} is outside the declared roots")
+    for files in embeddings["profileFiles"].values():
         for rel in files:
-            if isinstance(rel, str) and not contained(root, rel, roots):
+            if not isinstance(rel, str) or not rel or not contained(root, rel, roots):
                 failures.append(f"FAIL: profileFiles entry {rel} is outside the declared roots")
 def contained(root: Path, rel: str, roots: list[str]) -> bool:
-    path = Path(rel)
-    if path.is_absolute() or any(part in {".", ".."} for part in path.parts):
+    parts = rel.split("/")
+    if Path(rel).is_absolute() or any(part in {".", ".."} for part in parts):
         return False
-    resolved = (root / path).resolve()
+    resolved = (root / rel).resolve()
     return any(resolved.is_relative_to((root / item).resolve()) for item in roots)
 def check_c8_shape(embeddings: dict, failures: list[str]) -> None:
     node = embeddings.get("absenceSearch")
@@ -279,46 +310,35 @@ def check_c8_shape(embeddings: dict, failures: list[str]) -> None:
     if node.get("limitation") != LIMITATION:
         failures.append("FAIL: absenceSearch limitation is not the required sentence")
 def check_c6(embeddings: dict, rows: list, failures: list[str]) -> None:
-    profiles = embeddings.get("profileFiles")
-    if embeddings.get("sourceProfile") != SOURCE_PROFILE or embeddings.get("coreProfile") != CORE_PROFILE:
+    profiles = embeddings["profileFiles"]
+    if embeddings["sourceProfile"] != SOURCE_PROFILE or embeddings["coreProfile"] != CORE_PROFILE:
         failures.append("FAIL: embeddings sourceProfile or coreProfile is wrong")
-    if not isinstance(profiles, dict) or list(profiles) != [SOURCE_PROFILE, CORE_PROFILE]:
+    if list(profiles) != [SOURCE_PROFILE, CORE_PROFILE]:
         failures.append("FAIL: profileFiles keys are not the declared source and Core profiles")
         return
-    allowed = {
-        "source": string_set(profiles.get(SOURCE_PROFILE)),
-        "core": string_set(profiles.get(CORE_PROFILE)),
-    }
+    allowed = {"source": set(profiles[SOURCE_PROFILE]), "core": set(profiles[CORE_PROFILE])}
     for row in rows:
-        if not isinstance(row, dict) or row.get("realisation") == "absent":
+        if row["realisation"] == "absent":
             continue
         for side, file_key, _symbol_key, _context_key in SIDES:
-            rel = row.get(file_key)
+            rel = row[file_key]
             if isinstance(rel, str) and rel not in allowed[side]:
                 profile = SOURCE_PROFILE if side == "source" else CORE_PROFILE
-                failures.append(f"FAIL: {row.get('schemaField')} {side} file {rel} is not listed for {profile}")
-def string_set(value: object) -> set[str]:
-    return {item for item in value if isinstance(item, str)} if isinstance(value, list) else set()
+                failures.append(f"FAIL: {row['schemaField']} {side} file {rel} is not listed for {profile}")
 def check_c7(embeddings: dict, rows: list, failures: list[str]) -> None:
-    table = embeddings.get("classificationTable")
-    if not isinstance(table, list):
-        failures.append("FAIL: classificationTable is not a list")
-        return
     classes: dict[str, str] = {}
-    for entry in table:
-        if not isinstance(entry, dict) or list(entry) != ["context", "realisationClass", "rationale"]:
-            found = list(entry) if isinstance(entry, dict) else None
-            failures.append(f"FAIL: classificationTable entry keys are {found!r}")
+    for entry in embeddings["classificationTable"]:
+        if list(entry) != ["context", "realisationClass", "rationale"]:
+            failures.append(f"FAIL: classificationTable entry keys are {list(entry)!r}")
             continue
         context = entry["context"]
-        if not isinstance(context, str) or context in classes:
+        if context in classes:
             failures.append(f"FAIL: duplicate classificationTable context {context!r}")
         if entry["realisationClass"] not in ("present", "partial"):
             failures.append(f"FAIL: classificationTable {context} realisationClass is {entry['realisationClass']!r}")
-        if not isinstance(entry["rationale"], str) or not entry["rationale"].strip():
+        if not entry["rationale"].strip():
             failures.append(f"FAIL: classificationTable {context} rationale is empty")
-        if isinstance(context, str):
-            classes[context] = entry["realisationClass"]
+        classes[context] = entry["realisationClass"]
     cited: set[str] = set()
     for row in rows:
         if not isinstance(row, dict) or row.get("realisation") not in ("present", "partial"):
@@ -355,7 +375,7 @@ def check_c9(judgments: dict, leaves: set[str], failures: list[str]) -> None:
             failures.append(f"FAIL: judgments.{row.get('key')} schemaFields is not a list")
             continue
         for field in fields:
-            if field not in leaves:
+            if not isinstance(field, str) or field not in leaves:
                 failures.append(f"FAIL: judgments.{row.get('key')} schemaFields entry {field!r} is not a leaf")
 def check_c5(root: Path, rows: list, failures: list[str]) -> None:
     cache: dict[str, dict[str, set[str]]] = {}
@@ -408,11 +428,16 @@ def strip_ebnf(text: str) -> str:
     def blank(match: re.Match[str]) -> str:
         return "".join("\n" if char == "\n" else " " for char in match.group(0))
     return re.sub(r"\(\*.*?\*\)", blank, text, flags=re.DOTALL)
+def brace_depth(text: str, index: int) -> int:
+    return text.count("{", 0, index) - text.count("}", 0, index)
 def ts_declarations(text: str) -> dict[str, set[str]]:
     found: dict[str, set[str]] = {}
     for match in TOP_LEVEL.finditer(text):
-        found.setdefault(match.group(1), set()).add(match.group(1))
+        if brace_depth(text, match.start()) == 0:
+            found.setdefault(match.group(1), set()).add(match.group(1))
     for match in OBJECT_TYPE.finditer(text):
+        if brace_depth(text, match.start()) != 0:
+            continue
         body = object_body(text, match.end())
         if body is not None:
             found.setdefault(match.group(1), set()).update(object_members(body))
@@ -465,8 +490,11 @@ def k_declarations(text: str) -> dict[str, set[str]]:
         stop = K_STOP.search(commented, match.end())
         rhs = commented[match.end(): stop.start() if stop else len(commented)]
         found.setdefault(match.group(1), set()).update(k_constructors(rhs))
-    for cell in CELL.findall(strip_code(commented)):
-        found.setdefault(cell, set()).add(cell)
+    for match in CONFIG.finditer(commented):
+        stop = K_STOP.search(commented, match.end())
+        block = commented[match.end(): stop.start() if stop else len(commented)]
+        for cell in CELL.findall(strip_code(block)):
+            found.setdefault(cell, set()).add(cell)
     return found
 def k_constructors(rhs: str) -> set[str]:
     names = {item for group in re.findall(r"\[([^\[\]]*)\]", rhs) for item in re.findall(rf"(?:klabel|symbol)\(\s*({IDENT})", group)}
