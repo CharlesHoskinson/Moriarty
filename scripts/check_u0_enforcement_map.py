@@ -9,8 +9,9 @@ Whether a cited line truly enforces its field is a reviewed claim. This checker
 proves C1-C7 only: schema validity, the frozen-schema hash, a sorted bijection
 with those leaves, the status and mechanism rules, file and line existence,
 a whole-identifier citation, and native-root membership. The citation ignores
-``//`` and ``#`` line comments and ``/* */`` block comments, including a block
-comment opened on an earlier line.
+``//`` line comments and ``/* */`` block comments, including a block opened on
+an earlier line. ``#`` is a line comment only in Python and shell files.
+Markers inside single, double, and backtick strings stay in the line text.
 """
 
 from __future__ import annotations
@@ -36,13 +37,18 @@ ARTIFACT_REL = Path("deliverables/u0-semantic-contract-2026-09-23/enforcement-ma
 HOST_ROOT = Path("experiments/moriarty-language/src")
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 NON_HOST = {"circuit", "ledgerPrimitive", "signature", "nativeBoundary"}
+HASH_COMMENT = {".py", ".pyi", ".sh", ".bash", ".zsh", ".ksh", ".bats"}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=MORIARTY_ROOT)
     args = parser.parse_args(argv)
-    return check_root(args.root.resolve())
+    try:
+        return check_root(args.root.resolve())
+    except Exception as error:
+        print(f"FAIL: internal error: {type(error).__name__}: {one_line(str(error))}")
+        return 1
 
 
 def check_root(root: Path) -> int:
@@ -223,18 +229,6 @@ def check_status(field: str, status: object, mechanisms: object, failures: list[
         failures.append(f"FAIL: {field} status host-only requires only hostCheck mechanisms")
     elif status == "NOT_ENFORCED" and mechanisms:
         failures.append(f"FAIL: {field} status NOT_ENFORCED requires no mechanisms")
-    for item in mechanisms:
-        if not isinstance(item, dict):
-            failures.append(f"FAIL: {field} mechanism is not an object")
-            continue
-        kind = item.get("kind")
-        file_name = item.get("file")
-        if kind == "hostCheck" and not isinstance(file_name, str):
-            failures.append(f"FAIL: {field} hostCheck file is missing")
-        elif kind == "hostCheck" and not under_root(Path(file_name), HOST_ROOT):
-            failures.append(
-                f"FAIL: {field} hostCheck file is outside {HOST_ROOT.as_posix()}: {file_name}"
-            )
 
 
 def native_root_block(root: Path, native_roots: object) -> list[str]:
@@ -246,7 +240,9 @@ def native_root_block(root: Path, native_roots: object) -> list[str]:
             blocked.append("blocked: nativeRoots entry is empty")
             continue
         path = Path(item)
-        if path.is_absolute() or ".." in path.parts or not (root / path).is_dir():
+        resolved = (root.resolve() / path).resolve()
+        escaped = path.is_absolute() or ".." in path.parts or not resolved.is_relative_to(root.resolve())
+        if escaped or not resolved.is_dir():
             blocked.append(f"blocked: missing native root {item}")
     return blocked
 
@@ -281,23 +277,30 @@ def check_mechanism(
 ) -> None:
     kind = mechanism.get("kind")
     file_name = mechanism.get("file")
-    if kind in NON_HOST:
-        path = Path(file_name) if isinstance(file_name, str) else None
-        if path is None or not any(under_root(path, native) for native in native_roots):
-            failures.append(f"FAIL: {field} {kind} file is outside nativeRoots: {file_name}")
     relative = repo_relative(file_name)
     if relative is None:
         failures.append(f"FAIL: {field} citation file is not a relative path: {file_name}")
         return
-    # Read the lexical path. ``..`` is rejected above, so a directory symlink
-    # inside the root still names a repository file.
-    target = root / relative
-    if not target.is_file():
+    base = root.resolve()
+    resolved = (base / relative).resolve()
+    if not resolved.is_relative_to(base):
+        failures.append(f"FAIL: {field} citation file resolves outside the repository: {file_name}")
+        return
+    outside = False
+    if kind in NON_HOST and not any(resolves_under(base, resolved, native) for native in native_roots):
+        failures.append(f"FAIL: {field} {kind} file is outside nativeRoots: {file_name}")
+        outside = True
+    elif kind == "hostCheck" and not resolves_under(base, resolved, HOST_ROOT):
+        failures.append(f"FAIL: {field} hostCheck file is outside {HOST_ROOT.as_posix()}: {file_name}")
+        outside = True
+    if not resolved.is_file():
         blocked.append(f"blocked: missing {relative.as_posix()}")
+        return
+    if outside:
         return
     line_number = mechanism.get("line")
     try:
-        lines = target.read_text(encoding="utf-8").splitlines()
+        lines = resolved.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeError) as error:
         failures.append(f"FAIL: {field} citation file is not readable UTF-8 ({error})")
         return
@@ -310,7 +313,7 @@ def check_mechanism(
     if not isinstance(symbol, str) or IDENTIFIER.fullmatch(symbol) is None:
         failures.append(f"FAIL: {field} symbol {symbol!r} is not an identifier")
         return
-    if not has_identifier(lines, line_number, symbol):
+    if not has_identifier(lines, line_number, symbol, relative.suffix):
         failures.append(
             f"FAIL: {field} symbol {symbol} is not an identifier on line {line_number} "
             f"of {relative.as_posix()}"
@@ -326,59 +329,68 @@ def repo_relative(file_name: object) -> Path | None:
     return path
 
 
-def under_root(path: Path, root: Path) -> bool:
-    return path != root and path.is_relative_to(root)
+def resolves_under(base: Path, resolved: Path, parent: Path) -> bool:
+    """True when ``resolved`` is strictly inside ``parent`` and both stay in ``base``."""
+
+    parent_resolved = (base / parent).resolve()
+    return (
+        parent_resolved.is_relative_to(base)
+        and resolved != parent_resolved
+        and resolved.is_relative_to(parent_resolved)
+    )
 
 
-def has_identifier(lines: list[str], line_number: int, symbol: str) -> bool:
-    visible = strip_comments(lines[line_number - 1], comment_open_before(lines, line_number))
-    return re.search(rf"\b{re.escape(symbol)}\b", visible, flags=re.ASCII) is not None
+def has_identifier(lines: list[str], line_number: int, symbol: str, suffix: str) -> bool:
+    open_comment, quote, visible = False, "", ""
+    hash_comment = suffix in HASH_COMMENT
+    for index, line in enumerate(lines[:line_number], start=1):
+        visible, open_comment, quote = scan_comments(line, open_comment, quote, hash_comment)
+    found = re.search(rf"\b{re.escape(symbol)}\b", visible, flags=re.ASCII)
+    return index == line_number and found is not None
 
 
-def comment_open_before(lines: list[str], line_number: int) -> bool:
-    """True when a ``/*`` block comment opened on an earlier line is still open."""
+def scan_comments(
+    line: str, open_comment: bool, quote: str, hash_comment: bool
+) -> tuple[str, bool, str]:
+    """Return code text, open block-comment state, and the unclosed quote.
 
-    open_comment = False
-    for line in lines[: line_number - 1]:
-        open_comment = scan_comments(line, open_comment)[1]
-    return open_comment
-
-
-def strip_comments(line: str, open_comment: bool = False) -> str:
-    """Drop ``//`` and ``#`` line comments and ``/* */`` block comments."""
-
-    return scan_comments(line, open_comment)[0]
-
-
-def scan_comments(line: str, open_comment: bool) -> tuple[str, bool]:
-    """Return code text and whether a block comment continues after this line.
-
-    ``//`` and ``#`` end the line only outside a block comment. A block comment
-    opened on an earlier line stays open until ``*/``.
+    Comment markers inside a single, double, or backtick string stay visible.
+    ``#`` starts a line comment only when ``hash_comment`` is true.
     """
 
     pieces: list[str] = []
     index = 0
-    length = len(line)
-    while index < length:
+    limit = len(line)
+    while index < limit:
         if open_comment:
             end = line.find("*/", index)
             if end < 0:
-                return "".join(pieces), True
-            open_comment = False
-            index = end + 2
+                return "".join(pieces), True, quote
+            open_comment, index = False, end + 2
+            continue
+        if quote:
+            if line[index] == "\\" and index + 1 < limit:
+                pieces.append(line[index : index + 2])
+                index += 2
+                continue
+            pieces.append(line[index])
+            if line[index] == quote:
+                quote = ""
+            index += 1
             continue
         if line.startswith("/*", index):
             end = line.find("*/", index + 2)
             if end < 0:
-                return "".join(pieces), True
+                return "".join(pieces), True, quote
             index = end + 2
             continue
-        if line.startswith("//", index) or line[index] == "#":
+        if line.startswith("//", index) or (hash_comment and line[index] == "#"):
             break
+        if line[index] in "\"'`":
+            quote = line[index]
         pieces.append(line[index])
         index += 1
-    return "".join(pieces), open_comment
+    return "".join(pieces), open_comment, quote
 
 
 if __name__ == "__main__":
