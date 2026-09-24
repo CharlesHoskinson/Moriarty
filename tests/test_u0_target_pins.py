@@ -51,6 +51,30 @@ COMPILER_BASE = "006c4d91ed09c0a89261861b6e7203b3efa3e2df"
 COMPILER_PIN = "f702692895e8be811fb9eac2a1c0bfafca5dea70"
 KEY_SELECTION = "first circuit in receipt order; all digests are equally current"
 SRS_PIN = "4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74"
+SRS_SELECTION = (
+    "Same catalog excerpt, so degree recency cannot decide. "
+    "Chose k=17 because checked-encoding-resources.json records it."
+)
+LEDGER_SELECTION = (
+    "Tie on 2026-09-19 between 3fa0d1d and a8ab82ba. "
+    "Chose the checkout named in astra-backend-requirements.md."
+)
+ZKIR_SELECTION = (
+    "Tie on 2026-09-19 between 7dff84a and 2ffe2d17. "
+    "Chose the clean tracked tree in astra-backend-requirements.md."
+)
+LEDGER9_PINS = (
+    "0d364eb9f8c388a0399d05f59f2468c96d765015",
+    "92e8bdd3a97b61b229e38916e1b180de6f448dd5",
+)
+SRS_CONFLICT_DIGESTS = (
+    "fc253016885ec830e97808c9ec920bb5cab5c21af590380a6cb5eb0538e2b244",
+    "724c7c3d779148bb113c7ee9c034b2f27db16e6bdf315fde90105a9bad00b1de",
+    "09c877216d6589b370263e18af40a030a901b41a7a7c37ef58c9901db41f05c6",
+    "e8436dc5d8b598f169c127c745135d889744007e6d384ff126df8d1332522f86",
+    "b0e6fa7a4ab4a79a1e6560966f267556409db44bab6d5fab3711ad6c6b623207",
+    "3289a751c938988cd2f54154d8722d1eda2cd11593064afdde82099b24ff4a58",
+)
 
 
 def run_checker(root: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -126,6 +150,28 @@ def test_real_ledger_passes() -> None:
     assert isinstance(srs_quote, str)
     assert SRS_PIN in srs_quote
     assert "positiveProvingSteps" not in srs_quote
+    assert srs["selectionReason"] == SRS_SELECTION
+    assert zkir["selectionReason"] == ZKIR_SELECTION
+    assert ledger_row["selectionReason"] == LEDGER_SELECTION
+    unresolved_text = "\n".join(ledger["unresolved"])
+    for digest in SRS_CONFLICT_DIGESTS:
+        assert any(
+            item["kind"] == "conflict" and digest in (item.get("evidenceQuote") or "")
+            for item in srs["claims"]
+        )
+        assert digest in unresolved_text
+    for pin in LEDGER9_PINS:
+        assert any(
+            item["kind"] == "conflict" and pin in (item.get("evidenceQuote") or "")
+            for item in ledger_row["claims"]
+        )
+        assert pin in unresolved_text
+    for marker in ("midnight-zkir-v3", "04c9c5d9", "5b593d1"):
+        assert any(
+            item["kind"] == "conflict" and marker in (item.get("evidenceQuote") or "")
+            for item in zkir["claims"]
+        )
+        assert marker in unresolved_text
     for component in ("proving-keys", "verifier-keys"):
         differing = [
             item
@@ -408,21 +454,17 @@ def test_absent_verifier_keys_unexcluded_hit_fails(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "word",
+    ("word", "reported"),
     [
-        "verified",
-        "reverified",
-        "re-verified",
-        "compatible",
-        "current",
-        "validated",
-        "currently",
-        "unverified",
-        "incompatible",
-        "compatibility",
+        ("verified", "verified"),
+        ("reverified", "reverified"),
+        ("re-verified", "verified"),
+        ("compatible", "compatible"),
+        ("current", "current"),
+        ("validated", "validated"),
     ],
 )
-def test_banned_word_in_note_fails(tmp_path: Path, word: str) -> None:
+def test_banned_word_in_note_fails(tmp_path: Path, word: str, reported: str) -> None:
     root, ledger = stage_ledger(tmp_path)
     row(ledger, "zkir")["note"] = f"No issues found. This pin was {word}."
     write_ledger(root, ledger)
@@ -430,8 +472,28 @@ def test_banned_word_in_note_fails(tmp_path: Path, word: str) -> None:
     process = run_checker(root)
 
     assert process.returncode == 1, process.stdout + process.stderr
-    assert "banned word" in process.stdout
-    assert word.lower() in process.stdout
+    assert f"banned word {reported!r}" in process.stdout
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "Verification key digest",
+        "A validation label is allowed.",
+        "A concurrent label is allowed.",
+        "The word currently is allowed.",
+        "An incompatible label is allowed.",
+        "An unverified label is allowed.",
+    ],
+)
+def test_allowed_note_words_pass(tmp_path: Path, note: str) -> None:
+    root, ledger = stage_ledger(tmp_path)
+    row(ledger, "verifier-keys")["note"] = note
+    write_ledger(root, ledger)
+
+    process = run_checker(root)
+
+    assert process.returncode == 0, process.stdout + process.stderr
 
 
 def test_long_note_fails(tmp_path: Path) -> None:

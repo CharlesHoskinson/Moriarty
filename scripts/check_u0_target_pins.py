@@ -57,14 +57,10 @@ GENERATED_PREFIXES = (
     "deliverables/u0-semantic-contract-2026-09-23/",
     "openspec/changes/consolidated-language-kernel/schemas/",
 )
-# Ruling 1: reject these stems in note with no negation parse.
-# The verif stem keeps a claim suffix so the component name "verifier" stays legal.
+# Amendment 4: whole words only, case-insensitive, no stem and no negation parse.
+# A hyphen is a word boundary, so "re-verified" still matches "verified".
 BANNED_NOTE_RE = re.compile(
-    r"(?i)"
-    r"[A-Za-z-]*verif(?:ied|ying|ication|y)[A-Za-z-]*"
-    r"|[A-Za-z-]*compatib[A-Za-z-]*"
-    r"|[A-Za-z-]*current[A-Za-z-]*"
-    r"|[A-Za-z-]*validat[A-Za-z-]*"
+    r"(?i)\b(?:verified|reverified|compatible|current|validated)\b"
 )
 NOTE_LIMIT = 160
 # Checker-owned absence search roots and pin patterns. Search terms come from
