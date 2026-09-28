@@ -3,7 +3,7 @@ id: research.open-questions
 type: question
 title: Open questions
 status: active
-updated_at: 2026-09-11T17:24:22Z
+updated_at: 2026-09-28T15:38:14Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -15,7 +15,7 @@ sources:
   - SRC-0036
   - SRC-0038
 created: 2026-09-02
-updated: 2026-09-11
+updated: 2026-09-28
 tags:
   - moriarty
   - research
@@ -68,3 +68,30 @@ From the [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]]; exper
 - Does the cross-contract `Reclaim` rule keep an unclaimed `Release` recoverable exactly once (E4)?
 - Is an off-ledger IVC segment certificate worth about 20 s per step and a 411 MB proving key (E5)?
 - Can join summaries express every Moriarty merge rule without full branch history?
+
+## U0 unified proposal (added 2026-09-28)
+
+From the [[wiki/sessions/u0-unified-proposal-2026-09-28|nine-reviewer U0 study]]. The first six are owner decisions that block Phase B of its work plan.
+
+- Do the five remainder classes (`none`, `conserved-split`, `charged-increment`, `sub-unit-residual`, `protocol-reserve`) replace D2's single reserve beneficiary, and is liability evolution fixed as opening + accrual − discharge = closing with non-negative components?
+- Does a charged-minus-credited rounding spread count against `signedIntent.feeCap` and `grossDebitCap`? Must be decided before U3, where "at most 1 A fee" could otherwise become tight.
+- Is signed-intent authentication in-circuit (canonical intent digest as a public input), with the circuit-commitment-plus-ledger-signature route admitted only on a passing negative control? This is trust premise TP07.
+- Is S0 approved as the named first slice: program A a funded repay under AccrualFirst with exact conversion, program B a transfer with a literal fee line?
+- Should the T3 tuple harness be run on historical profile H now, as harness validation carrying no target claim, to close CLM-0958 ("proved, not verified")?
+- Is the Aeon refinement package committed under re-scoped text, or left uncommitted?
+- Does any released or installable compiler, ledger and proof server emit and accept ZKIR v3 end to end? Until one exists, U0-T stays blocked. Resolution route: install from upstream release artifacts and read the IR header from the emitted bytes.
+- Was the only Moriarty prove at k=14 and never verified, and does the pinned `accrue` key never produce a transaction proof? Single-reviewer finding; verify before acting.
+- Can one `Conversion.rounding` field serve origination (floor) and repayment (ceil) at the same call site, and what does the profile record when it cannot? Single-reviewer finding.
+- What UInt128 bound must a K/TypeScript correspondence state, given that `lcRepay` uses unbounded `Int`? Single-reviewer finding.
+- Does the ledger enforce any stage-relation leaf intrinsically? The enforcement search roots exclude the ledger itself, so ledger-intrinsic loci are an unexamined candidate.
+
+## Intent language and programmable escrow (added 2026-09-28)
+
+The owner placed conditional settlement with programmable escrow in the intent language ([[wiki/moriarty-architecture|architecture decision]]). That placement settles the carrier and opens these:
+
+- Which milestone owns the intent condition grammar? S6 in the U0 plan writes a signed-intent abstract syntax during the freeze phase, but no milestone is assigned the condition language itself.
+- Is the intent condition language the same small predicate language proposed for executable judgment clauses, or a second one? Recommendation: the same, to avoid two predicate surfaces, two evaluators and two correspondence arguments.
+- What is the canonical, bounded encoding of a condition tree, given that the in-circuit intent digest must cover it and U1 must measure the cost?
+- How are escrowed funds, their release condition and their refund path represented in the stage relation, which today carries only effects and a failure policy?
+- Can a condition reference an observed value at all before the canonical stage statement binds an observation's value and observed-at time? On current evidence, no — which puts the observation gap on the escrow critical path.
+- Does a signed condition bind the recipient, who does not sign the stage? The design requires consent from a party made liable and says recording a request imposes no duty on an unconsenting recipient.

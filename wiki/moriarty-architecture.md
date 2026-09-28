@@ -3,7 +3,7 @@ id: moriarty.architecture.decision
 type: decision
 title: Moriarty architecture decision
 status: active
-updated_at: 2026-09-11T17:24:22Z
+updated_at: 2026-09-28T20:15:00Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -42,7 +42,7 @@ sources:
   - SRC-0031
   - SRC-0033
 created: 2026-09-02
-updated: 2026-09-11
+updated: 2026-09-28
 tags:
   - moriarty
   - research
@@ -221,3 +221,79 @@ The [[wiki/decisions/pcd-midnight-native-architecture|PCD decision]] places the 
 - Read, write and native effects share one transcript section with no checkpoint between them (CLM-0949).
 
 See the [report](attachments/historical-evidence/deliverables/pcd-midnight-native-2026-09-11/REPORT.md) §§10–12 and the [PCD roadmap](attachments/historical-evidence/openspec/PCD-ROADMAP-2026-09-11.md). S2 proposal; not implemented.
+
+## Intent language owns conditional settlement and programmable escrow — 2026-09-28
+
+**Owner decision, 2026-09-28.** Conditional settlement with programmable escrow belongs in the **intent language**: the conditions that govern funding, release, refund and partial progress are expressed and signed as part of the canonical intention, not left to program logic alone and not delegated to the optional Federated DeFi Kernel.
+
+**Why this is a placement decision and not a restatement.** The architecture already describes conditional settlement ([design](../docs/MORIARTY-CONSOLIDATED-DESIGN.md) `:62` names "funded into programmable escrow" among nine workflow states, `:64` lists the condition materials, and [ROADMAP.md](../ROADMAP.md) `:24` makes two-asset programmable escrow a U3 exit) — but it never says which component carries a condition. The signed intention as frozen in the 2026-09-23 packet has twelve fields (`intentId`, `signer`, `consentPolicy`, `delegationPolicy`, `assetIdentities`, `recipients`, `grossDebitCap`, `feeCap`, `minNetOutcome`, `validity`, `replayPolicy`, `recoveryPolicy`): caps, sets and policies, and no condition, predicate, escrow or release construct. The decision assigns the missing carrier.
+
+**What it closes.** The 2026-09-28 DeFi coverage study found several properties asserted with no component behind them; this decision supplies the component for a group of them: the conjunction and threshold rules the design assigns to the Moriarty column (`:30`) with no operator, core construct or library family; the release, refund and compensation branch of cross-domain workflow (`:72`); and the conditional-payoff shape that options, escrowed delivery and document-guarded settlement all need. See [[wiki/sessions/u0-unified-proposal-2026-09-28|the U0 study page]] and the [coverage report](../deliverables/u0-study-2026-09-28/DEFI-COVERAGE-REPORT.md).
+
+**What it obliges, before U0-F freezes the contract.**
+
+- **S6 must design for conditions.** The U0 plan's signed-intent abstract syntax (a Core `SignedIntent` type and a source `intent` EBNF fragment) is scheduled in the freeze phase. It must admit a condition grammar even though slice S0 uses none, or U3's escrow forces a grammar break and new signing semantics over an already-frozen intent.
+- **One predicate language, not two.** The plan already proposes a small fixed predicate language for executable judgment clauses (linear integer arithmetic and set membership over relation paths). Intent conditions need a predicate language too. These should be the same language, or the product acquires two predicate surfaces with two evaluators, two certifications and two correspondence arguments.
+- **The intent judgment grows.** "Intent refinement" must be defined over conditions, not only over the cap inequalities it covers today.
+- **Observations become an intent-language dependency.** A condition over an observed value cannot be written while the canonical stage statement binds observations as issuer, domain, time and finality with no value and no observed-at time. The oracle gap is therefore on the critical path for escrow, not a separate category concern.
+- **In-circuit authentication gets a richer object.** The proposed decision to authenticate the canonical intent digest in-circuit now covers a recursive predicate structure. U1 owns measuring that cost; the structure must be canonical and bounded before it can be digested.
+- **Escrow needs custody and a release branch in the relation.** The stage relation carries effects and a failure policy; escrowed funds, their release condition and their refund path need a bound representation.
+
+**Status.** Owner decision recorded; specified-only. No construct is implemented and no milestone has yet been assigned the grammar work. CLM-0978.
+
+## Moriarty Intent Language MIL/1 — 2026-09-28
+
+A [full design](../concepts/intent-language/README.md) for the intent language the 2026-09-28 owner decision requires, with a [category map](../concepts/intent-language/CATEGORY-MAP.md) over eight DeFi categories and twelve asset categories. Specified-only; no construct implemented and no milestone has accepted it.
+
+**Shape.** Four layers: Intent (signed, digested, authenticated in-circuit) → Plan (a solver's candidate, checked not trusted) → Episode (bounded DAG of stages carrying joins, compensation and cumulative budgets) → Stage (one accepted transition on one domain). The Episode is the composite unit above the stage that the architecture review found missing.
+
+**The decisions that carry it.**
+
+- **One predicate language Φ** for intent conditions, judgment clauses, library preconditions and refinements. Total, bounded, no recursion, no division, each clause statically costed. The U0 plan's proposed judgment-clause language is a subset of it.
+- **Time is a core type and domain-qualified.** A bare instant is a type error.
+- **Observations carry a value, an observed-at instant and an evidence class** (`anchored`, `imported of Policy`, `attested of (issuer,k,n)`). The anchoring rule is a typing rule: an imported fact cannot be written where an anchored one is required. This is how cross-domain settlement stays honest without claiming global rollback.
+- **Two new authority rights beside the design's six:** `issue` (supply authority) and `enforce` (a third party's bounded right against a defaulting counterparty). Four reviewers reached this independently; see [[wiki/sessions/u0-unified-proposal-2026-09-28|CLM-0982]].
+- **Footprints** over `(domain, account, asset)`, obligations, supply, escrow and replay cells, declared per operation. Independence is set disjointness. This is the region notion of CLM-0980, and the one addition that cannot be retrofitted.
+- **Escrow with `release`/`refund` predicates that must be exhaustive and disjoint**, checked at compile time. The nine workflow states become derived predicates rather than an enum, and an escrow with no reachable exit is rejected — which gives the design's recovery-viability obligation a component for the first time.
+- **Holes with statically checked monotone completion.** A solver cannot widen a cap, add a recipient, extend a window or resurrect authority by filling a hole; it is a polarity check, not a review.
+- **Conservation stated generally:** per `(domain, asset)`, Σ balance deltas = declared supply delta, zero exactly when nothing is minted. This supersedes the U0 proposal's E1, which states the zero case unconditionally ([[wiki/sessions/u0-unified-proposal-2026-09-28|CLM-0973]]).
+- **Residue is a field**, so an inexpressible effect is reported rather than making the instance invalid.
+- **Asset identity is structured** — domain, issuer, symbol, representation — giving wrapped, canonical, shielded and synthetic forms distinct identities with declared links.
+
+**Asset architecture, in three sentences.** An asset's identity carries its domain, issuer and representation; its economy is one conservation equation per `(domain, asset)`; creating units always requires the `issue` right, and creating liabilities always requires consent from the party made liable. None of the three was previously expressible.
+
+**Open and visible:** n-party clearing (batch auctions, order-book crossing), flash loans (excluded by keeping the stage atomic), a liquidation latency bound, competing-slash ordering under restaking, and the general form of policy state over reachability. The design also does not supply the family→constructor map, and adds constructors that make it more necessary.
+
+**Placement.** The freeze work — Φ, the types, footprints, authority kinds, canonical form — is U0, as the signed-intent syntax task extended. Everything else is enabled by deciding the shape now and foreclosed by freezing the twelve-field intent instead. CLM-0986.
+
+### MIL/1 nine-reviewer PL review — 2026-09-28
+
+[Combined report](../concepts/intent-language/review/REVIEW-REPORT.md) · nine reviews in the same directory. Three lenses (type system, expressiveness, compilation) × three model families (Claude Opus 5.5, GPT-6 Sol, Grok 4.7).
+
+**Unanimous: the shape is right, the document is not freezable.** Nine of nine endorse the four layers, outcome-first intents, evidence as a rejectable position, debt off the supply equation, per-domain conservation and footprints. Nine of nine refuse to hash-bind it at U0. CLM-0987.
+
+**Three load-bearing claims are false, not incomplete** (CLM-0988):
+
+- The **escrow meta-rule** rejects the design's own showcase and its own lending example, forbids the ordinary waiting state, does no work under the satisfiability reading, and forbids the late-success/refund race `ROADMAP.md:39` requires of U3. A deadline is a clock fact, not an exit and not a refund entitlement.
+- **Monotone completion** is refuted three ways, including a filling that passes the polarity check while deleting the signer's early exit, and sign-dependent variance under `Signed<A>`. The stated implication is not a closed sentence.
+- The **anchoring rule** is not a typing rule: `anchored` is a nullary tag for a domain-relative property, every eliminator erases the label, holes carry no evidence, and a private witness tag is forgeable unless bound in-circuit to an authenticated read.
+
+**Four findings reach back into the U0 proposal itself** (CLM-0989): E1's zero-form conservation; T6's in-circuit signature primacy, which overreaches a ZKIR v3 instruction set with no Ed25519 verifier and no SHA-512; the U3 discriminator's cross-multiplied UInt256 inequalities, which do not fit the 255-bit BLS12-381 scalar against a 256-bit `u128` product; and the assumption that a compile-time solver escapes the trusted computing base, which it does not unless the circuit re-establishes the property.
+
+**Decidability, precisely** (CLM-0990): Φ without products is difference logic or QF-LIA and solver-free; with products it is QF-BV and needs SMT. The repository's own measurement is the argument — one 128-bit division obligation cost bitvector `rlimit` 242,607,369 against 1,978 for unbounded `Int`, and 256-bit exceeded 600 seconds (`openspec/changes/aeon-refinement-integration/design.md:27-31`).
+
+**The five open items were wrong** (CLM-0991). n-party clearing is real but its proposed carrier is refuted — every order writes the pool, so a join over disjoint footprints is the maximally wrong mechanism. Flash loans are a product cut, not a consequence of atomicity. Liquidation latency is liveness, not a language property. Competing-slash ordering is forced into the core. Policy state belongs in the core now. **Concentrated liquidity is missing from the list and is not reachable by any incremental patch to Φ.**
+
+**Disposition.** MIL/1 is superseded pending MIL/2, to be cut against the review rather than patched in place. Five choices in that revision are the owner's: Φ₀ or Φ₁ at U0; flash loans as a restated cut or a bounded intra-stage trace; joins ledger-linked or in-circuit; whether to reserve a multi-signer stage arity now; and whether concentrated liquidity is in scope.
+
+### MIL/2 — 2026-09-28
+
+[Design](../concepts/intent-language/DESIGN-MIL2.md). Cut against the nine-reviewer review rather than patched, because the repairs interact. Specified-only. CLM-0992.
+
+**Repairs.** Escrow becomes a transition relation with a legitimate pending state, per-witness in-circuit exclusivity via a constrained branch bit and a ledger tombstone, a required `priority` field for the late-success/refund race, and `deadline none` legal again; the authoring check is `after(deadline) ⇒ release_when ∨ refund_when` over Φ₀, decided by difference logic with `unknown` failing closed. Monotone completion is replaced by **acceptance refinement** — `Accepted(I[σ]) ⊆ Accepted(I)`, checked per filling — with polarity demoted to an authoring lint whose variance table excludes signed factors. Evidence becomes a **type index with a source-set effect** (`Γ ⊢ t : T ! S`), `anchored` a typing side condition bound in-circuit to an authenticated ledger read rather than a Φ proposition. Φ gains formation judgments, total evaluation into `Value | Reject`, atomic negation, `pre`/`post`, and `totalAssets` with both share-conversion directions. The footprint cell vocabulary is completed and footprints are derived and checked against declaration. The MIL/1 fallback is deleted outright.
+
+**Five owner decisions taken, each with its reversal cost recorded.** (1) **Φ₀ frozen at U0, Φ₁ deferred** — literal-coefficient cross-multiplication stays in Φ₀, so the U3 discriminator needs no solver, while pool arithmetic and variable products wait; the repository's own bitvector measurement (rlimit 242,607,369 against 1,978; 256-bit over 600 s) decides it. (2) **Flash loans excluded as a restated product cut**, not an entailment of atomicity, with a `trace` extension point reserved. (3) **Joins ledger-linked through U3**; in-circuit parent verification stays ZR09 in U4. (4) **Multi-signer stage arity reserved now** with the U0 profile admitting one signer — the one thing reviewers agreed cannot be retrofitted. (5) **Concentrated liquidity declared out of scope**, since it needs bounded iteration and a new sort.
+
+**Discipline change.** Every formal claim now carries `[checked]`, `[obligation]` or `[deferred]`, and §17 collects the six obligations that must be proved before the digest is hash-bound. MIL/1's failure was stating theorems it had not checked; nothing in MIL/2 is claimed proved.
+
+**Corrections to U0 carried forward:** E1 as the general conservation law with S0 as its zero specialization; T6's in-circuit signature primacy withdrawn, since ZKIR v3 has no Ed25519 verifier and no SHA-512; the U3 cross-multiplied UInt256 limits subject to the limb rule; and SMT kept out of U0 because a compile-time solver does not escape the trusted base unless the circuit re-establishes the property.
