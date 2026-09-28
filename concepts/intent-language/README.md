@@ -6,6 +6,7 @@ A design for an AI-friendly language of signed financial intention that expresse
 cross-chain **conditional settlement with programmable escrow**, and its mapping to every
 DeFi and asset category.
 
+- **[EXECUTION-SUMMARY.md](EXECUTION-SUMMARY.md) — start here.** What was executed, the current support checklist, the five decisions and their reversal costs, the six outstanding obligations, and what to do on return.
 - **[DESIGN-MIL2.md](DESIGN-MIL2.md) — the current design.** Supersedes MIL/1 after the nine-reviewer review.
 - [review/REVIEW-REPORT.md](review/REVIEW-REPORT.md) — the combined review that forced the revision, plus nine individual reviews.
 - [DESIGN.md](DESIGN.md) — **MIL/1, superseded.** Retained as the reviewed artifact: types, the predicate language Φ, authority kinds,

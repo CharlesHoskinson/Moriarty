@@ -14,7 +14,7 @@ are still being argued with.
 
 ## Contents
 
-- [intent-language](intent-language/README.md) — the Moriarty Intent Language. MIL/2 is
+- [intent-language](intent-language/README.md) — the Moriarty Intent Language. Start at its [execution summary](intent-language/EXECUTION-SUMMARY.md). MIL/2 is
   current, cut against a nine-reviewer programming-language review that refused to freeze
   MIL/1. Returns for a deeper review; six proof obligations are outstanding and five owner
   decisions are recorded with their reversal costs.
