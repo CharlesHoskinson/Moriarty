@@ -1,0 +1,56 @@
+# MIL/1 review brief (read-only)
+
+You are one of nine independent programming-language reviewers (three Claude Opus 5.5, three GPT-6 Sol, three Grok 4.7) examining a proposed language design in /home/charl/Moriarty. Three reviewers share each lens, one per model family. Your review will be merged with the other eight, so be concrete, cite file:line, and state disagreements plainly rather than hedging.
+
+## HARD RULES
+
+- **Read-only.** Do not modify, create or delete any file in the repository. Do not run git commands that change state. Do not submit anything to a network or deploy anything. Reading, grepping and parsing are fine.
+- **Evidence discipline** (see docs/FOOTGUNS.md): documentation, advisor agreement or a passing checker does not complete a capability. Distinguish "designed", "specified", "implemented" and "demonstrated". Never invent green checks. If you did not run something, say so.
+- **Review the design, not the repository's current state.** The design is a proposal for what the language should be. "This is not implemented" is true of all of it and is not a finding. The question is whether the design is *right* and *buildable*.
+- Your final answer is your review in Markdown, nothing else. Maximum ~2,500 words.
+
+## WHAT YOU ARE REVIEWING
+
+`deliverables/intent-language-design-2026-09-28/DESIGN.md` — the Moriarty Intent Language, MIL/1 — and `deliverables/intent-language-design-2026-09-28/CATEGORY-MAP.md`, its mapping to eight DeFi categories and twelve asset categories. Read both in full first.
+
+## CONTEXT YOU NEED
+
+Moriarty is a permissionless language of provable financial intention, compiled to Midnight ZKIRv3 and run on Midnight's native Halo2-derived PLONK/KZG stack. `ROADMAP.md` (56 lines) defines one delivery sequence U0..U7; `docs/MORIARTY-CONSOLIDATED-DESIGN.md` (123 lines) is the controlling architecture; `docs/MORIARTY-PRODUCT-CONTRACT.md` preserves the owner's constraints. Read all three — they are short and they constrain what MIL/1 is allowed to be.
+
+Constraints that are not negotiable and that a good review must respect:
+
+- Every stage terminates within a checked bound. No unbounded recursion inside a stage. Long-lived workflows progress through authenticated continuations.
+- Mandatory proof-carrying acceptance. A host-computed Boolean is never sufficient; each bound field must have an actual circuit constraint, authenticated state read, signature commitment or ledger check.
+- Checked finite-width integer arithmetic with explicit rounding direction by economic role. No field-element coercion. Prices are base-per-quote, scale 0..18.
+- A local model must never claim global rollback across domains. A timeout proves neither non-execution nor entitlement to refund.
+- Debt is not token supply. Creating a liability requires consent from the party made liable. Default does not erase debt.
+- The Federated DeFi Kernel is optional; Moriarty must work on Midnight without it.
+
+Background, useful but secondary: `deliverables/u0-study-2026-09-28/UNIFIED-PROPOSAL.md` (the U0 contract proposal MIL/1 must land inside), `deliverables/u0-study-2026-09-28/ARCHITECTURE-COVERAGE-REPORT.md` (the architectural holes MIL/1 claims to close) and `deliverables/u0-study-2026-09-28/DEFI-COVERAGE-REPORT.md`. A comparison system, the DeFi Kernel, is at /home/charl/projects/defiformal (Lean; `lean/DefiKernel/Typed/`, `docs/UNIFIED-DEFI-ELEMENT-TABLE.md`) — cite it as *[df]* with its path, it is a different repository.
+
+## WHAT TO PRODUCE
+
+Your lens brief follows. Whatever your lens, your review must contain:
+
+1. **Verdict** — one paragraph. Is this design sound, buildable at U0 scope, and right for the problem? Say what you would change before it is frozen.
+2. **Findings** — your lens's substance, each with file:line and a concrete argument. A finding that would change the design outranks one that would change the prose.
+3. **Defects** — anything you believe is *wrong*, as opposed to incomplete: an unsound rule, a type error, a circular dependency, a claim the design cannot deliver, a construct that cannot be compiled or proved under the constraints above. Be specific and be willing to be wrong in public.
+4. **Missing** — what a language of this kind needs that this design does not have. Distinguish "must be in MIL/1" from "can be a library" from "belongs to a later milestone".
+5. **Disagreements** — where you disagree with the design's own stated positions, including the five items it declares open and the placement decisions it makes.
+6. **Top three changes**, ranked, each stated as a concrete edit to the design.
+
+Do not restate the design back to me. Assume the reader has read it.
+
+## YOUR LENS: P3 — compilation, proving and AI ergonomics
+
+You own the question of whether this can be built, proved, and driven by a machine.
+
+- **Canonical form and the digest.** §8 requires a canonical encoding with bounded depth and node count, hashed to a digest that is a public input and authenticated in-circuit. Is that achievable for a recursive predicate tree? What is the actual cost shape — estimate it against ZKIRv3's 34 instructions and 13 types (see `wiki/zkir/zkir-instruction-set.md` and `docs/MORIARTY-BACKEND-REQUIREMENTS.md`). The design admits a tension and proposes a fallback: commitment to the tree plus in-circuit evaluation of only the effect-binding clauses. Is that fallback sound, and does it preserve the design's honesty claims?
+- **What must be in-circuit versus checked by the ledger versus host-advisory.** For each MIL/1 construct — escrow release, refund, footprint disjointness, monotonicity, conservation, evidence class, authority kind, replay — say where it must be enforced and why. The controlling rule is that a host-computed Boolean is never sufficient. Which constructs does that rule make expensive, and is any of them unaffordable?
+- **Compile-time checks the design assumes.** It requires: `release ∧ refund` unsatisfiable; `release ∨ refund ∨ after(deadline)` valid; escrow exit reachability; footprint disjointness; hole polarity. Are these decidable for Φ as specified, and at what complexity? Name the decision procedure. If any needs an SMT solver, say so plainly — the project has an explicit position that adding a solver to the trusted computing base is a cost, and a compile-time-only use may or may not escape it.
+- **The Episode.** A bounded DAG of stages with joins, compensation and cumulative budgets. How does it compile? Is an Episode a single proof, a proof per stage with a linking relation, or a recursive certificate — and how does that interact with the fact that Midnight per-transaction recursive verification is not assumed available and full recursion is a March 2027 planning assumption? Does the Episode force U4 work into U2?
+- **Bounded execution.** Every stage terminates in checked bounds. Does Φ evaluation, footprint computation and escrow exhaustiveness checking fit a bounded stage? What is the worst case for a realistic intent?
+- **AI ergonomics, concretely.** §11 lists ten properties. Which of them actually hold given the rest of the design, and which are aspirations? Focus on: counterexample-carrying rejection (what exactly is returned, and is a minimal unsatisfiable core computable here?), the distinct outcome vocabulary, declared per-clause cost (computable statically, or does it depend on runtime data?), and residue (does a residue field weaken the acceptance relation — can a program hide a real effect in residue?).
+- **Implementability at U0.** The design places Φ, types, footprints, authority kinds and canonical form in U0 as the signed-intent syntax task. Is that a realistic U0 scope, or is it three milestones of work? If it is too big, what is the minimum subset that must be frozen at U0 so the rest can arrive without a breaking change — and what exactly breaks if it is deferred?
+
+Estimate numbers where you can, and say when a number is an estimate rather than a measurement.
