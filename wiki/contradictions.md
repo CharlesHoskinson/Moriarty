@@ -4,7 +4,7 @@ id: research.contradictions
 type: contradiction
 title: Contradictions and documentation drift
 status: active
-updated_at: 2026-09-11T17:24:22Z
+updated_at: 2026-09-28T16:20:00Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -52,7 +52,7 @@ sources:
   - SRC-0048
   - SRC-0049
 created: 2026-09-02
-updated: 2026-09-11
+updated: 2026-09-28
 tags:
   - moriarty
   - research
@@ -281,3 +281,27 @@ SRC-0101 is the exact payload previously summarized by SRC-0087; SRC-0103 is the
 ## Recursion scope reconciliation — 2026-09-19
 
 The older categorical rejection of DAG/recursive history is superseded as target scope. The user assumes comprehensive Midnight recursion around March2027; full native financial recursion/private composition remains required. Ledger induction is a separate early evidence mode, not closure of MC03/MC06. Old source facts retain original pins. [Consolidated design](../docs/MORIARTY-CONSOLIDATED-DESIGN.md) and [backend requirements](../docs/MORIARTY-BACKEND-REQUIREMENTS.md) govern. Mina/DeFiFormal mechanisms are comparative evidence, not portable Midnight proofs.
+
+## U0 unified proposal — 2026-09-28
+
+From the [[wiki/sessions/u0-unified-proposal-2026-09-28|nine-reviewer U0 study]]. Resolved positions are recommendations, not accepted policy.
+
+| Conflict | Scopes that may explain it | Provisional disposition |
+| --- | --- | --- |
+| The Aeon package says the written `repay` guards are unsound; the TypeScript evaluator and the K semantics reject the same case. | Written source contract versus host kernel enforcement | A contract omission, not an evaluator defect. The laws become judgment clauses; the README wording is corrected. The evaluator rejection is read from code, not executed — task N4 exists to demonstrate it. |
+| EXIT-GATE.md records six numeric conformance gaps; two L3 reviewers count five, with ProRata misclassified; the third counts six reclassified into remainder classes plus two uninventoried rows and a one-field conflict. | Counting rule versus classification rule | Adopt the remainder classes; the count follows the classification. None of it blocks S0. |
+| U2's target: one reviewer offered amending U2 to "the released ZKIR major", which is v2; the other two assumed v3. | Released artifacts versus the stated target | Resolved by the owner: ZKIRv3 is the target, U0-T is blocked until upstream integration lands, and there is no downgrade. The v2 path is historical evidence only. |
+| May U1 start before the target is qualified? One reviewer says no; two allow host work first. | Host certificates versus native certificates | Host certificates after U0-F plus U0-S; native certificates only after U0-T. Feasibility measured against an unpinned target is not evidence. |
+| `ROADMAP.md:23` and `docs/MORIARTY-BACKEND-REQUIREMENTS.md:3` say current execution targets ZKIRv3, while the repository's own artifacts are ZKIR v2 bytes and v2-sourced keys. | Target statement versus demonstrated path | The v2 artifacts are profile H, historical evidence. The claim must be read as a target, not as a demonstrated path, until a V3 receipt exists. |
+| The recorded pins describe a single compatible tuple, while the checkers make `compatibleTupleEstablished: true` unreachable. | Recorded intent versus implemented gate | Single-reviewer finding, confirmed at the cited checker lines during synthesis. Replace the flag with per-profile `unverified`/`blocked`/`reverified` states. |
+
+## U0 proposal versus the DeFi-coverage study — 2026-09-28
+
+Established by the [DeFi kernel coverage study](../deliverables/u0-study-2026-09-28/DEFI-COVERAGE-REPORT.md) and re-verified against the cited files.
+
+| Conflict | Scopes that may explain it | Provisional disposition |
+| --- | --- | --- |
+| The unified proposal states law E1 as `Σ gross = Σ supply changes = 0` (`UNIFIED-PROPOSAL.md:90`); its source states `Σ gross = Σ supplyChanges (0 in MSS)` (`opus55-L1.md:155`), and the DeFi kernel's law is `Σ effect = supply`. | Slice-scoped law versus general law | The unqualified form is wrong for any program that mints or burns. Restate E1 in the general form with the zero as an S0 consequence before S3 hash-binds the clause. CLM-0973. |
+| The study's §10 records a single-reviewer claim that declaring a protocol-reserve type would close all six numeric conformance gaps. | Checker behaviour versus reviewer reading | Refuted. `conformance_reasons` (`scripts/check_u0_numeric_profile.py:1529-1547`) accumulates reasons; five of the six rows are `authorSelectable: true`, so only `prorata-principal-share` has the reserve as its sole reason. One gap, not six. CLM-0969. |
+| The study records that no reviewer could run the evaluator because the host `/tmp` was full, and creates task N4 to demonstrate the repay rejection. | Environment at the time of the study versus now | The blocker was environmental and has cleared. Under `bun`, the repayment tests pass 57 of 57 and the suite is 903/911; Node on this host cannot import the `.ts` sources at all. N4's replay is now executable. CLM-0974. |
+| S0 binds `observations[]` to an empty set with rejection, presented as scoping; the older atomic profile implements observation declarations, provider bindings, evidence digests and an authenticity gate. | Successor profile versus legacy atomic profile | The empty binding freezes a regression. Record the observation surface as a deferred capability with an owner rather than as a slice exclusion. CLM-0975. |
