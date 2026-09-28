@@ -4,11 +4,11 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-12
+updated: 2026-09-28
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-12T21:40:00Z
+updated_at: 2026-09-28T15:38:14Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -31,6 +31,26 @@ sources:
 ## Governing design — 2026-09-19 consolidation
 
 [One vision, language/kernel boundary and U0–U7 roadmap](research/consolidated-design/index.md) · [Mina recursion requirements study](research/mina/index.md) · [Next ZKIR/recursion contract](../docs/MORIARTY-BACKEND-REQUIREMENTS.md). Older sections below preserve dated research and evidence; they do not override current scope or select competing queues.
+
+## U0 unified proposal — 2026-09-28
+
+[[wiki/sessions/u0-unified-proposal-2026-09-28|Nine-reviewer U0 study]] · [unified proposal](../deliverables/u0-study-2026-09-28/UNIFIED-PROPOSAL.md) · [2026-09-23 packet under review](../deliverables/u0-semantic-contract-2026-09-23/). Three lenses × three model families. Eleven consensus findings, a three-state gate (U0-F frozen, U0-S slice demonstrated, U0-T target qualified), a named first slice S0 with laws L1–L7, five numeric remainder classes, and three separate target profiles with ZKIRv3 as the target. CLM-0961–CLM-0972. Specified-only; nothing executed and nothing committed.
+
+## Moriarty Intent Language MIL/2 — 2026-09-28
+
+[MIL/2 design](../concepts/intent-language/DESIGN-MIL2.md) · [nine-reviewer review](../concepts/intent-language/review/REVIEW-REPORT.md) · [MIL/1, superseded](../concepts/intent-language/DESIGN.md) · [category map, needs re-derivation](../concepts/intent-language/CATEGORY-MAP.md) · [[wiki/moriarty-architecture|architecture page]]. An AI-friendly language of signed financial intention for abstract cross-chain conditional settlement with programmable escrow: four layers, one predicate language, domain-qualified time, observations carrying value and evidence class, `issue` and `enforce` authority rights, and footprints. Lives in [concepts/intent-language](../concepts/intent-language/README.md) pending a deeper review. MIL/1 was reviewed by nine PL reviewers and superseded: its escrow meta-rule, its monotone-completion check and its anchoring rule were each false, and its examples were not in the grammar. MIL/2 replaces them with an escrow transition relation, acceptance refinement, and evidence as a type index with source-set propagation, and tags every claim `checked`, `obligation` or `deferred`. CLM-0986–CLM-0992; specified-only.
+
+## Intent language carries conditional settlement — 2026-09-28
+
+Owner decision: conditional settlement with programmable escrow belongs in the **intent language**, signed as part of the canonical intention rather than left to program logic or the optional federated kernel. [[wiki/moriarty-architecture|Architecture page]], CLM-0978. It supplies the missing carrier for the design's conjunction/threshold rules and the release/refund branch, and it obliges the U0 signed-intent syntax task to admit a condition grammar before the contract freezes.
+
+## DeFi kernel coverage of the language design — 2026-09-28
+
+[Architecture report](../deliverables/u0-study-2026-09-28/ARCHITECTURE-COVERAGE-REPORT.md) · [coverage report](../deliverables/u0-study-2026-09-28/DEFI-COVERAGE-REPORT.md) · [nine reviewer reports](../deliverables/u0-study-2026-09-28/defi-coverage/) · defiformal pinned at `8c5dd103`.
+
+On the architecture axis the answer is better: 16 of 29 kernel abstractions have a designated component, against 3 expressed on the build axis, and the three-column responsibility boundary is the strongest artifact in either repository. Two structural gaps remain — no notion of a region, and no artifact joining the nine library families to the 48-constructor core inventory — plus a closed authority model found independently from four categories. CLM-0979–CLM-0985.
+
+On the implementation axis: Eight DeFi categories plus the kernel abstraction. No category is covered; 11 of 181 scored requirements are covered and none is demonstrated. Seven structural gaps recur: no inequality judgment language, no supply authority, no observation value or time, no read/write footprint, no time type, no capability kind, and no typeable claim algebra. Four corrections to the U0 proposal are recorded in CLM-0969 and CLM-0973–CLM-0977. Specified-only.
 
 ## Aeon integration study — 2026-09-19
 
