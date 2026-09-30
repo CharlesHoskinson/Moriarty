@@ -1,0 +1,352 @@
+[
+  {
+    "command": "node -v",
+    "exit_code": 0,
+    "expected": "Node 24 or newer",
+    "observed": "v24.21.0",
+    "output_file": "outputs/node-version.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori --help",
+    "exit_code": 0,
+    "expected": "one-line command list; local results called PreparedUnqualified",
+    "observed": "usage line plus 'Local financial results remain PreparedUnqualified.' Stderr carried a Node warning that NO_COLOR is ignored because FORCE_COLOR is set. The CLI source does not set either variable. Later mori processes printed the same warning.",
+    "output_file": "outputs/help.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori init bridge-stake",
+    "exit_code": 0,
+    "expected": "new directory with starter invoice, scenario, tests, and README; qualification local-stipulation-only",
+    "observed": "status Initialized for /tmp/moriarty-beta-developers-v3-20260930/G3/bridge-stake",
+    "output_file": "outputs/starter/README.md"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/invoice.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked, action pay LocalS0",
+    "observed": "AuthoringChecked Invoice. sourceHash fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c before formatting",
+    "output_file": "outputs/starter/check.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/invoice.mori",
+    "exit_code": 0,
+    "expected": "text support line and PreparedUnqualified reminder",
+    "observed": "AuthoringChecked Invoice; pay: LocalS0; Local preparation remains PreparedUnqualified.",
+    "output_file": "outputs/starter/check-text.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori inspect bridge-stake/invoice.mori",
+    "exit_code": 0,
+    "expected": "identity claims authenticated false; four premises and four bindings on the local action",
+    "observed": "domain id Midnight, asset id A, accounts Owner/Recipient/Fee, all authenticated false. pay is LocalS0 with the four premises and four unverified bindings",
+    "output_file": "outputs/starter/inspect.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori test bridge-stake",
+    "exit_code": 0,
+    "expected": "starter case PreparedUnqualified and TestsPassed",
+    "observed": "TestsPassed, qualification local-stipulation-only, case 'literal fee payment' passed with status PreparedUnqualified and code null. This was the init manifest, later replaced",
+    "output_file": "outputs/starter/test.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/invoice.mori --action pay --scenario bridge-stake/scenario.json",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified. Independent arithmetic: 10.00 is 1000 atoms, fee 0.10 is 10, gross debit 1010, balances 8990/1000/10, allowance remaining 8990 spent 1010, work 9/1",
+    "observed": "PreparedUnqualified. Effects and post matched that arithmetic. Four premises and four unverified bindings. qualification local-stipulation-only. scenarioHash 12928a795bba2435140fc22c0d33f039da3b04c8de6c244d0c4da338900f0430",
+    "output_file": "outputs/starter/simulate.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand bridge-stake/invoice.mori --action pay --scenario bridge-stake/scenario.json",
+    "exit_code": 0,
+    "expected": "Expanded Source/6 proposal, not a ledger accept",
+    "observed": "status Expanded, qualification local-stipulation-only, source profile moriarty-financial-agreement-source/6, selected TransferLiteralFee",
+    "output_file": "outputs/starter/expand.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt bridge-stake/invoice.mori",
+    "exit_code": 0,
+    "expected": "formatted source on stdout, file unchanged",
+    "observed": "stdout is expanded records. Hash of that text c7090e6be5124795fd0c60d74860d8f5d221090a9ab88f0defcdc73e7d65a6d8 differs from the pre-format check hash",
+    "output_file": "outputs/starter/fmt.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt bridge-stake/invoice.mori --write",
+    "exit_code": 0,
+    "expected": "write formatted bytes, empty stdout",
+    "observed": "empty stdout. Written bytes matched fmt stdout. Starter copy kept at outputs/starter/invoice.mori. Project invoice later removed so the bridge tests would not keep the starter case",
+    "output_file": "outputs/starter/fmt-write.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check node_modules/@moriarty-lang/beta/examples/bridge.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked, escrow/claim/recover SpecifiedOnly",
+    "observed": "AuthoringChecked BridgeDemo. financialRelations Open, localPreparation Unsupported",
+    "output_file": "outputs/examples/bridge-check.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check node_modules/@moriarty-lang/beta/examples/staking.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked, five staking actions SpecifiedOnly",
+    "observed": "AuthoringChecked StakingDemo. deposit, reward, slash, unbond, withdraw are SpecifiedOnly",
+    "output_file": "outputs/examples/staking-check.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate node_modules/@moriarty-lang/beta/examples/bridge.mori --action escrow --scenario bridge-stake/scenario.json",
+    "exit_code": 1,
+    "expected": "Unsupported BETA_PROFILE_UNSUPPORTED, null effects and post, even though the starter scenario does not describe a bridge",
+    "observed": "Unsupported, that code, publishedEffects null, publishedPost null. scenarioHash matched the starter scenario",
+    "output_file": "outputs/examples/bridge-sim.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate node_modules/@moriarty-lang/beta/examples/staking.mori --action deposit --scenario bridge-stake/scenario.json",
+    "exit_code": 1,
+    "expected": "same Unsupported result",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED, null effects and post",
+    "output_file": "outputs/examples/staking-sim.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/vault-bridge.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked on the hand-written cross-stake agreement; 13 SpecifiedOnly actions",
+    "observed": "AuthoringChecked before formatting. Hash f5d73ba07a0549a4c1dff5d54c35f705a4dd9fb1ca346f62029598d38b0cf27d",
+    "output_file": "outputs/program/check.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/invalid-cross-stake.mori",
+    "exit_code": 1,
+    "expected": "BETA_ASSET_MISMATCH for staking ClaimUSD on a RailUSD share class",
+    "observed": "AuthoringRejected CrossStakeRejected. BETA_ASSET_MISMATCH at 11:37: Expected Qty<RailUSD>, received Qty<ClaimUSD>",
+    "output_file": "outputs/program/invalid-cross-text.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/invalid-nominal-sum.mori",
+    "exit_code": 1,
+    "expected": "BETA_ASSET_MISMATCH on RailUSD + ClaimUSD",
+    "observed": "AuthoringRejected NominalSumRejected. BETA_ASSET_MISMATCH at 9:19: Addition/subtraction require identical numeric types and nominal assets",
+    "output_file": "outputs/program/invalid-sum-text.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/invalid-alias.mori",
+    "exit_code": 1,
+    "expected": "BETA_DUPLICATE_ID for a second asset with id RailUSDCanonical",
+    "observed": "AuthoringRejected AliasRejected. BETA_DUPLICATE_ID at 6:44: Duplicate economic identity; aliases are unsupported",
+    "output_file": "outputs/program/invalid-alias-text.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt bridge-stake/vault-bridge.mori --write",
+    "exit_code": 0,
+    "expected": "formatter rewrites records and changes the source hash",
+    "observed": "hash became d3b0f1cf99d1a098f381306383894301af33c2a2e128f5daef9c455f16165395. Later author edits changed the hash again",
+    "output_file": "outputs/program/fmt.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt bridge-stake/invalid-cross-stake.mori --write",
+    "exit_code": 1,
+    "expected": "invalid source is not rewritten",
+    "observed": "AuthoringRejected BETA_ASSET_MISMATCH. File still begins with the original comment",
+    "output_file": "outputs/program/fmt-invalid-write.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori test bridge-stake",
+    "exit_code": 0,
+    "expected": "18 cases: 14 Unsupported BETA_PROFILE_UNSUPPORTED, one BETA_ACTION_UNKNOWN, two BETA_ASSET_MISMATCH, one BETA_DUPLICATE_ID. No effects or post expected",
+    "observed": "First manifest run passed, including the escrow case whose scenario has an unknown evidence_fresh field. This run was before the reward-amount repair",
+    "output_file": "outputs/program/test.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/vault-bridge.mori --action escrow_home --scenario bridge-stake/scenarios/home-rail.json",
+    "exit_code": 1,
+    "expected": "Unsupported, null effects and post",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED. scenarioHash 4830268187b3e31bf31a8727584143be1c116b076468151d818d9555db941df9. publishedEffects null. publishedPost null. No qualification field on this object",
+    "output_file": "outputs/program/sim-escrow.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/vault-bridge.mori --action escrow_home --scenario bridge-stake/scenarios/malformed-extra.json",
+    "exit_code": 1,
+    "expected": "schema error if the fixture were parsed; Unsupported if SpecifiedOnly returns first",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED. Different scenarioHash 9e9406bda2348fb2d6529774f7987feffaf52eee575c653bbceee0b4e8932883. The unknown field was not reported",
+    "output_file": "outputs/program/sim-escrow-malformed.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand bridge-stake/vault-bridge.mori --action escrow_home --scenario bridge-stake/scenarios/home-rail.json",
+    "exit_code": 1,
+    "expected": "Unsupported, no Source/6 text",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED, publishedEffects null, publishedPost null",
+    "output_file": "outputs/program/expand-escrow.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/vault-bridge.mori --action compose_escrow_and_deposit --scenario bridge-stake/scenarios/home-rail.json",
+    "exit_code": 1,
+    "expected": "AuthoringRejected BETA_ACTION_UNKNOWN",
+    "observed": "AuthoringRejected BETA_ACTION_UNKNOWN, null effects and post",
+    "output_file": "outputs/program/sim-compose.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/bridge-misaligned.mori",
+    "exit_code": 0,
+    "expected": "domain alignment either rejects a home owner escrowing ClaimUSD, or accepts it",
+    "observed": "AuthoringChecked MisalignedBridge. escrow_misaligned: SpecifiedOnly. The mismatch was accepted",
+    "output_file": "outputs/probes/bridge-misaligned.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/stake-cross-account.mori",
+    "exit_code": 1,
+    "expected": "BETA_DOMAIN_MISMATCH when a foreign owner deposits into a home share class",
+    "observed": "AuthoringRejected. BETA_DOMAIN_MISMATCH at 7:28: Operation argument domains differ",
+    "output_file": "outputs/probes/stake-cross-account.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/cap-other-asset.mori",
+    "exit_code": 0,
+    "expected": "fee_cap asset either must match the escrow asset or is unchecked on horizon intents",
+    "observed": "AuthoringChecked. fee_cap of 1.000000 ClaimUSD on a RailUSD escrow was accepted",
+    "output_file": "outputs/probes/cap-other-asset.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/unlinked-duty.mori",
+    "exit_code": 0,
+    "expected": "a missing stage name, a numeric retained_duties, a quantity signed_floor, or an earliest_round outside the window might be diagnosed",
+    "observed": "AuthoringChecked. None of those were diagnosed",
+    "output_file": "outputs/probes/unlinked-duty.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/duplicate-share-id.mori",
+    "exit_code": 0,
+    "expected": "duplicate share-class id HomeVaultShare might raise BETA_DUPLICATE_ID",
+    "observed": "AuthoringChecked DuplicateShareId with no actions",
+    "output_file": "outputs/probes/duplicate-share-id.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/empty-policy.mori",
+    "exit_code": 0,
+    "expected": "policy {} might be missing required duty fields",
+    "observed": "AuthoringChecked. The empty policy is attached to a deposit intent",
+    "output_file": "outputs/probes/empty-policy.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori check probes/intent-domain-mismatch.mori",
+    "exit_code": 0,
+    "expected": "horizon intent domain, asset, and signer might have to agree",
+    "observed": "AuthoringChecked. domain HomeRail, asset ClaimUSD, signer on ForeignClaim, claim operation accepted",
+    "output_file": "outputs/probes/intent-domain-mismatch.check.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate outputs/starter/invoice.mori --action pay --scenario probes/bad-scenario.json",
+    "exit_code": 1,
+    "expected": "FormationRejected for unknown field evidence_fresh",
+    "observed": "FormationRejected BETA_SCENARIO_SCHEMA: Unknown field evidence_fresh (/). publishedEffects null",
+    "output_file": "outputs/probes/starter-bad-scenario.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate outputs/starter/invoice.mori --action pay --scenario probes/duplicate-key.json",
+    "exit_code": 1,
+    "expected": "duplicate JSON key round rejected",
+    "observed": "FormationRejected BETA_JSON_DUPLICATE: Duplicate JSON key round (/)",
+    "output_file": "outputs/probes/starter-dup-key.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate outputs/starter/invoice.mori --action pay --scenario probes/lying-effects.json",
+    "exit_code": 1,
+    "expected": "Core rejects a candidate effect vector that is not the 1010-atom transfer",
+    "observed": "CoreRejected. rejection code S0_EFFECT_MISMATCH, judgment effect, publishedEffects null, publishedPost null",
+    "output_file": "outputs/probes/starter-lying.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/vault-bridge.mori --action escrow_home --scenario probes/bad-scenario.json",
+    "exit_code": 1,
+    "expected": "the same unknown field that FormationRejects a local pay",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED. The schema error is not reached",
+    "output_file": "outputs/probes/bridge-bad-scenario.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori init bridge-stake",
+    "exit_code": 1,
+    "expected": "refuse an existing target",
+    "observed": "stderr: mori: EEXIST: file already exists, mkdir '.../bridge-stake'. No JSON diagnostic",
+    "output_file": "outputs/probes/init-exists.stderr"
+  },
+  {
+    "command": "./node_modules/.bin/mori test /tmp",
+    "exit_code": 1,
+    "expected": "missing mori.tests.json diagnosed",
+    "observed": "stderr: mori: ENOENT: no such file or directory, stat '/tmp/mori.tests.json'",
+    "output_file": "outputs/probes/test-nommanifest.stderr"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate probes/local-rail-transfer.mori --action move --scenario bridge-stake/scenarios/home-rail.json",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified for a 25000-atom zero-fee transfer. Post balances 975000, 25000, 50000. Allowance remaining 975000 spent 25000. Work 7 and 2. No fee credit",
+    "observed": "PreparedUnqualified and those figures matched. Same home-rail.json that escrow_home refuses to execute. Four premises and four bindings",
+    "output_file": "outputs/probes/local-rail.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate probes/local-claim-transfer.mori --action move --scenario bridge-stake/scenarios/foreign-claim.json",
+    "exit_code": 1,
+    "expected": "foreign fixture parses, then Core rejects a 1-atom transfer from a zero balance",
+    "observed": "CoreRejected S0_EFFECT_RANGE. publishedEffects null. publishedPost null",
+    "output_file": "outputs/probes/local-claim.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate probes/local-repay.mori --action paydown --scenario probes/note-scenario.json",
+    "exit_code": 0,
+    "expected": "Accrual-first: pay 125 atoms against principal 5000 and accrued 125. Accrued becomes 0, principal stays 5000, outstanding 5000, status Outstanding. Balances 9875 and 125. Work 3 and 1",
+    "observed": "PreparedUnqualified. SetObligation and post obligation matched. Status stayed Outstanding",
+    "output_file": "outputs/probes/local-repay.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt bridge-stake/vault-bridge.mori",
+    "exit_code": 0,
+    "expected": "second format is idempotent",
+    "observed": "stdout matches the final file byte for byte. sourceHash 58324510cab48d8c7ecf587130746db22415a646135e45049eefa102302c9fa5",
+    "output_file": "outputs/program/fmt-again.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check bridge-stake/vault-bridge.mori",
+    "exit_code": 0,
+    "expected": "text check lists 13 SpecifiedOnly actions and does not call the file PreparedUnqualified",
+    "observed": "AuthoringChecked CrossStakeBridge and the 13 SpecifiedOnly names. No PreparedUnqualified line. openGates in the JSON form are authentication, nativeProof, financialCorrespondence, atomicLedgerAcceptance. evidence AuthoringOnly",
+    "output_file": "outputs/program/check-final.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori inspect bridge-stake/vault-bridge.mori",
+    "exit_code": 0,
+    "expected": "resolved atoms for faces, zero identity gaps, reward slice distinct from the 5.75 cap, share_ratio_gap 0, withdraw floors",
+    "observed": "All identities authenticated false. localS0Actions empty. premises empty. LockRail amount 25000 and fee_cap 0. TakeClaim amount 250000000 and fee_cap 0. RewardHome amount 450, gross_cap 575, fee_cap 0. RewardForeign amount 4500000, gross_cap 5750000, fee_cap 0. UnbondHome earliest_round 0 and share_atoms 10000. WithdrawHome minimum_backing 9600 and fee_cap 400. WithdrawForeign minimum_backing 96000000 and fee_cap 4000000. Const, stage, episode, share class, policy, and grant values are absent from the inspect object",
+    "output_file": "outputs/program/inspect-final.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori test bridge-stake",
+    "exit_code": 0,
+    "expected": "final 18 intended cases pass with the statuses predicted before the run",
+    "observed": "TestsPassed. qualification local-stipulation-only. Fourteen Unsupported BETA_PROFILE_UNSUPPORTED, one AuthoringRejected BETA_ACTION_UNKNOWN, two AuthoringRejected BETA_ASSET_MISMATCH, one AuthoringRejected BETA_DUPLICATE_ID",
+    "output_file": "outputs/program/test-final.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate bridge-stake/vault-bridge.mori --action reward_home --scenario bridge-stake/scenarios/home-rail.json",
+    "exit_code": 1,
+    "expected": "reward stays SpecifiedOnly after the amount repair",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED, publishedEffects null",
+    "output_file": "outputs/program/sim-reward.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand bridge-stake/vault-bridge.mori --action deposit_foreign --scenario bridge-stake/scenarios/foreign-claim.json",
+    "exit_code": 1,
+    "expected": "foreign deposit does not expand",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED, publishedEffects null",
+    "output_file": "outputs/program/expand-deposit-foreign.stdout"
+  },
+  {
+    "command": "node tools/protocol-probe.mjs",
+    "exit_code": 0,
+    "expected": "LSP hover and diagnostics, MCP check and preview, using the installed stdio servers",
+    "observed": "LSP moriarty-beta 0.1.0-beta.1, utf-16, full sync. 88 document symbols. Hover on escrow_home: Support SpecifiedOnly. Completion labels bridge.escrow, bridge.claim, bridge.recover. Diagnostics empty on the valid file, then BETA_SYNTAX and BETA_NUMBER on the tiny buffer. MCP tools check, inspect, expand, preview. check AuthoringChecked all SpecifiedOnly. preview escrow_home isError true, Unsupported BETA_PROFILE_UNSUPPORTED, publishedEffects null. This client did not call MCP inspect or expand, and did not request LSP formatting",
+    "output_file": "outputs/protocol/summary.json"
+  },
+  {
+    "command": "MORIARTY_BETA_CLI=$PWD/dist/cli.js nvim --headless -u NONE -l editor/nvim/smoke.lua",
+    "exit_code": 0,
+    "expected": "shipped Neovim 0.11 smoke passes without editing the package",
+    "observed": "NVIM v0.11.6. Stderr: Neovim Moriarty stdio LSP smoke passed: initialize/open/definition/symbols/format/change/diagnostics/shutdown. The smoke uses its own scalar sample, not vault-bridge.mori",
+    "output_file": "outputs/protocol/nvim-smoke.stderr"
+  }
+]

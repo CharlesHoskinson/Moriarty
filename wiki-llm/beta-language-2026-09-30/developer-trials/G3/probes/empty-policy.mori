@@ -1,0 +1,13 @@
+profile "moriarty-beta/1";
+agreement EmptyPolicy {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  policy Bare = {};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  share_class HomeShares = {domain: HomeRail, id: "HomeVaultShare", backing: RailUSD};
+  intent Stake = {
+    operation: staking.deposit(owner: Staker, shares: HomeShares, backing: 1.00 RailUSD),
+    policy: Bare,
+  };
+  action deposit_home uses Stake;
+}

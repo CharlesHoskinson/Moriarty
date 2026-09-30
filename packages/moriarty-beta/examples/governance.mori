@@ -1,0 +1,16 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement GovernanceDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+policy Terms = {id: "Terms", epoch: 3, source_hash: "terms-v3", duty_preservation: "required"};
+intent Queue = {operation: governance.queue(policy: Terms, next_epoch: 4), earliest_round: 180, veto_before: 179, relation: "existing signed duties retain terms"};
+action queue uses Queue;
+intent Execute = {operation: governance.execute(policy: Terms)};
+action execute uses Execute;
+intent Veto = {operation: governance.veto(policy: Terms)};
+action veto uses Veto;
+}

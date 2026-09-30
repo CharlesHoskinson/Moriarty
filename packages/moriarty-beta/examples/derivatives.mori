@@ -1,0 +1,17 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement DerivativesDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+instrument Call = {domain: Preview, id: "Call", underlying: GOLD, settlement: USD, strike_units: "USD per GOLD", strike: "100.00", exercise_round: 150, collateral: 500.00 USD};
+observation Fixing = {domain: Preview, id: "Fixing", unit: "USD per GOLD", source: "feed", observed_round: 150};
+intent Fix = {operation: option.fix(instrument: Call, observation: Fixing)};
+action fix uses Fix;
+intent Exercise = {operation: option.exercise(instrument: Call, holder: Alice), continuation: "missing fixing retains reserve and exercise duty"};
+action exercise uses Exercise;
+intent Settle = {operation: option.settle(instrument: Call, holder: Alice, payoff: 100.00 USD), rounding: "payoff floor benefits reserve"};
+action settle uses Settle;
+}

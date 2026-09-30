@@ -4,11 +4,11 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-28
+updated: 2026-09-30
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-28T15:38:14Z
+updated_at: 2026-09-30T19:17:22Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -27,6 +27,10 @@ sources:
 ---
 
 # Moriarty language wiki index
+
+## Beta language research and delivery — 2026-09-30
+
+[[wiki/sessions/beta-language-2026-09-30|Research, beta tools and developer trials]] · [agent dossier](../wiki-llm/beta-language-2026-09-30/README.md) · [standalone package](../packages/moriarty-beta/README.md). Local S0 preparation remains unqualified; broader lifecycle syntax is a proposal and financial/authentication/proof/ledger gates remain open.
 
 ## Governing design — 2026-09-19 consolidation
 

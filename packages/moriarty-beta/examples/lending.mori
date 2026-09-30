@@ -1,0 +1,16 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement LendingDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+obligation Loan = {domain: Preview, id: "Loan", asset: USD};
+intent Borrow = {operation: lending.originate(obligation: Loan, debtor: Alice, creditor: Bob, principal: 500.00 USD, collateral: 1.000 GOLD), relation: "aggregate locks and funded principal; financial validation open"};
+action borrow uses Borrow;
+intent Roll = {operation: lending.roll_forward(obligation: Loan, to_round: 200)};
+action roll uses Roll;
+intent Liquidate = {operation: lending.liquidate(obligation: Loan), continuation: "residual debt persists"};
+action liquidate uses Liquidate;
+}

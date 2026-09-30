@@ -1,0 +1,16 @@
+profile "moriarty-beta/1";
+agreement UnlinkedDuty {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  share_class HomeShares = {domain: HomeRail, id: "HomeVaultShare", backing: RailUSD};
+  stage EscrowLock = {domain: HomeRail, id: "escrow-lock", duty: "named duty", status: "pending", signed_floor: 96.00 RailUSD};
+  intent Stake = {
+    operation: staking.deposit(owner: Staker, shares: HomeShares, backing: 250.00 RailUSD),
+    reads: ["no-such-stage"],
+    retained_duties: 4,
+    earliest_round: 99,
+    valid: rounds(domain: HomeRail, from: 12, to: 48),
+  };
+  action deposit_home uses Stake;
+}

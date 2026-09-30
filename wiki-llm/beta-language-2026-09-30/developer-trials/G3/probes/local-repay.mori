@@ -1,0 +1,34 @@
+// Fixture probe only. Accrual-first repayment of a RailUSD note.
+profile "moriarty-beta/1";
+agreement NoteFixture {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  account Borrower = {domain: HomeRail, id: "Borrower"};
+  account Lender = {domain: HomeRail, id: "Lender"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  obligation Note = {domain: HomeRail, id: "Note", asset: RailUSD};
+  const pay: Qty<RailUSD> = 1.25 RailUSD;
+  const zero: Qty<RailUSD> = 0.00 RailUSD;
+  intent Paydown = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Borrower,
+    key: "key-note",
+    nonce: "note-n1",
+    pre_head: "note-head-0",
+    valid: rounds(domain: HomeRail, from: 0, to: 10),
+    gross_cap: pay,
+    fee_cap: zero,
+    net_floor: zero,
+    operation: repay(obligation: Note, payer: Borrower, amount: pay),
+    source_hash: "note-src",
+    policy_digest: "note-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action paydown uses Paydown;
+}

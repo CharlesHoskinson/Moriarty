@@ -1,0 +1,337 @@
+{
+ "profile": "moriarty-beta-tests/1",
+ "cases": [
+  {
+   "name": "partial 100.00 clears accrued then principal",
+   "source": "loan.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "PreparedUnqualified",
+    "effects": [
+     {
+      "kind": "Debit",
+      "account": "Alice",
+      "asset": "USDCanonical",
+      "amount": "10000"
+     },
+     {
+      "kind": "Credit",
+      "account": "Bob",
+      "asset": "USDCanonical",
+      "amount": "10000"
+     },
+     {
+      "kind": "SetObligation",
+      "id": "Loan1",
+      "principal": "41250",
+      "accrued": "0",
+      "outstanding": "41250",
+      "status": "Outstanding"
+     },
+     {
+      "kind": "UseAllowance",
+      "owner": "Alice",
+      "amount": "10000"
+     },
+     {
+      "kind": "UseReplay",
+      "key": "[\"Midnight\",\"Alice\",\"rp1\"]"
+     },
+     {
+      "kind": "AdvanceHead",
+      "predecessor": "h0",
+      "successor": "h1"
+     }
+    ],
+    "post": {
+     "core": "moriarty-core/5",
+     "domain": "Midnight",
+     "asset": "USDCanonical",
+     "head": "h1",
+     "round": "1",
+     "workRemaining": "9",
+     "workSpent": "1",
+     "balances": [
+      {
+       "account": "Alice",
+       "amount": "70000"
+      },
+      {
+       "account": "Bob",
+       "amount": "15000"
+      }
+     ],
+     "allowances": [
+      {
+       "owner": "Alice",
+       "remaining": "70000",
+       "spent": "10000"
+      }
+     ],
+     "obligations": [
+      {
+       "id": "Loan1",
+       "debtor": "Alice",
+       "creditor": "Bob",
+       "asset": "USDCanonical",
+       "principal": "41250",
+       "accrued": "0",
+       "outstanding": "41250",
+       "status": "Outstanding"
+      }
+     ],
+     "consumedReplay": [
+      "[\"Midnight\",\"Alice\",\"rp1\"]"
+     ]
+    }
+   }
+  },
+  {
+   "name": "interest-only 5.00 leaves 7.50 accrued",
+   "source": "loan.mori",
+   "action": "pay_interest_only",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "PreparedUnqualified",
+    "effects": [
+     {
+      "kind": "Debit",
+      "account": "Alice",
+      "asset": "USDCanonical",
+      "amount": "500"
+     },
+     {
+      "kind": "Credit",
+      "account": "Bob",
+      "asset": "USDCanonical",
+      "amount": "500"
+     },
+     {
+      "kind": "SetObligation",
+      "id": "Loan1",
+      "principal": "50000",
+      "accrued": "750",
+      "outstanding": "50750",
+      "status": "Outstanding"
+     },
+     {
+      "kind": "UseAllowance",
+      "owner": "Alice",
+      "amount": "500"
+     },
+     {
+      "kind": "UseReplay",
+      "key": "[\"Midnight\",\"Alice\",\"rp3\"]"
+     },
+     {
+      "kind": "AdvanceHead",
+      "predecessor": "h0",
+      "successor": "h1"
+     }
+    ],
+    "post": {
+     "core": "moriarty-core/5",
+     "domain": "Midnight",
+     "asset": "USDCanonical",
+     "head": "h1",
+     "round": "1",
+     "workRemaining": "9",
+     "workSpent": "1",
+     "balances": [
+      {
+       "account": "Alice",
+       "amount": "79500"
+      },
+      {
+       "account": "Bob",
+       "amount": "5500"
+      }
+     ],
+     "allowances": [
+      {
+       "owner": "Alice",
+       "remaining": "79500",
+       "spent": "500"
+      }
+     ],
+     "obligations": [
+      {
+       "id": "Loan1",
+       "debtor": "Alice",
+       "creditor": "Bob",
+       "asset": "USDCanonical",
+       "principal": "50000",
+       "accrued": "750",
+       "outstanding": "50750",
+       "status": "Outstanding"
+      }
+     ],
+     "consumedReplay": [
+      "[\"Midnight\",\"Alice\",\"rp3\"]"
+     ]
+    }
+   }
+  },
+  {
+   "name": "full 512.50 settles",
+   "source": "loan.mori",
+   "action": "pay_full",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "PreparedUnqualified",
+    "effects": [
+     {
+      "kind": "Debit",
+      "account": "Alice",
+      "asset": "USDCanonical",
+      "amount": "51250"
+     },
+     {
+      "kind": "Credit",
+      "account": "Bob",
+      "asset": "USDCanonical",
+      "amount": "51250"
+     },
+     {
+      "kind": "SetObligation",
+      "id": "Loan1",
+      "principal": "0",
+      "accrued": "0",
+      "outstanding": "0",
+      "status": "Settled"
+     },
+     {
+      "kind": "UseAllowance",
+      "owner": "Alice",
+      "amount": "51250"
+     },
+     {
+      "kind": "UseReplay",
+      "key": "[\"Midnight\",\"Alice\",\"rp2\"]"
+     },
+     {
+      "kind": "AdvanceHead",
+      "predecessor": "h0",
+      "successor": "h1"
+     }
+    ],
+    "post": {
+     "core": "moriarty-core/5",
+     "domain": "Midnight",
+     "asset": "USDCanonical",
+     "head": "h1",
+     "round": "1",
+     "workRemaining": "9",
+     "workSpent": "1",
+     "balances": [
+      {
+       "account": "Alice",
+       "amount": "28750"
+      },
+      {
+       "account": "Bob",
+       "amount": "56250"
+      }
+     ],
+     "allowances": [
+      {
+       "owner": "Alice",
+       "remaining": "28750",
+       "spent": "51250"
+      }
+     ],
+     "obligations": [
+      {
+       "id": "Loan1",
+       "debtor": "Alice",
+       "creditor": "Bob",
+       "asset": "USDCanonical",
+       "principal": "0",
+       "accrued": "0",
+       "outstanding": "0",
+       "status": "Settled"
+      }
+     ],
+     "consumedReplay": [
+      "[\"Midnight\",\"Alice\",\"rp2\"]"
+     ]
+    }
+   }
+  },
+  {
+   "name": "partial at last valid round 10",
+   "source": "loan.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/last_round.json",
+   "expect": {
+    "status": "PreparedUnqualified",
+    "effects": [
+     {
+      "kind": "Debit",
+      "account": "Alice",
+      "asset": "USDCanonical",
+      "amount": "10000"
+     },
+     {
+      "kind": "Credit",
+      "account": "Bob",
+      "asset": "USDCanonical",
+      "amount": "10000"
+     },
+     {
+      "kind": "SetObligation",
+      "id": "Loan1",
+      "principal": "41250",
+      "accrued": "0",
+      "outstanding": "41250",
+      "status": "Outstanding"
+     },
+     {
+      "kind": "UseAllowance",
+      "owner": "Alice",
+      "amount": "10000"
+     },
+     {
+      "kind": "UseReplay",
+      "key": "[\"Midnight\",\"Alice\",\"rp1\"]"
+     },
+     {
+      "kind": "AdvanceHead",
+      "predecessor": "h0",
+      "successor": "h1"
+     }
+    ]
+   }
+  },
+  {
+   "name": "partial at first valid round 0",
+   "source": "loan.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/round0.json",
+   "expect": {
+    "status": "PreparedUnqualified"
+   }
+  },
+  {
+   "name": "expired round 11 rejected",
+   "source": "loan.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/expired.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_INTENT_SCOPE"
+   }
+  },
+  {
+   "name": "full payoff with insufficient funds",
+   "source": "loan.mori",
+   "action": "pay_full",
+   "scenario": "scenarios/short_funds.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_EFFECT_RANGE"
+   }
+  }
+ ]
+}

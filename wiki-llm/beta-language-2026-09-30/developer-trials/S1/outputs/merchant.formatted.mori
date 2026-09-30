@@ -1,0 +1,61 @@
+// Merchant invoice: 125.375 EURC price, 1.250 EURC platform fee, exact scale-3 atoms.
+profile "moriarty-beta/1";
+agreement MerchantInvoice {
+  domain Preview = {
+    id: "Midnight",
+    chain: "midnight",
+    network: "preview"
+  };
+  account Customer = {
+    domain: Preview,
+    id: "Customer7"
+  };
+  account Merchant = {
+    domain: Preview,
+    id: "Merchant42"
+  };
+  account Platform = {
+    domain: Preview,
+    id: "PlatformFees"
+  };
+  asset EURC = {
+    domain: Preview,
+    id: "EuroCoinCanonical",
+    scale: 3,
+    representation: "canonical",
+    symbol: "EURC"
+  };
+  const price: Qty<EURC> = 125.375 EURC;
+  const fee = 1.250 EURC;
+  const gross = price + fee;
+  const net = gross - fee;
+  intent InvoicePayment = {
+    domain: Preview,
+    asset: EURC,
+    signer: Customer,
+    key: "customer7-key",
+    nonce: "inv-2026-0001",
+    pre_head: "head-0",
+    valid: rounds(domain: Preview,
+    from: 0,
+    to: 20),
+    gross_cap: gross,
+    fee_cap: fee,
+    net_floor: net,
+    operation: transfer(from: Customer,
+    to: Merchant,
+    fee_to: Platform,
+    value: price,
+    fee: fee),
+    source_hash: "merchant-src-1",
+    policy_digest: "merchant-policy-1",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action pay_invoice uses InvoicePayment;
+}
