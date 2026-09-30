@@ -1,0 +1,65 @@
+// Authoring-valid, financially out of bounds.
+// Alice fee is 12.25 USD = 1225 atoms. fee_cap is 10.00 USD = 1000 atoms.
+// gross_cap stays wage + fee = 246300 atoms, and net_floor stays the wage.
+// Check does not compare those signed bounds. Local preparation must reject.
+profile "moriarty-beta/1";
+agreement PayrollFeeOverCap {
+  domain Night = {
+    id: "NightPayroll",
+    chain: "night-ledger",
+    network: "preview-week-39"
+  };
+  account Desk = {
+    domain: Night,
+    id: "PayrollDesk"
+  };
+  account Alice = {
+    domain: Night,
+    id: "AliceChen"
+  };
+  account Processor = {
+    domain: Night,
+    id: "PayrollProcessor"
+  };
+  asset USD = {
+    domain: Night,
+    id: "PayrollUSD",
+    scale: 2,
+    representation: "canonical",
+    symbol: "USD",
+  };
+  const alice_wage: Qty<USD> = 2450.75 USD;
+  const alice_fee = 12.25 USD;
+  const alice_gross = alice_wage + alice_fee;
+  const stated_fee_cap = 10.00 USD;
+  intent PayAlice = {
+    domain: Night,
+    asset: USD,
+    signer: Desk,
+    key: "desk-key-alice-w39",
+    nonce: "payroll-2026-09-w39-alice",
+    pre_head: "desk-head-alice-w38",
+    valid: rounds(domain: Night,
+    from: 40,
+    to: 52),
+    gross_cap: alice_gross,
+    fee_cap: stated_fee_cap,
+    net_floor: alice_wage,
+    operation: transfer(from: Desk,
+    to: Alice,
+    fee_to: Processor,
+    value: alice_wage,
+    fee: alice_fee,
+    ),
+    source_hash: "claim-src-alice-w39",
+    policy_digest: "claim-policy-payroll-w39",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action pay_alice uses PayAlice;
+}

@@ -1,0 +1,289 @@
+[
+  {
+    "command": "node -v",
+    "exit_code": 0,
+    "expected": "Node 24 or newer, as required by the package.",
+    "observed": "v24.21.0. Stderr also prints a Node warning that NO_COLOR is ignored because FORCE_COLOR is set. That warning appears on later mori stderr captures too.",
+    "output_file": "outputs/00-node-version.txt"
+  },
+  {
+    "command": "node arithmetic for scale-2 payroll atoms, balances, allowances, and the 10.00 USD fee cap",
+    "exit_code": 0,
+    "expected": "Alice gross 246300 atoms and Bob gross 188490 atoms, with conserved allowance totals. Fee 1225 exceeds cap 1000.",
+    "observed": "Those integers, and feeExceedsCap true. The same arithmetic was computed before the first simulate. This saved file is a later repeat of that calculation, not a copy of mori output.",
+    "output_file": "outputs/00-arithmetic.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori --help",
+    "exit_code": 0,
+    "expected": "The command list, plus a line that local results remain PreparedUnqualified.",
+    "observed": "init, check, fmt, inspect, expand/simulate, test, lsp, mcp. Closing line: Local financial results remain PreparedUnqualified.",
+    "output_file": "outputs/01-help.txt"
+  },
+  {
+    "command": "./node_modules/.bin/mori init scratch-init",
+    "exit_code": 0,
+    "expected": "A new directory with the starter invoice, scenario, tests, and README.",
+    "observed": "status Initialized, qualification local-stipulation-only. Files: invoice.mori, scenario.json, mori.tests.json, README.md.",
+    "output_file": "outputs/02-init.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori init scratch-init",
+    "exit_code": 1,
+    "expected": "Refusal, because init refuses an existing target.",
+    "observed": "stderr: mori: EEXIST: file already exists, mkdir '.../scratch-init'. Stdout empty.",
+    "output_file": "outputs/03-init-again.err"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll.mori",
+    "exit_code": 0,
+    "expected": "AuthoringChecked, with pay_alice and pay_bob LocalS0 and adopt_schedule SpecifiedOnly.",
+    "observed": "AuthoringChecked PayrollWeek. pay_alice LocalS0, pay_bob LocalS0, adopt_schedule SpecifiedOnly. Local preparation remains PreparedUnqualified.",
+    "output_file": "outputs/04-check-payroll.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll.mori --json",
+    "exit_code": 0,
+    "expected": "JSON authoring report with open gates and no diagnostics.",
+    "observed": "status AuthoringChecked. evidence AuthoringOnly. openGates: authentication, nativeProof, financialCorrespondence, atomicLedgerAcceptance. The file is 31049 bytes and includes all 30 operation schemas. sourceHash 18efde69e2361cff9a05a2c6ecc38c6e321d462d7bcfc38fdb18287e17214b98.",
+    "output_file": "outputs/05-check-payroll-json.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll-wrong-asset.mori",
+    "exit_code": 1,
+    "expected": "AuthoringRejected BETA_ASSET_MISMATCH on the USD plus Points sum.",
+    "observed": "AuthoringRejected PayrollWrongAsset. BETA_ASSET_MISMATCH at 26:23: Addition/subtraction require identical numeric types and nominal assets.",
+    "output_file": "outputs/06-check-wrong-asset.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll-wrong-asset.mori --json",
+    "exit_code": 1,
+    "expected": "One diagnostic, no actions published.",
+    "observed": "BETA_ASSET_MISMATCH span bytes 881-903. actions is an empty array.",
+    "output_file": "outputs/07-check-wrong-asset-json.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll-fee-over-cap.mori",
+    "exit_code": 0,
+    "expected": "AuthoringChecked. The fee cap inequality is a core rule, so check should still accept the file.",
+    "observed": "AuthoringChecked PayrollFeeOverCap. pay_alice LocalS0.",
+    "output_file": "outputs/08-check-fee-over-cap.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check payroll/payroll-fee-over-cap.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked JSON.",
+    "observed": "AuthoringChecked. No diagnostic compares 1225 fee atoms with the 1000 atom fee cap.",
+    "output_file": "outputs/09-check-fee-over-cap-json.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt payroll/payroll.mori",
+    "exit_code": 0,
+    "expected": "A spelling-preserving format on stdout.",
+    "observed": "Stdout differs from the source. Call arguments after the first are placed at the parent indent, so they look like sibling fields. Comments were kept. This stdout was not written back.",
+    "output_file": "outputs/10-fmt-payroll.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt payroll/payroll-wrong-asset.mori",
+    "exit_code": 1,
+    "expected": "No format edit for invalid source.",
+    "observed": "JSON status AuthoringRejected with the same BETA_ASSET_MISMATCH diagnostic.",
+    "output_file": "outputs/11-fmt-wrong.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt payroll/payroll-wrong-asset.mori --write",
+    "exit_code": 1,
+    "expected": "Exit 1 and unchanged source bytes.",
+    "observed": "Same rejection JSON. The source still has the one-line domain declaration and the Points sum. sha256 0f19b1a8e2d7c08a55e09b2810071207892581dbb3c6aa551f3fc417c605ff5e.",
+    "output_file": "outputs/12-fmt-wrong-write.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt payroll/payroll-fee-over-cap.mori",
+    "exit_code": 0,
+    "expected": "Stdout format, same call-layout change as the main file.",
+    "observed": "Format differs. Not written back.",
+    "output_file": "outputs/13-fmt-fee.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check outputs/10-fmt-payroll.mori --json",
+    "exit_code": 0,
+    "expected": "Formatted text still AuthoringChecked, with a different source hash.",
+    "observed": "AuthoringChecked. Same three actions and supports. sourceHash 0bae92e2be696c7d607de81daaf1ca831a97a9f9b69181d7b50ea28172bdefd3.",
+    "output_file": "outputs/14-check-fmt-payroll.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori check outputs/13-fmt-fee.mori --json",
+    "exit_code": 0,
+    "expected": "Formatted fee-over-cap text still AuthoringChecked.",
+    "observed": "AuthoringChecked.",
+    "output_file": "outputs/15-check-fmt-fee.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori inspect payroll/payroll.mori",
+    "exit_code": 0,
+    "expected": "Unverified identity claims, LocalS0 bounds, and open authentication and ledger coverage.",
+    "observed": "Every identity has authenticated false. PayAlice gross/fee/net atoms 246300/1225/245075. PayBob 188490/940/187550. localS0Actions pay_alice and pay_bob. adopt_schedule financialRelations Open. Four required premises and four unverified bindings.",
+    "output_file": "outputs/16-inspect.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand payroll/payroll.mori --action pay_alice --scenario payroll/scenario-alice.json",
+    "exit_code": 0,
+    "expected": "Expanded Source/6 proposal. gross_cap 246300, fee_cap 1225, net_floor 245075.",
+    "observed": "status Expanded, qualification local-stipulation-only, proposalNote null. Source/6 debit 246300, credits 245075 and 1225. use_replay prints the nonce; the later core effect key is the JSON triple.",
+    "output_file": "outputs/17-expand-alice.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_alice --scenario payroll/scenario-alice.json",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified. Debit 246300. Alice post balance 260075. Employer 4753700. Processor 1475. Allowance remaining 753700 spent 446300. Work 7/3. Replay key for nonce payroll-2026-09-w39-alice.",
+    "observed": "Those effects and that candidate post. qualification local-stipulation-only. Premises and bindings match inspect. This matched the test expectation written beforehand.",
+    "output_file": "outputs/18-sim-alice.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_bob --scenario payroll/scenario-bob.json",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified. Debit 188490. Bob balance 187550. Employer 3011510. Processor 9740. Allowance 611510/238490. Work 4/2. Distinct nonce and head from Alice.",
+    "observed": "Those effects and that candidate post. Alice's scenario file was not modified.",
+    "output_file": "outputs/19-sim-bob.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll-fee-over-cap.mori --action pay_alice --scenario payroll/scenario-alice.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_INTENT_SCOPE, with no published effects.",
+    "observed": "CoreRejected, judgment intent, code S0_INTENT_SCOPE, diagnosticWork 1, publishedPost null, publishedEffects null.",
+    "output_file": "outputs/20-sim-fee.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_alice --scenario payroll/scenario-alice-stale-head.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_HISTORY_STALE because the fixture head is desk-head-stale and the intent pre_head is desk-head-alice-w38.",
+    "observed": "CoreRejected, judgment history, code S0_HISTORY_STALE, published effects null.",
+    "output_file": "outputs/21-sim-stale.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_alice --scenario payroll/scenario-wrong-asset.json",
+    "exit_code": 1,
+    "expected": "FormationRejected BETA_SCENARIO_IDENTITY because the fixture asset is BonusPoints.",
+    "observed": "FormationRejected. Message: Scenario domain/asset does not match source (/). Span is the pay_alice action span, bytes 2114-2145. publishedEffects null.",
+    "output_file": "outputs/22-sim-wrong-scenario.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action adopt_schedule --scenario payroll/scenario-alice.json",
+    "exit_code": 1,
+    "expected": "Unsupported BETA_PROFILE_UNSUPPORTED and no effect vector.",
+    "observed": "Unsupported. Recognized authoring profile has no local execution. publishedEffects null, publishedPost null.",
+    "output_file": "outputs/23-sim-schedule.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll-wrong-asset.mori --action pay_alice --scenario payroll/scenario-alice.json",
+    "exit_code": 1,
+    "expected": "AuthoringRejected before scenario execution.",
+    "observed": "AuthoringRejected BETA_ASSET_MISMATCH. publishedEffects null.",
+    "output_file": "outputs/24-sim-wrong-source.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand payroll/payroll.mori --action adopt_schedule --scenario payroll/scenario-alice.json",
+    "exit_code": 1,
+    "expected": "The same Unsupported result as simulate, with no Source/6 document.",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED. publishedEffects null.",
+    "output_file": "outputs/25-expand-schedule.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori test payroll",
+    "exit_code": 0,
+    "expected": "TestsPassed for the seven cases whose effects and posts were calculated before this command.",
+    "observed": "TestsPassed, qualification local-stipulation-only. All seven cases passed: two PreparedUnqualified, AuthoringRejected, CoreRejected fee cap, CoreRejected stale head, FormationRejected scenario asset, Unsupported schedule.",
+    "output_file": "outputs/26-test.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate node_modules/@moriarty-lang/beta/examples/staking.mori --action deposit --scenario payroll/scenario-alice.json",
+    "exit_code": 1,
+    "expected": "Shipped SpecifiedOnly staking action rejects execution.",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED. No effects. The scenario was not applied.",
+    "output_file": "outputs/27-sim-shipped-staking.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori",
+    "exit_code": 1,
+    "expected": "A usage error requiring --action and --scenario.",
+    "observed": "stderr: mori: simulate requires --action and --scenario. Stdout empty.",
+    "output_file": "outputs/28-sim-missing-flags.err"
+  },
+  {
+    "command": "./node_modules/.bin/mori dance payroll",
+    "exit_code": 1,
+    "expected": "Unknown command.",
+    "observed": "stderr: mori: Unknown command dance.",
+    "output_file": "outputs/29-unknown-cmd.err"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_alice --scenario outputs/probe-duplicate-key.json",
+    "exit_code": 1,
+    "expected": "FormationRejected on a duplicate JSON key.",
+    "observed": "BETA_JSON_DUPLICATE. Message: Duplicate JSON key profile (/). Span is again the action span.",
+    "output_file": "outputs/30-sim-dup-key.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate payroll/payroll.mori --action pay_alice --scenario outputs/probe-unknown-field.json",
+    "exit_code": 1,
+    "expected": "FormationRejected on an unknown scenario field.",
+    "observed": "BETA_SCENARIO_SCHEMA. Message: Unknown field note (/).",
+    "output_file": "outputs/31-sim-unknown-field.out"
+  },
+  {
+    "command": "node /tmp/g1-stdio-client.mjs",
+    "exit_code": 0,
+    "expected": "A real local MCP and LSP session. MCP preview of pay_alice is PreparedUnqualified. An extra path argument is rejected. LSP diagnostics mark the wrong-asset file.",
+    "observed": "MCP tools are check, inspect, expand, preview, additionalProperties false. preview pay_alice PreparedUnqualified with the four premises. preview adopt_schedule isError true, BETA_PROFILE_UNSUPPORTED. Extra path argument returns JSON-RPC -32602. LSP capabilities are full sync, utf-16, completion, hover, definition, document symbols, formatting. No semantic tokens. Wrong-asset diagnostic line 25 character 22. First hover and definition calls were aimed at a string and a comment and returned null.",
+    "output_file": "outputs/34-stdio-client-summary.json"
+  },
+  {
+    "command": "node --input-type=module library check/inspect/simulate/expand/format",
+    "exit_code": 0,
+    "expected": "The public JS API agrees with the CLI on status, the Alice debit, and the schedule rejection.",
+    "observed": "check AuthoringChecked. inspect identities all unauthenticated. simulate PreparedUnqualified debit 246300. wrong-asset code BETA_ASSET_MISMATCH. format text differs and is not null. expand adopt_schedule Unsupported with publishedEffects null.",
+    "output_file": "outputs/35-library-api.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori test /tmp/g1-bad-expect",
+    "exit_code": 1,
+    "expected": "TestsFailed when the expected debit amount is 1. A useful failure would show the actual amount.",
+    "observed": "TestsFailed. The case says passed false, status PreparedUnqualified, code null. There is no expected value, actual value, or diff.",
+    "output_file": "outputs/36-test-mismatch.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori test scratch-init",
+    "exit_code": 0,
+    "expected": "The unmodified starter case passes. This is a control, not the payroll assignment.",
+    "observed": "TestsPassed. Case literal fee payment, status PreparedUnqualified, code null.",
+    "output_file": "outputs/37-starter-test.out"
+  },
+  {
+    "command": "./node_modules/.bin/mori test .",
+    "exit_code": 1,
+    "expected": "Failure, because the assignment manifest is payroll/mori.tests.json.",
+    "observed": "stderr: mori: ENOENT .../G1/mori.tests.json. Stdout empty.",
+    "output_file": "outputs/38-test-root.err"
+  },
+  {
+    "command": "./node_modules/.bin/mori test payroll",
+    "exit_code": 0,
+    "expected": "The assignment suite still passes after the probes.",
+    "observed": "TestsPassed. Same seven cases.",
+    "output_file": "outputs/39-test-again.out"
+  },
+  {
+    "command": "node /tmp/g1-lsp-followup.mjs",
+    "exit_code": 0,
+    "expected": "Hover and definition on real identifiers, and completion at the transfer call.",
+    "observed": "Hover on account Desk says the identity metadata is an unverified claim. Hover on action pay_alice says Support LocalS0 and that local preparation does not qualify proofs or settlement. Definition of signer Desk resolves to line 15 characters 10-14. Definition of alice_wage resolves to line 26 characters 8-18. Completion at transfer returns one item, kind keyword, detail Moriarty authoring. Hover on const alice_wage uses the same unverified-identity sentence.",
+    "output_file": "outputs/40-lsp-followup.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate outputs/10-fmt-payroll.mori --action pay_alice --scenario payroll/scenario-alice.json",
+    "exit_code": 0,
+    "expected": "Same Alice effects and post as the hand-written source, and a different source hash.",
+    "observed": "PreparedUnqualified. effects_equal true. post_equal true. source_hash_equal false.",
+    "output_file": "outputs/41-sim-formatted.out"
+  }
+]

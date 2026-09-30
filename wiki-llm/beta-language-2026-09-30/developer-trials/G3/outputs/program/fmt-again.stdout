@@ -1,0 +1,491 @@
+// Cross-stake bridge authoring. This file is not a settlement program.
+// RailUSDCanonical and ClaimUSDNominal both use display symbol USD.
+// They differ in domain, economic id, scale, and representation.
+// 250.00 RailUSD is 25000 atoms. 250.000000 ClaimUSD is 250000000 atoms.
+// No action sequences escrow, claim, and stake. Those calls stay separate.
+// Stage, episode, and intent duty fields are discussion strings, not obligations.
+// Structural checking does not validate evidence freshness, financial rules, or duties.
+// SpecifiedOnly simulation publishes no effects. It is not PreparedUnqualified.
+// It is not a signature, a proof, provider authentication, or ledger acceptance.
+// Author discipline, not a checker rule: bridge does not require the owner
+// domain to match the amount asset, and horizon caps need not match that asset.
+// Staking does reject a cross-domain owner. reads strings are not stage links.
+// earliest_round is not compared with the rounds window.
+profile "moriarty-beta/1";
+agreement CrossStakeBridge {
+  domain HomeRail = {
+    id: "HomeRail",
+    chain: "home-rail",
+    network: "stake-preview"
+  };
+  domain ForeignClaim = {
+    id: "ForeignClaim",
+    chain: "claim-net",
+    network: "wrap-preview"
+  };
+  account Staker = {
+    domain: HomeRail,
+    id: "StakerPrincipal"
+  };
+  account Custodian = {
+    domain: HomeRail,
+    id: "VaultCustodian"
+  };
+  account RewardDesk = {
+    domain: HomeRail,
+    id: "RewardTreasury"
+  };
+  account Holder = {
+    domain: ForeignClaim,
+    id: "ClaimHolder"
+  };
+  account ForeignDesk = {
+    domain: ForeignClaim,
+    id: "ForeignCustodian"
+  };
+  account ForeignRewards = {
+    domain: ForeignClaim,
+    id: "ForeignRewardDesk"
+  };
+  asset RailUSD = {
+    domain: HomeRail,
+    id: "RailUSDCanonical",
+    scale: 2,
+    representation: "canonical",
+    symbol: "USD"
+  };
+  asset ClaimUSD = {
+    domain: ForeignClaim,
+    id: "ClaimUSDNominal",
+    scale: 6,
+    representation: "bridge-claim",
+    symbol: "USD"
+  };
+  share_class HomeShares = {
+    domain: HomeRail,
+    id: "HomeVaultShare",
+    backing: RailUSD
+  };
+  share_class ForeignShares = {
+    domain: ForeignClaim,
+    id: "ClaimVaultShare",
+    backing: ClaimUSD
+  };
+  const window_open: Scalar = 12;
+  const window_close: Scalar = 48;
+  const full_share_atoms: Scalar = 25_000;
+  const partial_share_atoms: Scalar = 10_000;
+  // 10000/25000 = 2/5, stated without division: 10000*5 = 25000*2.
+  const share_ratio_left = partial_share_atoms * 5;
+  const share_ratio_right = full_share_atoms * 2;
+  const share_ratio_gap = share_ratio_right - share_ratio_left;
+  const rail_face_atom_count: Scalar = 25_000;
+  const claim_face_atom_count: Scalar = 250_000_000;
+  // Bare scalar gap. No unit, no rate, and not spendable.
+  const unchecked_atom_count_gap = claim_face_atom_count - rail_face_atom_count;
+  const escrow_face: Qty<RailUSD> = 250.00 RailUSD;
+  const home_face_atoms: Qty<RailUSD> = atoms(asset: RailUSD, value: 25_000);
+  const home_face_gap = escrow_face - home_face_atoms;
+  const reward_slice: Qty<RailUSD> = 4.50 RailUSD;
+  const slash_slice: Qty<RailUSD> = 1.25 RailUSD;
+  const reward_and_slash = reward_slice + slash_slice;
+  const reward_stated: Qty<RailUSD> = 5.75 RailUSD;
+  const reward_gap = reward_stated - reward_and_slash;
+  const proportional_slice: Qty<RailUSD> = 100.00 RailUSD;
+  const withdraw_floor: Qty<RailUSD> = 96.00 RailUSD;
+  const floor_gap = proportional_slice - withdraw_floor;
+  const home_two_fifths = escrow_face * 2;
+  const home_five_slices = proportional_slice * 5;
+  const home_proportion_gap = home_five_slices - home_two_fifths;
+  const tighter_home_floor = min(a: withdraw_floor, b: proportional_slice);
+  const tighter_gap = tighter_home_floor - withdraw_floor;
+  const claim_face: Qty<ClaimUSD> = 250.000000 ClaimUSD;
+  const claim_atoms: Qty<ClaimUSD> = atoms(asset: ClaimUSD, value: 250_000_000);
+  const claim_gap = claim_face - claim_atoms;
+  const foreign_reward: Qty<ClaimUSD> = 4.500000 ClaimUSD;
+  const foreign_slash: Qty<ClaimUSD> = 1.250000 ClaimUSD;
+  const foreign_reward_and_slash = foreign_reward + foreign_slash;
+  const foreign_reward_stated: Qty<ClaimUSD> = 5.750000 ClaimUSD;
+  const foreign_reward_gap = foreign_reward_stated - foreign_reward_and_slash;
+  const foreign_slice: Qty<ClaimUSD> = 100.000000 ClaimUSD;
+  const foreign_floor: Qty<ClaimUSD> = 96.000000 ClaimUSD;
+  const foreign_floor_gap = foreign_slice - foreign_floor;
+  const foreign_two_fifths = claim_face * 2;
+  const foreign_five_slices = foreign_slice * 5;
+  const foreign_proportion_gap = foreign_five_slices - foreign_two_fifths;
+  policy DutyTerms = {
+    id: "BridgeStakeTerms",
+    epoch: 1,
+    source_hash: "terms-bridge-stake-1",
+    duty_preservation: "required-but-unchecked"
+  };
+  grant EscrowAuthority = {
+    issuer: Custodian,
+    scope: "escrow-250-RailUSD",
+    expiry: window_close,
+    revocation_epoch: 2,
+    gross_limit: escrow_face,
+    work_limit: 1,
+    signers: [Staker],
+    evidence: "grant text is not a signature"
+  };
+  party StakerParty = {
+    id: "party-staker",
+    account: Staker
+  };
+  party HolderParty = {
+    id: "party-holder",
+    account: Holder
+  };
+  observation ClaimFix = {
+    domain: ForeignClaim,
+    id: "ClaimFix",
+    unit: "ClaimUSD per RailUSD",
+    source: "unbound-bridge-feed",
+    observed_round: window_open,
+    maximum_age: 3,
+    finality: "not-admitted",
+    provenance: "provider binding open"
+  };
+  stage EscrowLock = {
+    domain: HomeRail,
+    id: "escrow-lock",
+    duty: "Home custodian text: RailUSD stays named until a separate claim or recover action",
+    status: "pending",
+    amount: escrow_face,
+    evidence: "a foreign receipt is not admitted by this authoring check",
+    relation: "escrow does not mint ClaimUSDNominal",
+    paired_claim: "claim-rail-250",
+    failure: "a closed round window is not proof of foreign nonreceipt",
+    retained_duties: "lock duty text survives a rejected claim attempt",
+    trigger: "escrow_home",
+    completion: "not an executable completion"
+  };
+  stage ClaimDuty = {
+    domain: ForeignClaim,
+    id: "foreign-claim",
+    duty: "ClaimUSDNominal is a bridge-claim face, not RailUSDCanonical",
+    status: "pending-evidence",
+    amount: claim_face,
+    evidence: "freshness, finality, and provider binding are open",
+    relation: "250.000000 ClaimUSD is 250000000 atoms and is not 25000 RailUSD atoms",
+    paired_claim: "claim-rail-250",
+    failure: "claim_id text is not joined to the escrow action",
+    retained_duties: "claim duty text does not retain a balance",
+    trigger: "claim_foreign",
+    completion: "not a mint of ForeignShares"
+  };
+  stage HomeUnbondDuty = {
+    domain: HomeRail,
+    id: "home-unbond",
+    duty: "10000 home share atoms stay pending; slash is not allocated to them",
+    status: "pending-withdrawal",
+    amount: proportional_slice,
+    evidence: "share atoms are not checked against backing atoms",
+    relation: "2/5 of 250.00 RailUSD is the 100.00 slice; the withdraw floor is 96.00",
+    paired_claim: "claim-rail-250",
+    failure: "unbond does not pay backing",
+    retained_duties: "pending withdrawal text remains explicit",
+    trigger: "unbond_home",
+    completion: "withdraw_home is a separate action"
+  };
+  stage ForeignUnbondDuty = {
+    domain: ForeignClaim,
+    id: "foreign-unbond",
+    duty: "The same 10000 share-atom count is not 10000 ClaimUSD atoms",
+    status: "pending-withdrawal",
+    amount: foreign_slice,
+    evidence: "foreign scale 6 makes 2/5 of face equal 100000000 atoms",
+    relation: "copying home share atoms across the bridge does not preserve value",
+    paired_claim: "claim-rail-250",
+    failure: "foreign unbond does not redeem RailUSD",
+    retained_duties: "foreign pending withdrawal is a separate discussion",
+    trigger: "unbond_foreign",
+    completion: "not composed with claim_foreign"
+  };
+  episode BridgeThenStake = {
+    id: "bridge-then-stake",
+    stages: [EscrowLock,
+    ClaimDuty,
+    HomeUnbondDuty,
+    ForeignUnbondDuty],
+    pending: "escrow, claim, deposit, slash, unbond, and withdraw are separate SpecifiedOnly actions",
+    timeout: "no horizon duty reads the authored round window",
+    recovery: "recover_home does not clear foreign duty text",
+    failure: "local execution is unsupported and publishes no effect vector",
+    duty: "these duty strings are not obligations and are not evidence",
+    authority: EscrowAuthority
+  };
+  intent LockRail = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    policy: DutyTerms,
+    authority: EscrowAuthority,
+    valid: rounds(domain: HomeRail,
+    from: window_open,
+    to: window_close),
+    gross_cap: escrow_face,
+    fee_cap: home_face_gap,
+    net_floor: escrow_face,
+    reads: ["escrow-lock"],
+    writes: ["no-local-effect"],
+    relation: "fee_cap is 250.00 RailUSD minus atoms(25000); that gap is zero atoms",
+    failure: "timeout alone is not proof of foreign nonreceipt",
+    continuation: "claim_foreign and deposit_foreign are not this action",
+    status: "pending",
+    retained_duties: "home lock text is not an empty S0 duty list",
+    recovery: "recover_home is a separate action",
+    operation: bridge.escrow(owner: Staker,
+    amount: escrow_face,
+    destination: ForeignClaim,
+    claim_id: "claim-rail-250")
+  };
+  intent TakeClaim = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    signer: Holder,
+    policy: DutyTerms,
+    authority: "no admitted foreign grant",
+    valid: rounds(domain: ForeignClaim,
+    from: window_open,
+    to: window_close),
+    gross_cap: claim_face,
+    fee_cap: claim_gap,
+    net_floor: claim_face,
+    reads: ["foreign-claim"],
+    writes: ["no-local-effect"],
+    relation: "fee_cap is the zero gap between 250.000000 ClaimUSD and 250000000 atoms",
+    failure: "evidence freshness is outside structural checking",
+    continuation: "a claim does not deposit ForeignShares",
+    observation: "ClaimFix is declared and is not an argument of bridge.claim",
+    status: "pending-evidence",
+    retained_duties: "claim duty text does not retain a balance effect",
+    operation: bridge.claim(owner: Holder,
+    amount: claim_face,
+    source: HomeRail,
+    claim_id: "claim-rail-250")
+  };
+  intent RecoverRail = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    policy: DutyTerms,
+    authority: EscrowAuthority,
+    valid: rounds(domain: HomeRail,
+    from: window_open,
+    to: window_close),
+    earliest_round: window_close,
+    gross_cap: escrow_face,
+    fee_cap: 0.00 RailUSD,
+    net_floor: escrow_face,
+    reads: ["escrow-lock"],
+    writes: ["no-local-effect"],
+    relation: "recover names the same 25000 RailUSD atoms and does not burn ClaimUSD",
+    failure: "timeout alone is not proof of foreign nonreceipt",
+    continuation: "foreign pending claim text is not cleared here",
+    status: "pending",
+    retained_duties: "recover does not delete the claim duty string",
+    operation: bridge.recover(owner: Staker,
+    amount: escrow_face,
+    claim_id: "claim-rail-250")
+  };
+  intent StakeHome = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    policy: DutyTerms,
+    valid: rounds(domain: HomeRail,
+    from: window_open,
+    to: window_close),
+    gross_cap: escrow_face,
+    fee_cap: 0.00 RailUSD,
+    net_floor: escrow_face,
+    reads: ["home-unbond"],
+    writes: ["no-local-effect"],
+    relation: "deposit of 25000 RailUSD atoms does not run escrow_home",
+    rounding: "share mint floor is stated and not computed",
+    continuation: "full_share_atoms 25000 is a scalar name, not a mint result",
+    status: "specified-only",
+    retained_duties: "deposit creates no checked share balance",
+    operation: staking.deposit(owner: Staker,
+    shares: HomeShares,
+    backing: escrow_face)
+  };
+  intent RewardHome = {
+    domain: HomeRail,
+    asset: RailUSD,
+    policy: DutyTerms,
+    gross_cap: reward_stated,
+    fee_cap: reward_gap,
+    net_floor: reward_slice,
+    reads: ["home-unbond"],
+    writes: ["no-local-effect"],
+    relation: "amount stays 4.50; fee_cap 0 proves 4.50 plus 1.25 equals 5.75; gross_cap is not enforced",
+    rounding: "reward is not a share-price update",
+    continuation: "reward is not netted with slash_home",
+    status: "specified-only",
+    retained_duties: "reward text is not a posted balance",
+    operation: staking.reward(shares: HomeShares,
+    amount: reward_slice)
+  };
+  intent SlashHome = {
+    domain: HomeRail,
+    asset: RailUSD,
+    policy: DutyTerms,
+    gross_cap: slash_slice,
+    net_floor: slash_slice,
+    reads: ["home-unbond"],
+    writes: ["no-local-effect"],
+    relation: "slash 1.25 RailUSD is 125 atoms on the whole class",
+    loss: "slash is not netted against reward; unbond duty stays pending",
+    continuation: "no rule allocates 125 atoms to the 10000 share-atom slice",
+    status: "pending",
+    retained_duties: "pending withdrawal text remains after this slash",
+    operation: staking.slash(shares: HomeShares,
+    amount: slash_slice)
+  };
+  intent UnbondHome = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    policy: DutyTerms,
+    reads: ["home-unbond"],
+    writes: ["no-local-effect"],
+    relation: "earliest_round is share_ratio_gap; 10000*5 and 25000*2 meet at zero",
+    earliest_round: share_ratio_gap,
+    continuation: "unbond does not pay the 100.00 RailUSD slice",
+    failure: "share atoms are not checked against backing atoms",
+    status: "pending-withdrawal",
+    retained_duties: "unbond duty stays pending until withdraw_home",
+    operation: staking.unbond(owner: Staker,
+    shares: HomeShares,
+    share_atoms: partial_share_atoms)
+  };
+  intent WithdrawHome = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    policy: DutyTerms,
+    gross_cap: proportional_slice,
+    fee_cap: floor_gap,
+    net_floor: withdraw_floor,
+    reads: ["home-unbond"],
+    writes: ["no-local-effect"],
+    relation: "fee_cap is 100.00 minus 96.00 RailUSD, which is 400 atoms and not a transfer fee",
+    rounding: "the 96.00 floor is not applied to a balance",
+    continuation: "withdraw does not settle the unbond duty",
+    status: "pending-withdrawal",
+    retained_duties: "minimum_backing is an open financial relation",
+    operation: staking.withdraw(owner: Staker,
+    shares: HomeShares,
+    share_atoms: partial_share_atoms,
+    minimum_backing: tighter_home_floor)
+  };
+  intent StakeForeign = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    signer: Holder,
+    policy: DutyTerms,
+    authority: "no admitted foreign grant",
+    valid: rounds(domain: ForeignClaim,
+    from: window_open,
+    to: window_close),
+    gross_cap: claim_face,
+    fee_cap: 0.000000 ClaimUSD,
+    net_floor: claim_face,
+    reads: ["foreign-unbond"],
+    writes: ["no-local-effect"],
+    relation: "foreign deposit backs ClaimUSDNominal and does not spend RailUSD",
+    rounding: "25000 share atoms are not 25000 claim atoms",
+    continuation: "deposit_foreign is not the successor of claim_foreign",
+    status: "specified-only",
+    retained_duties: "no share ledger is updated",
+    operation: staking.deposit(owner: Holder,
+    shares: ForeignShares,
+    backing: claim_face)
+  };
+  intent RewardForeign = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    policy: DutyTerms,
+    gross_cap: foreign_reward_stated,
+    fee_cap: foreign_reward_gap,
+    net_floor: foreign_reward,
+    reads: ["foreign-unbond"],
+    writes: ["no-local-effect"],
+    relation: "amount stays 4.500000; fee_cap 0 proves that sum is 5.750000; gross_cap is not enforced",
+    rounding: "foreign reward atoms are 4500000, not the home 450",
+    continuation: "same display digits are a different nominal asset",
+    status: "specified-only",
+    retained_duties: "foreign reward text is not home reward text",
+    operation: staking.reward(shares: ForeignShares,
+    amount: foreign_reward)
+  };
+  intent SlashForeign = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    policy: DutyTerms,
+    gross_cap: foreign_slash,
+    net_floor: foreign_slash,
+    reads: ["foreign-unbond"],
+    writes: ["no-local-effect"],
+    relation: "foreign slash is 1250000 ClaimUSD atoms, not 125 RailUSD atoms",
+    loss: "foreign slash is not applied to the home vault",
+    continuation: "no cross-domain loss allocation exists",
+    status: "pending",
+    retained_duties: "foreign pending withdrawal stays explicit",
+    operation: staking.slash(shares: ForeignShares,
+    amount: foreign_slash)
+  };
+  intent UnbondForeign = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    signer: Holder,
+    policy: DutyTerms,
+    reads: ["foreign-unbond"],
+    writes: ["no-local-effect"],
+    relation: "the 10000 share-atom figure is reused and is not a backing quantity",
+    continuation: "unbond does not pay 100.000000 ClaimUSD",
+    failure: "share_atoms are a scalar with no asset parameter",
+    status: "pending-withdrawal",
+    retained_duties: "foreign unbond duty is not the home unbond duty",
+    operation: staking.unbond(owner: Holder,
+    shares: ForeignShares,
+    share_atoms: partial_share_atoms)
+  };
+  intent WithdrawForeign = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    signer: Holder,
+    policy: DutyTerms,
+    gross_cap: foreign_slice,
+    fee_cap: foreign_floor_gap,
+    net_floor: foreign_floor,
+    reads: ["foreign-claim",
+    "foreign-unbond"],
+    writes: ["no-local-effect"],
+    relation: "fee_cap is 4.000000 ClaimUSD, 4000000 atoms, the gap under the 100.000000 slice",
+    rounding: "96.000000 ClaimUSD is an author floor, not a payout",
+    continuation: "this withdraw does not redeem escrowed RailUSD",
+    status: "pending-withdrawal",
+    retained_duties: "bridge claim evidence is still open",
+    operation: staking.withdraw(owner: Holder,
+    shares: ForeignShares,
+    share_atoms: partial_share_atoms,
+    minimum_backing: foreign_floor)
+  };
+  action escrow_home uses LockRail;
+  action claim_foreign uses TakeClaim;
+  action recover_home uses RecoverRail;
+  action deposit_home uses StakeHome;
+  action reward_home uses RewardHome;
+  action slash_home uses SlashHome;
+  action unbond_home uses UnbondHome;
+  action withdraw_home uses WithdrawHome;
+  action deposit_foreign uses StakeForeign;
+  action reward_foreign uses RewardForeign;
+  action slash_foreign uses SlashForeign;
+  action unbond_foreign uses UnbondForeign;
+  action withdraw_foreign uses WithdrawForeign;
+}

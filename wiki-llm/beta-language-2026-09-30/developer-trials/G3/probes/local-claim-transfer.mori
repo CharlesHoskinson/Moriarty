@@ -1,0 +1,34 @@
+// Fixture probe only. Foreign balances are zero, so this transfer must not prepare.
+profile "moriarty-beta/1";
+agreement ClaimFixture {
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Holder = {domain: ForeignClaim, id: "ClaimHolder"};
+  account Desk = {domain: ForeignClaim, id: "ForeignCustodian"};
+  account Rewards = {domain: ForeignClaim, id: "ForeignRewardDesk"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  const atom: Qty<ClaimUSD> = 0.000001 ClaimUSD;
+  const no_fee: Qty<ClaimUSD> = 0.000000 ClaimUSD;
+  intent Move = {
+    domain: ForeignClaim,
+    asset: ClaimUSD,
+    signer: Holder,
+    key: "key-claim",
+    nonce: "claim-n1",
+    pre_head: "claim-head-0",
+    valid: rounds(domain: ForeignClaim, from: 12, to: 48),
+    gross_cap: atom,
+    fee_cap: no_fee,
+    net_floor: atom,
+    operation: transfer(from: Holder, to: Desk, fee_to: Rewards, value: atom, fee: no_fee),
+    source_hash: "fixture-src",
+    policy_digest: "fixture-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action move uses Move;
+}

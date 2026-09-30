@@ -1,0 +1,22 @@
+// Authoring only for amm.* and oracle.*: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement EuroGoldPool {
+ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Trader = { domain: Preview, id: "TraderT" };
+ account Lp = { domain: Preview, id: "LiquidityProviderL" };
+ asset EUR = { domain: Preview, id: "EurCanon", scale: 2, representation: "canonical", symbol: "EUR" };
+ asset XAU = { domain: Preview, id: "XauCanon", scale: 4, representation: "canonical", symbol: "XAU" };
+ pool EuroGold = { domain: Preview, id: "EuroGold", assets: [EUR, XAU] };
+ observation XauFix = { domain: Preview, id: "XauEurFix", unit: "EUR per XAU", source: "fixing-feed-claim", observed_round: 200, maximum_age: 3, finality: "finalized", provenance: "provider binding open" };
+ const sell = 500.00 EUR;
+ const fee_room = 1.50 EUR;
+ const min_out = 0.2400 XAU;
+ intent ReadFix = { operation: oracle.select(observation: XauFix), failure: "ObservationStale or ObservationDisputed", continuation: "Pending retains dependent duty" };
+ action read_fix uses ReadFix;
+ intent SwapIn = { operation: amm.swap_exact_input(pool: EuroGold, owner: Trader, input: sell, output_asset: XAU, net_floor: min_out + fee_room, fee_cap: fee_room), rounding: "output floor benefits pool", failure: "first failure; no effects" };
+ action swap_eur_for_xau uses SwapIn;
+ intent Deposit = { operation: amm.mint(pool: EuroGold, owner: Lp, amounts: [sell + fee_room, 0.3000 XAU], minimum_share_atoms: 1000) };
+ action add_liquidity uses Deposit;
+ intent Withdraw = { operation: amm.redeem(pool: EuroGold, owner: Lp, share_atoms: 500) };
+ action remove_liquidity uses Withdraw;
+}

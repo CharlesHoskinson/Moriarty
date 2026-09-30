@@ -1,0 +1,12 @@
+profile "moriarty-beta/1";
+agreement CrossAccountStake {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Holder = {domain: ForeignClaim, id: "ClaimHolder"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  share_class HomeShares = {domain: HomeRail, id: "HomeVaultShare", backing: RailUSD};
+  intent Stake = {
+    operation: staking.deposit(owner: Holder, shares: HomeShares, backing: 250.00 RailUSD),
+  };
+  action deposit_cross uses Stake;
+}

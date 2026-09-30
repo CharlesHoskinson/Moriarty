@@ -1,0 +1,135 @@
+$ mori simulate invalid/gross_cap_too_low.mori --action pay_invoice --scenario scenarios/good.json
+--- stdout
+{
+  "status": "CoreRejected",
+  "sourceHash": "a085f1158fd317325c1a2e46627f2b2edb63d4a15843ac032aa346cfcc672fb7",
+  "scenarioHash": "f5d9d73ec7d8ea26a07a89d91e1076b919e4901d1360f65b0d2abc5922dd84c4",
+  "result": {
+    "status": "CoreRejected",
+    "ast": {
+      "profile": "moriarty-financial-agreement-source/6",
+      "programId": "MerchantInvoice",
+      "domain": "Midnight",
+      "settlement": {
+        "asset": "EuroCoinCanonical",
+        "scale": "3"
+      },
+      "selected": {
+        "actionId": "TransferLiteralFee",
+        "sourceHash": "merchant-src-1",
+        "policyDigest": "merchant-policy-1"
+      },
+      "intent": {
+        "signer": "Customer7",
+        "keyRef": "customer7-key",
+        "nonce": "inv-2026-0001",
+        "preHead": "head-0",
+        "notBefore": "0",
+        "notAfter": "20",
+        "grossCap": "125375",
+        "feeCap": "1250",
+        "netFloor": "125375",
+        "signedAction": {
+          "kind": "Transfer",
+          "from": "Customer7",
+          "to": "Merchant42",
+          "feeTo": "PlatformFees",
+          "value": "125375",
+          "fee": "1250"
+        },
+        "failure": "success_only",
+        "observations": "empty",
+        "disclosures": "empty",
+        "retainedEffects": "empty",
+        "retainedDuties": "empty",
+        "delegation": "none",
+        "recovery": "none"
+      },
+      "authenticated": {
+        "head": "head-0",
+        "predecessor": "genesis",
+        "round": "5",
+        "balances": [
+          {
+            "account": "Customer7",
+            "amount": "500000"
+          },
+          {
+            "account": "Merchant42",
+            "amount": "0"
+          },
+          {
+            "account": "PlatformFees",
+            "amount": "0"
+          }
+        ],
+        "allowance": {
+          "owner": "Customer7",
+          "remaining": "200000",
+          "spent": "0"
+        },
+        "replay": "unused",
+        "workRemaining": "10",
+        "workSpent": "0"
+      },
+      "submitted": {
+        "action": {
+          "kind": "Transfer",
+          "from": "Customer7",
+          "to": "Merchant42",
+          "feeTo": "PlatformFees",
+          "value": "125375",
+          "fee": "1250"
+        },
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Customer7",
+            "asset": "EuroCoinCanonical",
+            "amount": "126625"
+          },
+          {
+            "kind": "Credit",
+            "account": "Merchant42",
+            "asset": "EuroCoinCanonical",
+            "amount": "125375"
+          },
+          {
+            "kind": "Credit",
+            "account": "PlatformFees",
+            "asset": "EuroCoinCanonical",
+            "amount": "1250"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Customer7",
+            "amount": "126625"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "inv-2026-0001"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "head-0",
+            "successor": "head-1"
+          }
+        ],
+        "postHead": "head-1"
+      }
+    },
+    "rejection": {
+      "status": "Rejected",
+      "judgment": "intent",
+      "code": "S0_INTENT_SCOPE",
+      "diagnosticWork": 1,
+      "publishedPost": null,
+      "publishedEffects": null
+    }
+  },
+  "qualification": "local-stipulation-only"
+}
+
+--- stderr
+
+--- exit 1

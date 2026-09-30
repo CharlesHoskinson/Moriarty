@@ -1,0 +1,17 @@
+// Invalid on purpose: stake the foreign bridge-claim face in the home share class.
+// ClaimUSDNominal is not RailUSDCanonical. The composition is rejected.
+profile "moriarty-beta/1";
+agreement CrossStakeRejected {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  share_class HomeShares = {domain: HomeRail, id: "HomeVaultShare", backing: RailUSD};
+  const claim_face: Qty<ClaimUSD> = 250.000000 ClaimUSD;
+  intent StakeWrappedOnHome = {
+    operation: staking.deposit(owner: Staker, shares: HomeShares, backing: claim_face),
+    relation: "home shares cannot take the foreign nominal face",
+  };
+  action stake_wrapped_on_home uses StakeWrappedOnHome;
+}

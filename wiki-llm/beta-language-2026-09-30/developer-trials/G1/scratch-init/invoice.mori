@@ -1,0 +1,18 @@
+profile "moriarty-beta/1";
+agreement Invoice {
+ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Buyer = { domain: Preview, id: "Owner" };
+ account Seller = { domain: Preview, id: "Recipient" };
+ account Treasury = { domain: Preview, id: "Fee" };
+ asset USD = { domain: Preview, id: "A", scale: 2, representation: "canonical", symbol: "USD" };
+ const price: Qty<USD> = 10.00 USD;
+ const fee = 0.10 USD;
+ intent Payment = {
+  domain: Preview, asset: USD, signer: Buyer, key: "key1", nonce: "n1", pre_head: "h0",
+  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,
+  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),
+  source_hash: "src1", policy_digest: "policy1", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action pay uses Payment;
+}

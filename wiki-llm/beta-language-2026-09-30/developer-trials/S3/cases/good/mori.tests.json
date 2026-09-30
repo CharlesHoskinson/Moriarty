@@ -1,0 +1,112 @@
+{
+ "profile": "moriarty-beta-tests/1",
+ "cases": [
+  {
+   "name": "swap fee 3x0.25 EUR on 250.00 EUR",
+   "source": "swap_fee.mori",
+   "action": "settle_swap_fee",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "PreparedUnqualified",
+    "effects": [
+     {
+      "kind": "Debit",
+      "account": "TraderT",
+      "asset": "EurCanon",
+      "amount": "25075"
+     },
+     {
+      "kind": "Credit",
+      "account": "PoolVaultV",
+      "asset": "EurCanon",
+      "amount": "25000"
+     },
+     {
+      "kind": "Credit",
+      "account": "ProtocolFeeP",
+      "asset": "EurCanon",
+      "amount": "75"
+     },
+     {
+      "kind": "UseAllowance",
+      "owner": "TraderT",
+      "amount": "25075"
+     },
+     {
+      "kind": "UseReplay",
+      "key": "[\"Midnight\",\"TraderT\",\"swap-7\"]"
+     },
+     {
+      "kind": "AdvanceHead",
+      "predecessor": "head-a",
+      "successor": "head-b"
+     }
+    ],
+    "post": {
+     "core": "moriarty-core/5",
+     "domain": "Midnight",
+     "asset": "EurCanon",
+     "head": "head-b",
+     "round": "5",
+     "workRemaining": "3",
+     "workSpent": "1",
+     "balances": [
+      {
+       "account": "TraderT",
+       "amount": "74925"
+      },
+      {
+       "account": "PoolVaultV",
+       "amount": "30000"
+      },
+      {
+       "account": "ProtocolFeeP",
+       "amount": "75"
+      }
+     ],
+     "allowances": [
+      {
+       "owner": "TraderT",
+       "remaining": "74925",
+       "spent": "25075"
+      }
+     ],
+     "obligations": [],
+     "consumedReplay": [
+      "[\"Midnight\",\"TraderT\",\"swap-7\"]"
+     ]
+    }
+   }
+  },
+  {
+   "name": "amm swap is specified only",
+   "source": "pool_oracle.mori",
+   "action": "swap_eur_for_xau",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "Unsupported",
+    "code": "BETA_PROFILE_UNSUPPORTED"
+   }
+  },
+  {
+   "name": "amm mint is specified only",
+   "source": "pool_oracle.mori",
+   "action": "add_liquidity",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "Unsupported",
+    "code": "BETA_PROFILE_UNSUPPORTED"
+   }
+  },
+  {
+   "name": "oracle select is specified only",
+   "source": "pool_oracle.mori",
+   "action": "read_fix",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "Unsupported",
+    "code": "BETA_PROFILE_UNSUPPORTED"
+   }
+  }
+ ]
+}
