@@ -8,7 +8,7 @@ updated: 2026-09-30
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-30T19:17:22Z
+updated_at: 2026-09-30T21:34:04Z
 sources:
   - SRC-0111
   - SRC-0112
@@ -30,7 +30,7 @@ sources:
 
 ## Beta language research and delivery — 2026-09-30
 
-[[wiki/sessions/beta-language-2026-09-30|Research, beta tools and developer trials]] · [agent dossier](../wiki-llm/beta-language-2026-09-30/README.md) · [standalone package](../packages/moriarty-beta/README.md). Local S0 preparation remains unqualified; broader lifecycle syntax is a proposal and financial/authentication/proof/ledger gates remain open.
+[[wiki/sessions/beta-language-2026-09-30|Completed research, beta tools and developer trials]] · [agent dossier](../wiki-llm/beta-language-2026-09-30/README.md) · [standalone package](../packages/moriarty-beta/README.md) · [published result](../wiki-llm/beta-language-2026-09-30/RESULT.md). Local S0 preparation remains unqualified; broader lifecycle syntax is a proposal and financial/authentication/proof/ledger gates remain open.
 
 ## Governing design — 2026-09-19 consolidation
 

@@ -1,6 +1,6 @@
 # Moriarty authoring beta: delivery result
 
-2026-09-30. Research, design convergence, beta implementation, final independent implementation review and the six requested developer trials are complete. Publication is being reconciled; see the publication section for the observed state. This report separates repository observations, experiments and proposed future language features.
+2026-09-30. Research, design convergence, beta implementation, final independent implementation review and the six requested developer trials are complete. The reviewed beta is merged into main and published as an authoring prerelease; see the publication section for exact receipts. This report separates repository observations, experiments and proposed future language features.
 
 ## Delivered language and tools
 
@@ -48,10 +48,10 @@ Feedback drove repayment onboarding, precise mismatch/identity diagnostics, read
 
 ## Wiki, scope and open obligations
 
-Research and decisions are filed under `wiki-llm`; canonical navigation was saved through an inspected portable transaction, with [inspection](evidence/save-navigation-inspect.json) and [apply receipt](evidence/save-navigation-result.json). [Strict canonical lint](evidence/wiki-lint-final.txt) reports20 preexisting findings (11 dead links,7 duplicate basenames,2 stale index entries), no new navigation/frontmatter/provenance/orphan findings. No accepted financial claim was promoted.
+Research and decisions are filed under `wiki-llm`; canonical navigation was saved through an inspected portable transaction, with [inspection](evidence/save-navigation-inspect.json) and [apply receipt](evidence/save-navigation-result.json). [Strict canonical completion lint](evidence/wiki-lint-completion.txt) reports20 preexisting findings (11 dead links,7 duplicate basenames,2 stale index entries), no new navigation/frontmatter/provenance/orphan findings. [Completion navigation](evidence/save-completion-result.json) was also applied through an inspected transaction after publication. No accepted financial claim was promoted.
 
 Every successful local money result remains **PreparedUnqualified/local-stipulation-only**. Four external premises remain canonical intent signature, snapshot-to-head, head extension and atomic ledger compare-and-consume; four unverified bindings remain agreement ID, selected program, asset scale and authenticated predecessor. Source hashes/typed IDs/prose policies do not authenticate claims. Signatures, native proof/correspondence, atomic financial ledger acceptance and full eight-area conformance remain open. Existing campaign/resource stops remain unchanged. This beta advances language authoring and demonstrable local tooling; those separate product obligations are not marked complete.
 
 ## Publication
 
-Not yet published. Final current reviewer reconciliation and scoped delivery review precede commit, pull request, main integration and beta artifact publication. No npm registry or tutorial-site deployment is claimed.
+[PR11](https://github.com/CharlesHoskinson/Moriarty/pull/11) merged the reviewed beta into main at `f5295e601bbbb2adb0e8c81c893621259e6b2df1`. The [authoring prerelease](https://github.com/CharlesHoskinson/Moriarty/releases/tag/moriarty-authoring-beta-0.1.0-beta.1) targets that commit and publishes the CLI tarball, VSIX and SHA256SUMS. [Publication receipt](evidence/publication-v6.json) records merged state, actual target and uploaded asset digests. [Actual published downloads](evidence/published-downloads-v6.json) match the checksums. The subsequent completion-document commit changes no frozen code or release artifact. No npm registry or tutorial-site deployment is claimed.

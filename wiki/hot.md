@@ -10,7 +10,7 @@ tags: [moriarty, consolidation, recursion]
 
 # Moriarty current direction
 
-[September30 beta language loop](sessions/beta-language-2026-09-30.md) links nine-domain research, design reviews, standalone authoring/local tools, and developer/tutorial feedback. Only existing S0 transfer/repayment preparation is local; the typed full-language horizon stays specified-only.
+[Completed September30 beta language loop](sessions/beta-language-2026-09-30.md) links research, design reviews, published standalone authoring/local tools, six developer trials, and the tutorial guide/site plan. [Final result](../wiki-llm/beta-language-2026-09-30/RESULT.md) records the prerelease and measured scope. Only existing S0 transfer/repayment preparation is local; the typed full-language horizon stays specified-only.
 
 [One consolidated vision, design and roadmap](research/consolidated-design/index.md) controls the permissionless native Midnight language and optional federated kernel boundary. [Backend requirements](../docs/MORIARTY-BACKEND-REQUIREMENTS.md) specify ZR01–16 plus Mina-derived MNR01–08. The user assumes comprehensive Midnight recursion in about six months; native recursive/private composition remains required, without a Lean dependency.
 

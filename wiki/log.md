@@ -8,7 +8,7 @@ updated: 2026-09-30
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-30T19:17:22Z
+updated_at: 2026-09-30T21:34:04Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,8 @@ sources:
 ---
 
 # Wiki log
+
+2026-09-30 — Completed and published the reviewed authoring-beta loop through PR11 and the authoring prerelease. Six developer trials, current package reruns, scoped final reviews and tutorial recommendations are preserved in the dossier. Signature/native/proof/financial ledger gates remain open; no canonical financial claim is promoted.
 
 2026-09-30 — Filed navigation to the user-authorized beta language research and delivery dossier, preserving original audits, scoped implementation evidence and developer/tutorial feedback. Dossier findings are working knowledge; no canonical financial/proof claim is accepted by this navigation update.
 
