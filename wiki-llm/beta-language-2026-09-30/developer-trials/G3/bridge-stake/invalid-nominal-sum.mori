@@ -1,0 +1,10 @@
+// Invalid on purpose: the two USD symbols are not one asset.
+// 250.00 RailUSD and 250.000000 ClaimUSD cannot be added.
+profile "moriarty-beta/1";
+agreement NominalSumRejected {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  const crossed = 250.00 RailUSD + 250.000000 ClaimUSD;
+}

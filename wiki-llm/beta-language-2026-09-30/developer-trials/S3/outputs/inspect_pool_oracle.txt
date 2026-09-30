@@ -1,0 +1,421 @@
+{
+  "status": "AuthoringChecked",
+  "sourceHash": "f4a93ffa3043f68aee0eba21a7a4573ff884e5841bd3053b06431774df4956c9",
+  "diagnostics": [],
+  "agreement": "EuroGoldPool",
+  "identities": [
+    {
+      "kind": "domain",
+      "name": "Preview",
+      "claims": {
+        "id": "Midnight",
+        "chain": "midnight",
+        "network": "preview"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 151,
+        "end": 226
+      }
+    },
+    {
+      "kind": "account",
+      "name": "Trader",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "TraderT"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 228,
+        "end": 280
+      }
+    },
+    {
+      "kind": "account",
+      "name": "Lp",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "LiquidityProviderL"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 282,
+        "end": 341
+      }
+    },
+    {
+      "kind": "asset",
+      "name": "EUR",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "EurCanon",
+        "scale": "2",
+        "representation": "canonical",
+        "symbol": "EUR"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 343,
+        "end": 445
+      }
+    },
+    {
+      "kind": "asset",
+      "name": "XAU",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "XauCanon",
+        "scale": "4",
+        "representation": "canonical",
+        "symbol": "XAU"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 447,
+        "end": 549
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "read_fix",
+      "intent": "ReadFix",
+      "span": {
+        "start": 1084,
+        "end": 1113
+      },
+      "nameSpan": {
+        "start": 1091,
+        "end": 1099
+      },
+      "support": "SpecifiedOnly",
+      "coverage": {
+        "financialRelations": "Open",
+        "localPreparation": "Unsupported"
+      },
+      "bounds": {
+        "scalarAndQuantityMax": "340282366920938463463374607431768211455"
+      },
+      "requiredPremises": [],
+      "unverifiedBindings": []
+    },
+    {
+      "name": "swap_eur_for_xau",
+      "intent": "SwapIn",
+      "span": {
+        "start": 1349,
+        "end": 1385
+      },
+      "nameSpan": {
+        "start": 1356,
+        "end": 1372
+      },
+      "support": "SpecifiedOnly",
+      "coverage": {
+        "financialRelations": "Open",
+        "localPreparation": "Unsupported"
+      },
+      "bounds": {
+        "scalarAndQuantityMax": "340282366920938463463374607431768211455"
+      },
+      "requiredPremises": [],
+      "unverifiedBindings": []
+    },
+    {
+      "name": "add_liquidity",
+      "intent": "Deposit",
+      "span": {
+        "start": 1524,
+        "end": 1558
+      },
+      "nameSpan": {
+        "start": 1531,
+        "end": 1544
+      },
+      "support": "SpecifiedOnly",
+      "coverage": {
+        "financialRelations": "Open",
+        "localPreparation": "Unsupported"
+      },
+      "bounds": {
+        "scalarAndQuantityMax": "340282366920938463463374607431768211455"
+      },
+      "requiredPremises": [],
+      "unverifiedBindings": []
+    },
+    {
+      "name": "remove_liquidity",
+      "intent": "Withdraw",
+      "span": {
+        "start": 1651,
+        "end": 1689
+      },
+      "nameSpan": {
+        "start": 1658,
+        "end": 1674
+      },
+      "support": "SpecifiedOnly",
+      "coverage": {
+        "financialRelations": "Open",
+        "localPreparation": "Unsupported"
+      },
+      "bounds": {
+        "scalarAndQuantityMax": "340282366920938463463374607431768211455"
+      },
+      "requiredPremises": [],
+      "unverifiedBindings": []
+    }
+  ],
+  "intents": [
+    {
+      "name": "ReadFix",
+      "terms": {
+        "operation": {
+          "tag": "call",
+          "name": "oracle.select",
+          "args": {
+            "observation": {
+              "tag": "entity",
+              "kind": "observation",
+              "declaration": "XauFix",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "XauEurFix",
+                "unit": "EUR per XAU",
+                "source": "fixing-feed-claim",
+                "observed_round": "200",
+                "maximum_age": "3",
+                "finality": "finalized",
+                "provenance": "provider binding open"
+              },
+              "authenticated": false
+            }
+          }
+        },
+        "failure": {
+          "tag": "string",
+          "value": "ObservationStale or ObservationDisputed"
+        },
+        "continuation": {
+          "tag": "string",
+          "value": "Pending retains dependent duty"
+        }
+      }
+    },
+    {
+      "name": "SwapIn",
+      "terms": {
+        "operation": {
+          "tag": "call",
+          "name": "amm.swap_exact_input",
+          "args": {
+            "pool": {
+              "tag": "entity",
+              "kind": "pool",
+              "declaration": "EuroGold",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "EuroGold"
+              },
+              "authenticated": false
+            },
+            "owner": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Trader",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "TraderT"
+              },
+              "authenticated": false
+            },
+            "input": {
+              "tag": "qty",
+              "asset": "EUR",
+              "atoms": "50000"
+            },
+            "output_asset": {
+              "tag": "entity",
+              "kind": "asset",
+              "declaration": "XAU",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "XauCanon",
+                "scale": "4",
+                "representation": "canonical",
+                "symbol": "XAU"
+              },
+              "authenticated": false
+            },
+            "net_floor": {
+              "tag": "qty",
+              "asset": "XAU",
+              "atoms": "2400"
+            },
+            "fee_cap": {
+              "tag": "qty",
+              "asset": "EUR",
+              "atoms": "150"
+            }
+          }
+        },
+        "rounding": {
+          "tag": "string",
+          "value": "output floor benefits pool"
+        },
+        "failure": {
+          "tag": "string",
+          "value": "first failure; no effects"
+        }
+      }
+    },
+    {
+      "name": "Deposit",
+      "terms": {
+        "operation": {
+          "tag": "call",
+          "name": "amm.mint",
+          "args": {
+            "pool": {
+              "tag": "entity",
+              "kind": "pool",
+              "declaration": "EuroGold",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "EuroGold"
+              },
+              "authenticated": false
+            },
+            "owner": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Lp",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "LiquidityProviderL"
+              },
+              "authenticated": false
+            },
+            "amounts": {
+              "tag": "array",
+              "items": [
+                {
+                  "tag": "qty",
+                  "asset": "EUR",
+                  "atoms": "50150"
+                },
+                {
+                  "tag": "qty",
+                  "asset": "XAU",
+                  "atoms": "3000"
+                }
+              ]
+            },
+            "minimum_share_atoms": {
+              "tag": "scalar",
+              "value": "1000"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Withdraw",
+      "terms": {
+        "operation": {
+          "tag": "call",
+          "name": "amm.redeem",
+          "args": {
+            "pool": {
+              "tag": "entity",
+              "kind": "pool",
+              "declaration": "EuroGold",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "EuroGold"
+              },
+              "authenticated": false
+            },
+            "owner": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Lp",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "LiquidityProviderL"
+              },
+              "authenticated": false
+            },
+            "share_atoms": {
+              "tag": "scalar",
+              "value": "500"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "coverage": {
+    "syntax": "checked when diagnostics empty",
+    "names": "checked",
+    "quantities": "nominal exact arithmetic",
+    "financialRelations": "Open",
+    "localS0Actions": [],
+    "authentication": "open",
+    "ledgerCommit": "open"
+  },
+  "bounds": {
+    "scalarAndQuantityMax": "340282366920938463463374607431768211455"
+  },
+  "requiredPremises": [],
+  "unverifiedBindings": []
+}

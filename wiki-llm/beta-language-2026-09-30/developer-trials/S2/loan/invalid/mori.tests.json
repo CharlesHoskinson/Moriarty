@@ -1,0 +1,65 @@
+{
+ "profile": "moriarty-beta-tests/1",
+ "cases": [
+  {
+   "name": "overpay by one cent 512.51",
+   "source": "overpay_by_one_cent.mori",
+   "action": "pay_full",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_EFFECT_RANGE"
+   }
+  },
+  {
+   "name": "gross_cap below amount",
+   "source": "cap_below_amount.mori",
+   "action": "pay_full",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_INTENT_SCOPE"
+   }
+  },
+  {
+   "name": "nonzero fee_cap on repay",
+   "source": "nonzero_fee_cap.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_INTENT_SCOPE"
+   }
+  },
+  {
+   "name": "wrong signer",
+   "source": "wrong_signer.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "AuthoringRejected",
+    "code": "BETA_SIGNER"
+   }
+  },
+  {
+   "name": "bare amount without asset",
+   "source": "bare_amount.mori",
+   "action": "pay_partial",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "AuthoringRejected",
+    "code": "BETA_DECIMAL_SCALAR"
+   }
+  },
+  {
+   "name": "three decimals on scale 2",
+   "source": "too_precise.mori",
+   "action": "pay_full",
+   "scenario": "scenarios/open.json",
+   "expect": {
+    "status": "AuthoringRejected",
+    "code": "BETA_PRECISION"
+   }
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+profile "moriarty-beta/1";
+agreement CapOtherAsset {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  intent LockRail = {
+    operation: bridge.escrow(owner: Staker, amount: 250.00 RailUSD, destination: ForeignClaim, claim_id: "claim-rail-250"),
+    fee_cap: 1.000000 ClaimUSD,
+  };
+  action escrow_home uses LockRail;
+}

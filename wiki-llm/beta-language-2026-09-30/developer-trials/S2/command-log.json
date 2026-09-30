@@ -1,0 +1,219 @@
+[
+ {
+  "command": "../node_modules/.bin/mori check loan.mori --json",
+  "exit_code": 0,
+  "expected": "AuthoringChecked (exit 0)",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 115, \"end\": 124 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 128, \"end\": 203 },",
+  "output_file": "outputs/check.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori fmt loan.mori",
+  "exit_code": 0,
+  "expected": "formatted stdout (exit 0)",
+  "observed": "// Original: AccrualFirst loan repayment, partial (100.00) and full (512.50). profile \"moriarty-beta/1\"; agreement LoanRepay { domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" }; account Alice = { domain: Preview, id: \"Alice\" }; account Bob = { domain: Preview, id: \"Bob\" }; a",
+  "output_file": "outputs/fmt.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori inspect loan.mori",
+  "exit_code": 0,
+  "expected": "identity claims, open premises (exit 0)",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"identities\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"claims\": { \"id\": \"Midnight\", \"chain\": \"midnight\", \"network\": \"preview\" }, \"authentica",
+  "output_file": "outputs/inspect.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori expand loan.mori --action pay_partial --scenario scenarios/open.json",
+  "exit_code": 0,
+  "expected": "Source/6 text (exit 0)",
+  "observed": "{ \"status\": \"Expanded\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"source6\": \"profile \\\"moriarty-financial-agreement-source/6\\\";\\nagreement LoanRepay {\\ndomain Midnight;\\nsettl",
+  "output_file": "outputs/expand_partial.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario scenarios/open.json",
+  "exit_code": 0,
+  "expected": "PreparedUnqualified; principal 41250 accrued 0 (exit 0)",
+  "observed": "{ \"status\": \"PreparedUnqualified\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"result\": { \"status\": \"PreparedUnqualified\", \"ast\": { \"profile\": \"moriarty-financial-agreement-sour",
+  "output_file": "outputs/sim_partial.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_full --scenario scenarios/open.json",
+  "exit_code": 0,
+  "expected": "Prepared; settle: principal 0 accrued 0 outstanding 0 Settled; Alice 80000-51250=28750 Bob 56250 (exit 0)",
+  "observed": "{ \"status\": \"PreparedUnqualified\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"result\": { \"status\": \"PreparedUnqualified\", \"ast\": { \"profile\": \"moriarty-financial-agreement-sour",
+  "output_file": "outputs/sim_full.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario scenarios/expired.json",
+  "exit_code": 1,
+  "expected": "CoreRejected (round 11 > valid to 10), no effects (exit 1 is the documented-by-behaviour code for rejections; my first expectation of 0 was wrong)",
+  "observed": "{ \"status\": \"CoreRejected\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"scenarioHash\": \"ab0d8fdf1c0af8888bf41a20d74f151f682b5801fb3ab1ed6212004bb26c9709\", \"result\": { \"status\": \"CoreRejected\", \"ast\": { \"profile\": \"moriarty-financial-agreement-source/6\", \"progra",
+  "output_file": "outputs/sim_expired.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_full --scenario scenarios/short_funds.json",
+  "exit_code": 1,
+  "expected": "CoreRejected: payer has 51249 < 51250 (exit 1 is the documented-by-behaviour code for rejections; my first expectation of 0 was wrong)",
+  "observed": "{ \"status\": \"CoreRejected\", \"sourceHash\": \"e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161\", \"scenarioHash\": \"9278f53d205a3562336c6cc2cfc8c78b4bc21ded2523da86831735672683cdb6\", \"result\": { \"status\": \"CoreRejected\", \"ast\": { \"profile\": \"moriarty-financial-agreement-source/6\", \"progra",
+  "output_file": "outputs/sim_short.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/overpay_by_one_cent.mori --json",
+  "exit_code": 0,
+  "expected": "check passes (structure only); Core rejects at simulate (exit 0)",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"28131eb041fb8de0c255df5776fd62e30352e2b7ab866098d62f1133aa0d1f30\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 115, \"end\": 124 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 128, \"end\": 203 },",
+  "output_file": "outputs/ck_over1.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate invalid/overpay_by_one_cent.mori --action pay_full --scenario scenarios/open.json",
+  "exit_code": 1,
+  "expected": "CoreRejected S0_EFFECT_RANGE, no effects (exit 1 is the documented-by-behaviour code for rejections; my first expectation of 0 was wrong)",
+  "observed": "{ \"status\": \"CoreRejected\", \"sourceHash\": \"28131eb041fb8de0c255df5776fd62e30352e2b7ab866098d62f1133aa0d1f30\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"result\": { \"status\": \"CoreRejected\", \"ast\": { \"profile\": \"moriarty-financial-agreement-source/6\", \"progra",
+  "output_file": "outputs/sim_over1.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/cap_below_amount.mori --json",
+  "exit_code": 0,
+  "expected": "check diagnostic (exit 1) — my expectation was wrong: structural check passes; Core rejects at simulate",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"fd7c9ecc79d1a2036197e5c8f83b59ab3ef8928002b5678ca849d5d27633d248\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 115, \"end\": 124 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 128, \"end\": 203 },",
+  "output_file": "outputs/ck_cap_below_amount.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/nonzero_fee_cap.mori --json",
+  "exit_code": 0,
+  "expected": "check diagnostic (exit 1) — my expectation was wrong: structural check passes; Core rejects at simulate",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"2821e1812d11a88067a11a2b0bd6f3dce71bc022569049f4b9dfa859e3418944\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 115, \"end\": 124 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 128, \"end\": 203 },",
+  "output_file": "outputs/ck_nonzero_fee_cap.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/wrong_signer.mori --json",
+  "exit_code": 1,
+  "expected": "check diagnostic (exit 1)",
+  "observed": "{ \"status\": \"AuthoringRejected\", \"sourceHash\": \"49060ae54a8178ece4133c80352c7b5cb5497e3b2c69cda8a3085e26a9c9985c\", \"diagnostics\": [ { \"code\": \"BETA_SIGNER\", \"message\": \"Repayment signer must be payer\", \"span\": { \"start\": 270, \"end\": 300 } } ], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 11",
+  "output_file": "outputs/ck_wrong_signer.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/bare_amount.mori --json",
+  "exit_code": 1,
+  "expected": "check diagnostic (exit 1)",
+  "observed": "{ \"status\": \"AuthoringRejected\", \"sourceHash\": \"6b3960ba9e8c2c8c47a387eb3323c43251ecb1bb72204e6362ed96c686dfabb7\", \"diagnostics\": [ { \"code\": \"BETA_DECIMAL_SCALAR\", \"message\": \"A decimal requires an asset reference\", \"span\": { \"start\": 861, \"end\": 867 } } ], \"agreement\": \"LoanRepay\", \"agreementSpan\"",
+  "output_file": "outputs/ck_bare_amount.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check invalid/short_decimal.mori --json",
+  "exit_code": 0,
+  "expected": "check diagnostic (exit 1)",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"e4845ac5ca5051df576f7bea165ad9154df196a0bd845e449668d423391794ed\", \"diagnostics\": [], \"agreement\": \"LoanRepay\", \"agreementSpan\": { \"start\": 115, \"end\": 124 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 128, \"end\": 203 },",
+  "output_file": "outputs/ck_short_decimal.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate invalid/cap_below_amount.mori --action pay_full --scenario scenarios/open.json",
+  "exit_code": 1,
+  "expected": "CoreRejected S0_INTENT_SCOPE (gross cap < amount) (exit 1 is the documented-by-behaviour code for rejections; my first expectation of 0 was wrong)",
+  "observed": "{ \"status\": \"CoreRejected\", \"sourceHash\": \"fd7c9ecc79d1a2036197e5c8f83b59ab3ef8928002b5678ca849d5d27633d248\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"result\": { \"status\": \"CoreRejected\", \"ast\": { \"profile\": \"moriarty-financial-agreement-source/6\", \"progra",
+  "output_file": "outputs/sim_cap_below.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate invalid/nonzero_fee_cap.mori --action pay_partial --scenario scenarios/open.json",
+  "exit_code": 1,
+  "expected": "CoreRejected S0_INTENT_SCOPE (fee_cap!=0) (exit 1 is the documented-by-behaviour code for rejections; my first expectation of 0 was wrong)",
+  "observed": "{ \"status\": \"CoreRejected\", \"sourceHash\": \"2821e1812d11a88067a11a2b0bd6f3dce71bc022569049f4b9dfa859e3418944\", \"scenarioHash\": \"60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec\", \"result\": { \"status\": \"CoreRejected\", \"ast\": { \"profile\": \"moriarty-financial-agreement-source/6\", \"progra",
+  "output_file": "outputs/sim_fee_cap.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori test .",
+  "exit_code": 0,
+  "expected": "TestsPassed for 7 cases (exit 0)",
+  "observed": "{ \"status\": \"TestsPassed\", \"qualification\": \"local-stipulation-only\", \"cases\": [ { \"name\": \"partial 100.00 clears accrued then principal\", \"passed\": true, \"status\": \"PreparedUnqualified\", \"code\": null }, { \"name\": \"interest-only 5.00 leaves 7.50 accrued\", \"passed\": true, \"status\": \"PreparedUnqualifi",
+  "output_file": "outputs/test_good.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori test invalid",
+  "exit_code": 0,
+  "expected": "TestsPassed for 6 intentionally-invalid cases (expectations are rejections) (exit 0)",
+  "observed": "{ \"status\": \"TestsPassed\", \"qualification\": \"local-stipulation-only\", \"cases\": [ { \"name\": \"overpay by one cent 512.51\", \"passed\": true, \"status\": \"CoreRejected\", \"code\": \"S0_EFFECT_RANGE\" }, { \"name\": \"gross_cap below amount\", \"passed\": true, \"status\": \"CoreRejected\", \"code\": \"S0_INTENT_SCOPE\" }, {",
+  "output_file": "outputs/test_invalid.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori test ctl",
+  "exit_code": 1,
+  "expected": "TestsFailed because expected outstanding is deliberately wrong (exit 1)",
+  "observed": "{ \"status\": \"TestsFailed\", \"qualification\": \"local-stipulation-only\", \"cases\": [ { \"name\": \"partial 100.00 clears accrued then principal\", \"passed\": false, \"status\": \"PreparedUnqualified\", \"code\": null } ] } ",
+  "output_file": "outputs/test_control.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_acct.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_ACCOUNTING\", \"message\": \"Outstanding must equal principal plus accrued (/obligation)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb",
+  "output_file": "outputs/scen_acct.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_settled.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_SCHEMA\", \"message\": \"S0 requires an Outstanding obligation (/obligation/status)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc",
+  "output_file": "outputs/scen_settled.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_self.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_IDENTITY\", \"message\": \"Obligation does not match source request (/obligation)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc61",
+  "output_file": "outputs/scen_self.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_id.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_IDENTITY\", \"message\": \"Obligation does not match source request (/obligation)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc61",
+  "output_file": "outputs/scen_id.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_unk.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_SCHEMA\", \"message\": \"Unknown field gross_cap (/)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc61e022ca7bd5a4c07b71d8e2626e0\",",
+  "output_file": "outputs/scen_unk.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_dup.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_JSON_DUPLICATE\", \"message\": \"Duplicate JSON key round (/)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc61e022ca7bd5a4c07b71d8e2626e0\",",
+  "output_file": "outputs/scen_dup.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate loan.mori --action pay_partial --scenario /tmp/s_replay.json",
+  "exit_code": 1,
+  "expected": "scenario rejected / not Prepared (exit 1)",
+  "observed": "{ \"status\": \"FormationRejected\", \"diagnostics\": [ { \"code\": \"BETA_SCENARIO_SCHEMA\", \"message\": \"Expected closed replay tag (/replay)\", \"span\": { \"start\": 2107, \"end\": 2142 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"97d6cc49a8cacd02fedbf93ab439fb49dfc61e022ca7bd5a4c07b71d8",
+  "output_file": "outputs/scen_replay.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori check /tmp/lending.mori --json",
+  "exit_code": 0,
+  "expected": "check lists SpecifiedOnly actions (exit 0)",
+  "observed": "{ \"status\": \"AuthoringChecked\", \"sourceHash\": \"2a85e347e953120c070982dd844c65c7afbe2899ec198c242e0aceea09995bb3\", \"diagnostics\": [], \"agreement\": \"LendingDemo\", \"agreementSpan\": { \"start\": 112, \"end\": 123 }, \"declarations\": [ { \"kind\": \"domain\", \"name\": \"Preview\", \"span\": { \"start\": 126, \"end\": 199 ",
+  "output_file": "outputs/specified_check.txt"
+ },
+ {
+  "command": "../node_modules/.bin/mori simulate /tmp/lending.mori --action borrow --scenario scenarios/open.json",
+  "exit_code": 1,
+  "expected": "BETA_PROFILE_UNSUPPORTED no effects (exit 1)",
+  "observed": "{ \"status\": \"Unsupported\", \"diagnostics\": [ { \"code\": \"BETA_PROFILE_UNSUPPORTED\", \"message\": \"Recognized authoring profile has no local execution\", \"span\": { \"start\": 786, \"end\": 812 } } ], \"publishedPost\": null, \"publishedEffects\": null, \"sourceHash\": \"2a85e347e953120c070982dd844c65c7afbe2899ec198c",
+  "output_file": "outputs/specified_sim.txt"
+ },
+ {
+  "command": "mori fmt /tmp/fmtcopy.mori --write; then fmt again and diff; check sourceHash before/after",
+  "exit_code": 0,
+  "expected": "idempotent; hash changes vs original",
+  "observed": "idempotent; hash 97d6cc49… -> 988ddbe0… (formatting changes bytes)",
+  "output_file": "(inline, see report)"
+ },
+ {
+  "command": "node mcp.cjs (initialize, notifications/initialized, tools/list, tools/call preview pay_full)",
+  "exit_code": 0,
+  "expected": "4 tools; preview PreparedUnqualified",
+  "observed": "initialize ok; tools/list ok; preview returned PreparedUnqualified",
+  "output_file": "outputs/mcp_session.txt"
+ }
+]

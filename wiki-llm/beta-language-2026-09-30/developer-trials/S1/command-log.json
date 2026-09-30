@@ -1,0 +1,177 @@
+[
+  {
+    "command": "mori --help",
+    "exit_code": 0,
+    "expected": "usage",
+    "observed": "one-line usage, no per-command flags",
+    "output_file": "outputs/00-help.txt"
+  },
+  {
+    "command": "mori init inv (first run, output only in transcript; scaffold kept in inv/)",
+    "exit_code": 0,
+    "expected": "Initialized",
+    "observed": "status Initialized, qualification local-stipulation-only",
+    "output_file": "inv/"
+  },
+  {
+    "command": "mori init inv (second run)",
+    "exit_code": 1,
+    "expected": "refuses existing target",
+    "observed": "see file",
+    "output_file": "outputs/00-init-existing.txt"
+  },
+  {
+    "command": "mori check merchant.mori --json (cwd merchant)",
+    "exit_code": 0,
+    "expected": "exit 0 AuthoringChecked, LocalS0",
+    "observed": "\"status\": \"AuthoringChecked\",",
+    "output_file": "outputs/01-check.txt"
+  },
+  {
+    "command": "mori inspect merchant.mori (cwd merchant)",
+    "exit_code": 0,
+    "expected": "gross 126625, fee 1250, net 125375 atoms",
+    "observed": "\"status\": \"AuthoringChecked\",",
+    "output_file": "outputs/02-inspect.txt"
+  },
+  {
+    "command": "mori fmt merchant.mori (cwd merchant)",
+    "exit_code": 0,
+    "expected": "formatted source to stdout",
+    "observed": "(see file)",
+    "output_file": "outputs/03-fmt.txt"
+  },
+  {
+    "command": "mori expand merchant.mori --action pay_invoice --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 0,
+    "expected": "Source/6 + origin map",
+    "observed": "\"status\": \"Expanded\",",
+    "output_file": "outputs/04-expand-good.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified; debit 126625, credit 125375/1250",
+    "observed": "\"status\": \"PreparedUnqualified\", | \"status\": \"PreparedUnqualified\", | \"status\": \"PreparedUnqualified\",",
+    "output_file": "outputs/05-sim-good.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/low_allowance.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "rejection: allowance 100000 < 126625, no effects",
+    "observed": "\"status\": \"CoreRejected\", | \"status\": \"CoreRejected\", | \"status\": \"Rejected\", | \"code\": \"S0_AUTH_SCOPE\",",
+    "output_file": "outputs/06-sim-low-allowance.txt"
+  },
+  {
+    "command": "mori test . (cwd merchant)",
+    "exit_code": 0,
+    "expected": "exit 0 TestsPassed, 4 cases",
+    "observed": "\"status\": \"TestsPassed\", | \"status\": \"PreparedUnqualified\", | \"code\": null | \"status\": \"CoreRejected\",",
+    "output_file": "outputs/07-test.txt"
+  },
+  {
+    "command": "mori test negative-control (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 TestsFailed (wrong expected code)",
+    "observed": "\"status\": \"TestsFailed\", | \"status\": \"PreparedUnqualified\", | \"code\": null | \"status\": \"CoreRejected\",",
+    "output_file": "outputs/08-test-negative-control.txt"
+  },
+  {
+    "command": "mori check invalid/unit_mix.mori --json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 BETA_ASSET_MISMATCH",
+    "observed": "\"status\": \"AuthoringRejected\", | \"code\": \"BETA_ASSET_MISMATCH\", | \"message\": \"Addition/subtraction require identical numeric types and nominal assets\",",
+    "output_file": "outputs/09-check-unit-mix.txt"
+  },
+  {
+    "command": "mori check invalid/unknown_name.mori --json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 BETA_REFERENCE",
+    "observed": "\"status\": \"AuthoringRejected\", | \"code\": \"BETA_REFERENCE\", | \"message\": \"Unknown or forward reference fees\",",
+    "output_file": "outputs/10-check-unknown-name.txt"
+  },
+  {
+    "command": "mori check invalid/scale_mismatch.mori --json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 BETA_PRECISION",
+    "observed": "\"status\": \"AuthoringRejected\", | \"code\": \"BETA_PRECISION\", | \"message\": \"Quantity has more decimals than asset scale\",",
+    "output_file": "outputs/11-check-precision.txt"
+  },
+  {
+    "command": "mori simulate invalid/gross_cap_too_low.mori --action pay_invoice --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 CoreRejected",
+    "observed": "\"status\": \"CoreRejected\", | \"status\": \"CoreRejected\", | \"status\": \"Rejected\", | \"code\": \"S0_INTENT_SCOPE\",",
+    "output_file": "outputs/12-sim-gross-cap-low.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/expired.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "exit 1 CoreRejected",
+    "observed": "\"status\": \"CoreRejected\", | \"status\": \"CoreRejected\", | \"status\": \"Rejected\", | \"code\": \"S0_INTENT_SCOPE\",",
+    "output_file": "outputs/13-sim-expired.txt"
+  },
+  {
+    "command": "mori check invalid/specified_only_lending.mori --json (cwd merchant)",
+    "exit_code": 0,
+    "expected": "exit 0, actions SpecifiedOnly",
+    "observed": "\"status\": \"AuthoringChecked\",",
+    "output_file": "outputs/14-check-specified-only.txt"
+  },
+  {
+    "command": "mori expand invalid/specified_only_lending.mori --action borrow --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "BETA_PROFILE_UNSUPPORTED",
+    "observed": "\"status\": \"Unsupported\", | \"code\": \"BETA_PROFILE_UNSUPPORTED\", | \"message\": \"Recognized authoring profile has no local execution\",",
+    "output_file": "outputs/15-expand-specified-only.txt"
+  },
+  {
+    "command": "mori simulate invalid/specified_only_lending.mori --action borrow --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "BETA_PROFILE_UNSUPPORTED no effects",
+    "observed": "\"status\": \"Unsupported\", | \"code\": \"BETA_PROFILE_UNSUPPORTED\", | \"message\": \"Recognized authoring profile has no local execution\",",
+    "output_file": "outputs/16-sim-specified-only.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/bad_unknown_field.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "scenario rejected",
+    "observed": "\"status\": \"FormationRejected\", | \"code\": \"BETA_SCENARIO_SCHEMA\", | \"message\": \"Unknown field bogus (/)\",",
+    "output_file": "outputs/17-sim-unknown-field.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/bad_missing_allowance.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "scenario rejected",
+    "observed": "\"status\": \"FormationRejected\", | \"code\": \"BETA_SCENARIO_SCHEMA\", | \"message\": \"Missing field allowance (//allowance)\",",
+    "output_file": "outputs/18-sim-missing-allowance.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action pay_invoice --scenario scenarios/bad_dup_key.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "duplicate key rejected",
+    "observed": "\"status\": \"FormationRejected\", | \"code\": \"BETA_JSON_DUPLICATE\", | \"message\": \"Duplicate JSON key round (/)\",",
+    "output_file": "outputs/19-sim-dup-key.txt"
+  },
+  {
+    "command": "mori simulate merchant.mori --action nope --scenario scenarios/good.json (cwd merchant)",
+    "exit_code": 1,
+    "expected": "unknown action error",
+    "observed": "\"status\": \"AuthoringRejected\", | \"code\": \"BETA_ACTION_UNKNOWN\", | \"message\": \"Unknown action nope\",",
+    "output_file": "outputs/20-sim-unknown-action.txt"
+  },
+  {
+    "command": "mori fmt invalid/unit_mix.mori (cwd merchant)",
+    "exit_code": 1,
+    "expected": "no edit for invalid source",
+    "observed": "\"status\": \"AuthoringRejected\", | \"code\": \"BETA_ASSET_MISMATCH\", | \"message\": \"Addition/subtraction require identical numeric types and nominal assets\",",
+    "output_file": "outputs/21-fmt-invalid.txt"
+  },
+  {
+    "command": "node mcp_client.mjs (initialize, initialized, tools/list, tools/call preview low_allowance)",
+    "exit_code": 0,
+    "expected": "tools list + CoreRejected preview",
+    "observed": "see file",
+    "output_file": "outputs/22-mcp-session.txt"
+  }
+]

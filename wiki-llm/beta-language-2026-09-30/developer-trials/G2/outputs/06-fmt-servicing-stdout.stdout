@@ -1,0 +1,179 @@
+// Note service desk for one closed term note.
+// Scale: USD id UsdNote uses 2, so 1.00 USD is 100 atoms. GOLD id GoldGram uses 3.
+// Named quantities are source intent. A scenario is a separate untrusted local stipulation.
+// Local transfer and AccrualFirst repay prepare only. Lending originate, roll, and liquidate stay SpecifiedOnly.
+// Results are PreparedUnqualified: no signature, provider authentication, proof, or ledger acceptance.
+profile "moriarty-beta/1";
+agreement NoteService {
+  domain Desk = {
+    id: "DeskNet",
+    chain: "midnight",
+    network: "preview"
+  };
+  account Borrower = {
+    domain: Desk,
+    id: "Borrower"
+  };
+  account Lender = {
+    domain: Desk,
+    id: "Lender"
+  };
+  account Servicer = {
+    domain: Desk,
+    id: "Servicer"
+  };
+  asset USD = {
+    domain: Desk,
+    id: "UsdNote",
+    scale: 2,
+    representation: "canonical",
+    symbol: "USD"
+  };
+  asset GOLD = {
+    domain: Desk,
+    id: "GoldGram",
+    scale: 3,
+    representation: "canonical",
+    symbol: "GOLD"
+  };
+  obligation Note = {
+    domain: Desk,
+    id: "NoteSeven",
+    asset: USD
+  };
+  // Inclusive round windows. Preparation does not advance the round.
+  const funding_open = 10;
+  const funding_close = 20;
+  const installment_open = 44;
+  const installment_close = 52;
+  const payoff_open = 80;
+  const payoff_close = 88;
+  const roll_open = 60;
+  const roll_target = 90;
+  // Draw: 1_250.00 + 12.50 = 1_262.50 USD = 126250 atoms.
+  const principal: Qty<USD> = 1_250.00 USD;
+  const service_fee = 12.50 USD;
+  const gross_advance = principal + service_fee;
+  const collateral = 2.500 GOLD;
+  // Installment schedule, accrual first: min(218.75, 18.75) = 18.75 interest, then 200.00 principal.
+  // 1000.00 + 18.75 = 1018.75 outstanding. After the installment, principal open is 800.00 and accrued is 0.00.
+  const accrued_at_service = 18.75 USD;
+  const principal_open = 1_000.00 USD;
+  const installment = 218.75 USD;
+  const interest_portion = min(a: installment, b: accrued_at_service);
+  const principal_portion = installment - interest_portion;
+  const scheduled_total = principal_portion + interest_portion;
+  const zero = 0.00 USD;
+  // Independent later stipulation, not the installment post-state.
+  // Residual principal matches the 800.00 left above. 6.25 is new stipulated accrual.
+  // Payoff 806.25 clears accrued first (6.25) and then principal (800.00).
+  const residual_principal = 800.00 USD;
+  const residual_accrued = 6.25 USD;
+  const payoff = residual_principal + residual_accrued;
+  intent Draw = {
+    domain: Desk,
+    asset: USD,
+    signer: Lender,
+    key: "lender-key-1",
+    nonce: "draw-1",
+    pre_head: "svc-head-10",
+    valid: rounds(domain: Desk,
+    from: funding_open,
+    to: funding_close),
+    gross_cap: gross_advance,
+    fee_cap: service_fee,
+    net_floor: principal,
+    operation: transfer(from: Lender,
+    to: Borrower,
+    fee_to: Servicer,
+    value: principal,
+    fee: service_fee),
+    source_hash: "claim-draw-source",
+    policy_digest: "claim-service-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action disburse uses Draw;
+  intent Installment = {
+    domain: Desk,
+    asset: USD,
+    signer: Borrower,
+    key: "borrower-key-1",
+    nonce: "installment-3",
+    pre_head: "svc-head-52",
+    valid: rounds(domain: Desk,
+    from: installment_open,
+    to: installment_close),
+    gross_cap: scheduled_total,
+    fee_cap: zero,
+    net_floor: zero,
+    operation: repay(obligation: Note,
+    payer: Borrower,
+    amount: scheduled_total),
+    source_hash: "claim-installment-source",
+    policy_digest: "claim-service-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action service_installment uses Installment;
+  intent Payoff = {
+    domain: Desk,
+    asset: USD,
+    signer: Borrower,
+    key: "borrower-key-1",
+    nonce: "payoff-1",
+    pre_head: "svc-head-80",
+    valid: rounds(domain: Desk,
+    from: payoff_open,
+    to: payoff_close),
+    gross_cap: payoff,
+    fee_cap: zero,
+    net_floor: zero,
+    operation: repay(obligation: Note,
+    payer: Borrower,
+    amount: payoff),
+    source_hash: "claim-payoff-source",
+    policy_digest: "claim-service-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action close_note uses Payoff;
+  intent Originate = {
+    operation: lending.originate(obligation: Note,
+    debtor: Borrower,
+    creditor: Lender,
+    principal: principal,
+    collateral: collateral),
+    relation: "collateral lock and funded principal are specified only; local execution is open",
+  };
+  action originate uses Originate;
+  intent Roll = {
+    operation: lending.roll_forward(obligation: Note,
+    to_round: roll_target),
+    valid: rounds(domain: Desk,
+    from: roll_open,
+    to: roll_target),
+    relation: "explicit later round; accrual and evidence freshness stay open",
+  };
+  action roll uses Roll;
+  intent Liquidate = {
+    operation: lending.liquidate(obligation: Note),
+    continuation: "residual debt persists; no price or shortfall is computed",
+  };
+  action liquidate uses Liquidate;
+}

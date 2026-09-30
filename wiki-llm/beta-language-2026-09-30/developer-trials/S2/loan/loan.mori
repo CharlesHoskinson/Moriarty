@@ -1,0 +1,37 @@
+// Original: AccrualFirst loan repayment, partial (100.00) and full (512.50).
+profile "moriarty-beta/1";
+agreement LoanRepay {
+ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Alice = { domain: Preview, id: "Alice" };
+ account Bob = { domain: Preview, id: "Bob" };
+ asset USD = { domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD" };
+ obligation Loan = { domain: Preview, id: "Loan1", asset: USD };
+ const partial: Qty<USD> = 100.00 USD;
+ const payoff: Qty<USD> = 512.50 USD;
+ const interest_only: Qty<USD> = 5.00 USD;
+ const no_fee = 0.00 USD;
+ intent PartialPay = {
+  domain: Preview, asset: USD, signer: Alice, key: "alice-key", nonce: "rp1", pre_head: "h0",
+  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: partial, fee_cap: no_fee, net_floor: no_fee,
+  operation: repay(obligation: Loan, payer: Alice, amount: partial),
+  source_hash: "loan-src1", policy_digest: "loan-policy1", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ intent InterestOnly = {
+  domain: Preview, asset: USD, signer: Alice, key: "alice-key", nonce: "rp3", pre_head: "h0",
+  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: interest_only, fee_cap: no_fee, net_floor: no_fee,
+  operation: repay(obligation: Loan, payer: Alice, amount: interest_only),
+  source_hash: "loan-src1", policy_digest: "loan-policy1", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ intent FullPay = {
+  domain: Preview, asset: USD, signer: Alice, key: "alice-key", nonce: "rp2", pre_head: "h0",
+  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: payoff, fee_cap: no_fee, net_floor: no_fee,
+  operation: repay(obligation: Loan, payer: Alice, amount: payoff),
+  source_hash: "loan-src1", policy_digest: "loan-policy1", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action pay_partial uses PartialPay;
+ action pay_interest_only uses InterestOnly;
+ action pay_full uses FullPay;
+}

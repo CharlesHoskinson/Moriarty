@@ -1,0 +1,14 @@
+profile "moriarty-beta/1";
+agreement IntentDomainMismatch {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Holder = {domain: ForeignClaim, id: "ClaimHolder"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  intent TakeClaim = {
+    domain: HomeRail,
+    asset: ClaimUSD,
+    signer: Holder,
+    operation: bridge.claim(owner: Holder, amount: 1.000000 ClaimUSD, source: HomeRail, claim_id: "claim-rail-250"),
+  };
+  action claim_foreign uses TakeClaim;
+}

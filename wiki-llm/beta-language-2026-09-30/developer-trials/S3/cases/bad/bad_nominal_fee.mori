@@ -1,0 +1,21 @@
+profile "moriarty-beta/1";
+agreement SwapFeeSettlement {
+ domain Preview = { id: "Midnight", chain: "midnight", network: "preview" };
+ account Trader = { domain: Preview, id: "TraderT" };
+ account Vault = { domain: Preview, id: "PoolVaultV" };
+ account Protocol = { domain: Preview, id: "ProtocolFeeP" };
+ asset EUR = { domain: Preview, id: "EurCanon", scale: 2, representation: "canonical", symbol: "EUR" };
+ asset USD = { domain: Preview, id: "UsdCanon", scale: 2, representation: "canonical", symbol: "USD" };
+ const notional: Qty<EUR> = 250.00 EUR;
+ const fee_each = 0.25 EUR;
+ const usd_fee = 0.75 USD;
+ const fee = usd_fee;
+ intent Settle = {
+  domain: Preview, asset: EUR, signer: Trader, key: "trader-key", nonce: "swap-7", pre_head: "head-a",
+  valid: rounds(domain: Preview, from: 5, to: 9), gross_cap: notional + fee, fee_cap: fee, net_floor: notional,
+  operation: transfer(from: Trader, to: Vault, fee_to: Protocol, value: notional, fee: fee),
+  source_hash: "swapfee-src", policy_digest: "swapfee-policy", failure: SuccessOnly,
+  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+ };
+ action settle_swap_fee uses Settle;
+}

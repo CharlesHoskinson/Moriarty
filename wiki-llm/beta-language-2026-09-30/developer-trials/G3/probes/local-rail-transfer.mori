@@ -1,0 +1,35 @@
+// Fixture probe only. This is a local S0 transfer of RailUSDCanonical.
+// It is not a bridge escrow and it does not stake shares.
+profile "moriarty-beta/1";
+agreement RailFixture {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  account Custodian = {domain: HomeRail, id: "VaultCustodian"};
+  account RewardDesk = {domain: HomeRail, id: "RewardTreasury"};
+  asset RailUSD = {domain: HomeRail, id: "RailUSDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+  const face: Qty<RailUSD> = 250.00 RailUSD;
+  const no_fee: Qty<RailUSD> = 0.00 RailUSD;
+  intent Move = {
+    domain: HomeRail,
+    asset: RailUSD,
+    signer: Staker,
+    key: "key-rail",
+    nonce: "rail-n1",
+    pre_head: "rail-head-0",
+    valid: rounds(domain: HomeRail, from: 12, to: 48),
+    gross_cap: face,
+    fee_cap: no_fee,
+    net_floor: face,
+    operation: transfer(from: Staker, to: Custodian, fee_to: RewardDesk, value: face, fee: no_fee),
+    source_hash: "fixture-src",
+    policy_digest: "fixture-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action move uses Move;
+}

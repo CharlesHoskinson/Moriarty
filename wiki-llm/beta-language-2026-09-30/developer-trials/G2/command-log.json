@@ -1,0 +1,429 @@
+[
+  {
+    "command": "node --version",
+    "exit_code": 0,
+    "expected": "Node 24 or newer",
+    "observed": "v24.21.0. The session also sets FORCE_COLOR=1 and NO_COLOR=1, so Node prints a warning on stderr for every process.",
+    "output_file": "outputs/00-node.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori --help",
+    "exit_code": 0,
+    "expected": "One-line command list and a PreparedUnqualified reminder",
+    "observed": "Printed the init/check/fmt/inspect/expand/simulate/test/lsp/mcp line and 'Local financial results remain PreparedUnqualified.' Recaptured to disk after the first identical run.",
+    "output_file": "outputs/00-help.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori init loan-desk",
+    "exit_code": 0,
+    "expected": "status Initialized, qualification local-stipulation-only",
+    "observed": "Created invoice.mori, scenario.json, mori.tests.json, and README.md. Stderr was only the session Node color warning.",
+    "output_file": "outputs/01-init.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/invoice.mori --json",
+    "exit_code": 0,
+    "expected": "AuthoringChecked for the starter invoice",
+    "observed": "Starter check succeeded before the starter files were replaced.",
+    "output_file": "outputs/02-starter-check.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori test loan-desk",
+    "exit_code": 0,
+    "expected": "Starter case literal fee payment passes",
+    "observed": "TestsPassed, qualification local-stipulation-only, one PreparedUnqualified case. This was the starter suite, later replaced.",
+    "output_file": "outputs/03-starter-test.json"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/servicing.mori --write",
+    "exit_code": 0,
+    "expected": "Format the original note service and leave it valid",
+    "observed": "Exit 0 and empty stdout. A second fmt without --write was byte-identical. Comments and 1_250.00 spelling remained. Call arguments stay at the parent indent.",
+    "output_file": "outputs/04-fmt-servicing.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/repay-with-fee.mori --write",
+    "exit_code": 0,
+    "expected": "Format the fee-cap variant",
+    "observed": "Exit 0 and empty stdout.",
+    "output_file": "outputs/05-fmt-repay-fee.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/servicing.mori",
+    "exit_code": 0,
+    "expected": "Second format matches the written file",
+    "observed": "cmp reported the stdout bytes identical to servicing.mori.",
+    "output_file": "outputs/06-fmt-servicing-stdout.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/invalid-window.mori",
+    "exit_code": 1,
+    "expected": "No edit and a round-window diagnostic",
+    "observed": "AuthoringRejected BETA_ROUND_WINDOW, span bytes 756-794.",
+    "output_file": "outputs/07-fmt-invalid-window.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/invalid-precision.mori",
+    "exit_code": 1,
+    "expected": "No edit and a precision diagnostic",
+    "observed": "AuthoringRejected because 12.505 exceeds scale 2.",
+    "output_file": "outputs/08-fmt-invalid-precision.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/servicing.mori",
+    "exit_code": 0,
+    "expected": "AuthoringChecked with three LocalS0 and three SpecifiedOnly actions",
+    "observed": "disburse, service_installment, and close_note are LocalS0. originate, roll, and liquidate are SpecifiedOnly. Text ends with the PreparedUnqualified reminder.",
+    "output_file": "outputs/09-check-servicing.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/servicing.mori --json",
+    "exit_code": 0,
+    "expected": "JSON check with coverage and open gates",
+    "observed": "AuthoringChecked. evidence AuthoringOnly. openGates are authentication, nativeProof, financialCorrespondence, atomicLedgerAcceptance. The body also embeds all 30 operation schemas and is 50835 bytes.",
+    "output_file": "outputs/10-check-servicing-json.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/invalid-window.mori",
+    "exit_code": 1,
+    "expected": "BETA_ROUND_WINDOW",
+    "observed": "AuthoringRejected BrokenServiceWindow. BETA_ROUND_WINDOW at 14:12: Inverted round window.",
+    "output_file": "outputs/11-check-invalid-window.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/invalid-precision.mori",
+    "exit_code": 1,
+    "expected": "BETA_PRECISION",
+    "observed": "AuthoringRejected OverpreciseFee. BETA_PRECISION at 10:23: Quantity has more decimals than asset scale.",
+    "output_file": "outputs/12-check-invalid-precision.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/repay-with-fee.mori",
+    "exit_code": 0,
+    "expected": "Authoring accepts a nonzero repay fee cap",
+    "observed": "AuthoringChecked. The fee-cap rule is not an authoring error.",
+    "output_file": "outputs/13-check-repay-fee.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori inspect loan-desk/servicing.mori",
+    "exit_code": 0,
+    "expected": "Identities unauthenticated, local actions carry four premises and four bindings",
+    "observed": "sourceHash c47dfcdcbbd4cfbe49b8d1b2e753414c4ee77b40470568a1f635febb365ce176 matches the formatted file. Every identity has authenticated false. Local actions list the four premises and four unverified bindings. SpecifiedOnly actions list neither.",
+    "output_file": "outputs/14-inspect.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori test loan-desk",
+    "exit_code": 0,
+    "expected": "14 hand-computed cases pass, including full effects and post",
+    "observed": "TestsPassed, local-stipulation-only, 14/14. This run was after fmt and before the later probe files. Expected effects were written from the schedule arithmetic, not from this output.",
+    "output_file": "outputs/15-test.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand loan-desk/servicing.mori --action disburse --scenario loan-desk/scenarios/disburse.json",
+    "exit_code": 0,
+    "expected": "Expanded transfer proposal",
+    "observed": "status Expanded, qualification local-stipulation-only.",
+    "output_file": "outputs/16-expand-disburse.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action disburse --scenario loan-desk/scenarios/disburse.json",
+    "exit_code": 0,
+    "expected": "PreparedUnqualified debit 126250, credits 125000 and 1250",
+    "observed": "Matched the precomputed draw. post head svc-head-11, round stays 10, work 7/1. Four premises and four unverified bindings are present.",
+    "output_file": "outputs/17-simulate-disburse.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment.json",
+    "exit_code": 0,
+    "expected": "Source/6 RepayAccrualFirst for 21875 atoms",
+    "observed": "Expanded. selected RepayAccrualFirst, valid 44..52, gross_cap 21875, fee_cap 0, net_floor 0, conversion identity. proposalNote null.",
+    "output_file": "outputs/18-expand-installment.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment.json",
+    "exit_code": 0,
+    "expected": "Accrual-first post principal 80000, accrued 0, outstanding 80000",
+    "observed": "PreparedUnqualified. Debit and credit 21875. SetObligation Outstanding 80000/0/80000. Round stays 52. Work 2/5. Replay key [\"DeskNet\",\"Borrower\",\"installment-3\"].",
+    "output_file": "outputs/19-simulate-installment.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action close_note --scenario loan-desk/scenarios/close-note.json",
+    "exit_code": 0,
+    "expected": "Payoff 80625 settles principal and accrued to zero",
+    "observed": "PreparedUnqualified. SetObligation Settled 0/0/0. Work moves from 1/9 to 0/10. Round stays 80.",
+    "output_file": "outputs/20-simulate-close.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-replay.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_HISTORY_REPLAY and no published effects",
+    "observed": "judgment history, code S0_HISTORY_REPLAY, diagnosticWork 1, publishedEffects null, publishedPost null. Exit 1 with JSON on stdout.",
+    "output_file": "outputs/21-simulate-replay.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-short-balance.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_EFFECT_RANGE for one atom short",
+    "observed": "Borrower balance 21874 against payment 21875. judgment effect, code S0_EFFECT_RANGE, no published effects.",
+    "output_file": "outputs/22-simulate-balance.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-no-work.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_AUTH_SCOPE when work_remaining is 0",
+    "observed": "judgment authority, code S0_AUTH_SCOPE. Allowance was still 21875, so the failing input is the work counter.",
+    "output_file": "outputs/23-simulate-work.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-after-window.json",
+    "exit_code": 1,
+    "expected": "CoreRejected S0_INTENT_SCOPE at round 53",
+    "observed": "Window is 44..52 inclusive. Round 53 is judgment intent, code S0_INTENT_SCOPE.",
+    "output_file": "outputs/24-simulate-window.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-overpay.json",
+    "exit_code": 0,
+    "expected": "Expansion stays Expanded and warns that the proposal is not the core decision",
+    "observed": "proposalNote: Invalid overpayment proposal preserves unchanged obligation; only Core determines the first failure. Effects still debit 21875 and set_obligation outstanding 10000.",
+    "output_file": "outputs/25-expand-overpay.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/scenarios/installment-overpay.json",
+    "exit_code": 1,
+    "expected": "Core rejects overpayment with S0_EFFECT_RANGE",
+    "observed": "Same code and judgment as the short-balance case. publishedEffects null.",
+    "output_file": "outputs/26-simulate-overpay.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action roll --scenario loan-desk/scenarios/roll-stipulation.json",
+    "exit_code": 1,
+    "expected": "SpecifiedOnly roll does not execute",
+    "observed": "Unsupported, BETA_PROFILE_UNSUPPORTED, publishedEffects null, publishedPost null. The result object has no qualification field.",
+    "output_file": "outputs/27-simulate-roll.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action originate --scenario loan-desk/scenarios/roll-stipulation.json",
+    "exit_code": 1,
+    "expected": "SpecifiedOnly originate does not execute",
+    "observed": "Unsupported, BETA_PROFILE_UNSUPPORTED, no effects.",
+    "output_file": "outputs/28-simulate-originate.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action liquidate --scenario loan-desk/scenarios/roll-stipulation.json",
+    "exit_code": 1,
+    "expected": "SpecifiedOnly liquidate does not execute",
+    "observed": "Unsupported, BETA_PROFILE_UNSUPPORTED, no effects.",
+    "output_file": "outputs/29-simulate-liquidate.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/invalid-window.mori --action service_installment --scenario loan-desk/scenarios/installment.json",
+    "exit_code": 1,
+    "expected": "AuthoringRejected before scenario use",
+    "observed": "BETA_ROUND_WINDOW. publishedEffects null. No qualification field.",
+    "output_file": "outputs/30-simulate-invalid-window.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/repay-with-fee.mori --action service_installment --scenario loan-desk/scenarios/installment.json",
+    "exit_code": 1,
+    "expected": "Core rejects fee_cap 1250 on repay",
+    "observed": "Authoring had accepted it. CoreRejected judgment intent, code S0_INTENT_SCOPE.",
+    "output_file": "outputs/31-simulate-fee-cap.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check node_modules/@moriarty-lang/beta/examples/lending.mori",
+    "exit_code": 0,
+    "expected": "Shipped lending example is SpecifiedOnly",
+    "observed": "AuthoringChecked LendingDemo. borrow, roll, and liquidate are SpecifiedOnly.",
+    "output_file": "outputs/32-check-shipped-lending.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate node_modules/@moriarty-lang/beta/examples/lending.mori --action borrow --scenario loan-desk/scenarios/roll-stipulation.json",
+    "exit_code": 1,
+    "expected": "Shipped borrow does not execute locally",
+    "observed": "Unsupported, BETA_PROFILE_UNSUPPORTED, no effects.",
+    "output_file": "outputs/33-simulate-shipped-lending.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/round-44.json",
+    "exit_code": 0,
+    "expected": "Inclusive lower bound round 44 prepares",
+    "observed": "PreparedUnqualified. post round 44. Obligation still principal 80000 accrued 0 outstanding 80000.",
+    "output_file": "outputs/34-probe-round-44.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/round-43.json",
+    "exit_code": 1,
+    "expected": "Round 43 is outside 44..52",
+    "observed": "CoreRejected S0_INTENT_SCOPE, judgment intent.",
+    "output_file": "outputs/35-probe-round-43.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/predecessor-other.json",
+    "exit_code": 0,
+    "expected": "A changed predecessor still prepares",
+    "observed": "PreparedUnqualified. Candidate post has no predecessor field. Head still advances to svc-head-53.",
+    "output_file": "outputs/36-probe-predecessor.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/stale-head.json",
+    "exit_code": 1,
+    "expected": "Head that differs from pre_head is stale",
+    "observed": "CoreRejected S0_HISTORY_STALE, judgment history.",
+    "output_file": "outputs/37-probe-stale-head.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/same-successor.json",
+    "exit_code": 1,
+    "expected": "post_head equal to head is rejected",
+    "observed": "CoreRejected S0_HISTORY_SUCCESSOR, judgment history.",
+    "output_file": "outputs/38-probe-same-successor.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/allowance-empty.json",
+    "exit_code": 1,
+    "expected": "Zero allowance uses the same code as zero work",
+    "observed": "CoreRejected S0_AUTH_SCOPE, judgment authority. Work remaining was still 3.",
+    "output_file": "outputs/39-probe-allowance.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/accrual-not-source-schedule.json",
+    "exit_code": 0,
+    "expected": "Scenario accrued 5000 produces principal 83125, not the source schedule 80000",
+    "observed": "PreparedUnqualified. Debit remains 21875. Post principal 83125, accrued 0, outstanding 83125. Hand arithmetic: 100000 - (21875 - 5000) = 83125.",
+    "output_file": "outputs/40-probe-accrual-mismatch.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/missing-obligation.json",
+    "exit_code": 1,
+    "expected": "Repay without obligation is a formation error",
+    "observed": "FormationRejected BETA_SCENARIO_SCHEMA: Expected record (/obligation).",
+    "output_file": "outputs/41-probe-missing-obligation.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/swapped-balances.json",
+    "exit_code": 1,
+    "expected": "Balance order is significant",
+    "observed": "FormationRejected BETA_SCENARIO_CELLS: Balance account/order mismatch (/balances/0).",
+    "output_file": "outputs/42-probe-swapped.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/symbol-asset.json",
+    "exit_code": 1,
+    "expected": "Symbol USD is not the economic asset id",
+    "observed": "FormationRejected BETA_SCENARIO_IDENTITY. Scenario asset USD does not match source id UsdNote.",
+    "output_file": "outputs/43-probe-symbol-asset.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/declaration-domain.json",
+    "exit_code": 1,
+    "expected": "Declaration name Desk is not the domain id",
+    "observed": "FormationRejected BETA_SCENARIO_IDENTITY. Scenario domain Desk does not match id DeskNet.",
+    "output_file": "outputs/44-probe-domain-name.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/unknown-field.json",
+    "exit_code": 1,
+    "expected": "Unknown scenario field memo is rejected",
+    "observed": "FormationRejected BETA_SCENARIO_SCHEMA: Unknown field memo (/).",
+    "output_file": "outputs/45-probe-unknown-field.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/bad-replay-tag.json",
+    "exit_code": 1,
+    "expected": "Replay tag must be unused or consumed",
+    "observed": "FormationRejected BETA_SCENARIO_SCHEMA: Expected closed replay tag (/replay).",
+    "output_file": "outputs/46-probe-bad-replay.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/numeric-round.json",
+    "exit_code": 1,
+    "expected": "Round must be a canonical decimal string",
+    "observed": "FormationRejected BETA_SCENARIO_INTEGER at /round.",
+    "output_file": "outputs/47-probe-numeric-round.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/duplicate-round.json",
+    "exit_code": 1,
+    "expected": "Duplicate JSON keys are rejected",
+    "observed": "FormationRejected BETA_JSON_DUPLICATE: Duplicate JSON key round.",
+    "output_file": "outputs/48-probe-duplicate-key.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action roll --scenario loan-desk/probes/garbage.txt",
+    "exit_code": 1,
+    "expected": "SpecifiedOnly returns before scenario parsing",
+    "observed": "Unsupported BETA_PROFILE_UNSUPPORTED even though the scenario text is not JSON. No effects.",
+    "output_file": "outputs/49-probe-roll-garbage.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori simulate loan-desk/servicing.mori --action missing --scenario loan-desk/scenarios/installment.json",
+    "exit_code": 1,
+    "expected": "Unknown action is an authoring rejection",
+    "observed": "AuthoringRejected BETA_ACTION_UNKNOWN: Unknown action missing.",
+    "output_file": "outputs/50-probe-unknown-action.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori init loan-desk",
+    "exit_code": 1,
+    "expected": "Init refuses an existing directory",
+    "observed": "Stderr: mori: EEXIST: file already exists, mkdir '.../loan-desk'. No JSON diagnostic on stdout.",
+    "output_file": "outputs/51-init-exists.stderr"
+  },
+  {
+    "command": "./node_modules/.bin/mori fmt loan-desk/invalid-window.mori --write",
+    "exit_code": 1,
+    "expected": "fmt --write does not rewrite invalid source",
+    "observed": "AuthoringRejected BETA_ROUND_WINDOW. The source bytes stayed the inverted-window program.",
+    "output_file": "outputs/52-fmt-write-invalid.stdout"
+  },
+  {
+    "command": "node --input-type=module -e 'import { readFileSync } from \"node:fs\"; import { check, simulate } from \"@moriarty-lang/beta\"; const source = readFileSync(\"loan-desk/servicing.mori\",\"utf8\"); const scenario = readFileSync(\"loan-desk/scenarios/installment.json\",\"utf8\"); const checked = check(source); const local = simulate(source, \"service_installment\", scenario); const roll = simulate(source, \"roll\", scenario); process.stdout.write(JSON.stringify({ check: checked.status, actions: checked.actions.map(a => [a.name, a.support, a.coverage.localPreparation]), preview: local.status, qualification: local.qualification, premises: local.result?.candidate?.requiredPremises ?? null, roll: roll.status, rollCode: roll.diagnostics?.[0]?.code ?? null, rollEffects: roll.publishedEffects }, null, 2));'",
+    "exit_code": 0,
+    "expected": "Public API matches the CLI for installment and roll",
+    "observed": "check AuthoringChecked. simulate service_installment is PreparedUnqualified with the four premises. roll is Unsupported with publishedEffects null.",
+    "output_file": "outputs/53-api-preview.stdout"
+  },
+  {
+    "command": "node loan-desk/tools/protocol-clients.mjs",
+    "exit_code": 0,
+    "expected": "Local MCP and LSP clients can check and preview the note",
+    "observed": "MCP tools are check, inspect, expand, preview. tools/list before notifications/initialized returns -32002. preview of service_installment is PreparedUnqualified and isError false. preview of roll is Unsupported and isError true. LSP positionEncoding utf-16, textDocumentSync 1, hover and definition work, invalid window diagnostic is 0-based line 13 character 11. LSP exit 0.",
+    "output_file": "outputs/54-protocol.stdout"
+  },
+  {
+    "command": "MORIARTY_BETA_CLI=\"$PWD/dist/cli.js\" nvim --headless -u NONE -l editor/nvim/smoke.lua",
+    "exit_code": 0,
+    "expected": "Shipped Neovim smoke passes",
+    "observed": "Exit 0. The pass sentence was printed on stderr: Neovim Moriarty stdio LSP smoke passed: initialize/open/definition/symbols/format/change/diagnostics/shutdown. This smoke uses its own demo buffer, not servicing.mori.",
+    "output_file": "outputs/55-nvim-smoke.stderr"
+  },
+  {
+    "command": "./node_modules/.bin/mori check loan-desk/probes/no-division.mori",
+    "exit_code": 1,
+    "expected": "Division is not an operator",
+    "observed": "AuthoringRejected BETA_CHARACTER at 3:19: Unexpected source character; identifiers must be ASCII. The character is '/'.",
+    "output_file": "outputs/56-no-division.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori check node_modules/@moriarty-lang/beta/ai/examples/invalid.mori",
+    "exit_code": 1,
+    "expected": "Shipped invalid example fails on the first diagnostic",
+    "observed": "AuthoringRejected BETA_NUMBER at 3:18: Noncanonical numeric spelling. The later unknown name in that file was not reported.",
+    "output_file": "outputs/57-ai-invalid.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori test loan-desk",
+    "exit_code": 0,
+    "expected": "The 14 intended cases still pass after probes",
+    "observed": "TestsPassed, local-stipulation-only, 14 passed. Probes under loan-desk/probes are outside mori.tests.json.",
+    "output_file": "outputs/58-final-test.stdout"
+  },
+  {
+    "command": "./node_modules/.bin/mori expand loan-desk/servicing.mori --action service_installment --scenario loan-desk/probes/predecessor-other.json",
+    "exit_code": 0,
+    "expected": "Source/6 echoes the unchecked predecessor",
+    "observed": "Expanded. The generated line is: predecessor \"unrelated-predecessor\";",
+    "output_file": "outputs/59-expand-predecessor.stdout"
+  }
+]

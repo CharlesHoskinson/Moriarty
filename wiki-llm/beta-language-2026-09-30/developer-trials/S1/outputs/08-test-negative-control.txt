@@ -1,0 +1,36 @@
+$ mori test negative-control
+--- stdout
+{
+  "status": "TestsFailed",
+  "qualification": "local-stipulation-only",
+  "cases": [
+    {
+      "name": "valid 125.375 EURC invoice plus 1.250 fee",
+      "passed": true,
+      "status": "PreparedUnqualified",
+      "code": null
+    },
+    {
+      "name": "allowance 100.000 below gross 126.625 rejects",
+      "passed": false,
+      "status": "CoreRejected",
+      "code": "S0_AUTH_SCOPE"
+    },
+    {
+      "name": "gross cap equal to price (no room for fee) rejects",
+      "passed": true,
+      "status": "CoreRejected",
+      "code": "S0_INTENT_SCOPE"
+    },
+    {
+      "name": "round 25 after valid window 0..20 rejects",
+      "passed": true,
+      "status": "CoreRejected",
+      "code": "S0_INTENT_SCOPE"
+    }
+  ]
+}
+
+--- stderr
+
+--- exit 1
