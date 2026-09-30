@@ -1,0 +1,29 @@
+{
+  "text": "**Bounded acceptance.** No high or medium defect in the embedded W-D2H codec, frozen vectors, or result claims. The record is a local purpose-1/3/4 content experiment pinned to repair-02. It does not adopt a provider, a Source AST adapter, a consumer, loaded-artifact proof, B05–B07, or W-D2/Sprint 1.\n\nRepair-02 (`52ffc9b4…`, `history/pre-grok-repair-03/SPEC.md`) is the codec source. Repair-03 (`7f6ebf64…`) changes consumer order only: tag 16/17 asset and scale precedence, and tag 35 debtor/creditor (Source obligation cell before the retained B11 fact). Purpose 1/3/4 field order, widths, caps, and the debtor/creditor exclusion are the same in both texts. The codec stays on the repair-02 pin and does not implement those consumer anchors.\n\n**Byte rules checked against repair-02 and the frozen hex.** Preimage is `ASCII(\"moriarty-mil4-image/1\") || 00 || purpose:u8 || payloadLength:u32be || payload`, then SHA-256. Synthetic preimages show that prefix, purpose `01`/`03`/`04`, and lengths `0x57` (87), `0x9e` (158), `0x112` (274), `0xfe` (254), `0x119` (281). Envelopes are payload plus 27 bytes.\n\nPurpose 1 order is version `06`, profile text, wire `01`, agreement/domain/asset ids, scale `u8`, action id, kind `01`/`02`. `TransferLiteralFee`/`01` and `RepayAccrualFirst`/`02` are the only pairs. Purpose 3 order matches, including `fileCount` `00 03` and role/blob framing `u8 || u32be || raw bytes`. Synthetic core bytes show `// front\\r\\n`, `00 ff ef bb bf`, and an empty third file. Purpose 4 order matches through raw `hash32` links, keyRef, `u64` rounds, `u128` nominals, failure `01`, five `u16` zeros, delegation `00`, recovery `00`, then the variant. Transfer hex is owner/recipient/feeRecipient/amount/fee, including zero fee and recipient `Fees`. Repayment hex ends `…070101` (amount 7, AccrualFirst, identity) and has no debtor/creditor slot.\n\nNominal max `2^127−1` is 16-byte big-endian; `2^127` is rejected. Round max is 8-byte `2^64−1`. Scale is one byte `0..18`. Identifiers are `u16be` plus 1–64 ASCII, with distinct nominal sorts and reserved-word rejection. keyRef is decoded scalar text under both caps; controls `U+0000..U+001F` and `U+007F` fail; lone surrogates fail before UTF-8 repair. Frozen keyRef `000b 6b65793a 65 cc81 f09f9880` keeps `e` + U+0301 + U+1F600. Hashes inside a policy are 32 raw bytes. `07ef99c2…` and `e2b032a5…` in the synthetic policy are the synthetic purpose-1 and purpose-3 digests.\n\n`produceImages` hashes Source and Core first and copies those digests into the policy. Standalone purpose 4 still serializes a differing Core id; composition rejects a Source/package text or kind mismatch. `compareContent` returns `scope:\"content-only\"` and `authenticated:false`. The standalone keyRef failure carries `W_D2F_DOMAIN_UNSUPPORTED` with null `comparisonTag`, `factPath`, `publishedPost`, and `publishedEffects`.\n\n**Result record.** `codec.test.mjs` defines 72 tests; `test-results.tap` is `1..72`, pass 72, fail 0, skipped 0, in the same order. Nine synthetic payload/envelope/digest records are three inputs times purposes 1/3/4. Two actual-package records are digest and length only. Declared module sizes `20746+17917+2640=41303`. Spec framing for those sizes is purpose-3 payload `41446` (Transfer) and `41445` (Repay). Policy sizes stay 274 and 254 because only the 32-byte Core digest changes. Vector prose states the Python and Node serializers are same-author.\n\n**Acceptance bounds.** This review decoded embedded bytes and both serializers. It did not re-execute Node or recompute SHA-256. Actual module bodies are not in the packet, so `21a5a5c0…` and `6e153b33…` are accepted only as internally consistent length-and-hash records. Same-author agreement is serializer alignment only. Export, closure, loaded-artifact, toolchain, and lowering correspondence stay open. `policyValue` shares nested caller objects. The producer also rejects `validFrom > validUntil`; repair-02’s round domain is `0..2^64−1`, and that extra local predicate does not change any frozen vector byte. The inline reserved-word set is not diffed here against frontend `f3d2a05d…`.",
+  "stopReason": "end_turn",
+  "usage": {
+    "input_tokens": 78485,
+    "cache_read_input_tokens": 1152,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 64611,
+    "reasoning_tokens": 63444,
+    "total_tokens": 144248
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.18537208,
+  "total_cost_usd_ticks": 1853720800,
+  "modelUsage": {
+    "grok-4.7-build": {
+      "inputTokens": 78485,
+      "outputTokens": 64611,
+      "cacheReadInputTokens": 1152,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.18537208
+    }
+  },
+  "_redaction": {
+    "private_reasoning_removed": true,
+    "original_sha256": "d32633b68e6e54791e50c50a3f65fd87707a4862ec27ee9cc7251d19facb23c5"
+  }
+}

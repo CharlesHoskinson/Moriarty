@@ -1,0 +1,1 @@
+I will apply the repository instructions and the checked-in develop skill, then inspect guarded status and the existing K conventions before reviewing the transition draft.

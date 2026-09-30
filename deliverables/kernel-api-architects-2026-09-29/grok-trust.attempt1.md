@@ -1,0 +1,1 @@
+I'll load Moriarty's develop skill and the four named sources first, then run guarded status before any design work. This stays advisory: no product edits, and I will not look at other architects' answers.Using the Moriarty develop skill for this research pass. Next I will run guarded status, then read only the four named sources.

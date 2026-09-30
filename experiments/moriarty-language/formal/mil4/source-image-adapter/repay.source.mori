@@ -1,0 +1,26 @@
+profile "moriarty-financial-agreement-source/6";
+agreement AgreementA {
+ domain D; settlement A scale 0;
+ selected RepayAccrualFirst source_hash "claim-source" digest "claim-policy";
+ intent {
+  signer Payer key "key1"; nonce "n1"; pre_head "h0"; valid 0..10;
+  gross_cap 30; fee_cap 0; net_floor 0; failure success_only;
+  signed_action repay obligation Loan payer Payer amount 30 conversion identity;
+  observations empty; disclosures empty; retained_effects empty; retained_duties empty;
+  delegation none; recovery none;
+ }
+ authenticated {
+  head "h0"; predecessor "genesis"; round 1;
+  balance Payer 2000; balance Creditor 0;
+  allowance Payer remaining 2000 spent 0;
+  obligation Loan { debtor Payer; creditor Creditor; asset A;
+   principal 1000; accrued 10; outstanding 1010; status outstanding; }
+  replay unused; work_remaining 10; work_spent 0;
+ }
+ submit repay obligation Loan payer Payer amount 30 conversion identity;
+ effects { debit Payer 30; credit Creditor 30;
+  set_obligation Loan principal 980 accrued 0 outstanding 980 status outstanding;
+  use_allowance Payer 30; use_replay "n1"; advance_head "h0" "h1";
+ }
+ post_head "h1";
+}

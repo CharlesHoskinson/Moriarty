@@ -1,0 +1,147 @@
+# Stablecoins and synthetic assets: redemption and system-state recommendation (Opus 5.5, independent)
+
+**Scope.** This is specified-only design review. I did not compile, test, prove or submit anything, and nothing here claims implementation, proof or ledger acceptance. `status --json` reports the current capability as SP01.6 with dispatch blocked on operational history. That does not affect this read-only review.
+
+## 1. Verdict
+
+MIL/2 is **fit for purpose as a carrier for live-mode issuance, but not yet fit for redemption or system states.** It has the pieces a redemption design needs: nominal assets (`DESIGN-MIL2.md:53-61`), the `issue` right (`:193`), general conservation (`:256`), liabilities with debtor consent (`:94-100`), escrow with a legitimate pending state (`:199-219`), and literal cross-multiplication in Φ₀ (`:136,140,160`). It is missing four things:
+
+- an asset-level **mode** (live, paused or shutdown);
+- a redemption lifecycle that keeps a queued claim as debt and not as supply;
+- a par-conversion rounding rule that says where the remainder goes;
+- any way to handle a reserve shortfall without a stage that lists every holder.
+
+The category report calls shutdown and rebasing **Open** (`category-review/03-stablecoins.md:24-25`). I agree those rows are open. I disagree that closing them needs authenticated completeness over all holders (see §5).
+
+## 2. Five ranked design edits (recommendations)
+
+### Edit 1. Add an asset mode cell, gate every supply effect on it, and make shutdown one-way
+
+- **Rule.** Add `mode(d, asset) ∈ {live, paused, shutdown(epoch)}` to the `Cell` vocabulary (`DESIGN-MIL2.md:239-242`). The derived footprint of any `mint`, `burn` or redemption effect on `(d, asset)` must include `mode(d, asset)` in its read set (`:249`).
+- **Transitions.**
+  - `live ⇄ paused`, authorized by `amend` scoped to `mode(d, asset)`.
+  - `live | paused → shutdown(e)` writes a one-shot tombstone, the same mechanism as the escrow terminal state (`MIL2-PROPOSED-SEMANTICS.tex:192-197`).
+- **Mode table.** The table is signed into the asset policy:
+  - `paused` always blocks `mint`.
+  - `paused` blocks `redeem` only if the policy declares it, and that declaration must be visible when the holder signs.
+  - `shutdown` blocks `mint` and par redemption. It enables only the claim path in Edit 4.
+- **Enforcement.** The stage reads the mode cell through an authenticated read at the predecessor head. No mode flag supplied by the host is admitted (`.tex:130`).
+- **Counterexample.** An issuer pauses. A mint proved against the pre-pause head is then submitted. If the mode cell is not in the read set, the ledger accepts a mint during the pause.
+- **Placement.** Add the cell sort and the rejection codes `MODE_PAUSED` and `SHUTDOWN_FINAL` in **U0**, because U0 owns the cell vocabulary and the header (`DESIGN-MIL2.md:345`). Adding a cell after the header freezes is a version migration. The transition semantics go in **U3**.
+
+### Edit 2. Model redemption as custody at request, burn at settlement, and a queued claim as an obligation
+
+- **States.** `requested → accepted → settled | returned | unknown`.
+- **Request.** The holder's tokens move into a redemption escrow. Supply does not change.
+- **Accept.** This creates `Obligation{debtor: issuer, creditor: holder, asset: reserve, principal: par(q)}`, consented to by the issuer (`DESIGN-MIL2.md:94-100`, L1 at `.tex:179-187`).
+- **Settle.** One stage burns the escrowed tokens (`Δsupply = −q`, under the `issue` right) and discharges the obligation with a funded reserve transfer.
+- **Return.** Only escrowed tokens that were never burned go back to the holder, so a return never needs a re-mint.
+- **External settlement.** A fiat payout remains `unknown` until imported evidence arrives. A deadline does not settle it (`.tex:200-202`).
+- **Core rule.** In a redemption lane, a `burn` must be matched in the same stage by either a funded payout of `par(q)` or a new or existing obligation of `par(q)`.
+- **Counterexample.** Burn at request with a deferred off-chain payout: the tokens disappear, supply falls, and no liability records the holder's claim. The issuer can then deny the claim, and E1 is still satisfied. This breaks "debt is not token supply" (`MORIARTY-PRODUCT-CONTRACT.md:43`).
+- **External practice** (not a Moriarty rule): ERC-7540 models asynchronous redemption as Pending → Claimable → Claimed, https://eips.ethereum.org/EIPS/eip-7540. This source is not captured in the deliverable and I did not fetch it for this review.
+- **Placement.** **U3** (conditional settlement, `ROADMAP.md:24`). Fiat request/confirm families go in **U6**.
+
+### Edit 3. Encode par conversion relationally, with role-directed rounding and a posted remainder
+
+- **Rule.** For a signed literal rate `num/den`, define `out = ⌊q·num/den⌋` as a Φ₀ relation, with no division operator:
+
+  `out·den + rem = q·num ∧ rem < den`
+
+  Role direction:
+  - The holder's receipt rounds down.
+  - Collateral or tokens required from the holder round up.
+
+  This matches the U0 default `receipt: floor, obligation: ceil` (`numeric-profile.json:49-53`).
+- **Remainder.** `rem` is posted to a declared `roundingSurplus(d, asset)` cell or reserve account. The alternative policy is `exact`, which rejects unless `rem = 0`.
+- **Width.** Declare the widths. `u128 × 10^12` is below 2^168, which is within the 253-bit `less_than` bound (`DESIGN-MIL2.md:169`). Rates above that use the limb rule (`:171`).
+- **Counterexamples.**
+  - A ceiling payout pays `q/10^12 + 1` and drains one reserve unit per call.
+  - An unposted floor remainder makes E1 fail silently, or the dust disappears from both sides.
+  - The numeric profile itself records that no reserve mechanism exists (`numeric-profile.json:54-58`).
+- **External practice:** EIP-4626 says vaults should round "to favor the Vault itself" and requires both `convertTo` functions to round down (captured copy `source-text/erc4626.md:631-636`; https://eips.ethereum.org/EIPS/eip-4626).
+- **Placement.** **U0** numeric profile and **U1** primitive certificate. Φ₁ does **not** move: literal-rate par conversion is already inside Φ₀.
+
+### Edit 4. Gate par redemption on solvency; handle shortfall with pull-based pro-rata claims against a frozen snapshot
+
+- **Solvency guard.** Live par redemption requires:
+
+  `post(balance(d, Reserve, R))·den ≥ post(supply(d, T))·num`
+
+  This uses literal coefficients only, so it is Φ₀. When it fails, the stage rejects with `RESERVE_SHORTFALL`. The only path left is `shutdown`.
+- **Shutdown.** The shutdown stage writes snapshot cells `S* = supply` and `R* = reserve` for epoch `e`.
+- **Claims.** Each later claim burns `q` and pays `out`. The per-asset cumulative cells `burned` and `paid` must keep `paid·S* ≤ burned·R*`, and `burned ≤ S*`.
+- **Cost of the ratio.** Two state values are multiplied, so this is Φ₁ with a two-limb product.
+- **Holder priority.** Priority is `Obligation.rank` (`DESIGN-MIL2.md:95`). The shutdown policy must say whether accepted-but-unpaid queue obligations are senior or rank equally with holders. I recommend equal rank by default, because otherwise the queue becomes a way to front-run the shutdown.
+- **Counterexample (bank run).** The reserve is 90 and supply is 100. Without the guard, the first 90 redeemers are paid at par and the last 10 get nothing. With the guard, every holder receives 0.9.
+- **No global rollback.** Redemptions already settled are final, and wrapped supply on another domain claims through its custody account on `d`.
+- **Placement.** Reserve the snapshot and cumulative cell sorts in **U0**. The Φ₀ solvency guard goes in **U3/U6**. The pro-rata claim needs Φ₁, so it stays in **U4**. I do not recommend pulling Φ₁ into U0.
+
+### Edit 5. Represent rebasing as shares × index; apply conservation to shares; keep the nominal balance out of writes
+
+- **Rule.** For a rebasing asset, the canonical ledger cell holds shares. The index is one `policy` cell, written under `amend` or `issue`. E1 (`.tex:171-178`) is checked over share units. The nominal balance is a Φ₁ view that may appear in guards but never in a write set.
+- **Negative rebase.** A negative rebase is a pro-rata haircut that needs no list of holders, the same accounting as Edit 4.
+- **Counterexample.** If rebasing is treated as explicit per-account supply deltas, a bounded stage cannot cover every account. It either breaks the effect cap (`DESIGN-MIL2.md:279`) or leaves some accounts un-rebased. This is hazard X4 (`R3-stablecoins.md:450-459`).
+- **Placement.** Record the adapter choice in **U0**, because it decides whether `balance` stays a primitive read. The nominal view is Φ₁ (**U4**). Rebasing families go in **U6**.
+
+## 3. Core versus library
+
+**Core** (these bind the accepting path):
+- the mode cell and the mode gate on supply effects;
+- `mint`/`burn` constructors under `issue`;
+- E1 plus the burn-matching rule;
+- the relational rounded conversion with a posted remainder;
+- rank ordering between claim classes;
+- snapshot and cumulative-claim cell sorts;
+- rejection codes: `MODE_PAUSED`, `SHUTDOWN_FINAL`, `RESERVE_SHORTFALL`, `ROUNDING_DIRECTION`, `UNPOSTED_REMAINDER`.
+
+**Library:**
+- FIFO ticket counters, redemption windows and fees;
+- pause governance (which multisig, how long);
+- peg-swap modules and stability or savings rates;
+- fiat request/confirm with attestation policies;
+- Maker-style shutdown choreography;
+- rebase oracle policy;
+- haircut schedules.
+
+A library may narrow the core rules. It may never widen them.
+
+## 4. Smallest implementable slice (recommendation)
+
+The slice is one domain `d`, live mode, and an **on-chain** reserve (so the reserve read is anchored and needs no attestation):
+
+- token `T` with 18 decimals and reserve asset `R` with 6 decimals;
+- par rate `num = 1`, `den = 10^12`, with the `floor` policy;
+- the redemption program holds `issue(d, T)` with an affine budget.
+
+Supply changes are excluded from S0 (`R3-stablecoins.md:321`). This slice therefore needs a U2 profile that admits nonempty supply changes, which is a scope decision for the owners.
+
+**Positive case.**
+- Pre-state: supply `5·10^18`, reserve `5·10^6`.
+- The holder burns `q = 10^18 + 7`.
+- Result: `out = 10^6` and `rem = 7`, posted to `roundingSurplus`.
+- Post-state: supply `4·10^18 − 7`, reserve `4·10^6`.
+- Solvency: `4·10^6·10^12 ≥ 4·10^18 − 7` holds.
+- E1 on T: `−(10^18 + 7) = Δsupply`. E1 on R: `+10^6 − 10^6 = 0`.
+
+**Hostile case.** Identical signed intent, envelope, witnesses and head, except `out = 10^6 + 1`. The expected result is rejection by the in-circuit relation (`ROUNDING_DIRECTION`), not by the envelope.
+
+**Second hostile case.** Pre-state reserve `5·10^6 − 1` with the same par redemption. The expected result is `RESERVE_SHORTFALL`.
+
+In both hostile cases the host has no input slot for a solvency or rounding flag.
+
+## 5. Explicit disagreements
+
+1. **Shutdown does not need completeness over holders** (disagreeing with `03-stablecoins.md:24` and `R3-stablecoins.md:461-470`). Because `supply` is an authenticated aggregate, pull-based claims against a frozen `S*` plus the cumulative-counter invariant give pro-rata safety without listing holders. Completeness is needed only for designs that push payouts or settle every debt position in one stage. Sky's `End` settles per vault through keeper calls (https://github.com/sky-ecosystem/dss/blob/master/src/end.sol; not captured, not fetched here), which is an external precedent for pull-based settlement.
+2. **Redemption should not use the escrow release/refund template directly** (`03-stablecoins.md:21` treats escrow as a redemption template). Escrow `priority` decides between release and refund (`DESIGN-MIL2.md:206`). A refund after a burn would need a re-mint. Escrow is correct only for holding tokens before the burn (Edit 2).
+3. **Par conversion does not need Φ₁** (compare `DESIGN-MIL2.md:89,137`). A literal-rate conversion is Φ₀ in relational form. Φ₁ is needed only for state-ratio shutdown and the nominal view of a rebasing asset.
+4. **No new right kind.** Pause and shutdown use `amend` scoped to the mode cell, with the one-way tombstone. `recover` (`DESIGN-MIL2.md:191`) must not be reused for shutdown, because recovery is per-workflow.
+
+## 6. Residual assumptions
+
+- **Stale-read rejection is unverified.** I assume Midnight contract-state reads are authenticated against the transaction's state transcript, so a stage that read a stale mode or supply cell is rejected. This must be checked against the pinned ledger in U0.
+- **Off-chain reserves remain a trust premise.** A solvency guard over an attested reserve rests on imported evidence (`DESIGN-MIL2.md:187`; `MORIARTY-PRODUCT-CONTRACT.md:47`). It cannot establish backing.
+- **Contention.** Single `supply`, `mode` and cumulative cells serialize redemptions. I accept that as a throughput cost.
+- **No automatic trigger.** Shutdown is only as live as the actors who submit it, and this needs a named liveness assumption (`DESIGN-MIL2.md:219`).
+- **Legal questions are out of scope.** Obligor, jurisdiction and legal recourse for fiat claims are not addressed here.
+- **Unmeasured costs.** The proposed cells and rejection codes add to the U0 caps (`DESIGN-MIL2.md:270-283`), whose values are still unmeasured proposals.

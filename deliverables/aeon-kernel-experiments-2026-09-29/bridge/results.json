@@ -1,0 +1,59 @@
+[
+  {
+    "case": "withhold_while_unknown",
+    "accepted": true,
+    "errors": [],
+    "trust": [],
+    "source": "def withhold (sent:Int | sent > 0)\n             (delivered:Int | delivered >= 0 && delivered <= sent)\n             (status:Int | status = 1)\n             : {refund:Int | refund >= 0 && delivered + refund <= sent} := 0;"
+  },
+  {
+    "case": "timeout_alone_full_refund",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation: Failed to prove `((delivered\u00b2\u2070\u2077 + sent\u00b2\u2070\u2075) <= sent\u00b2\u2070\u2075)` in FileLocation(file='/tmp/tmpg8krvlbo.ae', start=(2, 1), end=(6, 35))\n    Could not establish it from the available facts:\n+-----Constraint-----+\n\u2200sent\u00b2\u2070\u2075:Int  | (sent\u00b2\u2070\u2075 > 0)\n\u2200delivered\u00b2\u2070\u2077:Int  | ((delivered\u00b2\u2070\u2077 >= 0) && (delivered\u00b2\u2070\u2077 <= sent\u00b2\u2070\u2075))\n_\u2074\u00b2\u2078:_ | (sent\u00b2\u2070\u2075 > 0)\n====>\n((delivered\u00b2\u2070\u2077 + sent\u00b2\u2070\u2075) <= sent\u00b2\u2070\u2075)\n+---------//---------+\n\n    counterexample: delivered = 1, sent = 1"
+    ],
+    "trust": [],
+    "source": "def refund_on_timeout (sent:Int | sent > 0)\n                      (delivered:Int | delivered >= 0 && delivered <= sent)\n                      (timed_out:Bool)\n                      : {refund:Int | refund >= 0 && delivered + refund <= sent} :=\n    if timed_out then sent else 0;"
+  },
+  {
+    "case": "unknown_status_full_refund",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation: Failed to prove `((delivered\u2074\u2074\u00b2 + sent\u2074\u2074\u2070) <= sent\u2074\u2074\u2070)` in FileLocation(file='/tmp/tmppo9q7f5q.ae', start=(2, 1), end=(5, 87))\n    Could not establish it from the available facts:\n+-----Constraint-----+\n\u2200sent\u2074\u2074\u2070:Int  | (sent\u2074\u2074\u2070 > 0)\n\u2200delivered\u2074\u2074\u00b2:Int  | ((delivered\u2074\u2074\u00b2 >= 0) && (delivered\u2074\u2074\u00b2 <= sent\u2074\u2074\u2070))\n_\u2076\u2075\u2077:_ | (sent\u2074\u2074\u2070 > 0)\n====>\n((delivered\u2074\u2074\u00b2 + sent\u2074\u2074\u2070) <= sent\u2074\u2074\u2070)\n+---------//---------+\n\n    counterexample: delivered = 1, sent = 1"
+    ],
+    "trust": [],
+    "source": "def refund_unknown (sent:Int | sent > 0)\n                   (delivered:Int | delivered >= 0 && delivered <= sent)\n                   (status:Int | status = 1)\n                   : {refund:Int | refund >= 0 && delivered + refund <= sent} := sent;"
+  },
+  {
+    "case": "observed_zero_does_not_prove_nonreceipt",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation: Failed to prove `((actual_delivery\u2076\u2076\u2074 + sent\u2076\u2076\u00b2) <= sent\u2076\u2076\u00b2)` in FileLocation(file='/tmp/tmphrsdzlt2.ae', start=(2, 1), end=(6, 106))\n    Could not establish it from the available facts:\n+-----Constraint-----+\n\u2200sent\u2076\u2076\u00b2:Int  | (sent\u2076\u2076\u00b2 > 0)\n\u2200actual_delivery\u2076\u2076\u2074:Int  | ((actual_delivery\u2076\u2076\u2074 >= 0) && (actual_delivery\u2076\u2076\u2074 <= sent\u2076\u2076\u00b2))\n_\u2079\u00b9\u00b9:_ | (sent\u2076\u2076\u00b2 > 0)\n====>\n((actual_delivery\u2076\u2076\u2074 + sent\u2076\u2076\u00b2) <= sent\u2076\u2076\u00b2)\n+---------//---------+\n\n    counterexample: actual_delivery = 1, sent = 1"
+    ],
+    "trust": [],
+    "source": "def refund_on_empty_observation (sent:Int | sent > 0)\n                                (actual_delivery:Int | actual_delivery >= 0 && actual_delivery <= sent)\n                                (observed_delivery:Int | observed_delivery = 0)\n                                (status:Int | status = 1)\n                                : {refund:Int | refund >= 0 && actual_delivery + refund <= sent} := sent;"
+  },
+  {
+    "case": "partial_delivery_full_refund",
+    "accepted": false,
+    "errors": [
+      "LiquidTypeCheckingFailedRelation: Failed to prove `((delivered\u2079\u00b9\u2078 + sent\u2079\u00b9\u2076) <= sent\u2079\u00b9\u2076)` in FileLocation(file='/tmp/tmp2fcdcmbv.ae', start=(2, 1), end=(4, 87))\n    Could not establish it from the available facts:\n+-----Constraint-----+\n\u2200sent\u2079\u00b9\u2076:Int  | (sent\u2079\u00b9\u2076 > 0)\n\u2200delivered\u2079\u00b9\u2078:Int  | ((delivered\u2079\u00b9\u2078 > 0) && (delivered\u2079\u00b9\u2078 <= sent\u2079\u00b9\u2076))\n_\u00b9\u00b9\u2070\u2075:_ | (sent\u2079\u00b9\u2076 > 0)\n====>\n((delivered\u2079\u00b9\u2078 + sent\u2079\u00b9\u2076) <= sent\u2079\u00b9\u2076)\n+---------//---------+\n\n    counterexample: delivered = 1, sent = 1"
+    ],
+    "trust": [],
+    "source": "def refund_partial (sent:Int | sent > 0)\n                   (delivered:Int | delivered > 0 && delivered <= sent)\n                   : {refund:Int | refund >= 0 && delivered + refund <= sent} := sent;"
+  },
+  {
+    "case": "refund_remaining_after_partial",
+    "accepted": true,
+    "errors": [],
+    "trust": [],
+    "source": "def refund_remaining (sent:Int | sent > 0)\n                     (delivered:Int | delivered >= 0 && delivered <= sent)\n                     : {refund:Int | refund >= 0 && delivered + refund <= sent} :=\n    sent - delivered;"
+  },
+  {
+    "case": "full_refund_with_proven_zero_delivery",
+    "accepted": true,
+    "errors": [],
+    "trust": [],
+    "source": "def refund_zero (sent:Int | sent > 0)\n                (delivered:Int | delivered = 0)\n                : {refund:Int | refund >= 0 && delivered + refund <= sent} := sent;"
+  }
+]

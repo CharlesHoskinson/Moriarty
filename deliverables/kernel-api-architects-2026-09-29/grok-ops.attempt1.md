@@ -1,0 +1,1 @@
+I'll load Moriarty's develop skill and the four named sources first, then run guarded status before any protocol design.

@@ -1,0 +1,17 @@
+# Primary-source capture ledger
+
+Retrieved 2026-09-29 with Scrapling 0.4.15, `scrapling extract get URL FILE --ai-targeted`. Captures are cleaned page text, not byte-for-byte HTML. Hashes refer to the retained Markdown files. All pages are public. Current vendor documentation and source-repository README files are primary evidence of stated interfaces and architecture; they do not independently prove runtime behavior or deployment state.
+
+| ID | Publisher and page | Capture | SHA-256 | Used for |
+| --- | --- | --- | --- | --- |
+| N1 | [NEAR Intents, Verifier Contract](https://docs.near-intents.org/integration/verifier-contract/introduction) | [verifier.md](sources/verifier.md) | `336e9bab750749f87f2ee8895e603b342cdd18746421bc77af2a438167665a73` | Custody ledger, verifier settlement, direct and bundled submission |
+| N2 | [NEAR Intents, Market Makers](https://docs.near-intents.org/integration/market-makers/introduction) | [market-makers.md](sources/market-makers.md) | `549710b7b90957cdcbeb71d67f0ff14870209a38f35a1868578ffe11f1da2bfb` | Message Bus, competing quotes, optional relay |
+| N3 | [NEAR Intents, Token Bridges](https://docs.near-intents.org/integration/bridging/overview) | [bridge-current.md](sources/bridge-current.md) | `c4a68d330d19611fc6c21ee04af4d9bc4301ef8670ebda39fb2fd51b5b99d703` | Bridge route and trust-model separation |
+| N4 | [NEAR Intents, BTC refund](https://docs.near-intents.org/integration/bridging/btc-deposit-refund) | [btc-refund.md](sources/btc-refund.md) | `1fc35bb47be89f83e234280ea18b027afcba185a70a5e5f11e477f68ca819fa1` | Multi-step recovery, timelock, nonfinality, cost |
+| N5 | [NEAR, Chain Signatures](https://docs.near.org/chain-abstraction/chain-signatures) | [chainsig.md](sources/chainsig.md) | `8ceb231c332218ce7b507815a7b76351e7d4909e9fe6db2eedc9709494cae995` | Signing request, derivation path, replay warning, outbound boundary |
+| N6 | [NEAR MPC repository](https://github.com/near/mpc) | [mpc.md](sources/mpc.md) | `3925c9e7584cb9c22cf65c09f8490aa007ee3f182a76a4d147df9e572f5e9d4d` | MPC signer/indexer and foreign observation capabilities |
+| N7 | [NEAR Intents, Signing Intents](https://docs.near-intents.org/integration/verifier-contract/signing-intents) | [signing.md](sources/signing.md) | `b282261b5aad7e290f2841404bd9c6514fab97e190e6ccffd53f579de85d9ad6` | Distinct wallet signature standards and verification |
+
+Additional primary pages inspected in the browser: [NEAR Intents contract repository](https://github.com/near/intents), [NEAR omni-transaction-rs](https://github.com/near/omni-transaction-rs), and the [archived 1Click API documentation](https://github.com/defuse-protocol/gitbook-docs/blob/main/integration/distribution-channels/1click-api.md). They were not retained as Scrapling captures in this bounded pass. The former NEAR documentation URL for Intents Bridge and a guessed 1Click documentation URL returned 404; their empty captures were discarded. No source from those failed URLs supports a claim.
+
+**Evidence status:** Architecture and API descriptions are accepted as vendor-stated facts. Moriarty boundary and API recommendations in the proposal are inferences. Production liveness, bridge security, independent signer behavior and deployed hash equivalence remain unverified. Current documentation reflects more bridge routes than the older `docs.near.org` Intents Bridge page; the proposal uses the current NEAR Intents page for route scope.

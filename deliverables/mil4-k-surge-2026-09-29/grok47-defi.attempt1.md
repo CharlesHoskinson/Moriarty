@@ -1,0 +1,1 @@
+I'll start from the checked-in development skill and a read-only guarded-status check, then review the existing K conventions before auditing the Sol draft.Guarded status is read-only and blocked on SP01.6 evidence; this stays a specified-only semantics review. Next I will match the checked-in K rule style and then audit the Sol draft rule by rule.

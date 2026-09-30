@@ -1,0 +1,9 @@
+# W-D2E effect commitment review disposition
+
+**Frozen packet:** `w-d2e-effect-candidate-packet.md`, SHA-256 `e756d634b989e6acf9191990cf40af955233350f5a0df9caa9dbd9b996038446`, 21 embedded files including six binary exports.
+
+Independent GPT-6.1 Sol high and Grok 4.7 xhigh (`grok-4.7-build`) accept W-D2E as a bounded finite encoding and equality experiment. Both reject normative W-D2 closure. The GPT reviewer verified every embedded hash and reproduced the Python fixtures and 67 Node tests from packet bytes. Grok inspected the layout, financial cases, tests and dissent statically; it did not recompute digests or execute Node. Its raw output is `w-d2e-effect-grok-4.7-xhigh-raw.json`; the GPT findings are preserved in the session review record.
+
+The exact candidate commits ordered effect lines, pre/post footprint, work and replay consumption, round and independently selected pre/successor heads. Six positive vectors match literal Core/5 prepared effects and candidate posts. Eighteen encodable hostile mutations change the commitment; a premise-order mutation rejects before hashing. The equality consumer decodes canonical `/3` authorization bytes and compares signed field 26 to SHA-256 of the supplied effect image.
+
+The decisive limit is executed: a hostile Debit vector with a recomputed matching field 26 returns `CommitmentEqualUnqualified`, while Core/5 rejects it with `S0_EFFECT_MISMATCH`. Grok preserved a stricter interpretation that would call the experiment incomplete as a binding of signed operation to effects; the accepted scope is byte equality only. The consumer does not read signed operation, caps, nonce, signer, preHead or scale to rederive effects. Semantic preparation, authenticated footprint and head, replay consumption, signature/proof binding, wallet behavior and atomic ledger application remain open. The preimplementation Python freeze is a same-author chronology record, not an independently witnessed timestamp.

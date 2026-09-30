@@ -47,6 +47,157 @@ Here `emit` declares a financial operation for the evaluator to check. It does n
 </details>
 
 
+<details>
+<summary>Canonical financial-agreement source/5 grammar</summary>
+
+The complete grammar for the current local loan profile follows. The [canonical grammar file](experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf) supplies these exact bytes.
+
+```ebnf
+(* ISO/IEC 14977 EBNF for moriarty-financial-agreement-source/5.
+   Source header must match exactly; /1, /2, /3, /4 and older profiles remain separate.
+   Lexical rules are lexical.md plus the financial-expression punctuation
+   [ ] and ?. record and operation are profile-gated declaration spellings
+   and are not added to the global keyword catalog.
+   State fields in this profile have no initializer.
+   Multiple actionDecl forms are admitted in declaration order.
+   Zero actions is a semantic SOURCE_ACTION_COUNT rejection.
+   Parentheses create no AST nodes. Conditional is right-associative below Or.
+   Simultaneous bounds: source65536 bytes, tokens8192, AST8192, depth64,
+   declarations256, statements256 per action, record fields64, ordinary call
+   arguments64, collection intrinsic arguments128, action parameters256.
+   Integer lexical tokens remain unsigned canonical decimals; - is separate.
+   financialRead and financialPostRead use typeArgs; exactly one simple
+   generic symbol is a static SOURCE_ARITY / SOURCE_TYPE_SHAPE rule, not a
+   parse rejection. financialPostRead is legal only in ensures.
+   The source contract supplies all type/domain/metadata and diagnostic rules.
+*)
+
+program = profileDecl, agreementDecl, ? end of file ? ;
+
+profileDecl = "profile", stringToken, ";" ;
+
+agreementDecl = "agreement", identifier, "{", { declaration }, "}" ;
+
+declaration = unitDecl
+            | partyDecl
+            | assetDecl
+            | recordDecl
+            | operationDecl
+            | uninitializedStateDecl
+            | actionDecl ;
+
+unitDecl = "unit", identifier, ";" ;
+
+partyDecl = "party", identifier, ";" ;
+
+assetDecl = "asset", identifier, ":", type, ";" ;
+
+recordDecl = "record", identifier, "{", { recordField }, "}" ;
+
+recordField = identifier, ":", type, ";" ;
+
+operationDecl = "operation", identifier, ":", type, ";" ;
+
+uninitializedStateDecl = "state", identifier, ":", type, ";" ;
+
+actionDecl = "action", identifier, "(", [ parameters ], ")",
+              "{", { statement }, { postcondition }, "}" ;
+
+parameters = parameter, { ",", parameter } ;
+
+parameter = identifier, ":", type ;
+
+statement = requirement | binding | update | emission ;
+
+requirement = "requires", expression, ";" ;
+
+binding = "let", identifier, "=", expression, ";" ;
+
+update = "next", ".", identifier, "=", expression, ";" ;
+
+emission = "emit", identifier, ( "{", [ effectFields ], "}" | expression ), ";" ;
+
+effectFields = effectField, { ",", effectField } ;
+
+effectField = identifier, ":", expression ;
+
+postcondition = "ensures", expression, ";" ;
+
+type = identifier, [ typeArgs ] ;
+
+typeArgs = "<", typeArgument, { ",", typeArgument }, ">" ;
+
+typeArgument = type | signedInteger ;
+signedInteger = [ "-" ], integerToken ;
+
+expression = conditional ;
+
+conditional = disjunction, [ "?", expression, ":", conditional ] ;
+
+disjunction = conjunction, { "or", conjunction } ;
+
+conjunction = negation, { "and", negation } ;
+
+negation = { "not" }, comparison ;
+
+comparison = sum, [ comparisonOp, sum ] ;
+
+comparisonOp = "==" | "!=" | "<" | "<=" | ">" | ">=" ;
+
+sum = product, { ( "+" | "-" ), product } ;
+
+product = postfix, { "*", postfix } ;
+
+postfix = primary, { ".", identifier | "[", expression, "]" } ;
+
+ordinaryPrimaryName = ? identifier token except some, none, collection, quantity, record, amount, shares, variant, project_variant, to_uint, outstanding, principal, accrued, balance, allowance_remaining, allowance_spent, post_outstanding, post_principal, post_accrued, post_balance, post_allowance_remaining, post_allowance_spent ? ;
+
+primary = "-", integerToken
+        | integerToken
+        | stringToken
+        | "true"
+        | "false"
+        | ordinaryPrimaryName, [ "(", [ arguments ], ")" ]
+        | genericCall
+        | dynamicOrLiteral
+        | financialGeneric
+        | financialRead
+        | financialPostRead
+        | recordLiteral
+        | "(", expression, ")" ;
+
+genericCall = ( "some" | "none" | "collection" | "quantity" ),
+              "<", typeArgument, { ",", typeArgument }, ">",
+              "(", [ arguments ], ")" ;
+
+dynamicOrLiteral = ( "amount" | "shares" ), [ typeArgs ],
+                   "(", [ arguments ], ")" ;
+
+financialGeneric = ( "variant" | "project_variant" | "to_uint" ),
+                   typeArgs, "(", [ arguments ], ")" ;
+
+financialRead = ( "outstanding" | "principal" | "accrued" | "balance"
+                | "allowance_remaining" | "allowance_spent" ),
+                typeArgs, "(", [ arguments ], ")" ;
+
+financialPostRead = ( "post_outstanding" | "post_principal" | "post_accrued"
+                    | "post_balance" | "post_allowance_remaining"
+                    | "post_allowance_spent" ),
+                    typeArgs, "(", [ arguments ], ")" ;
+
+recordLiteral = "record", "<", type, ">", "{", [ effectFields ], "}" ;
+
+arguments = expression, { ",", expression } ;
+
+identifier = ? ASCII identifier token defined in lexical.md ? ;
+
+integerToken = ? canonical unsigned decimal token defined in lexical.md ? ;
+
+stringToken = ? JSON string token defined in lexical.md ? ;
+```
+
+</details>
+
 Authorization can fix an **exact plan**, including its action, state updates and financial effects, or permit an **outcome intent**, within which a solver chooses a plan. An owner who wants a particular transfer need not delegate route selection. An owner who wants a minimum return can leave choices open while bounding gross spending, fees, recipients and allowed actions. The local atomic evaluator already checks both forms as authority supplied alongside an action, using simulated authentication. Binding that authority cryptographically to ledger acceptance and durable replay protection remains implementation work.
 
 ### Bounded computation, continuing agreements
