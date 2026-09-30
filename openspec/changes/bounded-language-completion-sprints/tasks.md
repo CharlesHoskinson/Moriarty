@@ -4,7 +4,7 @@ Status: S2, specified-only delivery program. These items track product work, not
 
 - [ ] SP01: Complete [Financial contract and execution admission](../../sprints/sp01-financial-contract-and-execution-admission.md) under its existing MC gates.
 - [ ] SP02: Complete [Complete .mori authoring frontend](../../sprints/sp02-complete-mori-authoring-frontend.md) under its existing MC gates.
-- [ ] SP03: Complete [Executable bounded semantics in K](../../sprints/sp03-executable-bounded-semantics-in-k.md) under its existing MC gates.
+- [ ] SP03: Complete [MIL/4 K and Quint successor semantics](../../sprints/sp03-mil4-k-quint-successor.md) under its existing MC gates.
 - [ ] SP04: Complete [Complete native verifier component feasibility](../../sprints/sp04-complete-native-verifier-component-feasibility.md) under its existing MC gates.
 - [ ] SP05: Complete [Financial integration on Preview](../../sprints/sp05-financial-integration-on-preview.md) under its existing MC gates.
 - [ ] SP06: Complete [Real recursive financial history](../../sprints/sp06-real-recursive-financial-history.md) under its existing MC gates.

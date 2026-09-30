@@ -1,0 +1,29 @@
+{
+  "text": "The G29 repair holds. No high or medium contradiction in the embedded packet.\n\nBounded design concurrence only. This is specified-only. It is not adoption, implementation approval, or a Sprint 1 result. W-D2 stays open. B05–B17 stay open. G21 and G50 stay fragment controls.\n\n## G29 repair\n\n`selectedTarget` is `[current-action/builtin-selector, expected CoreProgramId, constructor]`.\n\nG29 keeps the action key and the first component as `TransferLiteralFee`, and changes only the expected Core program to `RepayAccrualFirst` and the constructor to `repayment`.\n\nTag6 then runs in the stated order: wire action equals Source `TransferLiteralFee`; B04 authenticates; B01 action membership passes; the retained current-action fact matches. Signed `coreProgramId` and `operation.kind` stay off tag6. After the intervening gates, tag10 passes Source, lowered `programId`, and B01 program membership, then fails on B04’s expected `RepayAccrualFirst` with `FieldMismatch/coreProgramId`. The constructor is not reached.\n\nG18+G29 stays on that same tag10 result for a different first comparison: signed `RepayAccrualFirst` differs from Source `TransferLiteralFee` before B01 membership or the B04 target. G31 stays `EvidenceInvalid/B04` at tag6 when the proof does not establish the claimed target. G41 stays a constructor-only `FieldMismatch/operation.kind` at tag35. G42 stays a program-only tag10 mismatch. Those four rows agree with the tag6 and tag10 lists.\n\n## Prior findings\n\nB11 keeps head custody. B02 retains `stageAssociationRef` and does not compare `preHead`. G12 is `Unavailable/B11` after both Source head literals. G46 and G48 are `EvidenceInvalid/B11` before fact checks. G47 is a genuine other head: integrity, then core, domain, and asset, then `FieldMismatch/preHead` with binding B11, `factPath` `B11.snapshot.head`, and `sourcePath` null.\n\nWire versus wrapper channels match the stated D rules. G24 and G26 use `sourcePath` null and `inputPath` `wire.stageId`. G43 and G44 use `sourcePath` `context.stageId` or `context.episodeId`. G45 rejects the reserved wrapper value first.\n\nBaseline `sourceHash`, `coreHash`, `policyHash`, Source `sourceHash` and `policyDigest`, and both `intent.preHead` and `authenticated.head` are explicit. G51–G53 are retained-hash mismatches after direct claims agree. G38–G40 stay wrong-image `EvidenceInvalid` results. G21 stops before B05. G50 is membership only. That is two positives and 51 rejection/control rows, G01–G53 with no gap. G03 is rejection only.\n\nB01–B04, tag4/5/6/10/16 order, G32–G37, and G49 agree with the written schedules. Same-view failure, duplicate keys, and cross-sort B01 evidence stay `EvidenceInvalid` at the owning anchor. Mapping A still rejects fixture `actionId` `Action` at the tag6 literal. The packet does not rewrite those fixtures or close the consumer.\n\n## Residual (low)\n\nTag10 step 5, signed `coreProgramId` versus the builtin selector, cannot be the first failure once tag6 step 4 and tag10 step 1 have passed. G18, G29, G35, and G42 share the abbreviated `FieldMismatch/coreProgramId` outcome; the prose distinguishes the comparison, while binding, `factPath`, and `sourcePath` are spelled out for G47 and G51–G53. No numbered row is the genuine first-component mismatch that tag6 step 4 now describes. None of these changes a stated G-row outcome.",
+  "stopReason": "end_turn",
+  "usage": {
+    "input_tokens": 113077,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 49273,
+    "reasoning_tokens": 48425,
+    "total_tokens": 162350
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.17740928,
+  "total_cost_usd_ticks": 1774092800,
+  "modelUsage": {
+    "grok-4.7-build": {
+      "inputTokens": 113077,
+      "outputTokens": 49273,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.17740928
+    }
+  },
+  "_redaction": {
+    "private_reasoning_removed": true,
+    "original_sha256": "b23d3276b34dc32756984e95d908dd1b7f7212e0e47aee80227721543e1e3f97"
+  }
+}

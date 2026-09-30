@@ -1,0 +1,702 @@
+# MIL/3 draft: financial resource and numeric semantics
+
+**This is an independent agent proposal.** Every rule in it is specified only. Nothing has been adopted, accepted, implemented, compiled or proved. No test, proof, compiler or Midnight transaction was run. The only computations were Python integer arithmetic to derive the trace values in §4. They are arithmetic facts about the stated numbers and say nothing about how Moriarty behaves. I edited no files.
+
+**Startup.** I read `plugins/moriarty-dev/skills/develop/SKILL.md` and ran `cli.py --repo . status --json`. It returned capability `SP01.6 loan-swap-subset`, next action `sp01-loan-report`, and implementation blocked by stale inputs and missing accounting evidence. That block covers implementation dispatch. It does not cover read-only research.
+
+**Inputs.** I read these:
+- `concepts/intent-language/DESIGN-MIL2.md`
+- `deliverables/mil2-deep-research-2026-09-29/MIL2-PROPOSED-SEMANTICS.tex`
+- all eight `opus55-*-recommendations/SYNTHESIS.md` files
+- the individual numeric-lens reviews (AMM review-02; staking review-01, -04 and -05; lending review-02, -03 and -04; stablecoin review-02 and -04) by targeted extract
+- `docs/decisions/u0-numeric-profile-decision.md` and `deliverables/u0-semantic-contract-2026-09-23/numeric-profile.json`
+- the U0 laws in `deliverables/u0-study-2026-09-28/UNIFIED-PROPOSAL.md`
+- the captured ZKIR v3 and ERC-4626 texts in `source-text/`
+
+I did not open `deliverables/mil3-design-draft-2026-09-29/` or any other MIL/3 agent output.
+
+**"The five reviews."** I read this as the five independent Opus lens reviews behind each category synthesis. Where a conflict involves a specific review, I name the category and review number.
+
+**Tags.** I keep the repository convention:
+- **[checked]**: verified against the cited files, or derived by construction in this document.
+- **[obligation]**: required before freeze, with a proof route.
+- **[deferred]**: deliberately not claimed.
+
+An untagged sentence carries no load.
+
+---
+
+## 1. Design thesis and explicit scope
+
+### 1.1 Thesis
+
+**T1. Three numeric strata. Pool arithmetic leaves Φ.**
+- **Φ₀** is the signed-intent predicate language. MIL/2 already has it: linear terms with literal coefficients.
+- **𝒩** is a new *certified transition arithmetic*. It covers range checks, bounded products, quotient and remainder verification, role-fixed rounding and product comparison. It is evaluated once per concrete witness, inside a program's transition. It never appears inside a signed predicate.
+- **Φ₁** stays reserved for genuine variable-product *intent predicates*. Its deferral stays in place.
+
+This implements the shared AMM recommendation 1 and staking recommendation 1. It removes `sharesFor`, `assetsFor` and `mulDiv` from the Φ grammar (`DESIGN-MIL2.md:85-86,137`).
+
+The repository's cost figure is bitvector `rlimit` 242,607,369 against 1,978 (`DESIGN-MIL2.md:163`). That figure prices universal authoring-time validity. It does not price per-witness checking. The claim that per-witness checking is cheap natively is itself **[obligation W5]**, not a fact.
+
+**T2. Six resource kinds, each with its own law.** The kinds are:
+- **holdings** (token balances)
+- **supply**
+- **liens** (reserved or committed locks)
+- **liabilities** (obligations)
+- **claims** (positions and receivables)
+- **accounted pool state**
+
+No kind turns into another except through a named, paired transition. In particular:
+- debt is never a negative balance;
+- a share is supply of a nominal share asset, never debt;
+- a position is a claim, never a spendable balance.
+
+**T3. Rounding is a function of the operation's role, never an argument.** The rule also separates two things that D2 and `numeric-profile.json:58` currently merge:
+- A *sub-unit remainder* is the fractional part of a quotient. It is not an amount of any asset, so it cannot be "posted".
+- An *allocation residue* is an integer amount left over when one quantity is split among several recipients. It *must* be posted by an explicit effect.
+
+**T4. Money moves only by funded effects. Liabilities change only by the roll-forward.** Every liability change is tied either to a funded effect in the same accepted stage, or to signed consent or authority. Gross, fee and net figures are *attributions over* deltas. They are never additional deltas.
+
+**T5. Loss is recognized, never erased.** Impairment, meaning the creditor's valuation, is separate from forgiveness, meaning the debtor's legal obligation. Pool loss allocation is the *only* admitted effect that may lower a share's asset value. It is authorized, bounded and replay-keyed.
+
+### 1.2 Scope
+
+**In scope.** Asset identity, resource kinds, widths, 𝒩, the rounding-role table, the effect grammar, conservation per asset and domain, the lock state machine, the obligation roll-forward, loss allocation, gross/fee/net semantics, episode roll-forward, and the first-slice rules for CPMM, vault, lending and CDP stablecoin.
+
+**Touched only where they create resource effects.** Oracles (price orientation and value arithmetic), governance (the `issue` and `enforce` budgets), bridges (decimal conversion) and derivatives (payoff rounding and legs).
+
+**Out of scope, left to other lenses.** Evidence provenance, footprint derivation, escrow control flow, canonical encoding and authority state machines. I reference them only as interfaces.
+
+### 1.3 Core safety versus library policy
+
+| Core (semantic, certified, not replaceable by a library) | Library or profile policy (versioned, digest-pinned per instance) |
+|---|---|
+| Nominal asset identity; resource-kind separation | Pool curve (CPMM first), fee tier `f/F`, protocol-fee split |
+| 𝒩 primitives, their preconditions and rejection codes | Bootstrap parameters (`vA`, `vS`, `MIN`) |
+| Rounding-role table and remainder/residue rule | Liquidation close factor, bonus, price band |
+| E1, E-Sh, E-Pos, L1–L4, K1 laws; derived supply | Accrual rate (literal in the first profile) |
+| Gross/fee/net definitions; fee-coverage rule | Debt ceiling value, collateral ratio |
+| Funded-discharge rule; impairment ≠ forgiveness | Waterfall ordering among claim classes |
+| Loss recognition authority, bound and replay key | Keeper reward funding source |
+| Accounted-total cells; `unsolicited` custody cell | Withdrawal-queue timing and rate-freeze rule |
+
+### 1.4 Deferred (explicit)
+
+These are all **[deferred]**:
+- concentrated liquidity (MIL/2 decision 5), weighted and stable pools
+- variable-rate index models beyond a literal rate
+- TWAP and median
+- perpetual funding, portfolio margin, socialized loss and ADL
+- rebasing supply
+- cross-domain minting with decimal conversion (specified here only as a rounding-role row)
+- multi-signer clearing, flash loans and Φ₁
+
+---
+
+## 2. Normative draft text
+
+### 2.1 Symbols
+
+| Symbol | Meaning |
+|---|---|
+| `d ∈ D` | executing domain |
+| `a ∈ AssetId` | nominal asset identifier |
+| `h` | holder: account, custody account, pool reserve, fee recipient, residue holder |
+| `bal(d,h,a)` | holding in `a`'s smallest unit, `Qty<a>` |
+| `sup(d,a)` | total supply of `a` on `d` |
+| `Δx` | post value of `x` minus pre value, as an exact integer (not a field element) |
+| `P, C` | pool instance, share class |
+| `acc(P,a)` | accounted assets of pool `P` in `a` (not the raw custody balance) |
+| `S(P,C)` | total shares: supply of the nominal share asset `sh(P,C)` |
+| `o` | obligation, with principal `pₒ`, accrued `aₒ`, outstanding `uₒ`, state `stₒ` |
+| `ℓ` | lien, with owner, asset, amount `mℓ`, state `qℓ`, and set `againstℓ` |
+| `LT(d,h,a)` | authenticated aggregate lien total |
+| `W_q` | quantity width (128); `W_p`: pool operand width (decision N1) |
+| `FR_BITS` | bit length of the native field modulus, recorded as 255 in the captured ZKIR v3 spec |
+| `role ∈ {Recv, Owe, Exact}` | rounding role |
+| `ρ` | rejection: `Reject(code)`. Every partial rule below names its codes |
+
+### 2.2 Asset identity and resource kinds
+
+```
+AssetId  ::= opaque ledger id                                   -- nominal
+AssetKind::= base | wrapped(link: AssetId, policy) | share(P, C) | synthetic(issuer, backing: BackingMode)
+BackingMode ::= cdp(policy) | reserve(policy, attestation: Obs) | unbacked(policy)   -- unbacked must be named
+Resource ::= Holding(d,h,a) | Supply(d,a) | Lien(ℓ) | LockTotal(d,h,a)
+           | Liability(o) | Claim(leg: long|short, acct, I) | Accounted(P, a) | ShareSupply(P, C)
+           | Unsolicited(P, a) | ResidueHolder(policy)
+```
+
+**Rule R-ID [checked against `DESIGN-MIL2.md:53-61`; the extension is proposed].** Two terms are comparable or addable only if their `AssetId` is identical. Matching symbol, decimals or issuer is never sufficient.
+
+**Rule R-SH.** `Share<P,C>` elaborates to `Qty<sh(P,C)>`. Here `sh(P,C)` is a nominal asset of kind `share(P,C)`, and its `issue` right is held only by pool program `P`. This follows AMM review-02 R3 and resolves the scoping mismatch with `issue (domain, asset)` at `DESIGN-MIL2.md:193`.
+
+**Rule R-POS.** `Position<I>` is replaced by two unsigned legs, `Claim(long, acct, I)` and `Claim(short, acct, I)`. These are side-indexed legs as in derivatives review-05. A leg never appears in E1 and is never debited as a balance. This removes the sign ambiguity behind MIL/2's variance lint exclusion (`DESIGN-MIL2.md:234`).
+
+### 2.3 Width profile and field premises
+
+All of these are premises or obligations. None is a measurement.
+
+| ID | Statement | Tag |
+|---|---|---|
+| W1 | `Qty` is `u128`. Every quantity term carries a range fact `v < 2^128` established by a checked construction. | [checked] as MIL/2 text, `DESIGN-MIL2.md:66,169` |
+| W2 | The captured ZKIR v3 spec at `47793c8` records `FR_BITS = 255`. `LessThan` and `ConstrainBits` require `bits < FR_BITS`. `DivModPowerOfTwo` requires `bits ≤ 248`. | [checked] against the capture, `source-text/zkir-v3-spec.md:79-80,498-501,572,583`. This is a spec-text fact, not a measured circuit property. |
+| W3 | MIL/2 says `less_than` "stops at 253 bits" (`DESIGN-MIL2.md:169`). The capture implies a bound of 254 bits (`bits ≤ 254`). The wiki records a parity adjustment `max(bits + bits mod 2, 4)` in synthesis (`wiki/zkir/zkir-instruction-set.md:202-209`). | **Contradiction.** [obligation]: establish the effective comparison bound on the pinned target. |
+| W4 | Every 𝒩 product `a·b` is accepted only if the declared width makes the integer product `< 2^(bound in W3)`. Otherwise it is a declared multi-limb gadget. A native field `mul` followed by a comparison, with no such precondition, is forbidden. | Rule. Its soundness is [obligation]. |
+| W5 | Per-witness 𝒩 checking (range, multiply, quotient/remainder, comparison) fits within the §12 caps and native cost for the first slices. | [obligation], measured at U1 |
+| W6 | Pool operand width `W_p` is decision N1 (§6): either u126 with single-field products, or u128 with two-limb products. | open |
+
+With `W_p = 126`, operands `< 2^126` give products `< 2^252`, below either reading of W3. **[checked by construction]**
+
+That argument applies only if every operand of every product carries its own `range(126, ·)` fact. This includes post-state sums such as `x + e` and `acc + vA`. A sum of two `u126` values can reach `2^127`, so the sum itself must be range-checked **before** the product. **[checked by construction; this is a counterexample to any rule that range-checks only the inputs]**
+
+### 2.4 Certified transition arithmetic 𝒩 (program side only)
+
+The witness supplies values. The circuit checks relations. `n, d, q, r` are exact integers with declared widths.
+
+```
+N-RANGE   range(k, v)                         ⇒ v < 2^k                 ρ: ARITH_RANGE
+N-MUL     mulB(a, b) = a·b    pre range(W_p,a), range(W_p,b)           ρ: ARITH_RANGE
+N-CMP     cmpB(u, v) = [u ≤ v] pre range(W3,u), range(W3,v)
+N-DIV     div(role, n, d) = z  witness (q, r):
+            d > 0                                                     ρ: DIV_ZERO
+            n = q·d + r  ∧  0 ≤ r < d                                  ρ: DIVMOD_WITNESS
+            z = q               if role = Recv
+            z = q + [r > 0]     if role = Owe
+            z = q ∧ r = 0       if role = Exact                        ρ: INEXACT
+N-PCMP    pcmp(a,b,c,e) = [a·b ≤ c·e]  (both products under N-MUL preconditions)
+N-ISQRT   isqrt(n) = s  ⇔ s·s ≤ n < (s+1)·(s+1)                        ρ: DIVMOD_WITNESS
+```
+
+**Rule N-ROLE-FIXED.** `role` is a static attribute of the operation tag in the rounding-role table (§2.5). It is never a witness value, a source argument or a hole. A program that supplies a role argument fails typing with `ROUND_ROLE`.
+
+This contradicts the free `Rounding` parameter at `DESIGN-MIL2.md:85-86`. It also contradicts the author-selectable rows in `numeric-profile.json` (`accrual-interest`, `expression-obligation-division`, `origination-settlement-conversion`, `repayment-settlement-conversion`, all with `authorSelectable: true`). D2 already classifies that author choice as an open conformance gap (`u0-numeric-profile-decision.md:22`), so this rule is consistent with the owner decision.
+
+**Rule N-NOT-Φ.** 𝒩 terms may appear in program transitions, `ensures` clauses and library operations. They may **not** appear in a signed Φ₀ clause. A signed clause may compare only 𝒩 *results*, such as `dy`, `shares` or `seize`, using Φ₀ atoms.
+
+### 2.5 Rounding-role table (normative) and the remainder rule
+
+**Principle.** The operation's role determines the direction. D2 gives the default: *owed rounds up, received rounds down* (`u0-numeric-profile-decision.md:15-16`). The **protected side** is the party that does not choose the witness. For pools, vaults and lending pools, that is the pool (existing holders). For bilateral instruments, the protected side must be *declared in signed terms* (see contradiction C7).
+
+| Op tag | Computes | Role | Protected side |
+|---|---|---|---|
+| `amm.out.exactIn` | swap output `dy` | Recv (floor) | pool |
+| `amm.in.exactOut` | required input `e*` | Owe (ceil) | pool |
+| `amm.fee` / `vault.fee` | fee `φ` on a gross base | Owe (ceil) | fee recipient |
+| `amm.lp.mintShares`, `amm.lp.burnOut` | shares minted; outputs | Recv | pool |
+| `amm.lp.inputsUsed` | inputs taken for mint | Owe | pool |
+| `vault.deposit` | shares for given assets | Recv | vault |
+| `vault.mint` | assets for given shares | Owe | vault |
+| `vault.withdraw` | shares burned for given assets | Owe | vault |
+| `vault.redeem` | assets for given shares | Recv | vault |
+| `loan.accrue` | interest | Owe | creditor |
+| `loan.originate.convert` | disbursed amount on conversion | Recv | lender |
+| `loan.repay.convert` | settlement due on conversion | Owe | lender |
+| `liq.seize` | collateral to keeper | Recv | debtor |
+| `liq.closeFactor` | maximum repayable | Recv | debtor |
+| `cdp.maxDraw` | maximum mint against collateral | Recv | system |
+| `px.value` | collateral value, for health | Recv (floor) | system |
+| `px.requirement` | required collateral | Owe (ceil) | system |
+| `deriv.payoff` | cash payoff | **declared** | per instrument terms (C7) |
+| `bridge.convert` | represented amount across decimals | Recv | issuer/backing |
+| `alloc.prorata` | share of a distributable sum | Recv + residue rule | residue holder |
+
+The existing vault rows match the comparative ERC-4626 guidance (`source-text/erc4626.md:631-636`; https://eips.ethereum.org/EIPS/eip-4626). That is Ethereum practice, not Moriarty evidence.
+
+**Rule REM-1 (sub-unit remainder) [checked by construction].** The remainder `r` of `div` is measured in units of `1/d` of the asset. It is never an effect. Rounding changes only the integer amount `z` that some effect transfers. The protected side "benefits" only in that it keeps the unit that was not transferred. Conservation (E1) is therefore unaffected by rounding.
+
+Consequence. D2's "dust accrues to the protocol reserve" (`u0-numeric-profile-decision.md:18`) cannot be read literally for a sub-unit remainder. There is nothing to post. The gap recorded at `numeric-profile.json:58` ("remainder has nowhere to post") is a category error for single-quotient operations. For pools, vaults and creditors, **the protected-side holder is the beneficiary**. Instantiating D2's "protocol reserve" this way is a D2 per-primitive override with a rationale (`:20`), and it needs owner confirmation (decision N3).
+
+**Rule REM-2 (allocation residue).** When an integer amount `X` is split among recipients `i` with weights `wᵢ` and total `W = Σwᵢ`:
+- each share is `zᵢ = div(Recv, X·wᵢ, W)`;
+- the *residue* `X − Σzᵢ` is an integer with `0 ≤ residue < |recipients|` [checked by construction];
+- the residue **must** appear as an explicit transfer to the policy's declared `ResidueHolder`.
+
+A stage whose effects omit the residue fails E1 or effect completeness with `RESIDUE_UNPOSTED`. This is where D2's protocol reserve is genuinely needed. `reserveMechanism.status = absent` (`numeric-profile.json:55-58`) remains an open U0 gap for this case.
+
+### 2.6 Effect grammar (resource effects only)
+
+```
+eff ::= transfer(d, a, from h, to h', n)                 -- Δbal(h)=−n, Δbal(h')=+n
+      | mint(d, a, to h, n, auth: IssueGrant, backing: BackingRef)
+      | burn(d, a, from h, n, auth: BurnGrant | owner)
+      | lien.reserve(ℓ, h, a, n, against: {o…}, ttl) | lien.commit(ℓ)
+      | lien.release(ℓ, n) | lien.cancel(ℓ) | lien.seize(ℓ, n, to h', auth: EnforceGrant)
+      | obl.originate(o, debtor, creditor, a, n, consent: ConsentRef, funding: EffRef)
+      | obl.accrue(o, period k, z)        -- z from 𝒩 loan.accrue
+      | obl.repay(o, n, funding: EffRef)  -- AccrualFirst split
+      | obl.forgive(o, n, auth: creditor) | obl.impair(o, mark) | obl.recover(o, n, funding)
+      | pool.recognizeLoss(P, a, L, cause: o | slash(v), key)
+      | leg.open(I, long acct, short acct', q) | leg.close(I, …, q)
+      | feeAttr(kind: explicit | venue | protocol, a, z, to h, covers: EffRef)
+      | residue(a, z, to ResidueHolder)
+```
+
+**Rule EFF-D [checked against `DESIGN-MIL2.md:254`].** Every effect's domain equals the executing domain. A foreign credit is imported evidence plus a later local stage, never an effect of the current stage.
+
+### 2.7 Conservation laws
+
+Every clause fails closed with its code.
+
+**E1 (holdings/supply), for each `(d, a)` touched.** Let `Mint(d,a)` and `Burn(d,a)` be the sums of that stage's `mint` and `burn` amounts.
+
+```
+Σ_{h ∈ Holders(d)} Δbal(d,h,a) = Δsup(d,a) = Mint(d,a) − Burn(d,a)      ρ: CONSERVE_E1
+```
+
+`Holders` includes accounts, escrow custody, pool reserves, `Unsolicited`, fee recipients and residue holders.
+
+**Δsup is derived from effects, never declared.** This is the stablecoin shared recommendation 1. It strengthens `DESIGN-MIL2.md:256`, where the supply delta is "declared".
+
+**E1-AUTH.** Every `mint` line carries an `IssueGrant` scoped to `(d, a)`, with remaining budget `β ≥ n`. The grant's post budget is `β − n` (`SUPPLY_UNAUTHORIZED`, `ISSUE_BUDGET`). A `burn` does **not** replenish `β` unless the signed grant says `replenish on burn` (stablecoin synthesis 1).
+
+**E1-BACK.** Every `mint` of a `synthetic` asset carries a `BackingRef` that matches the asset's `BackingMode`:
+- `cdp`: in the same stage, an `obl.originate` or an increase of principal by the same `n`, with a committed lien against that obligation.
+- `reserve`: an observation under the named policy. This is a trust premise, not proof of an off-chain balance.
+- `unbacked`: the policy's explicit bucket, visible in the public statement.
+
+Code: `BACKING_MISSING`.
+
+**E-Sh (shares).** For each `(P, C)`: `Σ_h Δbal(d,h,sh(P,C)) = ΔS(P,C)`. `ΔS` changes only through `mint` or `burn` authored by program `P`. This is E1 instantiated on the share asset, plus the rule that only `P` holds the issue right. **[checked by construction from R-SH and E1]**
+
+**E-ACC (accounted state).** `acc(P,a)` changes only through these declared pool transitions: deposit or swap-in credit, payout debit, `recognizeLoss`, accrual realization, or `sweep(Unsolicited → acc)` under pool policy. An inbound `transfer` to `P`'s custody that no transition claims is credited to `Unsolicited(P,a)` instead. Pricing reads `acc`, never raw custody (`STALE_OR_UNACCOUNTED`). This follows AMM review-02 R3 edit 1 and staking synthesis 2.
+
+**E-CUST (custody coupling), invariant.**
+
+```
+bal(d, custody(P), a) = acc(P, a) + Unsolicited(P, a) − outstandingLent(P, a)
+```
+
+`outstandingLent` is non-zero only for lending pools (§2.10). **[obligation O-N4: inductive preservation over every admitted transition]**
+
+**E-Pos (claims).** For each instrument `I`: `Σ long(I) = Σ short(I)` after every accepted stage (`LEG_IMBALANCE`). Legs are never in `Holders`.
+
+**Separation [checked by construction].** Liabilities are not in E1. A loan disbursement is `transfer(creditor → debtor, n)` plus `obl.originate(o, n)`. E1 sees only the transfer. L1 (below) sees only the obligation.
+
+### 2.8 Gross, fee and net semantics
+
+Fix a signer `s` and a signed intent `I` with per-asset caps `GrossCap_I(a)`, `FeeCap_I(a)` and floors `NetFloor_I(b, recipient)`.
+
+```
+G1  gross_s(a)  = Σ { n | transfer(d,a,from h,·,n) ∈ eff, h ∈ Controlled(s) }
+                + Σ { n | burn(d,a,from h,n), h ∈ Controlled(s) }
+                + Σ { n | lien.commit/seize on s's holdings }      -- committed liens count as debit exposure
+G2  fees_s(a)   = Σ { z | feeAttr(k, a, z, ·, covers e) ∈ eff, e debits Controlled(s) }  for k ∈ FeeScope_I
+                  FeeScope_I = {explicit, venue, protocol} unless I signs `fees scope explicit`
+G3  net_s(b,r)  = Σ { n | transfer(d,b,·,to r,n) ∈ eff }  − Σ { n | transfer(d,b,from r,·,n) ∈ eff, r = recipient }
+G4  FEE-COVER:  for every feeAttr(k,a,z,to h,covers e): z ≤ amount(e) ∧ h = recipient of e or of a
+                  delta in eff; Σ feeAttr covering e ≤ amount(e)                     ρ: FEE_UNCOVERED
+G5  checks:     gross_s(a) ≤ GrossCap_I(a) (GROSS_CAP); fees_s(a) ≤ FeeCap_I(a) (FEE_CAP);
+                net_s(b,r) ≥ NetFloor_I(b,r) (NET_FLOOR)
+```
+
+Notes on G1–G5:
+- **Fees are attributions, not extra deltas (G4).** A CPMM venue fee `φ` is part of the `dx` transfer into the pool. It must not be double-counted in E1. The fee cap cannot be evaded by moving the fee into the pool's invariant. This is AMM review-02 R4 with its 1.23 A counterexample. It also matches the repository rule that fees count against net goals (`AGENTS.md:82-83`).
+- **Per-asset caps.** A fee paid in another asset is a type error (R-ID) unless the intent signs a literal conversion `fee_rate(b→a) = m/10^k`. The conversion is then valued with `px.requirement` (Owe, ceil). This is decision N5.
+- **G3 counts only transfers to the named recipient.** A transfer to a different account controlled by the same wallet does not count unless it is listed.
+
+**Episode roll-forward (ties to the MIL/2 link fields at `DESIGN-MIL2.md:46`).** For stage `k` of episode `E`:
+
+```
+CG_k(a)  = CG_{k−1}(a) + gross_s,k(a)          -- refunds never subtract (AGENTS.md:82)
+CF_k(a)  = CF_{k−1}(a) + fees_s,k(a)
+ROLL_k   = { (o, pₒ, aₒ, uₒ, stₒ) } committed; opening(ROLL_k) = closing(ROLL_{k−1})   ρ: ROLL_LINK
+CG_k(a) ≤ GrossCap_I(a) ∧ CF_k(a) ≤ FeeCap_I(a)                                          ρ: GROSS_CAP / FEE_CAP
+```
+
+Refunds appear in `net`, never in `CG`.
+
+**[obligation O-N7]:** cumulative monotonicity. For every accepted episode, the sequence `CG` is non-decreasing. Proof route: induction on stage acceptance.
+
+### 2.9 Liens (committed and reserved locks)
+
+States: `reserved → committed → {released, seized, cancelled}`, plus `reserved → cancelled` and `reserved → expired`.
+
+```
+K0  LT(d,h,a) = Σ_{ℓ: owner h, asset a, qℓ ∈ {reserved, committed}} mℓ     (authenticated aggregate cell)
+K1  LT(d,h,a) ≤ bal(d,h,a)                                                 ρ: LOCK_EXCEEDS
+K2  every effect debiting bal(d,h,a) by n requires n ≤ bal − LT (pre) and reads LT(d,h,a)
+                                                                           ρ: LOCK_EXCEEDS
+K3  lien.reserve/commit/release/seize/cancel update mℓ and LT atomically in one stage
+K4  lien.release(ℓ, n) requires every o ∈ againstℓ with priority ≥ the released tranche
+    discharged, or a signed reallocation                                   ρ: LIEN_STILL_BACKING
+K5  lien.seize(ℓ, n): n ≤ mℓ; n bounded by the liquidation policy (§2.11.3); transfers n
+    from h to h'; mℓ −= n; LT −= n. Stale proof → ρ: STALE_HEAD, bound to ℓ.version
+```
+
+Rule K2 makes lock safety **local to every debit**, per lending synthesis 2. Checking `K1` only at lien creation does not prevent a later plain `transfer` from breaking it. That is counterexample T-9.
+
+Custody (escrow and pool) is distinct from lien. Custody moves the balance to another holder, and E1 sees it. A lien leaves the balance in place, and K sees it. `DESIGN-MIL2.md:102` states K1 without K0 or K2, so it is not locally checkable (lending review-02 and -05).
+
+### 2.10 Obligations: funded roll-forward and loss
+
+State `stₒ ∈ {active, impaired, discharged, writtenOff}`. The components are non-negative and fit `u128` (L2, L5).
+
+```
+L1  uₒ = pₒ + aₒ    (derived, never stored independently — lending synthesis 1)
+L1' u'ₒ = uₒ + creation + accrual − discharge − forgiveness                (U0 L1 + tex L1)
+L3  obl.repay(o, n): 0 < n ≤ uₒ                                            ρ: REPAY_RANGE
+L6  obl.repay requires `funding` = a transfer(d, a_o, from payer, to creditorₒ, n') in the same
+    stage, n' = n (exact, U0 L6), or n' = div(Owe, …) under loan.repay.convert  ρ: LIABILITY_UNFUNDED
+L7  AccrualFirst: dA = min(n, aₒ), dP = n − dA; a'ₒ = aₒ − dA; p'ₒ = pₒ − dP   (U0 L7, [checked] restored in MIL/2 :100)
+L8  obl.originate requires consent (ConsentRef bound to debtor's signed digest) and a funding
+    transfer creditor→debtor of the same n (or a mint for cdp)             ρ: CONSENT_MISSING / LIABILITY_UNFUNDED
+L9  obl.accrue(o, k, z): period index k = lastₒ + 1 (no skip, no replay); z = div(Owe, pₒ·num, den)
+                                                                           ρ: ACCRUAL_PERIOD
+L10 obl.forgive: authority = creditorₒ's signed grant; reduces aₒ first then pₒ (declared order);
+    never produced by an enforce right                                     ρ: FORGIVE_UNAUTHORIZED
+L11 obl.impair(o, mark): creditor-side valuation only; uₒ unchanged; stₒ := impaired
+L12 stₒ = discharged ⇔ uₒ = 0; a discharged obligation releases no lien until K4 holds
+```
+
+**Loss allocation to pooled creditors.** For a lending pool `P`, `acc(P,a) = cash + Σ_{o ∈ book(P)} markₒ`. Here `markₒ = uₒ` while active, and the impairment mark after `obl.impair`.
+
+```
+LA1 pool.recognizeLoss(P, a, L, cause o, key): L = mark_before − mark_after ≥ 0;
+    L ≤ uₒ; key = (o, impairmentEpoch) consumed once                       ρ: LOSS_BOUND / LOSS_REPLAY
+LA2 recognizeLoss is the only admitted transition with post(acc)·pre(S) < pre(acc)·post(S)  (PPS-down)
+LA3 obl.recover(o, n, funding): funded repayment of an impaired obligation raises acc by n above mark
+LA4 authority: enforce/policy right named in the pool's digest-pinned policy; debtor's uₒ untouched
+```
+
+A stage with a pps decrease and no `recognizeLoss` fails `PPS_MONOTONE`. The same shape covers staking slashes (`cause slash(v)`, replay key = verdict ID) and CDP shortfall.
+
+The **waterfall among claim classes** is library policy. The core guarantees only these four things:
+- non-erasure: `uₒ` survives impairment;
+- a single recognition per key;
+- a bound;
+- claimant completeness when a snapshot is claimed. For system-wide shutdown this last guarantee is [deferred].
+
+### 2.11 First-slice library rules over 𝒩
+
+#### 2.11.1 CPMM exact input (`cpmm/1`)
+
+Pre-state: authenticated `(x, y) = (acc(P,A), acc(P,B))` at pool head `v`, and fee `f/F` pinned in `P`'s policy digest.
+
+```
+CP0  head(P) = v (authenticated read)                                  ρ: STALE_HEAD
+CP1  x > 0 ∧ y > 0 ∧ dx > 0                                            ρ: POOL_EMPTY / ZERO_INPUT
+CP2  φ = div(Owe, dx·f, F)            (amm.fee)
+CP3  e = dx − φ   (checked; e > 0)                                      ρ: ARITH_RANGE
+CP4  range(W_p, x+e); dy = div(Recv, y·e, x+e)   (amm.out.exactIn); 0 < dy < y  ρ: ZERO_OUTPUT
+CP5  range(W_p, x+dx); x' = x+dx; y' = y−dy
+CP6  effects: transfer(A, trader→P, dx); transfer(B, P→recipient, dy); feeAttr(venue, A, φ, P, covers CP6.1)
+CP7  post acc(P,A)=x', acc(P,B)=y'; head(P) := v+1
+```
+
+**Equivalence [checked by construction].** Suppose `range` facts hold and `x+e > 0`. Then
+
+- `dy = ⌊y·e/(x+e)⌋`
+- ⟺ `(x+e)(y−dy) ≥ x·y` and `(x+e)(y−dy−1) < x·y`
+
+Proof: expand `(x+e)(y−dy) ≥ xy` to `dy(x+e) ≤ ye`, and expand the strict tightness bound to `(dy+1)(x+e) > ye`. So the "quotient/remainder" and "inequality plus tightness" candidates (AMM synthesis disagreement row 4) define the same output. The only remaining choice between them is native cost, **[obligation W5]**.
+
+Exact output (`amm.in.exactOut`) reuses CP0–CP7. The witness supplies `dx` and `dy` is fixed. Acceptance requires the invariant `(x+e)(y−dy) ≥ xy`. Minimality of `dx` is the trader's interest, protected by the trader's own gross cap, not by the pool.
+
+#### 2.11.2 Vault (`vault/1`, one asset, one class)
+
+Pre-state: `A = acc(V,a)`, `S = S(V,C)`, and immutable offsets `(vA ≥ 1, vS ≥ 1)` in the policy digest.
+
+```
+VD deposit(a):  s = div(Recv, a·(S+vS), A+vA); s > 0                  ρ: ZERO_OUTPUT
+VM mint(s):     a = div(Owe,  s·(A+vA), S+vS)
+VW withdraw(a): s = div(Owe,  a·(S+vS), A+vA)
+VR redeem(s):   a = div(Recv, s·(A+vA), S+vS); a > 0                  ρ: ZERO_OUTPUT
+VP (all four)   (A'+vA)·(S+vS) ≥ (A+vA)·(S'+vS)                       ρ: PPS_MONOTONE
+```
+
+- Every sum `A+vA`, `S+vS`, `A'+vA` is range-checked before its product (W4).
+- Effects: the asset transfer between user and custody `V`, and `mint` or `burn` of `sh(V,C)` to or from the user. E-ACC updates `A` by exactly the transferred amount.
+- Bootstrap. With `vA ≥ 1` the divisor is positive by construction, so `S = 0` is not a special branch. Dead shares are the alternative (decision N4).
+
+**[checked by construction]** VD implies VP: `s ≤ a(S+vS)/(A+vA)` gives `(A+a+vA)(S+vS) ≥ (A+vA)(S+s+vS)`. Symmetric arguments hold for VM, VW and VR.
+
+**[obligation O-N6]:** round-trip. `redeem(deposit(a)) ≤ a` for every admitted state (staking review-01 O-V1).
+
+#### 2.11.3 Lending (`loan/1` fixed-rate; `loan-col/1` collateralized)
+
+`loan/1` uses L1–L12 only, a literal rate and no oracle. This follows lending synthesis 5.
+
+`loan-col/1` adds:
+- a lien `ℓ` committed against `o`;
+- an authenticated scalar price `Price<Coll, Debt, s>` in base-per-quote orientation (D1);
+- the health predicate `pcmp(uₒ·10^s·HF_den, …)`, evaluated in 𝒩 as a *program transition check*, not as a Φ clause.
+
+The liquidation bounds are:
+
+```
+LQ1 repay r ≤ div(Recv, uₒ·cf_num, cf_den)                     (liq.closeFactor)
+LQ2 seize z ≤ div(Recv, r·(10^4+bonusBps)·price_scale, 10^4·price_mantissa)   (liq.seize)
+LQ3 funded repay (L6) + lien.seize(ℓ, z) + obl.repay(o, r) in one stage; residual uₒ − r survives
+LQ4 if mℓ exhausted and u'ₒ > 0: obl.impair allowed; never obl.forgive by keeper
+```
+
+Keeper ordering uses head serialization on `ℓ.version`. This is decision N6.
+
+#### 2.11.4 CDP stablecoin draw (`cdp/1`)
+
+```
+CD1 mint(d, USD*, to debtor, m, issueGrant(system), backing cdp(o))
+CD2 obl.originate(o, debtor, system, USD*, m) or principal += m, consent bound
+CD3 lien.commit(ℓ, debtor, Coll, c, against {o})
+CD4 health: pcmp in 𝒩 under px.value (floor) vs px.requirement (ceil), or a literal-price policy
+CD5 aggregate debt ceiling cell Σ principal ≤ ceiling, authenticated and updated in-stage  ρ: CEILING
+CD6 repay by burn: burn(USD*, from debtor, n) is the funding effect of obl.repay(o, n)
+```
+
+Under CD6 the creditor is the issuer, so a burn is an admitted funding form for L6.
+
+### 2.12 Stage-relation additions
+
+The following would be added to the `Stage` conjunction in `MIL2-PROPOSED-SEMANTICS.tex:131-137`:
+
+- `ProgramValid`: the selected program transition, including its 𝒩 checks, holds for the witness. This follows AMM synthesis 2.
+- `NumericSound`: every 𝒩 node satisfies its precondition and role.
+- `Conserve` is refined to E1 + E1-AUTH + E1-BACK + E-Sh + E-ACC + E-Pos.
+- `LiabilityRoll` is refined to L1–L12 and LA1–LA4.
+- `LocksSafe` is refined to K0–K5.
+- `FeeGrossNet` is added: G1–G5 and the episode roll-forward.
+
+---
+
+## 3. Effect on each of the eight DeFi categories
+
+| Category | Change under this lens | Remaining gap |
+|---|---|---|
+| **AMM** | Pool arithmetic moves from Φ₁ to 𝒩 plus `cpmm/1`. The fee is an attribution counted in G2 by default. `acc` and `Unsolicited` close the donation path. Rounding is role-fixed. LP shares are the nominal `sh(P,C)` under E-Sh. | LP mint and burn (isqrt bootstrap `MIN`), multi-hop (one hop per stage), surplus allocation between owner and completer (AMM synthesis row 2), concentrated, weighted and stable pools [deferred] |
+| **Lending** | A real obligation state machine (L1–L12). Funded discharge. K0–K2 on every debit. Impairment is separate from forgiveness. Lending-pool loss through LA1–LA4. Liquidation bounds LQ1–LQ4. | Oracle round selection (oracle lens). Variable-rate index [deferred]. Keeper ordering (N6). Waterfall policy. |
+| **Stablecoins** | Supply derived from `mint`/`burn`. Issue budget without implicit replenishment. E1-BACK co-effect. Debt stays separate from supply. Repayment by burn is a funding form. Debt ceiling cell. | Redemption queue, system mode, shutdown pro-rata (REM-2 applies) [deferred]. Reserve attestation remains a trust premise. |
+| **Derivatives** | Side-indexed legs with E-Pos. Payoff via 𝒩 with a **declared** protected side (C7). Settlement creates an obligation paid by funded transfer (L6/L8), so an expired option cannot erase an unpaid duty. | Fixing selection (oracle lens). Margin, funding, ADL [deferred]. |
+| **Oracles** | Only numeric consequences: price orientation per D1, `px.value` floor and `px.requirement` ceil, scale checks in `pcmp`. | Identity and provenance are out of lens. A product of variable price and variable quantity is 𝒩, not Φ₀ (decision N2). |
+| **Governance** | `IssueGrant` and `EnforceGrant` budgets are consumed like authority (A1). Forgiveness needs creditor authority, and `enforce` can never forgive. Loss recognition authority is pinned in pool policy. A policy change never rewrites `ROLL` for existing obligations. | Grant state machine and policy pinning are out of lens. |
+| **Bridges** | Decimal conversion is a `bridge.convert` row (Recv). A cross-domain amount is a claim, not an E1 delta (EFF-D). The representation dust claimant follows REM-2. | Paired-claim invariant, verifier policy [deferred to the bridge lens and U4]. |
+| **Staking/yield** | The vault rules VD–VP. `acc` for managed assets. Slashing through `recognizeLoss(cause slash, key verdict)`. Reward distribution via `alloc.prorata` plus residue. | Queue and unbonding lifecycle, reward-index checkpoints, restaking allocation [deferred]. |
+
+---
+
+## 4. Traces (exact effects and expected stage results)
+
+**What an "Accept" result below means.** It means `StageCandidate` under the proposed relation. `AcceptedStage` requires the open native path (`MIL2-PROPOSED-SEMANTICS.tex:159-167`). For every hostile trace, the envelope is well-formed: signer, digest, domain, clock, caps, recipient and footprint are all valid, and one bound fact is mutated.
+
+Shared setup for T-1 to T-3:
+- Domain `mp` (midnight.preview). Assets `A` (NIGHT, 6 decimals) and `B` (DUST, 6 decimals).
+- Pool `P` at head `v=7`: `x = acc(P,A) = 1,000,000,000`, `y = acc(P,B) = 2,000,000,000`. Fee `30/10000`. `W_p = 126`.
+- Intent `AcquireB`: `GrossCap(A) = 11,000,000`, `FeeCap(A) = 1,000,000`, `NetFloor(B, owner) = 20,000,000`, fee scope default (all fee kinds).
+
+### T-1 (valid): exact-input CPMM swap
+
+| Step | Value |
+|---|---|
+| CP2 | `dx·f = 330,000,000`; `div(Owe, 330,000,000, 10,000)`: `q=33,000, r=0` → `φ = 33,000` |
+| CP3 | `e = 10,967,000` |
+| CP4 | `y·e = 21,934,000,000,000,000`; `x+e = 1,010,967,000`; witness `q = 21,696,059`, `r = 320,947,000` (`0 ≤ r < x+e` ✓) → `dy = 21,696,059` |
+| Invariant | `(x+e)(y−dy) = 2,000,000,000,320,947,000 ≥ 2,000,000,000,000,000,000 = xy` ✓ |
+| Tightness | `(x+e)(y−dy−1) = 1,999,999,999,309,980,000 < xy` ✓ |
+
+Effects:
+- `transfer(mp, A, owner→P, 11,000,000)`
+- `transfer(mp, B, P→owner, 21,696,059)`
+- `feeAttr(venue, A, 33,000, P, covers #1)`
+
+Checks:
+- E1(A): `−11,000,000 + 11,000,000 = 0 = Δsup` ✓. E1(B): `−21,696,059 + 21,696,059 = 0` ✓.
+- G: gross `11,000,000 ≤ 11,000,000` ✓; fees `33,000 ≤ 1,000,000` ✓; net `21,696,059 ≥ 20,000,000` ✓. FEE-COVER: `33,000 ≤ 11,000,000` ✓.
+- Post state: `acc(P,A) = 1,011,000,000`, `acc(P,B) = 1,978,303,941`, `head = 8`.
+
+**Result: Accept (StageCandidate).**
+
+### T-2 (hostile): one-unit over-delivery
+
+Everything is as in T-1, but the witness claims `dy = 21,696,060`. The trader's envelope still passes, since the net floor, gross and fee checks all hold.
+
+- Quotient form: `r = 21,934,000,000,000,000 − 21,696,060·1,010,967,000 = −690,020,000 < 0`.
+- Inequality form: `(x+e)(y−dy) = 1,999,999,999,309,980,000 < xy`.
+
+**Result: Reject `DIVMOD_WITNESS`** (equivalently `POOL_INVARIANT`). No state, effect or replay ID is published (U0 F1). This is the AMM synthesis U2 discriminator. It shows the pool rule, not an envelope check.
+
+### T-3 (valid and hostile): exact-output, fee under-rounded
+
+Target `dy = 20,000,000`. The witness supplies `dx = 10,131,406`.
+
+- Valid: `dx·f = 303,942,180`; `div(Owe, ·, 10,000)`: `q = 30,394`, `r = 2,180 > 0` → `φ = 30,395`. `e = 10,101,011`. Invariant slack `+1,780,000,000` ✓. **Accept.**
+- Hostile: the witness sets `φ = 30,394` (floor) and `e = 10,101,012`. The invariant still passes, with slack `+3,760,000,000`. So **the pool invariant alone does not catch this**: the pool receives the same `dx`, and the only damage is a fee cap misreported by one unit. N-ROLE-FIXED requires `φ = q + [r>0] = 30,395`. **Result: Reject `ROUND_ROLE`.**
+- Also hostile: `dx = 10,131,405` gives `φ = 30,395` and `e = 10,101,010 < e* = 10,101,011`, so the invariant fails. **Reject `POOL_INVARIANT`.**
+
+### T-4 (valid): vault deposit with a non-zero remainder
+
+Vault `V`: `A = 1,000,500`, `S = 1,000,000,000`, `vA = 1`, `vS = 1,000`. The user deposits `a = 999`.
+
+- `n = 999·1,000,001,000 = 999,000,999,000`; `d = 1,000,501`; witness `q = 998,500`, `r = 750,500` → `s = 998,500`.
+- VP: `(1,001,500)·(1,000,001,000) ≥ (1,000,501)·(1,000,999,500)` ✓. With `s+1`, VP fails, so the result is tight.
+
+Effects:
+- `transfer(mp, a, user→V, 999)`
+- `mint(mp, sh(V,C), user, 998,500, issue: V)`
+
+Checks:
+- E1(asset): 0. E1(share): `+998,500 = ΔS` ✓. E-ACC: `A' = 1,001,499`.
+- A signed Φ₀ clause `shares ≥ 998,000` passes.
+
+**Result: Accept.** The sub-unit remainder `750,500/1,000,501` of a share is not transferred to anyone (REM-1).
+
+### T-5 (hostile): redeem rounded up, and a zero-output redeem
+
+Same vault. The user redeems `s = 1,000,000` shares.
+- `n = 1,000,000·1,000,501`; `d = 1,000,001,000`; `q = 1,000`, `r = 500,000,000` → `a = 1,000` (Recv).
+- A witness claiming `a = 1,001` (ceil) fails N-DIV with `r' < 0` and fails VP. **Reject `DIVMOD_WITNESS` / `PPS_MONOTONE`.**
+- A program declaring `redeem` with role Owe fails typing with **`ROUND_ROLE`**. Under MIL/2's free `Rounding` argument this would type-check, which is the drain counterexample in staking review-05.
+- Redeeming 1 share: `q = 0` → **Reject `ZERO_OUTPUT`**. The user is protected from burning for nothing, and the loop "1 share → 1 unit via ceil" is unrepresentable.
+
+### T-6 (hostile): donation and inflation
+
+Fresh vault, `vA = 1`, `vS = 1,000`. The attacker deposits 1 unit and receives 1,000 shares (`A = 1`, `S = 1,000`). The attacker then transfers `1,000,000` units directly to custody `V`.
+
+- Under E-ACC, that transfer is credited to `Unsolicited(V,a)`, and `A` stays 1.
+- The victim deposits `1,000,000`: `s = ⌊1,000,000·2,000/2⌋ = 1,000,000,000` shares. The donation is not reflected in pricing.
+
+**Result: victim deposit Accept at a fair price. The attack yields nothing.**
+
+Comparison without E-ACC, with pricing from raw custody and no offset (`A = 1,000,001`, `S = 1`): the victim gets `⌊10^6·1/1,000,001⌋ = 0` shares. Under VD this is **Reject `ZERO_OUTPUT`** rather than silent loss. With the offset but raw custody, the victim gets `2,000` shares instead of about `10^9`. That shows **the offset alone does not neutralize donation; E-ACC does.** **[checked arithmetic]**
+
+### T-7 (valid): partial, then covering repayment under AccrualFirst
+
+Obligation `o`: `p = 1,000,000,000`, `a = 0`, rate `5/1000` per period, `last = 0`.
+- Accrue at period 1: `z = div(Owe, 5,000,000,000, 1,000) = 5,000,000` → `a = 5,000,000`, `u = 1,005,000,000`.
+- Repay `n = 3,000,000` with funding `transfer(A, debtor→creditor, 3,000,000)`: `dA = 3,000,000`, `dP = 0` → `a = 2,000,000`, `u = 1,002,000,000`. **Accept.**
+- Repay `n = 10,000,000` (funded): `dA = 2,000,000`, `dP = 8,000,000` → `p = 992,000,000`, `a = 0`. **Accept.**
+- `ROLL` opening equals the predecessor's closing at each step. `CG(A)` rises by 3,000,000, then by 10,000,000.
+
+### T-8 (hostile): unfunded or mismatched discharge
+
+The stage contains `obl.repay(o, 10,000,000)`, but the funding transfer is `9,999,999`, or goes to a non-creditor, or is missing.
+
+**Result: Reject `LIABILITY_UNFUNDED`.** Variant: `obl.forgive(o, 10,000,000)` signed only by a keeper holding `enforce` → **Reject `FORGIVE_UNAUTHORIZED`**. This is the "erased debt" control in `ROADMAP.md:39` (immediate delivery brief).
+
+### T-9 (hostile): double pledge through a plain transfer
+
+`bal(owner, C) = 100`. Lien `ℓ₁` (committed, 80) is against `o₁`, so `LT = 80`. The stage then contains:
+- `lien.reserve(ℓ₂, owner, C, 30, against {o₂})`
+- separately, `transfer(C, owner→x, 25)`
+
+The first is rejected because `LT` would be `110 > 100`. The transfer alone fails K2: `25 > 100 − 80 = 20`.
+
+**Result: Reject `LOCK_EXCEEDS`.** Checking each lien individually, as MIL/2 §3.4 permits, would accept both.
+
+### T-10 (hostile): positive supply with no backing
+
+A CDP stage mints `m = 500,000,000 USD*` to the debtor under a valid `issueGrant` with budget `10^12`. The obligation increase is absent, or is `499,999,999`.
+
+E1 holds, since `Δsup = +500,000,000 = Σ Δbal`. That is exactly why E1 alone is insufficient. **Result: Reject `BACKING_MISSING`.**
+
+### T-11 (hostile): refund resets gross
+
+Episode `E`:
+- stage 1 funds escrow with 11 A (`CG = 11,000,000`);
+- stage 2 refunds 11 A (net `+11 A` to owner, `CG` unchanged);
+- stage 3 attempts a fresh 11 A funding under the same intent.
+
+`CG = 22,000,000 > 11,000,000` → **Reject `GROSS_CAP`**. This is the `AGENTS.md:82` rule made mechanical.
+
+### T-12 (hostile): sum range skipped before a product
+
+Pool with `x = 2^125 + 5` and `dx = 2^125`. Both are below `2^126`, but `x + dx ≥ 2^126`. CP5 `range(W_p, x+dx)` → **Reject `ARITH_RANGE`**.
+
+Without CP5 the next product could reach `≈ 2^127 · 2^126 = 2^253`. That is within the W3 ambiguity (253 or 254 bits), which is exactly the case the width obligation must settle.
+
+---
+
+## 5. Conflicts with MIL/2, the semantics draft, owner decisions and the reviews
+
+| # | Conflict | Position taken here |
+|---|---|---|
+| C1 | MIL/2 puts `sharesFor`/`assetsFor`/`mulDiv` in Φ₁, deferred to U4 (`DESIGN-MIL2.md:85-89,137,158-165,350`). | Remove them from Φ. Add 𝒩 on the transition side. Φ₁'s deferral is unchanged. |
+| C2 | **Owner decision D3**: AMM and vault primitives are U6 and are not listed in the U0 profile (`u0-numeric-profile-decision.md:24-26`). The AMM, staking and lending reviews propose U0 tags and U1 certification. | **Not decided here.** This is decision N0. It changes an owner decision and needs the owner or the majority design rule (develop skill §2). |
+| C3 | The free `Rounding` argument (`DESIGN-MIL2.md:85-86`) and the author-selectable profile rows (`numeric-profile.json`, four rows) conflict with D2. | N-ROLE-FIXED. This is consistent with D2's statement of the gap (`:22`). |
+| C4 | "Remainder `retained-in-pool`" is tagged **[checked]** at `DESIGN-MIL2.md:89`. D2 says the protocol reserve (`:18`). | REM-1: a sub-unit remainder cannot be posted, so the protected-side holder benefits. REM-2: an integer residue is posted to a declared holder. The MIL/2 tag should be **[obligation/policy]**, not [checked] (staking review-01 made the same point). |
+| C5 | Fee rounding direction. Staking review-05 says fees round **down** on the recipient's side. AMM review-02 and staking review-04 say **ceil**. D2 says fees are owed, so ceil (`:15`). | Follow D2: ceil. Review-05 contradicts the owner decision. T-3 shows the fee floor is not caught by the invariant. |
+| C6 | Width. AMM review-01 prefers two-limb u128. AMM reviews -02/-04/-05 prefer u126 (or u112). Lending review-02 proposes a `prodLe` Φ atom with limbs. Staking review-04/-05 propose two-limb divmod. | Decision N1. Note that lending review-02's `prodLe` places a product in **Φ**, which conflicts with N-NOT-Φ. My proposal keeps the health check in 𝒩, and the signed intent sees only Boolean or result quantities. |
+| C7 | D2 says "owed rounds up, received rounds down". For a bilateral transfer (derivative payoff, P2P loan conversion), the same amount is owed by one party and received by the other. D2 does not determine a unique direction. | Rounding is determined by a *declared protected side*. For pool and vault it is the pool. For bilateral terms it must be signed in the instrument. **Counterexample to D2 as written.** |
+| C8 | MIL/2 `less_than` "stops at 253 bits" (`:169`). The captured ZKIR spec gives `bits < FR_BITS = 255` (`zkir-v3-spec.md:80,498`). | W3 records this as an obligation. R1 in AMM review-02 relies on the 253 figure and itself flagged that dependency. |
+| C9 | MIL/2 E1 says "declared supply delta" (`:256`). U0 E1 says `Σ gross = Σ supply changes = 0` (`UNIFIED-PROPOSAL.md:90`). | Δsup is *derived* from `mint`/`burn` effects. U0 E1 is the case with no mint or burn. |
+| C10 | `Encumbrance.priority: u8` together with a "signed total order on seizes" (`DESIGN-MIL2.md:98,193`). Lending review-05 wants ledger-head serialization. Staking review-03 wants origination priority. | K5 binds `ℓ.version` (head serialization) for safety. The priority among claimants is library policy. Decision N6. |
+| C11 | The semantics draft's L1 (`tex:180-185`) has no impairment or write-off, and "authorizedForgiveness" is the only reduction. | L11/LA1: impairment is creditor-side and never reduces `uₒ`. This reconciles lending synthesis 4 ("distinct from forgiveness"). |
+| C12 | The semantics draft excludes "vault conversion" from the first profile (`tex:59`). | Consistent if N0 keeps D3. If N0 adopts U1 certification, the tex scope sentence must change. |
+| C13 | MIL/2 decision 5 treats concentrated liquidity as needing a new sort. The rule `sh(P,C)` does not cover range positions. | Agreed and kept [deferred]. R-SH is deliberately not claimed for ranges. |
+| C14 | The MIL/2 showcase signs `fees <= 1 A` with no fee scope. Counting only explicit fee lines under-counts venue fees. | G2 defaults to all fee kinds. An explicit-only scope must be signed (decision N5). |
+
+---
+
+## 6. Unresolved decisions and verification obligations
+
+### 6.1 Decisions
+
+None of these is taken here. Each gives alternatives, a recommendation and the evidence needed.
+
+| ID | Decision | Alternatives | Recommendation | Evidence needed |
+|---|---|---|---|---|
+| N0 | Placement of pool and vault arithmetic | (a) keep D3: U6, and U0 reserves nothing; (b) U0 reserves op tags and role rows, U1 certifies 𝒩, U2 accepts one pool or vault stage | (b), but it amends D3, so the owner must decide | Owner decision; U1 cost measurement of N-DIV and N-MUL under valid and adversarial witnesses |
+| N1 | Pool operand width | (a) u126, single-field product; (b) u128 two-limb; (c) both profiles, with a width tag in pool policy | (c) with (a) first | Effective comparison bound (W3); gadget cost; realistic reserve range |
+| N2 | Priced health and collateral checks | (a) 𝒩 `pcmp` on the transition side; (b) a Φ₀ literal-price policy only; (c) a Φ `prodLe` atom (lending review-02) | (a), and (b) as the no-oracle fallback | Equivalence proof of (a) with signed thresholds; native cost |
+| N3 | Remainder beneficiary | (a) the protected-side holder per REM-1, as a D2 override with rationale; (b) the literal D2 reserve plus a mechanism for REM-2 only | (a)+(b): REM-1 for quotients, REM-2 plus the reserve for allocation residue | Owner confirmation of the D2 override; `reserveMechanism` design |
+| N4 | Vault bootstrap | (a) mandatory virtual offset; (b) dead shares with `MIN`; (c) either, pinned per instance | (c), with `vA ≥ 1` required when (a) | Bound proof relating `vS` to extraction margin (staking review-04 notes this is unproved) |
+| N5 | Fee scope and cross-asset fees | (a) default all kinds, per-asset caps; (b) explicit-only default | (a) | Owner or majority vote; wallet UX impact |
+| N6 | Seize ordering | (a) head/version serialization; (b) signed total order; (c) origination priority | (a) for safety plus (c) as policy | Concurrent-keeper traces |
+| N7 | Exact-quote pool rule | (a) invariant only; (b) tightness required (`dy = ⌊·⌋`) | (b) for exact input | Surplus allocation clause (AMM synthesis row 2) |
+| N8 | Unbacked issuance | (a) explicit `unbacked` bucket; (b) forbidden | (a), visible in the public statement | Stablecoin synthesis dissent resolution |
+
+### 6.2 New obligations under this lens
+
+All are **[obligation]**:
+- **O-N1.** 𝒩 soundness and completeness: each relation accepts exactly the intended integer result for every witness within the declared widths. Route: algebraic proof plus K and TypeScript differential with adversarial `(q, r)`.
+- **O-N2.** No field wrap: every product node carries range facts on both operands, including derived sums, and its bound is below the effective comparison bound (W3/W4). Route: static width inference with a proof.
+- **O-N3.** Role determinism: every division node's role is a function of its op tag. Route: typing lemma.
+- **O-N4.** E-CUST inductive preservation over all admitted transitions, including `Unsolicited` and `sweep`.
+- **O-N5.** K1 preservation given K2 on every debit path, including custody, fees and seizes. The proof must show no debit bypasses `LT`.
+- **O-N6.** Vault round trip and PPS monotonicity except through LA1.
+- **O-N7.** Monotone `CG`/`CF` and ROLL linkage across an episode.
+- **O-N8.** L1' closure: every change to `uₒ` is attributable to exactly one of creation, accrual, funded discharge, authorized forgiveness or funded recovery.
+- **O-N9.** The CPMM equivalence (§2.11.1) holds under the chosen widths. Route: mechanized proof.
+- **O-N10.** REM-2 residue bound and posting completeness.
+
+### 6.3 Preserved and unresolved
+
+**MIL/2 §17 obligations remain open.** These are totality, non-laundering, the encumbrance sum rule (now O-N5), acceptance refinement, recovery viability and derived-footprint containment. The tex obligations O1–O6 (`tex:247-252`) also remain open.
+
+**U0 items remain open:**
+- `reserveMechanism: absent` (`numeric-profile.json:55-58`)
+- the author-selectable rounding gaps
+- K-reference reconciliation, which notes missing "exact units, price orientation, beneficiary rules" (`k-reconciliation.json:191`)
+- source/Core embeddings, target pins and the enforcement map
+
+**U1 gate:** a native certificate for each primitive of the slice, with adversarial soundness. **U2 gate:** native verification and complete effect readback (`ROADMAP.md:22-23`). This document satisfies neither.
+
+---
+
+## 7. Anchors and primary URLs
+
+**Repository (worktree at base `983a4bb4`, with untracked deliverables):**
+- `concepts/intent-language/DESIGN-MIL2.md`: lines 46, 53-61, 66-78, 85-89, 98-102, 137, 158-171, 193, 234, 254-258, 270-283, 338, 350, 363-365
+- `deliverables/mil2-deep-research-2026-09-29/MIL2-PROPOSED-SEMANTICS.tex`: lines 59, 131-137, 159-167, 171-187, 229-237, 247-252
+- `docs/decisions/u0-numeric-profile-decision.md`: lines 13-18 (D2), 20 (overrides), 22 (author-selectable gap), 24-26 (D3)
+- `deliverables/u0-semantic-contract-2026-09-23/numeric-profile.json`: `defaultPolicy` (line 49), `reserveMechanism` (lines 55-58), primitive rows with `authorSelectable`
+- `deliverables/u0-semantic-contract-2026-09-23/k-reconciliation.json:191`
+- `deliverables/u0-study-2026-09-28/UNIFIED-PROPOSAL.md:80-95` (L1–L7, E1, E2, I1–I5, A1, F1)
+- `experiments/moriarty-language/spec/successor/expression-signatures.json:905-927` (Core `Mul`: "checked integer product in underlying type", `ARITH_RANGE`), `:942,980` (`FloorDiv`, `CeilDiv`)
+- `ROADMAP.md:21-23,27` (U0/U1/U2/U6 rows, including "per-primitive rounding direction and beneficiary policy")
+- `ROADMAP.md:39` (the U3 discriminator and hostile list)
+- `AGENTS.md:82-83` ("Refunds cannot erase gross debit limits; fees count against net goals")
+- `docs/MORIARTY-PRODUCT-CONTRACT.md:41`
+- `deliverables/mil2-deep-research-2026-09-29/source-text/zkir-v3-spec.md:79-80,498-501,572,583` (FR_BITS, bit bounds)
+- `wiki/zkir/zkir-instruction-set.md:202-209` (`less_than` parity adjustment)
+- `source-text/erc4626.md:136,166,631-636`
+- Recommendation syntheses: `opus55-{amm,lending,stablecoins,staking_yield,derivatives,oracles,governance,bridges}-recommendations/SYNTHESIS.md`
+- Reviews cited: AMM `review-02.md`; staking `review-01.md`, `-04`, `-05`; lending `review-02.md`, `-03`, `-04`
+
+**External, comparative only (not Moriarty evidence):**
+- ZKIR v3 spec at the pinned revision: https://raw.githubusercontent.com/midnightntwrk/midnight-zkir/47793c8ab042aa5a91d1a4672c6b82de6bdf9dd8/zkir-spec/docs/zkir-v3-spec.md. This is the target spec text; the captured copy is in `source-text/`. It is not a measured circuit.
+- ERC-4626 rounding directions: https://eips.ethereum.org/EIPS/eip-4626 (captured)
+- Uniswap v2 fee-adjusted invariant and minimum-liquidity lock: https://github.com/Uniswap/v2-core/blob/master/contracts/UniswapV2Pair.sol. Cited by the AMM synthesis; **not captured in `source-text/`**, so it should be captured before any reliance.
+- SMT-LIB logic fragments: https://smt-lib.org/logics-all.shtml (captured)
+
+**Arithmetic provenance.** All trace numbers in §4 come from Python integer arithmetic run in this session. The exact-output pair `10,131,406`/`10,131,405` and the T-1 output `21,696,059` match AMM review-02 §4 independently.

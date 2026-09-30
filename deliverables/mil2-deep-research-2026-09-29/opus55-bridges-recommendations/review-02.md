@@ -1,0 +1,189 @@
+# Recommendation: how MIL/2 should handle foreign evidence in bridges and cross-domain settlement
+
+**Status:** this is a specified-only design review, and everything below is a recommendation. I implemented nothing and ran no tests, proofs, compilation or transactions. The guarded status command returned `SP01.6 loan-swap-subset` with unresolved operational history and no pending transactions. That blocks campaign dispatch, not this review.
+
+## 1. Verdict on design fitness
+
+The local rules are sound, but the foreign-evidence part is not ready to freeze. MIL/2 already has four good local rules:
+- Every stage runs on one domain (`DESIGN-MIL2.md:43-46`).
+- Effects are domain-qualified, and a foreign credit counts only as evidence for a later stage (`DESIGN-MIL2.md:254`).
+- Evidence type carries a source set (`DESIGN-MIL2.md:175-187`).
+- A deadline is not proof that something did not happen (`MIL2-PROPOSED-SEMANTICS.tex:200-202`).
+
+The gap is that foreign evidence is a single opaque index, `imported(Policy)`, and "remains a named trust premise until U4" (`DESIGN-MIL2.md:177,187`). Yet the first profile already lets imported observations inform guards (`MIL2-PROPOSED-SEMANTICS.tex:59`). MIL/2 does not specify:
+- which verifier mode checked the evidence;
+- which source chain, instance or epoch it comes from;
+- what the evidence actually states (that a message is present, or that it is absent);
+- how final it is;
+- how a foreign message is identified for replay protection;
+- what happens after a reorg or a compromised verifier.
+
+`final(obs)` and `attested(obs,k,n)` are Φ propositions (`DESIGN-MIL2.md:145`). That makes them disjunctable, which is a laundering route (see edit 1). U0 is supposed to hash-bind the canonical encoding, and "U0 cannot hash-bind what is unspecified" (`DESIGN-MIL2.md:262`). So these fields have to be fixed at U0 even though verification stays at U4.
+
+## 2. Five ranked design edits (recommendations)
+
+### Edit 1 — Replace `imported(Policy)` with a typed, digest-bound `EvidencePolicy`, and make evidence properties typing side conditions
+
+**Rule sketch:**
+```
+EvidencePolicy ::= { mode: lightClient(clientId, consensusSpecDigest)
+                         | committee(k, n, keysetDigest, keysetEpoch)
+                         | optimistic(challenge: Duration(clk_S), bondRef)
+                         | trustedAttestor(issuer)
+                   , src: (Domain, InstanceId, Epoch)
+                   , statement: membership | nonMembership
+                   , minFinality: FinalityClass
+                   , maxAge: Duration(clk_src)
+                   , statusCell: policy(id)           -- active | frozen | revoked
+                   , locus: circuit | ledgerRule }    -- where verification is enforced
+ε ::= anchored | imported(policyDigest) | ...
+```
+- **Formation:** a position that requires `imported(p)` with `minFinality ≥ f` admits a term `t ! L` only if every `i ∈ L` is imported under `p` and meets `f`. This is the same discipline as `anchored` (`DESIGN-MIL2.md:185`).
+- **Remove from Φ:** `final(obs)` and `attested(obs,k,n)` stop being propositions.
+
+**Counterexample (current design):** the guard `final(o) or after(t_S)` type-checks. A relayer who holds non-final evidence waits until `t_S` and the guard passes. A second case: two policies that are both named "bridgeX" but have different keysets are indistinguishable, because the index carries a name and not a digest.
+
+**Placement:** encoding, digest and formation go in **U0**, with type-level rejection checks in U1. Native verification stays in **U4**.
+
+**Boundary change:** this puts evidence-policy fields into U0. The reason is the canonical-encoding rule at `DESIGN-MIL2.md:262`, plus the fact that the U0 evidence type index is already assigned to U0 (`DESIGN-MIL2.md:345`).
+
+### Edit 2 — Key replay on foreign message identity, not on proof bytes
+
+**Rule sketch:**
+```
+ForeignMsgId = Poseidon(tag ‖ srcDomain ‖ srcInstance ‖ emitter ‖ sequence
+                        ‖ payloadDigest ‖ dstDomain ‖ dstInstance ‖ timeout@clk_D)
+Receive(m):  replay(m.id) ∉ s   ∧ Verify_p(m) ∧ m.dst = executingDomain
+          ⟹ replay'(m.id) ∧ bridgeClaim'(m.id) = minted
+```
+Only the destination domain consumes the nullifier. The public stage statement binds `m.id` next to the observation identities (`MIL2-PROPOSED-SEMANTICS.tex:240`).
+
+**Counterexample:** the same S lock is proven at height h and again at h+1. Those are two different proof byte strings, so a replay cell keyed on observation identity or evidence hash would allow two mints. A message addressed to a different destination instance of the same asset would also be accepted, because `dstInstance` is not bound.
+
+**External practice:** IBC's packet commitment is `hash(data, timeoutHeight, timeoutTimestamp)`, identified by port, channel and sequence. Receive checks the receipt path, which is keyed by sequence (`source-text/ibc-ics004.md:423-428,1040`; https://github.com/cosmos/ibc/blob/main/spec/core/ics-004-channel-and-packet-semantics/README.md). This is external practice, not a Moriarty rule.
+
+**Placement:** the ID schema goes in **U0**. The local nullifier and a hostile replay test go in **U2**. That test can run under a stub policy whose enforcement locus is the ledger (see §4).
+
+### Edit 3 — Nonreceipt is a destination-clock statement, and D must refuse receipt after its timeout
+
+**Rule sketch:**
+```
+DstReceive(m) requires before(m.timeout @ clk_D)            -- native, on D
+SrcRefund(x,m) requires  q_x = pending ∧ bridgeClaim(m.id) = unknown
+                   ∧ ( Obs<NonReceipt(m.id, h_D ≥ m.timeout), imported(p)@D>
+                         with p.statement = nonMembership
+                     ∨ recoverRight(trustedNegative, window) )  -- named, signed
+Formation: a refund guard on a cross-domain escrow may not be discharged
+           only by after(Instant(clk_S)); clk_S ≠ clk_D is a type error in that position.
+```
+Keep outcome states `unknown | received | nonreceivedProved`. These are exclusive per `m.id` because the proven height is at or after `m.timeout`, and D's own receive rule rejects at or after `m.timeout`.
+
+**Counterexample:** S refunds at its own deadline, and the relayer then delivers to D late. If D has no native timeout check, both legs settle and the asset is double-spent.
+
+**External practice:** IBC requires the timeout to be "proven on the recipient chain, not simply the absence of a response on the sending chain." It verifies receipt absence at `proofHeight ≥ timeoutHeight` (`source-text/ibc-ics004.md:1329,1378,1425`). The Moriarty rule that corresponds is already in the contract: "Timeout is not evidence of nonexecution" (`docs/MORIARTY-PRODUCT-CONTRACT.md:47`).
+
+**Placement:** state types and the formation rule go in **U0**. The late-receipt versus refund race goes in **U3** (`ROADMAP.md:25`). Verifying the non-membership proof goes in **U4**.
+
+### Edit 4 — Separate finality from outcome; handle reorgs and compromise without rollback
+
+**Rule sketch:**
+```
+FinalityClass ::= instantBFT | checkpointed(epoch) | depth(n) | optimistic(window)
+Retractable(depth(_)), Retractable(optimistic(_))
+Receive under retractable evidence ⟹ issue Contingent<repr>(m.id)   -- non-transferable,
+                                        or transferable only under a signed haircut policy
+Promote(m.id): Obs meeting instantBFT|checkpointed ⟹ Contingent → Canonical repr
+Freeze(p): misbehaviour evidence (two conflicting signed headers/attestations
+           for one (src,height)) ⟹ policy(p) := frozen
+           frozen ⟹ reject new Receive/Promote/Refund under p; claims stay unknown
+Invalidate(m.id) after mint ⟹ Obligation{debtor: declared backstop, creditor: holders,
+                                 principal: minted} — never a negative supply delta
+```
+- **Status table correction:** remove `final` as an outcome state (`MIL2-PROPOSED-SEMANTICS.tex:202`). Finality is an attribute of the evidence.
+- **Debt:** a deficit is a liability, which keeps it separate from supply (`docs/MORIARTY-PRODUCT-CONTRACT.md:43`).
+- **No rollback:** D effects already accepted stay accepted, and there is no global rollback.
+
+**Counterexample:** D mints against a depth-6 lock on S, and S then reorganizes. D's supply now exceeds S custody, but every local E1 equation still balances (`MIL2-PROPOSED-SEMANTICS.tex:171-177`). The backing failure has no representation anywhere.
+
+**External practice:** IBC freezes a client on misbehaviour evidence and allows a frozen-channel close (`source-text/ibc-ics004.md:784-795`).
+
+**Placement:** the enum, the `Contingent` representation link and the frozen policy state go in **U0**. Freeze and promote transitions go in **U3**. Misbehaviour verification goes in **U4**. The loss allocator is a U6 library.
+
+### Edit 5 — Pair a claim across domains and bind verification locus without a host Boolean
+
+**Rule sketch:**
+```
+bridgeClaim(m.id) : unknown → minted | nonreceivedProved → (redeemed | refunded)   -- tombstoned
+Backing(route, p):  Σ outstanding_D(repr) ≤ Σ locked_S(canonical)  [conditional on p honest]
+EvidenceValid(o) holds only if p.locus ∈ {circuit, ledgerRule} and the
+                 public statement binds (policyDigest, m.id, h_src, statusCell head)
+```
+Under `trustedAttestor`, "the relayer checked the proof" never satisfies `EvidenceValid`. The attestor's signature must be circuit-checked or ledger-checked. In-circuit Ed25519 is unavailable (`DESIGN-MIL2.md:264`). So committee mode needs either a ledger signature rule or a circuit-friendly signature scheme.
+
+**Counterexample:** a host adapter returns `verified=true` for a forged committee attestation, and D mints. Native acceptance never saw the foreign statement.
+
+**Placement:** the claim cell and the locus field go in **U0**. The backing invariant is an **obligation** proved per verifier mode in U4. A federated attestation is `committee` mode under a U5 policy (`ROADMAP.md:26`). It is evidence to be verified, not part of the acceptance relation.
+
+## 3. Core versus library boundary
+
+**Core (recommendation):**
+- the `EvidencePolicy` type and its digest;
+- `ForeignMsgId`;
+- `replay`, `bridgeClaim` and `policy` status cells;
+- outcome states and their exclusivity;
+- the `FinalityClass` enum and the retractability rule;
+- the clock-mismatch formation rule;
+- `Contingent` representation;
+- invalidation as an `Obligation`;
+- the requirement that the verification locus is native.
+
+These all interact with linearity, digests and native acceptance, so they cannot be retrofitted later.
+
+**Library:**
+- concrete light clients and their consensus specs;
+- lock-mint, burn-mint and custodial-release templates;
+- bonded fast-fill and liquidity-provider reimbursement;
+- haircut and exposure-cap policies;
+- loss allocators and fee economics;
+- propagation of eligibility rules to wrapped assets.
+
+**Kernel:** the optional federated kernel supplies relaying and committee attestations under its own policy, and nothing more.
+
+## 4. Smallest implementable slice and evidence pair
+
+**Slice:** a destination receive stage on one Midnight Preview instance, under a `committee(1,1)` policy with `locus = ledgerRule`. This assumes Midnight can check a signature over a digest in a ledger rule (`DESIGN-MIL2.md:263`), which is not confirmed. There is no light client in this slice.
+
+The stage:
+1. binds `m.id`, `policyDigest`, the `policy(p)=active` head and `before(m.timeout@clk_D)`;
+2. consumes `replay(m.id)`;
+3. issues `Contingent<wD>` for 99 to the owner, plus a 1-unit fee to the declared recipient;
+4. writes `bridgeClaim(m.id)=minted`.
+
+This slice exercises edits 1, 2, 3 (the D side) and 5. It deliberately does not claim bridge safety.
+
+**Positive control:** a fresh `m.id`, a valid attestation over `m.id`, an active policy, a time before the timeout, and complete effects of 99 + 1 ≤ 100. The expected result is that the stage is accepted and the claim is minted.
+
+**Hostile control:** the same message submitted a second time with a different, still valid attestation. The attestation nonce changes, so the evidence bytes differ, but `m.id` is identical. The expected result is rejection because `replay(m.id)` is already consumed.
+
+Validity condition for the pair: the hostile input passes every other clause on its own. Show this by resubmitting it against a state where the nullifier is fresh, where it must be accepted. That proves the rejection comes from the replay rule and not from a malformed witness.
+
+Further hostile variants: wrong `dstInstance`, a frozen policy, arrival at or after the timeout, and a refund discharged only by `after(clk_S)`.
+
+## 5. Explicit disagreements
+
+1. **With `DESIGN-MIL2.md:145`:** `final` and `attested` should not be Φ propositions (edit 1).
+2. **With `MIL2-PROPOSED-SEMANTICS.tex:202`:** `final` should not be an outcome state alongside `received` (edit 4).
+3. **With `MIL2-PROPOSED-SEMANTICS.tex:59` and `DESIGN-MIL2.md:187`:** before U4, the profile should reject imported evidence unless its enforcement locus is native (circuit or ledger rule). A "named trust premise" that no one enforces amounts to a host-computed acceptance Boolean.
+4. **With the category report (`07-bridges.md:16`):** it places all verifier work in U4. I move the encoding into U0.
+5. **Also with the category report:** it lists the four-state set as adequate carriers. I think that set needs the finality split and a destination timeout check that D itself enforces.
+
+## 6. Residual assumptions
+
+- The Midnight ledger can check a signature over a digest in a validity rule. This is unverified.
+- D's clock and height can be read authentically in-circuit.
+- Midnight finality is treated as `instantBFT` for its own stages.
+- Foreign consensus is honest above each mode's threshold.
+- Relayers are eventually live, and D is reachable (the IBC partition caveat, `ibc-ics004.md:1329`).
+- Poseidon is collision resistant for `ForeignMsgId`.
+- Keyset rotation is epoch-bound and signed under the prior epoch.
+- A declared backstop exists and is solvent for deficit obligations. Otherwise the backing obligation is only as strong as the verifier model. MIL/2 cannot prove a foreign chain honest.

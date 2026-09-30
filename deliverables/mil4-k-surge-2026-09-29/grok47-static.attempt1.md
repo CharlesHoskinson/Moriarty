@@ -1,0 +1,1 @@
+I will start from the checked-in development rules and the existing K conventions, then review the static draft against the MIL/2, MIL/4, and numeric-profile texts you supplied.

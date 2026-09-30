@@ -34,7 +34,7 @@ Input financial state is a **supplied local projection**. It is not an authentic
 
 ## Citations (source paths, no new external claims)
 
-- `openspec/sprints/sp03-executable-bounded-semantics-in-k.md` — due100 / pay30
+- `openspec/sprints/execution/SP03.md` — historical bounded due100 / pay30 execution
 - `openspec/sprints/report-lessons.json` — TX02
 - retained round-08 composition `gpt6-mechanism-result-review.md` — CM04 / CM09
 - retained successor `semantic-contract.md` section F.2 — AccrualFirst, PrincipalFirst, ProRata, and conversion rounding names. This kernel is a provisional local projection and makes no full F.2 correspondence claim

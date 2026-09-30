@@ -1,0 +1,29 @@
+{
+  "text": "The repaired codec closes the pre-repair high Proxy defect. This review finds no high or medium defect in proxy repair-01.\n\nHistorical dissent stands. Frozen packet `34e34595aaab4094ee4735ce81b511b873f82fe3ad7f89648ebcfecb7757d332` and codec `c7e9479889d4168f858c147fc28bd8d2bb2be0ac24ec4b0554b61a4bb87041a6` checked descriptors in `record` and then encoded with `[[Get]]`. `proxy-reproduction.tap` is 0/4: selector/kind, cross-phase asset, post-admission non-ASCII ID, and descriptor-versus-get all changed the digest. The old 72/72 run does not clear that defect.\n\n## Repair trace\n\n`encodeImage` and `produceImages` now snapshot before any payload read. `snapshotRecord` takes `Object.getOwnPropertyDescriptors` once, copies each data `value`, recursively snapshots nested IDs, operations, file records, and the three-file array, and freezes a new plain object. `produceImages` rebinds definition, package, and terms to those snapshots, then encodes only the snapshots. `policyValue` points at those same frozen IDs and the same frozen operation.\n\nA Proxy `get` trap is not on that path. A lying `getOwnPropertyDescriptor` is copied once and then read only from the frozen plain object. `idText` still reads `.value` several times, and `identifier` calls it again, but those reads hit the frozen string captured for that field. Selector text and kind byte are checked with `operationKind` on that same pair; a mismatch throws `ImageCodecError` and returns no image.\n\nCross-phase asset is the same frozen ID on the source snapshot and on `policyValue.asset`. A later trap can still mutate the caller’s original object. It cannot replace the snapshot already stored. The four old divergences, plus the full-graph, hidden-invalid-descriptor, shared-ID, and file-get controls, match this structure. The embedded TAP records 87 passes, 0 failures, including those controls.\n\n## Bytes, aliases, parity\n\nPurpose 1, 3, and 4 layouts match the pinned repair-02 byte rules and the later live SPEC (`7adb21b5…`, 40109 bytes). Prefix `moriarty-mil4-image/1` + NUL + purpose + u32be length accounts for the stated 27-byte envelope. IDs are u16be plus ASCII, text is u16be plus UTF-8, scale is one byte 0..18, nominals are 16-byte big-endian through `2^127−1`, rounds are 8-byte big-endian through `2^64−1`, hashes are 32 raw bytes, files are role byte plus blob, and the five empty u16 fields plus delegation and recovery are the fixed zero bytes. Transfer is `01` plus owner, recipient, fee recipient, amount, fee. Repay is `02` plus obligation, payer, amount, `01 01`. Caps are 4096, 1MiB per file, and 4MiB for the package. Purpose 2 is rejected.\n\nFile bytes are copied with `TypedArray` `byteLength`, `byteOffset`, and `buffer` slots into a new `Buffer`. Returned payload and preimage are further copies. Returned policy IDs and the operation are new frozen objects, so later writes to the caller inputs do not change a re-encode. Same-realm `SharedArrayBuffer` is rejected. A Proxy around a `Uint8Array` fails the internal-slot read.\n\nThe live SPEC differs from repair-02 in consumer text only: tag8 constructor diagnostics, tag16/17 asset and scale order, and tag35 debtor/creditor before B11. Those sections are outside this producer. Exact image byte rules are unchanged, which agrees with the repair-03 comparison’s identical byte-rule claim. Pinned input remains repair-02 `52ffc9b4…` under `history/pre-grok-repair-03/SPEC.md`.\n\n## Claims checked\n\nThe 87 names in `test-results.tap` match `codec.test.mjs`. Nine synthetic images are three vectors times three purposes. Actual package sizes reconcile: module bytes 20746+17917+2640 = 41303, plus a 128-byte fixed header and 15 bytes of role and length, give 41446 and 41445. The one-byte gap is `TransferLiteralFee` versus `RepayAccrualFirst`. Policy sizes 274 and 254 stay at the synthetic widths because both hashes are fixed 32-byte fields. Result digests for source images match the frozen vectors; core and linked policy digests match `result-data.json`. Archive count 13 matches the history file list. `currentExecutableIndependentReview: pending` matches this being the follow-up review.\n\nThis pass did not re-execute Node or recompute SHA-256. Hash equalities above are cross-checks inside the packet plus the source-payload hex layout, not a fresh digest run.\n\n## Residual limits\n\nThese stay low and do not reopen the high finding. Capture is still per field: a descriptor trap can mutate a later sibling before that sibling is copied, and the encoded triple then follows the post-mutation snapshots. `ISSUES.md` already limits the claim to listed cases, not pure arbitrary traps. Returned image objects and payload buffers remain mutable after the digest is computed; policy identities and the operation do not. Standalone `encodeImage(4)` still allows a policy whose `actionId` text and `coreProgramId` text differ; `produceImages` rejects that split. That boundary is already stated in `ISSUES.md`. No B05–B07, provider, or W-D2 closure is shown.",
+  "stopReason": "end_turn",
+  "usage": {
+    "input_tokens": 94919,
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 89236,
+    "reasoning_tokens": 87972,
+    "total_tokens": 184155
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.24658636,
+  "total_cost_usd_ticks": 2465863600,
+  "modelUsage": {
+    "grok-4.7-build": {
+      "inputTokens": 94919,
+      "outputTokens": 89236,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.24658636
+    }
+  },
+  "_redaction": {
+    "private_reasoning_removed": true,
+    "original_sha256": "a189a88bebc04241ad73d631991f6eed5f90a64fe5506f83fb1fc326e54239cb"
+  }
+}
