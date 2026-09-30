@@ -1,0 +1,21 @@
+# MIL/4 S0 recommendations and decision sequence
+
+**Status, 2026-09-30:** recommendations from local experiments and specified-only W-D2F/G/H drafts. They are not adopted W-D2 semantics. W-D2F repair-05, W-D2G repair-04 and W-D2H repair-04 each have separate GPT-6.1 Sol high and Grok 4.7 xhigh bounded design approvals. The local purpose-1/3/4 codec passes 87 checks after a Proxy admission repair and has two bounded reviews. A Source/6 purpose-1 adapter passes 50 checks and has two bounded reviews. W-D0–W-D4 and Sprint 1 remain open.
+
+## Recommended choices
+
+1. **Identity (B01–B04):** keep Source/6's closed `TransferLiteralFee` and `RepayAccrualFirst` selectors. Give agreement instance, stage, episode, action and Core program distinct nominal sorts, even when text matches. Carry stage and episode in an explicit contextual wrapper. Authenticate component-wise keys under one immutable registry view tied to B11. Keep B11 as the sole authenticated current-head source. Do not treat the existing W-D2E `actionId=Action` fixtures as Source-to-wire positives. The alternative logical-action alias requires a successor to the current tag-6 literal rule. See [W-D2G](../../experiments/moriarty-language/formal/mil4/identity-binding/SPEC.md).
+2. **Selected images (B05–B07):** use a canonical nine-field, instance-scoped Source definition image; a purpose-separated exact three-module Core/lowerer/wrapper package image; and a separate policy image linking the computed Source/Core hashes and fixed signed scope. Keep digest claims out of their own images. Treat source-byte equality and actual loaded-artifact/lowering correspondence as separate proofs. Require new profiles when code closure or Source grammar gains an action body. See [W-D2H](../../experiments/moriarty-language/formal/mil4/hash-images/SPEC.md).
+3. **Consumer order:** decode canonical `/3` wire, parse Source/6, perform the full compatibility-domain sweep, compare tag-local literals and authenticated provider facts, then check complete history, prepare with direct Core/5, derive the complete W-D2E image from the verified pre/post, compare that image and field 26, and return only `SemanticComparedUnqualified`. Use B16's complete replay history in the Core input; never use Source lowering's selected-key-only `[]/[key]` as authenticated history. B17 atomic ledger compare-and-consume is a later mode. See [W-D2F](../../experiments/moriarty-language/formal/mil4/effect-consumer/PLAN.md).
+
+## Concrete next implementation sprint
+
+Freeze any adopted B01–B07 format and identity decisions with independent byte vectors. The existing codec and adapter are content-only local experiments; the next runnable slice should verify image bytes and fail-closed missing-provider outcomes while keeping every provider fact explicitly untrusted until authentication exists. A positive semantic comparison additionally needs implemented B08–B16 providers with real selected evidence, including exact wallet/ledger signature-message preprocessing, one authenticated snapshot, verified head extension, full replay transport and grant/work authority. Test the re-committed hostile Debit: matching field 26 must still reject when Core derives a different effect.
+
+After local semantic comparison, implement B17 separately and demonstrate one atomic compare-and-consume/apply against the same digest, snapshot, effects, allowance, replay and successor. Only that result could support a ledger admission claim. Existing `PreparedUnqualified`, finite K/Quint witnesses, wire round trips and effect equality cannot substitute for these gates.
+
+## Existing measured boundary
+
+The reviewed [S1B finite packet](audits/S1B-FINAL-REVIEW-DISPOSITION.md) and [α_local repair](audits/ALPHA-LOCAL-INJECTIVE-REVIEW-DISPOSITION.md) establish only three common positive local projections and a bounded failure/head/premise matrix. The `/3` codec and W-D2E effect codec have reproducible local vectors; W-D2E accepts a re-committed hostile image because it checks equality to a supplied image. The current W-D2F/G/H matrices are specified-only and have zero authenticated consumer, registry or image-producer executions.
+
+Guarded SP01.6 dispatch is still blocked by stale binding/candidate inputs, missing accounting and unavailable live resource state. No public transaction was submitted in this work.

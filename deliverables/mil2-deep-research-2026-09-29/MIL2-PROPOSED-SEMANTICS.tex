@@ -1,0 +1,275 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,longtable,array}
+\usepackage[margin=25mm]{geometry}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=blue]{hyperref}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{ragged2e}
+\setlist{nosep,leftmargin=18pt}
+\hypersetup{pdftitle={MIL/2 Proposed Bounded Semantics},pdfauthor={Moriarty research draft}}
+\newcommand{\R}{\mathsf{Reject}}
+\newcommand{\Ok}{\mathsf{Ok}}
+\newcommand{\Eval}{\mathsf{Eval}}
+\newcommand{\Auth}{\mathsf{Auth}}
+\newcommand{\holds}{\mathsf{holds}}
+\newcommand{\Cells}{\mathsf{Cells}}
+\newcommand{\supp}{\mathsf{src}}
+\newcommand{\eff}{\mathsf{Eff}}
+\newcommand{\foot}{\mathsf{Foot}}
+\newcommand{\trace}{\mathsf{Trace}}
+\newcommand{\Bool}{\mathbb{B}}
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\dom}{\mathsf{dom}}
+\newcommand{\Rel}{\mathcal{R}}
+\newcommand{\Tr}{\mathcal{T}}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{obligation}{Proof obligation}
+\title{Moriarty Intent Language MIL/2\\Proposed Bounded Semantics}
+\author{Research draft for review}
+\date{29 September 2026\\\small Moriarty baseline \texttt{983a4bb49e3ccae399ee2514da2f6fa3f03593fd}}
+\begin{document}
+\maketitle
+\begin{abstract}
+This document proposes a precise first profile for MIL/2: typed terms, total bounded evaluation, signed-template completion, evidence provenance, stage acceptance, escrow transitions, resource accounting, and footprints. Its notation and admission order follow Moriarty's existing successor semantic contract. It corrects two visible inconsistencies in the current design: the general escrow guard language is wider than integer difference logic, and the showcase footprint omits balance writes. The definitions are candidates for review. Preservation, native enforcement, and liveness remain proof obligations.
+\end{abstract}
+\noindent\textbf{Status.} Specified only. No compiler, prover, K model, or Midnight transaction is certified by this document. A source claim, a proposed rule, and a proof obligation are distinguished explicitly below. The companion research memo and captured primary sources are in the same deliverable directory.
+
+\section{Repository semantic conventions and profile boundary}
+Moriarty separates lexical rules, an ISO/IEC 14977 EBNF source grammar, static semantics, an executable TypeScript evaluator, and an independent K operational definition. A profile identifier fixes each admitted constructor and rule set. The current source/5 profile elaborates through Core/4 and lifecycle/1. MIL/2's \texttt{moriarty-intent/2} is a proposed \emph{new intent layer}; this paper neither renames source/5 nor asserts a lowering into that Core exists~\cite{SRC5,STATIC,CORE}.
+
+The established static judgment is $\Sigma;\Gamma;phase\vdash e:T$, where $\Sigma$ is a bounded acyclic schema registry and $\Gamma$ has disjoint locals, arguments, observations, and persistent fields. This proposal extends that judgment with a provenance effect $!L$ and a separate intent-policy environment $\Pi$:
+\[
+\Sigma;\Gamma;phase;\Pi\vdash e:T\;!\;L.
+\tag{T}
+\]
+The extension is a proposed compatibility obligation, not a rule already implemented in source/5. Exact type equality includes asset, holder, vault, scale, and unit indices; no implicit amount, price, or debt conversion is permitted. MIL/2 $\mathsf{Qty}(a)$ requires an explicit representation and elaboration rule before it may use the existing Core $\mathsf{Amount}\langle a\rangle$.
+
+Admission follows the repository order: structural bounds and canonical metadata; schema and declaration validation; complete lexical-order static checking of every action and both Boolean branches; full Pre/Args/Obs snapshot validation; then work-metered reduction. The existing Core configuration has the fields
+\[
+\langle control,pre,writes,locals,args,obs,descriptors,
+workInitial,workRemaining,result\rangle.
+\]
+Pure \texttt{Emit} records a typed descriptor. Financial state and effects arise only when the protected operation layer prepares that descriptor. The existing source/5 sequence prepares the lifecycle kernel once before evaluating the final \texttt{ensures} suffix. A rejected local preparation publishes no state, effects, or IDs~\cite{CORE,SRC5}. This proposal preserves that ordering wherever it extends source/5.
+
+\section{Scope and semantic objects}
+The first profile admits one signer and one executing domain per bounded stage. A stage may leave an authenticated continuation. Imported observations may inform a guard only under a signed evidence policy. The optional federated kernel is outside the acceptance relation. Multi-signer stages, variable multiplication, vault conversion, native parent-proof verification, and cross-domain atomic rollback are outside this profile.
+
+Let $D,A,P,C$ be finite sets of domains, nominal asset identifiers, parties, and state cells. Asset metadata is checked against a nominal identifier; matching symbols or decimals do not establish asset identity. Every quantity is a checked unsigned 128-bit integer in an asset's smallest unit. A signed balance delta has a separate sort. A clock-indexed instant can be compared only with an instant on the same clock.
+
+\begin{definition}[State and effects, proposed]
+A state $s$ maps typed cells to values and contains balances, supply, obligations, encumbrances, escrows, allowances, receipt-consumption marks, replay marks, and terminal tombstones. An effect $e$ is a finite sequence of domain-qualified balance and supply deltas plus fee, liability, authority, and disclosure records. A candidate transition $(s,e,s')$ is evaluated as one stage; only acceptance commits $s'$.
+\end{definition}
+
+For an obligation $o$, write $p_o,a_o,u_o$ for principal, accrued amount, and outstanding amount. For an escrow $x$, write $q_x\in\{\mathsf{unfunded},\mathsf{pending},\mathsf{released},\mathsf{refunded}\}$. An observation has identity $i$, value $v$, origin class $\epsilon$, domain $d$, observation time $t_o$, policy reference, and an authenticated-value commitment. Identity is retained in provenance; class and domain alone are insufficient to distinguish two observations.
+
+\section{Typed terms, provenance, and total evaluation}
+Types include $\mathsf{Qty}(a)$, $\mathsf{Delta}(a)$, $\mathsf{Instant}(c)$, $\mathsf{Duration}(c)$, $\mathsf{Position}(j)$, and $\Bool$. Terms include literals, typed observations, state-cell reads, checked addition and subtraction, comparisons, $\min$, $\max$, multiplication by a literal, Boolean connectives, and bounded threshold predicates. Pool share conversion and multiplication of two variable terms are reserved for a later profile.
+
+The typing judgment (T) records a source set $L$ of observation \emph{identities}. Let $\lambda(i)=(\epsilon_i,d_i)$ give each source's class and domain. Source sets propagate through all constructors, including guards that select a branch:
+\[
+\frac{\Sigma;\Gamma;phase;\Pi\vdash t_1:\mathsf{Qty}(a)!L_1\quad
+      \Sigma;\Gamma;phase;\Pi\vdash t_2:\mathsf{Qty}(a)!L_2}
+     {\Sigma;\Gamma;phase;\Pi\vdash t_1+t_2:\mathsf{Qty}(a)!(L_1\cup L_2)}
+\]
+\[
+\frac{\Sigma;\Gamma;phase;\Pi\vdash b_1:\Bool!L_1\quad
+      \Sigma;\Gamma;phase;\Pi\vdash b_2:\Bool!L_2}
+     {\Sigma;\Gamma;phase;\Pi\vdash \mathsf{And}(b_1,b_2):\Bool!(L_1\cup L_2)}.
+\]
+The second rule extends the existing \texttt{And} constructor with a provenance effect. Both operands are checked statically even if reduction skips the right operand. A dynamic source set may be smaller only if a separate sound dependency theorem is supplied. A position requiring anchored evidence on $d$ admits $t$ only if $\forall i\in L,\lambda(i)=(\mathsf{anchored},d)$ and each $i$ is bound to the required authenticated ledger read. An imported value cannot become anchored by arithmetic, comparison, aggregation, or hole filling. The existing Core \texttt{ReadPre(post,...)} is legal only in an \texttt{Ensure} condition; MIL/2 guards cannot read a speculative post-state through that constructor~\cite{STATIC}.
+
+After whole-input admission and static checking, reduction is total into a result type. In the existing notation, a local rejection retains a code, UTF-8 half-open source span, node path, and consumed ordinary work. We propose the extension
+\[
+\begin{gathered}
+\langle control,pre,writes,locals,args,obs,descriptors,w_0,w,result\rangle\\
+\longrightarrow^{*}
+\mathsf{ExpressionPrepared}(post,descriptors,w,L)
+\quad\text{or}\\
+\mathsf{Rejected}(code,span,nodePath,w_0-w).
+\end{gathered}
+\]
+Here $L$ is proposed result metadata, not an existing wire field. The prepared expression result is tentative; it does not mean accepted financial execution. Each operator names its failure conditions. Checked subtraction rejects underflow; arithmetic rejects \texttt{ARITH\_RANGE} at its declared width; division in a later profile rejects a nonpositive denominator; a threshold $k$-of-$n$ rejects $k=0$ or $k>n$; a clock operation rejects incompatible clocks or overflow. Missing, stale, unauthorized, or unverifiable observations receive distinct proposed rejection codes. A rejected guard cannot authorize a transition. Existing \texttt{And}/\texttt{Or} check both operands statically, then reduce left-to-right with short-circuit behavior and ordinary work charged only for entered constructors~\cite{CORE,STATIC}. A skipped right branch does not fail dynamically, but its static provenance remains included. Source spans and failure ordering follow the existing profile rules.
+
+\begin{obligation}[Totality and non-laundering]
+For every well-formed bounded term, evaluation terminates with one of the stated results; accepted values carry a source set that contains every influencing observation. Show this by induction over the complete term grammar, then check the executable evaluator and K definition against positive and adversarial cases.
+\end{obligation}
+
+\subsection{The authoring-check fragment}
+The MIL/2 escrow check asks whether
+\[
+\mathsf{after}(deadline)\Rightarrow release\_when\lor refund\_when.
+\]
+To establish validity, a checker must show the negation unsatisfiable over the admitted typed state and time constraints. The difference-logic procedure applies only when each arithmetic atom has the required variable-difference form. General $\Phi_0$ guards permit sums, literal coefficients, $\min/\max$, and threshold combinations. Their check requires a sound QF-LIA reduction or another complete bounded procedure; an unhandled formula returns $\R(\mathsf{unsupported})$. The procedure and its cost limit are part of the language profile. The fixed caps in MIL/2 are proposals until measured. SMT-LIB defines the narrower QF\_IDL and broader QF\_LIA fragments separately~\cite{SMTLIB}.
+
+\section{Signed templates and completion}
+A signed intent template $I$ has a canonical versioned encoding of fixed clauses, typed holes, permitted filling predicates, evidence policy, authority, fee and gross limits, recovery policy, and a residue digest. A completion $\sigma$ maps each hole to a value or permitted effect-grammar object. Define $\mathsf{Fill}(I,\sigma)$ to require type correctness, all hole bounds, the permitted source sets, unchanged fixed bytes, and the signed version/domain. Define $\pi_I$ as the projection from a completed stage trace to the signer's observable trace: all effects, recipients, fees, duties, authority consumption, disclosure, and terminal status remain visible; only route-internal choices designated as holes may be hidden.
+
+\begin{definition}[Template acceptance, proposed]
+Let $\Rel_I(s,o,e,s',\sigma)$ be the source-level acceptance relation in Section~\ref{sec:stage}. The template denotes
+\[
+\Tr(I)=\bigl\{\pi_I(s,o,e,s')\mid
+  \exists\sigma.\;\mathsf{Fill}(I,\sigma)\land\Rel_I(s,o,e,s',\sigma)\bigr\}.
+\]
+For a fixed admissible completion, $\Tr(I,\sigma)$ uses the same definition with that $\sigma$ held fixed. This gives the previously unfilled expression $\mathsf{Accepted}(I)$ a closed denotation.
+\end{definition}
+
+Set inclusion $\Tr(I,\sigma)\subseteq\Tr(I)$ then follows from the definition when the same source relation is used. The substantive implementation property is stronger:
+\[
+\mathsf{NativeAccept}(I,\sigma,w,\ell)
+\Longrightarrow
+\mathsf{Fill}(I,\sigma)\land\pi_I(\ell)\in\Tr(I).
+\tag{C1}
+\]
+It requires that native acceptance binds the exact signed template, completed terms, full effects, and authenticated ledger state. A bounded hole by itself does not establish (C1). A proposed negative corpus includes a bound-respecting route that redirects a recipient, substitutes imported for anchored evidence, widens fees, or drops a continuing duty.
+
+\section{Stage acceptance relation}\label{sec:stage}
+Write $\mathsf{Stage}(I,\sigma,s,o,e,s')$ for the conjunction below. Each clause names its evidence and enforcement locus; a host-computed Boolean is not a substitute for a required native constraint or ledger check.
+\begin{align*}
+\mathsf{Stage}={}&\mathsf{TypedBounded}\land\mathsf{SignedBound}
+\land\mathsf{GuardsTrue}\land\mathsf{AuthorityFresh}\\
+&\land\mathsf{EvidenceValid}\land\mathsf{EffectComplete}
+\land\mathsf{Conserve}\land\mathsf{LiabilityRoll}\\
+&\land\mathsf{LocksSafe}\land\mathsf{FootprintSound}
+\land\mathsf{HistoryLink}\land\mathsf{FailurePolicy}.
+\end{align*}
+This conjunction is a compact mathematical presentation, not an additional executable Core constructor. The U0 stage-relation schema uses six judgment keys, grouped under four design obligations~\cite{U0SCHEMA}: 
+\begin{center}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.18\linewidth}>{\RaggedRight\arraybackslash}p{0.31\linewidth}>{\RaggedRight\arraybackslash}p{0.39\linewidth}}
+\toprule
+U0 key & Design judgment & MIL/2 proposed clause\\
+\midrule
+\texttt{stage} & Contract properties & Typed bounds, profile, program and circuit identity, domain and lifecycle identity\\
+\texttt{intent} & Intent refinement & Signed completion, recipients, assets, gross and fee caps, disclosure and validity\\
+\texttt{effect} & Valid transition & Observations, complete effects, supply, liabilities and outcome\\
+\texttt{authority} & Valid transition & Consent, consumed and reserved authority, replay and rights\\
+\texttt{history} & Compliant history & Legitimate predecessor, obligation commitments and unique consumption\\
+\texttt{failure} & Rejection/partial failure & Phase policy, retained effects and retained fees\\
+\bottomrule
+\end{tabular}
+\end{center}
+The first five keys must hold for an accepted successful stage. The \texttt{failure} key governs every accepted failure phase and its residual duties. A local evaluator's atomic rejection is not automatically a ledger failure rule. The existing stage-relation JSON schema is a recorded U0 contract with open embeddings and enforcement; this proposal adds clauses to be reconciled with it, not a claim that its fields already enforce the rules.
+
+The source-to-ledger chain has explicit boundaries:
+\[
+\begin{aligned}
+\mathsf{Source}_{/5}&\xrightarrow{\text{elaborate}}\mathsf{Core}_{/4}
+\xrightarrow{\text{reduce}}\mathsf{ExpressionPrepared},\\
+\mathsf{ExpressionPrepared}&\xrightarrow{\text{protected operations}}
+\mathsf{FinancialPrepared},\\
+\mathsf{Intent}_{/2}+\mathsf{FinancialPrepared}
+&\xrightarrow{\text{proposed stage relation}}\mathsf{StageCandidate},\\
+\mathsf{StageCandidate}&\xrightarrow{\text{open native path}}
+\mathsf{AcceptedStage}.
+\end{aligned}
+\]
+The current K lifecycle definition checks selected source/Core financial cases and produces exact rejection codes; the corresponding MIL/2 K rules and a general source/Core/K/native correspondence theorem remain open~\cite{KDEF}. A source-level descriptor is not a ledger transfer.
+
+For each executing domain $d$ and asset $a$, complete-effect conservation is
+\[
+\sum_{p\in P\cup\mathsf{Custody}\cup\mathsf{Reserve}}
+  \Delta\mathsf{balance}_{d,p,a}
+  =\Delta\mathsf{supply}_{d,a}.
+\tag{E1}
+\]
+Supply change requires the signed $\mathsf{issue}$ right. For each obligation,
+\[
+u'_o=p'_o+a'_o,
+\quad
+u'_o=u_o+\mathsf{creation}_o+\mathsf{accrual}_o
+        -\mathsf{discharge}_o-\mathsf{authorizedForgiveness}_o,
+\tag{L1}
+\]
+with nonnegative components and consent for a new debtor liability. Forgiveness and repayment are distinct effects. For a repayment under AccrualFirst,
+$d_a=\min(n,a_o)$ and $d_p=n-d_a$, with $0<n\le u_o$ and a corresponding funded transfer.
+
+Gross debit, fees, and net return are checked separately against the signed intent. A refund does not reset prior gross spending. Cumulative used plus reserved authority stays within the signed budget. Replay identifiers and terminal tombstones are consumed at most once under the ledger's authenticated current state.
+
+\section{Escrow, race priority, and recovery}
+An escrow starts unfunded, moves to pending on an accepted funding stage, and moves from pending to one of two terminal states on an accepted stage. A guard may be true for both branches. The signed priority rule selects a single branch at the same authenticated head. A terminal tombstone then prevents a second terminal transition.
+\[
+\frac{q_x=\mathsf{pending}\quad\mathsf{Guard}_x(b,s,o)=\mathsf{true}
+\quad b=\mathsf{Choose}_{priority}(s,o)\quad\neg\mathsf{tombstone}(x)}
+{\mathsf{Stage}_b(x,s,o,e,s')\;\land\;
+ q'_x=\mathsf{terminal}(b)\;\land\;\mathsf{tombstone}'(x)}.
+\tag{ESC}
+\]
+This rule requires the branch bit to be Boolean constrained, the selected branch effects to be complete, and the tombstone write to be ledger enforced. Pending is a valid state, including before any release or refund guard is true. A deadline only enables a signed policy branch; it is neither proof of foreign nonexecution nor an unconditional right to refund.
+
+For cross-domain outcomes, use distinct states $\mathsf{unknown}$, $\mathsf{received}$, $\mathsf{nonreceivedProved}$, and $\mathsf{final}$. A policy may permit recovery after a verified negative result or under an explicitly named trusted attestation. Absence of a local response leaves the outcome unknown. IBC's timeout semantics require evidence about the destination chain and illustrate why this distinction matters~\cite{IBC}.
+
+\begin{obligation}[Recovery]
+Prove local safety: each escrow has at most one accepted terminal transition and all residual duties survive. State conditional progress separately: under named inclusion, relay, actor, finality, and witness-availability assumptions, an authorized closure or recovery path remains reachable. A workflow claiming a stronger guarantee is rejected at authoring or acceptance.
+\end{obligation}
+
+\section{Footprints, locks, and linear resources}
+A footprint is a pair $(R,W)$ of read and write cell sets. An effect or guard has a derived footprint. For a local transfer of $a$ from $p$ to $q$ on $d$,
+\[
+\foot(\mathsf{transfer}(d,a,p,q,n)):
+\quad R=W=\{\mathsf{balance}(d,p,a),\mathsf{balance}(d,q,a)\}
+\cup\mathsf{AuxCells},
+\tag{F1}
+\]
+where $\mathsf{AuxCells}$ is explicitly expanded for allowance, fee, replay, and custody effects used by that operation. Compound effects take set unions. A guard's state reads enter $R$. Every cell selected through a hole or alias must have a statically bounded resolution; otherwise derivation rejects. Admission requires $R_{decl}\supseteq R_{derived}$ and $W_{decl}\supseteq W_{derived}$.
+
+Applying (F1) to the current MIL/2 showcase gives these branch writes:
+\[
+\begin{aligned}
+W_{release}&\supseteq\{\mathsf{balance}(d,E,A),
+\mathsf{balance}(d,counterparty,A)\},\\
+W_{refund}&\supseteq\{\mathsf{balance}(d,E,A),
+\mathsf{balance}(d,owner,A)\}.
+\end{aligned}
+\]
+The written declaration lists neither recipient A cell and therefore fails containment under the proposed semantics. The example must be corrected or the meaning of $\mathsf{escrow}(E)$ must explicitly and soundly subsume those cells.
+
+Let $\mathsf{lock}_s(x)$ include every committed or reserved encumbrance that can still settle. The proposed safety invariant is
+\[
+\forall p,a:\quad
+\sum_{x:\mathsf{owner}(x)=p,\mathsf{asset}(x)=a}
+  \mathsf{lock}_s(x)
+\le \mathsf{balance}_s(p,a),
+\tag{K1}
+\]
+with a unique transition for reservation, commitment, release, seizure, or cancellation. Claim priority and debtor consent are separate predicates. Forking partitions linear receipts and consumed rights; shared affine budgets remain a single authenticated counter across branches. Joining consumes each predecessor once. This follows the resource discipline studied for digital contracts in Nomos~\cite{NOMOS}, while (K1) remains a MIL/2 proof obligation.
+
+\section{Native correspondence and remaining obligations}
+The public stage statement must bind at least: semantic and numeric version; program/Core identity; intent digest and signer authority; domain and instance; predecessor head; observation identities and authenticated values; complete effects and fees; opening and closing liabilities; authority and replay consumption; selected failure branch; continuation or terminal tombstone. For each field, record its circuit public input, constrained witness relation, authenticated ledger read, or ledger validity rule. ZKIR's formal statement-soundness result has producer and witness-shape premises, so the MIL/2 compiler and caller must discharge the corresponding assumptions for the emitted artifact~\cite{ZKIR}.
+
+\begin{center}
+\begin{tabular}{>{\RaggedRight\arraybackslash}p{0.12\linewidth}>{\RaggedRight\arraybackslash}p{0.49\linewidth}>{\RaggedRight\arraybackslash}p{0.28\linewidth}}
+\toprule
+ID & Required result & First evidence target\\
+\midrule
+O1 & Total typed evaluation with named rejection for every partial operator & Executed TypeScript/K differential\\
+O2 & Source-set preservation and authenticated observation binding & Operator proof plus adversarial provenance cases\\
+O3 & Lock and reservation invariant, with debt persistence & Two-solver and partial-progress traces\\
+O4 & Native acceptance implies source-level template refinement (C1) & Complete effect and signed-field mutation controls\\
+O5 & Terminal safety and conditional recovery under stated assumptions & Late-result, timeout and partition traces\\
+O6 & Derived-footprint containment and linear fork/join consumption & Showcase derivation and alias cases\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Review boundary.} The rules above define a candidate for the next research sprint. Finite local tests, a graph edge, or a generic backend theorem cannot alone establish source-to-ledger correspondence, native proof enforcement, or Midnight Preview acceptance.
+
+\begingroup\RaggedRight
+\begin{thebibliography}{9}
+\bibitem{MIL2} Moriarty, \emph{Moriarty Intent Language (MIL/2)}, 28 September 2026. Repository revision \texttt{983a4bb}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/concepts/intent-language/DESIGN-MIL2.md}.
+\bibitem{STATIC} Moriarty, \emph{Proposed static semantics and expression rules}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/experiments/moriarty-language/spec/successor/static-semantics.md}.
+\bibitem{CORE} Moriarty, \emph{Expression semantic contract}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/experiments/moriarty-language/spec/successor/semantic-contract.md}.
+\bibitem{SRC5} Moriarty, \emph{Financial agreement source /5}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md}.
+\bibitem{KDEF} Moriarty, \emph{Bounded funded financial semantics in K}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/experiments/moriarty-language/formal/k/README.md}.
+\bibitem{U0SCHEMA} Moriarty, \emph{U0 six judgments and canonical stage relation}. \url{https://github.com/CharlesHoskinson/Moriarty/blob/983a4bb/deliverables/u0-semantic-contract-2026-09-23/judgments.json}.
+\bibitem{SMTLIB} SMT-LIB, \emph{QF\_IDL and QF\_LIA logic definitions}. \url{https://smt-lib.org/logics-all.shtml}.
+\bibitem{IBC} Cosmos IBC, \emph{ICS-004 channel and packet semantics}, Timeouts. \url{https://github.com/cosmos/ibc/blob/main/spec/core/ics-004-channel-and-packet-semantics/README.md}.
+\bibitem{NOMOS} A. Das et al., \emph{Resource-Aware Session Types for Digital Contracts}. \url{https://arxiv.org/abs/1902.06056}.
+\bibitem{ZKIR} Midnight, \emph{ZKIR v3 specification and Agda formalization}, revision \texttt{47793c8}. \url{https://github.com/midnightntwrk/midnight-zkir/blob/47793c8ab042aa5a91d1a4672c6b82de6bdf9dd8/zkir-spec/src/zkir-v3/README.md}.
+\bibitem{PROV} W3C, \emph{PROV-O: The PROV Ontology}. \url{https://www.w3.org/TR/prov-o/}.
+\bibitem{IFC} A. C. Myers and B. Liskov, \emph{Complete, Safe Information Flow with Decentralized Labels}. \url{https://www.cs.cornell.edu/andru/papers/sp98/paper.html}.
+\end{thebibliography}
+\endgroup
+\end{document}

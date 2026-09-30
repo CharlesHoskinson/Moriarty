@@ -20,7 +20,7 @@ Sprints are deliverable boundaries, not promised calendar durations. Capacity an
 | --- | --- | --- | --- |
 | [SP01: Financial contract and execution admission](sp01-financial-contract-and-execution-admission.md) | Reviewed financial contract and current admission records | retained repository evidence | MC01, MC03, MC04, MC05, MC06, MC07, MC08 |
 | [SP02: Complete .mori authoring frontend](sp02-complete-mori-authoring-frontend.md) | Complete .mori specification, frontend, formatter and checking CLI | SP01 | MC01, MC08 |
-| [SP03: Executable bounded semantics in K](sp03-executable-bounded-semantics-in-k.md) | Runnable K semantics, simulation and scoped language proofs | SP02 | MC01, MC04, MC05 |
+| [SP03: MIL/4 K and Quint successor](sp03-mil4-k-quint-successor.md) | Complete first-profile K semantics, Quint projection and scoped language proofs | SP02 | MC01, MC04, MC05 |
 | [SP04: Complete native verifier component feasibility](sp04-complete-native-verifier-component-feasibility.md) | Complete native verifier feasibility result | SP01 | MC03, MC04 |
 | [SP05: Financial integration on Preview](sp05-financial-integration-on-preview.md) | Actual loan and swap settlement comparison | SP01 | MC02, MC04 |
 | [SP06: Real recursive financial history](sp06-real-recursive-financial-history.md) | Real retained recursive financial proof | SP01, SP04 | MC03 |
@@ -34,7 +34,7 @@ Sprints are deliverable boundaries, not promised calendar durations. Capacity an
 ```mermaid
 flowchart LR
   SP01[SP01 Financial contract and admission] --> SP02[SP02 Source language]
-  SP02 --> SP03[SP03 K semantics]
+  SP02 --> SP03[SP03 MIL/4 K and Quint]
   SP01 --> SP04[SP04 Native verifier feasibility]
   SP01 --> SP05[SP05 Preview integration]
   SP04 --> SP06[SP06 Native financial proof]
@@ -104,7 +104,7 @@ References already selected in the language dossier: [ISO/IEC 14977](https://www
 
 ## Formal verification contract
 
-K is the primary executable semantics of Moriarty Core. SP03 normally creates `experiments/moriarty-language/formal/k/run.py` with `compile`, `traces --all` and `prove --claims PATH` commands. These are planned entry points, not currently installed commands. SP09.1 owns early atomic K/correspondence and bootstraps the same pinned runner if SP03 has not yet created it. It does not wait for the successor frontend or full financial corpus. Serialize shared toolchain writers. Its claim manifest separates language metatheorems, contract properties and correspondence judgments. A successful compile or finite test set cannot discharge all three.
+K is the primary executable semantics of the selected MIL/4 Core. SP03's successor plan defines the new composition root and toolchain interfaces after its semantic contract is frozen; the older `experiments/moriarty-language/formal/k/run.py` commands are reuse candidates, not prescribed new interfaces. SP09.1 owns early atomic K/correspondence and may bootstrap a shared pinned runner if SP03 has not done so. It does not wait for the successor frontend or full financial corpus. Serialize shared toolchain writers. The claim manifest separates language metatheorems, contract properties and correspondence judgments. A successful compile or finite test set cannot discharge all three.
 
 For MC04-MC06, the planned `formal/claims.json` in each package identifies that package's required theorem domains and proof dependencies. The K wrapper must reject unknown, missing or unproved required claims. SP09 owns MC04/MC05 manifests; SP10 owns MC06. SP11 requalifies all changed domains. Existing planned `lake ... build` entries are replaced by this explicit claim verification contract. Historical Lean/K results remain untouched. If a correspondence proof needs a supporting proof assistant, record the justified bridge and its trusted dependencies in the executable packet; this does not replace K operational semantics or count an unproved bridge as complete.
 

@@ -1,0 +1,29 @@
+{
+  "text": "**No high or medium contradiction in grok-repair-05.** The two prior medium literal-oracle defects are corrected in the embedded bytes. This is a design-only read: no consumer run, and W-D2 / Sprint 1 stay open.\n\n### Prior mediums\n\nRepayment wire-versus-Source rows are source claims. `repay-debtor-mismatch` and `repay-creditor-mismatch` use `operation.debtor` / `operation.creditor`, `comparisonTag` 35, and `sourcePath` `authenticated.obligation.debtor` / `authenticated.obligation.creditor`. They carry no B11 binding and no `factPath`. Payer stays on signed payer / submitted payer / signer; debtor is the next subfield.\n\nEqual-claim B11 controls are separate. `repay-authenticated-debtor-mismatch-with-equal-claims` and `repay-authenticated-creditor-mismatch-with-equal-claims` keep a formation-valid Source (`signer` / `payer` / `debtor` O, `creditor` C), set `sourcePath` null, `binding` B11, and `factPath` `B11.snapshot.obligations[0].debtor` / `.creditor`. That matches the parser rule that Source `debtor` must equal `signer`.\n\nScale and core-program literals name the Source path only. `scale-field-mismatch` is `settlement.scale` at tag 17 with no B10 label. `coreprogram-field-mismatch` is `selected.actionId` at tag 10 with no B04 label. `auth-scale-mismatch-with-equal-claims` and `auth-core-id-mismatch-with-equal-claims` still carry B10 and B04.\n\n### Invariants that hold\n\n- Order is F-wire, F-source, D, M, H, C, I, E, optional L. Reading B keeps B17 pending after local E. Late `operation.owner` domain failure beats B01. A domain-valid late literal does not.\n- V-S0-01 and F-S0-01 are vocabulary relations. Raw cross-string equality is rejected. The tag-1 unsupported branch is specified as uninhabited under the current decoder, parser, and lowerer. A genuine snapshot core mismatch is `W_D2F_PROFILE_UNSUPPORTED` at tag 18, `field` `coreVersion`, `factPath` `B11.snapshot.core`, before C. B11 fact order is core, domain, asset, head. Invalid proof is `W_D2F_EVIDENCE_INVALID` before those facts.\n- Counts match the receipt: header + 35 signed fields, 14 nested operation fields, 6 specified-only positives, 152 hostile rows, 11 inspections, B01–B17. Positives still resolve to B01 at `agreementId`. W-D2E `actionId` `Action` stays a literal difference from `TransferLiteralFee` / `RepayAccrualFirst`. Fixture lengths and commitments match the embedded effect vectors (583 / 560 / 688 and the six printed hashes).\n- B16 order is shape and identifier/hash32, distinctness, selected-member versus B13 unused, then the Source replay claim. Consumed-at-tag-20, invalid proof, and history inconsistency stay distinct codes. AdvanceHead indices follow the parsed list: optional credit is independent of fee (index 5 with the extra credit, index 4 without).\n- Direct C matches `prepareMil4S0(state, intent, submittedEffects, proposedPostHead, outcome)`. State cells and work come from verified B11. `consumedReplay` comes from `B16.completeReplayHistory`. Intent and UseReplay keys come from `lowerSource6`. Successor is B15. Outcome is `TerminalSuccess`. `localStipulation`, lowerer state, Source `[]` / `[selectedKey]`, and `prepareSource6S0Unqualified` are excluded. Isolated Core rows stay `isolated-existing-module` and line up with stage → intent → effect → authority → history → failure, including `sameEffects` before authority/history/failure.\n- Receipt hashes for the five design files and nine dependencies match the manifest and section labels. `implementationExists`, `consumerTestsExecuted`, and observed successes are false/0. No normative W-D2 closure is claimed.\n\nLow residue only: retained-fact rows still mix JSON keys `binding` and `retainedFactBinding`; tag-35 obligation checks index `obligations[0]` before the unsigned-tail length check; signed-versus-submitted action order is prose, while most endpoint rows still use `sourcePath` null. The repair-04 byte identity of the other 146 hostile rows is a receipt claim; those prior bytes are not in this packet.",
+  "stopReason": "end_turn",
+  "usage": {
+    "input_tokens": 166257,
+    "cache_read_input_tokens": 1152,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 67050,
+    "reasoning_tokens": 66012,
+    "total_tokens": 234459
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.2500326,
+  "total_cost_usd_ticks": 2500326000,
+  "modelUsage": {
+    "grok-4.7-build": {
+      "inputTokens": 166257,
+      "outputTokens": 67050,
+      "cacheReadInputTokens": 1152,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.2500326
+    }
+  },
+  "_redaction": {
+    "private_reasoning_removed": true,
+    "original_sha256": "a80aec58b91bc83e4b119632a687c8c82f92e805133d394436d45bd9d4c1eb98"
+  }
+}

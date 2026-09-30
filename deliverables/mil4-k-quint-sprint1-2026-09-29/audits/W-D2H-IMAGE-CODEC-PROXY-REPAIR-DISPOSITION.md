@@ -1,0 +1,9 @@
+# W-D2H image codec Proxy repair-01 disposition
+
+**Decision, 2026-09-30:** accept the repaired purpose-1/3/4 codec as a bounded local **content-encoding experiment**. This does not adopt the proposed image suite or establish a B05–B07 provider.
+
+The exact [repair packet](w-d2h-image-codec-proxy-repair-01-candidate-packet.md) has SHA256 `3876143201ceaa93d378a6125a899233893b88d55629580a2d967eeaf4bf5973`. GPT-6.1 Sol high [recomputed 18 manifest hashes and 15 artifact references, ran 87 tests, reproduced nine Python images and two actual-package vectors, and reran hostile Proxy probes](w-d2h-image-codec-proxy-repair-01-gpt-6.1-sol-high-audit.md); it reported no high/medium defect. Grok was requested as 4.7 xhigh; its [raw static result](w-d2h-image-codec-proxy-repair-01-grok-4.7-xhigh-raw.json) reports `grok-4.7-build` and no high/medium defect. Grok did not execute tests or recompute hashes. Both reviews retain the [initial high finding and dissent](W-D2H-IMAGE-CODEC-INITIAL-DISPOSITION.md).
+
+The repaired codec captures admitted descriptor values into owned frozen records and copies file-byte views before any image is produced. It prevents the prior selector/kind, nested-ID and cross-phase asset substitutions in the tested input model. Purpose-1/3/4 byte rules are unchanged across the pinned repair-02 and current repair-04 design texts.
+
+Remaining limits: descriptor capture is sequential across fields, so no atomic snapshot of a concurrently mutating caller object is claimed; returned payload buffers can be mutated after the digest is returned; standalone policy content encoding does not authenticate or compare its identity to a Source/Core context. Source formation, artifact selection/provenance, loaded-code correspondence, complete replay, signed-intent consumption and ledger application are separate. W-D2 and Sprint 1 stay open.

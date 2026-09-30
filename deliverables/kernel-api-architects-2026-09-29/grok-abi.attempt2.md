@@ -1,0 +1,1 @@
+The consultation is advisory and stays inside the supplied packet plus the two local sources the assignment names. I will load the develop skill and the consolidated design, and I will not treat guarded status as something still to run.
