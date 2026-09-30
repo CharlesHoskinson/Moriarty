@@ -1,0 +1,110 @@
+{
+  "profile": "moriarty-beta-tests/1",
+  "cases": [
+    {
+      "name": "valid 125.375 EURC invoice plus 1.250 fee",
+      "source": "merchant.mori",
+      "action": "pay_invoice",
+      "scenario": "scenarios/good.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Customer7",
+            "asset": "EuroCoinCanonical",
+            "amount": "126625"
+          },
+          {
+            "kind": "Credit",
+            "account": "Merchant42",
+            "asset": "EuroCoinCanonical",
+            "amount": "125375"
+          },
+          {
+            "kind": "Credit",
+            "account": "PlatformFees",
+            "asset": "EuroCoinCanonical",
+            "amount": "1250"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Customer7",
+            "amount": "126625"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "[\"Midnight\",\"Customer7\",\"inv-2026-0001\"]"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "head-0",
+            "successor": "head-1"
+          }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "Midnight",
+          "asset": "EuroCoinCanonical",
+          "head": "head-1",
+          "round": "5",
+          "workRemaining": "9",
+          "workSpent": "1",
+          "balances": [
+            {
+              "account": "Customer7",
+              "amount": "373375"
+            },
+            {
+              "account": "Merchant42",
+              "amount": "125375"
+            },
+            {
+              "account": "PlatformFees",
+              "amount": "1250"
+            }
+          ],
+          "allowances": [
+            {
+              "owner": "Customer7",
+              "remaining": "73375",
+              "spent": "126625"
+            }
+          ],
+          "obligations": [],
+          "consumedReplay": [
+            "[\"Midnight\",\"Customer7\",\"inv-2026-0001\"]"
+          ]
+        }
+      }
+    },
+    {
+      "name": "allowance 100.000 below gross 126.625 rejects",
+      "source": "merchant.mori",
+      "action": "pay_invoice",
+      "scenario": "scenarios/low_allowance.json",
+      "expect": {
+        "status": "CoreRejected",
+        "code": "S0_AUTH_SCOPE"
+      }
+    },
+    {
+      "name": "gross cap equal to price (no room for fee) rejects",
+      "source": "invalid/gross_cap_too_low.mori",
+      "action": "pay_invoice",
+      "scenario": "scenarios/good.json",
+      "expect": {
+        "status": "CoreRejected"
+      }
+    },
+    {
+      "name": "round 25 after valid window 0..20 rejects",
+      "source": "merchant.mori",
+      "action": "pay_invoice",
+      "scenario": "scenarios/expired.json",
+      "expect": {
+        "status": "CoreRejected"
+      }
+    }
+  ]
+}

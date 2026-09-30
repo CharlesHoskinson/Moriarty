@@ -4,11 +4,11 @@ title: Moriarty research log
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-12
+updated: 2026-09-30
 tags:
   - moriarty
   - navigation
-updated_at: 2026-09-12T21:40:00Z
+updated_at: 2026-09-30T19:17:22Z
 sources:
   - SRC-0109
   - SRC-0110
@@ -24,6 +24,8 @@ sources:
 ---
 
 # Wiki log
+
+2026-09-30 — Filed navigation to the user-authorized beta language research and delivery dossier, preserving original audits, scoped implementation evidence and developer/tutorial feedback. Dossier findings are working knowledge; no canonical financial/proof claim is accepted by this navigation update.
 
 ## [2026-09-19] save | Aeon initial research
 

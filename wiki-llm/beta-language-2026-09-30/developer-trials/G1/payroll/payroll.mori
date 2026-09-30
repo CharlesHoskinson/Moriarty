@@ -1,0 +1,104 @@
+// Week 39 payroll on NightPayroll.
+// Two independent transfer intents: different recipient, nonce, key,
+// source-hash claim, and pre-head. The signer is the same payroll desk.
+// Identity strings are unverified claims.
+// Fees are agreed exact quantities. This profile has no division or rounding.
+// Alice: 2450.75 USD + 12.25 USD = 2463.00 USD.
+// Scale 2 atoms: 245075 + 1225 = 246300.
+// Bob: 1875.50 USD + 9.40 USD = 1884.90 USD.
+// Scale 2 atoms: 187550 + 940 = 188490.
+// pay_alice and pay_bob are Local S0. A local result is PreparedUnqualified.
+// This source does not sign, prove, or settle.
+// adopt_schedule is SpecifiedOnly. Structural support is not execution.
+profile "moriarty-beta/1";
+agreement PayrollWeek {
+  domain Night = { id: "NightPayroll", chain: "night-ledger", network: "preview-week-39" };
+  account Desk = { domain: Night, id: "PayrollDesk" };
+  account Alice = { domain: Night, id: "AliceChen" };
+  account Bob = { domain: Night, id: "BobOkoye" };
+  account Processor = { domain: Night, id: "PayrollProcessor" };
+  asset USD = {
+    domain: Night,
+    id: "PayrollUSD",
+    scale: 2,
+    representation: "canonical",
+    symbol: "USD",
+  };
+  const alice_wage: Qty<USD> = 2450.75 USD;
+  const alice_fee = 12.25 USD;
+  const alice_gross = alice_wage + alice_fee;
+  const bob_wage: Qty<USD> = 1875.50 USD;
+  const bob_fee = 9.40 USD;
+  const bob_gross = bob_wage + bob_fee;
+  intent PayAlice = {
+    domain: Night,
+    asset: USD,
+    signer: Desk,
+    key: "desk-key-alice-w39",
+    nonce: "payroll-2026-09-w39-alice",
+    pre_head: "desk-head-alice-w38",
+    valid: rounds(domain: Night, from: 40, to: 52),
+    gross_cap: alice_gross,
+    fee_cap: alice_fee,
+    net_floor: alice_wage,
+    operation: transfer(
+      from: Desk,
+      to: Alice,
+      fee_to: Processor,
+      value: alice_wage,
+      fee: alice_fee,
+    ),
+    source_hash: "claim-src-alice-w39",
+    policy_digest: "claim-policy-payroll-w39",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action pay_alice uses PayAlice;
+  intent PayBob = {
+    domain: Night,
+    asset: USD,
+    signer: Desk,
+    key: "desk-key-bob-w39",
+    nonce: "payroll-2026-09-w39-bob",
+    pre_head: "desk-head-bob-w38",
+    valid: rounds(domain: Night, from: 40, to: 52),
+    gross_cap: bob_gross,
+    fee_cap: bob_fee,
+    net_floor: bob_wage,
+    operation: transfer(
+      from: Desk,
+      to: Bob,
+      fee_to: Processor,
+      value: bob_wage,
+      fee: bob_fee,
+    ),
+    source_hash: "claim-src-bob-w39",
+    policy_digest: "claim-policy-payroll-w39",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action pay_bob uses PayBob;
+  policy Schedule = {
+    id: "Week39Schedule",
+    epoch: 39,
+    source_hash: "claim-schedule-w39",
+    duty_preservation: "retain signed wage intents",
+  };
+  intent AdoptSchedule = {
+    operation: governance.queue(policy: Schedule, next_epoch: 40),
+    earliest_round: 44,
+    veto_before: 43,
+    relation: "queued schedule does not alter signed wage caps",
+  };
+  action adopt_schedule uses AdoptSchedule;
+}

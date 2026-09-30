@@ -1,0 +1,224 @@
+{
+  "profile": "moriarty-beta-tests/1",
+  "cases": [
+    {
+      "name": "disburse-exact",
+      "source": "servicing.mori",
+      "action": "disburse",
+      "scenario": "scenarios/disburse.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          { "kind": "Debit", "account": "Lender", "asset": "UsdNote", "amount": "126250" },
+          { "kind": "Credit", "account": "Borrower", "asset": "UsdNote", "amount": "125000" },
+          { "kind": "Credit", "account": "Servicer", "asset": "UsdNote", "amount": "1250" },
+          { "kind": "UseAllowance", "owner": "Lender", "amount": "126250" },
+          { "kind": "UseReplay", "key": "[\"DeskNet\",\"Lender\",\"draw-1\"]" },
+          { "kind": "AdvanceHead", "predecessor": "svc-head-10", "successor": "svc-head-11" }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "DeskNet",
+          "asset": "UsdNote",
+          "head": "svc-head-11",
+          "round": "10",
+          "workRemaining": "7",
+          "workSpent": "1",
+          "balances": [
+            { "account": "Lender", "amount": "0" },
+            { "account": "Borrower", "amount": "125000" },
+            { "account": "Servicer", "amount": "1250" }
+          ],
+          "allowances": [
+            { "owner": "Lender", "remaining": "0", "spent": "126250" }
+          ],
+          "obligations": [],
+          "consumedReplay": ["[\"DeskNet\",\"Lender\",\"draw-1\"]"]
+        }
+      }
+    },
+    {
+      "name": "installment-accrual-first",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          { "kind": "Debit", "account": "Borrower", "asset": "UsdNote", "amount": "21875" },
+          { "kind": "Credit", "account": "Lender", "asset": "UsdNote", "amount": "21875" },
+          {
+            "kind": "SetObligation",
+            "id": "NoteSeven",
+            "principal": "80000",
+            "accrued": "0",
+            "outstanding": "80000",
+            "status": "Outstanding"
+          },
+          { "kind": "UseAllowance", "owner": "Borrower", "amount": "21875" },
+          { "kind": "UseReplay", "key": "[\"DeskNet\",\"Borrower\",\"installment-3\"]" },
+          { "kind": "AdvanceHead", "predecessor": "svc-head-52", "successor": "svc-head-53" }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "DeskNet",
+          "asset": "UsdNote",
+          "head": "svc-head-53",
+          "round": "52",
+          "workRemaining": "2",
+          "workSpent": "5",
+          "balances": [
+            { "account": "Borrower", "amount": "0" },
+            { "account": "Lender", "amount": "21875" }
+          ],
+          "allowances": [
+            { "owner": "Borrower", "remaining": "0", "spent": "21875" }
+          ],
+          "obligations": [
+            {
+              "id": "NoteSeven",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "asset": "UsdNote",
+              "principal": "80000",
+              "accrued": "0",
+              "outstanding": "80000",
+              "status": "Outstanding"
+            }
+          ],
+          "consumedReplay": ["[\"DeskNet\",\"Borrower\",\"installment-3\"]"]
+        }
+      }
+    },
+    {
+      "name": "close-note-settled",
+      "source": "servicing.mori",
+      "action": "close_note",
+      "scenario": "scenarios/close-note.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          { "kind": "Debit", "account": "Borrower", "asset": "UsdNote", "amount": "80625" },
+          { "kind": "Credit", "account": "Lender", "asset": "UsdNote", "amount": "80625" },
+          {
+            "kind": "SetObligation",
+            "id": "NoteSeven",
+            "principal": "0",
+            "accrued": "0",
+            "outstanding": "0",
+            "status": "Settled"
+          },
+          { "kind": "UseAllowance", "owner": "Borrower", "amount": "80625" },
+          { "kind": "UseReplay", "key": "[\"DeskNet\",\"Borrower\",\"payoff-1\"]" },
+          { "kind": "AdvanceHead", "predecessor": "svc-head-80", "successor": "svc-head-81" }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "DeskNet",
+          "asset": "UsdNote",
+          "head": "svc-head-81",
+          "round": "80",
+          "workRemaining": "0",
+          "workSpent": "10",
+          "balances": [
+            { "account": "Borrower", "amount": "0" },
+            { "account": "Lender", "amount": "80625" }
+          ],
+          "allowances": [
+            { "owner": "Borrower", "remaining": "0", "spent": "80625" }
+          ],
+          "obligations": [
+            {
+              "id": "NoteSeven",
+              "debtor": "Borrower",
+              "creditor": "Lender",
+              "asset": "UsdNote",
+              "principal": "0",
+              "accrued": "0",
+              "outstanding": "0",
+              "status": "Settled"
+            }
+          ],
+          "consumedReplay": ["[\"DeskNet\",\"Borrower\",\"payoff-1\"]"]
+        }
+      }
+    },
+    {
+      "name": "installment-replay-consumed",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment-replay.json",
+      "expect": { "status": "CoreRejected", "code": "S0_HISTORY_REPLAY" }
+    },
+    {
+      "name": "installment-balance-short",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment-short-balance.json",
+      "expect": { "status": "CoreRejected", "code": "S0_EFFECT_RANGE" }
+    },
+    {
+      "name": "installment-work-exhausted",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment-no-work.json",
+      "expect": { "status": "CoreRejected", "code": "S0_AUTH_SCOPE" }
+    },
+    {
+      "name": "installment-round-after-window",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment-after-window.json",
+      "expect": { "status": "CoreRejected", "code": "S0_INTENT_SCOPE" }
+    },
+    {
+      "name": "installment-overpay-outstanding",
+      "source": "servicing.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment-overpay.json",
+      "expect": { "status": "CoreRejected", "code": "S0_EFFECT_RANGE" }
+    },
+    {
+      "name": "installment-nonzero-fee-cap",
+      "source": "repay-with-fee.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment.json",
+      "expect": { "status": "CoreRejected", "code": "S0_INTENT_SCOPE" }
+    },
+    {
+      "name": "originate-specified-only",
+      "source": "servicing.mori",
+      "action": "originate",
+      "scenario": "scenarios/roll-stipulation.json",
+      "expect": { "status": "Unsupported", "code": "BETA_PROFILE_UNSUPPORTED" }
+    },
+    {
+      "name": "roll-forward-specified-only",
+      "source": "servicing.mori",
+      "action": "roll",
+      "scenario": "scenarios/roll-stipulation.json",
+      "expect": { "status": "Unsupported", "code": "BETA_PROFILE_UNSUPPORTED" }
+    },
+    {
+      "name": "liquidate-specified-only",
+      "source": "servicing.mori",
+      "action": "liquidate",
+      "scenario": "scenarios/roll-stipulation.json",
+      "expect": { "status": "Unsupported", "code": "BETA_PROFILE_UNSUPPORTED" }
+    },
+    {
+      "name": "inverted-round-window",
+      "source": "invalid-window.mori",
+      "action": "service_installment",
+      "scenario": "scenarios/installment.json",
+      "expect": { "status": "AuthoringRejected", "code": "BETA_ROUND_WINDOW" }
+    },
+    {
+      "name": "overprecise-service-fee",
+      "source": "invalid-precision.mori",
+      "action": "disburse",
+      "scenario": "scenarios/disburse.json",
+      "expect": { "status": "AuthoringRejected", "code": "BETA_PRECISION" }
+    }
+  ]
+}

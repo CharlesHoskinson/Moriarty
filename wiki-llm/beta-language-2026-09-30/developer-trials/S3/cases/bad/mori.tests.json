@@ -1,0 +1,53 @@
+{
+ "profile": "moriarty-beta-tests/1",
+ "cases": [
+  {
+   "name": "underfunded trader 250.00 EUR vs 250.75 EUR needed",
+   "source": "swap_fee.mori",
+   "action": "settle_swap_fee",
+   "scenario": "swap_fee_underfunded.json",
+   "expect": {
+    "status": "CoreRejected",
+    "code": "S0_EFFECT_RANGE"
+   }
+  },
+  {
+   "name": "EUR+USD fee mix rejected at authoring",
+   "source": "bad_nominal_fee.mori",
+   "action": "settle_swap_fee",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "AuthoringRejected",
+    "code": "BETA_ASSET_MISMATCH"
+   }
+  },
+  {
+   "name": "amm unknown output asset",
+   "source": "bad_amm_unknown_asset.mori",
+   "action": "swap_eur_for_xau",
+   "scenario": "swap_fee_ok.json",
+   "expect": {
+    "status": "AuthoringRejected",
+    "code": "BETA_REFERENCE"
+   }
+  },
+  {
+   "name": "scenario unknown field",
+   "source": "swap_fee.mori",
+   "action": "settle_swap_fee",
+   "scenario": "swap_fee_unknown_field.json",
+   "expect": {
+    "status": "FormationRejected"
+   }
+  },
+  {
+   "name": "scenario wrong asset id",
+   "source": "swap_fee.mori",
+   "action": "settle_swap_fee",
+   "scenario": "swap_fee_wrong_asset.json",
+   "expect": {
+    "status": "FormationRejected"
+   }
+  }
+ ]
+}

@@ -11,6 +11,19 @@ Moriarty is experimental. Developers can author and simulate supported source pr
 - [Requirements: Moriarty Programming Language Requirements (MPLRs), proposed ZKIRv4 and recursion](https://charleshoskinson.github.io/Moriarty/docs/requirements.html): the language requirements, native backend obligations, recursion refinements and consolidated delivery direction.
 - [Current formal syntax and semantics](https://charleshoskinson.github.io/Moriarty/docs/language.html): versioned source profiles, grammar, static judgments and operational rules.
 
+## Authoring beta
+
+The standalone [Moriarty beta package](packages/moriarty-beta/README.md) provides
+exact asset quantities, named financial calls, a CLI, language server, VS Code/
+Neovim assets and read-only AI tools. Follow its
+[getting started guide](packages/moriarty-beta/GETTING-STARTED.md) for transfer and
+funded repayment examples. Local preparation remains **PreparedUnqualified**;
+cryptographic authentication, native financial proofs and ledger settlement
+remain open. The eight DeFi families have explicit authoring support labels.
+
+[Research, design reviews and delivery evidence](wiki-llm/beta-language-2026-09-30/README.md)
+preserve the rationale and the separate proposed full-language horizon.
+
 ## From a transaction to an agreement
 
 Consider a buyer who authorizes payment for goods once a seller accepts the terms, a designated issuer attests to a shipping document and a delivery condition is satisfied. The funds may already be in escrow. The seller may fulfill the order in parts. Payment may involve another chain whose outcome is temporarily unknown. A useful account of this agreement must say which conditions have been established, how much may be released, who still owes what and which remedies remain available.

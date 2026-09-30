@@ -1,0 +1,12 @@
+profile "moriarty-beta/1";
+agreement MisalignedBridge {
+  domain HomeRail = {id: "HomeRail", chain: "home-rail", network: "stake-preview"};
+  domain ForeignClaim = {id: "ForeignClaim", chain: "claim-net", network: "wrap-preview"};
+  account Staker = {domain: HomeRail, id: "StakerPrincipal"};
+  asset ClaimUSD = {domain: ForeignClaim, id: "ClaimUSDNominal", scale: 6, representation: "bridge-claim", symbol: "USD"};
+  intent LockForeignFace = {
+    operation: bridge.escrow(owner: Staker, amount: 250.000000 ClaimUSD, destination: ForeignClaim, claim_id: "claim-rail-250"),
+    relation: "home account escrows a foreign-domain quantity",
+  };
+  action escrow_misaligned uses LockForeignFace;
+}

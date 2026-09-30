@@ -1,0 +1,177 @@
+[
+ {
+  "command": "./node_modules/.bin/mori check src/pool_oracle.mori --json",
+  "exit_code": 0,
+  "expected": "exit 0: AuthoringChecked, 4 SpecifiedOnly actions",
+  "observed": "exit 0; AuthoringChecked",
+  "output_file": "outputs/check_pool_oracle.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check src/swap_fee.mori --json",
+  "exit_code": 0,
+  "expected": "exit 0: AuthoringChecked, LocalS0",
+  "observed": "exit 0; AuthoringChecked",
+  "output_file": "outputs/check_swap_fee.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori inspect src/pool_oracle.mori",
+  "exit_code": 0,
+  "expected": "exit 0: atoms 50000/2400/150/50150/3000, no premises listed for specified actions",
+  "observed": "exit 0; AuthoringChecked",
+  "output_file": "outputs/inspect_pool_oracle.txt"
+ },
+ {
+  "command": "./node_modules/.bin/mori inspect src/swap_fee.mori",
+  "exit_code": 0,
+  "expected": "exit 0: 25075/75/25000 atoms, 4 premises, 4 unverified bindings",
+  "observed": "exit 0; AuthoringChecked",
+  "output_file": "outputs/inspect_swap_fee.txt"
+ },
+ {
+  "command": "./node_modules/.bin/mori simulate src/swap_fee.mori --action settle_swap_fee --scenario scenarios/swap_fee_ok.json",
+  "exit_code": 0,
+  "expected": "exit 0: PreparedUnqualified; Trader 74925, Vault 30000, Protocol 75 (hand-derived)",
+  "observed": "exit 0; PreparedUnqualified",
+  "output_file": "outputs/sim_swap_fee_ok.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori simulate src/swap_fee.mori --action settle_swap_fee --scenario scenarios/swap_fee_underfunded.json",
+  "exit_code": 1,
+  "expected": "exit 1: CoreRejected, no effects",
+  "observed": "exit 1; CoreRejected S0_EFFECT_RANGE",
+  "output_file": "outputs/sim_swap_fee_underfunded.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori simulate src/pool_oracle.mori --action swap_eur_for_xau --scenario scenarios/swap_fee_ok.json",
+  "exit_code": 1,
+  "expected": "exit 1: Unsupported BETA_PROFILE_UNSUPPORTED",
+  "observed": "exit 1; Unsupported BETA_PROFILE_UNSUPPORTED",
+  "output_file": "outputs/sim_pool_swap_eur_for_xau.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori simulate src/pool_oracle.mori --action read_fix --scenario scenarios/swap_fee_ok.json",
+  "exit_code": 1,
+  "expected": "exit 1: Unsupported",
+  "observed": "exit 1; Unsupported BETA_PROFILE_UNSUPPORTED",
+  "output_file": "outputs/sim_pool_read_fix.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori expand src/pool_oracle.mori --action swap_eur_for_xau --scenario scenarios/swap_fee_ok.json",
+  "exit_code": 1,
+  "expected": "exit 1: Unsupported",
+  "observed": "exit 1; Unsupported BETA_PROFILE_UNSUPPORTED",
+  "output_file": "outputs/expand_pool_swap.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori test cases/good",
+  "exit_code": 0,
+  "expected": "exit 0: 4 pass",
+  "observed": "exit 0; TestsPassed",
+  "output_file": "outputs/test_good.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori test cases/bad",
+  "exit_code": 0,
+  "expected": "exit 0: 5 intended rejections match",
+  "observed": "exit 0; TestsPassed",
+  "output_file": "outputs/test_bad.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/bad_nominal_fee.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_ASSET_MISMATCH",
+  "output_file": "outputs/check_bad_nominal_fee.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/bad_scale_spelling.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_PRECISION",
+  "output_file": "outputs/check_bad_scale_spelling.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/bad_amm_unknown_asset.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_REFERENCE",
+  "output_file": "outputs/check_bad_amm_unknown_asset.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/bad_amm_missing_fee_cap.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_MISSING_FIELD",
+  "output_file": "outputs/check_bad_amm_missing_fee_cap.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/bad_amm_floor_mixed_assets.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_ASSET_MISMATCH",
+  "output_file": "outputs/check_bad_amm_floor_mixed_assets.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/probe_floor_wrong_asset.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_ASSET_MISMATCH",
+  "output_file": "outputs/check_probe_floor_wrong_asset.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/probe_output_same_as_input.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_ASSET_MISMATCH",
+  "output_file": "outputs/check_probe_output_same_as_input.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/probe_owner_is_pool.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_TYPE",
+  "output_file": "outputs/check_probe_owner_is_pool.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/probe_oracle_odd_fields.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_UINT128_BOUND",
+  "output_file": "outputs/check_probe_oracle_odd_fields.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori check variants/probe_output_not_in_pool.mori --json",
+  "exit_code": 1,
+  "expected": "exit 1: AuthoringRejected",
+  "observed": "exit 1; AuthoringRejected BETA_ASSET_MISMATCH",
+  "output_file": "outputs/check_probe_output_not_in_pool.json"
+ },
+ {
+  "command": "./node_modules/.bin/mori init starter",
+  "exit_code": 0,
+  "expected": "starter created",
+  "observed": "Initialized local-stipulation-only (files read, not reused)",
+  "output_file": null
+ },
+ {
+  "command": "./node_modules/.bin/mori fmt src/swap_fee.mori | fmt again",
+  "exit_code": 0,
+  "expected": "idempotent",
+  "observed": "idempotent; expanded to multi-line; sourceHash changed",
+  "output_file": "outputs/swap_fee.fmt.mori"
+ },
+ {
+  "command": "python3 mcp_client.py (real stdio MCP: initialize,tools/list,preview,check)",
+  "exit_code": 0,
+  "expected": "preview Prepared, check AuthoringChecked",
+  "observed": "as expected",
+  "output_file": "outputs/mcp_session.json"
+ },
+ {
+  "command": "mori test <copy of cases/good with balance 74900>",
+  "exit_code": 1,
+  "expected": "TestsFailed",
+  "observed": "TestsFailed; no field-level diff shown",
+  "output_file": "outputs/test_wrong_expectation.json"
+ }
+]

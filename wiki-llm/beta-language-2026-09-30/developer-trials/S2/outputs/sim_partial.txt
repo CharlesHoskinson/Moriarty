@@ -1,0 +1,221 @@
+{
+  "status": "PreparedUnqualified",
+  "sourceHash": "e5e8aaa9b13729e7548588405d9bef2719fa8cec622e85a34d9db718d96c1161",
+  "scenarioHash": "60504ffd758b1d5442bb1f32593019fbe3293da3ac8a1dbafcb377de7253beec",
+  "result": {
+    "status": "PreparedUnqualified",
+    "ast": {
+      "profile": "moriarty-financial-agreement-source/6",
+      "programId": "LoanRepay",
+      "domain": "Midnight",
+      "settlement": {
+        "asset": "USDCanonical",
+        "scale": "2"
+      },
+      "selected": {
+        "actionId": "RepayAccrualFirst",
+        "sourceHash": "loan-src1",
+        "policyDigest": "loan-policy1"
+      },
+      "intent": {
+        "signer": "Alice",
+        "keyRef": "alice-key",
+        "nonce": "rp1",
+        "preHead": "h0",
+        "notBefore": "0",
+        "notAfter": "10",
+        "grossCap": "10000",
+        "feeCap": "0",
+        "netFloor": "0",
+        "signedAction": {
+          "kind": "Repay",
+          "obligation": "Loan1",
+          "payer": "Alice",
+          "amount": "10000",
+          "conversion": "identity"
+        },
+        "failure": "success_only",
+        "observations": "empty",
+        "disclosures": "empty",
+        "retainedEffects": "empty",
+        "retainedDuties": "empty",
+        "delegation": "none",
+        "recovery": "none"
+      },
+      "authenticated": {
+        "head": "h0",
+        "predecessor": "genesis",
+        "round": "1",
+        "balances": [
+          {
+            "account": "Alice",
+            "amount": "80000"
+          },
+          {
+            "account": "Bob",
+            "amount": "5000"
+          }
+        ],
+        "allowance": {
+          "owner": "Alice",
+          "remaining": "80000",
+          "spent": "0"
+        },
+        "obligation": {
+          "id": "Loan1",
+          "debtor": "Alice",
+          "creditor": "Bob",
+          "asset": "USDCanonical",
+          "principal": "50000",
+          "accrued": "1250",
+          "outstanding": "51250",
+          "status": "Outstanding"
+        },
+        "replay": "unused",
+        "workRemaining": "10",
+        "workSpent": "0"
+      },
+      "submitted": {
+        "action": {
+          "kind": "Repay",
+          "obligation": "Loan1",
+          "payer": "Alice",
+          "amount": "10000",
+          "conversion": "identity"
+        },
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Alice",
+            "asset": "USDCanonical",
+            "amount": "10000"
+          },
+          {
+            "kind": "Credit",
+            "account": "Bob",
+            "asset": "USDCanonical",
+            "amount": "10000"
+          },
+          {
+            "kind": "SetObligation",
+            "id": "Loan1",
+            "principal": "41250",
+            "accrued": "0",
+            "outstanding": "41250",
+            "status": "Outstanding"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Alice",
+            "amount": "10000"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "rp1"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "h0",
+            "successor": "h1"
+          }
+        ],
+        "postHead": "h1"
+      }
+    },
+    "candidate": {
+      "status": "PreparedUnqualified",
+      "core": "moriarty-core/5",
+      "preHead": "h0",
+      "effects": [
+        {
+          "kind": "Debit",
+          "account": "Alice",
+          "asset": "USDCanonical",
+          "amount": "10000"
+        },
+        {
+          "kind": "Credit",
+          "account": "Bob",
+          "asset": "USDCanonical",
+          "amount": "10000"
+        },
+        {
+          "kind": "SetObligation",
+          "id": "Loan1",
+          "principal": "41250",
+          "accrued": "0",
+          "outstanding": "41250",
+          "status": "Outstanding"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Alice",
+          "amount": "10000"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Alice\",\"rp1\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "h0",
+          "successor": "h1"
+        }
+      ],
+      "candidatePost": {
+        "core": "moriarty-core/5",
+        "domain": "Midnight",
+        "asset": "USDCanonical",
+        "head": "h1",
+        "round": "1",
+        "workRemaining": "9",
+        "workSpent": "1",
+        "balances": [
+          {
+            "account": "Alice",
+            "amount": "70000"
+          },
+          {
+            "account": "Bob",
+            "amount": "15000"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Alice",
+            "remaining": "70000",
+            "spent": "10000"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan1",
+            "debtor": "Alice",
+            "creditor": "Bob",
+            "asset": "USDCanonical",
+            "principal": "41250",
+            "accrued": "0",
+            "outstanding": "41250",
+            "status": "Outstanding"
+          }
+        ],
+        "consumedReplay": [
+          "[\"Midnight\",\"Alice\",\"rp1\"]"
+        ]
+      },
+      "requiredPremises": [
+        "canonical-intent-signature",
+        "snapshot-to-head",
+        "head-extension",
+        "atomic-ledger-compare-and-consume"
+      ]
+    },
+    "unverifiedBindings": [
+      "agreement-id",
+      "selected-program",
+      "asset-scale",
+      "authenticated-predecessor"
+    ]
+  },
+  "qualification": "local-stipulation-only"
+}

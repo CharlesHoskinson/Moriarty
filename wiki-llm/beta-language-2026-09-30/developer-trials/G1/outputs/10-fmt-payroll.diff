@@ -1,0 +1,95 @@
+--- payroll/payroll.mori	2026-09-30 14:10:20.954035562 -0600
++++ outputs/10-fmt-payroll.out	2026-09-30 14:10:29.270035195 -0600
+@@ -12,11 +12,27 @@
+ // adopt_schedule is SpecifiedOnly. Structural support is not execution.
+ profile "moriarty-beta/1";
+ agreement PayrollWeek {
+-  domain Night = { id: "NightPayroll", chain: "night-ledger", network: "preview-week-39" };
+-  account Desk = { domain: Night, id: "PayrollDesk" };
+-  account Alice = { domain: Night, id: "AliceChen" };
+-  account Bob = { domain: Night, id: "BobOkoye" };
+-  account Processor = { domain: Night, id: "PayrollProcessor" };
++  domain Night = {
++    id: "NightPayroll",
++    chain: "night-ledger",
++    network: "preview-week-39"
++  };
++  account Desk = {
++    domain: Night,
++    id: "PayrollDesk"
++  };
++  account Alice = {
++    domain: Night,
++    id: "AliceChen"
++  };
++  account Bob = {
++    domain: Night,
++    id: "BobOkoye"
++  };
++  account Processor = {
++    domain: Night,
++    id: "PayrollProcessor"
++  };
+   asset USD = {
+     domain: Night,
+     id: "PayrollUSD",
+@@ -37,16 +53,17 @@
+     key: "desk-key-alice-w39",
+     nonce: "payroll-2026-09-w39-alice",
+     pre_head: "desk-head-alice-w38",
+-    valid: rounds(domain: Night, from: 40, to: 52),
++    valid: rounds(domain: Night,
++    from: 40,
++    to: 52),
+     gross_cap: alice_gross,
+     fee_cap: alice_fee,
+     net_floor: alice_wage,
+-    operation: transfer(
+-      from: Desk,
+-      to: Alice,
+-      fee_to: Processor,
+-      value: alice_wage,
+-      fee: alice_fee,
++    operation: transfer(from: Desk,
++    to: Alice,
++    fee_to: Processor,
++    value: alice_wage,
++    fee: alice_fee,
+     ),
+     source_hash: "claim-src-alice-w39",
+     policy_digest: "claim-policy-payroll-w39",
+@@ -66,16 +83,17 @@
+     key: "desk-key-bob-w39",
+     nonce: "payroll-2026-09-w39-bob",
+     pre_head: "desk-head-bob-w38",
+-    valid: rounds(domain: Night, from: 40, to: 52),
++    valid: rounds(domain: Night,
++    from: 40,
++    to: 52),
+     gross_cap: bob_gross,
+     fee_cap: bob_fee,
+     net_floor: bob_wage,
+-    operation: transfer(
+-      from: Desk,
+-      to: Bob,
+-      fee_to: Processor,
+-      value: bob_wage,
+-      fee: bob_fee,
++    operation: transfer(from: Desk,
++    to: Bob,
++    fee_to: Processor,
++    value: bob_wage,
++    fee: bob_fee,
+     ),
+     source_hash: "claim-src-bob-w39",
+     policy_digest: "claim-policy-payroll-w39",
+@@ -95,7 +113,8 @@
+     duty_preservation: "retain signed wage intents",
+   };
+   intent AdoptSchedule = {
+-    operation: governance.queue(policy: Schedule, next_epoch: 40),
++    operation: governance.queue(policy: Schedule,
++    next_epoch: 40),
+     earliest_round: 44,
+     veto_before: 43,
+     relation: "queued schedule does not alter signed wage caps",

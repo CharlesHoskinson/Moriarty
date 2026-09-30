@@ -1,0 +1,61 @@
+// Authoring accepts this repay. Local core rejects it.
+// AccrualFirst repayment requires fee_cap 0 and net_floor 0. A 12.50 USD fee cap is outside that rule.
+// The installment amount and round window match servicing.mori. Only the fee cap differs.
+profile "moriarty-beta/1";
+agreement RepayFeeCap {
+  domain Desk = {
+    id: "DeskNet",
+    chain: "midnight",
+    network: "preview"
+  };
+  account Borrower = {
+    domain: Desk,
+    id: "Borrower"
+  };
+  account Lender = {
+    domain: Desk,
+    id: "Lender"
+  };
+  asset USD = {
+    domain: Desk,
+    id: "UsdNote",
+    scale: 2,
+    representation: "canonical",
+    symbol: "USD"
+  };
+  obligation Note = {
+    domain: Desk,
+    id: "NoteSeven",
+    asset: USD
+  };
+  const installment = 218.75 USD;
+  const service_fee = 12.50 USD;
+  const zero = 0.00 USD;
+  intent Installment = {
+    domain: Desk,
+    asset: USD,
+    signer: Borrower,
+    key: "borrower-key-1",
+    nonce: "installment-3",
+    pre_head: "svc-head-52",
+    valid: rounds(domain: Desk,
+    from: 44,
+    to: 52),
+    gross_cap: installment,
+    fee_cap: service_fee,
+    net_floor: zero,
+    operation: repay(obligation: Note,
+    payer: Borrower,
+    amount: installment),
+    source_hash: "claim-installment-source",
+    policy_digest: "claim-service-policy",
+    failure: SuccessOnly,
+    observations: [],
+    disclosures: [],
+    retained_effects: [],
+    retained_duties: [],
+    delegation: None,
+    recovery: None,
+  };
+  action service_installment uses Installment;
+}

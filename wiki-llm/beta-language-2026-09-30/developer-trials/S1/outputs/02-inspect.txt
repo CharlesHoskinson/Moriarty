@@ -1,0 +1,357 @@
+$ mori inspect merchant.mori
+--- stdout
+{
+  "status": "AuthoringChecked",
+  "sourceHash": "55eb162043907aeaf67b3634909444b0076c28dd441ad8a4537d7480fb500f52",
+  "diagnostics": [],
+  "agreement": "MerchantInvoice",
+  "identities": [
+    {
+      "kind": "domain",
+      "name": "Preview",
+      "claims": {
+        "id": "Midnight",
+        "chain": "midnight",
+        "network": "preview"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 143,
+        "end": 218
+      }
+    },
+    {
+      "kind": "account",
+      "name": "Customer",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "Customer7"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 220,
+        "end": 276
+      }
+    },
+    {
+      "kind": "account",
+      "name": "Merchant",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "Merchant42"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 278,
+        "end": 335
+      }
+    },
+    {
+      "kind": "account",
+      "name": "Platform",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "PlatformFees"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 337,
+        "end": 396
+      }
+    },
+    {
+      "kind": "asset",
+      "name": "EURC",
+      "claims": {
+        "domain": {
+          "declaration": "Preview",
+          "kind": "domain",
+          "id": "Midnight"
+        },
+        "id": "EuroCoinCanonical",
+        "scale": "3",
+        "representation": "canonical",
+        "symbol": "EURC"
+      },
+      "authenticated": false,
+      "span": {
+        "start": 398,
+        "end": 511
+      }
+    }
+  ],
+  "actions": [
+    {
+      "name": "pay_invoice",
+      "intent": "InvoicePayment",
+      "span": {
+        "start": 1178,
+        "end": 1217
+      },
+      "nameSpan": {
+        "start": 1185,
+        "end": 1196
+      },
+      "support": "LocalS0",
+      "coverage": {
+        "financialRelations": "DelegatedToCoreDuringLocalPreparation",
+        "localPreparation": "AvailableUnqualified"
+      },
+      "bounds": {
+        "scalarAndQuantityMax": "340282366920938463463374607431768211455",
+        "s0SignedFieldMax": "170141183460469231731687303715884105727"
+      },
+      "requiredPremises": [
+        "canonical-intent-signature",
+        "snapshot-to-head",
+        "head-extension",
+        "atomic-ledger-compare-and-consume"
+      ],
+      "unverifiedBindings": [
+        "agreement-id",
+        "selected-program",
+        "asset-scale",
+        "authenticated-predecessor"
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "name": "InvoicePayment",
+      "terms": {
+        "domain": {
+          "tag": "entity",
+          "kind": "domain",
+          "declaration": "Preview",
+          "claims": {
+            "id": "Midnight",
+            "chain": "midnight",
+            "network": "preview"
+          },
+          "authenticated": false
+        },
+        "asset": {
+          "tag": "entity",
+          "kind": "asset",
+          "declaration": "EURC",
+          "claims": {
+            "domain": {
+              "declaration": "Preview",
+              "kind": "domain",
+              "id": "Midnight"
+            },
+            "id": "EuroCoinCanonical",
+            "scale": "3",
+            "representation": "canonical",
+            "symbol": "EURC"
+          },
+          "authenticated": false
+        },
+        "signer": {
+          "tag": "entity",
+          "kind": "account",
+          "declaration": "Customer",
+          "claims": {
+            "domain": {
+              "declaration": "Preview",
+              "kind": "domain",
+              "id": "Midnight"
+            },
+            "id": "Customer7"
+          },
+          "authenticated": false
+        },
+        "key": {
+          "tag": "string",
+          "value": "customer7-key"
+        },
+        "nonce": {
+          "tag": "string",
+          "value": "inv-2026-0001"
+        },
+        "pre_head": {
+          "tag": "string",
+          "value": "head-0"
+        },
+        "valid": {
+          "tag": "call",
+          "name": "rounds",
+          "args": {
+            "domain": {
+              "tag": "entity",
+              "kind": "domain",
+              "declaration": "Preview",
+              "claims": {
+                "id": "Midnight",
+                "chain": "midnight",
+                "network": "preview"
+              },
+              "authenticated": false
+            },
+            "from": {
+              "tag": "scalar",
+              "value": "0"
+            },
+            "to": {
+              "tag": "scalar",
+              "value": "20"
+            }
+          }
+        },
+        "gross_cap": {
+          "tag": "qty",
+          "asset": "EURC",
+          "atoms": "126625"
+        },
+        "fee_cap": {
+          "tag": "qty",
+          "asset": "EURC",
+          "atoms": "1250"
+        },
+        "net_floor": {
+          "tag": "qty",
+          "asset": "EURC",
+          "atoms": "125375"
+        },
+        "operation": {
+          "tag": "call",
+          "name": "transfer",
+          "args": {
+            "from": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Customer",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "Customer7"
+              },
+              "authenticated": false
+            },
+            "to": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Merchant",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "Merchant42"
+              },
+              "authenticated": false
+            },
+            "fee_to": {
+              "tag": "entity",
+              "kind": "account",
+              "declaration": "Platform",
+              "claims": {
+                "domain": {
+                  "declaration": "Preview",
+                  "kind": "domain",
+                  "id": "Midnight"
+                },
+                "id": "PlatformFees"
+              },
+              "authenticated": false
+            },
+            "value": {
+              "tag": "qty",
+              "asset": "EURC",
+              "atoms": "125375"
+            },
+            "fee": {
+              "tag": "qty",
+              "asset": "EURC",
+              "atoms": "1250"
+            }
+          }
+        },
+        "source_hash": {
+          "tag": "string",
+          "value": "merchant-src-1"
+        },
+        "policy_digest": {
+          "tag": "string",
+          "value": "merchant-policy-1"
+        },
+        "failure": {
+          "tag": "tag",
+          "name": "SuccessOnly"
+        },
+        "observations": {
+          "tag": "array",
+          "items": []
+        },
+        "disclosures": {
+          "tag": "array",
+          "items": []
+        },
+        "retained_effects": {
+          "tag": "array",
+          "items": []
+        },
+        "retained_duties": {
+          "tag": "array",
+          "items": []
+        },
+        "delegation": {
+          "tag": "tag",
+          "name": "None"
+        },
+        "recovery": {
+          "tag": "tag",
+          "name": "None"
+        }
+      }
+    }
+  ],
+  "coverage": {
+    "syntax": "checked when diagnostics empty",
+    "names": "checked",
+    "quantities": "nominal exact arithmetic",
+    "financialRelations": "ConditionalOnLocalS0Preparation",
+    "localS0Actions": [
+      "pay_invoice"
+    ],
+    "authentication": "open",
+    "ledgerCommit": "open"
+  },
+  "bounds": {
+    "scalarAndQuantityMax": "340282366920938463463374607431768211455",
+    "s0SignedFieldMax": "170141183460469231731687303715884105727",
+    "s0Scope": "LocalS0ActionsOnly"
+  },
+  "requiredPremises": [
+    "canonical-intent-signature",
+    "snapshot-to-head",
+    "head-extension",
+    "atomic-ledger-compare-and-consume"
+  ],
+  "unverifiedBindings": [
+    "agreement-id",
+    "selected-program",
+    "asset-scale",
+    "authenticated-predecessor"
+  ]
+}
+
+--- stderr
+
+--- exit 0

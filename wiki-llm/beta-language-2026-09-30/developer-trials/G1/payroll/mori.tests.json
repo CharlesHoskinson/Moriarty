@@ -1,0 +1,116 @@
+{
+  "profile": "moriarty-beta-tests/1",
+  "cases": [
+    {
+      "name": "pay Alice week 39",
+      "source": "payroll.mori",
+      "action": "pay_alice",
+      "scenario": "scenario-alice.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          { "kind": "Debit", "account": "PayrollDesk", "asset": "PayrollUSD", "amount": "246300" },
+          { "kind": "Credit", "account": "AliceChen", "asset": "PayrollUSD", "amount": "245075" },
+          { "kind": "Credit", "account": "PayrollProcessor", "asset": "PayrollUSD", "amount": "1225" },
+          { "kind": "UseAllowance", "owner": "PayrollDesk", "amount": "246300" },
+          { "kind": "UseReplay", "key": "[\"NightPayroll\",\"PayrollDesk\",\"payroll-2026-09-w39-alice\"]" },
+          { "kind": "AdvanceHead", "predecessor": "desk-head-alice-w38", "successor": "desk-head-alice-w39" }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "NightPayroll",
+          "asset": "PayrollUSD",
+          "head": "desk-head-alice-w39",
+          "round": "44",
+          "workRemaining": "7",
+          "workSpent": "3",
+          "balances": [
+            { "account": "PayrollDesk", "amount": "4753700" },
+            { "account": "AliceChen", "amount": "260075" },
+            { "account": "PayrollProcessor", "amount": "1475" }
+          ],
+          "allowances": [
+            { "owner": "PayrollDesk", "remaining": "753700", "spent": "446300" }
+          ],
+          "obligations": [],
+          "consumedReplay": [
+            "[\"NightPayroll\",\"PayrollDesk\",\"payroll-2026-09-w39-alice\"]"
+          ]
+        }
+      }
+    },
+    {
+      "name": "pay Bob week 39",
+      "source": "payroll.mori",
+      "action": "pay_bob",
+      "scenario": "scenario-bob.json",
+      "expect": {
+        "status": "PreparedUnqualified",
+        "effects": [
+          { "kind": "Debit", "account": "PayrollDesk", "asset": "PayrollUSD", "amount": "188490" },
+          { "kind": "Credit", "account": "BobOkoye", "asset": "PayrollUSD", "amount": "187550" },
+          { "kind": "Credit", "account": "PayrollProcessor", "asset": "PayrollUSD", "amount": "940" },
+          { "kind": "UseAllowance", "owner": "PayrollDesk", "amount": "188490" },
+          { "kind": "UseReplay", "key": "[\"NightPayroll\",\"PayrollDesk\",\"payroll-2026-09-w39-bob\"]" },
+          { "kind": "AdvanceHead", "predecessor": "desk-head-bob-w38", "successor": "desk-head-bob-w39" }
+        ],
+        "post": {
+          "core": "moriarty-core/5",
+          "domain": "NightPayroll",
+          "asset": "PayrollUSD",
+          "head": "desk-head-bob-w39",
+          "round": "44",
+          "workRemaining": "4",
+          "workSpent": "2",
+          "balances": [
+            { "account": "PayrollDesk", "amount": "3011510" },
+            { "account": "BobOkoye", "amount": "187550" },
+            { "account": "PayrollProcessor", "amount": "9740" }
+          ],
+          "allowances": [
+            { "owner": "PayrollDesk", "remaining": "611510", "spent": "238490" }
+          ],
+          "obligations": [],
+          "consumedReplay": [
+            "[\"NightPayroll\",\"PayrollDesk\",\"payroll-2026-09-w39-bob\"]"
+          ]
+        }
+      }
+    },
+    {
+      "name": "reject gross sum across USD and points",
+      "source": "payroll-wrong-asset.mori",
+      "action": "pay_alice",
+      "scenario": "scenario-alice.json",
+      "expect": { "status": "AuthoringRejected", "code": "BETA_ASSET_MISMATCH" }
+    },
+    {
+      "name": "reject fee above fee cap",
+      "source": "payroll-fee-over-cap.mori",
+      "action": "pay_alice",
+      "scenario": "scenario-alice.json",
+      "expect": { "status": "CoreRejected", "code": "S0_INTENT_SCOPE" }
+    },
+    {
+      "name": "reject stale payroll head",
+      "source": "payroll.mori",
+      "action": "pay_alice",
+      "scenario": "scenario-alice-stale-head.json",
+      "expect": { "status": "CoreRejected", "code": "S0_HISTORY_STALE" }
+    },
+    {
+      "name": "reject scenario asset that differs from source",
+      "source": "payroll.mori",
+      "action": "pay_alice",
+      "scenario": "scenario-wrong-asset.json",
+      "expect": { "status": "FormationRejected", "code": "BETA_SCENARIO_IDENTITY" }
+    },
+    {
+      "name": "schedule adoption is specified only",
+      "source": "payroll.mori",
+      "action": "adopt_schedule",
+      "scenario": "scenario-alice.json",
+      "expect": { "status": "Unsupported", "code": "BETA_PROFILE_UNSUPPORTED" }
+    }
+  ]
+}

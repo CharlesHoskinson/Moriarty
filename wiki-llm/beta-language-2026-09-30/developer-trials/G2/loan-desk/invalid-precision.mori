@@ -1,0 +1,21 @@
+// Genuine invalid variant: a service fee cannot name a third decimal at scale 2.
+// 12.505 USD is not an exact UsdNote quantity. No rounding is applied.
+profile "moriarty-beta/1";
+agreement OverpreciseFee {
+  domain Desk = { id: "DeskNet", chain: "midnight", network: "preview" };
+  account Lender = { domain: Desk, id: "Lender" };
+  account Borrower = { domain: Desk, id: "Borrower" };
+  account Servicer = { domain: Desk, id: "Servicer" };
+  asset USD = { domain: Desk, id: "UsdNote", scale: 2, representation: "canonical", symbol: "USD" };
+  const service_fee = 12.505 USD;
+  const principal = 1_250.00 USD;
+  intent Draw = {
+    domain: Desk, asset: USD, signer: Lender, key: "lender-key-1", nonce: "draw-1", pre_head: "svc-head-10",
+    valid: rounds(domain: Desk, from: 10, to: 20),
+    gross_cap: principal, fee_cap: service_fee, net_floor: principal,
+    operation: transfer(from: Lender, to: Borrower, fee_to: Servicer, value: principal, fee: service_fee),
+    source_hash: "claim-draw-source", policy_digest: "claim-service-policy", failure: SuccessOnly,
+    observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+  };
+  action disburse uses Draw;
+}

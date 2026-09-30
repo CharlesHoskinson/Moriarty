@@ -1,0 +1,212 @@
+$ mori simulate merchant.mori --action pay_invoice --scenario scenarios/good.json
+--- stdout
+{
+  "status": "PreparedUnqualified",
+  "sourceHash": "55eb162043907aeaf67b3634909444b0076c28dd441ad8a4537d7480fb500f52",
+  "scenarioHash": "f5d9d73ec7d8ea26a07a89d91e1076b919e4901d1360f65b0d2abc5922dd84c4",
+  "result": {
+    "status": "PreparedUnqualified",
+    "ast": {
+      "profile": "moriarty-financial-agreement-source/6",
+      "programId": "MerchantInvoice",
+      "domain": "Midnight",
+      "settlement": {
+        "asset": "EuroCoinCanonical",
+        "scale": "3"
+      },
+      "selected": {
+        "actionId": "TransferLiteralFee",
+        "sourceHash": "merchant-src-1",
+        "policyDigest": "merchant-policy-1"
+      },
+      "intent": {
+        "signer": "Customer7",
+        "keyRef": "customer7-key",
+        "nonce": "inv-2026-0001",
+        "preHead": "head-0",
+        "notBefore": "0",
+        "notAfter": "20",
+        "grossCap": "126625",
+        "feeCap": "1250",
+        "netFloor": "125375",
+        "signedAction": {
+          "kind": "Transfer",
+          "from": "Customer7",
+          "to": "Merchant42",
+          "feeTo": "PlatformFees",
+          "value": "125375",
+          "fee": "1250"
+        },
+        "failure": "success_only",
+        "observations": "empty",
+        "disclosures": "empty",
+        "retainedEffects": "empty",
+        "retainedDuties": "empty",
+        "delegation": "none",
+        "recovery": "none"
+      },
+      "authenticated": {
+        "head": "head-0",
+        "predecessor": "genesis",
+        "round": "5",
+        "balances": [
+          {
+            "account": "Customer7",
+            "amount": "500000"
+          },
+          {
+            "account": "Merchant42",
+            "amount": "0"
+          },
+          {
+            "account": "PlatformFees",
+            "amount": "0"
+          }
+        ],
+        "allowance": {
+          "owner": "Customer7",
+          "remaining": "200000",
+          "spent": "0"
+        },
+        "replay": "unused",
+        "workRemaining": "10",
+        "workSpent": "0"
+      },
+      "submitted": {
+        "action": {
+          "kind": "Transfer",
+          "from": "Customer7",
+          "to": "Merchant42",
+          "feeTo": "PlatformFees",
+          "value": "125375",
+          "fee": "1250"
+        },
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Customer7",
+            "asset": "EuroCoinCanonical",
+            "amount": "126625"
+          },
+          {
+            "kind": "Credit",
+            "account": "Merchant42",
+            "asset": "EuroCoinCanonical",
+            "amount": "125375"
+          },
+          {
+            "kind": "Credit",
+            "account": "PlatformFees",
+            "asset": "EuroCoinCanonical",
+            "amount": "1250"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Customer7",
+            "amount": "126625"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "inv-2026-0001"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "head-0",
+            "successor": "head-1"
+          }
+        ],
+        "postHead": "head-1"
+      }
+    },
+    "candidate": {
+      "status": "PreparedUnqualified",
+      "core": "moriarty-core/5",
+      "preHead": "head-0",
+      "effects": [
+        {
+          "kind": "Debit",
+          "account": "Customer7",
+          "asset": "EuroCoinCanonical",
+          "amount": "126625"
+        },
+        {
+          "kind": "Credit",
+          "account": "Merchant42",
+          "asset": "EuroCoinCanonical",
+          "amount": "125375"
+        },
+        {
+          "kind": "Credit",
+          "account": "PlatformFees",
+          "asset": "EuroCoinCanonical",
+          "amount": "1250"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Customer7",
+          "amount": "126625"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Customer7\",\"inv-2026-0001\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "head-0",
+          "successor": "head-1"
+        }
+      ],
+      "candidatePost": {
+        "core": "moriarty-core/5",
+        "domain": "Midnight",
+        "asset": "EuroCoinCanonical",
+        "head": "head-1",
+        "round": "5",
+        "workRemaining": "9",
+        "workSpent": "1",
+        "balances": [
+          {
+            "account": "Customer7",
+            "amount": "373375"
+          },
+          {
+            "account": "Merchant42",
+            "amount": "125375"
+          },
+          {
+            "account": "PlatformFees",
+            "amount": "1250"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Customer7",
+            "remaining": "73375",
+            "spent": "126625"
+          }
+        ],
+        "obligations": [],
+        "consumedReplay": [
+          "[\"Midnight\",\"Customer7\",\"inv-2026-0001\"]"
+        ]
+      },
+      "requiredPremises": [
+        "canonical-intent-signature",
+        "snapshot-to-head",
+        "head-extension",
+        "atomic-ledger-compare-and-consume"
+      ]
+    },
+    "unverifiedBindings": [
+      "agreement-id",
+      "selected-program",
+      "asset-scale",
+      "authenticated-predecessor"
+    ]
+  },
+  "qualification": "local-stipulation-only"
+}
+
+--- stderr
+
+--- exit 0

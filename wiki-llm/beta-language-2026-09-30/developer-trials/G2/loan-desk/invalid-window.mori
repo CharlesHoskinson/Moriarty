@@ -1,0 +1,21 @@
+// Genuine invalid variant: the installment window is reversed.
+// rounds() rejects from > to before any scenario or core preparation.
+profile "moriarty-beta/1";
+agreement BrokenServiceWindow {
+  domain Desk = { id: "DeskNet", chain: "midnight", network: "preview" };
+  account Borrower = { domain: Desk, id: "Borrower" };
+  account Lender = { domain: Desk, id: "Lender" };
+  asset USD = { domain: Desk, id: "UsdNote", scale: 2, representation: "canonical", symbol: "USD" };
+  obligation Note = { domain: Desk, id: "NoteSeven", asset: USD };
+  const installment = 218.75 USD;
+  const zero = 0.00 USD;
+  intent LateWindow = {
+    domain: Desk, asset: USD, signer: Borrower, key: "borrower-key-1", nonce: "installment-3", pre_head: "svc-head-52",
+    valid: rounds(domain: Desk, from: 90, to: 44),
+    gross_cap: installment, fee_cap: zero, net_floor: zero,
+    operation: repay(obligation: Note, payer: Borrower, amount: installment),
+    source_hash: "claim-installment-source", policy_digest: "claim-service-policy", failure: SuccessOnly,
+    observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,
+  };
+  action service_installment uses LateWindow;
+}
