@@ -1,0 +1,9 @@
+# Local pinned ledger signature primitive experiment
+
+**Status:** narrow W-D1 evidence, 2026-09-30. This uses a synthetic signing key and the installed `@midnight-ntwrk/ledger-v8` 8.1.0 module. It does not call a connector wallet, a proof verifier or a ledger transaction, and it does not close W-D1.
+
+The [test](host-interoperability.test.mjs) reads the current 540-byte transfer `/3` fixture, calculates `D = SHA256(C)`, and constructs `M = ASCII("midnight_signed_message:32:") || D`. The installed ledger primitive signs `M` with `ledger.signData` and verifies that signature with `ledger.verifySignature` on `M`. The same signature rejects on `D`, `SHA256(M)`, the repayment fixture's prefixed digest, a doubled prefix, and a one-byte mutation. One Node test passed with zero failures. No secret key or signature bytes are stored in this repository.
+
+The exact command was `node --test experiments/moriarty-language/formal/mil4/signature/host-interoperability.test.mjs` from the checkout root; it exited 0 with 1/1 passing. The installed package is `ledger-v8` 8.1.0 from the `r3-native` worktree. Its `package.json` SHA-256 is `52266d4e4ffa3dcd46faed72c1ffc0c7f4dd08bf01004068f8912d285b6b0536`; the imported `midnight_ledger_wasm_fs.js` SHA-256 is `125acbc6327afcf5540e70fe2a42de58af909695fc284a0e663e20a3666d296c`.
+
+The positive result establishes only that this installed ledger library's signer and verifier agree on the exact supplied `M` input. It does not determine how a current connector wallet preprocesses `signData`, whether a wallet signature verifies through this host API, whether the on-chain acceptance path can call it, or whether a proof binds `D` to the signed bytes and complete effects. The [W-D1 research note](../../../../../deliverables/mil4-k-quint-sprint1-2026-09-29/WIRE-DECISION-RESEARCH.md) keeps those experiments and the acceptance consumer open.

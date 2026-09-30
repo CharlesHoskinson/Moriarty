@@ -25,7 +25,7 @@ final `ensures` suffix; first lexical failed clause; financial rollback; finite
 work; distinct nominal debt and tokens; no host flag establishes acceptance.
 Sources: [LANGUAGE-DESIGN](../../../../deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md:46),
 [SP01.3](../../../../openspec/sprints/sp01-financial-contract-and-execution-admission.md:49),
-[SP03](../../../../openspec/sprints/sp03-executable-bounded-semantics-in-k.md:39).
+[historical SP03 execution](../../../../openspec/sprints/execution/SP03.md).
 
 The following are **new proposed choices**, not inherited approvals:
 

@@ -1,0 +1,11 @@
+# Aeon probes for the kernel boundary
+
+**Evidence status:** three isolated source-level experiments at pinned [`alcides/aeon` commit `ef66bd95`](https://github.com/alcides/aeon/tree/ef66bd95e6b7d2d5309453ee63640bc7fa1d988f), Aeon 4.9.0. They are advisory authoring experiments. They do not exercise a Moriarty compiler, cryptographic signer, bridge, foreign ledger or Midnight proof.
+
+| Probe | Observed acceptance and rejection | Boundary consequence |
+| --- | --- | --- |
+| [Authority envelope](../deliverables/aeon-kernel-experiments-2026-09-29/authority/REPORT.md) | Recipient, domain and fee substitutions were rejected. A gross 101 under a combined gross cap 100 was **accepted**. The CLI also accepted `{v:Int | false} := 101`; a separately stated cap rejected 101. | This pinned Aeon path cannot be an admission or settlement gate. The root cause is unknown. Exact-byte authorization and independent financial acceptance remain required. |
+| [Bridge refund](../deliverables/aeon-kernel-experiments-2026-09-29/bridge/RESULT.md) | Full refund from timeout, unknown status, zero *observed* delivery, or positive partial delivery was rejected by a conservation refinement. Refund of the remaining amount passed under an explicit complete-delivery premise. | An adapter must justify complete delivery or nonreceipt. Aeon arithmetic does not produce that foreign-chain evidence or prevent late execution. |
+| [Multichain signing](../deliverables/aeon-kernel-experiments-2026-09-29/signing/RESULT.md) | Wrong domain, path, digest, recipient, value, epoch and nonce were rejected in the checked encoding. Signed/broadcast/finalized phase substitutions were rejected. A `native` promise of finality was accepted and flagged in the trust report. | Phase types help detect source mistakes but cannot prove MPC signing, broadcast or foreign finality. Native assumptions need a named verifier boundary. |
+
+The authority counterexample limits the interpretation of every successful Aeon type check in the other probes. Rejections show that specific obligations were checked in those sources; acceptances do not establish general soundness. A later upstream repair would still need source-to-Moriarty and Moriarty-to-Midnight correspondence. The exact `.ae` sources, CLI commands, raw output and hashes are retained in each linked experiment directory.

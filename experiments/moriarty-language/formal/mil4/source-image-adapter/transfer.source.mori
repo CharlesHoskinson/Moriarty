@@ -1,0 +1,23 @@
+profile "moriarty-financial-agreement-source/6";
+agreement AgreementA {
+ domain D; settlement A scale 0;
+ selected TransferLiteralFee source_hash "claim-source" digest "claim-policy";
+ intent {
+  signer Owner key "key1"; nonce "n1"; pre_head "h0"; valid 0..10;
+  gross_cap 11; fee_cap 1; net_floor 10; failure success_only;
+  signed_action transfer from Owner to Recipient fee_to Fee value 10 fee 1;
+  observations empty; disclosures empty; retained_effects empty; retained_duties empty;
+  delegation none; recovery none;
+ }
+ authenticated {
+  head "h0"; predecessor "genesis"; round 1;
+  balance Owner 100; balance Recipient 0; balance Fee 0;
+  allowance Owner remaining 100 spent 0; replay unused; work_remaining 10; work_spent 0;
+ }
+ submit transfer from Owner to Recipient fee_to Fee value 10 fee 1;
+ effects { debit Owner 11; credit Recipient 10;
+  credit Fee 1;
+  use_allowance Owner 11; use_replay "n1"; advance_head "h0" "h1";
+ }
+ post_head "h1";
+}
