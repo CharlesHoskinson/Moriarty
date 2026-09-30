@@ -2,7 +2,7 @@
 id: moriarty.session.beta-language-20260930
 title: Beta language research and developer delivery
 type: session
-status: active
+status: completed
 created: 2026-09-30
 updated: 2026-09-30
 tags:
@@ -36,3 +36,9 @@ ledger acceptance remain open at their recorded boundaries.
 Use the dossier's result and developer-trial reports for scoped run evidence and
 publication status. Original audit findings remain visible when successors repair
 them. Neither votes nor tool setup qualify financial transactions.
+
+## Completed authoring-beta delivery
+
+Repository/experiment observation: [PR11](https://github.com/CharlesHoskinson/Moriarty/pull/11) merged the reviewed beta at `f5295e601bbbb2adb0e8c81c893621259e6b2df1`. The [authoring prerelease](https://github.com/CharlesHoskinson/Moriarty/releases/tag/moriarty-authoring-beta-0.1.0-beta.1) supplies CLI/VSIX/checksums; actual downloaded bytes match their pinned hashes. [Final result](../../wiki-llm/beta-language-2026-09-30/RESULT.md) records79 beta/938 regression tests, six original developer trials and final package reproductions, scoped independent reviews, actual client evidence and tutorial content/layout decisions.
+
+This session's authoring/research/delivery loop is complete. The separate native financial product work remains open: PreparedUnqualified still has four external premises and four unverified bindings. No financial/proof claim changes status through this session update.

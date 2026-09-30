@@ -1,6 +1,6 @@
 ---
 title: Moriarty beta language research and delivery loop
-status: final-review-and-publication
+status: completed-authoring-beta
 created: 2026-09-30
 updated: 2026-09-30
 ---
@@ -96,3 +96,7 @@ records current measurements, exact review scope and publication state.
 [DevEx results](DEVEX-RESULT.md) and the [tutorial site plan](TUTORIAL-SITE-PLAN.md)
 preserve the feedback and onboarding decisions. Historical baseline counts do
 not establish beta acceptance.
+
+The authorized authoring-beta delivery loop is complete: [PR11](https://github.com/CharlesHoskinson/Moriarty/pull/11) is merged and the [prerelease](https://github.com/CharlesHoskinson/Moriarty/releases/tag/moriarty-authoring-beta-0.1.0-beta.1) is published with verified downloads. Financial/native product obligations remain open.
+
+[Complete task checklist](CHECKLIST.md) separates delivered beta work from open product obligations and unperformed optional validations.
