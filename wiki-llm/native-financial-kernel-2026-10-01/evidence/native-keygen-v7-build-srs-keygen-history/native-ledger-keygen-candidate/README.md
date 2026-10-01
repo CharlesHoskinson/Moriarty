@@ -1,0 +1,11 @@
+# Native keygen source candidate
+
+Uncompiled/unexecuted isolated next-capability candidate. Current Rust sources/Cargo manifest/lock copied only; no target, vendor, runtime outputs, metadata or history. Main CLI adds `keygen CONFIG PIN_SHA NEW_OUTPUT`; closed config is `{ir:{path,sha256},srs:{path,sha256}}`. Existing CLI validates exact config SHA before parsing. Serde denies unknown and duplicate known fields. Existing prepare/prove/verify/accept and provider are unchanged.
+
+Keygen enforces immutable current IR SHA, exact official SRS SHA/25,166,212bytes, k17 and complete prover-parameter decode EOF using the existing fixed offline Parameters. Actual public Zkir::keygen returns `(ProverKey<IrSource>, VerifierKey)` via setup_vk/setup_pk, per pinned ir.rs:121. Official CLI uses that same API and tagged serialization. The new consumer checks official tagged PK/VK/IR loader EOF and byte identity, then exclusively exports pk.tagged/vk.tagged/ir.tagged and final keygen-success.json. Started/failure records and partial artifacts do not establish usable keys. A hard resource stop may leave only started/partial files; external consumed reservation must remain intact.
+
+Existing native operation registration takes actual VK and future resolver consumes tagged PK/VK/IR. Actual PK/VK agreement under finalized nonzero-binding proof remains NotChecked, as receipt states. Keygen does not prove/check a transaction or register/apply/accept anything. No ceremony audit is inferred from SRS digest. No added dependency/OnDemand/network parameter path, wallet/private signing key, or environment parameter lookup.
+
+No cargo/metadata/node/binary/check/SRS/fetch/keygen/proof/WF/application/wallet/transaction execution ran. Frozen caller/handoff/wrappers and failure/resource history untouched. Future execution requires successful current actual preparation, both fresh source/result audits and separate reviewed SRS-body/keygen/proof resources. Source preparation grants none and resets no Compact/R3 debt.
+
+Concrete uncertainty: this isolated extension is uncompiled; generic tagged key bounds and trait/dependency compatibility still need the separately authorized build. No financial property/intent/transition/history/fee, custody/time, Preview, native PCD or full language acceptance is claimed. Native keygen alone supplies no such predicate.

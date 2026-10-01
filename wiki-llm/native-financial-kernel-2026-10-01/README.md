@@ -28,13 +28,23 @@ Future proving uses an exact resolver, published parameter hash, no-network chil
 1. Completed: adapter v3 actual check plus five relation refusals, independently reviewed.
 2. Completed: repaired native ledger caller compiled; production handoff and actual keyless native preparation succeeded. The preceding compile and mixed-unit-operation handoff failures remain archived.
 3. Completed: two fresh full current source and actual-result audits approved narrow successful v5 preparation publication with stated qualifications. No proof/application/Preview or new resource grant follows.
-4. Source prepared separately: offline native keygen CLI; bounded SRS/build/keygen resource proposal is being prepared. It has not executed or obtained resource approval. The obsolete standalone binding0 prover is not the finalized financial target.
+4. Source prepared separately: offline native keygen CLI. Both v6 resource votes approved its precise bounded prerequisites; old ELF retention succeeded, then the parameter request timed out with a 320 KiB partial body. Build and keygen did not run. A new reviewed transport amendment and compilation-first sequence are being prepared. The obsolete standalone binding0 prover is not the finalized financial target.
 5. After required current reviews: acquire exact official parameters and generate keys under reviewed limits, then use real ledger-finalized nonzero binding for one complete financial proof, independent verification and strict application.
 6. Preserve complete fees/state/events/replay/fault evidence; review actual results and publish only the proven scope.
 7. Resolve authentic deployment/asset/funding/account/time/history correspondence and actual Preview compatibility before settlement claims.
 
-Latest observed result: [V5-ACTUAL-PREPARATION.md](V5-ACTUAL-PREPARATION.md). Its [immutable history](evidence/ledger-v5-preparation-history/archive-manifest.json) retains original source/resource votes, source maps, actual handoff/config/artifacts and actual native preparation. Historical stage notes retain their original as-of status.
+Latest transport observation: [V6-TRANSPORT-FAILURE.md](V6-TRANSPORT-FAILURE.md). Latest successful preparation: [V5-ACTUAL-PREPARATION.md](V5-ACTUAL-PREPARATION.md). Its [immutable history](evidence/ledger-v5-preparation-history/archive-manifest.json) retains original source/resource votes, source maps, actual handoff/config/artifacts and actual native preparation. Historical stage notes retain their original as-of status.
 
 [Immutable evidence archive](evidence/archive-manifest.json) preserves byte-identical copies of the kernel, adapter source/preimages, failed dependency preparations and successful native source-check receipts. Absolute runtime paths are historical evidence, not a portable installation contract.
 
 Research artifacts currently live under `/home/charl/research/moriarty-signed-intent-2026-10-01/`. This note is a working record; execution observations will be filed with raw receipts, exact hashes and current independent audits. It grants no native or network execution authority.
+
+## V7 observed completion and next source review
+
+[Actual V7 key generation](V7-ACTUAL-KEYGEN.md) records successful offline build, exact parameter acquisition and native key generation. It records no financial proof, well-formedness or ledger application. The 44-file result freeze and small source/receipt archive are preserved; large public artifacts and both executables remain externally hash-bound.
+
+[Next proof source preparation](NEXT-PROOF-SOURCE-PREPARATION.md) preserves the original format-error draft and corrected successor. The [exact V8-03 preparation archive](evidence/native-financial-v8-03-source-preparation/archive-manifest.json) adds the fully pinned 667-input successor for fresh combined actual-result/source/resource audits. Requested reviews are a recorded dispatch event, not approval or continuing process liveness. No V8 authorization or execution exists at this checkpoint.
+
+## Current reviewed milestone
+
+[Reviewed key generation and next execution boundary](REVIEWED-KEYGEN-MILESTONE.md) records both terminal approvals, the separately reviewed CLI repair and the actual one-proof launch. Earlier sections preserve their preparation-time status; they do not describe current review completion. Full financial proof, independent verification, authenticated custody and Preview acceptance are not established by this milestone.
