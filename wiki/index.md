@@ -28,6 +28,10 @@ sources:
 
 # Moriarty language wiki index
 
+## Signed intent consumer — 2026-10-01
+
+[[wiki/sessions/signed-intent-2026-10-01|Actual native signatures, local atomic store and packed DevEx]] · [measured scope](../wiki-llm/signed-intent-2026-10-01/RESULT.md). Final result audits pending; authentic owner/state, complete native proof and Preview remain open.
+
 ## Midnight Rust cryptography tests — 2026-09-30
 
 [[wiki/sessions/midnight-crypto-2026-09-30|Pinned sources and twelve local Rust tests]] · [measured results](../wiki-llm/midnight-crypto-2026-09-30/RESULT.md). Signature, Merkle, bounded native proof and privileged local ledger checks do not establish financial/native/Preview acceptance.

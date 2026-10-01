@@ -16,10 +16,12 @@ export function scalarText(value: string): boolean {
   }
   return true;
 }
-export function parseBoundedJson(text: string): unknown {
+export function parseBoundedJson(text: string): unknown { return parseJsonWithinLimits(text,65536,1024); }
+/** Internal native response parser. */
+export function parseJsonWithinLimits(text: string, byteLimit:number, stringLimit:number): unknown {
   const fail = (code: string, message: string): never => { throw new LocalError(code, message); };
   if (typeof text !== 'string') fail('BETA_JSON_TEXT', 'JSON must be text');
-  if (Buffer.byteLength(text) > 65536) fail('BETA_JSON_BOUND', 'JSON exceeds 65536 bytes');
+  if (Buffer.byteLength(text) > byteLimit) fail('BETA_JSON_BOUND', 'JSON exceeds 65536 bytes');
   if (!scalarText(text)) fail('BETA_JSON_UNICODE', 'Invalid Unicode scalar');
   let i = 0, nodes = 0;
   const ws = (): void => { while (i < text.length && /[ \t\r\n]/.test(text[i])) i++; };
@@ -33,7 +35,7 @@ export function parseBoundedJson(text: string): unknown {
         try { value = JSON.parse(text.slice(start, i)) as string; }
         catch { return fail('BETA_JSON_SYNTAX', 'Invalid JSON string'); }
         if (!scalarText(value)) fail('BETA_JSON_UNICODE', 'Invalid decoded Unicode scalar');
-        if (Buffer.byteLength(value) > 1024) fail('BETA_JSON_STRING', 'JSON string exceeds 1024 bytes');
+        if (Buffer.byteLength(value) > stringLimit) fail('BETA_JSON_STRING', 'JSON string exceeds 1024 bytes');
         return value;
       }
       if (c === '\\' && !escaped) escaped = true; else escaped = false;

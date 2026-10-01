@@ -1,0 +1,104 @@
+{
+  "duration_api_ms": 452209,
+  "stop_reason": "end_turn",
+  "session_id": "ed35b331-2164-4973-a07e-f0fce4ade0ef",
+  "total_cost_usd": 1.455715,
+  "usage": {
+    "input_tokens": 38,
+    "cache_creation_input_tokens": 146157,
+    "cache_read_input_tokens": 1479805,
+    "output_tokens": 57505,
+    "output_tokens_details": {
+      "thinking_tokens": 33847
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 146157,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1323,
+        "cache_read_input_tokens": 151093,
+        "cache_creation_input_tokens": 676,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 676
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 38,
+      "outputTokens": 57505,
+      "cacheReadInputTokens": 1479805,
+      "cacheCreationInputTokens": 146157,
+      "webSearchRequests": 0,
+      "costUSD": 1.455715,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 33847,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 31,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "The plan is written to `/home/charl/research/moriarty-signed-intent-2026-10-01/S3-devex-plan.md`. It is planning only: I ran no tests, builds or signing, and no wallets or network were touched.\n\nThe worktree now shows modified and untracked files in `src/cli.ts`, `src/index.ts`, `src/json.ts`, the Rust crate and `src/auth.ts`. None are mine; other seats or the root are implementing, so my file partition may need rebasing onto their work.\n\n**Vote: APPROVE, bounded.** The flow covers signature validity over owner terms only. It must never imply owner authority, current state, replay freshness, proof, ledger acceptance or settlement. Approval depends on conditions R1\u2013R8 in section 12 of the file.\n\n**Main recommendations**\n- **Display.** A readable review screen is the default, with `--json` for machines. It is built from the statement Rust returned. Atoms always appear with scale, asset ID and symbol, and scaled decimals are marked display-only. The computed source hash and the author's claimed `source_hash` are shown under separate labels. The screen also says to sign the decoded frame bytes, not the hex text or the hash.\n- **Escaping.** I confirmed on a temp file that today's beta accepts zero-width and bidi characters in `network` and `key`. `mori inspect` then prints the raw character, and `JSON.stringify` leaves U+202E and U+2028 unescaped. I recommend escaping every non-printable-ASCII character rather than keeping a deny list, and keeping all stdout of the two new commands ASCII-only. S1's plan reaches the same rule independently.\n- **Result vocabulary.** There is no success-sounding top-level status. `ownerAuthority` is `NotChecked`, a closed `notEstablished` list appears on every success, and `ledgerAccepted` is `false`. `StatementMismatch` is separate from `SignatureRejected`. A valid signature followed by a Core rejection exits 1 but still reports the signature as valid. Exit 2 means no judgment could be made, and its output never says valid or invalid.\n- **Files.** I would create `src/intent-display.ts`, `tests/intent-display.test.mjs`, `tests/intent-trial.test.mjs`, `SIGNED-INTENT.md` and `examples/signed-intent/`. I would make small edits to the beta README and GETTING-STARTED.md, one sentence in the root README, and add `SIGNED-INTENT.md` to `files` in `package.json`.\n- **Website.** `site/` has no beta or getting-started content, so I plan no `site/` change. I suggest the root add one navigation row to `TUTORIAL-SITE-PLAN.md`.\n- **Offline trial.** It uses a packed tarball install, a copied Rust binary and an empty PATH, with public ephemeral fixtures only. It covers a tamper matrix, state-invariance and a bidi display check. A skipped run is reported as skipped, not as a pass.\n\n**Dissents recorded (D1\u2013D6)**\n- **Text rule.** I want v1 TEXT fields limited to printable ASCII; the root keeps Unicode.\n- **Scenario flag.** I want `--scenario` optional on `mori intent`; the root requires it.\n- **Output default.** I want readable output by default rather than JSON-only.\n- **Statuses.** I want distinct `StatementMismatch` and `ArtifactRejected` statuses.\n- **Framing.** I want a `framing` enum, not a `walletPrefix` boolean.\n- **Exit codes.** I want exit 2 reserved for process-level failures rather than malformed artifacts.\n\nI also preserved S1's fixed-binary alternative.\n\n**Not verified:** wallet `signData` compatibility with `midnight-sign-data`, offline `cargo` and `npm` behavior, and all tests. The screens in the plan are design mockups, not captured output.",
+  "ttft_ms": 1069,
+  "type": "result",
+  "duration_ms": 453002,
+  "uuid": "c79a8e68-974a-4ce8-b708-6d42bd1f13a6",
+  "ttft_stream_ms": 858,
+  "time_to_request_ms": 48,
+  "first_content_frame_ms": 858,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "seat": "S3",
+  "requested_model": "claude-sonnet-5-5",
+  "requested_effort": "high",
+  "process_exit_code": 0,
+  "elapsed_seconds": 453.9,
+  "prompt_sha256": "d1d435ce4e82c6a55ed67b60a07b6f2d41d43c4b772213ad71b676acd29c3a41"
+}

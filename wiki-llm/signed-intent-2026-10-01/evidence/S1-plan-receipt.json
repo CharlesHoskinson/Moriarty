@@ -1,0 +1,104 @@
+{
+  "duration_api_ms": 504079,
+  "stop_reason": "end_turn",
+  "session_id": "64d6caba-79a1-43ab-85d5-6f98d13c7384",
+  "total_cost_usd": 1.815525,
+  "usage": {
+    "input_tokens": 44,
+    "cache_creation_input_tokens": 184212,
+    "cache_read_input_tokens": 2074145,
+    "output_tokens": 66376,
+    "output_tokens_details": {
+      "thinking_tokens": 34825
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 184212,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1442,
+        "cache_read_input_tokens": 188625,
+        "cache_creation_input_tokens": 267,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 267
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 44,
+      "outputTokens": 66376,
+      "cacheReadInputTokens": 2074145,
+      "cacheCreationInputTokens": 184212,
+      "webSearchRequests": 0,
+      "costUSD": 1.815525,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 34825,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 38,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "The plan is written to `/home/charl/research/moriarty-signed-intent-2026-10-01/S1-security-plan.md` (426 lines). The repo is clean: no edits, no commits, no keys, wallet, network or proof builds. Status blocks the old loan campaign, and I did not dispatch it.\n\nI measured the findings below by running read-only probes and a scratch copy of the crate under `/tmp`, which I deleted afterwards. The existing beta suite (79 tests) passes today.\n\n**Findings that drive the design**\n- **Rebinding is real today.** Changing `network`, `chain`, `representation`, `symbol` or a declaration name in a beta source produces byte-identical Source/6. A signature over Source/6 or Core intent alone is replayable across networks and asset representations.\n- **`source_hash` and `policy_digest` are opaque strings.** `signedDigest` is only checked as opaque. Neither may be treated as provenance, and no digest of the envelope goes inside it.\n- **The provisional W-D2 `/3` codec can't be consumed by beta.** It types nonce and pre-head as hash32, uses u64 rounds, signs a repay creditor beta can't express, and carries a pre-state effect commitment. I recommend a separate version axis.\n- **Native verifier at pin `9f9842eb`:** malformed signatures and keys return an error. A valid-form but wrong signature returns false. The ECDSA high-S twin returns false. The verifier must keep these outcomes distinct.\n- **Repay is a residual risk.** The owner signature doesn't bind the creditor, because beta source has no creditor field.\n\n**Proposal**\n- **Envelope:** a closed binary format with header `moriarty-owner-intent-envelope/1\\0`, fixed tag order, fixed-width numbers and an 8192-byte cap. It is owner-only, so solver-portable.\n  - **Binds:** chain, network, domain, asset id/scale/representation/symbol, agreement id, action id, key scheme, public key, keyRef and the signer account. It also binds the exact beta source SHA-256 as the program hash, nonce, pre-head, validity window, caps, floor and every action field.\n  - **Excludes:** snapshot, effects, post-head and any self-digest. The two source labels are signed as opaque claims, never interpreted.\n- **Signing:** `raw` or `wallet_prefixed` over the whole envelope, with the convention named explicitly. Wallet transport is lowercase hex only.\n- **Result fields:** a valid signature is kept separate from authority, snapshot, head, transition, financial and proof results. Those stay `null` and `ledger_accepted` stays `false`.\n- **Interfaces:** the Rust `intent.rs` and `verify-intent` command are specified, along with the TS `intent-request` and `intent-verify` commands (no MCP change). The TS side uses fail-closed process handling and requires an explicit `--verifier` path.\n- **Tests:** the plan lists concrete positives and negatives for every case you named (\u00a7\u00a77\u201310), baseline digests for existing `expand`/`simulate`/`inspect` output, exact commands and a file list.\n\n**Vote:** phased implementation is sound, on four conditions:\n1. A different worker writes the independent Python reference and golden vectors before any implementation.\n2. Rust isn't \"consumed\" until the TS runner passes against the real binary with zero skips.\n3. A schema change after the freeze reruns all three encoders.\n4. All existing beta qualification gates and tests stay untouched.\n\n**Decisions for you before freezing the schema** (details in \u00a712)\n- The header name; I recommend not calling it `/3` yet.\n- Signing the whole envelope rather than a digest.\n- An exact-bytes program hash.\n- The unsigned repay creditor.\n- u128 rounds with scale capped at 18.\n\n**Suggested scope for S1:** Phase 0 (Python reference, golden vectors, hostile byte corpus) plus Phase 1 Rust test authorship. If you assign Phase 0 to someone else, I take Phase 1 implementation instead. In either case, writable paths are only the new files under `experiments/midnight-crypto/` listed in \u00a713, plus one line in `src/lib.rs` and the `verify-intent` command in `src/main.rs`.",
+  "ttft_ms": 1360,
+  "type": "result",
+  "duration_ms": 572150,
+  "uuid": "dcb334e3-decc-4496-97ea-f8028332eb53",
+  "ttft_stream_ms": 957,
+  "time_to_request_ms": 83,
+  "first_content_frame_ms": 957,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "seat": "S1",
+  "requested_model": "claude-sonnet-5-5",
+  "requested_effort": "high",
+  "process_exit_code": 0,
+  "elapsed_seconds": 573.7,
+  "prompt_sha256": "4dfe584636290b140fe2b0f5cf8122babb02886dba8a79040a18219fbc749758"
+}

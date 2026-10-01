@@ -1,0 +1,53 @@
+✔ escapeText is escape-by-default: only printable ASCII passes, every other scalar is visible (0.880266ms)
+✔ asciiJson keeps the parsed value while emitting only printable ASCII and newlines (0.613581ms)
+✔ formatAtoms derives exact scaled decimals with BigInt only (0.473344ms)
+✔ every signed statement leaf has a label and every leaf value appears in the review (4.390569ms)
+✔ unlabeled, missing and extra statement leaves fail closed (1.35935ms)
+✔ owner intent review separates signed terms from claims, computed hashes and unsigned context (2.760104ms)
+✔ midnight-sign-data review names the exact prefix and wallet mode has no fallback (1.485149ms)
+✔ hostile text is escaped everywhere in readable review, with a warning (0.601573ms)
+✔ a returned frame hash that differs from the recomputed hash is displayed as a mismatch, never hidden (0.354628ms)
+✔ verification review reports signature, authority gap and local result separately (0.98273ms)
+✔ verification review covers core rejection, invalid signature and repay (0.706987ms)
+✔ error review keeps actual status and code, escapes hostile messages and separates judgment from inability to judge (0.507304ms)
+✔ new commands: --review and --json are mutually exclusive and usage errors stay ASCII (383.844905ms)
+✔ existing commands keep their exact output behavior (379.749962ms)
+✔ missing, relative or fake native verifier gives exit 2 and never a validity claim (1205.234008ms)
+✔ source and scenario judgments stay exit 1 while keeping JSON compatibility (387.473341ms)
+✔ real native: intent review and JSON agree and match source-derived terms (418.79922ms)
+✖ real native: verify review for transfer and repay, expired scenario, bad signature and edited source (792.834795ms)
+✔ real native: hostile source text is escaped in readable and JSON output (302.38123ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 18
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3975.865954
+
+✖ failing tests:
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:304:1
+✖ real native: verify review for transfer and repay, expired scenario, bad signature and edited source (792.834795ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /first difference[^\n]*\/statement\/sourceSha256/i. Input:
+  
+  'FormationRejected  BETA_SIGNATURE_SOURCE_MISMATCH\n' +
+    '  Outcome: rejected. No effects were published.\n' +
+    '  Detail: Signed statement differs from current source\n' +
+    '  Hint: The artifact statement differs from the terms this source, action and signing metadata produce. This says nothing yet about the signature. Restore the exact signed source bytes (formatting counts) or sign again.\n'
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:326:11)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'FormationRejected  BETA_SIGNATURE_SOURCE_MISMATCH\n  Outcome: rejected. No effects were published.\n  Detail: Signed statement differs from current source\n  Hint: The artifact statement differs from the terms this source, action and signing metadata produce. This says nothing yet about the signature. Restore the exact signed source bytes (formatting counts) or sign again.\n',
+    expected: /first difference[^\n]*\/statement\/sourceSha256/i,
+    operator: 'match',
+    diff: 'simple'
+  }
