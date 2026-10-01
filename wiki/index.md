@@ -10,6 +10,7 @@ tags:
   - navigation
 updated_at: 2026-09-30T21:34:04Z
 sources:
+  - SRC-0118
   - SRC-0111
   - SRC-0112
   - SRC-0113
@@ -30,7 +31,7 @@ sources:
 
 ## Native financial kernel — 2026-10-01
 
-[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Actual native preparation, offline build and key generation are recorded; financial proof/application and authentication gates remain open. Result reviews and source/resource approval remain separate.
+[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Actual native preparation, keys and finalized proof are recorded. The latest sorted attempt passed producing-process default Real WF, then application refused excess NIGHT in its test genesis. Independent verification, financial Success, authenticated state and Preview remain open. SRC-0118 retains both actual-result reviews; source/resource approval remains separate.
 
 ## Signed intent consumer — 2026-10-01
 

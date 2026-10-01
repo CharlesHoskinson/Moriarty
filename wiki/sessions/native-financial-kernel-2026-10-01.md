@@ -6,7 +6,7 @@ status: research-draft
 created: 2026-10-01
 updated: 2026-10-01
 tags: [moriarty, midnight, native-proof, signatures]
-sources: [SRC-0115, SRC-0116, SRC-0117]
+sources: [SRC-0115, SRC-0116, SRC-0117, SRC-0118]
 ---
 
 # Native financial kernel and actual proof route
@@ -47,3 +47,11 @@ The original timed-out320KiB download and original624MB executable remain preser
 [Next proof source preparation](../../wiki-llm/native-financial-kernel-2026-10-01/NEXT-PROOF-SOURCE-PREPARATION.md) preserves an original unexecuted draft that incorrectly supplied tagged IR to a JSON loader, its correction, and an exact667-input v8-03 successor. The proposal uses one real finalized financial proof and a separate native verifier process under new source/resource/result gates. This intake records source preparation only, with no v8 resource authorization or proof execution. Broader native financial negative controls remain partly specified-only.
 
 Authenticated custody, mint/deploy/funding, account/asset/time/history bindings, generic language/property/intent/transition/history/PCD correspondence and real Preview settlement remain open. No accepted financial claim or user wallet/state/transaction is changed by this intake.
+
+## Reviewed sorted proof and actual application refusal — 2026-10-01
+
+Experiment observation, SRC-0118: [the sorted R3 attempt](../../wiki-llm/native-financial-kernel-2026-10-01/R3-04-ACTUAL-APPLICATION-REFUSAL.md) retained a finalized 6336-byte proof, statement and signed sealed transaction. Source ordering and retained application outputs establish successful real producer verification and default Real native well-formedness in that process. Native application then returned Failure(InvariantViolation(NightBalance(24001000000000000))). Genesis and returned state are byte-identical. Independent verification, full Success, accepted effects, fees and replay-after-success remain unperformed.
+
+Both fresh full actual-result audits approve source and failed-result faithfulness only; root inspected both complete reports and actual terminal Grok metadata. Requested Grok4.6 high returned grok-4.6-build/end_turn/process0. Astra was requested as gpt-6-astra medium without separate returned-provider attestation. [Collection](../../raw/sources/native-financial-r3-failure-2026-10-01/collection.json) binds the portable byte-identical evidence archive and preserves the original failed attempt; no new accepted financial claim follows.
+
+Source fact and inference: native default genesis reserves the entire NIGHT supply; the test fixture manually adds1e12 NIGHT. Their sum equals the observed excess. A separately reviewed retained-genesis invariant diagnostic is the next empirical predicate; this intake establishes no completed diagnostic or funded repair. A supply-consistent local funding route would still require a new context-bound proof and would not authenticate public-chain funding, owner mappings, time/history or general compiler/property/intent/transition/PCD correspondence. Existing Preview format limitations and all product exits remain open.
