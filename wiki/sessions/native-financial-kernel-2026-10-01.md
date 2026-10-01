@@ -6,7 +6,7 @@ status: research-draft
 created: 2026-10-01
 updated: 2026-10-01
 tags: [moriarty, midnight, native-proof, signatures]
-sources: [SRC-0115, SRC-0116]
+sources: [SRC-0115, SRC-0116, SRC-0117]
 ---
 
 # Native financial kernel and actual proof route
@@ -37,3 +37,13 @@ No registered VK, PK, SRS body, key generation, proof, strict well_formed, appli
 Source fact plus conditional inference: at08:10:16UTC, public RPC/indexer reported the same Preview block with ledger8.1.2/spec1000300. Matching official published runtime and ledger sources support IR2.0/V2proof/V3operation; the candidate requires IR3.1/V3proof/V4operation. Their serializers/loaders reject the candidate versions. This is incompatibility if the live node executes those matching published sources. It is not an observed network rejection or live build/WASM attestation. [Supplemental immutable collection](../../raw/sources/native-preparation-preview-2026-10-01/collection.json) links the original redacted responses and pinned public source captures.
 
 Authentication of address04, A1funding, account roles, destination ownership, NIGHT/time, stored round1, predecessor/history, generic lowering, contract properties, intent refinement, transition validity and recursive PCD remains open. ECDSA intent owner and Schnorr NIGHT payer are distinct; application Afee10 and protocol DUST are distinct. No wallet, user state or public transaction was changed. No canonical financial claim is promoted by this intake.
+
+## Actual build and key generation — 2026-10-01
+
+The preparation section above retains its recorded scope. Later experiment observations: the isolated native keygen caller compiled offline; the new full public parameter request matched exactly25,166,212bytes/SHA4a9ef6c7c0619aab74eede44b13e753e3ba54508a02dd3b7106a949aabb73b74; actual official k17 key generation produced tagged PK/VK/IR with loader EOF and byte round-trip checks. All three parent receipts record exit0/no stop and preserved source/new-binary identity. [Actual result and immutable evidence](../../wiki-llm/native-financial-kernel-2026-10-01/V7-ACTUAL-KEYGEN.md) record complete source/result hashes, resource measurements, externally retained large artifacts and historical labels. [SRC-0117 collection](../../raw/sources/native-keygen-v7-2026-10-01/collection.json) is provenance metadata over inside-vault source/receipt archives; it does not claim large binary bodies were copied.
+
+The original timed-out320KiB download and original624MB executable remain preserved. The new request did not resume or erase that failure. Ceremony trust remains independently unaudited. Keys satisfy neither financial proof nor well-formedness/application/ledger acceptance; resolver/registration agreement remains NotChecked. Fresh actual-result review is separate from the prior resource approval.
+
+[Next proof source preparation](../../wiki-llm/native-financial-kernel-2026-10-01/NEXT-PROOF-SOURCE-PREPARATION.md) preserves an original unexecuted draft that incorrectly supplied tagged IR to a JSON loader, its correction, and an exact667-input v8-03 successor. The proposal uses one real finalized financial proof and a separate native verifier process under new source/resource/result gates. This intake records source preparation only, with no v8 resource authorization or proof execution. Broader native financial negative controls remain partly specified-only.
+
+Authenticated custody, mint/deploy/funding, account/asset/time/history bindings, generic language/property/intent/transition/history/PCD correspondence and real Preview settlement remain open. No accepted financial claim or user wallet/state/transaction is changed by this intake.

@@ -24,4 +24,4 @@ tags: [moriarty, consolidation, recursion]
 
 ## Native financial iteration — 2026-10-01
 
-[[wiki/sessions/native-financial-kernel-2026-10-01|Current native proof work]] follows published PR13. Keep actual source check, native proof and financial ledger acceptance separate. Actual signed Beta handoff and keyless native preparation are narrowly reviewed. Keygen source/resources are separate; no proof, application, authenticated custody/history or Preview acceptance follows.
+[[wiki/sessions/native-financial-kernel-2026-10-01|Current native proof work]] follows published PR13. Keep actual source check, native proof and financial ledger acceptance separate. Actual signed Beta handoff and keyless native preparation are narrowly reviewed. Actual offline build, pinned SRS acquisition and native key generation are recorded; fresh result review and exact next proof/resource gates remain separate. No financial proof, application, authenticated custody/history or Preview acceptance follows.
