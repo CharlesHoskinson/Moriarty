@@ -28,6 +28,10 @@ sources:
 
 # Moriarty language wiki index
 
+## Midnight Rust cryptography tests — 2026-09-30
+
+[[wiki/sessions/midnight-crypto-2026-09-30|Pinned sources and twelve local Rust tests]] · [measured results](../wiki-llm/midnight-crypto-2026-09-30/RESULT.md). Signature, Merkle, bounded native proof and privileged local ledger checks do not establish financial/native/Preview acceptance.
+
 ## Beta language research and delivery — 2026-09-30
 
 [[wiki/sessions/beta-language-2026-09-30|Completed research, beta tools and developer trials]] · [agent dossier](../wiki-llm/beta-language-2026-09-30/README.md) · [standalone package](../packages/moriarty-beta/README.md) · [published result](../wiki-llm/beta-language-2026-09-30/RESULT.md). Local S0 preparation remains unqualified; broader lifecycle syntax is a proposal and financial/authentication/proof/ledger gates remain open.
