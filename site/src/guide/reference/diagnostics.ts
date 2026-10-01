@@ -263,7 +263,7 @@ export const DIAGNOSTIC_GROUPS: DiagnosticGroup[] = [
  */
 export const CORE_CODES: { code: string; judgment: string; when: string }[] = [
   { code: 'S0_STAGE_UNSUPPORTED', judgment: 'stage', when: 'The state or request shape is outside the S0 stage (missing balance or allowance rows, obligation not Outstanding, wrong row order).' },
-  { code: 'S0_INTENT_SCOPE', judgment: 'intent', when: 'The round is outside the window; fee above fee_cap; value plus fee above gross_cap; value below net_floor; zero amount; repayment with nonzero fee_cap or net_floor; signed action differs from the submitted action.' },
+  { code: 'S0_INTENT_SCOPE', judgment: 'intent', when: 'The round is outside the window; fee above fee_cap; value plus fee above gross_cap; value below net_floor; zero amount; repayment with nonzero fee_cap or net_floor; signed action differs from the submitted action (checked by the preparation step after the stage judgment).' },
   { code: 'S0_INTENT_ALIAS', judgment: 'intent', when: 'Signer, recipient and fee recipient are not three distinct accounts.' },
   { code: 'S0_EFFECT_RANGE', judgment: 'effect', when: 'The payer balance is below the gross debit, a credit overflows, or a repayment exceeds outstanding.' },
   { code: 'S0_EFFECT_MISMATCH', judgment: 'effect', when: 'The proposed effects differ from the effects Core computes.' },

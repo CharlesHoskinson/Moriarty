@@ -478,3 +478,44 @@ pre:focus-visible, .doc-table-wrap:focus-visible, .guide-main [role="region"]:fo
 
 /* A closing line that says which build a page's outputs came from. */
 .guide-main .doc-provenance { margin-top: var(--s5); color: var(--ink-muted); font-size: 0.88rem; }
+
+/* --- design map ----------------------------------------------------------------------
+   The whole design as three lanes of linked boxes. Solid lanes run today; the target lane is dashed.
+   It may run wider than the reading column on wide screens, and stacks to one column on a phone. */
+.doc-map { margin: var(--s5) 0 var(--s6); display: grid; gap: var(--s4); }
+@media (min-width: 1280px) { .doc-map { margin-right: -15rem; } }
+.map-lane { border: 1px solid var(--rule-strong); border-radius: 6px; padding: var(--s4); background: var(--paper-raised); }
+.map-lane[data-lane="sign"] { border-style: dashed; border-color: var(--ink-muted); background: transparent; }
+.map-lane[data-lane="target"] { border: 1px dashed var(--accent); background: var(--accent-soft); }
+.guide-main .map-lane-head { max-width: none; margin: 0 0 var(--s3); display: grid; gap: var(--s1); }
+.map-lane-head strong { font: 600 0.78rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); }
+.map-lane[data-lane="target"] .map-lane-head strong { color: var(--accent); }
+.map-lane-head span { font-size: 0.92rem; color: var(--ink-muted); }
+.guide-main .map-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.guide-main .map-steps li + li { margin-top: 0; }
+.guide-main .map-step { position: relative; max-width: none; }
+/* An arrow in the gap before every box but the first. */
+.map-step + .map-step::before {
+  content: "→"; position: absolute; left: calc(-1 * var(--s4)); top: 1.4rem; width: var(--s4); text-align: center;
+  color: var(--ink-muted); font-size: 0.95rem; line-height: 1;
+}
+.map-step > a {
+  display: grid; align-content: start; gap: var(--s1); height: 100%; padding: var(--s3); border-radius: 4px;
+  color: var(--ink); text-decoration: none; background: var(--paper); border: 1px solid var(--rule-strong);
+}
+.map-lane[data-lane="target"] .map-step > a { border-style: dashed; border-color: var(--accent); }
+.map-step > a:hover { border-color: var(--ink); }
+.map-step-title { font-weight: 650; font-size: 0.95rem; line-height: 1.3; display: flex; align-items: baseline; gap: var(--s2); }
+.map-n {
+  flex: none; display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 50%;
+  font: 600 0.72rem var(--mono); color: var(--paper); background: var(--ink);
+}
+.guide-main .map-cmd { justify-self: start; font-size: 0.78rem; }
+.map-body { font-size: 0.84rem; line-height: 1.45; color: var(--ink-muted); }
+.map-result { font: 0.74rem/1.4 var(--mono); color: var(--ink); padding-top: var(--s1); border-top: 1px solid var(--rule); margin-top: auto; }
+.guide-main .map-note { max-width: none; margin: var(--s3) 0 0; font-size: 0.88rem; color: var(--ink-muted); }
+.doc-map > figcaption { font-size: 0.85rem; color: var(--ink-muted); }
+@media (max-width: 900px) {
+  .guide-main .map-steps { grid-auto-flow: row; grid-auto-columns: auto; gap: var(--s4); }
+  .map-step + .map-step::before { content: "↓"; left: 0; right: 0; top: calc(-1 * var(--s4)); width: auto; height: var(--s4); display: grid; place-items: center; }
+}
