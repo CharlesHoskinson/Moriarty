@@ -10,6 +10,12 @@ Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifec
 
 General source-to-ledger correspondence, mandatory native proof-carrying acceptance across the full supported language, recursive/private history, federated integrations and complete conformance remain open. All U milestones below are specified-only until their exact exits are demonstrated. Documentation and advisor agreement do not complete them.
 
+## Current delivery observation — 2026-10-01
+
+The [authoring beta](wiki-llm/beta-language-2026-09-30/CHECKLIST.md), [Midnight Rust primitives](wiki-llm/midnight-crypto-2026-09-30/DELIVERY.md), [actual signed-intent Beta consumer](wiki-llm/signed-intent-2026-10-01/DELIVERY.md) and [reviewed native key generation](wiki-llm/native-financial-kernel-2026-10-01/REVIEWED-KEYGEN-MILESTONE.md) are delivered precursors. The latest [native financial attempt](wiki-llm/native-financial-kernel-2026-10-01/V8-03-ACTUAL-REFUSAL.md) produced a finalized proof and signed transaction, then strict well-formedness refused unsorted offer outputs before ledger application. Independent verification and complete financial acceptance remain open.
+
+The [alignment review](wiki-llm/ALIGNMENT-REVIEW-2026-10-01.md) retains U0–U7 and all original exits. The immediate repair is canonical native offer construction before binding/proving/signing, followed by independently reviewed complete effects and authentic state/account qualification. A fixed trusted-genesis proof cannot close the general supported-program U2 contract or U7 release.
+
 ## Recursion planning horizon
 
 The user supplied a six-month planning assumption on 2026-09-19: comprehensive Midnight recursion around March 2027. Full native recursion and private multi-parent composition are target capabilities, not optional replacements. Prepare U4 and the [next ZKIR/recursion requirements](docs/MORIARTY-BACKEND-REQUIREMENTS.md) during U0/U1. U1 will determine whether currently released interfaces support an early scoped milestone; their limitations do not reduce MC03/MC06. Revalidate actual released interfaces and costs before claiming support.
