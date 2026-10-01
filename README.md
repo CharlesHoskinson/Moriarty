@@ -13,6 +13,9 @@ Moriarty is experimental. Developers can author and simulate supported source pr
 
 ## Authoring beta
 
+Read the [interactive tutorials and eight DeFi examples](https://charleshoskinson.github.io/Moriarty/tutorial.html)
+for the surface language, worked local programs, design patterns and explicit support limits.
+
 The standalone [Moriarty beta package](packages/moriarty-beta/README.md) provides
 exact asset quantities, named financial calls, a CLI, language server, VS Code/
 Neovim assets and read-only AI tools. Follow its

@@ -6,7 +6,18 @@ import { SECTIONS } from './sections';
  * The single page. One section spine, two reader modes, no routing beyond
  * in-page anchors.
  */
+// The shared stylesheet hides the section jump below this width, so the
+// Tutorials entry is rendered on its own there.
+const JUMP_HIDDEN = '(max-width: 1180px)';
+
 export function App() {
+  const [compact, setCompact] = useState(() => window.matchMedia(JUMP_HIDDEN).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(JUMP_HIDDEN);
+    const on = () => setCompact(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const [mode, setModeState] = useState<Mode>('build');
 
   // Read the stored preference after mount so the first server-free render and
@@ -34,9 +45,18 @@ export function App() {
               {s.nav}
             </a>
           ))}
+          <a href="tutorial.html" title="Tutorials: write, check and locally prepare a Moriarty agreement">Tutorials</a>
           <a href="kernel.html" title="The Federated DeFi Kernel: an interactive illustration">Kernel</a>
           <a href="docs/requirements.html">Docs</a>
         </nav>
+        {compact ? (
+          <a
+            href="tutorial.html"
+            style={{ marginLeft: 'auto', color: 'var(--ink)', fontSize: '0.9rem', borderBottom: '1px solid var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+          >
+            Tutorials
+          </a>
+        ) : null}
         <ModeSwitch mode={mode} setMode={setMode} />
       </header>
       <main id="main">
