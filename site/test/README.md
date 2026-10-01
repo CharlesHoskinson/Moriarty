@@ -95,18 +95,22 @@ Set `URL` to point somewhere else, `CHROME` to pick a browser binary, and
 
 ## `python3 test/tutorial.spec.py`
 
-Drives the built tutorial at desktop and mobile widths. It checks the lesson
-sections, domain navigation, local fragments, direct transfer refresh, mobile
-home entry and lesson drawer, focus after selection, browser errors and page
-overflow. It opens every lesson URL in a fresh document at desktop and mobile
-widths, checks the current lesson and sticky-header clearance after layout
-settles, and reloads the architecture and kernel subsection links. Pipeline
-captures require the actual illustration to be loaded and visible. Distant
-lazy images with reserved dimensions do not have to load before these checks.
-It downloads the transfer and repayment program, scenario and test
-files through their real links and compares their bytes with the versioned
-lessons. It retains the downloads, screenshots and a JSON result under `SHOTS`.
-This browser gate does not run the beta CLI or establish proof or settlement.
+Drives the five documentation pages: the hub (`documentation.html`), Tutorials
+(`tutorial.html`), How-to guides (`how-to.html`), Reference (`reference.html`) and
+Explanation (`explanation.html`). For each page it checks the expected sections,
+duplicate ids, the masthead's current entry and every local link and fragment,
+including links between pages. It opens every section URL in a fresh document and
+checks the current section and sticky-header clearance after layout settles. It
+checks that old single-page tutorial links (`tutorial.html#amm`, `#syntax`,
+`#commands` and others) arrive at their new page and section, that overflowing
+code is reachable by keyboard, that each themed figure shows its light or dark
+variant to match the colour scheme (and the portrait pipeline on phones), page
+containment at 390 and 320 pixels in both schemes, the mobile home entry and the
+contents drawer, focus after selection, and browser errors. A source check keeps
+the page modes apart: no status chips or proposed syntax in the tutorial, proposed
+syntax only on the explanation page, and no `node dist/cli.js` or downloads-folder
+steps. Screenshots and a JSON result go under `SHOTS`. This browser gate does not
+run the beta CLI or establish proof or settlement.
 
 The Pages job runs it against the same `/Moriarty/` build used by the kernel
 suite. With that local server already running:

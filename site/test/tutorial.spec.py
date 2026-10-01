@@ -200,7 +200,9 @@ def figures(page, scheme):
         figure.scroll_into_view_if_needed()
         page.wait_for_function("""s=>{const v=[...document.querySelectorAll('img[src*="'+s+'-"]')].filter(i=>i.getBoundingClientRect().height>0);return v.length===1&&v[0].complete&&v[0].naturalWidth>0}""", arg=stem)
         shown = page.evaluate("""s=>[...document.querySelectorAll('img[src*="'+s+'-"]')].filter(i=>i.getBoundingClientRect().height>0).map(i=>i.currentSrc)[0]""", stem)
-        require(f"{stem}-{scheme}." in shown or f"{stem}-mobile-{scheme}." in shown, f"{path}: {stem} shows {shown} in {scheme} scheme")
+        phone = page.viewport_size["width"] <= 640
+        want = f"{stem}-mobile-{scheme}." if phone and stem == "pipeline" else f"{stem}-{scheme}."
+        require(want in shown, f"{path}: {stem} shows {shown} in {scheme} scheme, expected {want}")
 
 
 def keyboard_code(page):
