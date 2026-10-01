@@ -26,12 +26,14 @@ const E = PAGE_HREF.explanation;
 const H = PAGE_HREF.howto;
 const pkg = (path: string) => blob(`${BETA_PATH}/${path}`);
 
-const GROUPS = ['Tool', 'Language', 'Results and support', 'Data formats', 'Operation families', 'Release'];
+const GROUPS = ['Terms', 'Tool', 'Language', 'Results and support', 'Data formats', 'Operation families', 'Release'];
 
 /** The contents line at the top: one link per part of the page, in page order. The sidebar lists every section. */
 const CONTENTS: [string, string][] = [
+  ['glossary', 'Glossary'],
   ['cli', 'Command line'],
   ['language', 'Source language'],
+  ['phases', 'Phases of a run'],
   ['results', 'Results'],
   ['diagnostics', 'Diagnostic codes'],
   ['support-labels', 'Support labels'],
@@ -113,8 +115,8 @@ function Contents() {
     <nav aria-label="Contents of this page">
       <p>
         Facts about the <C>mori</C> tool and the source language <C>{PROFILE}</C>, at commit{' '}
-        <a href={`${REPOSITORY}/tree/${PINNED}`}>{PINNED_SHORT}</a>. What a local result does and does not establish is
-        explained in <a href={`${E}#stance`}>Explanation: what these pages do not claim</a>.
+        <a href={`${REPOSITORY}/tree/${PINNED}`}>{PINNED_SHORT}</a>. For what a local result establishes, read{' '}
+        <a href={`${E}#stance`}>Explanation: what these pages do not claim</a>.
       </p>
       <p className="doc-contents">
         {CONTENTS.map(([id, label], i) => (
@@ -125,6 +127,136 @@ function Contents() {
         ))}
       </p>
     </nav>
+  );
+}
+
+/* ------------------------------------------------------------------ Terms */
+
+const CORE_SOURCE = blob('experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts');
+const SOURCE6_SOURCE = blob('experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts');
+
+const DT_STYLE = { fontWeight: 600, marginTop: '1.25rem' } as const;
+const DD_STYLE = { margin: '0.25rem 0 0' } as const;
+const WHERE_STYLE = { margin: '0.25rem 0 0', fontSize: '0.92em' } as const;
+
+/** One glossary entry. The id `term-<slug>` is the link target used by every page. */
+function Term({ slug, name, where, children }: { slug: string; name: ReactNode; where: ReactNode; children: ReactNode }) {
+  return (
+    <>
+      <dt id={`term-${slug}`} style={DT_STYLE}>
+        {name}
+      </dt>
+      <dd style={DD_STYLE}>
+        <p style={{ margin: 0 }}>{children}</p>
+        <p style={WHERE_STYLE}>Where: {where}</p>
+      </dd>
+    </>
+  );
+}
+
+function Glossary() {
+  return (
+    <Section id="glossary" title="Glossary" nav="Glossary" group="Terms">
+      <p>
+        Terms used on every page, in alphabetical order. Each entry says where the term appears in source, JSON
+        output or a command.
+      </p>
+      <dl style={{ margin: 0 }}>
+        <Term slug="action" name="action" where={<><C>action NAME uses INTENT;</C> in the source; <C>--action NAME</C>; <C>actions[]</C> in <C>check --json</C>.</>}>
+          A declaration that names an intent so that a command can select it. Its support label is <C>LocalS0</C> when
+          the intent's operation is <C>transfer</C> or <C>repay</C>, and <C>SpecifiedOnly</C> otherwise.
+        </Term>
+        <Term slug="allowance" name="allowance" where={<>scenario field <C>allowance</C>; effect <C>UseAllowance</C>; <C>candidatePost.allowances</C>; code <C>S0_AUTH_SCOPE</C>.</>}>
+          The amount the signer may still spend, stated in the scenario as <C>{'{owner, remaining, spent}'}</C>. Core
+          requires <C>remaining</C> to cover the gross debit and moves that amount from <C>remaining</C> to{' '}
+          <C>spent</C>.
+        </Term>
+        <Term slug="atom" name="atom" where={<>every amount in scenario, test and result JSON, as a decimal string such as <C>"1010"</C>; <C>atoms(asset:, value:)</C> in the source.</>}>
+          An atom is the smallest unit of an asset. Amounts are whole numbers of atoms; at scale 2, 10.00 USD is 1000
+          atoms.
+        </Term>
+        <Term slug="candidate" name="candidate" where={<><C>result.candidate</C> (<C>effects</C>, <C>candidatePost</C>, <C>requiredPremises</C>) in <C>simulate</C> output; scenario field <C>candidate_effects</C>.</>}>
+          The output of a successful local preparation: the ordered effects and the post-state Core computed. A
+          candidate is not authenticated, signed, proved or submitted. The input that Core judges is called the
+          proposal: <C>expand</C> computes it, and the scenario field <C>candidate_effects</C>, despite its name, is a
+          proposal that replaces the computed one.
+        </Term>
+        <Term slug="core" name="Core" where={<><C>candidatePost.core: "moriarty-core/5"</C>; status <C>CoreRejected</C>; <C>result.rejection.judgment</C>; codes <C>S0_*</C>.</>}>
+          The local evaluator <C>moriarty-core/5</C>, a TypeScript function in{' '}
+          <a href={CORE_SOURCE}>mil4-s0-core-v5.ts</a>. It checks one Source/6 program against the scenario state in
+          six <a href="#results-judgments">judgments</a> and returns a candidate or the first failure. No formal
+          semantics and no correspondence to the Midnight ledger is claimed for it.
+        </Term>
+        <Term slug="domain" name="domain" where={<><C>domain NAME = {'{ id, chain, network }'}</C>; the intent field <C>domain</C>; the scenario field <C>domain</C>, which holds the <C>id</C>.</>}>
+          A declaration that names where accounts and assets live: an economic <C>id</C> plus <C>chain</C> and{' '}
+          <C>network</C> strings. The strings are labels. No tool connects to the chain or network they name.
+        </Term>
+        <Term slug="head" name="head" where={<>scenario fields <C>head</C> and <C>post_head</C>; intent field <C>pre_head</C>; effect <C>AdvanceHead</C>; codes <C>S0_HISTORY_STALE</C>, <C>S0_HISTORY_SUCCESSOR</C>.</>}>
+          An opaque string that names the state an intent extends. Core requires the intent's <C>pre_head</C> to
+          equal the scenario <C>head</C>, and <C>post_head</C> to differ from it. It is not a Midnight block hash or
+          contract-state commitment.
+        </Term>
+        <Term slug="horizon" name="horizon" where={<><a href={`${E}#horizon`}>Explanation: the proposed horizon language</a>; code blocks tagged “Proposed syntax, not accepted by the beta”.</>}>
+          The proposed future profile <C>moriarty-horizon/0.1</C>. No beta tool accepts its syntax: <C>check</C>{' '}
+          rejects a horizon sample with <C>AuthoringRejected</C>, for example <C>BETA_SYNTAX</C> (“Expected
+          profile”) or <C>BETA_CONSTRUCT</C> for an unknown declaration kind.
+        </Term>
+        <Term slug="intent" name="intent" where={<><C>intent NAME = {'{ ... }'}</C> in the source; <C>mori intent</C>; <C>intent</C> in the signed statement.</>}>
+          A declaration that holds the terms an owner would sign: signer, nonce, window, caps, floor and operation. A
+          transfer or repay intent has <a href="#intent-fields">twenty required fields</a>. It is a Moriarty source
+          construct, not a Midnight ledger transaction intent.
+        </Term>
+        <Term slug="kernel" name="kernel" where={<><a href="kernel.html">The Federated DeFi Kernel</a>. No command, field or code refers to it.</>}>
+          Short for the Federated DeFi Kernel, a proposed optional federation of services that would coordinate
+          evidence and routing around Moriarty programs. No beta command calls it.
+        </Term>
+        <Term slug="qualification" name={<>qualification, Unqualified</>} where={<>field <C>qualification</C> (<a href="#results-scope">scope fields</a>); statuses <C>PreparedUnqualified</C>, <C>SignedPreparedUnqualified</C>; coverage value <C>AvailableUnqualified</C>.</>}>
+          <C>PreparedUnqualified</C> means Core prepared a candidate result that no authentication, proof or ledger
+          has qualified; the <C>qualification</C> field (<C>local-stipulation-only</C>) says what the result rests
+          on. The native verifier's responses carry <C>signature-protocol-only</C>. Results of <C>check</C>,{' '}
+          <C>fmt</C> and <C>inspect</C>, and refusals that the command line raises itself, have no{' '}
+          <C>qualification</C> field; its absence does not mean the result is qualified.
+        </Term>
+        <Term slug="replay-key" name="replay key" where={<>scenario field <C>replay</C>; effect <C>UseReplay</C>; <C>candidatePost.consumedReplay</C>; code <C>S0_HISTORY_REPLAY</C>.</>}>
+          The tuple of domain id, signer id and nonce, written as a JSON string:{' '}
+          <C>{'"[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"'}</C>. Core rejects an intent whose key the scenario marks{' '}
+          <C>"consumed"</C>. No command stores state between runs, so a key is consumed only if the scenario says so.
+        </Term>
+        <Term slug="s0" name={<>S0, LocalS0</>} where={<>codes <C>S0_*</C>; support label <C>LocalS0</C>; <C>requiredPremises</C>.</>}>
+          S0 is the part of Core that the beta runs: the two operations <C>transfer</C> and <C>repay</C>, with six
+          judgments and the <C>S0_*</C> codes. <C>LocalS0</C> is the support label of an action whose operation is{' '}
+          <C>transfer</C> or <C>repay</C>, so that it runs on the S0 Core.
+        </Term>
+        <Term slug="scenario" name="scenario" where={<><C>--scenario FILE</C> on <C>expand</C>, <C>simulate</C>, <C>intent</C>, <C>verify-intent</C>; <C>cases[].scenario</C>; <a href="#scenario-format">scenario format</a>.</>}>
+          A JSON file (<C>moriarty-local-scenario/1</C>, kind <C>local-stipulation</C>) that states the starting
+          position: balances, allowance, head, round, replay state and work counters, plus the proposed{' '}
+          <C>post_head</C>. It is not signed.
+        </Term>
+        <Term slug="source-6" name="Source/6" where={<><C>source6</C> in <C>expand</C> output; status <C>SourceRejected</C>; messages starting <C>Generated Source/6 formation:</C>; code <C>BETA_TRANSPORT_ID</C>.</>}>
+          The generated intermediate program (<C>moriarty-financial-agreement-source/6</C>) that <C>expand</C> writes
+          for one action. It holds the intent, the scenario values and the proposed effects in one text, and Core
+          runs on it. Parser: <a href={SOURCE6_SOURCE}>financial-agreement-source-v6-frontend.ts</a>.
+        </Term>
+        <Term slug="specified-only" name="SpecifiedOnly" where={<>support label in <C>check</C> and <C>inspect</C>; the eight DeFi example files.</>}>
+          The support label of an action whose operation is a dotted call such as <C>amm.swap_exact_input</C>.{' '}
+          <C>check</C> checks its structure, names, domains and assets; <C>expand</C> and <C>simulate</C> return{' '}
+          <C>Unsupported</C>.
+        </Term>
+        <Term slug="stipulation" name="stipulation" where={<>scenario <C>kind: "local-stipulation"</C>; <C>qualification: "local-stipulation-only"</C>; <C>state: "LocalStipulationOnly"</C>.</>}>
+          A value taken as given rather than checked. Every scenario is a stipulation: a passing run shows what Core
+          computes from the stated position, not that the position is true.
+        </Term>
+        <Term slug="work-counter" name="work counter" where={<>scenario fields <C>work_remaining</C>, <C>work_spent</C>; <C>candidatePost.workRemaining</C>, <C>workSpent</C>; code <C>S0_AUTH_SCOPE</C>.</>}>
+          Two scenario integers that count preparation steps. Each preparation uses one step: Core requires{' '}
+          <C>work_remaining</C> to be at least 1, then moves one from <C>work_remaining</C> to <C>work_spent</C>.
+        </Term>
+        <Term slug="zkir" name="ZKIR" where={<><a href={PRODUCT_CONTRACT}>MORIARTY-PRODUCT-CONTRACT.md</a>. No command, field or code in the beta refers to it.</>}>
+          ZKIRv3 is the circuit format of Midnight's zero-knowledge proof stack. The product contract requires
+          compiled Moriarty contracts to target ZKIRv3 and run on Midnight; Compact can be an intermediate route only.
+          The beta has no compiler and produces no ZKIR.
+        </Term>
+      </dl>
+    </Section>
   );
 }
 
@@ -149,7 +281,7 @@ function Cli() {
     [
       'check',
       'check FILE [--json]',
-      'Parses and checks the source.',
+      'Parses the file and runs every source check. Reports the first failure only.',
       <>
         Text: <C>STATUS AGREEMENT</C>, one line <C>CODE at LINE:COLUMN: MESSAGE</C> per diagnostic, one line{' '}
         <C>ACTION: LABEL</C> per action. With <C>--json</C>: the analysis record.
@@ -183,7 +315,10 @@ function Cli() {
     [
       'expand',
       'expand FILE --action NAME --scenario FILE',
-      'Generates the Source/6 program for one action from the source and the scenario.',
+      <>
+        Generates the <a href="#term-source-6">Source/6</a> program for one action. It needs the scenario because the
+        program contains the scenario's values. Stops after the Source/6 parse (<a href="#phases">phases</a> 1 to 7).
+      </>,
       <>
         JSON with <C>status</C>, <C>sourceHash</C>, <C>scenarioHash</C>, <C>source6</C>, <C>fieldMap</C>,{' '}
         <C>origins</C>, <C>proposalNote</C>, <C>qualification</C>
@@ -196,7 +331,10 @@ function Cli() {
     [
       'simulate',
       'simulate FILE --action NAME --scenario FILE',
-      'Expands the action, then runs Core on the generated program.',
+      <>
+        Expands the action, then runs <a href="#term-core">Core</a> on the generated program (
+        <a href="#phases">phases</a> 1 to 9).
+      </>,
       <>
         JSON with <C>status</C>, <C>sourceHash</C>, <C>scenarioHash</C>, <C>result</C>, <C>qualification</C>
       </>,
@@ -342,7 +480,11 @@ function Cli() {
           <tr>
             <th scope="row"><C>--framing</C></th>
             <td><C>intent</C></td>
-            <td><C>raw</C> or <C>midnight-sign-data</C></td>
+            <td>
+              <C>raw</C>: the message is the signed frame itself. <C>midnight-sign-data</C>: the message is{' '}
+              <C>{'midnight_signed_message:<frame byte length>:'}</C> followed by the frame. Compatibility with a live
+              wallet is not verified.
+            </td>
           </tr>
           <tr>
             <th scope="row"><C>--signature</C></th>
@@ -352,7 +494,12 @@ function Cli() {
           <tr>
             <th scope="row"><C>--crypto-binary</C></th>
             <td><C>intent</C>, <C>verify-intent</C></td>
-            <td>Absolute path to the native verifier. Never looked up on <C>PATH</C>. Required.</td>
+            <td>
+              Absolute path to the native verifier, built from <C>experiments/midnight-crypto</C>. It checks signatures
+              with the <C>schnorr</C> and <C>ecdsa</C> modules of <C>midnight-base-crypto</C> from the{' '}
+              <C>midnight-ledger</C> repository, commit <C>9f9842e</C>. Never looked up on <C>PATH</C>. The command
+              does not check the binary's digest; it runs the file the path names. Required.
+            </td>
           </tr>
           <tr>
             <th scope="row"><C>--review</C></th>
@@ -405,7 +552,11 @@ function Cli() {
         <tbody>
           <tr>
             <th scope="row">0</th>
-            <td>The requested local operation completed. A preparation remains unqualified.</td>
+            <td>
+              The command did what was asked. A <C>simulate</C> or <C>verify-intent</C> result is a{' '}
+              <a href="#term-candidate">candidate</a>: nothing is proved, sent or settled, and the local tools sign
+              nothing.
+            </td>
           </tr>
           <tr>
             <th scope="row">1</th>
@@ -448,6 +599,22 @@ const ROLE_MEANING: [string, string][] = [
   ['string', 'A string literal.'],
 ];
 
+const GRAMMAR = `program  = "profile" STRING ";" "agreement" NAME "{" { item } "}" ;
+item     = KIND NAME [ ":" type ] "=" expr ";"
+         | "action" NAME "uses" NAME ";" ;
+type     = WORD [ "<" type { "," type } ">" ] ;
+expr     = term { ( "+" | "-" ) term } ;          (* left associative *)
+term     = primary { "*" primary } ;              (* left associative *)
+primary  = STRING | NUMBER [ ASSET ] | "true" | "false" | "None" | "SuccessOnly"
+         | "(" expr ")" | "[" [ expr { "," expr } [ "," ] ] "]"
+         | "{" fields "}" | CALL "(" fields ")" | NAME ;
+fields   = [ field { "," field } [ "," ] ] ;
+field    = WORD ":" expr ;
+CALL     = WORD { "." WORD } ;                    (* a name in the closed call registry *)
+KIND     = "domain" | "account" | "asset" | "obligation" | "const" | "intent" | "pool"
+         | "share_class" | "instrument" | "observation" | "policy" | "grant" | "party"
+         | "stage" | "episode" ;`;
+
 const SOURCE6_RESERVED =
   'profile agreement unit party asset const state action requires let next emit ensures true false not and or domain settlement scale selected source_hash digest intent signer key nonce pre_head post_head valid gross_cap fee_cap net_floor failure success_only signed_action observations empty disclosures retained_effects retained_duties delegation none recovery authenticated head predecessor round balance allowance remaining spent obligation debtor creditor principal accrued outstanding settled status replay unused consumed work_remaining work_spent submit transfer from to fee_to value fee repay payer amount conversion identity effects debit credit set_obligation use_allowance use_replay advance_head';
 
@@ -461,6 +628,21 @@ function Language() {
         <C>action NAME uses INTENT;</C>. An expression refers only to declarations written above it. Declaration and
         action names are unique within the agreement.
       </p>
+      <p>
+        A program has no statements, function bodies, loops, conditionals or storage. It is a list of declarations.
+        The checker computes every expression to a constant value while it reads the file, so a range or type error
+        is found by <C>check</C> before any scenario is read. Without an annotation, a declaration has the type of its
+        value.
+      </p>
+      <figure className="doc-code" data-kind="excerpt">
+        <figcaption className="doc-code-bar">
+          <span className="doc-code-tag">Grammar</span>
+          <span className="doc-code-title">Informal grammar, read from src/frontend.ts</span>
+        </figcaption>
+        <pre>
+          <code>{GRAMMAR}</code>
+        </pre>
+      </figure>
       <Table caption="Lexical elements">
         <thead>
           <tr>
@@ -550,7 +732,7 @@ function Language() {
         </thead>
         <tbody>
           <tr><th scope="row"><C>{'Qty<ASSET>'}</C></th><td>A quantity of that asset.</td></tr>
-          <tr><th scope="row"><C>Scalar</C>, <C>UInt128</C></th><td>An unsigned integer.</td></tr>
+          <tr><th scope="row"><C>Scalar</C>, <C>UInt128</C></th><td>An unsigned integer. The two names mean the same type.</td></tr>
           <tr><th scope="row"><C>String</C>, <C>Bool</C></th><td>A string; a boolean.</td></tr>
           <tr>
             <th scope="row"><Codes items={['Domain', 'Account', 'Asset', 'Obligation', 'Pool', 'Instrument', 'Observation', 'Policy', 'Grant', 'Stage', 'Episode', 'Party', 'ShareClass']} /></th>
@@ -589,8 +771,8 @@ function Language() {
           </tr>
           <tr>
             <td>Atoms</td>
-            <td>A quantity is stored as integer atoms: the number times 10^scale. At scale 2, <C>10.00 USD</C> is 1000 atoms and <C>1.5 USD</C> is 150 atoms.</td>
-            <td>none</td>
+            <td>A quantity is stored as integer <a href="#term-atom">atoms</a>: the number times 10^scale. At scale 2, <C>10.00 USD</C> is 1000 atoms and <C>1.5 USD</C> is 150 atoms.</td>
+            <td>No code</td>
           </tr>
           <tr>
             <td>Decimals</td>
@@ -605,7 +787,7 @@ function Language() {
           <tr>
             <td>Explicit atoms</td>
             <td><C>atoms(asset: USD, value: 1000)</C> is 1000 atoms of <C>USD</C>.</td>
-            <td>none</td>
+            <td>No code</td>
           </tr>
           <tr>
             <td>Operators</td>
@@ -619,12 +801,12 @@ function Language() {
           </tr>
           <tr>
             <td><C>*</C></td>
-            <td>Scalar times scalar, or scalar times quantity. Quantity times quantity is rejected.</td>
+            <td>Scalar times scalar, or scalar times quantity. Quantity times quantity is rejected. At scale 2, <C>3 * 10.00 USD</C> is 3000 atoms.</td>
             <td><C>BETA_TYPE</C></td>
           </tr>
           <tr>
             <td><C>min</C>, <C>max</C></td>
-            <td><C>min(a: X, b: Y)</C>: both scalars, or both quantities of one asset.</td>
+            <td><C>min(a: X, b: Y)</C>: both scalars, or both quantities of one asset. <C>min(a: 10.00 USD, b: 3 * 10.00 USD)</C> is 1000 atoms.</td>
             <td><C>BETA_ASSET_MISMATCH</C></td>
           </tr>
           <tr>
@@ -636,6 +818,11 @@ function Language() {
             <td>S0 signed fields</td>
             <td>In a <C>LocalS0</C> intent, <C>gross_cap</C>, <C>fee_cap</C>, <C>net_floor</C> and the operation amounts fit 2^127−1.</td>
             <td><C>BETA_S127_BOUND</C></td>
+          </tr>
+          <tr>
+            <td>Percentages</td>
+            <td>There is no division, so a percentage fee or an interest rate cannot be computed in the source. Write the fee or interest as a quantity.</td>
+            <td><C>BETA_CHARACTER</C> on <C>/</C></td>
           </tr>
           <tr>
             <td>No conversion</td>
@@ -739,13 +926,13 @@ function Language() {
           <tr><th scope="row"><C>domain</C></th><td>domain</td><td>The asset and the signer are on this domain.</td></tr>
           <tr><th scope="row"><C>asset</C></th><td>asset</td><td>Caps, floor and operation amounts are in this asset.</td></tr>
           <tr><th scope="row"><C>signer</C></th><td>account</td><td>Equals <C>from</C> of <C>transfer</C>, or <C>payer</C> of <C>repay</C> (<C>BETA_SIGNER</C>).</td></tr>
-          <tr><th scope="row"><C>key</C></th><td>nonempty string</td><td>An opaque key reference, not a public key.</td></tr>
-          <tr><th scope="row"><C>nonce</C></th><td>nonempty string</td><td>With domain and signer, forms the replay key.</td></tr>
-          <tr><th scope="row"><C>pre_head</C></th><td>nonempty string</td><td>Core compares it with the scenario <C>head</C>.</td></tr>
-          <tr><th scope="row"><C>valid</C></th><td><C>rounds(domain:, from:, to:)</C></td><td>On the intent's domain. Inclusive window; <C>from</C> at most <C>to</C>.</td></tr>
+          <tr><th scope="row"><C>key</C></th><td>nonempty string</td><td>A key reference. It is a label, not a public key.</td></tr>
+          <tr><th scope="row"><C>nonce</C></th><td>nonempty string</td><td>With domain and signer, forms the <a href="#term-replay-key">replay key</a>.</td></tr>
+          <tr><th scope="row"><C>pre_head</C></th><td>nonempty string</td><td>Core compares it with the scenario <a href="#term-head"><C>head</C></a>.</td></tr>
+          <tr><th scope="row"><C>valid</C></th><td><C>rounds(domain: D, from: N, to: M)</C></td><td>On the intent's domain. Inclusive window; <C>from</C> at most <C>to</C>.</td></tr>
           <tr><th scope="row"><C>gross_cap</C></th><td>quantity</td><td>Upper bound on the gross debit, fee included.</td></tr>
-          <tr><th scope="row"><C>fee_cap</C></th><td>quantity</td><td>Upper bound on the fee. Zero for <C>repay</C> (Core).</td></tr>
-          <tr><th scope="row"><C>net_floor</C></th><td>quantity</td><td>Lower bound on the transferred value. Zero for <C>repay</C> (Core).</td></tr>
+          <tr><th scope="row"><C>fee_cap</C></th><td>quantity</td><td>Upper bound on the fee. Must be zero for <C>repay</C>. Core checks this, not <C>check</C>: a nonzero value gives <C>CoreRejected</C> with <C>S0_INTENT_SCOPE</C>.</td></tr>
+          <tr><th scope="row"><C>net_floor</C></th><td>quantity</td><td>Lower bound on the transferred value. Must be zero for <C>repay</C>, checked by Core as for <C>fee_cap</C>.</td></tr>
           <tr><th scope="row"><C>operation</C></th><td><C>transfer(...)</C> or <C>repay(...)</C></td><td>Accounts and obligation on the intent's domain and asset.</td></tr>
           <tr><th scope="row"><C>source_hash</C></th><td>nonempty string</td><td>A claim. Not compared with any computed hash.</td></tr>
           <tr><th scope="row"><C>policy_digest</C></th><td>nonempty string</td><td>A claim. Not compared with any computed digest.</td></tr>
@@ -759,9 +946,16 @@ function Language() {
         </tbody>
       </Table>
       <p>
-        Core decides the economic bounds for a given scenario (<C>S0_INTENT_SCOPE</C>): transfer value above zero, fee
-        at most <C>fee_cap</C>, value plus fee at most <C>gross_cap</C>, value at least <C>net_floor</C>, and the
-        scenario round inside <C>valid</C>; repayment amount above zero and at most <C>gross_cap</C>.
+        Core decides the economic bounds against a given scenario (<C>S0_INTENT_SCOPE</C>): transfer value above zero,
+        fee at most <C>fee_cap</C>, value plus fee at most <C>gross_cap</C>, value at least <C>net_floor</C>, and the
+        scenario round inside <C>valid</C>; repayment amount above zero and at most <C>gross_cap</C>. A repayment at
+        most <C>gross_cap</C> but above the obligation's <C>outstanding</C> gives <C>S0_EFFECT_RANGE</C>, because
+        Core checks the intent before the effects.
+      </p>
+      <p>
+        An intent whose operation is a dotted call has one required field, <C>operation</C>. Every other field is
+        optional, and an omitted field has no value; nothing is filled in. Each field below is type-checked when
+        present, except those in the last row, which are stored unchecked.
       </p>
       <Table caption="Fields of a SpecifiedOnly intent (operation is a dotted call)">
         <thead>
@@ -829,6 +1023,63 @@ function Language() {
 
 /* ------------------------------------------------------------------ Results and support */
 
+function Phases() {
+  /** [phase, what is checked, status on failure, codes, depends on] */
+  const phases: [string, ReactNode, ReactNode, ReactNode, string][] = [
+    ['Read files', 'Size, byte order mark and UTF-8 of the source and the scenario.', <><C>FormationRejected</C>; a file over 65536 bytes gives <C>mori: File exceeds 65536 bytes</C></>, <Codes items={['BETA_BOM', 'BETA_UTF8']} />, 'Files'],
+    ['Source analysis', <>Every <a href="#language">source rule</a>. Expressions are computed to constants here.</>, <C>AuthoringRejected</C>, <>Source codes (<C>src/frontend.ts</C>)</>, 'Source'],
+    ['Action lookup', <>The <C>--action</C> name is declared.</>, <C>AuthoringRejected</C>, <C>BETA_ACTION_UNKNOWN</C>, 'Source'],
+    ['Support', <>The action is <C>LocalS0</C>. A <C>SpecifiedOnly</C> action stops here; the scenario is not checked.</>, <C>Unsupported</C>, <C>BETA_PROFILE_UNSUPPORTED</C>, 'Source'],
+    ['Scenario formation', <>Shape, identities and sums of the <a href="#scenario-format">scenario</a>, checked against the intent.</>, <C>FormationRejected</C>, <C>BETA_SCENARIO_*</C>, 'Scenario'],
+    ['Generation', <>The Source/6 text and the proposed effects, including <C>candidate_effects</C>.</>, <C>FormationRejected</C>, <Codes items={['BETA_SCENARIO_EFFECTS', 'BETA_EXPANSION_BOUND', 'BETA_ORIGIN_BOUND']} />, 'Scenario'],
+    ['Source/6 parse', 'The generated program parses. expand ends here with Expanded.', <><C>FormationRejected</C>, message <C>Generated Source/6 formation: ...</C></>, <>Source/6 codes</>, 'Scenario'],
+    ['Preparation parse', 'simulate parses the same text again before Core runs.', <C>SourceRejected</C>, <>Source/6 code in <C>result.code</C></>, 'Scenario'],
+    ['Core judgments', <>The six <a href="#results-judgments">judgments</a>, in order.</>, <C>CoreRejected</C>, <C>S0_*</C>, 'Scenario'],
+  ];
+  return (
+    <Section id="phases" title="Phases of simulate and verify-intent" nav="Phases of a run" group="Results and support">
+      <p>
+        <C>simulate</C> runs these phases in order and stops at the first failure. No later phase runs, and inside a
+        phase no later check runs, so a result carries one diagnostic or one Core code. <C>check</C> runs phases 1
+        and 2 on the source file; <C>expand</C> runs phases 1 to 7. Phases 2 to 4 are static: they depend on the
+        source text alone. Phases 5 to 9 are dynamic: they depend on the scenario.
+      </p>
+      <Table caption="Phases of one simulate call">
+        <thead>
+          <tr>
+            <th scope="col">Phase</th>
+            <th scope="col">Checks</th>
+            <th scope="col">Status on failure</th>
+            <th scope="col">Codes</th>
+            <th scope="col">Depends on</th>
+          </tr>
+        </thead>
+        <tbody>
+          {phases.map(([name, what, status, codes, input], i) => (
+            <tr key={name}>
+              <th scope="row">
+                {i + 1}. {name}
+              </th>
+              <td>{what}</td>
+              <td>{status}</td>
+              <td>{codes}</td>
+              <td>{input}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+      <p>
+        <C>verify-intent</C> checks the shape of the signature file, then runs phases 1 to 7 to build the expected
+        signed statement (<C>BETA_AUTH_SOURCE</C> if expansion fails). It then asks the native verifier to build the statement, compares it with the statement
+        in the signature file (<C>BETA_SIGNATURE_SOURCE_MISMATCH</C> on the first difference), and asks the verifier
+        to check the signature. Only if the signature is valid does it run <C>simulate</C>. A verifier failure stops
+        the command with a <C>BETA_CRYPTO_*</C> code and exit 2. <C>intent</C> builds the expected statement, has the
+        verifier build it, and checks no signature.
+      </p>
+    </Section>
+  );
+}
+
 function Results() {
   /** [row key, status shown, reported by, meaning] */
   const statuses: [string, ReactNode, string, ReactNode][] = [
@@ -837,7 +1088,15 @@ function Results() {
     ['AuthoringRejected', <C>AuthoringRejected</C>, 'check, fmt, inspect, expand, simulate', 'A source diagnostic, or an unknown action name.'],
     ['InspectionRejected', <C>InspectionRejected</C>, 'inspect', 'Inspection exceeded its bounds. Carries the original authoringStatus; not a source error.'],
     ['Expanded', <C>Expanded</C>, 'expand', 'The Source/6 program was generated.'],
-    ['PreparedUnqualified', <C>PreparedUnqualified</C>, 'simulate', 'Core produced a candidate: ordered effects and a candidate post-state.'],
+    [
+      'PreparedUnqualified',
+      <C>PreparedUnqualified</C>,
+      'simulate',
+      <>
+        Core produced a <a href="#term-candidate">candidate</a>: ordered effects and a post-state. No authentication,
+        proof or ledger has <a href="#term-qualification">qualified</a> it.
+      </>,
+    ],
     ['CoreRejected', <C>CoreRejected</C>, 'simulate', 'Core rejected the request at one judgment.'],
     ['SourceRejected', <C>SourceRejected</C>, 'simulate', 'The Source/6 parser rejected the generated program during preparation.'],
     ['FormationRejected', <C>FormationRejected</C>, 'expand, simulate, test, intent, verify-intent, init', 'A scenario, test, signature or command input was refused before Core.'],
@@ -847,7 +1106,7 @@ function Results() {
         <C>FormationRejected</C> with a <C>BETA_CRYPTO_*</C> code
       </>,
       'intent, verify-intent',
-      'The native verifier gave no valid answer: binary, timeout, transport or response failure. Exit 2. Signature validity unknown. Nothing is accepted as a fallback.',
+      'The native verifier gave no valid answer: binary, timeout, transport or response failure. Exit 2. The signature is neither accepted nor rejected. No other verifier or framing is tried.',
     ],
     ['Unsupported', <C>Unsupported</C>, 'expand, simulate', 'The action is SpecifiedOnly. No effects or post-state are published.'],
     ['TestsPassed', <C>TestsPassed</C>, 'test', 'Every case matched its expectation.'],
@@ -858,11 +1117,10 @@ function Results() {
       <C>SignedPreparedUnqualified</C>,
       'verify-intent',
       <>
-        The native verifier accepted the owner's signature and local preparation produced a candidate. The signature
-        is over the canonical intent statement, not over the source file. The statement binds the SHA-256 of the
-        exact source bytes, the agreement and action, the chain and network claims, the asset representation, scale
-        and symbol, the signer and key reference, the signature metadata, and the owner's operation and bounds. The
-        scenario is not signed.
+        The native verifier accepted the signature over the <a href="#results-signed-statement">signed
+        statement</a>, and Core produced a candidate. A verified signature shows that this key signed this
+        statement. It does not show that the key controls the account, that the key is unrevoked, or that any ledger
+        saw the transaction. The scenario is not signed.
       </>,
     ],
     ['SignedCoreRejected', <C>SignedCoreRejected</C>, 'verify-intent', 'The signature verified and Core rejected the request.'],
@@ -870,9 +1128,13 @@ function Results() {
   ];
   const judgments: [string, string, string][] = [
     ['stage', 'The state and request have the S0 shape.', 'S0_STAGE_UNSUPPORTED'],
-    ['intent', 'Round window, caps, floor, distinct endpoints, signed action equals submitted action.', 'S0_INTENT_SCOPE, S0_INTENT_ALIAS'],
-    ['effect', 'Funds and credit ranges; proposed effects equal computed effects.', 'S0_EFFECT_RANGE, S0_EFFECT_MISMATCH'],
-    ['authority', 'Allowance and work counters cover the gross debit and one step.', 'S0_AUTH_SCOPE'],
+    [
+      'intent',
+      'Round inside valid; amount above zero; fee at most fee_cap; value plus fee at most gross_cap; value at least net_floor; for repay, fee_cap and net_floor zero; for transfer, signer, recipient and fee recipient distinct. The signed action equals the submitted action (see below).',
+      'S0_INTENT_SCOPE, S0_INTENT_ALIAS',
+    ],
+    ['effect', 'The payer covers the gross debit; no credit overflows; a repayment is at most outstanding; the proposed effects equal the effects Core computes.', 'S0_EFFECT_RANGE, S0_EFFECT_MISMATCH'],
+    ['authority', 'Allowance remaining covers the gross debit; work remaining is at least 1.', 'S0_AUTH_SCOPE'],
     ['history', 'pre_head equals head; replay key unused; post_head is a new head.', 'S0_HISTORY_STALE, S0_HISTORY_REPLAY, S0_HISTORY_SUCCESSOR'],
     ['failure', 'The requested outcome is terminal success with nothing retained.', 'S0_FAILURE_UNSUPPORTED'],
   ];
@@ -901,11 +1163,49 @@ function Results() {
         four state values: <C>keyAuthority: "Unverified"</C>, <C>state: "LocalStipulationOnly"</C>,{' '}
         <C>nativeProof: "NotChecked"</C> and <C>ledger: "NotSubmitted"</C>, with <C>ledger_accepted: false</C>.
       </p>
+      <h3 id="results-signed-statement">What the signature covers</h3>
+      <p>
+        The signature is over a frame, not over the source file. The frame is the text{' '}
+        <C>moriarty-signed-intent/1</C>, a zero byte, a 4-byte big-endian length, and the statement as JSON with its
+        keys sorted. The statement holds the fields below. The scenario, its balances and <C>post_head</C> are not in
+        it. Full text: <a href={SIGNED_INTENT}>SIGNED-INTENT.md</a>.
+      </p>
+      <Table caption="Fields of the signed statement (profile moriarty-signed-intent/1)">
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">Content</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row"><Codes items={['profile', 'core', 'sourceProfile', 'authoringProfile']} /></th><td><C>moriarty-signed-intent/1</C>, <C>moriarty-core/5</C>, <C>moriarty-financial-agreement-source/6</C>, <C>moriarty-beta/1</C></td></tr>
+          <tr><th scope="row"><Codes items={['agreementId', 'actionName', 'selectedActionId']} /></th><td>Agreement name, action name, and <C>TransferLiteralFee</C> or <C>RepayAccrualFirst</C></td></tr>
+          <tr><th scope="row"><C>sourceSha256</C></th><td>SHA-256 of the source file's bytes</td></tr>
+          <tr><th scope="row"><C>ownerProgramSha256</C></th><td>Tagged SHA-256 of the profiles, agreement, action, domain, asset and intent, computed by the verifier</td></tr>
+          <tr><th scope="row"><C>domain</C></th><td><C>id</C>, <C>chain</C>, <C>network</C></td></tr>
+          <tr><th scope="row"><C>asset</C></th><td><C>id</C>, <C>representation</C>, <C>scale</C>, <C>symbol</C></td></tr>
+          <tr><th scope="row"><C>signature</C></th><td><C>scheme</C>, <C>publicKeyHex</C>, <C>framing</C>, <C>keyRef</C> (the source <C>key</C>)</td></tr>
+          <tr>
+            <th scope="row"><C>intent</C></th>
+            <td>
+              <Codes items={['version', 'advertisedSourceHash', 'advertisedPolicyDigest', 'signer', 'nonce', 'preHead', 'notBefore', 'notAfter', 'grossCap', 'feeCap', 'netFloor', 'failure', 'observations', 'disclosures', 'retainedEffects', 'retainedDuties', 'delegation', 'recovery', 'operation']} />.{' '}
+              The empty lists are signed as <C>[]</C>. <C>operation</C> holds the transfer endpoints, value and fee,
+              or the repayment payer, obligation, amount and <C>conversion: "identity"</C>.
+            </td>
+          </tr>
+        </tbody>
+      </Table>
       <p>
         A test case may expect one of six statuses: <C>PreparedUnqualified</C>, <C>CoreRejected</C>,{' '}
         <C>SourceRejected</C>, <C>AuthoringRejected</C>, <C>FormationRejected</C>, <C>Unsupported</C>.
       </p>
-      <Table caption="Core judgment order. Core reports the first failing judgment only.">
+      <h3 id="results-judgments">Core judgments</h3>
+      <p>
+        <a href="#term-core">Core</a> runs the six judgments in this order, stops at the first failure, and reports
+        that judgment and code in <C>result.rejection</C>. Source:{' '}
+        <a href={CORE_SOURCE}>mil4-s0-core-v5.ts</a>.
+      </p>
+      <Table caption="Core judgments, in the order Core runs them">
         <thead>
           <tr>
             <th scope="col">Order</th>
@@ -925,6 +1225,13 @@ function Results() {
           ))}
         </tbody>
       </Table>
+      <p>
+        The check that the signed action equals the submitted action belongs to the preparation step around Core
+        (<a href={blob('experiments/moriarty-language/src/successor/mil4-s0-source-v6.ts')}>mil4-s0-source-v6.ts</a>
+        ). It runs after the stage judgment and before the other results are reported, and a difference gives
+        judgment <C>intent</C> with <C>S0_INTENT_SCOPE</C>. <C>expand</C> writes the same operation into both
+        places, so through <C>mori</C> this check does not fail.
+      </p>
       <Table caption="Where the parts of a simulate result are">
         <thead>
           <tr>
@@ -943,7 +1250,8 @@ function Results() {
           <tr><th scope="row"><C>diagnostics</C></th><td><C>AuthoringRejected</C>, <C>FormationRejected</C>, <C>Unsupported</C></td><td>One diagnostic; <C>publishedEffects</C> and <C>publishedPost</C> are <C>null</C>.</td></tr>
         </tbody>
       </Table>
-      <Table caption="Scope fields">
+      <h3 id="results-scope">Scope fields</h3>
+      <Table caption="Fields that state what a result rests on">
         <thead>
           <tr>
             <th scope="col">Field</th>
@@ -952,8 +1260,9 @@ function Results() {
           </tr>
         </thead>
         <tbody>
-          <tr><th scope="row"><C>qualification</C></th><td><C>init</C>, <C>expand</C>, <C>simulate</C>, <C>test</C></td><td><C>local-stipulation-only</C>. A missing <C>qualification</C> never means qualification.</td></tr>
-          <tr><th scope="row"><C>qualification</C></th><td>native verifier responses in <C>intent</C>, <C>verify-intent</C></td><td><C>signature-protocol-only</C></td></tr>
+          <tr><th scope="row"><C>qualification</C></th><td><C>init</C>, <C>expand</C>, <C>simulate</C>, <C>test</C></td><td><C>local-stipulation-only</C>: the result rests on the stipulated scenario. Every <C>expand</C> and <C>simulate</C> result carries it, rejections included.</td></tr>
+          <tr><th scope="row"><C>qualification</C></th><td>top level of <C>intent</C> output; <C>signature.qualification</C> in <C>verify-intent</C> output</td><td><C>signature-protocol-only</C>: the response covers the signature protocol only. Its <C>authority_valid</C>, <C>snapshot_membership_valid</C> and <C>transition_valid</C> are <C>null</C>.</td></tr>
+          <tr><th scope="row">no <C>qualification</C></th><td><C>check</C>, <C>fmt</C>, <C>inspect</C>; refusals the command line raises itself, such as <C>BETA_BOM</C></td><td>The field is absent. Its absence does not mean the result is qualified.</td></tr>
           <tr><th scope="row"><C>evidence</C></th><td><C>check --json</C></td><td><C>AuthoringOnly</C></td></tr>
           <tr><th scope="row"><C>openGates</C></th><td><C>check --json</C></td><td><Codes items={['authentication', 'nativeProof', 'financialCorrespondence', 'atomicLedgerAcceptance']} /></td></tr>
           <tr><th scope="row"><C>actions[].coverage.financialRelations</C></th><td><C>check --json</C>, <C>inspect</C></td><td><C>DelegatedToCoreDuringLocalPreparation</C> (LocalS0) or <C>Open</C> (SpecifiedOnly)</td></tr>
@@ -1041,38 +1350,47 @@ function Diagnostics() {
 const LABELS: [StatusName, ReactNode, ReactNode][] = [
   [
     'LocalS0',
-    'Runs locally against a stipulated scenario. The scenario is a stipulation, not a fact about any ledger.',
+    <>
+      The action's operation is <C>transfer</C> or <C>repay</C>. <C>simulate</C> runs it on the{' '}
+      <a href="#term-s0">S0</a> Core against a scenario file. Nothing checks the scenario against a ledger.
+    </>,
     <>Action support in <C>check</C> and <C>inspect</C>, for intents whose operation is <C>transfer</C> or <C>repay</C>.</>,
   ],
   [
     'PreparedUnqualified',
     <>
-      A candidate result exists. Its limits are in{' '}
-      <a href={`${E}#stance`}>Explanation: what these pages do not claim</a>.
+      Core produced ordered effects and a post-state from the scenario. No authentication, signature check, proof
+      or ledger has qualified the result (<a href="#term-qualification">qualification</a>).
     </>,
     <>Status of <C>simulate</C> and of a test case.</>,
   ],
   [
     'SignedPreparedUnqualified',
     <>
-      A native verifier accepted the owner's signature and local preparation produced a candidate. What the statement
-      binds and the four state values the result carries: <a href="#results">results</a>.
+      The native verifier accepted the signature over the <a href="#results-signed-statement">signed statement</a>,
+      and Core produced a candidate. <C>keyAuthority</C> is <C>Unverified</C>, <C>state</C> is{' '}
+      <C>LocalStipulationOnly</C>, <C>nativeProof</C> is <C>NotChecked</C> and <C>ledger</C> is{' '}
+      <C>NotSubmitted</C>. A verified signature shows that this key signed this statement. It does not show that
+      the key controls the account, that the key is unrevoked, or that any ledger saw the transaction.
     </>,
     <>Status of <C>verify-intent</C>.</>,
   ],
   [
     'SpecifiedOnly',
-    'The source is checked for structure, names and quantities. Execution is refused as Unsupported.',
+    <>
+      The action's operation is a dotted call such as <C>amm.swap_exact_input</C>. <C>check</C> checks its
+      structure, names, domains and assets. <C>expand</C> and <C>simulate</C> refuse it with <C>Unsupported</C>.
+    </>,
     <>Action support in <C>check</C> and <C>inspect</C>, for intents whose operation is a dotted call.</>,
   ],
   [
     'Unsupported',
-    'The status expand and simulate return for a SpecifiedOnly action. No effects or post-state are published, and the scenario is not checked.',
+    'The status expand and simulate return for a SpecifiedOnly action. No effects or post-state are published, and the scenario is not schema-checked or applied.',
     <>Status of <C>expand</C> and <C>simulate</C>, code <C>BETA_PROFILE_UNSUPPORTED</C>.</>,
   ],
   [
     'Open',
-    'A capability or relation the example names but nothing yet establishes.',
+    'A premise, binding or financial relation that no beta tool checks.',
     <><C>financialRelations: "Open"</C> in <C>check --json</C>; every premise and binding.</>,
   ],
 ];
@@ -1100,7 +1418,7 @@ function SupportLabels() {
       </Table>
       <SeeAlso
         items={[
-          { mode: 'explanation', href: `${E}#stance`, label: 'Why labels and limits are stated the way they are' },
+          { mode: 'explanation', href: `${E}#stance`, label: 'What these pages do not claim' },
           { mode: 'explanation', href: `${E}#three-questions`, label: 'Authorization, acceptance and coordination' },
         ]}
       />
@@ -1177,7 +1495,7 @@ function SupportMatrix() {
       <SeeAlso
         items={[
           { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight DeFi families' },
-          { mode: 'explanation', href: `${E}#stance`, label: 'Why labels and limits are stated the way they are' },
+          { mode: 'explanation', href: `${E}#stance`, label: 'What these pages do not claim' },
         ]}
       />
     </Section>
@@ -1202,7 +1520,7 @@ function PremisesBindings() {
       <p>
         Every <Chip name="LocalS0" /> preparation lists four external premises (<C>requiredPremises</C>) and four
         unverified bindings (<C>unverifiedBindings</C>), in <C>simulate</C>, <C>inspect</C> and{' '}
-        <C>verify-intent</C>. A matching hash or a passing local test closes none of them. Source:{' '}
+        <C>verify-intent</C>. Neither a matching hash nor a passing test establishes any of them. Source:{' '}
         <a href={GETTING_STARTED}>GETTING-STARTED.md</a>.
       </p>
       <Table caption="Premises and bindings of a LocalS0 preparation">
@@ -1235,8 +1553,9 @@ function PremisesBindings() {
       </Table>
       <p>
         On a <Chip name="SpecifiedOnly" /> action, <C>inspect</C> reports <C>requiredPremises: []</C> and{' '}
-        <C>unverifiedBindings: []</C>. The empty lists mean that the S0 catalog does not apply. Authentication and
-        financial relations remain <C>Open</C>.
+        <C>unverifiedBindings: []</C>. The lists are empty because these four premises and four bindings belong to
+        the <a href="#term-s0">S0</a> preparation of <C>transfer</C> and <C>repay</C>. An empty list does not mean the
+        action has no premises; its <C>financialRelations</C> is <C>Open</C>.
       </p>
       <SeeAlso
         items={[
@@ -1279,11 +1598,14 @@ function ScenarioFormat() {
   return (
     <Section id="scenario-format" title="Local scenario format: moriarty-local-scenario/1" nav="Scenario format" group="Data formats">
       <p>
-        Source: <a href={pkg('src/bridge.ts')}>src/bridge.ts</a>; canonical text in{' '}
+        Source: <a href={pkg('src/bridge.ts')}>src/bridge.ts</a>; full text in{' '}
         <a href={GETTING_STARTED}>GETTING-STARTED.md</a>, “Local scenario reference”. A JSON record. Every field below
         is required unless marked optional. Unknown fields reject. The file follows the{' '}
-        <a href="#scenario-format-json-limits">JSON limits</a>. Errors in shape, identity or accounting are{' '}
-        <C>FormationRejected</C>; caps, funds, authority, expiry and replay are decided by Core.
+        <a href="#scenario-format-json-limits">JSON limits</a>. A wrong field shape, an identity that does not match
+        the intent, or a failed sum (<C>principal + accrued</C> not equal to <C>outstanding</C>, or a counter total
+        above 2^128−1) gives <C>FormationRejected</C>. Core decides the rest against the scenario: window and caps
+        (intent), funds (effect), allowance and work (authority), head and replay (history); see{' '}
+        <a href="#results-judgments">Core judgments</a>.
       </p>
       <Table caption="Scenario fields">
         <thead>
@@ -1315,8 +1637,8 @@ function ScenarioFormat() {
           <tr><th scope="row"><C>debtor</C></th><td>Equals the payer's <C>id</C>.</td></tr>
           <tr><th scope="row"><C>creditor</C></th><td>Differs from the payer.</td></tr>
           <tr><th scope="row"><C>asset</C></th><td>Equals the intent's asset <C>id</C>.</td></tr>
-          <tr><th scope="row"><C>principal</C>, <C>accrued</C>, <C>outstanding</C></th><td>Integer strings at most 2^127−1. principal + accrued equals outstanding.</td></tr>
-          <tr><th scope="row"><C>status</C></th><td><C>"Outstanding"</C></td></tr>
+          <tr><th scope="row"><C>principal</C>, <C>accrued</C>, <C>outstanding</C></th><td>Integer strings at most 2^127−1. principal + accrued equals outstanding. The beta has no interest calculation: <C>accrued</C> is a number you write, and Core only allocates the payment to it first, then to principal.</td></tr>
+          <tr><th scope="row"><C>status</C></th><td><C>"Outstanding"</C>. A payment equal to <C>outstanding</C> gives <C>SetObligation</C> with outstanding <C>"0"</C> and status <C>"Settled"</C>.</td></tr>
         </tbody>
       </Table>
       <Table caption="Effect variants in candidate_effects (closed field sets)">
@@ -1348,7 +1670,7 @@ function ScenarioFormat() {
           <tr><th scope="row">Text</th><td>Nonempty; at most 1024 bytes.</td></tr>
           <tr><th scope="row">Debit and Credit asset</th><td>Equals the scenario asset.</td></tr>
           <tr><th scope="row">SetObligation status</th><td><C>"Outstanding"</C> or <C>"Settled"</C></td></tr>
-          <tr><th scope="row">Replay key</th><td>In <C>candidate_effects</C>, <C>UseReplay.key</C> is the bare nonce (<C>"n1"</C>). In Core results it is the tuple of domain, signer and nonce encoded as a JSON string: <C>{'"[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"'}</C>.</td></tr>
+          <tr><th scope="row">Replay key</th><td>In <C>candidate_effects</C>, <C>UseReplay.key</C> is the bare nonce (<C>"n1"</C>). In Core results it is the tuple of domain, signer and nonce encoded as a JSON string: <C>{'"[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"'}</C>. The Source/6 lowering turns the nonce into the tuple before Core compares effects.</td></tr>
         </tbody>
       </Table>
       <h3 id="scenario-format-json-limits">JSON limits for scenario, test and signature files</h3>
@@ -1585,8 +1907,10 @@ function Examples() {
     <Section id="example-files" title="Example files" nav="Example files" group="Release">
       <p>
         Files under <a href={`${REPOSITORY}/tree/${PINNED}/${BETA_PATH}/examples`}><C>{`${BETA_PATH}/examples`}</C></a>{' '}
-        at commit {PINNED_SHORT}. Sizes and digests are of the committed bytes. Every <C>mori test</C> on the four
-        directories with a <C>mori.tests.json</C> reports <C>TestsPassed</C>.
+        at commit {PINNED_SHORT}. Sizes and digests are of the committed bytes. Four directories have a{' '}
+        <C>mori.tests.json</C>: <C>local/repay</C>, <C>signed-intent/transfer-schnorr-raw</C>,{' '}
+        <C>signed-intent/transfer-ecdsa-wallet</C> and <C>signed-intent/repay-ecdsa-raw</C>. <C>mori test</C> on
+        each reports <C>TestsPassed</C>.
       </p>
       <Table caption="Shipped example files">
         <thead>
@@ -1666,7 +1990,7 @@ function Examples() {
 function Release() {
   return (
     <Section id="release" title="Release and sources" nav="Release and sources" group="Release">
-      <Table caption="Release">
+      <Table caption="Package, version and commit">
         <tbody>
           <tr><th scope="row">Repository</th><td><a href={REPOSITORY}>CharlesHoskinson/Moriarty</a></td></tr>
           <tr><th scope="row">Package</th><td><C>@moriarty-lang/beta</C>, directory <C>{BETA_PATH}</C></td></tr>
@@ -1678,7 +2002,7 @@ function Release() {
           <tr><th scope="row">Commit of these pages</th><td><a href={`${REPOSITORY}/tree/${PINNED}`}><Digest hex={PINNED} /></a></td></tr>
         </tbody>
       </Table>
-      <Table caption="Canonical texts at the pinned commit">
+      <Table caption="Source documents at the pinned commit">
         <thead>
           <tr>
             <th scope="col">Document</th>
@@ -1688,7 +2012,7 @@ function Release() {
         <tbody>
           <tr><th scope="row"><a href={GETTING_STARTED}>GETTING-STARTED.md</a></th><td>Install, program shape, scenario and test formats, diagnostics.</td></tr>
           <tr><th scope="row"><a href={SIGNED_INTENT}>SIGNED-INTENT.md</a></th><td>The <C>intent</C> and <C>verify-intent</C> flow and the native verifier.</td></tr>
-          <tr><th scope="row"><a href={PRODUCT_CONTRACT}>MORIARTY-PRODUCT-CONTRACT.md</a></th><td>The product contract.</td></tr>
+          <tr><th scope="row"><a href={PRODUCT_CONTRACT}>MORIARTY-PRODUCT-CONTRACT.md</a></th><td>The product requirements, including the target: compiled programs run on Midnight as ZKIRv3.</td></tr>
           <tr><th scope="row"><a href={pkg('README.md')}>README.md</a></th><td>The package overview.</td></tr>
         </tbody>
       </Table>
@@ -1713,10 +2037,11 @@ function ReadingCodeBlocks() {
     ['Complete file', 'A whole file, byte for byte.', 'yes'],
     ['Excerpt', 'Part of a file. Not runnable on its own.', 'yes'],
     ['Output', 'What a command printed.', 'no'],
+    ['Grammar', 'An informal grammar of the source language. Not a file.', 'no'],
     ['Proposed syntax, not accepted by the beta', 'Syntax proposed for a later profile. No beta tool accepts it.', 'no'],
   ];
   return (
-    <Section id="reading-code-blocks" title="How code blocks are labelled" nav="Code block labels" group="Release">
+    <Section id="reading-code-blocks" title="How code blocks are labelled" nav="Code block labels" group="Terms">
       <Table caption="Code block tags">
         <thead>
           <tr>
@@ -1742,9 +2067,12 @@ function ReadingCodeBlocks() {
 
 export default function Reference() {
   return (
-    <DocShell page="reference" eyebrow="Reference" title="Reference" lead={<Contents />} groups={GROUPS} path={[]}>
+    <DocShell page="reference" eyebrow="Reference" title="mori command and source-language reference" lead={<Contents />} groups={GROUPS} path={[]}>
+      <Glossary />
+      <ReadingCodeBlocks />
       <Cli />
       <Language />
+      <Phases />
       <Results />
       <Diagnostics />
       <SupportLabels />
@@ -1757,7 +2085,6 @@ export default function Reference() {
       ))}
       <Examples />
       <Release />
-      <ReadingCodeBlocks />
     </DocShell>
   );
 }
