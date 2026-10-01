@@ -17,9 +17,7 @@ The standalone [Moriarty beta package](packages/moriarty-beta/README.md) provide
 exact asset quantities, named financial calls, a CLI, language server, VS Code/
 Neovim assets and read-only AI tools. Follow its
 [getting started guide](packages/moriarty-beta/GETTING-STARTED.md) for transfer and
-funded repayment examples. Local preparation remains **PreparedUnqualified**;
-cryptographic authentication, native financial proofs and ledger settlement
-remain open. The eight DeFi families have explicit authoring support labels.
+funded repayment examples. Local preparation remains **PreparedUnqualified**. The [signed-intent consumer](wiki-llm/signed-intent-2026-10-01/DELIVERY.md) performs actual Midnight signature verification; authenticated account/chain state, complete native financial acceptance and ledger settlement remain open. The eight DeFi families have explicit authoring support labels.
 
 [Research, design reviews and delivery evidence](wiki-llm/beta-language-2026-09-30/README.md)
 preserve the rationale and the separate proposed full-language horizon.
