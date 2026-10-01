@@ -1110,7 +1110,7 @@ function SupportMatrix() {
       </p>
       <SeeAlso
         items={[
-          { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight families' },
+          { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight DeFi families' },
           { mode: 'explanation', href: `${E}#stance`, label: 'Why labels and limits are stated the way they are' },
         ]}
       />
@@ -1587,7 +1587,7 @@ function Examples() {
       </Table>
       <SeeAlso
         items={[
-          { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight families' },
+          { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight DeFi families' },
           { mode: 'explanation', href: `${E}#purpose`, label: 'What Moriarty is for' },
         ]}
       />

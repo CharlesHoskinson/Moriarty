@@ -160,7 +160,14 @@ const TIER: Record<StatusName, 'runs' | 'structure' | 'open' | 'rejected'> = {
  * A status chip: the label name only, never a sentence. Chips belong in reference tables, the hub's example
  * list and family strips; prose says the meaning in words and links to the reference definition.
  */
-export function Status({ name }: { name: StatusName }) {
+export function Status({ name, link = true }: { name: StatusName; link?: boolean }) {
+  if (!link) {
+    return (
+      <span className="doc-status" data-tier={TIER[name]}>
+        {name}
+      </span>
+    );
+  }
   return (
     <a className="doc-status" data-tier={TIER[name]} href={`${PAGE_HREF.reference}#support-labels`} title={`${name}: see the support labels reference`}>
       {name}

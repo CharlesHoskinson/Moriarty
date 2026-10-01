@@ -187,7 +187,7 @@ export default function Documentation() {
                 </li>
                 <li>
                   <ModeLink mode="howto" href={`${H}#write-${f.id}`}>
-                    How to write<span className="doc-vh"> a {f.name} agreement</span>
+                    How to write<span className="doc-vh"> {f.agreement}</span>
                   </ModeLink>
                 </li>
               </ul>

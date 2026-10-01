@@ -63,15 +63,17 @@ export interface Family {
   scope: string;
   /** The shipped file, relative to packages/moriarty-beta. */
   file: string;
+  /** The agreement the how-to recipe writes, with its article: "How to write <agreement>". */
+  agreement: string;
 }
 
 export const FAMILIES: Family[] = [
-  { id: 'amm', name: 'AMM', scope: 'Swap a fixed input for at least a named output; mint and redeem liquidity.', file: 'examples/amm.mori' },
-  { id: 'lending', name: 'Lending', scope: 'Borrow, roll and liquidate.', file: 'examples/lending.mori' },
-  { id: 'stablecoins', name: 'Stablecoins', scope: 'Mint against backing, redeem, and keep the redemption duty.', file: 'examples/stablecoin.mori' },
-  { id: 'options', name: 'Options and derivatives', scope: 'Fixing, exercise and settlement intents for a call.', file: 'examples/derivatives.mori' },
-  { id: 'oracles', name: 'Oracles', scope: 'A named observation an agreement selects. It publishes no price.', file: 'examples/oracle.mori' },
-  { id: 'governance', name: 'Governance', scope: 'Queue, execute and veto a delayed policy change.', file: 'examples/governance.mori' },
-  { id: 'bridges', name: 'Bridges', scope: 'Escrow, claim and recovery across two domains.', file: 'examples/bridge.mori' },
-  { id: 'staking', name: 'Staking', scope: 'Deposit, reward, slash and exit.', file: 'examples/staking.mori' },
+  { id: 'amm', name: 'AMM', scope: 'Swap a fixed input for at least a named output; mint and redeem liquidity.', file: 'examples/amm.mori', agreement: 'an AMM agreement' },
+  { id: 'lending', name: 'Lending', scope: 'Borrow, roll and liquidate.', file: 'examples/lending.mori', agreement: 'a lending agreement' },
+  { id: 'stablecoins', name: 'Stablecoins', scope: 'Mint against backing, redeem, and keep the redemption duty.', file: 'examples/stablecoin.mori', agreement: 'a stablecoin agreement' },
+  { id: 'options', name: 'Options and derivatives', scope: 'Fixing, exercise and settlement intents for a call.', file: 'examples/derivatives.mori', agreement: 'an option agreement' },
+  { id: 'oracles', name: 'Oracles', scope: 'A named observation an agreement selects. It publishes no price.', file: 'examples/oracle.mori', agreement: 'an oracle agreement' },
+  { id: 'governance', name: 'Governance', scope: 'Queue, execute and veto a delayed policy change.', file: 'examples/governance.mori', agreement: 'a governance agreement' },
+  { id: 'bridges', name: 'Bridges', scope: 'Escrow, claim and recovery across two domains.', file: 'examples/bridge.mori', agreement: 'a bridge agreement' },
+  { id: 'staking', name: 'Staking', scope: 'Deposit, reward, slash and exit.', file: 'examples/staking.mori', agreement: 'a staking agreement' },
 ];

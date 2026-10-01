@@ -6,13 +6,14 @@ const GROUP = 'The eight examples';
 
 /** The standard footer of a family essay: the family's how-to and reference entry, plus extras. */
 function FamilySeeAlso({ id, extra = [] }: { id: FamilyId; extra?: SeeAlsoItem[] }) {
-  const name = FAMILIES.find((f) => f.id === id)?.name ?? id;
+  const fam = FAMILIES.find((f) => f.id === id);
+  const name = fam?.name ?? id;
   return (
     <SeeAlso
       title="Put it into practice"
       items={[
-        { mode: 'howto', href: `${H}#write-${id}`, label: `How to write a check-only ${name.toLowerCase()} agreement` },
-        { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight families' },
+        { mode: 'howto', href: `${H}#write-${id}`, label: `How to write ${fam?.agreement ?? 'one'}` },
+        { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight DeFi families' },
         { mode: 'reference', href: `${R}#family-${id}`, label: `Reference: the ${name.toLowerCase()} example file, operations and atoms` },
         ...extra,
       ]}
