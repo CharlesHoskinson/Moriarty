@@ -86,6 +86,23 @@ function Background({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
+/** A term's first use on this page, linked to its glossary entry. */
+function Term({ slug, children }: { slug: string; children: ReactNode }) {
+  return <a href={`${R}#term-${slug}`}>{children}</a>;
+}
+
+/** Only the lines of a recorded output that contain one of `keep`, in their original order. */
+function Pick({ k, keep, title }: { k: string; keep: string[]; title: ReactNode }) {
+  const text = lines(run(k).out)
+    .filter((l) => keep.some((x) => l.includes(x)))
+    .join('\n');
+  return (
+    <Code kind="output" title={title}>
+      {text}
+    </Code>
+  );
+}
+
 const NO_OUTPUT = 'This prints nothing.';
 
 const HAVE_MORI = (
@@ -122,7 +139,7 @@ const RECIPES: Recipe[] = [
   {
     id: 'amm',
     stem: 'amm',
-    goal: 'Write a swap of a fixed input for at least a named output, plus liquidity mint and redeem, and check it.',
+    goal: 'Write a swap that pays a fixed input amount and requires a minimum output amount. Add a liquidity mint and a redeem.',
     excerpt: [7, 11],
     declare: (
       <>
@@ -145,12 +162,12 @@ const RECIPES: Recipe[] = [
         a net floor written in the input asset (<code>net_floor: 0.45 USD</code>)
       </>
     ),
-    fix: <>Write the net floor in the output asset, here <code>GOLD</code>.</>,
+    fix: <>Write the net floor in the output asset. In this example the output asset is <code>GOLD</code>.</>,
   },
   {
     id: 'lending',
     stem: 'lending',
-    goal: 'Write a borrow, a roll to a later round and a liquidation, and check them.',
+    goal: 'Describe a collateralised loan from origination to liquidation, including a roll to a later round.',
     excerpt: [9, 11],
     declare: (
       <>
@@ -171,14 +188,15 @@ const RECIPES: Recipe[] = [
     ),
     fix: (
       <>
-        Add the missing argument, here <code>to_round: 200</code>. Every named argument is required.
+        Add the missing argument. In this example it is <code>to_round: 200</code>. Every named argument is
+        required.
       </>
     ),
   },
   {
     id: 'stablecoins',
     stem: 'stablecoin',
-    goal: 'Write a stablecoin mint against backing, a redemption and an emergency settlement, and check them.',
+    goal: 'Mint stablecoin supply against backing in another asset. Then write its redemption and an emergency settlement.',
     excerpt: [9, 11],
     declare: (
       <>
@@ -199,14 +217,15 @@ const RECIPES: Recipe[] = [
     ),
     fix: (
       <>
-        Write the backing in the instrument's backing asset, here <code>GOLD</code>.
+        Write the backing in the instrument's backing asset. In this example the backing asset is{' '}
+        <code>GOLD</code>.
       </>
     ),
   },
   {
     id: 'options',
     stem: 'derivatives',
-    goal: 'Write the fixing, exercise and settlement of a call option, and check them.',
+    goal: 'Define a call option, then the intents that fix it against an observation, exercise it and settle it with a stated payoff.',
     excerpt: [9, 16],
     declare: (
       <>
@@ -228,15 +247,15 @@ const RECIPES: Recipe[] = [
     ),
     fix: (
       <>
-        Pass an <code>account</code> as the holder. The position in the message points at the declaration of the
-        name you passed.
+        Pass an <code>account</code> as the holder. The position in the message, <code>10:22</code>, is the
+        declaration of the name you passed, not the call.
       </>
     ),
   },
   {
     id: 'oracles',
     stem: 'oracle',
-    goal: 'Write an agreement that selects a named oracle observation, and check it.',
+    goal: 'Make an intent select one named observation. The example selects a USD-per-GOLD fixing with a maximum age.',
     excerpt: [9, 11],
     declare: (
       <>
@@ -260,7 +279,7 @@ const RECIPES: Recipe[] = [
   {
     id: 'governance',
     stem: 'governance',
-    goal: 'Write a queued, executed and vetoed policy change, and check it.',
+    goal: 'Queue a policy change for a later epoch, and write the intents that execute or veto it.',
     excerpt: [9, 11],
     declare: (
       <>
@@ -275,12 +294,12 @@ const RECIPES: Recipe[] = [
         a quantity where an epoch number is expected (<code>next_epoch: 5.00 USD</code>)
       </>
     ),
-    fix: <>Write the epoch as a bare unsigned number.</>,
+    fix: <>Write the epoch as a whole number with no asset, such as <code>5</code>.</>,
   },
   {
     id: 'bridges',
     stem: 'bridge',
-    goal: 'Write a bridge escrow, the matching claim on the other domain and a recovery, and check them.',
+    goal: 'Lock funds in escrow on the local domain and claim them on a foreign domain. Add a recovery under the same claim id.',
     excerpt: [9, 17],
     declare: (
       <>
@@ -309,7 +328,7 @@ const RECIPES: Recipe[] = [
   {
     id: 'staking',
     stem: 'staking',
-    goal: 'Write a staking deposit, a reward, a slash, an unbond and a withdrawal, and check them.',
+    goal: 'Cover the life of a staking position, from the deposit through rewards and slashing to unbond and withdrawal.',
     excerpt: [9, 11],
     declare: (
       <>
@@ -330,7 +349,7 @@ const RECIPES: Recipe[] = [
         a quantity where a share count is expected (<code>share_atoms: 1.00 USD</code>)
       </>
     ),
-    fix: <>Write share counts as bare unsigned numbers of share atoms.</>,
+    fix: <>Write a share count as a whole number of share atoms with no asset, such as <code>100</code>.</>,
   },
 ];
 
@@ -350,7 +369,6 @@ function RecipeSection({ r }: { r: Recipe }) {
     <Section id={`write-${r.id}`} title={`How to write ${fam.agreement}`} nav={fam.name} group="Author">
       <FamilyStrip id={r.id} here="howto" />
       <Intro goal={r.goal} start={HAVE_MORI} />
-      <p>The beta checks this kind of agreement and does not run it.</p>
       <Steps>
         <li>
           <p>
@@ -392,7 +410,7 @@ function RecipeSection({ r }: { r: Recipe }) {
         </li>
       </Steps>
       <Worked>
-        The check in step 4 exits 0 and lists every action as <code>SpecifiedOnly</code>.
+        <code>mori check {file}</code> exits 0 and lists every action as <code>SpecifiedOnly</code>.
       </Worked>
       <p>
         Exact argument kinds: <a href={`${R}#family-${r.id}`}>Reference: {fam.name}</a>.
@@ -424,7 +442,7 @@ interface Symptom {
 const SYMPTOMS: Symptom[] = [
   {
     see: <code>mori: command not found</code>,
-    cause: 'A new shell, so the mori function is gone.',
+    cause: 'You opened a new shell. A shell function exists only in the shell where you defined it.',
     fix: <a href="#restore-shell">Restore the function</a>,
   },
   {
@@ -516,7 +534,11 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_DOMAIN_MISMATCH: Transfer accounts have different domains</code>,
-    cause: 'Accounts or assets from two domains in one operation.',
+    cause: (
+      <>
+        Accounts or assets from two <Term slug="domain">domains</Term> in one operation.
+      </>
+    ),
     fix: 'Declare them in the same domain. Only a bridge names a foreign domain.',
   },
   {
@@ -590,7 +612,8 @@ const SYMPTOMS: Symptom[] = [
     see: <code>S0_AUTH_SCOPE</code>,
     cause: (
       <>
-        The scenario's <code>allowance.remaining</code> is below the gross debit, or <code>work_remaining</code> is 0.
+        The scenario's <code>allowance.remaining</code> is below the gross debit, or <code>work_remaining</code> (the{' '}
+        <Term slug="work-counter">work counter</Term>) is 0.
       </>
     ),
     fix: 'Raise the allowance or the work counter in the scenario.',
@@ -612,7 +635,8 @@ const SYMPTOMS: Symptom[] = [
     see: <code>S0_HISTORY_STALE</code>,
     cause: (
       <>
-        The scenario's <code>head</code> differs from the intent's <code>pre_head</code>.
+        The scenario's <code>head</code> differs from the intent's <code>pre_head</code> (
+        <Term slug="head">head</Term>).
       </>
     ),
     fix: 'Make them the same.',
@@ -659,12 +683,14 @@ export default function HowTo() {
     <DocShell
       page="howto"
       eyebrow="How-to guides"
-      title="How-to guides"
+      title="How to do common tasks with mori"
       lead={
         <>
-          Short recipes for tasks you already have in mind. Each one assumes you have done{' '}
-          <a href={T}>the tutorial</a>. Results stay local and unqualified (
-          <a href={`${E}#stance`}>why</a>).
+          Recipes for installing from an archive, setting up an editor, writing and diagnosing tests, writing the eight
+          DeFi examples and verifying a signed <Term slug="intent">intent</Term>. Each recipe assumes you have finished{' '}
+          <a href={T}>the tutorial</a>. The eight DeFi examples are{' '}
+          <Term slug="specified-only">specified only</Term>: <code>mori check</code> accepts them, and{' '}
+          <code>mori simulate</code> does not run them.
         </>
       }
       groups={['Set up', 'Test and diagnose', 'Author', 'Check the examples', 'Sign']}
@@ -700,8 +726,9 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          This is a local archive install. No release on the npm registry exists. Signing also needs the native
-          verifier, which the archive does not contain (<a href="#sign-intent">how to verify a signed intent</a>).
+          The package is not published on the npm registry, so this recipe installs a local <code>.tgz</code> archive.
+          The archive does not contain the native verifier that signature checks need (
+          <a href="#sign-intent">how to verify a signed intent</a>).
         </p>
         <p>
           If you opened a new shell, <a href="#restore-shell">restore the function</a> first.
@@ -738,7 +765,10 @@ export default function HowTo() {
             <Cmd k="rs-archive" title="Restore mori from the archive project" />
           </li>
         </Steps>
-        <Worked>Either way, <code>mori --help</code> prints the command list shown in step 1.</Worked>
+        <Worked>
+          Either way, <code>mori --help</code> prints the command list that starts{' '}
+          <code>Moriarty beta: init DIR</code>.
+        </Worked>
       </Section>
 
       <Section id="editor" title="How to set up the editor and language server" nav="Editor and language server" group="Set up">
@@ -780,8 +810,8 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          The package carries its own copy of the CLI as its server. Its tests cover packaging and the language server
-          protocol, not activation inside VS Code.
+          The extension package includes its own copy of the CLI and runs it as the language server. Its tests cover
+          packaging and the language server protocol. They do not test activation inside VS Code.
         </p>
         <h3 id="editor-neovim">Neovim 0.11 or later</h3>
         <Steps>
@@ -800,12 +830,14 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          Other clients can run <code>mori lsp</code>: stdio, full document sync, UTF-16 positions. Activation in other
-          clients is not tested.
+          Other editors can run <code>mori lsp</code>. It uses stdio, full document sync and UTF-16 positions.
+          Activation in other editors is not tested.
         </p>
-        <Worked>The Neovim test prints the one line shown in step 2.</Worked>
+        <Worked>
+          The Neovim test prints one line that starts <code>Neovim Moriarty stdio LSP smoke passed</code>.
+        </Worked>
         <p>
-          Canonical text: <a href={blob(`${BETA_PATH}/editor/README.md`)}>editor/README.md</a>.
+          Full instructions: <a href={blob(`${BETA_PATH}/editor/README.md`)}>editor/README.md</a>.
         </p>
       </Section>
 
@@ -816,7 +848,7 @@ export default function HowTo() {
           start={
             <>
               {HAVE_MORI} The steps use a fresh copy of the transfer project from{' '}
-              <a href={`${T}#transfer`}>tutorial step 2</a>.
+              <a href={`${T}#transfer`}>the tutorial's transfer step</a>.
             </>
           }
         />
@@ -828,7 +860,8 @@ export default function HowTo() {
           </li>
           <li>
             <p>
-              Write a second scenario. Here the recipient already holds 500 atoms and the fee account 20:
+              Write a second <Term slug="scenario">scenario</Term>. In it the recipient already holds 500{' '}
+              <Term slug="atom">atoms</Term> and the fee account holds 20:
             </p>
             <Cmd k="wt-scenario" title="Write scenario-held.json" />
             <p>{NO_OUTPUT}</p>
@@ -852,6 +885,11 @@ export default function HowTo() {
             <p>Run the tests:</p>
             <Cmd k="wt-run" title="Run the tests" />
             <Out k="wt-run" />
+            <p>
+              <code>PreparedUnqualified</code> means that <Term slug="core">Core</Term>, the reference evaluator, prepared a <Term slug="candidate">candidate</Term> result
+              that no authentication, proof or ledger has qualified. The <Term slug="qualification">qualification</Term>{' '}
+              field, <code>local-stipulation-only</code>, says what the result rests on.
+            </p>
           </li>
         </Steps>
         <p>
@@ -860,22 +898,27 @@ export default function HowTo() {
         </p>
         <p>
           Take expected numbers from your own arithmetic, never from <code>simulate</code> output. A case that asserts
-          only <code>status</code> checks much less. The full case format:{' '}
+          only <code>status</code> does not check any amount. The full case format:{' '}
           <a href={`${R}#test-format`}>Reference: test file format</a>.
         </p>
         <Worked>
-          In step 5 both cases pass and <code>mori test</code> exits 0.
+          <code>mori test /tmp/howto-test</code> prints <code>"status": "TestsPassed"</code>, both cases show{' '}
+          <code>"passed": true</code>, and the command exits 0.
         </Worked>
         <Background href={`${E}#why-derive-expectations`}>Why expected amounts must be derived independently</Background>
       </Section>
 
       <Section id="test-rejection" title="How to test that Core rejects a request" nav="Test a rejection" group="Test and diagnose">
         <Intro
-          goal="Add a test case that passes only when Core rejects the request with a given code."
+          goal={
+            <>
+              Add a test case that passes only when Core rejects the request with a given code.
+            </>
+          }
           start={
             <>
               {HAVE_MORI} The steps use a fresh copy of the transfer project from{' '}
-              <a href={`${T}#transfer`}>tutorial step 2</a>.
+              <a href={`${T}#transfer`}>the tutorial's transfer step</a>.
             </>
           }
         />
@@ -885,7 +928,10 @@ export default function HowTo() {
             <Cmd k="tr-init" title="Create /tmp/howto-reject" />
           </li>
           <li>
-            <p>Write a scenario that Core must reject. Here the nonce is already used:</p>
+            <p>
+              Write a scenario that Core must reject. In this scenario the nonce is already used, so the{' '}
+              <Term slug="replay-key">replay key</Term> is spent:
+            </p>
             <Cmd k="tr-scenario" title="Write scenario-replayed.json" />
             <p>{NO_OUTPUT}</p>
           </li>
@@ -908,8 +954,8 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          A case with <code>expect: {'{ status, code }'}</code> asserts the status and the code only. A rejection
-          publishes no effects and no post state.
+          A case with <code>expect: {'{ status, code }'}</code> asserts the status and the code only. A rejected run has
+          no effects and no post state.
         </p>
         <p>
           If the code in the case is wrong, the case fails and names the code it got. To see this, change the expected
@@ -918,7 +964,7 @@ export default function HowTo() {
         <Cmd k="tr-wrong" title="Expect the wrong code and run the tests" />
         <Out k="tr-wrong" title="Part of the output" />
         <p>
-          <code>mori test</code> itself exits 1 here. Put the correct expectation back:
+          With the wrong code, <code>mori test</code> exits 1. Put the correct expectation back:
         </p>
         <Cmd k="tr-restore" title="Restore mori.tests.json" />
         <p>{NO_OUTPUT}</p>
@@ -926,7 +972,8 @@ export default function HowTo() {
           Other scenario changes and the codes they produce are in the <a href="#diagnose">diagnosis table</a>.
         </p>
         <Worked>
-          In step 5 both cases pass and <code>mori test</code> exits 0.
+          <code>mori test /tmp/howto-reject</code> prints <code>"status": "TestsPassed"</code>. The second case shows{' '}
+          <code>"status": "CoreRejected"</code> and <code>"code": "S0_HISTORY_REPLAY"</code>, and the command exits 0.
         </Worked>
         <Background href={`${E}#stipulation`}>What a passing local run does and does not show</Background>
       </Section>
@@ -937,7 +984,7 @@ export default function HowTo() {
           start={
             <>
               {HAVE_MORI} The steps use a fresh copy of the repayment project from{' '}
-              <a href={`${T}#repayment`}>tutorial step 3</a>.
+              <a href={`${T}#repayment`}>the tutorial's repayment step</a>.
             </>
           }
         />
@@ -980,8 +1027,14 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          If the amount is above the 101000 atoms outstanding, Core rejects it. To see the rejection, write a copy that
-          repays 1010.01 USD and run it:
+          A payment of exactly the 101000 atoms outstanding (1010.00 USD) repays the loan in full. The candidate result
+          sets principal, accrued and outstanding to 0 and the obligation's status to <code>Settled</code>:
+        </p>
+        <Cmd k="ca-full" title="Run a repayment of 1010.00 USD" />
+        <Out k="ca-full" title="The obligation in the effects" />
+        <p>
+          If the amount is above the 101000 atoms outstanding, Core rejects it at the effect judgment with{' '}
+          <code>S0_EFFECT_RANGE</code>. To see the rejection, write a copy that repays 1010.01 USD and run it:
         </p>
         <Cmd k="ca-over" title="Run a repayment of 1010.01 USD" />
         <Out k="ca-over" />
@@ -1019,7 +1072,7 @@ export default function HowTo() {
             <p>Run the same command again.</p>
           </li>
         </Steps>
-        <Table caption="Symptoms, likely causes and fixes">
+        <Table caption="Messages and result statuses, with cause and fix">
           <thead>
             <tr>
               <th scope="col">What you see</th>
@@ -1044,9 +1097,9 @@ export default function HowTo() {
           </tbody>
         </Table>
         <p>
-          A passing <code>check</code> does not mean a scenario will succeed: Core decides caps, funds, authority, expiry
-          and replay for each scenario. Every status and code:{' '}
-          <a href={`${R}#results`}>Reference: results</a> and <a href={`${R}#diagnostics`}>Reference: diagnostic codes</a>.
+          <code>check</code> reads only the program. A scenario can still be rejected, because Core tests the program
+          against the scenario (<a href={`${R}#results`}>Reference: results and judgment order</a>). Every code:{' '}
+          <a href={`${R}#diagnostics`}>Reference: diagnostic codes</a>.
         </p>
         <Worked>
           The command gives the status you expected, or the test prints <code>"status": "TestsPassed"</code> and exits
@@ -1061,7 +1114,7 @@ export default function HowTo() {
           start={
             <>
               {HAVE_MORI} The steps use a fresh copy of the transfer project from{' '}
-              <a href={`${T}#transfer`}>tutorial step 2</a>.
+              <a href={`${T}#transfer`}>the tutorial's transfer step</a>.
             </>
           }
         />
@@ -1096,8 +1149,8 @@ export default function HowTo() {
         <Cmd k="cf-nofee" title="Try a gross cap without the fee" />
         <Out k="cf-nofee" />
         <p>
-          A fee cap below the fee, or a net floor above the price, is rejected with the same code. So always run the
-          agreement, not only <code>check</code> it.
+          A fee cap below the fee, or a net floor above the price, is rejected with the same code. Run{' '}
+          <code>simulate</code> as well as <code>check</code>: only <code>simulate</code> shows these rejections.
         </p>
         <Worked>Run it against the starter scenario. The result starts:</Worked>
         <Cmd k="cf-sim" title="Run the payment" />
@@ -1107,18 +1160,22 @@ export default function HowTo() {
 
       <Section id="format-and-inspect" title="How to format a file and list its signed terms" nav="Format and inspect" group="Author">
         <Intro
-          goal="Lay out a source file in the standard format, and list the intent terms it carries."
+          goal={
+            <>
+              Lay out a source file in the standard format, and list the terms of each intent in it.
+            </>
+          }
           start={
             <>
               {HAVE_MORI} The steps use a fresh copy of the transfer project from{' '}
-              <a href={`${T}#transfer`}>tutorial step 2</a>.
+              <a href={`${T}#transfer`}>the tutorial's transfer step</a>.
             </>
           }
         />
         <Note title="Formatting changes the source hash" tone="caution">
           <p>
-            <code>fmt --write</code> changes the file's bytes, so its SHA-256 changes. A signed intent binds that
-            SHA-256, so format before you prepare an intent for signing, never after.
+            <code>fmt --write</code> changes the file's bytes, so its SHA-256 changes. A signed intent contains that
+            SHA-256. Format the file before you prepare an intent for signing. Do not format it after.
           </p>
         </Note>
         <Steps>
@@ -1151,9 +1208,13 @@ export default function HowTo() {
             <Out k="fi-terms" />
           </li>
         </Steps>
-        <Worked>Step 4 lists every term of the intent, including the empty ones.</Worked>
+        <Worked>
+          The term list has one line for each of the intent's 20 fields, including empty ones such as{' '}
+          <code>observations</code> and <code>delegation</code>.
+        </Worked>
         <p>
-          <code>inspect</code> also prints identity claims, action support and open premises:{' '}
+          <code>inspect</code> also prints identity claims, action support and the premises that a local run does not
+          establish:{' '}
           <a href={`${R}#cli`}>Reference: command line</a>.
         </p>
       </Section>
@@ -1193,8 +1254,8 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          If you installed from an archive, <code>MORI_PKG</code> already points at the installed package, and the
-          same commands work (<a href="#install-archive">how to install from an archive</a>).
+          If you installed from an archive, <code>MORI_PKG</code> already holds the path of the installed package, and
+          the same commands work (<a href="#install-archive">how to install from an archive</a>).
         </p>
         <Table caption="The eight example files, under packages/moriarty-beta/examples">
           <thead>
@@ -1232,7 +1293,8 @@ export default function HowTo() {
           {run('cfam-all').cmd ?? ''}
         </CodeDetails>
         <Worked>
-          <code>check</code> exits 0, and each action is listed as <code>SpecifiedOnly</code>, as in step 1.
+          <code>check</code> exits 0 for each file and lists each action as{' '}
+          <code>SpecifiedOnly (execution unsupported; financial relations open)</code>.
         </Worked>
       </Section>
 
@@ -1241,8 +1303,8 @@ export default function HowTo() {
         <Intro
           goal={
             <>
-              Prepare an owner intent for an external signer, then check the signature with the native verifier before
-              local preparation.
+              Prepare an owner intent for an external signer, sign it with your own key, and check the signature with
+              the native verifier.
             </>
           }
           start={
@@ -1253,28 +1315,34 @@ export default function HowTo() {
           }
         />
         <p>
-          You will prepare an owner intent, sign its bytes outside the tool, and verify the signature. What the
-          signature covers:{' '}
+          The signature covers the intent frame. The frame contains the source file's SHA-256 and the owner's terms. It
+          does not contain the scenario (
           <ModeLink mode="explanation" href={`${E}#three-questions`}>
             Explanation: authorization, acceptance and coordination
           </ModeLink>
-          .
+          ).
         </p>
 
         <h3 id="sign-intent-install">Install the package and build the verifier</h3>
         <Steps>
           <li>
             <p>
-              Build the native verifier from the pinned lockfile, and keep its absolute path. The first build compiles
-              many crates and needs network access to fetch them; add <code>--offline</code> only when they are already
-              cached.
+              Build the native verifier with the dependency versions in the lockfile (<code>--locked</code>), and keep
+              its absolute path. The first build compiles many crates and downloads them, so it needs network access.
+              Add <code>--offline</code> only if the crates are already in your Cargo cache.
             </p>
             <Cmd k="si-verifier" title="Build the verifier" />
             <p>The last line of the build reads (the time differs):</p>
             <Out k="si-verifier" />
             <p>
-              To use the binary elsewhere, copy it to a trusted absolute path and set <code>MORI_VERIFIER</code> to it. The
-              tool never searches <code>PATH</code> for it.
+              The verifier checks signatures with the Schnorr and ECDSA code of <code>midnight-base-crypto</code>, from
+              the <code>midnight-ledger</code> repository at the revision that <code>Cargo.toml</code> names.
+            </p>
+            <p>
+              <code>mori</code> runs the binary at the path you give and does not check its hash. The binary alone
+              decides whether a signature is valid, so use one that you built from this lockfile, and keep it in a
+              directory that only you can write to. To use it from another place, copy it there and set{' '}
+              <code>MORI_VERIFIER</code> to the new absolute path. The tool never searches <code>PATH</code> for it.
             </p>
           </li>
           <li>
@@ -1285,6 +1353,11 @@ export default function HowTo() {
         </Steps>
 
         <h3 id="sign-intent-example">Verify a ready public example</h3>
+        <p>
+          The package ships three signed examples. Their keys are test keys. A passing verification with them shows that
+          the tooling works. It does not show that anyone authorized the source's <code>Owner</code> or{' '}
+          <code>Payer</code> account.
+        </p>
         <Steps>
           <li>
             <p>Run the example's own test:</p>
@@ -1304,15 +1377,12 @@ export default function HowTo() {
           </li>
           <li>
             <p>
-              For the other two examples, use directory <code>transfer-ecdsa-wallet</code> with action <code>pay</code>,
-              or <code>repay-ecdsa-raw</code> with action <code>repay_loan</code>.
+              For the other two examples, use directory <code>transfer-ecdsa-wallet</code> (ECDSA,{' '}
+              <code>midnight-sign-data</code> framing) with action <code>pay</code>, or <code>repay-ecdsa-raw</code>{' '}
+              (ECDSA, <code>raw</code> framing) with action <code>repay_loan</code>.
             </p>
           </li>
         </Steps>
-        <p>
-          The example keys are throwaway test identities. They do not authorize the source's <code>Owner</code> or{' '}
-          <code>Payer</code> account.
-        </p>
 
         <h3 id="sign-intent-own">Prepare and verify your own external signature</h3>
         <Steps>
@@ -1331,15 +1401,93 @@ export default function HowTo() {
           </li>
           <li>
             <p>
+              Choose the framing, which says which bytes are signed. With <code>raw</code>, the signer signs the frame
+              itself. With <code>midnight-sign-data</code>, it signs the ASCII prefix{' '}
+              <code>midnight_signed_message:&lt;frame byte length&gt;:</code> followed by the frame. The framing is a
+              signed term, and verification tries no other framing. SIGNED-INTENT.md names no wallet or signer product
+              for either framing, and no live wallet has been tested with this flow. This recipe uses{' '}
+              <code>raw</code>.
+            </p>
+          </li>
+          <li>
+            <p>
               Prepare the intent. The result holds the full <code>statement</code>, <code>frame_hex</code>,{' '}
-              <code>frame_sha256</code> and <code>signing_message_hex</code>; this prints the status, the frame's
-              SHA-256 and the signing message length in bytes:
+              <code>frame_sha256</code> and <code>signing_message_hex</code>. This command prints the status, the
+              frame's SHA-256 and the length of the signing message in bytes:
             </p>
             <Cmd k="si-intent" title="Prepare the intent" />
             <Out k="si-intent" />
             <p>
-              <code>OwnerIntentPrepared</code> means the bytes to sign are ready. The tool has not checked any
-              signature, so it does not show that anyone holds the key. Read the statement before you sign.
+              <code>OwnerIntentPrepared</code> means that the bytes to sign are in <code>signing_message_hex</code>. The
+              tool has not checked a signature, so this result does not show that anyone holds the key.
+            </p>
+          </li>
+          <li>
+            <p>Before you sign, print the statement in readable form:</p>
+            <Cmd k="si-intent-review" title="Review the terms before signing" />
+            <Pick
+              k="si-intent-review"
+              title="Part of the output"
+              keep={[
+                'OwnerIntentPrepared',
+                '[agreementId]',
+                '[actionName]',
+                '[sourceSha256]',
+                '[domain/',
+                '[asset/id]',
+                '[asset/scale]',
+                '[signature/',
+                '[intent/signer]',
+                '[intent/nonce]',
+                '[intent/preHead]',
+                '[intent/notBefore]',
+                '[intent/notAfter]',
+                '[intent/grossCap]',
+                '[intent/feeCap]',
+                '[intent/netFloor]',
+                '[intent/operation/',
+                'Unsigned scenario context',
+              ]}
+            />
+            <p>Read these fields and confirm each one:</p>
+            <ul>
+              <li>
+                <code>sourceSha256</code> is the hash of the file you mean to sign. The review prints{' '}
+                <code>(match)</code> when it equals the hash of the file on disk.
+              </li>
+              <li>
+                <code>agreementId</code>, <code>actionName</code> and <code>selectedActionId</code> name the agreement
+                and the action you mean.
+              </li>
+              <li>
+                <code>domain/id</code>, <code>domain/chain</code> and <code>domain/network</code> are claims copied from
+                the source. The network <code>preview</code> is a label, not a connection to Midnight's Preview
+                network.
+              </li>
+              <li>
+                <code>asset/id</code> and <code>asset/scale</code>: every amount is in atoms of this asset.
+              </li>
+              <li>
+                <code>signature/scheme</code>, <code>signature/publicKeyHex</code> and <code>signature/framing</code> are
+                your scheme, your key and your framing.
+              </li>
+              <li>
+                <code>intent/signer</code> and the accounts in <code>intent/operation</code>: <code>from</code>,{' '}
+                <code>recipient</code> and <code>feeRecipient</code> for a transfer, or <code>payer</code> and{' '}
+                <code>obligationId</code> for a repayment.
+              </li>
+              <li>
+                <code>intent/grossCap</code>, <code>intent/feeCap</code>, <code>intent/netFloor</code> and the{' '}
+                <code>amount</code> and <code>fee</code> of the operation, in atoms.
+              </li>
+              <li>
+                <code>intent/nonce</code>, <code>intent/preHead</code>, <code>intent/notBefore</code> and{' '}
+                <code>intent/notAfter</code>: the replay label, the head label and the round window.
+              </li>
+            </ul>
+            <p>
+              The part under <code>Unsigned scenario context</code> lists the balances, the allowance and the head. They
+              are not signed.
             </p>
           </li>
           <li>
@@ -1348,22 +1496,48 @@ export default function HowTo() {
             <Out k="si-export" />
             <p>
               With <code>raw</code> framing the signing message is the frame itself, so its SHA-256 equals{' '}
-              <code>frame_sha256</code>. With <code>midnight-sign-data</code> it is{' '}
-              <code>midnight_signed_message:&lt;frame byte length&gt;:</code> followed by the frame; that prefix is
-              already in <code>signing_message_hex</code>, so do not add it again.
+              <code>frame_sha256</code>. With <code>midnight-sign-data</code> the prefix is already in{' '}
+              <code>signing_message_hex</code>, so do not add it again.
             </p>
           </li>
           <li>
+            <Note title="What a valid signature shows" tone="caution">
+              <p>
+                A valid signature shows only that this key signed these bytes. It does not show that the key controls
+                the <code>Owner</code> account, that the key is not revoked, or that any ledger has seen the intent. The
+                result records this as <code>"keyAuthority": "Unverified"</code>.
+              </p>
+            </Note>
             <p>
-              Sign <code>signing-message.bin</code> with your own signer, and keep the 64-byte raw signature as 128
-              lowercase hex characters in <code>SIGNATURE_HEX</code>. This step needs your signing system; the tool takes
-              no private key. Sign the bytes, not the hex text or <code>frame_sha256</code>. Both supported schemes hash
-              the message with SHA-256 internally, so do not hash it first. Convert a DER ECDSA signature to raw{' '}
-              <code>r || s</code> (low S) outside this tool.
+              Sign with your own signing system. The tool takes no private key. Follow these rules:
             </p>
+            <ul>
+              <li>
+                Sign the bytes in <code>signing-message.bin</code>. Do not sign the hex text or{' '}
+                <code>frame_sha256</code>.
+              </li>
+              <li>
+                If you chose <code>midnight-sign-data</code> and your signer adds the{' '}
+                <code>midnight_signed_message</code> prefix itself, give it the decoded <code>frame_hex</code> bytes
+                instead, so that the prefix appears once.
+              </li>
+              <li>
+                Do not hash the message first. Both supported schemes hash it with SHA-256 inside the signer. If your
+                signer accepts only a prehash, give it the SHA-256 of <code>signing-message.bin</code>, once.
+              </li>
+              <li>
+                Keep the 64-byte raw signature as 128 lowercase hex characters in <code>SIGNATURE_HEX</code>.
+              </li>
+              <li>
+                For ECDSA, convert a DER-encoded signature to raw <code>r || s</code> outside this tool, with{' '}
+                <code>s</code> in low-S form. Low S: if <code>(r, s)</code> is a valid ECDSA signature, so is{' '}
+                <code>(r, n − s)</code>, where <code>n</code> is the order of the secp256k1 group. The low-S form is
+                the one with <code>s</code> at most <code>n / 2</code>.
+              </li>
+            </ul>
             <p>
-              To follow along with the example's key, use the example's signature. It fits because the statement you
-              prepared is the same as the example's:
+              To follow along with the example's key, use the example's signature. It is valid for your statement
+              because your statement is the same as the example's statement:
             </p>
             <Cmd k="si-sample-sig" title="Use the example signature" />
           </li>
@@ -1378,33 +1552,49 @@ export default function HowTo() {
             <p>{NO_OUTPUT}</p>
           </li>
           <li>
+            <Note title="The scenario is not signed" tone="caution">
+              <p>
+                The same signature verifies against any well-formed scenario for this source and action. A changed
+                balance, allowance or head gives a different candidate or a Core
+                rejection under the same signature. Check the scenario separately.
+              </p>
+            </Note>
             <p>Verify, then print the main fields of the result:</p>
             <Cmd k="si-verify" title="Verify your signature" />
             <Out k="si-verify" />
+            <p>
+              <code>SignedPreparedUnqualified</code> means that the signature verified and Core prepared a candidate
+              result that no authentication, proof or ledger has qualified.
+            </p>
           </li>
         </Steps>
+        <p>
+          To see that the scenario is not signed, lower the owner's balance from 10000 to 500 atoms and verify again
+          with the same signature:
+        </p>
+        <Cmd k="si-scenario" title="Change the scenario, then verify again" />
+        <Out k="si-scenario" />
+        <p>
+          The signature is still valid. Core rejects the run because 500 atoms is less than the 1010-atom gross debit.
+        </p>
         <p>
           If you change the source after preparing the intent, even by a comment or by formatting, the SHA-256 no longer
           matches and verification stops before the signature check:
         </p>
         <Cmd k="si-edited" title="Edit the source, then verify again" />
         <Out k="si-edited" />
-
-        <p>
-          The scenario is not signed. If you change it, the signature can stay valid; run <code>verify-intent</code>{' '}
-          again, and expect a new candidate or a Core rejection.
-        </p>
         <p>
           <code>verify-intent</code> exits 0 when the signature verifies and a local candidate is prepared, 1 when the
           signature, the source or Core rejects, and 2 when the verifier itself fails (
           <a href={`${R}#results`}>Reference: results</a>, <a href={`${R}#cli`}>Reference: command line</a>).
         </p>
         <Worked>
-          The verification in the last step exits 0, <code>sourceMatched</code> is true, and the key authority, state,
-          proof and ledger fields stay open.
+          The verification of your signature exits 0 and prints <code>"sourceMatched": true</code>,{' '}
+          <code>"keyAuthority": "Unverified"</code>, <code>"state": "LocalStipulationOnly"</code>,{' '}
+          <code>"nativeProof": "NotChecked"</code> and <code>"ledger": "NotSubmitted"</code>.
         </Worked>
         <p>
-          Canonical text: <a href={SIGNED_INTENT}>SIGNED-INTENT.md</a>.
+          Full protocol: <a href={SIGNED_INTENT}>SIGNED-INTENT.md</a>.
         </p>
         <SeeAlso
           items={[

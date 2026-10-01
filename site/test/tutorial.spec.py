@@ -67,7 +67,7 @@ LEGACY = [
 ]
 
 # Themed figures: page, figure image stem.
-FIGURES = [("documentation.html", "quadrant"), ("documentation.html", "hero"), ("explanation.html", "hero"), ("explanation.html", "pipeline"), ("tutorial.html", "pipeline")]
+FIGURES = [("documentation.html", "quadrant"), ("documentation.html", "hero"), ("explanation.html", "pipeline"), ("tutorial.html", "pipeline")]
 
 results, errors = [], []
 OUT.mkdir(parents=True, exist_ok=True)
