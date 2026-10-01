@@ -1,0 +1,227 @@
+   Compiling moriarty-midnight-crypto v0.1.0 (/home/charl/Moriarty/.worktrees/moriarty-beta-20260930/experiments/midnight-crypto)
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:9:51
+     |
+   9 |  let tree=MerkleTree::<()>::blank(3).try_update(0,&leaf,()).unwrap().try_update(1,&other,()).unwrap().rehash();
+     |                                      ----------   ^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                                      |
+     |                                      required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::try_update`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1081:26
+     |
+1081 |     pub fn try_update<T: BinaryHashRepr + ?Sized>(
+     |                          ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::try_update`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:9:83
+     |
+   9 |  let tree=MerkleTree::<()>::blank(3).try_update(0,&leaf,()).unwrap().try_update(1,&other,()).unwrap().rehash();
+     |                                                                      ----------   ^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                                                                      |
+     |                                                                      required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::try_update`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1081:26
+     |
+1081 |     pub fn try_update<T: BinaryHashRepr + ?Sized>(
+     |                          ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::try_update`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:10:65
+     |
+  10 |  let root=tree.root().unwrap();let path=tree.find_path_for_leaf(leaf.clone()).unwrap();assert_eq!(path.root(),root);
+     |                                              ------------------ ^^^^^^^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                                              |
+     |                                              required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::find_path_for_leaf`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1192:34
+     |
+1192 |     pub fn find_path_for_leaf<T: BinaryHashRepr>(&self, leaf: T) -> Option<MerklePath<T>> {
+     |                                  ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::find_path_for_leaf`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:10:104
+   |
+10 |  let root=tree.root().unwrap();let path=tree.find_path_for_leaf(leaf.clone()).unwrap();assert_eq!(path.root(),root);
+   |                                                                                                        ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:11:90
+   |
+11 |  let mut bad=path.clone();bad.leaf="Midnight|A|balance|Owner|9999".into();assert_ne!(bad.root(),root);
+   |                                                                                          ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:12:87
+   |
+12 |  let mut bad=path.clone();bad.path[0].goes_left=!bad.path[0].goes_left;assert_ne!(bad.root(),root);
+   |                                                                                       ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:13:34
+     |
+  13 | ...tree.try_update(1,&"Midnight|A|balance|Recipient|1".to_string(),()).unwrap().rehash();let mut bad=path.clone();bad.path[0].sibl...
+     |         ----------   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |         |
+     |         required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::try_update`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1081:26
+     |
+1081 |     pub fn try_update<T: BinaryHashRepr + ?Sized>(
+     |                          ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::try_update`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:13:176
+     |
+  13 | ...sibling=alternate.find_path_for_leaf(leaf.clone()).unwrap().path[0].sibling;assert_ne!(bad.root(),root);
+     |                      ------------------ ^^^^^^^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                      |
+     |                      required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::find_path_for_leaf`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1192:34
+     |
+1192 |     pub fn find_path_for_leaf<T: BinaryHashRepr>(&self, leaf: T) -> Option<MerklePath<T>> {
+     |                                  ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::find_path_for_leaf`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:13:230
+   |
+13 | ...ibling;assert_ne!(bad.root(),root);
+   |                          ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:14:89
+     |
+  14 |  let new_leaf="Midnight|A|balance|Owner|8990".to_string();let updated=tree.try_update(0,&new_leaf,()).unwrap().rehash();
+     |                                                                            ----------   ^^^^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                                                                            |
+     |                                                                            required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::try_update`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1081:26
+     |
+1081 |     pub fn try_update<T: BinaryHashRepr + ?Sized>(
+     |                          ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::try_update`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:15:59
+   |
+15 | ...root);assert_ne!(path.root(),updated.root().unwrap());assert_eq!(updated.find_path_for_leaf(new_leaf).unwrap().root(),updated.roo...
+   |                          ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+error[E0277]: the trait bound `String: BinaryHashRepr` is not satisfied
+    --> tests/state.rs:15:129
+     |
+  15 | ...;assert_eq!(updated.find_path_for_leaf(new_leaf).unwrap().root(),updated.root().unwrap());
+     |                        ------------------ ^^^^^^^^ the trait `BinaryHashRepr` is not implemented for `String`
+     |                        |
+     |                        required by a bound introduced by this call
+     |
+     = help: the following other types implement trait `BinaryHashRepr`:
+               ()
+               (A, B, C, D, E, F, G, H, I, J, K, L)
+               (B, C, D, E, F, G, H, I, J, K, L)
+               (C, D, E, F, G, H, I, J, K, L)
+               (D, E, F, G, H, I, J, K, L)
+               (E, F, G, H, I, J, K, L)
+               (F, G, H, I, J, K, L)
+               (G, H, I, J, K, L)
+             and 26 others
+note: required by a bound in `MerkleTree::<A, D>::find_path_for_leaf`
+    --> /home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/9f9842e/transient-crypto/src/merkle_tree.rs:1192:34
+     |
+1192 |     pub fn find_path_for_leaf<T: BinaryHashRepr>(&self, leaf: T) -> Option<MerklePath<T>> {
+     |                                  ^^^^^^^^^^^^^^ required by this bound in `MerkleTree::<A, D>::find_path_for_leaf`
+
+error[E0599]: the method `root` exists for struct `MerklePath<String>`, but its trait bounds were not satisfied
+  --> tests/state.rs:15:148
+   |
+15 | ...af(new_leaf).unwrap().root(),updated.root().unwrap());
+   |                          ^^^^ method cannot be called on `MerklePath<String>` due to unsatisfied trait bounds
+   |
+   = note: the following trait bounds were not satisfied:
+           `String: BinaryHashRepr`
+
+Some errors have detailed explanations: E0277, E0599.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `moriarty-midnight-crypto` (test "state") due to 13 previous errors
+warning: build failed, waiting for other jobs to finish...

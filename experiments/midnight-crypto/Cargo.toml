@@ -1,0 +1,72 @@
+[package]
+name = "moriarty-midnight-crypto"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+hex = "0.4"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0
+
+# Upstream debug builds panic before emitting an invalid-witness proof.
+# Use its release assertion behavior to test rejection by the real verifier.
+[profile.test.package.midnight-proofs]
+debug-assertions = false
+
+[features]
+ledger = ["dep:midnight-ledger", "dep:midnight-storage", "dep:midnight-coin-structure"]
+state = ["dep:midnight-transient-crypto"]
+native-proof = ["dep:midnight-proofs", "dep:midnight-curves", "dep:blake2b_simd", "dep:ff"]
+
+[dependencies.midnight-transient-crypto]
+git = "https://github.com/midnightntwrk/midnight-ledger"
+rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8"
+optional = true
+
+[dependencies.midnight-proofs]
+git = "https://github.com/midnightntwrk/midnight-zk"
+rev = "0ededef0e605701fc5139ebdcf011b11f3d86ba7"
+optional = true
+
+[dependencies.midnight-curves]
+git = "https://github.com/midnightntwrk/midnight-zk"
+rev = "0ededef0e605701fc5139ebdcf011b11f3d86ba7"
+optional = true
+
+[dependencies.blake2b_simd]
+version = "1"
+optional = true
+
+[dependencies.ff]
+version = "0.13"
+optional = true
+
+[patch.crates-io.midnight-curves]
+git = "https://github.com/midnightntwrk/midnight-zk"
+rev = "0ededef0e605701fc5139ebdcf011b11f3d86ba7"
+
+[dependencies.midnight-ledger]
+git = "https://github.com/midnightntwrk/midnight-ledger"
+rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8"
+optional = true
+
+[dependencies.midnight-storage]
+git = "https://github.com/midnightntwrk/midnight-ledger"
+rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8"
+optional = true
+
+[dependencies.midnight-coin-structure]
+git = "https://github.com/midnightntwrk/midnight-ledger"
+rev = "9f9842ebed66cdff0f54d3fb09efc6a7cd077ed8"
+optional = true
