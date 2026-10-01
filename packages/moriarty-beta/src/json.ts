@@ -21,7 +21,7 @@ export function parseBoundedJson(text: string): unknown { return parseJsonWithin
 export function parseJsonWithinLimits(text: string, byteLimit:number, stringLimit:number): unknown {
   const fail = (code: string, message: string): never => { throw new LocalError(code, message); };
   if (typeof text !== 'string') fail('BETA_JSON_TEXT', 'JSON must be text');
-  if (Buffer.byteLength(text) > byteLimit) fail('BETA_JSON_BOUND', 'JSON exceeds 65536 bytes');
+  if (Buffer.byteLength(text) > byteLimit) fail('BETA_JSON_BOUND', `JSON exceeds ${byteLimit} bytes`);
   if (!scalarText(text)) fail('BETA_JSON_UNICODE', 'Invalid Unicode scalar');
   let i = 0, nodes = 0;
   const ws = (): void => { while (i < text.length && /[ \t\r\n]/.test(text[i])) i++; };

@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {isAbsolute} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
 import {expand,simulate,type Simulated} from './bridge.ts';
-import {prepareOwnerIntent,verifyAndPrepare,type CryptoConfig} from './auth.ts';
+import {prepareOwnerIntent,verifyAndPrepare,type CryptoConfig,type Signing} from './auth.ts';
 import {LocalError,parseBoundedJson,scalarText} from './json.ts';
 import {parseAndLowerSource6} from '../../../experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts';
 import type {S0Effect,S0PreparedUnqualified,S0State} from '../../../experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts';
@@ -194,7 +194,7 @@ export class LocalSettlementStore{
  async prepareIntent(input:unknown){
   const r=plain(input,['source','action','signing']),s=plain(r.signing,['scheme','publicKeyHex','framing']);
   const source=bounded(r.source,65536),action=idInput(r.action),root=this.#root;
-  const prepared=await prepareOwnerIntent(source,action,scenarioText(root,'unused',pendingHead(root)),{scheme:s.scheme as 'schnorr_bip340',publicKeyHex:s.publicKeyHex as string,framing:s.framing as 'raw'},this.#crypto);
+  const prepared=await prepareOwnerIntent(source,action,scenarioText(root,'unused',pendingHead(root)),{scheme:s.scheme as Signing['scheme'],publicKeyHex:s.publicKeyHex as string,framing:s.framing as Signing['framing']},this.#crypto);
   return {...prepared,provenance:QUAL,stateDigest:digestOf(root)};
  }
  /** Local operator action; no authenticated revoker. Takes effect from `fromRound` (default: current state round). */

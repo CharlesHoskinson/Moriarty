@@ -20,7 +20,7 @@ repayment with real signatures and complete independent effect/post expectations
 
 ## Fresh observations
 
-- Beta187tests passed,0failed,0skipped, with MORIARTY_REQUIRE_NATIVE=1 and actual
+- Beta189tests passed,0failed,0skipped, with MORIARTY_REQUIRE_NATIVE=1 and actual
   separately built Rust verifier/helper. Packed install works outside checkout
   with PATH empty, copied verifier, bundled guide, typed API and negative cases.
 - Rust all-features32tests passed,0failed; the new numerical experiment remains
@@ -32,7 +32,7 @@ repayment with real signatures and complete independent effect/post expectations
 - TypeScript typecheck passes; packed strict declaration client includes the actual
   signed statement, frame and boolean signature fields.
 
-Commands and complete outputs are retained in evidence/final-beta-tests.txt,
+Commands and complete outputs are retained in evidence/final-beta-tests-2.txt (initial187test receipt retained separately),
 evidence/final-rust-tests.txt and evidence/native-run.log. Failure evidence includes
 SEC1prefix acceptance, independent oracle prehash mismatch, process timeout,
 public declaration inference, readable CLI integration and pack-test assumptions.
