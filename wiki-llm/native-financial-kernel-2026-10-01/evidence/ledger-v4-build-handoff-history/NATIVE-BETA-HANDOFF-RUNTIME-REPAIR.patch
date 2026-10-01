@@ -1,0 +1,11 @@
+--- native-beta-handoff-source-v2-pre-runtime-repair/handoff.ts
++++ native-beta-handoff/handoff.ts
+@@ -96,7 +96,7 @@
+  assert.equal(result.context.callProofDataTrace.length,1);const trace=result.context.callProofDataTrace[0];assert.equal(trace.circuitId,'pay');
+  const normalized={input:trace.input,output:trace.output,publicTranscript:trace.publicTranscript,privateTranscriptOutputs:trace.privateTranscriptOutputs};
+  const retained=restore(JSON.parse(pinned(B+'/native-adapter-successor-v3/runtime-proof-data.json').toString()));assert.equal(nativeJson(normalized),nativeJson(retained));
+- assert.equal(trace.publicTranscript.length,293);assert.equal(trace.publicTranscript.filter((v:any)=>'popeq'in v).length,47);
++ assert.equal(trace.publicTranscript.length,293);assert.equal(trace.publicTranscript.filter((v:any)=>v!==null&&typeof v==='object'&&'popeq'in v).length,47);
+  const location='local-public-fixture/pay/c20c6e733500823c478eea885bebab5d62ba9958cfdd1ec8cf2ae89b32f9d7ae';
+  const preimage=runtime.proofDataIntoSerializedPreimage(trace.input,trace.output,trace.publicTranscript,trace.privateTranscriptOutputs,location);
+  assert.deepEqual(Buffer.from(preimage),pinned(B+'/native-adapter-successor-v3/good.preimage'));

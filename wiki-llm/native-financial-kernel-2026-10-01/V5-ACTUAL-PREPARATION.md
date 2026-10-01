@@ -1,0 +1,17 @@
+# Actual signed Beta transfer to keyless native preparation
+
+2026-10-01. Experiment observation. Both fresh exact source/resource reviewers approved one helper handoff and one success-dependent native preparation attempt. The actual compiled Rust caller was reused under its unchanged complete Rust map and exact binary hash; only the Node transcript-count guard and its manifest differed. Old v3/v4 failures and consumed attempts remain intact.
+
+The production signed-intent handoff exited 0. It verified the public ECDSA wallet statement with actual Midnight Rust verification, rebuilt Source/6 and Core/5, executed the generated kernel, matched all 21 ledger getters, six Core effects, complete native effects, the independently assembled 16-input head, all 293 operations and 47 reads, and the official serialized preimage. It emitted four exclusive keyless artifacts and a receipt with null authority and false proof/application/acceptance flags.
+
+The actual Rust prepare call exited 0 with no resource stop and preserved source/binary identities. Complete native preimage bytes matched the frozen 4,316-byte reference (SHA256 96f932aab236782897987da873b3cd6fab3cb8c8c35eb4e4777ca41864f41402), all eight native CallContext comparisons passed, native financial partition checks passed, and actual IR preprocessing succeeded. The actual preliminary fee estimate was 1128519108356650 specks, below the stipulated allowance100000000000000000000 and generationless fixture availability5000000000000000000000. This estimate is not consumed fees.
+
+The expected contract artifact is a storage reference with prestate escrow10000; no applied escrow8990 is evidenced. Registered VK is absent and proof invocations are zero. No SRS body, PK/VK, key generation, proof, strict well_formed, native application, or Preview transaction ran. Trusted fixture addresses/assets/escrow/time/round/payer remain unauthenticated. Signed A fee10 is separate from DUST; ECDSA owner is separate from Schnorr NIGHT payer. Opaque head mapping does not authenticate history. Generic compiler, contract property, intent, transition, history, and PCD obligations remain open.
+
+Two fresh full current source and actual-result audits independently approved narrow preparation publication. Grok returned grok-4.6-build/end_turn/process0; Astra was requested via host dispatch as gpt-6-astra medium, with no separately exposed returned-provider attestation. The original reports and exact decision are in evidence/ledger-v5-result-reviews. This approval grants no future resources or financial acceptance. Next keygen source is staged separately and remains uncompiled/unexecuted. Future allocation requires its own exact current review.
+
+Raw immutable evidence: [[evidence/ledger-v5-preparation-history/NATIVE-LEDGER-V5-RESULT-FREEZE.json]]. External original: /home/charl/research/moriarty-signed-intent-2026-10-01.
+
+Resource receipt limitations: global RX was observed at start/end, not every0.1 seconds; receipt jobs/thread fields do not enforce a two-thread helper cap. CPU/RSS sampling and disk stops can overshoot; source hashing occurs outside child wall budget. Namespace isolation supplies the network restriction. Actual receipts retain their original metadata, with these corrections stated here.
+
+Audit correction: the Grok report lists jmp2 among unit strings. Actual raw trace has17 unit strings (member6,pop2,lt1,neg4,add4) and two jmp objects among276objects. Exact293-op trace and preimage equality remain verified; original audit is preserved.

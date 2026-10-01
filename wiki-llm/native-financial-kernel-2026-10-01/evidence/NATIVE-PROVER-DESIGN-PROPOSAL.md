@@ -1,0 +1,15 @@
+# Native prover consumer design proposal
+
+Status: proposed, no source implementation or execution authority. Current native-adapter source-check remains the single delivery item. Independent API plan NATIVE-PROVER-API-PLAN.md supplies source citations; independent expected outcomes are being prepared separately.
+
+Select the public `Zkir::prove` trait implementation on exact pinned `IrSource`. It returns the actual native `(Proof, Vec<Fr>, pi_skips)` produced during preprocessing/proving. Explicitly perform the same actual `VerifierKey::verify` as the high-level wrapper, then retain the unchanged native statement and skips for a separate verification process. This is an explicit choice of plan option B. It requires the fresh substantive source/resource votes for the later candidate; it is not a silently substituted high-level helper call.
+
+Reason: `ProofPreimage::prove` returns proof and skips but discards its actual statement, and preprocess is private. Reconstructing operation widths/untaken branch padding would add a correspondence obligation. The public trait path retains relation-produced values directly and calls the same underlying native prover/verifier. There is exactly one proof.
+
+Read raw IR through `IrSource::load`; read tagged native PK/VK/preimage through exact APIs with cursor EOF; no MockProver or mock-verify. Provider uses exact verified published k17 parameter, synchronous/offline behavior, rejects a different k, and never starts a hidden download. Proving RNG is fresh local cryptographic entropy for a public fixture, not a wallet identity or secret signing operation.
+
+Prove mode preserves raw proof, canonical tagged Fr statement, actual skip vector, key/IR/parameter/preimage identities and actual self-verification. Independent verify mode reads the frozen public artifacts in a separate process, verifies good, checks every public field changed by +1, removed/appended fields, corrupted/truncated/appended raw proof, and decoder EOF controls, then verifies original good again. Label host/decoder failures separately from native proof refusals. No second setup/proof for controls.
+
+Resource proposal must separately bind exact source, locked graph, executable, published SRS URL/hash/body/temporary disk bounds, one native key-generation attempt, one proof attempt and independent verifier controls. No allocation is approved by this document. Preserve old R3 debt and four exhausted Compact attempts. Native adapter must first build/check successfully and retain actual skip layout. All later execution stops on cap/failure; no automatic retry.
+
+Local binding0 is a public fixture convention. The retained financial preimage is a manually authored specialization. None of this closes authenticated constructor/instance separation, real custody, contract/transaction binding, exclusive ledger replay, generic compiler/property/intent/transition/history correspondence or Preview ledger8 compatibility. A complete local native proof, if achieved, would prove only the exact retained relation/statement.

@@ -1,0 +1,44 @@
+# Independent adapter v3 source and resource decision
+
+Verdict: **approve-bounded** for the exact new amendment described below. This is one fresh substantive source/resource vote, not execution, build compatibility, native-check success, proof acceptance, or a replacement for the separate required reviewer.
+
+Reviewer: fresh delegated Codex context `/root/adapter_v3_resource_astra`. Requested route: `gpt-6-astra`, medium effort. That route is task metadata; this context exposes no independently verifiable returned model/effort identity. Do not manufacture a provider identity receipt from this report. No other auditor report or verdict was read, and no previous approval was reused.
+
+## Exact reviewed candidate and observations
+
+- Directory: `/home/charl/research/moriarty-signed-intent-2026-10-01/native-adapter-successor-v3`.
+- Manifest SHA256: `e61e3a8916b344b03e3249c4befdc2695254b8c661750d97366a8157b5af0200`.
+- Cargo.lock SHA256: `f0e156a01f1587886a6f9e9fc2887f40c3b07da86f484c9daba604714ba7483d`.
+- Full wrapper `run-adapter-v3-bounded.py` SHA256: `8b32a440ba2c4304031efcbc596751da22cf9ee58c617e3cfc1ee9b72fe5eb27`.
+
+Repository observation: loaded Moriarty AGENTS and the installed `moriarty-dev:develop` skill, then ran the required read-only status in `/home/charl/Moriarty/.worktrees/moriarty-beta-20260930`. Status reported stale campaign bindings, missing accounting and unavailable resource live state; no pending transactions. This vote does not resolve those campaign admissions. Publication PR13/main033e9a90 is handoff context, not a remote observation independently repeated by this reviewer. The full product goal remains open.
+
+Static verification independently hashed all 28 manifest source entries and all five absolute external inputs; every digest matched. Parsed the complete before/current TOML locks and compared all package identity tuples: 353 retained, 44 removed, zero added. Registry entries retain checksums; the only local package is the adapter. Git sources are exclusively the stated ledger and ZKIR commits. ZKIR3.1.0-rc.1/e82d81d25aabcc5f5092e2bd559083487f577914, ledger9a8777c4d035fc7f38ae286bcf5f8656668efd9f, proofs0.8.2/checksum22b1526bc7d9d1fad29505a15b81fe54aa7698a7dcd1948b447021bc8571f543, and curves0.3.1 remain pinned. This is a version-preserving prune, not evidence that Cargo will accept the lock.
+
+Read the complete candidate Rust checker, export program, Cargo.toml, manifest, wrapper, independent expectations and preparation diagnostics, plus the relevant official source snapshots and pinned native check/load implementation. The three ledger source snapshots match the available exact pinned ledger checkout byte for byte. Compared the original and v3 checker and all six preimages: every pair is byte-identical. Each preimage is4316bytes; their hashes match both manifest and export receipt.
+
+## Source judgment
+
+The export calls the actual generated impure `pay` circuit and selects its single `callProofDataTrace` entry. It passes actual input/output, ordered public transcript and private transcript outputs into the official `proofDataIntoSerializedPreimage` converter. Official source confirms input field conversion, all Op field representations, Popeq output extraction, binding0, explicit key location, and communication hash over randomness0 plus input/output values. It does not synthesize desired financial state into a proof preimage.
+
+Static artifact observations: frame length1278 and SHA256e59e6a4d1d480387c206088663f6611d29dff98d1ac99dadfe2c582b27cc1a48;293 public Ops; zero private transcript outputs; aligned Bytes32 result4e87ddfda49bafabddab1a05cbdd0538735744a318dda80a211075ebb343b09e. The head mutation selects Op8 at path[0,4]; the recipient post-read mutation selects Op263 at path[1,2], whose original value is1000. Frame/signature mutations alter one input byte and the communication commitment; the output mutation changes the commitment; coherent Popeq mutations change both serialized transcript representations. These support the named experiment without establishing native refusal.
+
+Rust uses tagged `ProofPreimage` decoding, rejects unconsumed trailing bytes, applies explicitly labeled host location/binding guards, then calls `check(&ir)`. The good fixture must return skips; every forged fixture must return an error or the process fails. Official pinned `ProofPreimage::check` delegates to the supplied IR; pinned `IrSource::check` preprocesses the preimage and returns skips. No adapter SRS, setup, keygen, proving, wallet or ledger call is present. Merely linking dependency APIs that also provide proving does not invoke them.
+
+Limitations retained: these six cases are a subset of ADAPTER-INDEPENDENT-EXPECTATIONS.md. They do not supply the complete malformed-input/financial/commitment matrix, a final repeated good control, or printed native vector counts. A panic or decode failure is not a clean native negative; a host identity failure is not a relation refusal. Actual error layers and skip output require result review. Binding0 and key location remain local host conventions; they do not establish contract-instance, constructor, escrow, ledger or transaction binding.
+
+## Resource judgment and allocation
+
+Approve exactly one new `adapter-v3-fetch` using `cargo fetch --locked`:120s wall,120s sampled group CPU,2GiB sampled group RSS and per-process address space,256MiB sampled global nonloopback RX, and+1GiB source/cache. Only successful completion with no stop reason permits one namespaced `cargo build --locked --offline`:600s wall,1200s sampled group CPU,4GiB sampled group RSS/address space,+2GiB target, jobs2/Rayon2. Only its success permits one namespaced six-fixture checker:60s wall,120s CPU,2GiB RSS/address space. Total target remains<=8GiB and free space>=10GiB. Build/check commands use `unshare -Urn`; namespace failure stops instead of falling back to network.
+
+The complete wrapper was inspected before comparing it to the original. Its changes are confined to source/manifest identity and distinct v3 phase reservation/log/receipt names. Exclusive creation and fsync of the reservation and directory precede launch. SIGINT/TERM are blocked across process ownership transfer; the child restores the inherited mask before exec and the parent restores after assigning its process handle. The outer finally blocks these signals and kills the process group and waits. Log/receipt exclusivity and durable reservations prevent reuse after failure. Source/external hashes are checked before and after a phase. The wrapper parses as Python; this reviewer did not launch it or run lifecycle tests.
+
+These are cooperative sampled controls, not strict containment against malicious children or unsampled peaks. CPU/RSS/traffic polling has a nominal0.1s interval and disk measurement a nominal5s interval; scans and scheduling add latency. Per-process rlimits complement sampled group controls. Global RX includes unrelated host activity and is conservative under the stated stable-interface assumption. Finally cannot handle SIGKILL/power loss; reservations remain. Shared cache/target and binary provenance assume no concurrent writer replacing artifacts between phases. Preserve the recorded binary digest for result review. Those limitations fit the stated one-off scope and do not authorize broader claims.
+
+## History and stopping conditions
+
+Inspected the original attempt, receipt and log: locked fetch exit101 after1.416910704s, with a lock-update refusal. It consumed its original allocation; no original build/check receipt exists. Preserve those bytes and reservations. V3 currently has no executed phase receipts. The rejected generate-lockfile diagnostic with62 changed selections and the root-only resolve:null diagnostic remain history, not approved dependencies. Full offline metadata pruned44 packages and stopped for missing glob0.3.4, leaving empty stdout. The raw v3 metadata receipt records0.139968650s; IMPLEMENTATION.md says0.034s. Use the receipt value; this timing discrepancy does not affect the selected bytes or the new caps.
+
+A new locked-fetch refusal consumes this new phase and stops the sequence. No unlock, retry, implicit alternate source resolution or reuse of the original reservation is approved. Subsequent build/check failures likewise stop their dependent phases. Successful native check and tagged Rust compatibility remain unperformed, so this vote approves testing that uncertainty rather than declaring it resolved.
+
+No SRS/keygen/proof, nativek17 retry, ledger/Preview execution or wallet authority is granted. Old R3 exhaustion, four Compact attempts, ledger8/ledger9 compatibility and all financial acceptance obligations remain unchanged and open. No fetch, build, checker, remote operation or proof was performed during this review. Only this review report was written.

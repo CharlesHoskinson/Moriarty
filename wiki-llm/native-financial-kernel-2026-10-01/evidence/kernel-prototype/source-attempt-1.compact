@@ -1,0 +1,78 @@
+pragma language_version >= 0.27 && <= 0.27;
+import CompactStandardLibrary;
+export { Secp256k1EcdsaSignature };
+circuit configuredKey(pk: Secp256k1Point): [] {
+ assert(pk != default<Secp256k1Point>, "IDENTITY_KEY");
+ assert((secp256k1PointX(pk) as Bytes<32>) == Bytes[171,40,63,143,116,250,8,170,157,219,54,181,48,124,233,40,217,232,241,246,13,177,180,52,88,32,182,227,42,200,115,108], "SOURCE_SEC1_X");
+ assert((secp256k1PointY(pk) as Bytes<32>) == Bytes[92,113,182,219,243,70,189,130,102,27,76,68,72,95,89,11,125,9,142,156,5,197,21,148,15,110,55,176,147,105,52,61], "SOURCE_SEC1_Y_PARITY");
+}
+circuit canonicalSignature(sig: Secp256k1EcdsaSignature): [] {
+ const sb: Bytes<32> = sig.s as Bytes<32>;
+ const hi: Uint<128> = slice<16>(sb, 16) as Uint<128>;
+ const lo: Uint<128> = slice<16>(sb, 0) as Uint<128>;
+ assert(hi < 170141183460469231731687303715884105727 || (hi == 170141183460469231731687303715884105727 && lo <= 124072173638108635037164174234284138656), "HIGH_S");
+ assert(sig.r != (0 as Secp256k1Scalar) && sig.s != (0 as Secp256k1Scalar), "ZERO_SIGNATURE");
+}
+export circuit verifyOwner(message: Bytes<1278>, sig: Secp256k1EcdsaSignature, pk: Secp256k1Point): Bytes<32> {
+ configuredKey(pk); canonicalSignature(sig);
+ assert(message == Bytes[109,105,100,110,105,103,104,116,95,115,105,103,110,101,100,95,109,101,115,115,97,103,101,58,49,50,52,57,58,109,111,114,105,97,114,116,121,45,115,105,103,110,101,100,45,105,110,116,101,110,116,47,49,0,0,0,4,196,123,34,97,99,116,105,111,110,78,97,109,101,34,58,34,112,97,121,34,44,34,97,103,114,101,101,109,101,110,116,73,100,34,58,34,73,110,118,111,105,99,101,34,44,34,97,115,115,101,116,34,58,123,34,105,100,34,58,34,65,34,44,34,114,101,112,114,101,115,101,110,116,97,116,105,111,110,34,58,34,99,97,110,111,110,105,99,97,108,34,44,34,115,99,97,108,101,34,58,34,50,34,44,34,115,121,109,98,111,108,34,58,34,85,83,68,34,125,44,34,97,117,116,104,111,114,105,110,103,80,114,111,102,105,108,101,34,58,34,109,111,114,105,97,114,116,121,45,98,101,116,97,47,49,34,44,34,99,111,114,101,34,58,34,109,111,114,105,97,114,116,121,45,99,111,114,101,47,53,34,44,34,100,111,109,97,105,110,34,58,123,34,99,104,97,105,110,34,58,34,109,105,100,110,105,103,104,116,34,44,34,105,100,34,58,34,77,105,100,110,105,103,104,116,34,44,34,110,101,116,119,111,114,107,34,58,34,112,114,101,118,105,101,119,34,125,44,34,105,110,116,101,110,116,34,58,123,34,97,100,118,101,114,116,105,115,101,100,80,111,108,105,99,121,68,105,103,101,115,116,34,58,34,112,111,108,105,99,121,49,34,44,34,97,100,118,101,114,116,105,115,101,100,83,111,117,114,99,101,72,97,115,104,34,58,34,115,114,99,49,34,44,34,100,101,108,101,103,97,116,105,111,110,34,58,34,110,111,110,101,34,44,34,100,105,115,99,108,111,115,117,114,101,115,34,58,91,93,44,34,102,97,105,108,117,114,101,34,58,34,115,117,99,99,101,115,115,95,111,110,108,121,34,44,34,102,101,101,67,97,112,34,58,34,49,48,34,44,34,103,114,111,115,115,67,97,112,34,58,34,49,48,49,48,34,44,34,110,101,116,70,108,111,111,114,34,58,34,49,48,48,48,34,44,34,110,111,110,99,101,34,58,34,110,49,34,44,34,110,111,116,65,102,116,101,114,34,58,34,49,48,34,44,34,110,111,116,66,101,102,111,114,101,34,58,34,48,34,44,34,111,98,115,101,114,118,97,116,105,111,110,115,34,58,91,93,44,34,111,112,101,114,97,116,105,111,110,34,58,123,34,97,109,111,117,110,116,34,58,34,49,48,48,48,34,44,34,102,101,101,34,58,34,49,48,34,44,34,102,101,101,82,101,99,105,112,105,101,110,116,34,58,34,70,101,101,34,44,34,102,114,111,109,34,58,34,79,119,110,101,114,34,44,34,107,105,110,100,34,58,34,84,114,97,110,115,102,101,114,34,44,34,114,101,99,105,112,105,101,110,116,34,58,34,82,101,99,105,112,105,101,110,116,34,125,44,34,112,114,101,72,101,97,100,34,58,34,104,48,34,44,34,114,101,99,111,118,101,114,121,34,58,34,110,111,110,101,34,44,34,114,101,116,97,105,110,101,100,68,117,116,105,101,115,34,58,91,93,44,34,114,101,116,97,105,110,101,100,69,102,102,101,99,116,115,34,58,91,93,44,34,115,105,103,110,101,114,34,58,34,79,119,110,101,114,34,44,34,118,101,114,115,105,111,110,34,58,34,109,111,114,105,97,114,116,121,45,105,110,116,101,110,116,47,51,34,125,44,34,111,119,110,101,114,80,114,111,103,114,97,109,83,104,97,50,53,54,34,58,34,102,97,98,99,57,57,99,56,54,53,48,56,49,52,97,52,56,51,101,97,54,97,102,53,49,55,50,98,53,57,101,53,97,97,100,50,99,55,54,102,99,54,52,100,56,99,50,54,49,51,57,98,56,51,52,54,57,54,99,99,56,48,51,53,34,44,34,112,114,111,102,105,108,101,34,58,34,109,111,114,105,97,114,116,121,45,115,105,103,110,101,100,45,105,110,116,101,110,116,47,49,34,44,34,115,101,108,101,99,116,101,100,65,99,116,105,111,110,73,100,34,58,34,84,114,97,110,115,102,101,114,76,105,116,101,114,97,108,70,101,101,34,44,34,115,105,103,110,97,116,117,114,101,34,58,123,34,102,114,97,109,105,110,103,34,58,34,109,105,100,110,105,103,104,116,45,115,105,103,110,45,100,97,116,97,34,44,34,107,101,121,82,101,102,34,58,34,107,101,121,49,34,44,34,112,117,98,108,105,99,75,101,121,72,101,120,34,58,34,48,50,54,99,55,51,99,56,50,97,101,51,98,54,50,48,53,56,51,52,98,52,98,49,48,100,102,54,102,49,101,56,100,57,50,56,101,57,55,99,51,48,98,53,51,54,100,98,57,100,97,97,48,56,102,97,55,52,56,102,51,102,50,56,97,98,34,44,34,115,99,104,101,109,101,34,58,34,101,99,100,115,97,95,115,101,99,112,50,53,54,107,49,95,115,104,97,50,53,54,34,125,44,34,115,111,117,114,99,101,80,114,111,102,105,108,101,34,58,34,109,111,114,105,97,114,116,121,45,102,105,110,97,110,99,105,97,108,45,97,103,114,101,101,109,101,110,116,45,115,111,117,114,99,101,47,54,34,44,34,115,111,117,114,99,101,83,104,97,50,53,54,34,58,34,102,98,53,48,55,98,102,98,56,52,56,97,56,56,53,57,97,53,53,99,48,50,48,102,97,102,52,49,48,101,53,50,102,57,101,52,48,99,48,48,102,99,51,57,51,56,97,57,48,101,97,51,99,55,54,51,101,49,99,102,49,100,54,99,34,125], "FRAME_SOURCE_MISMATCH");
+ const digest: Bytes<32> = persistentHash<Bytes<1278>>(message);
+ assert(digest == Bytes[229,158,106,77,29,72,3,135,194,6,8,134,99,246,97,29,41,223,249,141,26,201,157,173,254,44,88,43,39,204,26,72], "FRAME_SHA256_MISMATCH");
+ assert(secp256k1EcdsaVerify(digest, sig, pk), "BAD_SIGNATURE");
+ return digest;
+}
+export ledger ownerKey: Secp256k1Point;
+export ledger sourceDigest: Bytes<32>;
+export ledger ownerProgramDigest: Bytes<32>;
+export ledger usedNonce: Boolean;
+export ledger head: Bytes<32>;
+export ledger revision: Uint<128>;
+export ledger trustedRound: Uint<128>;
+export ledger ownerBalance: Uint<128>;
+export ledger recipientBalance: Uint<128>;
+export ledger feeBalance: Uint<128>;
+export ledger workRemaining: Uint<128>;
+export ledger workSpent: Uint<128>;
+export ledger allowanceRemaining: Uint<128>;
+export ledger allowanceSpent: Uint<128>;
+export ledger assetColor: Bytes<32>;
+export ledger recipientAddress: UserAddress;
+export ledger feeAddress: UserAddress;
+export ledger lastDebit: Uint<128>;
+export ledger lastRecipientCredit: Uint<128>;
+export ledger lastFeeCredit: Uint<128>;
+export ledger lastAllowanceUse: Uint<128>;
+constructor(pk: Secp256k1Point, color: Bytes<32>, recipient: UserAddress, fee: UserAddress, funding: Uint<128>, allowance: Uint<128>, work: Uint<128>, round: Uint<128>) {
+ configuredKey(pk);
+ assert(recipient.bytes != fee.bytes, "ALIASED_DESTINATIONS");
+ ownerKey=disclose(pk);assetColor=disclose(color);recipientAddress=disclose(recipient);feeAddress=disclose(fee);
+ sourceDigest=Bytes[251,80,123,251,132,138,136,89,165,92,2,15,175,65,14,82,249,228,12,0,252,57,56,169,14,163,199,99,225,207,29,108];
+ ownerProgramDigest=Bytes[250,188,153,200,101,8,20,164,131,234,106,245,23,43,89,229,170,210,199,111,198,77,140,38,19,155,131,70,150,204,128,53];
+ usedNonce=false;head=Bytes[158,70,1,201,175,148,16,34,8,189,107,222,166,105,60,191,90,150,56,246,214,185,250,113,110,174,84,4,67,204,48,228];revision=0;trustedRound=disclose(round);
+ ownerBalance=disclose(funding);recipientBalance=0;feeBalance=0;
+ workRemaining=disclose(work);workSpent=0;allowanceRemaining=disclose(allowance);allowanceSpent=0;
+ lastDebit=0;lastRecipientCredit=0;lastFeeCredit=0;lastAllowanceUse=0;
+}
+export circuit pay(message: Bytes<1278>, sig: Secp256k1EcdsaSignature): Bytes<32> {
+ const signedDigest: Bytes<32> = verifyOwner(message, sig, ownerKey);
+ assert(!usedNonce, "NONCE_CONSUMED");
+ assert(head == Bytes[158,70,1,201,175,148,16,34,8,189,107,222,166,105,60,191,90,150,56,246,214,185,250,113,110,174,84,4,67,204,48,228] && revision == 0, "STALE_HEAD");
+ assert(trustedRound >= 0 && trustedRound <= 10, "TRUSTED_ROUND_WINDOW");
+ assert(ownerBalance >= 1010, "OWNER_UNDERFLOW");assert(allowanceRemaining >= 1010, "ALLOWANCE_UNDERFLOW");assert(workRemaining >= 1, "WORK_EXHAUSTED");
+ const entry: Uint<128> = unshieldedBalance(assetColor);
+ assert(entry == ownerBalance, "ESCROW_BALANCE_MISMATCH");
+ assert(unshieldedBalanceGte(assetColor, 1010), "ESCROW_UNDERFUNDED");
+ const recipientAfter: Uint<128> = (recipientBalance + 1000) as Uint<128>;
+ const feeAfter: Uint<128> = (feeBalance + 10) as Uint<128>;
+ const spentAfter: Uint<128> = (allowanceSpent + 1010) as Uint<128>;
+ const workSpentAfter: Uint<128> = (workSpent + 1) as Uint<128>;
+ sendUnshielded(assetColor,1000,right<ContractAddress,UserAddress>(recipientAddress));
+ sendUnshielded(assetColor,10,right<ContractAddress,UserAddress>(feeAddress));
+ ownerBalance=(ownerBalance-1010) as Uint<128>;recipientBalance=recipientAfter;feeBalance=feeAfter;
+ allowanceRemaining=(allowanceRemaining-1010) as Uint<128>;allowanceSpent=spentAfter;
+ workRemaining=(workRemaining-1) as Uint<128>;workSpent=workSpentAfter;
+ lastDebit=1010;lastRecipientCredit=1000;lastFeeCredit=10;lastAllowanceUse=1010;
+ usedNonce=true;revision=1;
+ head=persistentHash<Vector<4,Bytes<32>>>([head,signedDigest,sourceDigest,ownerProgramDigest]);
+ return head;
+}

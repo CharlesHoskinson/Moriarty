@@ -25,6 +25,8 @@ sources:
 
 # Wiki log
 
+2026-10-01 — Filed SRC-0116: actual signed Beta/native keyless preparation passed and two fresh result reviews approved its narrow publication. Original failures, hashes, audit identity limits and conditional published Preview format mismatch retained. No keygen/proof/application/financial acceptance claim promoted.
+
 2026-10-01 — Recorded the signed-intent consumer, explicit local atomic store, three packed public examples and bounded numerical KZG experiment. Fresh whole-candidate result audits pending. No financial/Preview acceptance claim promoted.
 
 2026-09-30 — Filed pinned Midnight Rust source collection SRC-0114 and the local cryptography experiment dossier. Twelve Rust tests pass for named signature/state/proof/system-transaction predicates; production financial gates remain open.
@@ -1259,3 +1261,5 @@ Daml completion verification: 63 source-grounded provisional claims linked to im
 2026-09-28 — MIL/1 reviewed by nine PL reviewers (3 Claude Opus 5.5, 3 GPT-6 Sol, 3 Grok 4.7; lenses: types, expressiveness, compilation). Unanimous: shape right, not freezable. Three load-bearing claims false (escrow meta-rule, monotone completion, anchoring rule); four findings reach back into the U0 proposal; the five declared-open items were wrong and concentrated liquidity was missing. MIL/1 superseded pending MIL/2. CLM-0987–CLM-0991. Specified-only; nothing committed.
 
 2026-09-28 — MIL/2 drafted against the nine-reviewer review. Escrow as a transition relation with per-witness exclusivity and a priority field; acceptance refinement replacing monotone completion; evidence as a type index with source-set propagation; Φ formation and totality; Φ₀/Φ₁ split with Φ₀ frozen and Φ₁ deferred; completed footprint cells, derived and checked; fallback deleted; caps as numbers. Five owner decisions taken with reversal costs recorded. Every claim tagged checked/obligation/deferred; six obligations outstanding before freeze. CLM-0992. Specified-only; nothing committed.
+
+2026-10-01 — Filed pinned Compact0.35/ledger9 source collection SRC-0115 and native financial pipeline working snapshot. Preserved original failed fetch and constructor/race gaps; native check/proof and financial ledger acceptance remain open. PR13 signed-intent delivery supersedes its historical pending-review snapshot.
