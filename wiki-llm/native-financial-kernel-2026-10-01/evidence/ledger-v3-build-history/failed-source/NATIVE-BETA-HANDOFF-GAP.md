@@ -1,0 +1,57 @@
+# Native Beta handoff gap — source inspection only
+
+Status: specified-only implementation path. The current full native caller is uncompiled. This report supplies no resource vote, execution authority, native acceptance, proof result or language closure. No build, node invocation, native check, key generation, SRS work or transaction was performed. Four frozen Compact attempts remain exhausted. Wallet identities and state are preserved.
+
+## Observed program boundary
+
+Repository paths below are relative to `/home/charl/Moriarty/.worktrees/moriarty-beta-20260930`; external paths are relative to `/home/charl/research/moriarty-signed-intent-2026-10-01`.
+
+* `packages/moriarty-beta/src/bridge.ts:85,236` implements `expand(source, actionName, scenarioText)` and `simulate(...)`. `simulate` calls `prepareSource6S0Unqualified` and returns local-stipulation-only results.
+* `packages/moriarty-beta/src/auth.ts` implements `prepareOwnerIntent` and `verifyAndPrepare(source, action, scenarioText, signatureText, crypto)`. It reconstructs the statement from current source, checks canonical Rust-produced frame/message bytes and statement equality, verifies signature possession, then invokes Core/5. `SignedPreparedUnqualified.local.result.candidate` is the relevant candidate, with `effects`, `candidatePost`, `preHead`, and four required premises. Its nativeProof is NotChecked and ledger is NotSubmitted.
+* `experiments/moriarty-language/src/successor/mil4-s0-source-v6.ts:28` lowers Source/6 and checks submitted versus signed action identity. `mil4-s0-core-v5.ts:131` prepares effects; `S0PreparedUnqualified` is not an authenticated transition.
+* `packages/moriarty-beta/src/atomic.ts:218-280` is the actual local signed settlement consumer. It checks expected digest, verifies signature, resolves a local registry binding, serializes commit, rechecks registry/digest, derives a local successor hash, reruns Core/5, compares complete effects and swaps one immutable root. It never invokes this native financial caller. Snapshot provenance and authority remain local stipulations.
+* `kernel-prototype/generate.mjs` manually reads the transfer-ecdsa-wallet example, invokes the existing Beta CLI, and stores its candidate in `projection.expected`. It writes literal Compact message/key/digests and a fixed 1000 transfer plus 10 fee. It does not implement a reusable production Beta consumer.
+* `native-ledger-consumer/export-ledger-fixture.mjs` checks projection/retained-trace pins, constructs official runtime storage with fixed key/color/addresses/funding/allowance/work/round, invokes generated pay, compares the actual trace against retained data, and exports constructor/post storage and transcript. It checks three balance numbers but does not compare the complete Core/5 candidate to native storage/effects.
+* `native-ledger-consumer/src/main.rs:98-166` consumes closed `PrepareConfig { ir, initial_contract, expected_contract, runtime, retained_preimage, fixture }`. Artifact fields are `{path, sha256}`. `RuntimeData` is `{input, output, publicTranscript, privateTranscriptOutputs}`. `Fixture` is `{trust, network, block_seconds, night_creation_seconds, night_value, fee_allowance, ttl_seconds}`. There is no source/action/scenario/signature/Core candidate input. `construct` reconstructs and compares preimage/context and actual native runtime replay. `accept:200-230` requires real strict verification, full Success, storage/escrow, complete A1/NIGHT outputs, observed protocol fee accounting and state-preserving replay refusal. Those source checks are unexecuted for this candidate.
+
+## Smallest concrete missing consumer
+
+Recommendation/inference: add one explicit exact-profile preparation entry point beside Beta authentication, consumed by a Beta CLI operation. Inputs are the existing `verifyAndPrepare` arguments plus an explicit public fixture mapping and pinned existing kernel/trace/preimage artifacts. It calls the existing auth/Core path on caller supplied source/scenario; it never accepts a caller supplied successful candidate as evidence. It accepts only this frozen public transfer profile, checks the entire candidate relation, then calls the existing export logic to emit pinned artifacts and a `PrepareConfig` for the current Rust `prepare` entry point. The output is a source-bound trusted-genesis preparation fixture, not an authenticated ledger fixture.
+
+Suggested typed interface, specified only:
+
+`prepareExactNativeTransfer({source, action, scenarioText, signatureText, crypto, profilePins, publicFixtureMapping}, newOutput) -> {status: NativeFixturePreparedUnqualified, sourceSha256, scenarioSha256, frameSha256, coreCandidateSha256, profilePins, relationChecks, prepareConfigPath, ledger_accepted:false, authority_valid:null, trust: TRUSTED_GENESIS_PUBLIC_DEVELOPMENT_ONLY}`.
+
+Use bounded closed objects and decimal integers. Profile pins include hashes of existing Compact source, IR, generated runtime, retained trace/preimage and canonical statement/message. Mapping explicitly records Owner=contract escrow, Recipient=02 repeated, Fee=03 repeated, A=A1 repeated, h0=SHA256(local-fixture:h0), round=constructor stipulation. Refuse overrides or unsupported fields. No registry-to-ledger authority conversion is permitted. Existing export behavior should consume checked inputs rather than reread one hardcoded example. Do not regenerate or compile Compact.
+
+## Exact relation required before export
+
+The fixed kernel in `kernel-prototype/fixed-transfer.compact` admits one literal 1278-byte signing message, configured ECDSA key, source/owner-program digests, h0-derived native head, first-use nonce, revision zero, fixed addresses/color, amount1000/fee10, round window0..10. For the retained current transcript the constructor values must remain funding10000, allowance10000, work10, round1 and destination balances zero. Arbitrary funding/round parameters could be representable by the constructor but would change retained transcript/preimage and are outside this handoff.
+
+Compare candidate prestate and poststate completely: core/domain/asset; ordered Owner/Recipient/Fee balances10000/0/0 ->8990/1000/10; single allowance10000/0 ->8990/1010; no obligations; work10/0 ->9/1; unused replay -> exactly JSON([Midnight,Owner,n1]); round1 preserved. Effects must be exactly Debit1010, Credit1000, Credit10, UseAllowance1010, UseReplay, AdvanceHead, with no additional or omitted effects. Assert the four premises unchanged. Compare native lastDebit/lastRecipientCredit/lastFeeCredit/lastAllowanceUse, usedNonce, revision, mapped destination/color, source/owner-program digest and work/allowance totals. Inspect actual generated trace and native claimed outputs, not projection.expected alone.
+
+Head equality needs a declared relation: scenario h1 is an opaque proposed head; local atomic.ts derives a tagged local-effects hash; Compact computes a persistentHash over16 native fields. These are different constructions. Record h0/h1 to native pre/post correspondence explicitly and validate native hash inputs, never claim bytes equality or authenticated predecessor. This entry point must not call LocalSettlementStore.settle and mutate local state before native acceptance.
+
+## Acceptance and independent refusal matrix
+
+| Predicate | Positive expected result | Independent refusal expectation |
+|---|---|---|
+| Source formation and action | Existing current example expands; signed and submitted operation identical | Malformed/unsupported source; Repay; different action; extra effect/failure/duty rejected before export |
+| Canonical signed intent | Recomputed source/owner projection and frame/message equal frozen profile; valid low-S ECDSA | Source/hash/program/policy/domain/asset/key/framing/nonce/window/operation substitution; high-S/zero/invalid signature; malformed verifier response |
+| Intent refinement | Gross1010 <=cap1010, fee10 <=cap10, recipient1000 >=floor1000 | Gross cap1009, fee cap9, net floor1001; address alias; changed amounts; refund or omitted debit cannot repair violation |
+| Contract properties | Asset/account layout, nonnegative bounded balances, conservation, allowance/work totals, no obligations | Overflow/underflow; missing/extra/reordered state rows; extra asset/obligation; allowance1009; work0; changed mapping |
+| Transition validity | Full ordered effects and all post fields match recomputed Core candidate and native generated storage/effects | Candidate-only forgery; incorrect UseAllowance/replay/work; omitted fee; added mint/shielded/call effect; mismatched transcript/IR/storage pins |
+| History compliance | Exact h0 unused n1, native revision0 ->1, defined head relation, round1 in window | Stale head, consumed nonce, different predecessor, expired/future round, fake native/local hash equality; replay must leave accepted native state unchanged |
+| Failure semantics | Only terminal full success; no retained effects/duties; preserve native partial-result evidence | Requested failure/partial completion; retained duties/effects; guaranteed/fallible native failure cannot be relabeled full success |
+| Native acceptance | Separately authorized real VK/proof, strict well_formed and full apply Success with complete outputs/fees/replay | Keyless preparation, Zkir check, fee estimate, storage-only expected artifact or successful signature alone cannot establish acceptance |
+| Authority/custody/time | Explicit trusted-genesis public development assumptions carried to every output | Local registry proof, constructor owner key, A1 funding injection or constructor round promoted to authenticated registry/custody/block-time evidence |
+
+These are independently specified expectations, not executed cases. Actual native protocol DUST fees are distinct from signed A fee10; preserve the caller's full protocol fee allowance/accounting and report both asset domains without claiming signed feeCap covers DUST.
+
+## Outputs usable with the existing encoding
+
+Existing Compact/IR/generated runtime, canonical fixed message/signature, retained trace/preimage, and official tagged constructor/post storage can feed the current Rust artifact interface under their exact pins. `PREPARE_NO_VK` can emit keyless preparation storage/transcript; it cannot feed a proof-acceptance claim. Proving reconstructs with a real VK; registration changes must preserve storage relation and be checked in that path. Preliminary fee estimates are diagnostic only. Beta statement/frame/Core candidate cannot directly be passed as Rust runtime data or contract storage; the missing consumer must verify their relation and produce the official existing artifacts.
+
+Changing source bytes or signed owner terms changes the frozen message; changing destination/color/amount/profile changes constants. These need a new encoding/compile outside the exhausted current authority. Adding registry revocation, authenticated funding, genuine chain-time correspondence, general nonce/history accumulation or repayments likewise exceeds this exact compiled profile. Even a future successful exact handoff would establish only this source-bound conditional public transfer experiment, not a general Moriarty compiler, generic financial execution, native PCD, Preview settlement, or all DeFi profiles.
+
+Guarded startup status observed capability SP01.6 loan-swap-subset; operational history/current accounting and stale-input blockers persist. This report does not change admission or those blockers.

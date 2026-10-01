@@ -28,6 +28,10 @@ sources:
 
 # Moriarty language wiki index
 
+## Native financial kernel — 2026-10-01
+
+[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Native check/proof is pending; fixed runtime and row model do not establish financial acceptance.
+
 ## Signed intent consumer — 2026-10-01
 
 [[wiki/sessions/signed-intent-2026-10-01|Actual native signatures, local atomic store and packed DevEx]] · [measured scope](../wiki-llm/signed-intent-2026-10-01/RESULT.md). Final result audits pending; authentic owner/state, complete native proof and Preview remain open.
@@ -331,3 +335,5 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 - [Anoma research bank](research/anoma/index.md)
 
 - [Whole-language design review and integration gaps](research/language-design-review/index.md)
+
+2026-10-01 update: [[wiki/sessions/native-financial-kernel-2026-10-01|Native financial work]] now records reviewed actual keyless preparation and conditional Preview published-format incompatibility; proof/application/authentication gates remain open.

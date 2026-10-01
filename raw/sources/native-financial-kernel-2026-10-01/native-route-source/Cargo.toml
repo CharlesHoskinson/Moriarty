@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = [
+  "zkir",
+  "zkir-wasm",
+]
+
+default-members = [
+  "zkir",
+]
+
+[workspace.package]
+license = "Apache-2.0"
+repository = "https://github.com/midnightntwrk/midnight-zkir"
+
+# Used by the nix wasm packaging (bagel.nix); same settings as midnight-ledger.
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+# base-crypto 1.1.0, serialize 1.2.0, and transient-crypto 3.0.0 are not yet
+# published to crates.io; resolve them from the midnight-ledger repository, at
+# the parent of the zkir-v3-3.0.0-rc.1 tag this workspace was extracted from
+# (the tag commit itself isolates the workspace to the v3 crate, so the other
+# crates can only be loaded from its parent). They all come from the same
+# rev so their interlinked path dependencies unify to a single source.
+[patch.crates-io]
+midnight-base-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9a8777c4d035fc7f38ae286bcf5f8656668efd9f" }
+midnight-serialize = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9a8777c4d035fc7f38ae286bcf5f8656668efd9f" }
+midnight-transient-crypto = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9a8777c4d035fc7f38ae286bcf5f8656668efd9f" }
+# Not needed for the build itself, but without this transient-crypto pulls
+# storage-core (and its macro crates) from crates.io at the same name+version
+# as the git copies above, and nix's importCargoLock cannot vendor the same
+# name+version from two sources.
+midnight-storage-core = { git = "https://github.com/midnightntwrk/midnight-ledger", rev = "9a8777c4d035fc7f38ae286bcf5f8656668efd9f" }
