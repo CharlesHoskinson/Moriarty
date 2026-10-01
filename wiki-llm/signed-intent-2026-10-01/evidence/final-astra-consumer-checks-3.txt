@@ -1,0 +1,85 @@
+✔ pinned native verifier binary is present (1.097138ms)
+✔ fixture fee transfer 1000+10: hand effects, derived head, post state and Core5 cross-check (42.681484ms)
+✔ fixture zero-fee transfer 1000: hand effects, derived head, post state and Core5 cross-check (25.037539ms)
+✔ fixture repay 500 (accrual first, partial interest): hand effects, derived head, post state and Core5 cross-check (26.665592ms)
+✔ fixture repay 3000 (interest 1000 then principal 2000): hand effects, derived head, post state and Core5 cross-check (24.104594ms)
+✔ fixture repay 101000 (full settlement): hand effects, derived head, post state and Core5 cross-check (25.341913ms)
+✔ construction bounds and closed schemas (1.606581ms)
+✔ crypto configuration is copied; later mutation cannot redirect the verifier (22.892611ms)
+✔ snapshots are immutable clones with local-stipulation provenance only (16.921655ms)
+✔ state digest covers state, receipts, registry revision and bindings (1.2784ms)
+✔ owner bytes are state independent: equal statement/frame across different stores (32.181944ms)
+✔ closed settle input rejects invented flags and malformed values; nothing changes (5.808629ms)
+✔ closed settle input: missing/ill-typed/oversize/accessor/array/prototype values refused (7.01922ms)
+✔ R1 same artifact twice concurrently: one LocalCommitted, exact repeat AlreadyCommitted, one effect (28.254316ms)
+✔ R1b eight concurrent identical deliveries: exactly one effect (106.589412ms)
+✔ R2 two different intents (n1,n2) with same preHead: one commits, loser ATOMIC_STALE_STATE and no effect (40.318926ms)
+✔ R2b same nonce, different statement, concurrently: loser is ATOMIC_STALE_STATE, never AlreadyCommitted (30.095537ms)
+✔ stale expected digest is refused before any native process is spawned (6.9646ms)
+✔ R3 same nonce re-signed with preHead=h1 is S0_HISTORY_REPLAY; changed statement with old head is stale; neither consumes (51.060682ms)
+✔ R4 allowance 1500 allows one gross-1010 transfer; second is S0_AUTH_SCOPE after first only (30.496672ms)
+✔ R5 workRemaining 0 is S0_AUTH_SCOPE; R6 balance 1009 < gross 1010 is S0_EFFECT_RANGE; R8 round 11 is S0_INTENT_SCOPE (46.473937ms)
+✔ R7 revocation racing an in-flight settle refuses with AUTH_REVOKED and consumes nothing (26.793732ms)
+✔ R7b revoke API: unknown ids, closed input, monotone revision, effective round semantics (19.27225ms)
+✔ revocation at, before and after the state round (43.786325ms)
+✔ R9 attacker with a native-valid signature under a different key is AUTH_KEY_MISMATCH; wrong-key signature over owner key is SIGNATURE_INVALID (32.018199ms)
+✔ binding matrix: no binding for keyRef -> AUTH_NO_BINDING (18.745454ms)
+✔ binding matrix: binding for a different account -> AUTH_NO_BINDING (18.496688ms)
+✔ binding matrix: wrong network binding -> AUTH_DOMAIN_MISMATCH (15.684571ms)
+✔ binding matrix: wrong chain binding -> AUTH_DOMAIN_MISMATCH (18.201537ms)
+✔ binding matrix: wrong domain id binding -> AUTH_DOMAIN_MISMATCH (17.637593ms)
+✔ binding matrix: source network differs from the ledger -> AUTH_DOMAIN_MISMATCH (15.482388ms)
+✔ binding matrix: source chain differs from the ledger -> AUTH_DOMAIN_MISMATCH (17.319672ms)
+✔ binding matrix: cross-network replay: binding registered for another network and a source naming it -> AUTH_DOMAIN_MISMATCH (17.746397ms)
+✔ binding matrix: scheme differs -> AUTH_KEY_MISMATCH (17.32849ms)
+✔ binding matrix: public key differs -> AUTH_KEY_MISMATCH (16.13111ms)
+✔ binding matrix: expired -> AUTH_EXPIRED (17.753994ms)
+✔ binding matrix: not yet valid -> AUTH_NOT_YET_VALID (16.672376ms)
+✔ binding matrix: revoked from the round -> AUTH_REVOKED (15.224891ms)
+✔ domain id in source that differs from the store is a source-layer refusal (0.695874ms)
+✔ midnight-sign-data framing settles with the same binding and a different frame-bound head (21.711606ms)
+✔ tampering: statement, source, signature and digest are refused before any write (41.33981ms)
+✔ transport faults leave signature validity unknown and never commit (fake binary: transport negatives only) (116.903685ms)
+✔ R11 fault before commit leaves state byte-identical; retry commits exactly once with the same head (35.899876ms)
+✔ R13 fault at write step balances (transfer) leaves state, digest and registry unchanged; clean retry commits (32.289193ms)
+✔ R13 fault at write step balances (repay) leaves state, digest and registry unchanged; clean retry commits (26.398281ms)
+✔ R13 fault at write step allowances (transfer) leaves state, digest and registry unchanged; clean retry commits (31.36812ms)
+✔ R13 fault at write step allowances (repay) leaves state, digest and registry unchanged; clean retry commits (28.379826ms)
+✔ R13 fault at write step obligations (transfer) leaves state, digest and registry unchanged; clean retry commits (32.515865ms)
+✔ R13 fault at write step obligations (repay) leaves state, digest and registry unchanged; clean retry commits (33.43829ms)
+✔ R13 fault at write step replay (transfer) leaves state, digest and registry unchanged; clean retry commits (36.97375ms)
+✔ R13 fault at write step replay (repay) leaves state, digest and registry unchanged; clean retry commits (28.098515ms)
+✔ R13 fault at write step work (transfer) leaves state, digest and registry unchanged; clean retry commits (39.193661ms)
+✔ R13 fault at write step work (repay) leaves state, digest and registry unchanged; clean retry commits (31.952234ms)
+✔ R13 fault at write step head (transfer) leaves state, digest and registry unchanged; clean retry commits (32.063721ms)
+✔ R13 fault at write step head (repay) leaves state, digest and registry unchanged; clean retry commits (30.211113ms)
+✔ R13 fault at write step receipt (transfer) leaves state, digest and registry unchanged; clean retry commits (32.934958ms)
+✔ R13 fault at write step receipt (repay) leaves state, digest and registry unchanged; clean retry commits (25.145213ms)
+✔ R13 fault at write step swap (transfer) leaves state, digest and registry unchanged; clean retry commits (28.322464ms)
+✔ R13 fault at write step swap (repay) leaves state, digest and registry unchanged; clean retry commits (26.292103ms)
+✔ fault hook can only abort: its return value never admits a refused request (14.19521ms)
+✔ R12 ack loss: retry with the pre-commit expected digest is AlreadyCommitted and changes nothing; different statement is not (83.003424ms)
+✔ R14 repay: a competing repayment changes accrual after prepare; stale loser has no partial effect; chained repay uses accrued state (28.623047ms)
+✔ repay chain: 500 then 3000 follows accrual-first from the stored obligation, and settlement refuses a further S0 repay (64.500649ms)
+✔ transfer chain: second intent signs the derived head; stale digest from before the first commit is refused with no partial effect (34.798707ms)
+✔ changed state between snapshot and settle: every changed cell invalidates the expected digest (22.475989ms)
+✔ deriveSuccessorHead is deterministic, domain-separated and bound to frame, preHead, domain and every effect field (0.601226ms)
+✔ R15/R16 validateSuccessor accepts only the exact derived head and untampered complete effects (0.729537ms)
+✔ no result, snapshot or error ever claims ledger or external authority qualification (1.323597ms)
+
+> @moriarty-lang/beta@0.1.0-beta.1 prepack
+> npm run build && node editor/vscode/prepare.mjs
+
+
+> @moriarty-lang/beta@0.1.0-beta.1 build
+> node build.mjs
+
+✔ packed install outside checkout supports CLI, side-effect-free public API and declaration imports (1578.118528ms)
+ℹ tests 69
+ℹ suites 0
+ℹ pass 69
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2004.303762
