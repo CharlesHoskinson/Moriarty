@@ -1,5 +1,6 @@
 import { DocShell } from '../DocShell';
 import { Code, Section, SeeAlso, ThemedFigure } from '../components';
+import { DesignMap } from '../DesignMap';
 import { GETTING_STARTED, PRODUCT_CONTRACT, PROFILE } from '../data';
 import { Families } from '../explanation/Families';
 import { Horizon } from '../explanation/Horizon';
@@ -239,6 +240,9 @@ export default function Explanation() {
           apart is the point: a result that has passed one step says nothing about the next, and a reader can see
           exactly where any given result stops.
         </p>
+        <h3 id="architecture-map">The whole design</h3>
+        <DesignMap />
+        <h3 id="architecture-steps">The five steps</h3>
         <ThemedFigure name="pipeline" alt="" caption={PIPELINE_CAPTION} />
         <ol>
           <li>

@@ -1,5 +1,5 @@
 import { DocShell } from '../DocShell';
-import { Answer, Code, CodeDetails, Section, SeeAlso, Steps } from '../components';
+import { Answer, Code, CodeDetails, Section, SeeAlso, Steps, ThemedFigure } from '../components';
 import { PACKAGE_VERSION, PAGE_HREF, PINNED, PINNED_SHORT, REPOSITORY } from '../data';
 import transferSource from '../lessons/transfer.mori?raw';
 import transferScenario from '../lessons/transfer.scenario.json?raw';
@@ -237,6 +237,16 @@ export default function Tutorial() {
           Everything in this tutorial runs on your own computer, and nothing in it is signed, proved, sent to a ledger or
           settled (<a href={`${E}#stance`}>why the tool is limited this way</a>).
         </p>
+        <ThemedFigure
+          name="pipeline"
+          alt=""
+          caption={
+            <>
+              The tutorial covers the two local steps, Author and Propose. Signing is a{' '}
+              <a href={`${PAGE_HREF.howto}#sign-intent`}>separate how-to guide</a>; Prove and Settle are not built.
+            </>
+          }
+        />
         <p>You will:</p>
         <ul>
           <li>build the <code>mori</code> command from the Moriarty repository;</li>

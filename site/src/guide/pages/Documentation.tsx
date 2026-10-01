@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { DesignMap } from '../DesignMap';
 import { DocShell } from '../DocShell';
 import { ModeLink, Section, ThemedFigure } from '../components';
 import { BETA_PATH, FAMILIES, MODE_LETTER, PAGE_HREF, PROFILE, REPOSITORY, blob, type Mode } from '../data';
@@ -138,6 +139,13 @@ export default function Documentation() {
     >
       <Section id="start" title="Four kinds of page" nav="Four kinds of page" group="Start here">
         <ThemedFigure
+          name="hero"
+          alt=""
+          priority
+          className="doc-hero"
+          caption="A written agreement, its parts kept in separate trays, and a gate that stays shut until the last step."
+        />
+        <ThemedFigure
           name="quadrant"
           alt=""
           priority
@@ -149,6 +157,10 @@ export default function Documentation() {
             <QuadrantCard key={q.mode} q={q} />
           ))}
         </ul>
+      </Section>
+
+      <Section id="design" title="The design on one page" nav="The design on one page" group="Start here">
+        <DesignMap />
       </Section>
 
       <Section id="compass" title="Which do I need?" nav="Which do I need?" group="Start here">

@@ -26,7 +26,7 @@ SRC = Path(__file__).resolve().parents[1] / "src/guide"
 
 # Section ids each page must have, in any order. Other pages link to these ids.
 PAGES = {
-    "documentation.html": {"start", "compass", "examples", "status", "other"},
+    "documentation.html": {"start", "design", "compass", "examples", "status", "other"},
     "tutorial.html": {"overview", "getting-started", "transfer", "repayment", "testing", "next-steps"},
     "how-to.html": {"install-archive", "restore-shell", "editor", "write-test", "test-rejection", "change-amount", "diagnose",
                     "cap-with-fee", "format-and-inspect", "write-amm", "write-lending", "write-stablecoins", "write-options",
@@ -67,7 +67,7 @@ LEGACY = [
 ]
 
 # Themed figures: page, figure image stem.
-FIGURES = [("documentation.html", "quadrant"), ("explanation.html", "hero"), ("explanation.html", "pipeline")]
+FIGURES = [("documentation.html", "quadrant"), ("documentation.html", "hero"), ("explanation.html", "hero"), ("explanation.html", "pipeline"), ("tutorial.html", "pipeline")]
 
 results, errors = [], []
 OUT.mkdir(parents=True, exist_ok=True)
