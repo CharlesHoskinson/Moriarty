@@ -270,7 +270,7 @@ export function renderErrorReview(error:{code:string;message:string},outcome:'ju
   outcome==='unable'?'  Outcome: no judgment was made. Nothing was prepared or checked; signature validity is unknown, not false.':'  Outcome: rejected. No effects were published.',
   `  Detail: ${escapeAscii(error.message)}`];
  if(hint)out.push(`  Hint: ${hint}`);
- out.push(...extra);
+ out.push(...extra.map(escapeAscii));
  return out.join('\n')+'\n';
 }
 /** First leaf, in table order, where an artifact statement differs from the source-derived statement. */

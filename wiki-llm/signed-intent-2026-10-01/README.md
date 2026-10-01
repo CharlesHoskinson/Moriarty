@@ -12,6 +12,7 @@ reviews, while continuing work during AFK time.
 - [Local atomic consumer](LOCAL-SETTLEMENT.md) and [security cases](SECURITY-CASES.md).
 - [Developer walkthrough](DEVEX-RESULT.md) and [native numerical result](NATIVE-RESULT.md).
 - [Measured stage](RESULT.md): actual tests and preserved acceptance gaps.
+- [Review repair](REPAIR-AUDIT.md): supplementary rejection detail escaping.
 
 Repository observation: versioned Rust intent encoding/verification and the
 actual asynchronous beta consumer are implemented locally. Integration tests,
