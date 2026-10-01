@@ -4,7 +4,7 @@ This iteration follows signed-intent integration merged to `main` in PR13, commi
 
 ## Latest status after V8-03
 
-V7 completed the offline build, parameter acquisition and native key generation. V8-03 produced a finalized native proof and signed transaction, then strict well-formedness refused `OutputsNotSorted` before ledger application. Independent verification did not run. Full financial acceptance, authenticated custody, general source correspondence and Preview settlement remain open. See [the actual refusal](V8-03-ACTUAL-REFUSAL.md) and [the alignment review](../ALIGNMENT-REVIEW-2026-10-01.md).
+V7 completed the offline build, parameter acquisition and native key generation. After the preserved V8-03 unsorted-output refusal, the sorted R3 attempt produced a finalized proof and signed transaction, passed default Real native well-formedness in its producing process, then application refused excess NIGHT in the test genesis. Independent verification did not run. Full financial acceptance, authenticated custody, general source correspondence and Preview settlement remain open. See [the latest application refusal](R3-04-ACTUAL-APPLICATION-REFUSAL.md), [the historical V8 refusal](V8-03-ACTUAL-REFUSAL.md) and [the alignment review](../ALIGNMENT-REVIEW-2026-10-01.md).
 
 The next sections retain the preparation-stage record from before V7 key generation and V8-03 execution. Their statements about missing keys and proofs describe that earlier stage.
 
@@ -17,8 +17,8 @@ The next sections retain the preparation-stage record from before V7 key generat
 | Actual official runtime proof-data serialization | Locally observed | Current actual production handoff produced byte-identical frozen native preimage; no proof statement fabricated. |
 | Native source check | Locally observed, scoped result reviewed | [Result](evidence/ADAPTER-V3-RESULT.json): actual native relation accepted good and refused five forged preimages. No proof. |
 | Production signed Beta to native ledger preparation | Locally observed, narrow result reviewed | [Actual v5 result](V5-ACTUAL-PREPARATION.md): handoff and actual Rust preparation succeeded; complete preimage and eight contexts matched, actual IR preprocessing passed. No keys/proof/application. |
-| Full financial native proof | Open | Exact IR row model k17/114250 rows. No SRS body, key generation or proof performed. Model size is not proof success. |
-| Actual ledger financial acceptance | Open | Current keyless preimage has provisional binding0. Finalized ledger binding, actual proof, strict validation/application, fees and authenticated custody remain required. |
+| Finalized financial proof cryptography | Locally observed, failed financial application | [R3 evidence](R3-04-ACTUAL-APPLICATION-REFUSAL.md): real proof and same-process default Real WF; independent verifier and full Success remain open. |
+| Actual ledger financial acceptance | Open | Latest sorted finalized proof passed default Real WF, then native application returned NightBalance Failure. Complete effects, consumed fees, independent verification and authenticated custody remain required. |
 | Preview transfer and repayment | Incompatible matching published formats, open capability | Live Preview reports ledger8.1.2; matching published release supports older proof/operation/IR encodings. Conditional on live release correspondence; no live build attestation or observed candidate rejection. No transaction submitted. |
 
 ## Historical design choices before V7 key generation
@@ -58,3 +58,7 @@ Research artifacts currently live under `/home/charl/research/moriarty-signed-in
 ## Latest actual native refusal
 
 [V8-03 actual attempt](V8-03-ACTUAL-REFUSAL.md) retained a finalized 6,336-byte native proof and signed transaction, then native well-formedness refused unsorted offer outputs before application. The attempt is consumed; separate verification did not run. Fresh actual-result review and a distinct reviewed source/resource repair are required.
+
+## Latest actual application refusal
+
+[R3 actual attempt](R3-04-ACTUAL-APPLICATION-REFUSAL.md) supersedes earlier current-status statements above: real finalized proof and producing-process default Real WF succeeded; native application failed the NIGHT-supply invariant with unchanged state. Two fresh actual-result audits approve this failure classification only. The immediate predicate is native diagnosis of the retained genesis, followed by supply-consistent funding and a distinct reviewed complete financial attempt.
