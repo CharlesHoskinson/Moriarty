@@ -3,26 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
     <title>Tutorials — Moriarty</title>
-    <meta
-      name="description"
-      content="Learn the Moriarty surface language: write a bounded financial intention, check it, prepare it locally, and see how each of the eight DeFi areas is expressed and supported."
-    />
+    <meta name="description" content="Learn the Moriarty beta language by doing: install the command-line tool, write a transfer, check it, run it against a local scenario, then make a test fail on purpose." />
+    <script>
+      // Old single-page links (tutorial.html#syntax, #amm, ...) move to the page that now holds the section.
+      // The hash never reaches the server, so this runs here, before the page renders, and again on a hash change.
+      function route() {
+        var h;
+        try { h = decodeURIComponent((location.hash || '').slice(1)); } catch (e) { return; }
+        if (!h || /^(overview|getting-started|install|transfer(-derive|-files)?|repayment(-derive|-files)?|testing|wrong-expectation|core-rejection|next-steps)$/.test(h)) return;
+        var fam = 'amm|lending|stablecoins|options|oracles|governance|bridges|staking';
+        var exact = {
+          'overview-first': 'tutorial.html#transfer-files', 'overview-areas': 'documentation.html#examples',
+          'overview-names': 'explanation.html#names-ids-symbols', 'overview-legend': 'reference.html#support-labels',
+          'overview-split': 'explanation.html#three-questions', 'overview-source': 'reference.html#release',
+          'install-archive': 'how-to.html#install-archive', 'commands': 'reference.html#cli',
+          'units': 'explanation.html#names-ids-symbols', 'open-premises': 'reference.html#premises-bindings',
+          'what-a-pass-means': 'explanation.html#stipulation', 'lending-repay': 'tutorial.html#repayment',
+          'syntax-failures': 'reference.html#results', 'syntax-current-support': 'reference.html#support-matrix',
+          'syntax-names-ids-and-symbols-are-three-different-things': 'explanation.html#names-ids-symbols',
+          'trust-federation-is-optional': 'explanation.html#federation',
+          'trust-account-key-state-custody-and-asset': 'explanation.html#names-ids-symbols',
+          'trust-local-premises-and-unverified-bindings': 'reference.html#premises-bindings',
+          'architecture': 'explanation.html#architecture', 'architecture-kernel': 'explanation.html#architecture-kernel',
+          'bridges-late-result-and-refund': 'explanation.html#bridges-late-result-and-refund'
+        };
+        var to = exact[h], m;
+        if (!to && /^syntax(-|$)/.test(h)) to = 'reference.html#language';
+        if (!to && /^patterns(-|$)/.test(h)) to = 'explanation.html#patterns';
+        if (!to && /^trust(-|$)/.test(h)) to = 'reference.html#support-matrix';
+        if (!to && (m = new RegExp('^(' + fam + ')$').exec(h))) to = 'explanation.html#' + m[1];
+        if (!to && (m = new RegExp('^(' + fam + ')-horizon').exec(h))) to = 'explanation.html#horizon';
+        if (!to && (m = new RegExp('^(' + fam + ')-(amounts|file|command)').exec(h))) to = 'reference.html#family-' + m[1];
+        if (!to && (m = new RegExp('^(' + fam + ')-pattern').exec(h))) to = 'how-to.html#write-' + m[1];
+        if (!to && (m = new RegExp('^(' + fam + ')-').exec(h))) to = 'explanation.html#' + m[1];
+        if (to) location.replace(to);
+      }
+      route();
+      addEventListener('hashchange', route);
+    </script>
   </head>
-  <body class="guide-page">
+  <body class="guide-page" data-page="tutorial">
     <div id="root">
       <main>
-        <h1>Moriarty tutorials</h1>
-        <p>
-          These tutorials teach the Moriarty beta authoring language: a program states the terms an
-          owner would sign, with explicit assets, domains, accounts and bounds, and the beta toolchain
-          checks it and prepares an unqualified local candidate. Nothing in the first lessons is signed,
-          proved or settled. The interactive guide needs JavaScript. The
-          source repository, <a href="https://github.com/CharlesHoskinson/Moriarty">CharlesHoskinson/Moriarty</a>,
-          holds the same material in <code>packages/moriarty-beta/GETTING-STARTED.md</code>.
-        </p>
+        <h1>Write, check and test your first agreement</h1>
+        <p>This tutorial installs the Moriarty beta command-line tool, creates a transfer agreement, checks it, runs it against a local scenario and then makes a test fail on purpose. The interactive page needs JavaScript.</p>
+        <ul>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="tutorial.html">Tutorials</a></li>
+          <li><a href="how-to.html">How-to guides</a></li>
+          <li><a href="reference.html">Reference</a></li>
+          <li><a href="explanation.html">Explanation</a></li>
+        </ul>
+        <p>Source: <a href="https://github.com/CharlesHoskinson/Moriarty">CharlesHoskinson/Moriarty</a>.</p>
       </main>
     </div>
-    <script type="module" src="/src/tutorial/main.tsx"></script>
+    <script type="module" src="/src/guide/main.tsx"></script>
   </body>
 </html>

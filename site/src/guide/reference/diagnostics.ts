@@ -1,0 +1,298 @@
+/**
+ * Every diagnostic code the beta package at the pinned commit can report, with its message text as the
+ * source spells it. `<x>` marks a part of the message the tool fills in. Grouped by the module that raises it.
+ */
+
+export interface DiagnosticCode {
+  code: string;
+  messages: string[];
+}
+
+export interface DiagnosticGroup {
+  key: string;
+  caption: string;
+  /** The result status these codes appear under. */
+  status: string;
+  codes: DiagnosticCode[];
+}
+
+const d = (code: string, ...messages: string[]): DiagnosticCode => ({ code, messages });
+
+export const DIAGNOSTIC_GROUPS: DiagnosticGroup[] = [
+  {
+    key: 'source',
+    caption: 'Source checks (src/frontend.ts). Reported by check, fmt, inspect, expand, simulate and test.',
+    status: 'AuthoringRejected',
+    codes: [
+      d('BETA_PROFILE', 'Expected profile "moriarty-beta/1"'),
+      d('BETA_SOURCE_BOUND', 'Source exceeds 65536 bytes'),
+      d('BETA_TOKEN_BOUND', 'Source exceeds 8192 tokens including trivia and EOF'),
+      d('BETA_UNICODE', 'Lone Unicode surrogate'),
+      d('BETA_CHARACTER', 'Unsupported source character; identifiers use ASCII and division is not supported'),
+      d('BETA_COMMENT', 'Unterminated block comment'),
+      d('BETA_STRING', 'Unterminated string', 'Invalid JSON string', 'Empty <field> claim'),
+      d('BETA_STRING_BOUND', 'Decoded string exceeds 1024 bytes'),
+      d('BETA_NUMBER', 'Noncanonical numeric spelling'),
+      d('BETA_IDENTIFIER_BOUND', 'Identifier exceeds 64 characters'),
+      d('BETA_IDENTIFIER', 'Expected declaration identifier'),
+      d('BETA_TRANSPORT_ID', 'Identifier cannot be represented by unchanged Source/6'),
+      d('BETA_SYNTAX', 'Expected <token>', 'Expected field name', 'Expected qualified call component', 'Qualified names are calls only', 'Expected expression'),
+      d('BETA_TRAILING_INPUT', 'Trailing input after agreement'),
+      d('BETA_CONSTRUCT', 'Unknown or incomplete declaration'),
+      d('BETA_DUPLICATE_NAME', 'Duplicate declaration <name>'),
+      d('BETA_DUPLICATE_ID', 'Duplicate economic identity; aliases are unsupported', 'Duplicate pool asset'),
+      d('BETA_DUPLICATE_FIELD', 'Duplicate field <name>'),
+      d('BETA_REFERENCE', 'Unknown or forward reference <name>', 'Unknown type asset <name>', 'Unknown annotation domain'),
+      d('BETA_UNKNOWN_FIELD', 'Unknown field <name>'),
+      d(
+        'BETA_MISSING_FIELD',
+        'Missing field <name>',
+        'Stablecoin instrument requires asset and backing references',
+        'Option instrument requires underlying and settlement assets',
+      ),
+      d('BETA_UNKNOWN_CALL', 'Unknown call <name>'),
+      d(
+        'BETA_TYPE',
+        'Expected <kind> reference',
+        'Expected unsigned scalar',
+        'Expected string',
+        'Expected nominal Qty',
+        'Expected scalar or Qty',
+        'Expected array of Qty',
+        'Arithmetic requires scalars or quantities',
+        'Qty times Qty is unsupported',
+        '<kind> requires a record',
+        'Intent requires a named operation call',
+        'Pool assets require a nonempty asset array',
+        'Episode stages require an array',
+        '<field> requires a string array',
+        'Signers must be an account array',
+        'Horizon validity requires two round scalars',
+        'Horizon validity requires rounds or two round scalars',
+      ),
+      d('BETA_ANNOTATION', 'Expected type name', 'Value does not match <Type>', 'Unsupported type annotation <Type>'),
+      d(
+        'BETA_ASSET_MISMATCH',
+        'Expected Qty<X>, received Qty<Y>',
+        'Addition/subtraction require identical numeric types and nominal assets',
+        'min/max require identical numeric types',
+        'Asset is not a declared pool member',
+        'Bridge intent asset must match its local amount',
+      ),
+      d(
+        'BETA_DOMAIN_MISMATCH',
+        'Annotation domain mismatch',
+        'Transfer accounts have different domains',
+        'Repayment payer and obligation domains differ',
+        'Quantity asset has different domain',
+        'Pool and owner domains differ',
+        'Pool asset domain differs',
+        'Obligation asset domain differs',
+        'Resource asset domain differs',
+        'Operation argument domains differ',
+        'Operation account domain differs',
+        'Intent header and operation domains differ',
+        'Intent rounds domain differs',
+        'Intent domain, asset and signer must agree',
+        'Intent requires rounds on its domain',
+        'Repayment obligation domain or asset differs',
+      ),
+      d('BETA_QUANTITY_SEPARATOR', 'Quantity and asset need whitespace or a comment'),
+      d('BETA_PRECISION', 'Quantity has more decimals than asset scale'),
+      d('BETA_DECIMAL_SCALAR', 'A decimal requires an asset reference'),
+      d('BETA_SCALE', 'Asset scale must be 0..18'),
+      d('BETA_UINT128_BOUND', 'Unsigned arithmetic outside 0..2^128-1'),
+      d('BETA_S127_BOUND', 'S0 field exceeds 2^127-1'),
+      d('BETA_ROUND_WINDOW', 'Inverted round window'),
+      d('BETA_ENDPOINT_ALIAS', 'Transfer requires three distinct accounts, including zero fee'),
+      d('BETA_SIGNER', 'Transfer signer must be from account', 'Repayment signer must be payer'),
+      d('BETA_OPERATION', 'Intent operation must be transfer, repay or a recognized horizon operation', 'Action intent has no operation'),
+      d('BETA_FAILURE_POLICY', 'S0 requires SuccessOnly', 'S0 requires empty <field>', 'S0 requires <field>: None'),
+      d('BETA_DEPTH_BOUND', 'Nesting exceeds 64'),
+      d('BETA_NODE_BOUND', 'Analysis exceeds 8192 nodes'),
+      d('BETA_EDGE_BOUND', 'Analysis exceeds 32768 expression edges'),
+      d('BETA_FIELD_BOUND', 'Record/call exceeds 64 fields', 'Too many type arguments'),
+      d('BETA_DECLARATION_BOUND', 'Agreement exceeds 256 declarations/actions'),
+      d('BETA_FORMAT_BOUND', 'Formatted source exceeds 65536 bytes'),
+    ],
+  },
+  {
+    key: 'action',
+    caption: 'Action selection and support (src/bridge.ts). Reported by expand, simulate and test.',
+    status: 'AuthoringRejected or Unsupported',
+    codes: [
+      d('BETA_ACTION_UNKNOWN', 'Unknown action <name> (status AuthoringRejected)'),
+      d('BETA_PROFILE_UNSUPPORTED', 'Recognized authoring profile has no local execution; scenario was not schema-checked or applied (status Unsupported)'),
+    ],
+  },
+  {
+    key: 'scenario',
+    caption:
+      'Scenario and expansion checks (src/bridge.ts). Reported by expand, simulate and test. The message ends with " (<pointer>); source span identifies the action, not the scenario location".',
+    status: 'FormationRejected',
+    codes: [
+      d('BETA_SCENARIO_PROFILE', 'Expected local scenario profile'),
+      d('BETA_SCENARIO_SCHEMA', 'Expected record', 'Unknown field <name>', 'Missing field <name>', 'S0 requires an Outstanding obligation', 'Expected closed replay tag'),
+      d('BETA_SCENARIO_STRING', 'Expected nonempty scalar text'),
+      d('BETA_SCENARIO_ID', 'ID is not representable in Source/6'),
+      d('BETA_SCENARIO_INTEGER', 'Expected canonical bounded decimal string'),
+      d(
+        'BETA_SCENARIO_IDENTITY',
+        'Expected domain ID <id>; got <id>',
+        'Expected asset ID <id>; got <id>',
+        'Obligation does not match source request',
+        'Candidate asset cannot be represented by this Source/6 envelope',
+      ),
+      d('BETA_SCENARIO_ACCOUNTING', 'Outstanding must equal principal plus accrued', 'Counter total exceeds UInt128'),
+      d('BETA_SCENARIO_CELLS', 'Exact ordered balance cells required', 'Balance account/order mismatch', 'Duplicate balance identities', 'Allowance owner mismatch'),
+      d('BETA_SCENARIO_EFFECTS', 'Candidate effect array exceeds closed S0 bounds', 'Unknown effect kind', 'Unknown obligation status'),
+      d('BETA_SOURCE_SHAPE', 'Expected <shape>', 'Missing <field>', 'Expected closed request', 'Expected rounds'),
+      d('BETA_ORIGIN_BOUND', 'Origins exceed 2048'),
+      d('BETA_EXPANSION_BOUND', 'Generated Source/6 exceeds 65536 bytes', 'Serialized expansion exceeds 524288 bytes'),
+    ],
+  },
+  {
+    key: 'json',
+    caption: 'Bounded JSON parser (src/json.ts). Applies to scenario, test and signature files.',
+    status: 'FormationRejected',
+    codes: [
+      d('BETA_JSON_TEXT', 'JSON must be text'),
+      d('BETA_JSON_BOUND', 'JSON exceeds 65536 bytes'),
+      d('BETA_JSON_UNICODE', 'Invalid Unicode scalar', 'Invalid decoded Unicode scalar'),
+      d(
+        'BETA_JSON_SYNTAX',
+        'Invalid JSON string',
+        'Unterminated string',
+        'Expected object key',
+        'Expected colon',
+        'Expected comma',
+        'Expected JSON value',
+        'Trailing JSON material',
+        'Invalid JSON',
+      ),
+      d('BETA_JSON_STRING', 'JSON string exceeds 1024 bytes'),
+      d('BETA_JSON_DEPTH', 'JSON depth exceeds 32'),
+      d('BETA_JSON_NODES', 'JSON nodes exceed 4096'),
+      d('BETA_JSON_FIELDS', 'Object fields exceed 64'),
+      d('BETA_JSON_DUPLICATE', 'Duplicate JSON key <key>'),
+    ],
+  },
+  {
+    key: 'cli',
+    caption: 'Command line, files and tests (src/cli.ts).',
+    status: 'FormationRejected',
+    codes: [
+      d('BETA_BOM', 'UTF-8 BOM is unsupported; remove it explicitly'),
+      d('BETA_UTF8', 'File must contain valid UTF-8'),
+      d('BETA_INIT_EXISTS', 'Target already exists; choose a new directory'),
+      d(
+        'BETA_CASE_SCHEMA',
+        'Expected record',
+        'Unknown field <name>',
+        'Missing field <name>',
+        'Expected 1..64 local cases',
+        'Invalid or duplicate case name/action',
+        'Unknown expected status',
+      ),
+      d('BETA_CASE_PATH', 'Expected relative project file', 'Case file outside project', 'Case symlink outside project'),
+      d('BETA_CASE_RESULT_BOUND', 'Case report exceeds 524288 bytes'),
+    ],
+  },
+  {
+    key: 'inspect',
+    caption: 'Inspection (src/index.ts). Reported by inspect.',
+    status: 'InspectionRejected',
+    codes: [
+      d(
+        'BETA_INSPECTION_BOUND',
+        'Signed scope summary exceeds bounded response work or bytes',
+        'Signed scope projection exceeds depth64',
+        'Serialized inspection exceeds 524288 bytes',
+      ),
+    ],
+  },
+  {
+    key: 'signed',
+    caption: 'Signed intent (src/auth.ts, src/atomic.ts, src/intent-display.ts). Reported by intent and verify-intent. BETA_CRYPTO_ codes exit 2.',
+    status: 'FormationRejected',
+    codes: [
+      d('BETA_AUTH_SOURCE', '<expand result as JSON>', 'Source expansion changed'),
+      d('BETA_SIGNATURE_SCHEMA', 'Expected record', 'Expected source entity', 'Expected source text', 'Invalid signing metadata', 'Invalid signature hex', 'Missing statement', '<native code>: <native error>'),
+      d('BETA_SIGNATURE_SOURCE_MISMATCH', 'Signed statement differs from current source (with pointer, claimed and computed)'),
+      d('BETA_DISPLAY_SHAPE', '<review rendering shape message>'),
+      d('BETA_INTENT_AMOUNT_FORMAT', 'Amounts are canonical unsigned decimal atoms with scale 0..18'),
+      d('BETA_CRYPTO_BINARY_PATH', 'Configure an absolute native verifier path'),
+      d('BETA_CRYPTO_BINARY_UNAVAILABLE', 'Native verifier unavailable; configure an installed binary'),
+      d('BETA_CRYPTO_TIMEOUT', 'Timeout must be 1..30000 ms', 'Native verifier timed out'),
+      d('BETA_CRYPTO_INPUT_BOUND', 'Native request exceeds bound'),
+      d('BETA_CRYPTO_OUTPUT_BOUND', 'Native stdout exceeds bound', 'Native stderr exceeds bound'),
+      d('BETA_CRYPTO_PROCESS', 'Native stdin failed'),
+      d(
+        'BETA_CRYPTO_RESPONSE',
+        'Expected closed object',
+        'Response BOM',
+        'Expected one JSON line',
+        'Invalid native JSON (<code>)',
+        'Invalid native response',
+        'Invalid rejection',
+        'Invalid native claims',
+        'Status/exit mismatch',
+        'Missing statement',
+        'Statement differs from source',
+        'Owner projection hash mismatch',
+        'Signing metadata mismatch',
+        'Invalid bytes/hash',
+        'Invalid frame',
+        'Noncanonical frame payload',
+        'Frame statement mismatch',
+        'Message mismatch',
+      ),
+    ],
+  },
+  {
+    key: 'editor',
+    caption: 'Language server (src/servers.ts). Published as an editor diagnostic.',
+    status: 'diagnostic only',
+    codes: [d('BETA_RESOURCE', 'Source or aggregate document byte limit exceeded; this generation has no analysis')],
+  },
+];
+
+/**
+ * Core rejection codes (experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts and
+ * mil4-s0-source-v6.ts). They carry a judgment and no message.
+ */
+export const CORE_CODES: { code: string; judgment: string; when: string }[] = [
+  { code: 'S0_STAGE_UNSUPPORTED', judgment: 'stage', when: 'The state or request shape is outside the S0 stage (missing balance or allowance rows, obligation not Outstanding, wrong row order).' },
+  { code: 'S0_INTENT_SCOPE', judgment: 'intent', when: 'The round is outside the window; fee above fee_cap; value plus fee above gross_cap; value below net_floor; zero amount; repayment with nonzero fee_cap or net_floor; signed action differs from the submitted action.' },
+  { code: 'S0_INTENT_ALIAS', judgment: 'intent', when: 'Signer, recipient and fee recipient are not three distinct accounts.' },
+  { code: 'S0_EFFECT_RANGE', judgment: 'effect', when: 'The payer balance is below the gross debit, a credit overflows, or a repayment exceeds outstanding.' },
+  { code: 'S0_EFFECT_MISMATCH', judgment: 'effect', when: 'The proposed effects differ from the effects Core computes.' },
+  { code: 'S0_AUTH_SCOPE', judgment: 'authority', when: 'Allowance remaining is below the gross debit, work remaining is zero, or a counter overflows.' },
+  { code: 'S0_HISTORY_STALE', judgment: 'history', when: 'pre_head differs from the scenario head.' },
+  { code: 'S0_HISTORY_REPLAY', judgment: 'history', when: 'The replay key is already consumed.' },
+  { code: 'S0_HISTORY_SUCCESSOR', judgment: 'history', when: 'post_head is empty or equals the current head.' },
+  { code: 'S0_FAILURE_UNSUPPORTED', judgment: 'failure', when: 'The requested outcome is not terminal success with no retained effects or duties.' },
+];
+
+/** Codes of the generated Source/6 parser. They appear under FormationRejected with the message prefix "Generated Source/6 formation:". */
+export const SOURCE6_CODES = [
+  'AST_BOUND',
+  'DEPTH_BOUND',
+  'IDENTIFIER_BOUND',
+  'INTEGER_BOUND',
+  'INVALID_INTEGER',
+  'INVALID_STRING',
+  'INVALID_SURROGATE',
+  'NON_ASCII_IDENTIFIER',
+  'SOURCE6_CELL_SHAPE',
+  'SOURCE6_PROFILE_UNSUPPORTED',
+  'SOURCE6_RANGE',
+  'SOURCE6_SHAPE',
+  'SOURCE6_UNKNOWN_TAG',
+  'SOURCE6_VERSION',
+  'SOURCE_BOUND',
+  'STRING_BOUND',
+  'TOKEN_BOUND',
+  'UNEXPECTED_CHAR',
+  'UNTERMINATED_COMMENT',
+];

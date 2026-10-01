@@ -1,0 +1,221 @@
+{
+  "status": "PreparedUnqualified",
+  "sourceHash": "cda0142e991033fba9eb1551e9188e1bb2b3b953513d2893473810ef5e1b1c66",
+  "scenarioHash": "00bfbfaac6d28d7d13c0450e7204634e26a3768901be79c54f80eb9fba19fe8e",
+  "result": {
+    "status": "PreparedUnqualified",
+    "ast": {
+      "profile": "moriarty-financial-agreement-source/6",
+      "programId": "LoanAgreement",
+      "domain": "Midnight",
+      "settlement": {
+        "asset": "A",
+        "scale": "2"
+      },
+      "selected": {
+        "actionId": "RepayAccrualFirst",
+        "sourceHash": "src1",
+        "policyDigest": "policy1"
+      },
+      "intent": {
+        "signer": "Payer",
+        "keyRef": "key1",
+        "nonce": "n1",
+        "preHead": "h0",
+        "notBefore": "0",
+        "notAfter": "10",
+        "grossCap": "3000",
+        "feeCap": "0",
+        "netFloor": "0",
+        "signedAction": {
+          "kind": "Repay",
+          "obligation": "Loan",
+          "payer": "Payer",
+          "amount": "3000",
+          "conversion": "identity"
+        },
+        "failure": "success_only",
+        "observations": "empty",
+        "disclosures": "empty",
+        "retainedEffects": "empty",
+        "retainedDuties": "empty",
+        "delegation": "none",
+        "recovery": "none"
+      },
+      "authenticated": {
+        "head": "h0",
+        "predecessor": "genesis",
+        "round": "1",
+        "balances": [
+          {
+            "account": "Payer",
+            "amount": "200000"
+          },
+          {
+            "account": "Creditor",
+            "amount": "0"
+          }
+        ],
+        "allowance": {
+          "owner": "Payer",
+          "remaining": "200000",
+          "spent": "0"
+        },
+        "obligation": {
+          "id": "Loan",
+          "debtor": "Payer",
+          "creditor": "Creditor",
+          "asset": "A",
+          "principal": "100000",
+          "accrued": "1000",
+          "outstanding": "101000",
+          "status": "Outstanding"
+        },
+        "replay": "unused",
+        "workRemaining": "10",
+        "workSpent": "0"
+      },
+      "submitted": {
+        "action": {
+          "kind": "Repay",
+          "obligation": "Loan",
+          "payer": "Payer",
+          "amount": "3000",
+          "conversion": "identity"
+        },
+        "effects": [
+          {
+            "kind": "Debit",
+            "account": "Payer",
+            "asset": "A",
+            "amount": "3000"
+          },
+          {
+            "kind": "Credit",
+            "account": "Creditor",
+            "asset": "A",
+            "amount": "3000"
+          },
+          {
+            "kind": "SetObligation",
+            "id": "Loan",
+            "principal": "98000",
+            "accrued": "0",
+            "outstanding": "98000",
+            "status": "Outstanding"
+          },
+          {
+            "kind": "UseAllowance",
+            "owner": "Payer",
+            "amount": "3000"
+          },
+          {
+            "kind": "UseReplay",
+            "key": "n1"
+          },
+          {
+            "kind": "AdvanceHead",
+            "predecessor": "h0",
+            "successor": "h1"
+          }
+        ],
+        "postHead": "h1"
+      }
+    },
+    "candidate": {
+      "status": "PreparedUnqualified",
+      "core": "moriarty-core/5",
+      "preHead": "h0",
+      "effects": [
+        {
+          "kind": "Debit",
+          "account": "Payer",
+          "asset": "A",
+          "amount": "3000"
+        },
+        {
+          "kind": "Credit",
+          "account": "Creditor",
+          "asset": "A",
+          "amount": "3000"
+        },
+        {
+          "kind": "SetObligation",
+          "id": "Loan",
+          "principal": "98000",
+          "accrued": "0",
+          "outstanding": "98000",
+          "status": "Outstanding"
+        },
+        {
+          "kind": "UseAllowance",
+          "owner": "Payer",
+          "amount": "3000"
+        },
+        {
+          "kind": "UseReplay",
+          "key": "[\"Midnight\",\"Payer\",\"n1\"]"
+        },
+        {
+          "kind": "AdvanceHead",
+          "predecessor": "h0",
+          "successor": "h1"
+        }
+      ],
+      "candidatePost": {
+        "core": "moriarty-core/5",
+        "domain": "Midnight",
+        "asset": "A",
+        "head": "h1",
+        "round": "1",
+        "workRemaining": "9",
+        "workSpent": "1",
+        "balances": [
+          {
+            "account": "Payer",
+            "amount": "197000"
+          },
+          {
+            "account": "Creditor",
+            "amount": "3000"
+          }
+        ],
+        "allowances": [
+          {
+            "owner": "Payer",
+            "remaining": "197000",
+            "spent": "3000"
+          }
+        ],
+        "obligations": [
+          {
+            "id": "Loan",
+            "debtor": "Payer",
+            "creditor": "Creditor",
+            "asset": "A",
+            "principal": "98000",
+            "accrued": "0",
+            "outstanding": "98000",
+            "status": "Outstanding"
+          }
+        ],
+        "consumedReplay": [
+          "[\"Midnight\",\"Payer\",\"n1\"]"
+        ]
+      },
+      "requiredPremises": [
+        "canonical-intent-signature",
+        "snapshot-to-head",
+        "head-extension",
+        "atomic-ledger-compare-and-consume"
+      ]
+    },
+    "unverifiedBindings": [
+      "agreement-id",
+      "selected-program",
+      "asset-scale",
+      "authenticated-predecessor"
+    ]
+  },
+  "qualification": "local-stipulation-only"
+}
