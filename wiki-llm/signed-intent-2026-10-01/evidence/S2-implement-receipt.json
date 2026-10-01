@@ -1,0 +1,104 @@
+{
+  "duration_api_ms": 738410,
+  "stop_reason": "end_turn",
+  "session_id": "6e9204fa-7d6b-482c-b528-41debec69fbd",
+  "total_cost_usd": 2.437310399999999,
+  "usage": {
+    "input_tokens": 58,
+    "cache_creation_input_tokens": 183599,
+    "cache_read_input_tokens": 3049242,
+    "output_tokens": 109295,
+    "output_tokens_details": {
+      "thinking_tokens": 60568
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 183599,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2187,
+        "cache_read_input_tokens": 187612,
+        "cache_creation_input_tokens": 1599,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1599
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 58,
+      "outputTokens": 109295,
+      "cacheReadInputTokens": 3049242,
+      "cacheCreationInputTokens": 183599,
+      "webSearchRequests": 0,
+      "costUSD": 2.437310399999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 60568,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 34,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "The local settlement consumer is built and green. Its 68 tests pass against the real pinned Rust verifier, and `tsc --noEmit` is clean. The full beta suite also passes, 160 of 160, including G2's tests.\n\nI didn't touch `index.ts` or any file outside my set. No agents, commits, cargo builds, wallet or network calls. A declaration emit and an esbuild bundle went to `/tmp` only, and both succeed.\n\n## What was built\n\n**Files (all untracked, mine only):**\n- `packages/moriarty-beta/src/atomic.ts`\n- `packages/moriarty-beta/tests/atomic.test.mjs`\n- `wiki-llm/signed-intent-2026-10-01/LOCAL-SETTLEMENT.md`\n\n**API:**\n- `new LocalSettlementStore(initialScenarioText, bindingsText, crypto, {faultHook?})`\n- `snapshot()`, `prepareIntent({source, action, signing})`\n- `settle({source, action, signatureText, expectedStateDigest})`\n- `revoke({bindingId, fromRound?})`\n- Exported helpers: `deriveSuccessorHead`, `validateSuccessor`.\n\n**What `settle` does:**\n- **Scenario source:** it builds the Core5 scenario from store state, never from a caller snapshot.\n- **Verification:** it calls G2's real `verifyAndPrepare`, which runs the native signature check and the actual Core5.\n- **Registry check:** it checks the explicit local registry on full domain id/chain/network, account, keyRef, scheme, key, validity window and revocation.\n- **Commit:** under a mutex it re-reads the store, re-checks authority, compares the state digest, re-runs Core5, validates the derived head, then does a copy-on-write commit of all fields or none.\n- **Successor head:** it is derived from the signed frame and the effects excluding `AdvanceHead`. The caller supplies no post-state and no head.\n- **Output:** every result carries `ledger_accepted:false` and `authority_valid:null`, with all four premises and four unverified bindings kept. Provenance is always `local-stipulation`. Nothing is named Accepted, Authenticated or LedgerCommitted.\n\n## Tests\n\n- **Coverage:**\n  - the five hand-computed effect fixtures (fee transfer, zero-fee transfer, repay 500, repay 3000, repay 101000), cross-checked against Core5 called directly;\n  - R1\u2013R16;\n  - repay accrual chains;\n  - changed-state digests;\n  - the binding matrix;\n  - closed-input rejection;\n  - transport negatives using a fake binary;\n  - fault injection at all 8 write steps for both transfer and repay.\n- **Ephemeral keys:** keys are ECDSA, held in memory only.\n- **Red receipt:** the red run is against a stub that throws \"not implemented\", so 64 of 65 tests failed. It shows the tests exercise the API, not that they catch subtle bugs.\n- **Mutation check:** I broke the implementation ten ways (authority re-check, digest compare, frame compare, head derivation, write order, domain, revocation, registry digest, early stale refusal, key compare). Three survived the first round, so I added tests for them. All ten are now killed.\n- **Receipts:** `/home/charl/research/moriarty-s2-receipts-20260930/` holds `red-stub.txt`, `green-atomic.txt`, `mutation.txt` and `mutate.py`.\n\n## Differences from `plans/S2.md` (also in the doc)\n\n- **R1:** the same frame delivered twice concurrently gives one `LocalCommitted` and one `AlreadyCommitted`, not `ATOMIC_STALE_STATE`. Different statements still get `ATOMIC_STALE_STATE` (R2, R2b).\n- **R7:** the registry revision is part of the digest, so the commit re-checks authority before the digest compare. A revocation landing between prepare and commit reports `AUTH_REVOKED`.\n- **R15/R16:** these are unit tests of `validateSuccessor` and `deriveSuccessorHead`. They can't be reached end to end because the caller supplies no candidate.\n- **Registry:** it names the ledger domain explicitly, because the scenario carries only the domain id.\n\n## Limitations\n\n- **Scope:** the store is in memory and single-process, with no persistence. Key authority is not proved. `revoke` has no authenticated revoker.\n- **Stage shape:** Core5 allows only 2\u20133 balances, one allowance and at most one obligation. After a repay brings the obligation to Settled, S0 refuses further stages.\n- **Schnorr:** only ECDSA was exercised with real signatures, because Node has no BIP340. Schnorr appears only as a key-mismatch case.\n- **Coupling to G2:** the store depends on the fields `verifyAndPrepare` returns (`signature.statement`, `signature.frame_sha256`, `local`, `status`). A change there fails the tests rather than weakening a check.\n- **Not closed:** this does not close the ledger-native or public owner-binding gates, and no Rust, proof or Preview path was touched.\n\n## Root actions and open decisions\n\n- **Dependency issue:** none. G2's `auth.ts` and G1's binary work as specified.\n- **Public export:** add `export {LocalSettlementStore,deriveSuccessorHead,validateSuccessor,type Snapshot,type SettleResult,type Binding,type Domain} from './atomic.ts';` to `index.ts`.\n- **Registry or self-certifying account:** this is a consequential decision I did not make. The alternative to the explicit registry is a self-certifying account (the account id includes a key hash). That changes beta account identity and can't apply to existing wallet identities. The doc records this dissent.\n- **Signature route:** whether the signature is checked in-circuit, via a ledger intent signature, or off-chain with an on-chain capability is also open. Both decisions need a recorded vote before any Preview claim.",
+  "ttft_ms": 1296,
+  "type": "result",
+  "duration_ms": 827091,
+  "uuid": "28d5ae5f-17e0-4088-965c-ec9f669446b5",
+  "ttft_stream_ms": 1057,
+  "time_to_request_ms": 65,
+  "first_content_frame_ms": 1057,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "seat": "S2",
+  "requested_model": "claude-sonnet-5-5",
+  "requested_effort": "high",
+  "process_exit_code": 0,
+  "elapsed_seconds": 828.2,
+  "prompt_sha256": "381e14345192680789e78efaa0fed2632e93f2ae68cec31c00f5b91f08baafd4"
+}

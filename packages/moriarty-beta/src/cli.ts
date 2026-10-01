@@ -2,7 +2,9 @@
 import { readFileSync,writeFileSync,statSync,mkdirSync,realpathSync } from 'node:fs';
 import { resolve,relative,isAbsolute,join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { check,format,inspect,expand,simulate } from './index.ts';
+import { createHash } from 'node:crypto';
+import {asciiJson,escapeAscii,renderOwnerIntentReview,renderVerificationReview,renderErrorReview} from './intent-display.ts';
+import { check,format,inspect,expand,simulate,prepareOwnerIntent,verifyAndPrepare,IntentSourceMismatchError,type Signing } from './index.ts';
 import { LocalError,parseBoundedJson } from './json.ts';
 import { starterSource,starterScenario,starterCases,repaymentSource,repaymentScenario,repaymentCases } from './starter.ts';
 import { runLsp,runMcp } from './servers.ts';
@@ -78,18 +80,19 @@ function runCases(directory:string):object{
  if(Buffer.byteLength(JSON.stringify(report))>524288)throw new LocalError('BETA_CASE_RESULT_BOUND','Case report exceeds 524288 bytes');
  return report;
 }
-function main():void{
+async function main():Promise<void>{
  const [command,...raw]=process.argv.slice(2);
- if(!command||command==='help'||command==='--help'){process.stdout.write('Moriarty beta: init DIR [--template transfer|repay] | check FILE [--json] | fmt FILE [--write] | inspect FILE | expand/simulate FILE --action NAME --scenario FILE | test DIR | lsp | mcp\nLocal financial results remain PreparedUnqualified.\n');return;}
- if(raw.includes('--help')||raw.includes('-h')){const help:Record<string,string>={init:'init DIR [--template transfer|repay]',check:'check FILE [--json]',fmt:'fmt FILE [--write]',inspect:'inspect FILE',expand:'expand FILE --action NAME --scenario FILE',simulate:'simulate FILE --action NAME --scenario FILE',test:'test DIR',lsp:'lsp',mcp:'mcp'};if(!Object.hasOwn(help,command))throw new Error(`Unknown command ${command}`);process.stdout.write(`mori ${help[command]}\nLocal financial results remain PreparedUnqualified.\n`);return;}
+ if((command==='intent'||command==='verify-intent')&&raw.includes('--review')&&raw.includes('--json'))throw new Error('--review and --json cannot be combined');
+ if(!command||command==='help'||command==='--help'){process.stdout.write('Moriarty beta: init DIR [--template transfer|repay] | check FILE [--json] | fmt FILE [--write] | inspect FILE | expand/simulate FILE --action NAME --scenario FILE | test DIR | intent FILE --action NAME --scenario FILE --scheme SCHEME --public-key HEX --framing raw|midnight-sign-data --crypto-binary /ABS/BINARY [--review|--json] | verify-intent FILE --action NAME --scenario FILE --signature FILE --crypto-binary /ABS/BINARY [--review|--json] | lsp | mcp\nLocal financial results remain PreparedUnqualified.\n');return;}
+ if(raw.includes('--help')||raw.includes('-h')){const help:Record<string,string>={init:'init DIR [--template transfer|repay]',check:'check FILE [--json]',fmt:'fmt FILE [--write]',inspect:'inspect FILE',expand:'expand FILE --action NAME --scenario FILE',simulate:'simulate FILE --action NAME --scenario FILE',test:'test DIR',intent:'intent FILE --action NAME --scenario FILE --scheme SCHEME --public-key HEX --framing raw|midnight-sign-data --crypto-binary /ABS/BINARY [--review|--json]','verify-intent':'verify-intent FILE --action NAME --scenario FILE --signature FILE --crypto-binary /ABS/BINARY [--review|--json]',lsp:'lsp',mcp:'mcp'};if(!Object.hasOwn(help,command))throw new Error(`Unknown command ${command}`);process.stdout.write(`mori ${help[command]}\nLocal financial results remain PreparedUnqualified.\n`);return;}
  if(command==='lsp'||command==='mcp'){if(raw.length)throw new Error('Stdio command accepts no arguments');command==='lsp'?runLsp():runMcp();return;}
- const allowed:Record<string,string[]>={init:['--template'],check:['--json'],fmt:['--write'],inspect:[],expand:['--action','--scenario'],simulate:['--action','--scenario'],test:[]};
+ const allowed:Record<string,string[]>={init:['--template'],check:['--json'],fmt:['--write'],inspect:[],expand:['--action','--scenario'],simulate:['--action','--scenario'],test:[],intent:['--review','--json','--action','--scenario','--scheme','--public-key','--framing','--crypto-binary'],'verify-intent':['--review','--json','--action','--scenario','--signature','--crypto-binary']};
  if(!Object.hasOwn(allowed,command))throw new Error(`Unknown command ${command}`);
  const positional:string[]=[],options=new Map<string,string|boolean>();
  for(let i=0;i<raw.length;i++){
   const arg=raw[i];if(arg.startsWith('--')){
    if(!allowed[command].includes(arg)||options.has(arg))throw new Error(`Unknown or duplicate option ${arg}`);
-   if(arg==='--action'||arg==='--scenario'||arg==='--template'){const v=raw[++i];if(!v||v.startsWith('--'))throw new Error(`Missing value for ${arg}`);options.set(arg,v);}else options.set(arg,true);
+   if(['--action','--scenario','--template','--scheme','--public-key','--framing','--crypto-binary','--signature'].includes(arg)){const v=raw[++i];if(!v||v.startsWith('--'))throw new Error(`Missing value for ${arg}`);options.set(arg,v);}else options.set(arg,true);
   }else positional.push(arg);
  }
  if(positional.length!==1)throw new Error(`${command} requires one path`);
@@ -106,6 +109,22 @@ function main():void{
  if(command==='test'){output(runCases(path));return;}
  if((command==='expand'||command==='simulate')&&(!options.has('--action')||!options.has('--scenario')))throw new Error(`${command} requires --action and --scenario`);
  const source=read(path);
+ if(command==='intent'||command==='verify-intent'){
+  const required=command==='intent'?['--action','--scenario','--scheme','--public-key','--framing','--crypto-binary']:['--action','--scenario','--signature','--crypto-binary'];
+  for(const key of required)if(!options.has(key))throw new Error(`${command} requires ${key}`);
+  const scenario=read(resolve(options.get('--scenario') as string)),crypto={binaryPath:options.get('--crypto-binary') as string};
+  const context={sourceSha256:createHash('sha256').update(source).digest('hex'),scenarioSha256:createHash('sha256').update(scenario).digest('hex'),scenario:parseBoundedJson(scenario)};
+  if(command==='intent'){
+   const result=await prepareOwnerIntent(source,options.get('--action') as string,scenario,{scheme:options.get('--scheme'),publicKeyHex:options.get('--public-key'),framing:options.get('--framing')} as Signing,crypto);
+   process.stdout.write(options.has('--review')?renderOwnerIntentReview(result,context):asciiJson(result)+'\n');
+  }else{
+   const result=await verifyAndPrepare(source,options.get('--action') as string,scenario,read(resolve(options.get('--signature') as string)),crypto);
+   process.stdout.write(options.has('--review')?renderVerificationReview(result,context):asciiJson(result)+'\n');
+   if(result.status!=='SignedPreparedUnqualified')process.exitCode=1;
+  }
+  return;
+ }
+
  if(command==='fmt'){
   const result=format(source);if(result.text===null){output({status:'AuthoringRejected',diagnostics:result.diagnostics});process.exitCode=1;return;}
   if(options.has('--write'))writeFileSync(path,result.text);else process.stdout.write(result.text);return;
@@ -115,8 +134,13 @@ function main():void{
  const status=(result as {status?:string}).status;
  if(status&&!['AuthoringChecked','Expanded','PreparedUnqualified'].includes(status))process.exitCode=1;
 }
-try{main();}catch(error){
- process.exitCode=1;
- if(error instanceof LocalError)output({status:'FormationRejected',diagnostics:[{code:error.code,message:error.message}],publishedEffects:null,publishedPost:null});
- else process.stderr.write(`mori: ${error instanceof Error?error.message:String(error)}\n`);
-}
+main().catch((error)=>{
+ process.exitCode=error instanceof LocalError&&error.code.startsWith('BETA_CRYPTO_')?2:1;
+ const signedCommand=['intent','verify-intent'].includes(process.argv[2]);
+ if(error instanceof LocalError){
+  const detail=error instanceof IntentSourceMismatchError?{pointer:error.pointer,claimed:error.claimed,computed:error.computed}:{};
+  const result={status:'FormationRejected',diagnostics:[{code:error.code,message:error.message,...detail}],publishedEffects:null,publishedPost:null};
+  const extra=error instanceof IntentSourceMismatchError?[`  First difference ${error.pointer}`,`  claimed by artifact: ${escapeAscii(asciiJson(error.claimed??null,0))}; computed from this source and action: ${escapeAscii(asciiJson(error.computed??null,0))}`]:[];
+  if(signedCommand)process.stdout.write(process.argv.includes('--review')?renderErrorReview(error,process.exitCode===2?'unable':'judgment',extra):asciiJson(result)+'\n');else output(result);
+ }else{const message=`mori: ${error instanceof Error?error.message:String(error)}`;process.stderr.write((signedCommand?escapeAscii(message):message)+'\n');}
+});

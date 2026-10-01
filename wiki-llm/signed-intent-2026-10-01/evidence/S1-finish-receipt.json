@@ -1,0 +1,104 @@
+{
+  "duration_api_ms": 239147,
+  "stop_reason": "end_turn",
+  "session_id": "91cd1558-4b99-4659-8a5f-5966af127385",
+  "total_cost_usd": 0.7769566,
+  "usage": {
+    "input_tokens": 36,
+    "cache_creation_input_tokens": 72774,
+    "cache_read_input_tokens": 731193,
+    "output_tokens": 33955,
+    "output_tokens_details": {
+      "thinking_tokens": 11826
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 72774,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1647,
+        "cache_read_input_tokens": 74898,
+        "cache_creation_input_tokens": 3488,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 3488
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 36,
+      "outputTokens": 33955,
+      "cacheReadInputTokens": 731193,
+      "cacheCreationInputTokens": 72774,
+      "webSearchRequests": 0,
+      "costUSD": 0.7769566,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 11826,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 20,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "S1 is finished for my assigned scope: the oracle is fixed, the Node adversarial suite is written, and `SECURITY-CASES.md` is written. All three checks are green with the real binaries. This is not an audit approval, and the Astra/Grok audits are still pending.\n\n**Green runs** (`S1-final-green.txt`, run with `MORIARTY_REQUIRE_NATIVE=1` so nothing skipped)\n- `reference-intent.py check` returns `match`, with 20 golden vectors and 433 corpus entries.\n- `cargo test --offline --locked --jobs 2 --test intent_reference` passes all 9 tests, including the two that failed in your root check.\n- `node --test tests/auth-adversarial.test.mjs` passes all 7 tests.\n\n**Helper marker**\n- `S1-helper-ready.txt` is published with the helper path and build command.\n\n**Oracle fix** (`experiments/midnight-crypto/reference-intent.py`)\n- The Schnorr verifier now hashes the message with SHA-256 first and uses that digest as the BIP340 message, as `k256` `Verifier::verify` does. A comment says raw and wallet framing bytes are the bytes before that internal hash.\n- The ECDSA key decoder keeps accepting only SEC1 prefixes 02 and 03, so your prefix-05 fix in `intent.rs` and my corpus agree.\n- I did not touch the Rust production codec, and the vectors needed no regeneration.\n\n**Node suite** (`packages/moriarty-beta/tests/auth-adversarial.test.mjs`, 131 lines)\n- It uses the 5 hand-written fixtures across both schemes and both framings, giving 20 artifacts. The real Rust example signs each one. Expected effects and post-state come from the vectors' hand-written economics, not from an evaluator.\n- A statement leaf is a terminal value, counting empty arrays and null. The suite's walker finds 868 leaves, the same as your Rust matrix. Mutating any one leaf is always rejected: 808 `BETA_SIGNATURE_SOURCE_MISMATCH`, and the rest are schema errors or `SignatureRejected`.\n- The rest of the matrix covers:\n  - at least 220 source rebinds (network, representation, symbol, account and others);\n  - the unsigned-scenario cases (real valid signature, Core rejects or prepares);\n  - 35 hostile-JSON cases on each of 4 artifacts;\n  - unknown versus false.\n- The binary comes from `MORIARTY_CRYPTO_BINARY`, falling back to `$CARGO_TARGET_DIR` or `experiments/midnight-crypto/target`. No absolute home path is in the file.\n- It skips only when the binary is absent and `MORIARTY_REQUIRE_NATIVE` is not `1`. With that variable set, a missing binary fails every test.\n\n**Red tests kept** (`S1-node-red.txt`)\n- With the required binary missing, all 8 tests fail. I added a guard first, because empty-matrix tests had passed vacuously.\n- With a shim that rewrites a `false` signature result to `true` (`S1-lying-verifier-shim.mjs`), 2 tests fail: unknown-versus-false and the leaf matrix.\n\n**Defects**\n- **Oracle:** the Python Schnorr challenge used the raw message instead of its SHA-256. Fixed in the reference only.\n- **SEC1:** `k256` accepted a prefix-05 alias for a compressed ECDSA key. Your `intent.rs` fix covers it, and Node reports it as a thrown `BETA_SIGNATURE_SCHEMA`, which the suite asserts.\n\n**Gaps**\n- Only one-leaf mutations plus fixed hostile and rebind lists are covered, with no fuzzing.\n- Node returns `BETA_CRYPTO_RESPONSE` for malformed top-level artifact shapes, which is a misleading code for caller input. The suite locks the current behaviour, and renaming it would change a wire code.\n- `auth.test.mjs` is not mine and still hardcodes a home-directory default for the binary.\n- The outcome split between key-flip rejections varies by run (50/10 or 48/12), because the throwaway key is random.\n\n`SECURITY-CASES.md` is in `wiki-llm/signed-intent-2026-10-01/`; you didn't name a location, so move it if it belongs elsewhere. It has the counts, limits, both defects and the qualifications.\n\nEverything else is under `/home/charl/research/moriarty-signed-intent-2026-10-01/`: `S1-final-green.txt`, `S1-node-red.txt` and `S1-finish2-receipt.txt` (the completion receipt). `S1-root-reference-check.txt` and the earlier receipts are untouched, and nothing is committed.",
+  "ttft_ms": 2178,
+  "type": "result",
+  "duration_ms": 274950,
+  "uuid": "f788047e-beaa-4473-9b27-0ff48af8f623",
+  "ttft_stream_ms": 1344,
+  "time_to_request_ms": 57,
+  "first_content_frame_ms": 1344,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "seat": "S1",
+  "requested_model": "claude-sonnet-5-5",
+  "requested_effort": "high",
+  "process_exit_code": 0,
+  "elapsed_seconds": 275.8,
+  "prompt_sha256": "d552d01aafe194f31ed69b791170256d5c5c2dd92bac3d9fa7cecc9cf513e67f"
+}

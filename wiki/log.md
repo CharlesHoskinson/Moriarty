@@ -25,6 +25,8 @@ sources:
 
 # Wiki log
 
+2026-10-01 — Recorded the signed-intent consumer, explicit local atomic store, three packed public examples and bounded numerical KZG experiment. Fresh whole-candidate result audits pending. No financial/Preview acceptance claim promoted.
+
 2026-09-30 — Filed pinned Midnight Rust source collection SRC-0114 and the local cryptography experiment dossier. Twelve Rust tests pass for named signature/state/proof/system-transaction predicates; production financial gates remain open.
 
 2026-09-30 — Completed and published the reviewed authoring-beta loop through PR11 and the authoring prerelease. Six developer trials, current package reruns, scoped final reviews and tutorial recommendations are preserved in the dossier. Signature/native/proof/financial ledger gates remain open; no canonical financial claim is promoted.

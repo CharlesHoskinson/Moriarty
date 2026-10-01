@@ -10,6 +10,8 @@ tags: [moriarty, consolidation, recursion]
 
 # Moriarty current direction
 
+[Signed-intent integration](sessions/signed-intent-2026-10-01.md): real Rust signature consumer, local atomic store and packed examples; bounded numerical proof measured. Final reviews and authentic financial/Preview integration remain open.
+
 [Midnight Rust cryptography follow-up](sessions/midnight-crypto-2026-09-30.md): pinned official sources, twelve local tests and retained failures. Full financial/native/Preview integration remains open.
 
 [Completed September30 beta language loop](sessions/beta-language-2026-09-30.md) links research, design reviews, published standalone authoring/local tools, six developer trials, and the tutorial guide/site plan. [Final result](../wiki-llm/beta-language-2026-09-30/RESULT.md) records the prerelease and measured scope. Only existing S0 transfer/repayment preparation is local; the typed full-language horizon stays specified-only.

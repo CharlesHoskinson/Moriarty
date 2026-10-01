@@ -1,0 +1,229 @@
+✔ escapeText is escape-by-default: only printable ASCII passes, every other scalar is visible (1.234748ms)
+✔ asciiJson keeps the parsed value while emitting only printable ASCII and newlines (0.742767ms)
+✔ formatAtoms derives exact scaled decimals with BigInt only (0.582557ms)
+✖ every signed statement leaf has a label and every leaf value appears in the review (3.195198ms)
+✔ unlabeled, missing and extra statement leaves fail closed (1.666079ms)
+✔ owner intent review separates signed terms from claims, computed hashes and unsigned context (1.02572ms)
+✔ midnight-sign-data review names the exact prefix and wallet mode has no fallback (0.86207ms)
+✔ hostile text is escaped everywhere in readable review, with a warning (1.503741ms)
+✔ a returned frame hash that differs from the recomputed hash is displayed as a mismatch, never hidden (1.835356ms)
+✖ verification review reports signature, authority gap and local result separately (1.979925ms)
+✔ verification review covers core rejection, invalid signature and repay (1.328412ms)
+✔ error review keeps actual status and code, escapes hostile messages and separates judgment from inability to judge (0.28431ms)
+✖ new commands: --review and --json are mutually exclusive and usage errors stay ASCII (104.309201ms)
+✔ existing commands keep their exact output behavior (427.553086ms)
+✖ missing, relative or fake native verifier gives exit 2 and never a validity claim (209.49819ms)
+✖ source and scenario judgments stay exit 1 while keeping JSON compatibility (362.14235ms)
+﹣ real native: intent review and JSON agree and match source-derived terms (0.089332ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+﹣ real native: verify review for transfer and repay, expired scenario, bad signature and edited source (0.112131ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+﹣ real native: hostile source text is escaped in readable and JSON output (0.046032ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+ℹ tests 19
+ℹ suites 0
+ℹ pass 11
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 3
+ℹ todo 0
+ℹ duration_ms 1256.93145
+
+✖ failing tests:
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:87:1
+✖ every signed statement leaf has a label and every leaf value appears in the review (3.195198ms)
+  AssertionError [ERR_ASSERTION]: transfer/midnight-sign-data leaf signature/framing=raw missing
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:96:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:173:1
+✖ verification review reports signature, authority gap and local result separately (1.979925ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /scenario sha256[^\n]*d{64}[^\n]*unsigned/i. Input:
+  
+  'SignedPreparedUnqualified  (signature checked by native Rust; owner authority NOT checked)\n' +
+    'Signature check (native Rust, scheme ecdsa_secp256k1_sha256, framing raw)\n' +
+    '  signature_valid true\n' +
+    '  Meaning: the key used signed these exact frame bytes. This does not show that the key controls account "Owner", that the terms are current or unused, or that anything settled.\n' +
+    '  frame 47 bytes\n' +
+    '  frame sha256 claimed by native Rust: 370df7331d064058e90b99bd8401bf7ef472900caee1aba68645fdf293404dbc\n' +
+    '  frame sha256 computed here: 370df7331d064058e90b99bd8401bf7ef472900caee1aba68645fdf293404dbc (match)\n' +
+    '  signing message 47 bytes: raw framing, the signing message is the frame itself\n' +
+    '  Framing is signed metadata; no other framing is tried. Live wallet compatibility is not verified.\n' +
+    'Source match\n' +
+    '  source matched yes (sourceMatched true): the artifact statement equals the terms derived from this source and action\n' +
+    '  source sha256 claimed by artifact: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; computed from this file: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' +
+    'Signed owner terms (every leaf of the matched statement):\n' +
+    '  [profile] "moriarty-signed-intent/1"  signed profile identifier\n' +
+    '  [core] "moriarty-core/5"\n' +
+    '  [sourceProfile] "moriarty-financial-agreement-source/6"\n' +
+    '  [authoringProfile] "moriarty-beta/1"\n' +
+    '  [agreementId] "Invoice"  symbolic agreement ID from the source\n' +
+    '  [actionName] "pay"  action selected with --action\n' +
+    '  [selectedActionId] "TransferLiteralFee"\n' +
+    '  [sourceSha256] aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  statement value; computed from the exact source file bytes: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (match)\n' +
+    '  [ownerProgramSha256] bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  digest of the owner-term projection; not a compiled-program hash\n' +
+    '  [domain/id] "Midnight"  domain identity claimed by the source\n' +
+    '  [domain/chain] "midnight"\n' +
+    '  [domain/network] "preview"\n' +
+    '  [asset/id] "A"  asset identity; amounts below are atoms of this asset\n' +
+    '  [asset/representation] "canonical"\n' +
+    '  [asset/scale] "2"  decimal places used only to display atoms\n' +
+    '  [asset/symbol] "USD"  label only; not identity and not a conversion permission\n' +
+    '  [signature/scheme] "ecdsa_secp256k1_sha256"  must match the key; fixed by the signer and signed\n' +
+    '  [signature/publicKeyHex] 02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  (33 bytes) supplied with --public-key; checked only as a valid key for this scheme. Nothing here links it to account "Owner" or keyRef "key1"\n' +
+    '  [signature/keyRef] "key1"  symbolic label copied from the source key:; not a key, and nothing here resolves it\n' +
+    '  [signature/framing] "raw"  signed metadata; no other framing is tried\n' +
+    '  [intent/version] "moriarty-intent/3"\n' +
+    '  [intent/advertisedSourceHash] "src1"  author claim, not checked against any hash\n' +
+    '  [intent/advertisedPolicyDigest] "policy1"  author claim, not checked against any digest\n' +
+    '  [intent/signer] "Owner"  symbolic account ID, not an address or a key\n' +
+    '  [intent/nonce] "n1"  opaque replay label; freshness is not checked here\n' +
+    '  [intent/preHead] "h0"  opaque head label; the current head is not checked here\n' +
+    '  [intent/notBefore] 0  domain round number, inclusive; not wall-clock time and not money\n' +
+    '  [intent/notAfter] 10  domain round number, inclusive; not wall-clock time and not money\n' +
+    '  [intent/grossCap] 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n' +
+    '  [intent/feeCap] 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n' +
+    '  [intent/netFloor] 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n' +
+    '  [intent/failure] "success_only"\n' +
+    '  [intent/observations] none\n' +
+    '  [intent/disclosures] none\n' +
+    '  [intent/retainedEffects] none\n' +
+    '  [intent/retainedDuties] none\n' +
+    '  [intent/delegation] "none"\n' +
+    '  [intent/recovery] "none"\n' +
+    '  [intent/operation/kind] "Transfer"\n' +
+    '  [intent/operation/from] "Owner"  symbolic account ID\n' +
+    '  [intent/operation/recipient] "Recipient"  symbolic account ID\n' +
+    '  [intent/operation/feeRecipient] "Fee"  symbolic account ID\n' +
+    '  [intent/operation/amount] 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n' +
+    '  [intent/operation/fee] 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n' +
+    'Local result PreparedUnqualified (local stipulation against the unsigned scenario)\n' +
+    '  Effects (candidate, unqualified):\n' +
+    '    [0] Debit account "Owner" amount 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n' +
+    '    [1] Credit account "Recipient" amount 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n' +
+    '    [2] Credit account "Fee" amount 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n' +
+    '    [3] UseAllowance owner "Owner" amount 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n' +
+    '    [4] UseReplay key "[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"\n' +
+    '    [5] AdvanceHead predecessor "h0" successor "h1"\n' +
+    '  post head "h1" round "1" workRemaining "9" workSpent "1"\n' +
+    '  post balance "Owner" 8990 atoms | asset "A" | scale 2 | 89.90 (display only)\n' +
+    '  post balance "Recipient" 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n' +
+    '  post balance "Fee" 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n' +
+    '  post allowance owner "Owner" remaining 8990 atoms | asset "A" | scale 2 | 89.90 (display only); spent 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n' +
+    '  post consumedReplay "[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"\n' +
+    'Checks as returned (local labels, not authority)\n' +
+    '  keyAuthority Unverified\n' +
+    '  domainMapping SourceClaimsBound\n' +
+    '  expiry LocalRoundWithinWindow\n' +
+    '  replay LocallyUnused\n' +
+    '  financial LocallyPrepared\n' +
+    '  state LocalStipulationOnly\n' +
+    '  nativeProof NotChecked\n' +
+    '  ledger NotSubmitted\n' +
+    '  requiredPremises canonical-intent-signature, snapshot-to-head, head-extension, atomic-ledger-compare-and-consume\n' +
+    '  unverifiedBindings agreement-id, selected-program, asset-scale, authenticated-predecessor\n' +
+    'Unsigned scenario context (not part of the signed statement; every value below can change without touching a signature)\n' +
+    '  scenario sha256 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd  computed from the scenario file bytes\n' +
+    '  head "h0", predecessor "genesis", round "1", post_head "h1", replay "unused", work_remaining "10", work_spent "0"\n' +
+    '  balance "Owner" 10000 atoms | asset "A" | scale 2 | 100.00 (display only)\n' +
+    '  balance "Recipient" 0 atoms | asset "A" | scale 2 | 0.00 (display only)\n' +
+    '  balance "Fee" 0 atoms | asset "A" | scale 2 | 0.00 (display only)\n' +
+    '  allowance owner "Owner" remaining 10000 atoms | asset "A" | scale 2 | 100.00 (display only); spent 0 atoms | asset "A" | scale 2 | 0.00 (display only)\n' +
+    'Not established by this review\n' +
+    '  owner authority: no link from the key to account "Owner" or to the keyRef is checked\n' +
+    '  key-to-account binding\n' +
+    '  current state: balances, allowance and head come from an unsigned scenario\n' +
+    '  replay freshness beyond the local stipulation\n' +
+    '  proof\n' +
+    '  ledger acceptance\n' +
+    '  settlement\n' +
+    '  authority_valid null, snapshot_membership_valid null, transition_valid null, ledger_accepted false\n'
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:189:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'SignedPreparedUnqualified  (signature checked by native Rust; owner authority NOT checked)\nSignature check (native Rust, scheme ecdsa_secp256k1_sha256, framing raw)\n  signature_valid true\n  Meaning: the key used signed these exact frame bytes. This does not show that the key controls account "Owner", that the terms are current or unused, or that anything settled.\n  frame 47 bytes\n  frame sha256 claimed by native Rust: 370df7331d064058e90b99bd8401bf7ef472900caee1aba68645fdf293404dbc\n  frame sha256 computed here: 370df7331d064058e90b99bd8401bf7ef472900caee1aba68645fdf293404dbc (match)\n  signing message 47 bytes: raw framing, the signing message is the frame itself\n  Framing is signed metadata; no other framing is tried. Live wallet compatibility is not verified.\nSource match\n  source matched yes (sourceMatched true): the artifact statement equals the terms derived from this source and action\n  source sha256 claimed by artifact: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; computed from this file: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nSigned owner terms (every leaf of the matched statement):\n  [profile] "moriarty-signed-intent/1"  signed profile identifier\n  [core] "moriarty-core/5"\n  [sourceProfile] "moriarty-financial-agreement-source/6"\n  [authoringProfile] "moriarty-beta/1"\n  [agreementId] "Invoice"  symbolic agreement ID from the source\n  [actionName] "pay"  action selected with --action\n  [selectedActionId] "TransferLiteralFee"\n  [sourceSha256] aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  statement value; computed from the exact source file bytes: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (match)\n  [ownerProgramSha256] bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  digest of the owner-term projection; not a compiled-program hash\n  [domain/id] "Midnight"  domain identity claimed by the source\n  [domain/chain] "midnight"\n  [domain/network] "preview"\n  [asset/id] "A"  asset identity; amounts below are atoms of this asset\n  [asset/representation] "canonical"\n  [asset/scale] "2"  decimal places used only to display atoms\n  [asset/symbol] "USD"  label only; not identity and not a conversion permission\n  [signature/scheme] "ecdsa_secp256k1_sha256"  must match the key; fixed by the signer and signed\n  [signature/publicKeyHex] 02cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  (33 bytes) supplied with --public-key; checked only as a valid key for this scheme. Nothing here links it to account "Owner" or keyRef "key1"\n  [signature/keyRef] "key1"  symbolic label copied from the source key:; not a key, and nothing here resolves it\n  [signature/framing] "raw"  signed metadata; no other framing is tried\n  [intent/version] "moriarty-intent/3"\n  [intent/advertisedSourceHash] "src1"  author claim, not checked against any hash\n  [intent/advertisedPolicyDigest] "policy1"  author claim, not checked against any digest\n  [intent/signer] "Owner"  symbolic account ID, not an address or a key\n  [intent/nonce] "n1"  opaque replay label; freshness is not checked here\n  [intent/preHead] "h0"  opaque head label; the current head is not checked here\n  [intent/notBefore] 0  domain round number, inclusive; not wall-clock time and not money\n  [intent/notAfter] 10  domain round number, inclusive; not wall-clock time and not money\n  [intent/grossCap] 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n  [intent/feeCap] 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n  [intent/netFloor] 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n  [intent/failure] "success_only"\n  [intent/observations] none\n  [intent/disclosures] none\n  [intent/retainedEffects] none\n  [intent/retainedDuties] none\n  [intent/delegation] "none"\n  [intent/recovery] "none"\n  [intent/operation/kind] "Transfer"\n  [intent/operation/from] "Owner"  symbolic account ID\n  [intent/operation/recipient] "Recipient"  symbolic account ID\n  [intent/operation/feeRecipient] "Fee"  symbolic account ID\n  [intent/operation/amount] 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n  [intent/operation/fee] 10 atoms | asset "A" | scale 2 | 0.10 (display only)\nLocal result PreparedUnqualified (local stipulation against the unsigned scenario)\n  Effects (candidate, unqualified):\n    [0] Debit account "Owner" amount 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n    [1] Credit account "Recipient" amount 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n    [2] Credit account "Fee" amount 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n    [3] UseAllowance owner "Owner" amount 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n    [4] UseReplay key "[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"\n    [5] AdvanceHead predecessor "h0" successor "h1"\n  post head "h1" round "1" workRemaining "9" workSpent "1"\n  post balance "Owner" 8990 atoms | asset "A" | scale 2 | 89.90 (display only)\n  post balance "Recipient" 1000 atoms | asset "A" | scale 2 | 10.00 (display only)\n  post balance "Fee" 10 atoms | asset "A" | scale 2 | 0.10 (display only)\n  post allowance owner "Owner" remaining 8990 atoms | asset "A" | scale 2 | 89.90 (display only); spent 1010 atoms | asset "A" | scale 2 | 10.10 (display only)\n  post consumedReplay "[\\"Midnight\\",\\"Owner\\",\\"n1\\"]"\nChecks as returned (local labels, not authority)\n  keyAuthority Unverified\n  domainMapping SourceClaimsBound\n  expiry LocalRoundWithinWindow\n  replay LocallyUnused\n  financial LocallyPrepared\n  state LocalStipulationOnly\n  nativeProof NotChecked\n  ledger NotSubmitted\n  requiredPremises canonical-intent-signature, snapshot-to-head, head-extension, atomic-ledger-compare-and-consume\n  unverifiedBindings agreement-id, selected-program, asset-scale, authenticated-predecessor\nUnsigned scenario context (not part of the signed statement; every value below can change without touching a signature)\n  scenario sha256 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd  computed from the scenario file bytes\n  head "h0", predecessor "genesis", round "1", post_head "h1", replay "unused", work_remaining "10", work_spent "0"\n  balance "Owner" 10000 atoms | asset "A" | scale 2 | 100.00 (display only)\n  balance "Recipient" 0 atoms | asset "A" | scale 2 | 0.00 (display only)\n  balance "Fee" 0 atoms | asset "A" | scale 2 | 0.00 (display only)\n  allowance owner "Owner" remaining 10000 atoms | asset "A" | scale 2 | 100.00 (display only); spent 0 atoms | asset "A" | scale 2 | 0.00 (display only)\nNot established by this review\n  owner authority: no link from the key to account "Owner" or to the keyRef is checked\n  key-to-account binding\n  current state: balances, allowance and head come from an unsigned scenario\n  replay freshness beyond the local stipulation\n  proof\n  ledger acceptance\n  settlement\n  authority_valid null, snapshot_membership_valid null, transition_valid null, ledger_accepted false\n',
+    expected: /scenario sha256[^\n]*d{64}[^\n]*unsigned/i,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:231:1
+✖ new commands: --review and --json are mutually exclusive and usage errors stay ASCII (104.309201ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /--review and --json cannot be combined/. Input:
+  
+  'mori: Unknown or duplicate option --review\n'
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:236:62)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'mori: Unknown or duplicate option --review\n',
+    expected: /--review and --json cannot be combined/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:254:1
+✖ missing, relative or fake native verifier gives exit 2 and never a validity claim (209.49819ms)
+  AssertionError [ERR_ASSERTION]: /tmp/mori-display-nobin-zjf6o6/missing --review: mori: Unknown or duplicate option --review
+  
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:263:32)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/moriarty-beta/tests/intent-display.test.mjs:274:1
+✖ source and scenario judgments stay exit 1 while keeping JSON compatibility (362.14235ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /^FormationRejected\s+BETA_AUTH_SOURCE/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/intent-display.test.mjs:281:81)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /^FormationRejected\s+BETA_AUTH_SOURCE/,
+    operator: 'match',
+    diff: 'simple'
+  }

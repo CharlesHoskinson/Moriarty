@@ -52,6 +52,53 @@ fn run() -> Result<Value, String> {
     )
 }
 fn main() {
+    let cmd = std::env::args().nth(1).unwrap_or_default();
+    if matches!(
+        cmd.as_str(),
+        "intent-build" | "intent-frame" | "intent-verify"
+    ) {
+        let mut raw = Vec::new();
+        let result = io::stdin()
+            .take(65537)
+            .read_to_end(&mut raw)
+            .map_err(|e| moriarty_midnight_crypto::intent::IntentError {
+                code: "input",
+                error: e.to_string(),
+            })
+            .and_then(|_| {
+                if raw.len() > 65536 {
+                    Err(moriarty_midnight_crypto::intent::IntentError {
+                        code: "input",
+                        error: "request byte limit".into(),
+                    })
+                } else {
+                    std::str::from_utf8(&raw).map_err(|e| {
+                        moriarty_midnight_crypto::intent::IntentError {
+                            code: "input",
+                            error: e.to_string(),
+                        }
+                    })
+                }
+            })
+            .and_then(|text| moriarty_midnight_crypto::intent::run(&cmd, text));
+        match result {
+            Ok(v) => {
+                let invalid = v.get("signature_valid") == Some(&Value::Bool(false));
+                println!("{v}");
+                if invalid {
+                    std::process::exit(1);
+                }
+            }
+            Err(e) => {
+                println!(
+                    "{}",
+                    json!({"status":"IntentRejected","code":e.code,"error":e.error,"signature_valid":null,"ledger_accepted":false})
+                );
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
     match run() {
         Ok(v) => {
             let bad = v.get("signature_valid") == Some(&Value::Bool(false));

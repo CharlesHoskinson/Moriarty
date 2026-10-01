@@ -59,3 +59,7 @@ export function inspect(source:string):object{
   return {status:'InspectionRejected',authoringStatus:a.status,sourceHash:a.sourceHash,diagnostics:[{code:error.code,message:error.message,span:{start:0,end:0}}],agreement:a.agreement,identities:[],actions:[],intents:[]};
  }
 }
+
+export {prepareOwnerIntent,verifyAndPrepare,type Signing,type CryptoConfig,type SignedIntentStatement,type NativeIntentReceipt,type NativeIntentVerificationReceipt,type OwnerIntentPreparation,type SignedLocalPreparation} from './auth.ts';
+export {LocalSettlementStore,deriveSuccessorHead,validateSuccessor,type Snapshot,type SettleResult,type Binding,type Domain} from './atomic.ts';
+export {IntentSourceMismatchError} from './auth.ts';

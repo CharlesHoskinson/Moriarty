@@ -4,6 +4,9 @@ This package checks `.mori` financial authoring and locally prepares two S0
 operations. **PreparedUnqualified means a candidate, not an authenticated,
 proved, signed or settled transaction.** The local scenario is a stipulation.
 The other eight-family examples check structure only (`SpecifiedOnly`).
+For external signatures checked by the actual Rust verifier before preparation,
+follow the [signed intent walkthrough](SIGNED-INTENT.md). Its public examples
+include BIP340/raw transfer, ECDSA/wallet-framed transfer and ECDSA/raw repayment.
 
 ## Install and run
 
@@ -163,8 +166,9 @@ external premises are canonical intent signature, snapshot-to-head, head extensi
 and atomic ledger compare-and-consume. Four unverified bindings are agreement ID,
 selected program, asset scale and authenticated predecessor. Neither a hash nor
 a successful local test closes these obligations. Blockchain address codecs,
-cryptographic signatures, ZK proving, financial ledger settlement and general
-formal correspondence remain open.
+authenticated key/address mapping, ZK proving, financial ledger settlement and general
+formal correspondence remain open. The signed intent flow checks native cryptographic
+signatures while preserving those separate obligations.
 
 
 ### SpecifiedOnly authoring hints
