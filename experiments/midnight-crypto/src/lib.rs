@@ -1,5 +1,8 @@
 //! Experimental native verification; never financial or ledger qualification.
 pub mod codec;
+#[cfg(feature = "native-proof")]
+pub mod financial_transfer;
+pub mod intent;
 pub use codec::{canonical_message, wallet_message};
 use midnight_base_crypto::{ecdsa, schnorr};
 use midnight_serialize::Deserializable;

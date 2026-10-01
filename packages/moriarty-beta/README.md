@@ -2,11 +2,12 @@
 
 A standalone `.mori` authoring language for explicit financial intent, requiring
 Node 24 or later. Local transfer and funded AccrualFirst repayment reuse Source/6
-and Core/5 and return **PreparedUnqualified**. No signing, provider authentication,
-proof generation or ledger commit occurs.
+and Core/5 and return **PreparedUnqualified**. The signed owner-intent flow adds native Rust signature checks before local
+preparation. Provider authentication, financial proof and ledger commit remain open.
 
 Read the [getting started guide](GETTING-STARTED.md) for both operations, complete
-scenario/test schemas and troubleshooting.
+scenario/test schemas and troubleshooting. Read the [signed intent walkthrough](SIGNED-INTENT.md)
+for external signing, native verification and three public ready-to-verify examples.
 
 ## Start
 
@@ -55,6 +56,8 @@ and decoded duplicate JSON keys reject. It cannot override source intent.
 | `fmt FILE [--write]` | Comment/spelling-preserving format, stdout by default |
 | `inspect FILE` | Identity claims, operative bounds and open premises |
 | `expand FILE --action NAME --scenario FILE` | Source/6 and input origin map |
+| `intent ... [--review\|--json]` | Native owner signing bytes; possession unchecked |
+| `verify-intent ... [--review\|--json]` | Native signature check then unqualified local Core preparation |
 | `simulate ...` | Actual local Core result, effects and candidate post-state |
 | `test DIR` | Bounded cases, optionally exact effects/post expectations |
 | `lsp` | Full-sync stdio language server |
@@ -86,5 +89,5 @@ const local = simulate(sourceText, 'pay', scenarioJsonText);
 
 Public APIs accept bounded text and digest both local inputs. Origins use UTF8 byte
 ranges; editor positions use UTF16. Prepared results retain four external premises
-and four unverified bindings. Tests, matching hashes and AI tools close none of
-them. Native financial settlement and general K/Quint correspondence remain open.
+and four unverified bindings. A verified native signature is scoped evidence; account authority and the remaining
+state/ledger obligations stay open. Matching hashes and AI tools establish no authority. Native financial settlement and general K/Quint correspondence remain open.
