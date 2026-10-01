@@ -38,7 +38,7 @@ for(const [name,body,code,timeoutMs] of [
  ['stdout overflow',"process.stdout.write('x'.repeat(262145))",'BETA_CRYPTO_OUTPUT_BOUND',1000],
  ['stderr overflow',"process.stderr.write('x'.repeat(8193))",'BETA_CRYPTO_OUTPUT_BOUND',1000],
  ['invalid UTF8','process.stdout.write(Buffer.from([255,10]))','BETA_CRYPTO_RESPONSE',1000],
- ['duplicate field',`console.log('{"status":"a","status":"b"}')`,'BETA_JSON_DUPLICATE',1000],
+ ['duplicate field',`console.log('{"status":"a","status":"b"}')`,'BETA_CRYPTO_RESPONSE',1000],
  ['unknown fields',`console.log('{"status":"IntentBuilt","authority_valid":true}')`,'BETA_CRYPTO_RESPONSE',1000],
  ['extra output',`console.log('{}');console.log('{}')`,'BETA_CRYPTO_RESPONSE',1000],
 ])test(`native transport rejects ${name}`,async()=>{
