@@ -1,0 +1,46 @@
+# R2 independent actual-result and alignment publication audit
+
+2026-10-01. Requested route: GPT-6 Astra (`gpt-6-astra`), medium effort. No separate provider-returned identity/effort attestation is available; the requested route must not be represented as an independently returned attestation.
+
+Current candidate: `ALIGNMENT-V8-FAILED-PUBLICATION-R2-FREEZE.json`, SHA256 `91c7b58ee7a5a1abf16810049308e022ae7e981c12215710141f93403f0f5abb`, base `df8b155143e90450168af04fbfd20f7620043620`, checkout `/home/charl/Moriarty/.worktrees/moriarty-beta-20260930`. The supplied review contract applies with the explicit R2 freeze superseding its older freeze reference. This is a current R2 judgment, not reuse of the earlier publication vote.
+
+## Separate current votes
+
+1. **APPROVE narrow actual failed-result archive publication.** The complete frozen closure faithfully records a consumed attempt that produced a finalized native proof and signed transaction, then failed strict native well-formedness with `OutputsNotSorted`. No complete financial acceptance or independent verifier success is claimed.
+2. **APPROVE current root alignment/status publication.** README, ROADMAP, alignment review, kernel overview and refusal note consistently preserve the original supported-language-to-Midnight objective and acceptance gates. The revised overview puts the actual V7/V8 status first and explicitly identifies the earlier evidence, design and plan sections as historical. Older statements that keygen/proving had not run now have a clear temporal boundary.
+
+**All blocking publication fixes: none found in either R2 scope.** This is publication approval only. It grants no execution, retry, resource amendment, new semantic profile, target change, or financial-acceptance claim.
+
+## Scope and verification
+
+Refreshed AGENTS/develop startup and guarded `status --json`. Status still reports unresolved operational history, stale admission inputs, missing accounting/live resource evidence, and no pending transactions. These execution blocks are not waived.
+
+The review considers the complete current 25-file publication candidate and actual result/source closure, not just the README change. Full source and contract inspection retained in this audit context includes native main/provider/verify/artifacts/keygen, parent wrapper, source/Cargo locks, actual financial kernel and Beta handoff/authentication/bridge, relevant pinned ledger/ZKIR APIs, root README, consolidated design/product contract/roadmap, beta convergence and signed delivery evidence. R2 reread the revised overview, full roadmap/alignment/refusal documents and controlling product contract, refreshed the decisive executed source/API path, and rechecked all frozen identities. The sole changed publication entry is the kernel README, now SHA256 `4b0cbae9aee2b3db8735e730b07fb8daa50760b441cb6d8e5d0712cd4aef4018`.
+
+Fresh R2 digest checks matched all 25 publication entries, all 18 failed-result entries, all 667 V8 input entries, all nine native source-manifest entries, and all 44 V7 result entries. The actual output directory contains exactly the 14 parent-listed files, with matching sizes and hashes. The ELF matches `9e1b153a17cd55969dd800fd47bc728923963093267cc8d23765f0a6ea484559` and its recorded size. Wrapper hash `f5af2a11614365a702eb805c42c5252b59c9fe7b77e2398ed129e63c7e572687` and parent authorization hash `5974632324df6c08b65c206bb13d2d6d7b227dda4fb0cd8d2bd83f293b14e1c0` remain exact. The 391-package lock retains ledger `9a8777c4d035fc7f38ae286bcf5f8656668efd9f`, legacy compatibility ledger `a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1` and ZKIR `e82d81d25aabcc5f5092e2bd559083487f577914`.
+
+Only read-only inspection/hash/JSON/TOML/AST operations and prescribed status ran. No candidate import, tests, native/Cargo/Node execution, network, proof, wallet action or agents were used. Binary data was identity-checked, not independently cryptographically verified. No counterpart report/disposition was read. The only new written file is this report.
+
+## Actual executed predicates and refusal
+
+The parent records one reserved/consumed prove attempt, exit 1, no resource stop, no supervisor error, preserved source/binary identities and false native postconditions. Historical elapsed time is 226.6766 seconds, peak sampled RSS 2,888,863,744 bytes and sampled CPU 286.94 seconds. Sampling limitations remain; these are not continuous-peak or global-thread guarantees.
+
+Preparation replayed the actual runtime transcript, checked complete supported financial effects and storage, compared the constructed/frozen preimage and eight context fields, estimated fees and ran native preprocessing. The recorded skips match across preparation/proving. Its provisional binding0 and zero proof-invocation preparation fields describe that earlier stage.
+
+The pinned ledger finalizer supplies the final nonzero binding after processing inactive transcript operations and gas. The provider checks that binding, enforces one proof attempt and equal skips, invokes actual native proving, then verifies the same VK/proof/PI statement with both SRS-derived and embedded native verifier parameters before appending its record. The caller compares those PIs against the actual finalized call before retaining the 6,336-byte proof and statement. It signs/seals and checks PI equality again before retaining the transaction. The artifacts, source/ELF provenance and later failure location therefore support completion of these in-process predicates. This is stronger than merely finding planned verifier calls in unused source, but is not a separate verifier invocation or reproducible-build theorem.
+
+`accept()` calls default strict `well_formed` before `apply`; default enables Real proof verification, signatures, balancing and limits. The pinned offer validator checks sorting before action validation. `UtxoOutput` derives Ord with value first, while the caller preserves recipient1000 then fee10. The exact log is consequently explained by the unsorted A1 outputs. Official WASM construction sorts the vectors. Merely selecting strict settings does not mean this failed ledger call reached and passed every proof/signature check.
+
+No application-result, poststate, full-success receipt or replay artifact exists. No V8 independent verification outputs exist. The wrapper's verify branch requires a successful parent with true native postconditions; this parent cannot authorize it. Sorting after finalization would change commitments, and this result cannot approve reusing the proof for a changed transaction.
+
+## Preserved product obligations and limitations
+
+The fixed handoff consumes production Beta preparation but explicitly restricts source/scenario/signature identities. The kernel hardcodes its signed message/key and fixture mapping and uses manually funded development genesis. That scope cannot establish generic compilation. U2 still needs newly authored and structurally contrasting programs, generality over the admitted grammar, complete effects and hostile controls. Authoring beta release does not close U7. U3 conditional settlement/recovery and U4 native recursive/private history remain required; ledger induction cannot silently replace MC03/MC06. The recursion horizon remains a user planning assumption, not a verified upstream commitment.
+
+Trusted genesis/deployment, authenticated account and owner/key lifecycle, actual funding/custody, asset identity/scale/destinations, constructor time versus chain time, state/head/history provenance and concurrent unique consumption remain open. The owner ECDSA signature and deterministic public NIGHT payer represent different roles. A signed A fee10 does not establish authorization for separate DUST protocol costs. The fallible financial phase and retained guaranteed fees still require an explicit signed failure policy; local atomic rollback does not establish native atomicity or preserve residual duties automatically.
+
+The four retained premises remain canonical-intent-signature, snapshot-to-head, head-extension and atomic-ledger-compare-and-consume. The four unverified bindings remain agreement-id, selected-program, asset-scale and authenticated-predecessor. General source/Core/native compiler correspondence, adversarial-witness soundness, formal primitive certification, mandatory property/intent/transition/history coverage, recursive PCD/private multi-parent composition and Preview compatibility/submission/finality/settlement remain unfinished.
+
+The separate verifier's PI/proof mutations, call identity/communication/gas/effects changes, decoder suffix and ownership-signature controls did not run. Actual full Success, consumed fees/remainder, complete accepted UTXOs/state, replay refusal and broader native negatives (fabricated origin/funding, wrong owner/assets/recipients/domain, revocation/stale head, competing spends, fee/failure policies and erased duties) are not demonstrated by this malformed-envelope refusal. Earlier negative evidence retains only its original scope.
+
+Website source/assets, tutorial acceptance, and the separate sorted successor/source-resource proposal are excluded. Neither vote changes any semantic, financial, history, acceptance or resource obligation, and neither authorizes another attempt.
