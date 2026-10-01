@@ -23,7 +23,7 @@ export const RUNS: Record<string, Run> = {
     "exit": 0
   },
   "ca-over": {
-    "cmd": null,
+    "cmd": "sed 's/const amount = 20.00 USD;/const amount = 1010.01 USD;/' repayment.mori > over.mori\nmori simulate over.mori --action repay_loan --scenario scenario.json | grep -A3 '\"rejection\"'",
     "out": "    \"rejection\": {\n      \"status\": \"Rejected\",\n      \"judgment\": \"effect\",\n      \"code\": \"S0_EFFECT_RANGE\",",
     "exit": 0
   },
@@ -89,7 +89,7 @@ export const RUNS: Record<string, Run> = {
   },
   "ed-vsix": {
     "cmd": "npm run build\nnode editor/vscode/prepare.mjs\ncd editor/vscode\nnpm install --omit=dev --ignore-scripts\nnpm exec --yes --package @vscode/vsce@3.6.2 -- vsce package --allow-missing-repository",
-    "out": "\n> @moriarty-lang/beta@0.1.0-beta.1 build\n> node build.mjs\n\n\nup to date, audited 9 packages in 948ms\n\nfound 0 vulnerabilities\n WARNING  This extension consists of 326 files, out of which 166 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.\n\n INFO  Files included in the VSIX:\nmoriarty-beta-0.1.0.vsix\n├─ [Content_Types].xml \n├─ extension.vsixmanifest \n└─ extension/\n   ├─ LICENSE.txt [11.08 KB]\n   ├─ extension.cjs [0.73 KB]\n   ├─ language-configuration.json [0.31 KB]\n   ├─ package.json [1.04 KB]\n   ├─ readme.md \n   ├─ node_modules/\n   │  ├─ balanced-match/ (5 files) [6.78 KB]\n   │  ├─ brace-expansion/ (5 files) [19.12 KB]\n   │  ├─ minimatch/ (6 files) [41.37 KB]\n   │  ├─ semver/ (53 files) [98.7 KB]\n   │  ├─ vscode-jsonrpc/ (48 files) [203.49 KB]\n   │  ├─ vscode-languageclient/ (121 files) [637.35 KB]\n   │  ├─ vscode-languageserver-protocol/ (68 files) [356.78 KB]\n   │  └─ vscode-languageserver-types/ (9 files) [367.87 KB]\n   ├─ server/\n   │  ├─ cli.js [175.64 KB]\n   │  └─ package.json [0.02 KB]\n   ├─ snippets/\n   │  └─ moriarty.json [0.52 KB]\n   └─ syntaxes/\n      └─ moriarty.tmLanguage.json [1.06 KB]\n\n=> Run vsce ls --tree to see all included files.\n\n DONE  Packaged: /tmp/howto-home/Moriarty/packages/moriarty-beta/editor/vscode/moriarty-beta-0.1.0.vsix (326 files, 510.81 KB)",
+    "out": "\n> @moriarty-lang/beta@0.1.0-beta.1 build\n> node build.mjs\n\n\nup to date, audited 9 packages in 510ms\n\nfound 0 vulnerabilities\n WARNING  This extension consists of 326 files, out of which 166 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.\n\n INFO  Files included in the VSIX:\nmoriarty-beta-0.1.0.vsix\n├─ [Content_Types].xml \n├─ extension.vsixmanifest \n└─ extension/\n   ├─ LICENSE.txt [11.08 KB]\n   ├─ extension.cjs [0.73 KB]\n   ├─ language-configuration.json [0.31 KB]\n   ├─ package.json [1.04 KB]\n   ├─ readme.md \n   ├─ node_modules/\n   │  ├─ balanced-match/ (5 files) [6.78 KB]\n   │  ├─ brace-expansion/ (5 files) [19.12 KB]\n   │  ├─ minimatch/ (6 files) [41.37 KB]\n   │  ├─ semver/ (53 files) [98.7 KB]\n   │  ├─ vscode-jsonrpc/ (48 files) [203.49 KB]\n   │  ├─ vscode-languageclient/ (121 files) [637.35 KB]\n   │  ├─ vscode-languageserver-protocol/ (68 files) [356.78 KB]\n   │  └─ vscode-languageserver-types/ (9 files) [367.87 KB]\n   ├─ server/\n   │  ├─ cli.js [175.64 KB]\n   │  └─ package.json [0.02 KB]\n   ├─ snippets/\n   │  └─ moriarty.json [0.52 KB]\n   └─ syntaxes/\n      └─ moriarty.tmLanguage.json [1.06 KB]\n\n=> Run vsce ls --tree to see all included files.\n\n DONE  Packaged: /tmp/howto-home/Moriarty/packages/moriarty-beta/editor/vscode/moriarty-beta-0.1.0.vsix (326 files, 510.81 KB)",
     "exit": 0
   },
   "fam-amm-bad": {
@@ -284,7 +284,7 @@ export const RUNS: Record<string, Run> = {
   },
   "ia-install": {
     "cmd": "mkdir /tmp/howto-project\ncd /tmp/howto-project\nnpm install \"$MORI_TGZ\"",
-    "out": "\nadded 1 package in 285ms",
+    "out": "\nadded 1 package in 334ms",
     "exit": 0
   },
   "ia-pack": {
@@ -319,7 +319,7 @@ export const RUNS: Record<string, Run> = {
   },
   "si-install": {
     "cmd": "MORI_TGZ=\"$PWD/$(npm pack --silent)\"\nmkdir /tmp/howto-signed\ncd /tmp/howto-signed\nnpm install \"$MORI_TGZ\"\nMORI_PKG=\"$PWD/node_modules/@moriarty-lang/beta\"\nmori() { node \"$MORI_PKG/dist/cli.js\" \"$@\"; }",
-    "out": "\nadded 1 package in 358ms",
+    "out": "\nadded 1 package in 314ms",
     "exit": 0
   },
   "si-intent": {
@@ -354,7 +354,7 @@ export const RUNS: Record<string, Run> = {
   },
   "si-verifier": {
     "cmd": "cd ../..\ncargo build --locked --manifest-path experiments/midnight-crypto/Cargo.toml 2>&1 | tail -1\nMORI_VERIFIER=\"$PWD/experiments/midnight-crypto/target/debug/moriarty-midnight-crypto\"\ncd packages/moriarty-beta",
-    "out": "    Finished `dev` profile [unoptimized] target(s) in 0.27s",
+    "out": "    Finished `dev` profile [unoptimized] target(s) in 0.22s",
     "exit": 0
   },
   "si-verify": {
@@ -377,6 +377,11 @@ export const RUNS: Record<string, Run> = {
     "out": "{\n  \"status\": \"Initialized\",\n  \"directory\": \"/tmp/howto-reject\",\n  \"qualification\": \"local-stipulation-only\"\n}",
     "exit": 0
   },
+  "tr-restore": {
+    "cmd": "mv mori.tests.json.bak mori.tests.json",
+    "out": "",
+    "exit": 0
+  },
   "tr-run": {
     "cmd": "mori test /tmp/howto-reject",
     "out": "{\n  \"status\": \"TestsPassed\",\n  \"qualification\": \"local-stipulation-only\",\n  \"cases\": [\n    {\n      \"name\": \"literal fee payment\",\n      \"passed\": true,\n      \"status\": \"PreparedUnqualified\",\n      \"code\": null,\n      \"mismatches\": []\n    },\n    {\n      \"name\": \"spent nonce rejected by Core\",\n      \"passed\": true,\n      \"status\": \"CoreRejected\",\n      \"code\": \"S0_HISTORY_REPLAY\",\n      \"mismatches\": []\n    }\n  ]\n}",
@@ -388,7 +393,7 @@ export const RUNS: Record<string, Run> = {
     "exit": 0
   },
   "tr-wrong": {
-    "cmd": null,
+    "cmd": "cp mori.tests.json mori.tests.json.bak\nsed 's/\"S0_HISTORY_REPLAY\"/\"S0_EFFECT_RANGE\"/' mori.tests.json.bak > mori.tests.json\nmori test /tmp/howto-reject | sed -n '/spent nonce/,$p'",
     "out": "      \"name\": \"spent nonce rejected by Core\",\n      \"passed\": false,\n      \"status\": \"CoreRejected\",\n      \"code\": \"S0_HISTORY_REPLAY\",\n      \"mismatches\": [\n        {\n          \"pointer\": \"/code\",\n          \"expected\": \"S0_EFFECT_RANGE\",\n          \"actual\": \"S0_HISTORY_REPLAY\"\n        }\n      ]\n    }\n  ]\n}",
     "exit": 0
   },

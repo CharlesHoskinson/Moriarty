@@ -87,10 +87,16 @@ function assignHeadingIds(root: HTMLElement | null) {
   }
 }
 
+/** A code region's name: its kind and title from the caption bar (not the copy control), numbered when a page repeats it. */
+const regionNames = new Map<string, number>();
 function regionName(el: Element, fallback: string): string {
   const fig = el.closest('figure');
-  const caption = fig?.querySelector('figcaption strong')?.textContent ?? fig?.querySelector('figcaption')?.textContent;
-  return (caption ?? fallback).replace(/\s+/g, ' ').trim().slice(0, 80) || fallback;
+  const tag = fig?.querySelector('.doc-code-tag')?.textContent?.trim();
+  const title = fig?.querySelector('.doc-code-title')?.textContent?.trim();
+  const base = ([tag, title].filter(Boolean).join(': ') || fallback).replace(/\s+/g, ' ').slice(0, 80);
+  const n = (regionNames.get(base) ?? 0) + 1;
+  regionNames.set(base, n);
+  return n > 1 ? `${base} (${n})` : base;
 }
 
 /** A code frame that overflows must be reachable by keyboard; remove the stop again when it fits. */
@@ -117,7 +123,7 @@ function markCode(root: HTMLElement | null) {
  */
 function markTables(root: HTMLElement | null) {
   for (const t of Array.from(root?.querySelectorAll<HTMLTableElement>('table') ?? [])) {
-    const wrap = t.closest<HTMLElement>('.guide-table-wrap, [role="region"]');
+    const wrap = t.closest<HTMLElement>('.doc-table-wrap, [role="region"]');
     const caption = t.querySelector('caption')?.textContent?.trim();
     let prev: Element | null = t.previousElementSibling;
     while (prev && !/^H[1-6]$/.test(prev.tagName)) prev = prev.previousElementSibling;
@@ -346,6 +352,10 @@ export function DocShell({ page, eyebrow, title, lead, groups: groupsProp, path:
     setHosts(made);
     const target = hashTarget(location.hash);
     if (target) {
+      // A reader who arrives on a link starts reading at its heading, so focus starts there too.
+      const landing = target.matches('section') ? target.querySelector<HTMLElement>('h2') ?? target : target;
+      if (!landing.hasAttribute('tabindex')) landing.setAttribute('tabindex', '-1');
+      landing.focus({ preventScroll: true });
       arrive(target);
       target.scrollIntoView();
       hold(target);
@@ -448,6 +458,17 @@ export function DocShell({ page, eyebrow, title, lead, groups: groupsProp, path:
       window.cancelAnimationFrame(frame);
     };
   }, [lessons, arrive, hold]);
+
+  // Keep the current entry visible in a sidebar taller than the window. The rail scrolls itself;
+  // scrollIntoView would move the page as well.
+  useEffect(() => {
+    const rail = document.querySelector<HTMLElement>('.guide-side');
+    const item = rail?.querySelector<HTMLElement>('a[aria-current="location"]');
+    if (!rail || !item || rail.scrollHeight <= rail.clientHeight) return;
+    const r = item.getBoundingClientRect();
+    const b = rail.getBoundingClientRect();
+    if (r.bottom > b.bottom - 24 || r.top < b.top + 16) rail.scrollTop += r.top - b.top - rail.clientHeight / 2;
+  }, [active]);
 
   // On this page: the h3 headings of the current lesson.
   useEffect(() => {

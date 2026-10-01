@@ -24,49 +24,73 @@ import repayTests from '../lessons/repay.test.json?raw';
 
 const E = PAGE_HREF.explanation;
 const H = PAGE_HREF.howto;
-const HORIZON_DOC = blob('wiki-llm/beta-language-2026-09-30/FULL-LANGUAGE-HORIZON.md');
 const pkg = (path: string) => blob(`${BETA_PATH}/${path}`);
 
 const GROUPS = ['Tool', 'Language', 'Results and support', 'Data formats', 'Operation families', 'Release'];
 
-/** The page's sections, in page order. The contents list at the top is generated from this. */
-const CONTENTS: { group: string; items: [string, string][] }[] = [
-  { group: 'Tool', items: [['cli', 'Command-line tool']] },
-  { group: 'Language', items: [['language', 'Source language']] },
-  {
-    group: 'Results and support',
-    items: [
-      ['results', 'Results and judgment order'],
-      ['diagnostics', 'Diagnostic codes'],
-      ['support-labels', 'Support labels'],
-      ['support-matrix', 'Support by operation family'],
-      ['premises-bindings', 'Premises and bindings'],
-    ],
-  },
-  {
-    group: 'Data formats',
-    items: [
-      ['scenario-format', 'Scenario format'],
-      ['test-format', 'Test file format'],
-    ],
-  },
-  { group: 'Operation families', items: FAMILIES.map((f) => [`family-${f.id}`, f.name] as [string, string]) },
-  {
-    group: 'Release',
-    items: [
-      ['example-files', 'Example files'],
-      ['release', 'Release and sources'],
-      ['reading-code-blocks', 'Code block labels'],
-    ],
-  },
+/** The contents line at the top: one link per part of the page, in page order. The sidebar lists every section. */
+const CONTENTS: [string, string][] = [
+  ['cli', 'Command line'],
+  ['language', 'Source language'],
+  ['results', 'Results'],
+  ['diagnostics', 'Diagnostic codes'],
+  ['support-labels', 'Support labels'],
+  ['support-matrix', 'Support matrix'],
+  ['premises-bindings', 'Premises and bindings'],
+  ['scenario-format', 'Scenario format'],
+  ['test-format', 'Test format'],
+  ['family-amm', 'Operation families'],
+  ['example-files', 'Example files'],
+  ['release', 'Release'],
 ];
 
-function C({ children }: { children: ReactNode }) {
-  return <code>{children}</code>;
+const NOWRAP = { whiteSpace: 'nowrap' } as const;
+
+/**
+ * Line breaking for code in narrow table cells. Lines break only at spaces, so a word such as `--write` or
+ * `verify-intent` is never split at its hyphen. A word of 28 or more characters also gets break opportunities after
+ * `_`, `/`, `,` and `-`, and between a lower-case and an upper-case letter. A <wbr> adds no character, so copied
+ * text is unchanged.
+ */
+function breakable(s: string): ReactNode {
+  return s.split(' ').map((word, i) => (
+    <span key={i}>
+      {i > 0 ? ' ' : null}
+      {word.length < 28 ? (
+        <span style={NOWRAP}>{word}</span>
+      ) : (
+        word.split(/(?<=[_/,-])|(?<=[a-z])(?=[A-Z])/).map((part, j) => (
+          <span key={j} style={NOWRAP}>
+            {j > 0 ? <wbr /> : null}
+            {part}
+          </span>
+        ))
+      )}
+    </span>
+  ));
 }
 
-function Chip({ name }: { name: StatusName }) {
-  return <Status name={name} />;
+function C({ children }: { children: ReactNode }) {
+  return <code>{typeof children === 'string' ? breakable(children) : children}</code>;
+}
+
+/** A SHA-256 digest with a break opportunity every 16 hexadecimal characters. */
+function Digest({ hex }: { hex: string }) {
+  return (
+    <code>
+      {hex.match(/.{1,16}/g)!.map((part, i) => (
+        <span key={i}>
+          {i > 0 ? <wbr /> : null}
+          {part}
+        </span>
+      ))}
+    </code>
+  );
+}
+
+/** A label chip. Inside the support-labels and support-matrix sections it is rendered without a link to itself. */
+function Chip({ name, link = true }: { name: StatusName; link?: boolean }) {
+  return <Status name={name} link={link} />;
 }
 
 /** A comma-separated list of code spans. */
@@ -90,21 +114,16 @@ function Contents() {
       <p>
         Facts about the <C>mori</C> tool and the source language <C>{PROFILE}</C>, at commit{' '}
         <a href={`${REPOSITORY}/tree/${PINNED}`}>{PINNED_SHORT}</a>. What a local result does and does not establish is
-        explained in <a href={`${E}#stance`}>Explanation: how labels and limits are stated</a>.
+        explained in <a href={`${E}#stance`}>Explanation: what these pages do not claim</a>.
       </p>
-      <ul>
-        {CONTENTS.map((g) => (
-          <li key={g.group}>
-            <strong>{g.group}:</strong>{' '}
-            {g.items.map(([id, label], i) => (
-              <span key={id}>
-                {i > 0 ? ' · ' : null}
-                <a href={`#${id}`}>{label}</a>
-              </span>
-            ))}
-          </li>
+      <p className="doc-contents">
+        {CONTENTS.map(([id, label], i) => (
+          <span key={id}>
+            {i > 0 ? ' · ' : null}
+            <a href={`#${id}`}>{label}</a>
+          </span>
         ))}
-      </ul>
+      </p>
     </nav>
   );
 }
@@ -112,8 +131,10 @@ function Contents() {
 /* ------------------------------------------------------------------ Tool */
 
 function Cli() {
-  const rows: [string, ReactNode, ReactNode, ReactNode][] = [
+  /** [command, synopsis, effect, output, exit] */
+  const rows: [string, string, ReactNode, ReactNode, ReactNode][] = [
     [
+      'init',
       'init DIR [--template transfer|repay]',
       <>
         Creates <C>DIR</C> and writes <C>invoice.mori</C> (template <C>transfer</C>, the default) or{' '}
@@ -126,6 +147,7 @@ function Cli() {
       '0, 1',
     ],
     [
+      'check',
       'check FILE [--json]',
       'Parses and checks the source.',
       <>
@@ -133,10 +155,12 @@ function Cli() {
         <C>ACTION: LABEL</C> per action. With <C>--json</C>: the analysis record.
       </>,
       <>
-        0 for <C>AuthoringChecked</C>; 1 for <C>AuthoringRejected</C>
+        0 <C>AuthoringChecked</C>
+        <br />1 <C>AuthoringRejected</C>
       </>,
     ],
     [
+      'fmt',
       'fmt FILE [--write]',
       <>
         Formats the source. Prints it, or rewrites <C>FILE</C> with <C>--write</C>.
@@ -147,14 +171,17 @@ function Cli() {
       '0, 1',
     ],
     [
+      'inspect',
       'inspect FILE',
       'Lists identities, actions with support and bounds, intents with their terms, coverage, premises and bindings.',
       'JSON',
       <>
-        0 for <C>AuthoringChecked</C>; 1 for <C>AuthoringRejected</C> or <C>InspectionRejected</C>
+        0 <C>AuthoringChecked</C>
+        <br />1 <C>AuthoringRejected</C>, <C>InspectionRejected</C>
       </>,
     ],
     [
+      'expand',
       'expand FILE --action NAME --scenario FILE',
       'Generates the Source/6 program for one action from the source and the scenario.',
       <>
@@ -162,20 +189,24 @@ function Cli() {
         <C>origins</C>, <C>proposalNote</C>, <C>qualification</C>
       </>,
       <>
-        0 for <C>Expanded</C>; 1 otherwise
+        0 <C>Expanded</C>
+        <br />1 otherwise
       </>,
     ],
     [
+      'simulate',
       'simulate FILE --action NAME --scenario FILE',
       'Expands the action, then runs Core on the generated program.',
       <>
         JSON with <C>status</C>, <C>sourceHash</C>, <C>scenarioHash</C>, <C>result</C>, <C>qualification</C>
       </>,
       <>
-        0 for <C>PreparedUnqualified</C>; 1 otherwise
+        0 <C>PreparedUnqualified</C>
+        <br />1 otherwise
       </>,
     ],
     [
+      'test',
       'test DIR',
       <>
         Runs every case in <C>DIR/mori.tests.json</C>.
@@ -184,18 +215,25 @@ function Cli() {
         JSON report; see <a href="#test-format">test file format</a>
       </>,
       <>
-        0 for <C>TestsPassed</C>; 1 otherwise
+        0 <C>TestsPassed</C>
+        <br />1 otherwise
       </>,
     ],
     [
+      'intent',
       'intent FILE --action NAME --scenario FILE --scheme SCHEME --public-key HEX --framing raw|midnight-sign-data --crypto-binary /ABS/BINARY [--review|--json]',
       'Builds the canonical intent statement and the exact signing message through the native binary.',
       <>
         JSON with status <C>OwnerIntentPrepared</C>, or review text with <C>--review</C>
       </>,
-      '0, 1, 2',
+      <>
+        0 <C>OwnerIntentPrepared</C>
+        <br />1 otherwise
+        <br />2 <C>BETA_CRYPTO_*</C>
+      </>,
     ],
     [
+      'verify-intent',
       'verify-intent FILE --action NAME --scenario FILE --signature FILE --crypto-binary /ABS/BINARY [--review|--json]',
       'Checks the external signature through the native binary, then runs local preparation.',
       <>
@@ -203,24 +241,25 @@ function Cli() {
         review text
       </>,
       <>
-        0 for <C>SignedPreparedUnqualified</C>; 1 otherwise; 2
+        0 <C>SignedPreparedUnqualified</C>
+        <br />1 otherwise
+        <br />2 <C>BETA_CRYPTO_*</C>
       </>,
     ],
-    ['lsp', 'Runs the language server on standard input and output. Takes no arguments.', 'LSP messages', '1 if given arguments'],
-    ['mcp', 'Runs the MCP server on standard input and output. Takes no arguments.', 'MCP messages', '1 if given arguments'],
+    ['lsp', 'lsp', 'Runs the language server on standard input and output. Takes no arguments.', 'LSP messages', '1 if given arguments'],
+    ['mcp', 'mcp', 'Runs the MCP server on standard input and output. Takes no arguments.', 'MCP messages', '1 if given arguments'],
+    ['help', 'help | --help | (no command)', 'Prints the usage line for all commands.', 'Text', '0'],
     [
-      'help | --help | (no command)',
-      'Prints the usage line for all commands.',
-      'Text',
-      '0',
-    ],
-    [
+      'COMMAND --help',
       'COMMAND --help | COMMAND -h',
       'Prints the synopsis of one command.',
       <>
         Text <C>mori SYNOPSIS</C>
       </>,
-      '0; 1 for an unknown command',
+      <>
+        0
+        <br />1 unknown command
+      </>,
     ],
   ];
   return (
@@ -230,23 +269,27 @@ function Cli() {
         Node 24 or later. Source: <a href={pkg('src/cli.ts')}>src/cli.ts</a>. Every help text ends with the line{' '}
         <C>Local financial results remain PreparedUnqualified.</C>
       </p>
-      <Table caption="Commands">
+      <Table caption="Commands. Each command is written after mori.">
         <thead>
           <tr>
-            <th scope="col">Command and arguments</th>
-            <th scope="col">Effect</th>
-            <th scope="col">Output</th>
+            <th scope="col">Command</th>
+            <th scope="col">Synopsis, effect and output</th>
             <th scope="col">Exit</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(([cmd, effect, out, exit]) => (
+          {rows.map(([cmd, synopsis, effect, out, exit]) => (
             <tr key={cmd}>
               <th scope="row">
                 <C>{cmd}</C>
               </th>
-              <td>{effect}</td>
-              <td>{out}</td>
+              <td>
+                <C>{synopsis}</C>
+                <br />
+                {effect}
+                <br />
+                Output: {out}
+              </td>
               <td>{exit}</td>
             </tr>
           ))}
@@ -769,36 +812,15 @@ function Language() {
       </Table>
 
       <h3 id="price-orientation">Price orientation</h3>
-      <Table caption="Prices in the beta and in the proposed horizon">
-        <thead>
-          <tr>
-            <th scope="col">Item</th>
-            <th scope="col">Fact</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">Beta</th>
-            <td>
-              <C>{PROFILE}</C> has no price type. A <C>Price</C> annotation is rejected with <C>BETA_ANNOTATION</C>.
-              Price units in the examples are strings: <C>strike_units: "USD per GOLD"</C>, <C>unit: "USD per GOLD"</C>.
-            </td>
-          </tr>
-          <tr>
-            <th scope="row">Proposed (not accepted by the beta)</th>
-            <td>
-              <C>{'Price<Base, Quote, Scale>'}</C> counts units of <C>Base</C> per one unit of <C>Quote</C>
-              (base-per-quote). <C>{'Price<USD, GOLD, 2>'}</C> with mantissa 10000 reads 100.00 USD per GOLD. Swapping
-              the type arguments reverses the direction. A reciprocal needs an explicit conversion and a rounding
-              beneficiary. Source: <a href={HORIZON_DOC}>FULL-LANGUAGE-HORIZON.md</a>.
-            </td>
-          </tr>
-        </tbody>
-      </Table>
+      <p>
+        <C>{PROFILE}</C> has no price type. A <C>Price</C> annotation is rejected with <C>BETA_ANNOTATION</C>. Price
+        units in the examples are strings: <C>strike_units: "USD per GOLD"</C>, <C>unit: "USD per GOLD"</C>.
+      </p>
       <SeeAlso
         items={[
           { mode: 'explanation', href: `${E}#explicit-terms`, label: 'Why every term is stated' },
           { mode: 'howto', href: `${H}#cap-with-fee`, label: 'How to cap a payment so the fee counts toward the gross debit' },
+          { mode: 'explanation', href: `${E}#horizon-price`, label: 'Proposed price orientation' },
         ]}
       />
     </Section>
@@ -808,23 +830,43 @@ function Language() {
 /* ------------------------------------------------------------------ Results and support */
 
 function Results() {
-  const statuses: [string, string, string][] = [
-    ['Initialized', 'init', 'The project directory and its four files were written.'],
-    ['AuthoringChecked', 'check, inspect', 'The source passed every source check.'],
-    ['AuthoringRejected', 'check, fmt, inspect, expand, simulate', 'A source diagnostic, or an unknown action name.'],
-    ['InspectionRejected', 'inspect', 'Inspection exceeded its bounds. Carries the original authoringStatus; not a source error.'],
-    ['Expanded', 'expand', 'The Source/6 program was generated.'],
-    ['PreparedUnqualified', 'simulate', 'Core produced a candidate: ordered effects and a candidate post-state.'],
-    ['CoreRejected', 'simulate', 'Core rejected the request at one judgment.'],
-    ['SourceRejected', 'simulate', 'The Source/6 parser rejected the generated program during preparation.'],
-    ['FormationRejected', 'expand, simulate, test, intent, verify-intent, init', 'A scenario, test, signature or command input was refused before Core.'],
-    ['Unsupported', 'expand, simulate', 'The action is SpecifiedOnly. No effects or post-state are published.'],
-    ['TestsPassed', 'test', 'Every case matched its expectation.'],
-    ['TestsFailed', 'test', 'At least one case did not match.'],
-    ['OwnerIntentPrepared', 'intent', 'The canonical statement and signing message were built. No signature was checked.'],
-    ['SignedPreparedUnqualified', 'verify-intent', 'The signature verified and local preparation produced a candidate.'],
-    ['SignedCoreRejected', 'verify-intent', 'The signature verified and Core rejected the request.'],
-    ['SignatureRejected', 'verify-intent', 'The native verifier rejected the signature.'],
+  /** [row key, status shown, reported by, meaning] */
+  const statuses: [string, ReactNode, string, ReactNode][] = [
+    ['Initialized', <C>Initialized</C>, 'init', 'The project directory and its four files were written.'],
+    ['AuthoringChecked', <C>AuthoringChecked</C>, 'check, inspect', 'The source passed every source check.'],
+    ['AuthoringRejected', <C>AuthoringRejected</C>, 'check, fmt, inspect, expand, simulate', 'A source diagnostic, or an unknown action name.'],
+    ['InspectionRejected', <C>InspectionRejected</C>, 'inspect', 'Inspection exceeded its bounds. Carries the original authoringStatus; not a source error.'],
+    ['Expanded', <C>Expanded</C>, 'expand', 'The Source/6 program was generated.'],
+    ['PreparedUnqualified', <C>PreparedUnqualified</C>, 'simulate', 'Core produced a candidate: ordered effects and a candidate post-state.'],
+    ['CoreRejected', <C>CoreRejected</C>, 'simulate', 'Core rejected the request at one judgment.'],
+    ['SourceRejected', <C>SourceRejected</C>, 'simulate', 'The Source/6 parser rejected the generated program during preparation.'],
+    ['FormationRejected', <C>FormationRejected</C>, 'expand, simulate, test, intent, verify-intent, init', 'A scenario, test, signature or command input was refused before Core.'],
+    [
+      'FormationRejected-crypto',
+      <>
+        <C>FormationRejected</C> with a <C>BETA_CRYPTO_*</C> code
+      </>,
+      'intent, verify-intent',
+      'The native verifier gave no valid answer: binary, timeout, transport or response failure. Exit 2. Signature validity unknown. Nothing is accepted as a fallback.',
+    ],
+    ['Unsupported', <C>Unsupported</C>, 'expand, simulate', 'The action is SpecifiedOnly. No effects or post-state are published.'],
+    ['TestsPassed', <C>TestsPassed</C>, 'test', 'Every case matched its expectation.'],
+    ['TestsFailed', <C>TestsFailed</C>, 'test', 'At least one case did not match.'],
+    ['OwnerIntentPrepared', <C>OwnerIntentPrepared</C>, 'intent', 'The canonical statement and signing message were built. No signature was checked.'],
+    [
+      'SignedPreparedUnqualified',
+      <C>SignedPreparedUnqualified</C>,
+      'verify-intent',
+      <>
+        The native verifier accepted the owner's signature and local preparation produced a candidate. The signature
+        is over the canonical intent statement, not over the source file. The statement binds the SHA-256 of the
+        exact source bytes, the agreement and action, the chain and network claims, the asset representation, scale
+        and symbol, the signer and key reference, the signature metadata, and the owner's operation and bounds. The
+        scenario is not signed.
+      </>,
+    ],
+    ['SignedCoreRejected', <C>SignedCoreRejected</C>, 'verify-intent', 'The signature verified and Core rejected the request.'],
+    ['SignatureRejected', <C>SignatureRejected</C>, 'verify-intent', 'The native verifier rejected the signature. Local preparation is skipped.'],
   ];
   const judgments: [string, string, string][] = [
     ['stage', 'The state and request have the S0 shape.', 'S0_STAGE_UNSUPPORTED'],
@@ -845,15 +887,20 @@ function Results() {
           </tr>
         </thead>
         <tbody>
-          {statuses.map(([s, by, m]) => (
-            <tr key={s}>
-              <th scope="row"><C>{s}</C></th>
+          {statuses.map(([key, s, by, m]) => (
+            <tr key={key}>
+              <th scope="row">{s}</th>
               <td><Codes items={by.split(', ')} /></td>
               <td>{m}</td>
             </tr>
           ))}
         </tbody>
       </Table>
+      <p>
+        Every <C>SignedPreparedUnqualified</C>, <C>SignedCoreRejected</C> and <C>SignatureRejected</C> result carries
+        four state values: <C>keyAuthority: "Unverified"</C>, <C>state: "LocalStipulationOnly"</C>,{' '}
+        <C>nativeProof: "NotChecked"</C> and <C>ledger: "NotSubmitted"</C>, with <C>ledger_accepted: false</C>.
+      </p>
       <p>
         A test case may expect one of six statuses: <C>PreparedUnqualified</C>, <C>CoreRejected</C>,{' '}
         <C>SourceRejected</C>, <C>AuthoringRejected</C>, <C>FormationRejected</C>, <C>Unsupported</C>.
@@ -912,12 +959,11 @@ function Results() {
           <tr><th scope="row"><C>actions[].coverage.financialRelations</C></th><td><C>check --json</C>, <C>inspect</C></td><td><C>DelegatedToCoreDuringLocalPreparation</C> (LocalS0) or <C>Open</C> (SpecifiedOnly)</td></tr>
           <tr><th scope="row"><C>actions[].coverage.localPreparation</C></th><td><C>check --json</C>, <C>inspect</C></td><td><C>AvailableUnqualified</C> (LocalS0) or <C>Unsupported</C> (SpecifiedOnly)</td></tr>
           <tr><th scope="row"><C>scenarioValidation</C></th><td><C>Unsupported</C> results</td><td><C>NotAppliedUnsupported</C>: the scenario was not schema-checked or applied.</td></tr>
-          <tr><th scope="row"><C>keyAuthority</C></th><td><C>verify-intent</C></td><td><C>Unverified</C></td></tr>
         </tbody>
       </Table>
       <SeeAlso
         items={[
-          { mode: 'explanation', href: `${E}#architecture`, label: 'How an intention becomes a candidate' },
+          { mode: 'explanation', href: `${E}#architecture`, label: 'How an intent becomes a candidate' },
           { mode: 'howto', href: `${H}#test-rejection`, label: 'How to test that Core rejects a request' },
         ]}
       />
@@ -1000,12 +1046,18 @@ const LABELS: [StatusName, ReactNode, ReactNode][] = [
   ],
   [
     'PreparedUnqualified',
-    'A candidate result exists. It is not authenticated, proved, signed or settled.',
+    <>
+      A candidate result exists. Its limits are in{' '}
+      <a href={`${E}#stance`}>Explanation: what these pages do not claim</a>.
+    </>,
     <>Status of <C>simulate</C> and of a test case.</>,
   ],
   [
     'SignedPreparedUnqualified',
-    "A native verifier accepted the owner's signature over a canonical intent statement that binds the SHA-256 of the exact source bytes, and local preparation produced a candidate. Key authority, proof and ledger acceptance are still not established.",
+    <>
+      A native verifier accepted the owner's signature and local preparation produced a candidate. What the statement
+      binds and the four state values the result carries: <a href="#results">results</a>.
+    </>,
     <>Status of <C>verify-intent</C>.</>,
   ],
   [
@@ -1039,7 +1091,7 @@ function SupportLabels() {
         <tbody>
           {LABELS.map(([name, def, where]) => (
             <tr key={name}>
-              <th scope="row"><Chip name={name} /></th>
+              <th scope="row"><Chip name={name} link={false} /></th>
               <td>{def}</td>
               <td>{where}</td>
             </tr>
@@ -1067,11 +1119,8 @@ function SupportMatrix() {
         <thead>
           <tr>
             <th scope="col">Operation</th>
-            <th scope="col">File</th>
-            <th scope="col">Actions</th>
+            <th scope="col">File and actions</th>
             <th scope="col">Label</th>
-            <th scope="col"><C>financialRelations</C></th>
-            <th scope="col"><C>localPreparation</C></th>
             <th scope="col">expand, simulate</th>
           </tr>
         </thead>
@@ -1079,12 +1128,17 @@ function SupportMatrix() {
           {local.map(([name, init, file, action]) => (
             <tr key={name}>
               <th scope="row">{name}</th>
-              <td><C>{file}</C> from <C>{init}</C></td>
-              <td><C>{action}</C></td>
-              <td><Chip name="LocalS0" /></td>
-              <td><C>DelegatedToCoreDuringLocalPreparation</C></td>
-              <td><C>AvailableUnqualified</C></td>
-              <td><C>Expanded</C>; <Chip name="PreparedUnqualified" /> or <Chip name="CoreRejected" /></td>
+              <td>
+                <C>{file}</C> from <C>{init}</C>
+                <br />
+                <C>{action}</C>
+              </td>
+              <td><Chip name="LocalS0" link={false} /></td>
+              <td>
+                <C>Expanded</C>
+                <br />
+                <Chip name="PreparedUnqualified" link={false} /> or <Chip name="CoreRejected" link={false} />
+              </td>
             </tr>
           ))}
           {FAMILY_ENTRIES.map((f) => {
@@ -1092,21 +1146,33 @@ function SupportMatrix() {
             return (
               <tr key={f.id}>
                 <th scope="row"><a href={`#family-${f.id}`}>{fam.name}</a></th>
-                <td><a href={pkg(f.file)}><C>{f.file.replace('examples/', '')}</C></a></td>
-                <td><Codes items={f.operations.map((o) => o.action)} /></td>
-                <td><Chip name="SpecifiedOnly" /></td>
-                <td><Chip name="Open" /></td>
-                <td><C>Unsupported</C></td>
-                <td><Chip name="Unsupported" /> (<C>BETA_PROFILE_UNSUPPORTED</C>)</td>
+                <td>
+                  <a href={pkg(f.file)}><C>{f.file.replace('examples/', '')}</C></a>
+                  <br />
+                  <Codes items={f.operations.map((o) => o.action)} />
+                </td>
+                <td><Chip name="SpecifiedOnly" link={false} /></td>
+                <td>
+                  <Chip name="Unsupported" link={false} />
+                  <br />
+                  <C>BETA_PROFILE_UNSUPPORTED</C>
+                </td>
               </tr>
             );
           })}
         </tbody>
       </Table>
       <p>
-        <C>verify-intent</C> can reach <Chip name="SignedPreparedUnqualified" /> for the transfer and repayment actions
-        only. <C>intent</C> on a SpecifiedOnly action stops with <C>BETA_AUTH_SOURCE</C>, because its expansion is{' '}
-        <C>Unsupported</C>.
+        In <C>check --json</C> and <C>inspect</C>, a <Chip name="LocalS0" link={false} /> action reports{' '}
+        <C>financialRelations: "DelegatedToCoreDuringLocalPreparation"</C> and{' '}
+        <C>localPreparation: "AvailableUnqualified"</C>; a <Chip name="SpecifiedOnly" link={false} /> action reports{' '}
+        <C>financialRelations: "Open"</C> and <C>localPreparation: "Unsupported"</C> (
+        <a href="#results">scope fields</a>).
+      </p>
+      <p>
+        <C>verify-intent</C> can reach <Chip name="SignedPreparedUnqualified" link={false} /> for the transfer and
+        repayment actions only. <C>intent</C> on a SpecifiedOnly action stops with <C>BETA_AUTH_SOURCE</C>, because its
+        expansion is <C>Unsupported</C>.
       </p>
       <SeeAlso
         items={[
@@ -1395,19 +1461,21 @@ function FamilyEntrySection({ entry }: { entry: FamilyEntry }) {
       <FamilyStrip id={entry.id} here="reference" />
       <Table caption={`${fam.name}: file`}>
         <tbody>
-          <tr><th scope="row">File</th><td><a href={pkg(entry.file)}><C>{`${BETA_PATH}/${entry.file}`}</C></a></td></tr>
-          <tr><th scope="row">SHA-256</th><td><C>{entry.sha256}</C></td></tr>
-          <tr><th scope="row">Bytes</th><td>{entry.bytes}</td></tr>
+          <tr>
+            <th scope="row">File</th>
+            <td>
+              <a href={pkg(entry.file)}><C>{`${BETA_PATH}/${entry.file}`}</C></a> (size and SHA-256:{' '}
+              <a href="#example-files">example files</a>)
+            </td>
+          </tr>
           <tr><th scope="row">Agreement</th><td><C>{entry.agreement}</C></td></tr>
-          <tr><th scope="row">Label</th><td><Chip name="SpecifiedOnly" /> for every action</td></tr>
-          <tr><th scope="row">expand, simulate</th><td><Chip name="Unsupported" />, <C>BETA_PROFILE_UNSUPPORTED</C></td></tr>
+          <tr><th scope="row">Support</th><td>See <a href="#support-matrix">support by operation family</a>.</td></tr>
         </tbody>
       </Table>
       <Table caption={`${fam.name}: operations and required named arguments`}>
         <thead>
           <tr>
-            <th scope="col">Action</th>
-            <th scope="col">Intent</th>
+            <th scope="col">Action and intent</th>
             <th scope="col">Operation</th>
             <th scope="col">Required arguments</th>
             <th scope="col">Other intent fields</th>
@@ -1416,8 +1484,11 @@ function FamilyEntrySection({ entry }: { entry: FamilyEntry }) {
         <tbody>
           {entry.operations.map((o) => (
             <tr key={o.action}>
-              <th scope="row"><C>{o.action}</C></th>
-              <td><C>{o.intent}</C></td>
+              <th scope="row">
+                <C>{o.action}</C>
+                <br />
+                <span style={{ fontWeight: 400 }}>uses</span> <C>{o.intent}</C>
+              </th>
               <td><C>{o.operation}</C></td>
               <td><Codes items={(REGISTRY_MAP.get(o.operation) ?? []).map(([a, role]) => `${a}: ${role}`)} /></td>
               <td><Codes items={o.other} /></td>
@@ -1469,7 +1540,7 @@ function FamilyEntrySection({ entry }: { entry: FamilyEntry }) {
           ))}
         </tbody>
       </Table>
-      <CodeDetails summary={`Complete file: ${name} (${entry.bytes} bytes)`} kind="file" title={name} href={pkg(entry.file)}>
+      <CodeDetails summary={`Complete file: ${name}`} kind="file" title={name} href={pkg(entry.file)}>
         {entry.source}
       </CodeDetails>
     </Section>
@@ -1533,7 +1604,7 @@ function Examples() {
               <tr key={file}>
                 <th scope="row"><a href={pkg(file)}><C>{file.replace('examples/', '')}</C></a></th>
                 <td>{bytes}</td>
-                <td><C>{sha}</C></td>
+                <td><Digest hex={sha} /></td>
                 <td>
                   {STATUS_LABELS.includes(label) ? <Chip name={label as StatusName} /> : label}
                   {fam ? <> (<a href={`#family-${fam.id}`}>entry</a>)</> : null}
@@ -1543,13 +1614,12 @@ function Examples() {
           })}
         </tbody>
       </Table>
-      <Table caption="Files written by mori init">
+      <Table caption="Files written by mori init. Digests are in the table above.">
         <thead>
           <tr>
             <th scope="col">Template</th>
             <th scope="col">Source file</th>
             <th scope="col">Bytes</th>
-            <th scope="col">SHA-256</th>
             <th scope="col">Same bytes as</th>
           </tr>
         </thead>
@@ -1558,14 +1628,12 @@ function Examples() {
             <th scope="row"><C>transfer</C></th>
             <td><C>invoice.mori</C></td>
             <td>960</td>
-            <td><C>fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c</C></td>
             <td><C>signed-intent/transfer-*/program.mori</C></td>
           </tr>
           <tr>
             <th scope="row"><C>repay</C></th>
             <td><C>repayment.mori</C></td>
             <td>915</td>
-            <td><C>cda0142e991033fba9eb1551e9188e1bb2b3b953513d2893473810ef5e1b1c66</C></td>
             <td><C>signed-intent/repay-ecdsa-raw/program.mori</C>. <C>local/repay/repayment.mori</C> adds a final newline.</td>
           </tr>
         </tbody>
@@ -1607,7 +1675,7 @@ function Release() {
           <tr><th scope="row">Command</th><td><C>mori</C> (<C>dist/cli.js</C>)</td></tr>
           <tr><th scope="row">Runtime</th><td>Node 24 or later</td></tr>
           <tr><th scope="row">Distribution</th><td>Built from a checkout; not published to npm. <C>npm pack</C> produces <C>moriarty-lang-beta-{PACKAGE_VERSION}.tgz</C> for a local install.</td></tr>
-          <tr><th scope="row">Commit of these pages</th><td><a href={`${REPOSITORY}/tree/${PINNED}`}><C>{PINNED}</C></a></td></tr>
+          <tr><th scope="row">Commit of these pages</th><td><a href={`${REPOSITORY}/tree/${PINNED}`}><Digest hex={PINNED} /></a></td></tr>
         </tbody>
       </Table>
       <Table caption="Canonical texts at the pinned commit">
