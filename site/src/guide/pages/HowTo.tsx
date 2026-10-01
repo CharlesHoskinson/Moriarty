@@ -347,7 +347,7 @@ function RecipeSection({ r }: { r: Recipe }) {
   if (!source) throw new Error(`No example ${file}`);
   const k = (step: string) => `fam-${r.id}-${step}`;
   return (
-    <Section id={`write-${r.id}`} title={`How to write ${articleFor(fam.name)} agreement`} nav={fam.name} group="Author">
+    <Section id={`write-${r.id}`} title={`How to write ${fam.agreement}`} nav={fam.name} group="Author">
       <FamilyStrip id={r.id} here="howto" />
       <Intro goal={r.goal} start={HAVE_MORI} />
       <p>The beta checks this kind of agreement and does not run it.</p>
@@ -383,6 +383,7 @@ function RecipeSection({ r }: { r: Recipe }) {
         <li>
           <p>Check the file:</p>
           <Cmd k={k('check')} title={`Check ${file}`} />
+          <Out k={k('check')} />
           <p>
             If <code>check</code> reports an error, read its code and position. For example, {r.mistake} gives:
           </p>
@@ -391,28 +392,13 @@ function RecipeSection({ r }: { r: Recipe }) {
         </li>
       </Steps>
       <Worked>
-        <code>check</code> exits 0 and lists every action as specified only:
+        The check in step 4 exits 0 and lists every action as <code>SpecifiedOnly</code>.
       </Worked>
-      <Out k={k('check')} />
       <p>
         Exact argument kinds: <a href={`${R}#family-${r.id}`}>Reference: {fam.name}</a>.
       </p>
     </Section>
   );
-}
-
-function articleFor(name: string): string {
-  const lower: Record<string, string> = {
-    AMM: 'an AMM',
-    Lending: 'a lending',
-    Stablecoins: 'a stablecoin',
-    'Options and derivatives': 'an option',
-    Oracles: 'an oracle',
-    Governance: 'a governance',
-    Bridges: 'a bridge',
-    Staking: 'a staking',
-  };
-  return lower[name] ?? `a ${name.toLowerCase()}`;
 }
 
 /** Actions per shipped example, as `mori check` lists them. */
@@ -427,20 +413,10 @@ const FAMILY_ACTIONS: Record<FamilyId, string> = {
   staking: 'deposit, reward, slash, unbond, withdraw',
 };
 
-/** A status cell: the status name in code, any exit note in plain text, a dash for none. */
-function StatusCell({ text }: { text: string }) {
-  const [name, rest] = text.split(' (');
-  return (
-    <span style={{ whiteSpace: 'nowrap' }}>
-      {name === '—' ? '—' : <code style={{ wordBreak: 'normal' }}>{name}</code>}
-      {rest ? ` (${rest}` : null}
-    </span>
-  );
-}
-
 interface Symptom {
   see: ReactNode;
-  status: string;
+  /** The result status and exit code, only where they tell the symptoms apart. */
+  result?: ReactNode;
   cause: ReactNode;
   fix: ReactNode;
 }
@@ -448,13 +424,12 @@ interface Symptom {
 const SYMPTOMS: Symptom[] = [
   {
     see: <code>mori: command not found</code>,
-    status: '—',
     cause: 'A new shell, so the mori function is gone.',
     fix: <a href="#restore-shell">Restore the function</a>,
   },
   {
     see: <code>mori: ENOENT: no such file or directory, stat '…/mori.tests.json'</code>,
-    status: '— (exit 1)',
+    result: <>Exit code 1</>,
     cause: (
       <>
         <code>mori test</code> was given a directory without a test file.
@@ -468,7 +443,7 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>mori: simulate requires --action and --scenario</code>,
-    status: '— (exit 1)',
+    result: <>Exit code 1</>,
     cause: 'An argument is missing.',
     fix: (
       <>
@@ -478,7 +453,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_INIT_EXISTS</code>,
-    status: 'FormationRejected',
     cause: (
       <>
         <code>init</code> refuses a directory that already exists.
@@ -488,7 +462,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_PROFILE at 1:9: Expected profile "moriarty-beta/1"</code>,
-    status: 'AuthoringRejected',
     cause: 'The first line names another profile.',
     fix: (
       <>
@@ -498,7 +471,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_QUANTITY_SEPARATOR: Quantity and asset need whitespace or a comment</code>,
-    status: 'AuthoringRejected',
     cause: (
       <>
         An amount written as <code>10.00USD</code>.
@@ -512,7 +484,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_PRECISION: Quantity has more decimals than asset scale</code>,
-    status: 'AuthoringRejected',
     cause: (
       <>
         <code>10.001 USD</code> for an asset of scale 2.
@@ -522,7 +493,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_MISSING_FIELD: Missing field fee_cap</code>,
-    status: 'AuthoringRejected',
     cause: 'A required intent field or named argument is left out.',
     fix: (
       <>
@@ -532,7 +502,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_REFERENCE: Unknown or forward reference Byer</code>,
-    status: 'AuthoringRejected',
     cause: 'A misspelt name, or a name used before its declaration.',
     fix: 'Fix the spelling, or move the declaration above its first use.',
   },
@@ -542,13 +511,11 @@ const SYMPTOMS: Symptom[] = [
         <code>BETA_ASSET_MISMATCH</code>, for example <code>Expected Qty&lt;GOLD&gt;, received Qty&lt;USD&gt;</code>
       </>
     ),
-    status: 'AuthoringRejected',
     cause: 'Two different assets added together, or an amount in the wrong asset.',
     fix: 'Use the asset the field or operation expects. Nothing converts between assets.',
   },
   {
     see: <code>BETA_DOMAIN_MISMATCH: Transfer accounts have different domains</code>,
-    status: 'AuthoringRejected',
     cause: 'Accounts or assets from two domains in one operation.',
     fix: 'Declare them in the same domain. Only a bridge names a foreign domain.',
   },
@@ -558,13 +525,11 @@ const SYMPTOMS: Symptom[] = [
         <code>BETA_TYPE</code>, for example <code>Expected account reference</code>
       </>
     ),
-    status: 'AuthoringRejected',
     cause: 'A declaration of the wrong kind passed to a named argument.',
     fix: 'Pass a declaration of the kind the argument names.',
   },
   {
     see: <code>BETA_ACTION_UNKNOWN: Unknown action payy</code>,
-    status: 'AuthoringRejected',
     cause: (
       <>
         <code>--action</code> names no action in the file.
@@ -578,7 +543,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>BETA_SCENARIO_IDENTITY: Expected asset ID A; got B (/asset)</code>,
-    status: 'FormationRejected',
     cause: "The scenario's domain or asset id differs from the agreement's.",
     fix: (
       <>
@@ -593,8 +557,11 @@ const SYMPTOMS: Symptom[] = [
         <code>BETA_PROFILE_UNSUPPORTED</code> from <code>simulate</code> or <code>expand</code>
       </>
     ),
-    status: 'Unsupported',
-    cause: 'The action is specified only. The beta checks it and does not run it.',
+    cause: (
+      <>
+        The action is <code>SpecifiedOnly</code>. The beta checks it and does not run it.
+      </>
+    ),
     fix: (
       <>
         Nothing to fix. Use <code>mori check</code> for these files (<a href="#check-family">how to check an example</a>).
@@ -607,7 +574,6 @@ const SYMPTOMS: Symptom[] = [
         <code>check</code> passes, then <code>S0_INTENT_SCOPE</code>
       </>
     ),
-    status: 'CoreRejected',
     cause: 'The operation does not fit the signed bounds (gross cap, fee cap, net floor), or the round is outside the window.',
     fix: (
       <>
@@ -617,13 +583,11 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>S0_EFFECT_RANGE</code>,
-    status: 'CoreRejected',
     cause: "The owner's balance is below the gross debit, or a repayment is above the amount outstanding.",
     fix: 'Lower the amount or raise the scenario balance.',
   },
   {
     see: <code>S0_AUTH_SCOPE</code>,
-    status: 'CoreRejected',
     cause: (
       <>
         The scenario's <code>allowance.remaining</code> is below the gross debit, or <code>work_remaining</code> is 0.
@@ -633,7 +597,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>S0_HISTORY_REPLAY</code>,
-    status: 'CoreRejected',
     cause: (
       <>
         The scenario says the nonce is already used (<code>"replay": "consumed"</code>).
@@ -647,7 +610,6 @@ const SYMPTOMS: Symptom[] = [
   },
   {
     see: <code>S0_HISTORY_STALE</code>,
-    status: 'CoreRejected',
     cause: (
       <>
         The scenario's <code>head</code> differs from the intent's <code>pre_head</code>.
@@ -661,25 +623,28 @@ const SYMPTOMS: Symptom[] = [
         <code>TestsFailed</code> with a <code>pointer</code>, <code>expected</code> and <code>actual</code>
       </>
     ),
-    status: 'TestsFailed (exit 1)',
+    result: <>Exit code 1</>,
     cause: 'The run differs from what the test expects at that JSON pointer.',
     fix: 'Redo the arithmetic for that value. Change the expectation only if your arithmetic was wrong.',
   },
   {
     see: <code>BETA_SIGNATURE_SOURCE_MISMATCH: Signed statement differs from current source</code>,
-    status: 'FormationRejected',
     cause: 'The source bytes changed after the intent was prepared, even by a comment or by formatting.',
     fix: 'Prepare the intent again and get a new signature.',
   },
   {
     see: <code>SignatureRejected</code>,
-    status: 'SignatureRejected (exit 1)',
+    result: <>Exit code 1</>,
     cause: 'The signature does not verify for the frame, key, scheme and framing.',
     fix: 'Sign the decoded signing-message bytes, once, with the stated key and scheme.',
   },
   {
     see: <code>BETA_CRYPTO_BINARY_UNAVAILABLE</code>,
-    status: 'FormationRejected (exit 2)',
+    result: (
+      <>
+        <code>FormationRejected</code>, exit code 2
+      </>
+    ),
     cause: (
       <>
         <code>--crypto-binary</code> does not name a usable verifier.
@@ -763,6 +728,7 @@ export default function HowTo() {
               <code>Moriarty</code>, and define the function again:
             </p>
             <Cmd k="rs-checkout" title="Restore mori from the checkout" />
+            <Out k="rs-checkout" />
           </li>
           <li>
             <p>
@@ -772,8 +738,7 @@ export default function HowTo() {
             <Cmd k="rs-archive" title="Restore mori from the archive project" />
           </li>
         </Steps>
-        <Worked>Both print the command list:</Worked>
-        <Out k="rs-checkout" />
+        <Worked>Either way, <code>mori --help</code> prints the command list shown in step 1.</Worked>
       </Section>
 
       <Section id="editor" title="How to set up the editor and language server" nav="Editor and language server" group="Set up">
@@ -831,14 +796,14 @@ export default function HowTo() {
           <li>
             <p>Run the headless client test from the package directory:</p>
             <Cmd k="ed-nvim" title="Run the Neovim smoke test" />
+            <Out k="ed-nvim" />
           </li>
         </Steps>
         <p>
           Other clients can run <code>mori lsp</code>: stdio, full document sync, UTF-16 positions. Activation in other
           clients is not tested.
         </p>
-        <Worked>The Neovim test prints one line:</Worked>
-        <Out k="ed-nvim" />
+        <Worked>The Neovim test prints the one line shown in step 2.</Worked>
         <p>
           Canonical text: <a href={blob(`${BETA_PATH}/editor/README.md`)}>editor/README.md</a>.
         </p>
@@ -886,6 +851,7 @@ export default function HowTo() {
           <li>
             <p>Run the tests:</p>
             <Cmd k="wt-run" title="Run the tests" />
+            <Out k="wt-run" />
           </li>
         </Steps>
         <p>
@@ -898,9 +864,8 @@ export default function HowTo() {
           <a href={`${R}#test-format`}>Reference: test file format</a>.
         </p>
         <Worked>
-          Both cases pass and <code>mori test</code> exits 0:
+          In step 5 both cases pass and <code>mori test</code> exits 0.
         </Worked>
-        <Out k="wt-run" />
         <Background href={`${E}#why-derive-expectations`}>Why expected amounts must be derived independently</Background>
       </Section>
 
@@ -939,21 +904,30 @@ export default function HowTo() {
           <li>
             <p>Run the tests:</p>
             <Cmd k="tr-run" title="Run the tests" />
+            <Out k="tr-run" />
           </li>
         </Steps>
         <p>
           A case with <code>expect: {'{ status, code }'}</code> asserts the status and the code only. A rejection
           publishes no effects and no post state.
         </p>
-        <p>If the code in the case is wrong, the case fails and names the code it got:</p>
-        <Out k="tr-wrong" title="Part of the output, with S0_EFFECT_RANGE expected" />
+        <p>
+          If the code in the case is wrong, the case fails and names the code it got. To see this, change the expected
+          code to <code>S0_EFFECT_RANGE</code> and run the tests again:
+        </p>
+        <Cmd k="tr-wrong" title="Expect the wrong code and run the tests" />
+        <Out k="tr-wrong" title="Part of the output" />
+        <p>
+          <code>mori test</code> itself exits 1 here. Put the correct expectation back:
+        </p>
+        <Cmd k="tr-restore" title="Restore mori.tests.json" />
+        <p>{NO_OUTPUT}</p>
         <p>
           Other scenario changes and the codes they produce are in the <a href="#diagnose">diagnosis table</a>.
         </p>
         <Worked>
-          Both cases pass and <code>mori test</code> exits 0:
+          In step 5 both cases pass and <code>mori test</code> exits 0.
         </Worked>
-        <Out k="tr-run" />
         <Background href={`${E}#stipulation`}>What a passing local run does and does not show</Background>
       </Section>
 
@@ -1006,10 +980,14 @@ export default function HowTo() {
           </li>
         </Steps>
         <p>
-          If the amount is above the 101000 atoms outstanding (for example 1010.01 USD), Core rejects it. Test that with a
-          rejection case (<a href="#test-rejection">how to test a rejection</a>):
+          If the amount is above the 101000 atoms outstanding, Core rejects it. To see the rejection, write a copy that
+          repays 1010.01 USD and run it:
         </p>
-        <Out k="ca-over" title="Part of the simulate output for 1010.01 USD" />
+        <Cmd k="ca-over" title="Run a repayment of 1010.01 USD" />
+        <Out k="ca-over" />
+        <p>
+          Test that with a rejection case (<a href="#test-rejection">how to test a rejection</a>).
+        </p>
         <Worked>Run the tests again. The case passes:</Worked>
         <Cmd k="ca-run" title="Run the tests" />
         <Out k="ca-run" />
@@ -1041,24 +1019,26 @@ export default function HowTo() {
             <p>Run the same command again.</p>
           </li>
         </Steps>
-        <Table caption="Symptoms, the status they come with, likely causes and fixes">
+        <Table caption="Symptoms, likely causes and fixes">
           <thead>
             <tr>
               <th scope="col">What you see</th>
-              <th scope="col">Status</th>
-              <th scope="col">Likely cause</th>
-              <th scope="col">Fix</th>
+              <th scope="col">Likely cause and fix</th>
             </tr>
           </thead>
           <tbody>
             {SYMPTOMS.map((s, i) => (
               <tr key={i}>
-                <td>{s.see}</td>
                 <td>
-                  <StatusCell text={s.status} />
+                  {s.see}
+                  {s.result ? <span style={{ display: 'block', marginTop: '0.25rem' }}>{s.result}</span> : null}
                 </td>
-                <td>{s.cause}</td>
-                <td>{s.fix}</td>
+                <td>
+                  {s.cause}
+                  <span style={{ display: 'block', marginTop: '0.25rem' }}>
+                    <strong>Fix:</strong> {s.fix}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1168,10 +1148,10 @@ export default function HowTo() {
               amounts in atoms:
             </p>
             <Cmd k="fi-terms" title="List the intent terms" />
+            <Out k="fi-terms" />
           </li>
         </Steps>
-        <Worked>Every term of the intent is listed, including the empty ones:</Worked>
-        <Out k="fi-terms" />
+        <Worked>Step 4 lists every term of the intent, including the empty ones.</Worked>
         <p>
           <code>inspect</code> also prints identity claims, action support and open premises:{' '}
           <a href={`${R}#cli`}>Reference: command line</a>.
@@ -1186,13 +1166,14 @@ export default function HowTo() {
       <Section id="check-family" title="How to check an example from the eight DeFi families" nav="Check a DeFi example" group="Check the examples">
         <Intro goal="Check one of the shipped DeFi examples and read the result." start={HAVE_MORI} />
         <p>
-          These eight examples are specified only: the beta checks their structure, names and quantities, and does not
-          run them (<a href={`${R}#support-labels`}>Reference: support labels</a>).
+          These eight examples are <code>SpecifiedOnly</code>: the beta checks their structure, names and quantities,
+          and does not run them (<a href={`${R}#support-labels`}>Reference: support labels</a>).
         </p>
         <Steps>
           <li>
             <p>Check the file. Here, the AMM example:</p>
             <Cmd k="cfam-check" title="Check amm.mori" />
+            <Out k="cfam-check" />
           </li>
           <li>
             <p>
@@ -1237,7 +1218,7 @@ export default function HowTo() {
                   <code>{FAMILY_ACTIONS[f.id]}</code>
                 </td>
                 <td>
-                  <a href={`#write-${f.id}`}>{`How to write ${articleFor(f.name)} agreement`}</a>
+                  <a href={`#write-${f.id}`}>{`How to write ${f.agreement}`}</a>
                 </td>
               </tr>
             ))}
@@ -1251,9 +1232,8 @@ export default function HowTo() {
           {run('cfam-all').cmd ?? ''}
         </CodeDetails>
         <Worked>
-          <code>check</code> exits 0, and each action says it is specified only:
+          <code>check</code> exits 0, and each action is listed as <code>SpecifiedOnly</code>, as in step 1.
         </Worked>
-        <Out k="cfam-check" />
       </Section>
 
       {/* ------------------------------------------------------------------ Sign */}
@@ -1273,11 +1253,12 @@ export default function HowTo() {
           }
         />
         <p>
-          The signature is over a canonical intent frame. The frame binds the SHA-256 of the exact source bytes, the
-          agreement and action, the asset, the signer and key reference, the bounds and the operation. It is not a
-          signature over the source file itself. A success is <code>SignedPreparedUnqualified</code>: the key signed
-          those terms. Whether the key may act for the account, the current state, a proof and ledger acceptance stay
-          open (<a href={`${E}#three-questions`}>what is and is not signed</a>).
+          You will prepare an owner intent, sign its bytes outside the tool, and verify the signature. What the
+          signature covers:{' '}
+          <ModeLink mode="explanation" href={`${E}#three-questions`}>
+            Explanation: authorization, acceptance and coordination
+          </ModeLink>
+          .
         </p>
 
         <h3 id="sign-intent-install">Install the package and build the verifier</h3>
@@ -1357,7 +1338,8 @@ export default function HowTo() {
             <Cmd k="si-intent" title="Prepare the intent" />
             <Out k="si-intent" />
             <p>
-              <code>OwnerIntentPrepared</code> proves no one holds the key. Read the statement before you sign.
+              <code>OwnerIntentPrepared</code> means the bytes to sign are ready. The tool has not checked any
+              signature, so it does not show that anyone holds the key. Read the statement before you sign.
             </p>
           </li>
           <li>
@@ -1398,6 +1380,7 @@ export default function HowTo() {
           <li>
             <p>Verify, then print the main fields of the result:</p>
             <Cmd k="si-verify" title="Verify your signature" />
+            <Out k="si-verify" />
           </li>
         </Steps>
         <p>
@@ -1407,64 +1390,19 @@ export default function HowTo() {
         <Cmd k="si-edited" title="Edit the source, then verify again" />
         <Out k="si-edited" />
 
-        <h3 id="sign-intent-results">Read the signed result</h3>
-        <Table caption="Results of intent and verify-intent, with exit codes">
-          <thead>
-            <tr>
-              <th scope="col">Result</th>
-              <th scope="col">Exit</th>
-              <th scope="col">Meaning</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <code>OwnerIntentPrepared</code>
-              </td>
-              <td>0</td>
-              <td>Signable bytes prepared. Possession of the key is not checked.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>SignedPreparedUnqualified</code>
-              </td>
-              <td>0</td>
-              <td>Signature valid, and a local Core candidate prepared.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>SignatureRejected</code>
-              </td>
-              <td>1</td>
-              <td>The signature checked false. Local preparation is skipped.</td>
-            </tr>
-            <tr>
-              <td>
-                <code>SignedCoreRejected</code>
-              </td>
-              <td>1</td>
-              <td>Signature valid, and local Core rejected the scenario.</td>
-            </tr>
-            <tr>
-              <td>Formation, source or schema rejection</td>
-              <td>1</td>
-              <td>No signed preparation.</td>
-            </tr>
-            <tr>
-              <td>Verifier binary, timeout or transport failure</td>
-              <td>2</td>
-              <td>Signature validity unknown. Nothing is accepted as a fallback.</td>
-            </tr>
-          </tbody>
-        </Table>
         <p>
-          The scenario (balances, allowance and work counters, proposed effects, post state) is not signed. A changed
-          scenario can keep the signature valid and give a different candidate or a Core rejection.
+          The scenario is not signed. If you change it, the signature can stay valid; run <code>verify-intent</code>{' '}
+          again, and expect a new candidate or a Core rejection.
+        </p>
+        <p>
+          <code>verify-intent</code> exits 0 when the signature verifies and a local candidate is prepared, 1 when the
+          signature, the source or Core rejects, and 2 when the verifier itself fails (
+          <a href={`${R}#results`}>Reference: results</a>, <a href={`${R}#cli`}>Reference: command line</a>).
         </p>
         <Worked>
-          The verification exits 0, the source matches, and the open items stay open:
+          The verification in the last step exits 0, <code>sourceMatched</code> is true, and the key authority, state,
+          proof and ledger fields stay open.
         </Worked>
-        <Out k="si-verify" />
         <p>
           Canonical text: <a href={SIGNED_INTENT}>SIGNED-INTENT.md</a>.
         </p>

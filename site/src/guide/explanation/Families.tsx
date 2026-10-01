@@ -14,12 +14,20 @@ function FamilySeeAlso({ id, extra = [] }: { id: FamilyId; extra?: SeeAlsoItem[]
       items={[
         { mode: 'howto', href: `${H}#write-${id}`, label: `How to write ${fam?.agreement ?? 'one'}` },
         { mode: 'howto', href: `${H}#check-family`, label: 'How to check an example from the eight DeFi families' },
-        { mode: 'reference', href: `${R}#family-${id}`, label: `Reference: the ${name.toLowerCase()} example file, operations and atoms` },
+        { mode: 'reference', href: `${R}#family-${id}`, label: `Reference: the ${name === name.toUpperCase() ? name : name.toLowerCase()} example file, operations and atoms` },
         ...extra,
       ]}
     />
   );
 }
+
+/** Link to a family's reference entry, where the amounts are listed in atoms. */
+function AtomsRef({ id }: { id: FamilyId }) {
+  const name = FAMILIES.find((f) => f.id === id)?.name ?? id;
+  return <a href={`${R}#family-${id}`}>amounts in atoms: Reference: {name}</a>;
+}
+
+const DIAGNOSTICS = `${R}#diagnostics`;
 
 export function Families() {
   return (
@@ -27,7 +35,8 @@ export function Families() {
       <Section id="amm" title="The swap example: a fixed input and a minimum output" nav="AMM" group={GROUP}>
         <FamilyStrip id="amm" here="explanation" />
         <p>
-          Each of the eight family examples is specified only: <code>check</code> accepts its structure and
+          Each of the eight family examples is <a href={`${R}#support-labels`}>specified only</a>:{' '}
+          <code>check</code> accepts its structure and
           names, and running it is refused, so everything below is about what the source says rather than what a
           run produces. Each essay ends with a <em>hostile case</em>, a reading or a result an adversary might try
           to pass off as valid, and what does or does not stop it.
@@ -38,17 +47,15 @@ export function Families() {
           <code>GOLD</code> are names in this file; their economic ids are <code>USDCanonical</code> and{' '}
           <code>GoldCanonical</code>. All of it sits on domain <code>Preview</code> (economic id{' '}
           <code>Midnight</code>). Pool <code>Spot</code> lists both assets. The agreement also mints and redeems
-          liquidity shares for Alice, and declares Bob, who is not used. At scale 2 the input is 10000 atoms and the
-          0.30 USD fee cap is 30 atoms; at scale 3 the floor is 900 atoms.
+          liquidity shares for Alice, and declares Bob, who is not used. The fee cap is 0.30 USD (<AtomsRef id="amm" />).
         </p>
         <h3>What the swap intent fixes and what a kernel must decide</h3>
         <p>
           The operation fixes the pool, the owner, the input quantity, the output asset, a minimum net output and
           a fee cap. The checker requires the floor to be a quantity of the output asset and the fee cap a quantity
-          of the input asset; a floor written in USD fails with <code>Expected Qty&lt;GOLD&gt;, received
-          Qty&lt;USD&gt;</code>, and the names in that message are declaration names. The intent record has no{' '}
-          <code>gross_cap</code> field, and its <code>rounding</code> and <code>failure</code> fields are stored
-          strings: <q>output floor benefits pool</q> and <q>first failure; no effects</q>.
+          of the input asset, so a floor written in USD is rejected at authoring with{' '}
+          <code>BETA_ASSET_MISMATCH</code> (see <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>). The intent
+          has no gross cap, and its <code>rounding</code> and <code>failure</code> terms are stored strings.
         </p>
         <p>
           What the file leaves open is the financial relation. The amount Alice receives, the fee actually charged
@@ -60,8 +67,8 @@ export function Families() {
         </p>
         <h3>Hostile case: a completion outside the swap's bounds</h3>
         <p>
-          A completion that delivers 899 gold atoms misses the 900-atom floor. A fee of 31 dollar atoms misses the
-          30-atom cap. A fee quietly folded into the reserves breaks the proposed exact-input relation, which pays
+          A completion that delivers one gold atom less than the floor misses it. A fee one dollar atom above the
+          cap misses the cap. A fee quietly folded into the reserves breaks the proposed exact-input relation, which pays
           the fee outside the reserves, even when the floor and the cap both hold. Reading the price as
           dollars-per-gold when it is gold-per-dollar inverts the direction of the trade and leaves the authored
           floor behind.
@@ -81,16 +88,16 @@ export function Families() {
         <p>
           A borrower takes a loan from a named creditor, the loan can be rolled to a later round, and it can be
           liquidated. Alice is the debtor and Bob the creditor, both on domain <code>Preview</code>. Obligation{' '}
-          <code>Loan</code> is denominated in <code>USD</code> (economic id <code>USDCanonical</code>, scale 2), so
-          the principal of 500.00 USD is 50000 atoms. The collateral of 1.000 GOLD is 1000 atoms of{' '}
-          <code>GoldCanonical</code> at scale 3, a separate quantity on the same domain. The roll names round 200
+          <code>Loan</code> is denominated in <code>USD</code> (economic id <code>USDCanonical</code>), and the
+          principal is 500.00 USD. The collateral of 1.000 GOLD (<code>GoldCanonical</code>) is a separate quantity
+          on the same domain (<AtomsRef id="lending" />). The roll names round 200
           as a plain scalar. The liquidation names the obligation and stores the continuation{' '}
           <q>residual debt persists</q>.
         </p>
         <p>
           Paying the loan back is a different operation in a different file. The accrual-first repayment is one of
           the two operations that run locally, and the tutorial walks through it. The three operations in this file
-          are specified only.
+          are <a href={`${R}#support-labels`}>specified only</a>.
         </p>
         <h3>What the borrow, roll and liquidate intents leave to a kernel</h3>
         <p>
@@ -104,8 +111,8 @@ export function Families() {
         </p>
         <h3>Hostile case: a repayment or liquidation that erases debt</h3>
         <p>
-          Taking all 3000 atoms of a repayment from principal and leaving 1000 atoms of interest accrued is a
-          different loan; the shipped repayment takes the accrued atoms first. A payment larger than the
+          Taking a whole repayment from principal while interest stays accrued is a different loan; the shipped
+          repayment pays accrued interest first. A payment larger than the
           outstanding balance is an invalid candidate: principal, accrued, outstanding and status stay as they
           were, and Core rejects it, at the Intent judgment when that applies and otherwise at the effect range. A
           rejected candidate is never published as a prepared post-state. A debt reduction without the matching
@@ -128,19 +135,19 @@ export function Families() {
         <p>
           Alice deposits backing and receives an issued balance she can burn back for at least a named quantity of
           that backing. If the instrument is settled in an emergency, a redemption that is still owed remains a
-          duty. Instrument <code>Stable</code> issues <code>USD</code> (economic id <code>USDCanonical</code>, scale
-          2) against backing <code>GOLD</code> (economic id <code>GoldCanonical</code>, scale 3), on domain{' '}
-          <code>Preview</code>. Mint issues 10000 atoms against 200 gold atoms. Redeem burns the same 10000 issued
-          atoms and asks for at least 190 gold atoms. Emergency names a claim of the same 10000 issued atoms and
-          stores the continuation <q>existing redemption duties preserved</q>. Bob is declared and unused.
+          duty. Instrument <code>Stable</code> issues <code>USD</code> (economic id <code>USDCanonical</code>)
+          against backing <code>GOLD</code> (economic id <code>GoldCanonical</code>), on domain{' '}
+          <code>Preview</code>. Mint issues 100.00 USD against 0.200 GOLD. Redeem burns the same 100.00 USD and asks
+          for at least 0.190 GOLD. Emergency names a claim of the same 100.00 USD and stores the continuation{' '}
+          <q>existing redemption duties preserved</q> (<AtomsRef id="stablecoins" />). Bob is declared and unused.
         </p>
         <h3>What the mint, redeem and emergency intents leave to a kernel</h3>
         <p>
           The instrument record separates the issued asset from the backing asset, and the checker holds every
           quantity to its side: supply, burn and claim must be quantities of the issued asset, backing and{' '}
-          <code>minimum_backing</code> quantities of the backing asset. Backing written in USD fails with{' '}
-          <code>Expected Qty&lt;GOLD&gt;, received Qty&lt;USD&gt;</code>. The 10-atom gap between 200 and 190 is
-          simply the distance the author wrote between mint backing and the redeem minimum; the redeem output, any
+          <code>minimum_backing</code> quantities of the backing asset. Backing written in USD is rejected at
+          authoring with <code>BETA_ASSET_MISMATCH</code> (see <a href={DIAGNOSTICS}>Reference: diagnostic
+          codes</a>). The gap between the mint backing and the redeem minimum is simply a distance the author wrote; the redeem output, any
           fee and any price stay unwritten. The observation string <q>authenticated peg required; open</q> records
           that the peg is an open requirement.
         </p>
@@ -153,8 +160,8 @@ export function Families() {
         </p>
         <h3>Hostile case: backing in the wrong asset, or a dropped redemption duty</h3>
         <p>
-          A mint that posts 200 atoms of <code>USDCanonical</code> as backing fails the instrument split before any
-          reserve is considered. A redeem that releases 189 gold atoms is below the 190-atom minimum, while a
+          A mint that posts <code>USDCanonical</code> as backing fails the instrument split before any reserve is
+          considered. A redeem that releases one gold atom less than the signed minimum falls short of it, while a
           completion that pays more than the minimum is allowed. The subtler attack is an emergency result that
           burns the claim, pays nothing and deletes the redemption duty, treating a debt as if it were supply. The
           continuation string states that the duty is preserved, and authoring stores that string. The duty, the
@@ -168,15 +175,15 @@ export function Families() {
         <h3>What the options file states</h3>
         <p>
           The file sketches a cash-settled call held by Alice. The underlying is GOLD (economic id{' '}
-          <code>GoldCanonical</code>, scale 3) and settlement is in USD (economic id <code>USDCanonical</code>,
-          scale 2), both on domain <code>Preview</code>. The strike is the string <code>100.00</code> with units{' '}
-          <code>USD per GOLD</code>. Collateral is 500.00 USD, which is 50000 atoms. The exercise round is the
-          scalar 150. Settlement names Alice and a payoff of 100.00 USD, 10000 atoms.
+          <code>GoldCanonical</code>) and settlement is in USD (economic id <code>USDCanonical</code>), both on
+          domain <code>Preview</code>. The strike is the string <code>100.00</code> with units{' '}
+          <code>USD per GOLD</code>. Collateral is 500.00 USD. The exercise round is the scalar 150. Settlement
+          names Alice and a payoff of 100.00 USD (<AtomsRef id="options" />).
         </p>
         <p>
           Three intents carry the lifecycle. Fixing names the observation that would record a USD-per-GOLD value.
           Exercise names Alice and stores the continuation <q>missing fixing retains reserve and exercise duty</q>.
-          Settlement names the holder, the 10000-atom payoff and the rounding string{' '}
+          Settlement names the holder, the payoff and the rounding string{' '}
           <q>payoff floor benefits reserve</q>. The check accepts this record. It does not multiply a fixing by a
           notional and it does not move the collateral. Bob is declared and is not an argument of any of the three.
         </p>
@@ -187,21 +194,22 @@ export function Families() {
           payoff; it has no credit effect. Contrast the transfer that runs locally, which requires three distinct
           accounts on one domain, a value and a fee of the same asset, and a signer equal to the paying account.
           If an author added a fee cap and an intent asset here, the check would require the fee cap to be a
-          quantity of that asset, and the action would still be specified only. These files declare no signer,
+          quantity of that asset, and the action would still be{' '}
+          <a href={`${R}#support-labels`}>specified only</a>. These files declare no signer,
           key or signature at all. Everything that would make the call pay out correctly, the fixing, the payoff
           arithmetic and the reserve, belongs to a kernel; see{' '}
           <a href="#horizon-options">the proposed option lifecycle</a>.
         </p>
         <h3>Hostile case: a payoff in the wrong asset, or a strike that binds nothing</h3>
         <p>
-          The checker catches the structural attacks. A payoff in GOLD fails with <code>BETA_ASSET_MISMATCH</code>{' '}
-          (<code>Expected Qty&lt;USD&gt;, received Qty&lt;GOLD&gt;</code>). An instrument missing its underlying or
-          settlement asset fails with <code>BETA_MISSING_FIELD</code>. Instrument, observation and holder on
-          different domains fail with <code>BETA_DOMAIN_MISMATCH</code>. These rules live in the checker source,{' '}
+          The checker catches the structural attacks. A payoff in GOLD fails with <code>BETA_ASSET_MISMATCH</code>.
+          An instrument missing its underlying or settlement asset fails with <code>BETA_MISSING_FIELD</code>.
+          Instrument, observation and holder on different domains fail with <code>BETA_DOMAIN_MISMATCH</code>. The
+          messages are listed in <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>. These rules live in the checker source,{' '}
           <a href={FRONTEND}>frontend.ts</a>; the package does not ship a rejected option fixture.
         </p>
         <p>
-          The economic attacks pass. The 10000-atom payoff is not tied to the strike string, to the fixing round or
+          The economic attacks pass. The payoff is not tied to the strike string, to the fixing round or
           to the collateral. The continuation string creates no reserve liability or exercise duty, and the
           rounding string selects no beneficiary. The exercise round and the observation's round happen to be the
           same number, 150, but nothing requires them to match, and no round window limits exercise to that round.
@@ -291,9 +299,8 @@ export function Families() {
         <p>
           No grant, signer list or quorum is declared, and Alice and Bob receive no authority to amend, veto or
           execute. A later signature would show that a key signed a statement; it would not show that the key is the
-          policy authority. Nor would it admit anyone as a Moriarty maintainer. The language needs no governance
-          quorum or maintainer permission to compile a program; where such roles appear, they are roles inside an
-          agreement, and the project's own review process stays outside the public toolchain.
+          policy authority. Nor would it give anyone a role in the project. Checking or running a program needs no
+          quorum or permission; where such roles appear, they are roles inside an agreement.
         </p>
         <FamilySeeAlso id="governance" />
       </Section>
@@ -303,11 +310,11 @@ export function Families() {
         <h3>What the bridge file states</h3>
         <p>
           A bridge names one claim on two domains: a local escrow, a foreign claim, and a recovery of the escrow.
-          Escrow locks 100.00 USD of Alice's on <code>Midnight</code>: 10000 atoms of <code>USDCanonical</code>,
-          destination <code>Foreign</code>, claim id <code>claim-1</code>. Claim pays ForeignAlice 100.00 of{' '}
-          <code>WrappedUSD</code> on <code>Foreign</code>, scale 2 with representation <code>bridge-claim</code>,
-          also 10000 atoms, naming Preview as the source. Recover returns those 10000 atoms of{' '}
-          <code>USDCanonical</code> to Alice under the same <code>claim-1</code>. Bob and GOLD are declared and used
+          Escrow locks 100.00 USD (<code>USDCanonical</code>) of Alice's on <code>Midnight</code>, destination{' '}
+          <code>Foreign</code>, claim id <code>claim-1</code>. Claim pays ForeignAlice 100.00 of{' '}
+          <code>WrappedUSD</code> on <code>Foreign</code>, with representation <code>bridge-claim</code>, naming
+          Preview as the source. Recover returns the same 100.00 USD to Alice under the same{' '}
+          <code>claim-1</code> (<AtomsRef id="bridges" />). Bob and GOLD are declared and used
           by none of the three actions. Observation of the other domain, finality and settlement are outside the
           file.
         </p>
@@ -356,7 +363,7 @@ export function Families() {
         <p>
           The checker does reject one concrete mis-statement of custody. An escrow whose owner account is on one
           domain and whose amount asset is on the other is <code>AuthoringRejected</code> with{' '}
-          <code>BETA_DOMAIN_MISMATCH</code>, <q>Quantity asset has different domain</q>. Owner and amount stay on the
+          <code>BETA_DOMAIN_MISMATCH</code> (see <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>). Owner and amount stay on the
           local domain. Only the named <code>source</code> or <code>destination</code> argument may name the foreign
           domain. That rejection is a nominal domain check. It is not a finality proof and it does not decide the
           refund race.
@@ -374,8 +381,8 @@ export function Families() {
           Staking here is a share class backed by one asset, plus named changes to that backing and a two-step
           exit. The file deposits 100.00 USD into share class <code>VaultShare</code>, adds a reward of 5.00 USD,
           removes a slash of 3.00 USD, unbonds 100 share atoms, and withdraws those same 100 share atoms with a
-          minimum of 90.00 USD. The backing asset is <code>USDCanonical</code> at scale 2, so those amounts are
-          10000, 500, 300 and 9000 atoms; the 100 share atoms are a scalar, not a USD quantity. Alice owns the
+          minimum of 90.00 USD. The backing asset is <code>USDCanonical</code>; the 100 share atoms are a scalar,
+          not a USD quantity (<AtomsRef id="staking" />). Alice owns the
           deposit, unbond and withdraw. Reward and slash name the share class and an amount, and no owner. GOLD and
           Bob are declared and unused.
         </p>
@@ -388,9 +395,9 @@ export function Families() {
           derives no share balance, rounding remainder, slash order or surviving duty from them.
         </p>
         <p>
-          The remaining work is the financial relation: how many shares 10000 atoms of backing mint, who is credited
-          the 500-atom reward, whose claim the 300-atom slash reduces, and whether 100 share atoms may later leave
-          with at least 9000 atoms. The file computes no share price, reward index or redemption.
+          The remaining work is the financial relation: how many shares the deposit mints, who is credited the
+          reward, whose claim the slash reduces, and whether the 100 share atoms may later leave with at least the
+          withdrawal minimum. The file computes no share price, reward index or redemption.
         </p>
         <h3>Why the unbond request and the withdrawal are separate actions</h3>
         <p>
@@ -403,13 +410,13 @@ export function Families() {
         <h3>Hostile case: a slash that swallows the pending exit</h3>
         <p>
           The loss hint says a slash keeps a pending withdrawal explicit. Because the five actions are separate, a
-          slash of 300 atoms does not delete the unbond of 100 share atoms, and the unbond does not pay the
+          slash does not delete the unbond of 100 share atoms, and the unbond does not pay the
           withdrawal minimum. The checker neither orders those actions nor preserves a duty across them; the hint
           is the whole of the specified scope.
         </p>
         <p>
           A deposit whose owner is on a different domain from the share class is rejected at authoring with{' '}
-          <code>BETA_DOMAIN_MISMATCH</code>, <q>Operation argument domains differ</q>. Owner, share class and
+          <code>BETA_DOMAIN_MISMATCH</code> (see <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>). Owner, share class and
           backing quantity share the declared domain. That check fixes the identity of the position. It does not
           decide slash priority, and it does not pay the exit.
         </p>

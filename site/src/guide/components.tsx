@@ -39,7 +39,7 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 /** Copy control with visible, announced feedback. The copied text is passed in, never scraped from the button. */
-export function CopyButton({ text, label = 'Copy', done = 'Copied.' }: { text: string; label?: string; done?: string }) {
+export function CopyButton({ text, label = 'Copy', done = 'Copied.', name }: { text: string; label?: string; done?: string; name?: string }) {
   const [state, setState] = useState<'idle' | 'ok' | 'fail'>('idle');
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -51,7 +51,7 @@ export function CopyButton({ text, label = 'Copy', done = 'Copied.' }: { text: s
   };
   return (
     <>
-      <button type="button" className="doc-copy" onClick={copy}>
+      <button type="button" className="doc-copy" onClick={copy} aria-label={name ? `${label}: ${name}` : undefined}>
         {state === 'ok' ? 'Copied' : label}
       </button>
       <span role="status" className={`doc-copy-state doc-copy-${state}`}>
@@ -110,7 +110,7 @@ export function Code({ kind, title, children, href }: CodeProps) {
       <figcaption className="doc-code-bar">
         <span className="doc-code-tag">{KIND_TAG[kind]}</span>
         {title ? <span className="doc-code-title">{href ? <a href={href}>{title}</a> : title}</span> : null}
-        {copy ? <CopyButton text={copied} label={copy.label} done={copy.done} /> : null}
+        {copy ? <CopyButton text={copied} label={copy.label} done={copy.done} name={typeof title === 'string' ? title : KIND_TAG[kind]} /> : null}
       </figcaption>
       <pre>
         <code>{text}</code>
@@ -253,7 +253,7 @@ export interface SeeAlsoItem {
 /** The cross-link footer at the end of a section. */
 export function SeeAlso({ items, title = 'See also' }: { items: SeeAlsoItem[]; title?: string }) {
   return (
-    <nav className="doc-seealso" aria-label={title}>
+    <div className="doc-seealso" role="group" aria-label={title}>
       <p className="doc-seealso-title">{title}</p>
       <ul>
         {items.map((i) => (
@@ -264,7 +264,7 @@ export function SeeAlso({ items, title = 'See also' }: { items: SeeAlsoItem[]; t
           </li>
         ))}
       </ul>
-    </nav>
+    </div>
   );
 }
 
@@ -311,7 +311,7 @@ export function Steps({ children }: { children: ReactNode }) {
 /** Pixel size of each image in public/tutorial-assets, so the page reserves the right space before it loads. */
 const IMAGE_SIZE: Record<string, [number, number]> = {
   hero: [1536, 768],
-  pipeline: [1536, 640],
+  pipeline: [1536, 690],
   'pipeline-mobile': [1024, 1536],
   quadrant: [640, 640],
 };

@@ -49,6 +49,14 @@ function jsonRange(text: string, first: string, last: string): string {
   return [...lines.slice(start, start + before), tail].join('\n');
 }
 
+/** `text` with the leading whitespace common to its non-empty lines removed, so an excerpt starts at column 0. */
+function dedent(text: string): string {
+  const lines = text.split('\n');
+  const widths = lines.filter((l) => l.trim() !== '').map((l) => l.length - l.trimStart().length);
+  const cut = widths.length ? Math.min(...widths) : 0;
+  return lines.map((l) => l.slice(Math.min(cut, l.length - l.trimStart().length))).join('\n');
+}
+
 const NODE_OUTPUT = `v24.21.0`;
 
 const CLONE = `git clone https://github.com/CharlesHoskinson/Moriarty.git
@@ -205,10 +213,10 @@ const REJECT_TEST_OUTPUT = `{
 const NO_OUTPUT = 'These commands print nothing.';
 
 export default function Tutorial() {
-  const inspectTerms = jsonRange(transferInspect, 'gross_cap', 'net_floor');
-  const transferPost = jsonMember(transferSimulate, 'candidatePost');
-  const repayExcerpt = linesFromTo(repaySource, 'obligation Debt', 'operation: repay(');
-  const repayPost = jsonMember(repaySimulate, 'candidatePost');
+  const inspectTerms = dedent(jsonRange(transferInspect, 'gross_cap', 'net_floor'));
+  const transferPost = dedent(jsonMember(transferSimulate, 'candidatePost'));
+  const repayExcerpt = dedent(linesFromTo(repaySource, 'obligation Debt', 'operation: repay('));
+  const repayPost = dedent(jsonMember(repaySimulate, 'candidatePost'));
 
   return (
     <DocShell
@@ -255,7 +263,11 @@ export default function Tutorial() {
       </Section>
 
       <Section id="getting-started" title="Step 1. Build the command-line tool" nav="1. Build the tool" group="Tutorial">
-        <p>You build the tool from a copy of the repository and give it a short name in your shell.</p>
+        <p>
+          You build the tool from a clone of the whole repository and give it a short name in your shell. The package
+          imports shared files from the repository's <code>experiments</code> directory, so a download of the package
+          directory alone does not build.
+        </p>
         <h3 id="install">Build the tool from a checkout</h3>
         <Steps>
           <li>
@@ -381,10 +393,30 @@ export default function Tutorial() {
               {'cat /tmp/invoice/scenario.json'}
             </Code>
             <p>
-              Look at <code>balances</code>, <code>allowance</code> and <code>work_remaining</code> (
-              <a href={`${R}#scenario-format`}>every scenario field</a>):
+              Look at <code>balances</code>, <code>allowance</code>, <code>replay</code> and <code>work_remaining</code>{' '}
+              (<a href={`${R}#scenario-format`}>every scenario field</a>):
             </p>
             <Code kind="output">{transferScenario}</Code>
+            <p>
+              These fields describe the state before the transfer (
+              <a href={`${E}#explicit-terms`}>why the nonce and the head are written out</a>):
+            </p>
+            <ul>
+              <li>
+                <code>head</code> names the state the transfer extends, <code>h0</code>. A run moves it to{' '}
+                <code>post_head</code>, <code>h1</code>.
+              </li>
+              <li>
+                <code>allowance</code> is how much of the owner's balance the transfer may spend.
+              </li>
+              <li>
+                <code>replay</code> is <code>"unused"</code>: the transfer's one-time label, its nonce{' '}
+                <code>"n1"</code>, has not been used yet. A run marks it as consumed.
+              </li>
+              <li>
+                <code>work_remaining</code> is a local step budget. Each run spends one step.
+              </li>
+            </ul>
           </li>
         </Steps>
 
@@ -399,6 +431,11 @@ export default function Tutorial() {
               The check passes, and the action <code>pay</code> can run locally:
             </p>
             <Code kind="output">{CHECK_INVOICE_OUTPUT}</Code>
+            <p>
+              <code>pay: LocalS0</code> means the tool can run this action on your computer against a scenario. A run that
+              succeeds produces <code>PreparedUnqualified</code>: a candidate result that is not signed, proved or settled (
+              <a href={`${R}#support-labels`}>every support label</a>).
+            </p>
           </li>
           <li>
             <p>List the terms the program states:</p>
@@ -434,7 +471,8 @@ export default function Tutorial() {
               The three balances still add up to 10000.
             </li>
             <li>
-              The allowance has 10000 − 1010 = 8990 remaining and 1010 spent. The work counter falls from 10 to 9.
+              The allowance has 10000 − 1010 = 8990 remaining and 1010 spent. The step budget,{' '}
+              <code>work_remaining</code>, falls from 10 to 9.
             </li>
           </ul>
         </Answer>
@@ -448,7 +486,9 @@ export default function Tutorial() {
             </Code>
             <p>
               The output is long JSON with <code>"status": "PreparedUnqualified"</code> at the top. Find{' '}
-              <code>candidatePost</code>, the state after the transfer, and compare it with your answers:
+              <code>candidatePost</code>, the state the tool computes after the transfer, and compare it with your
+              answers. The output writes <code>workRemaining</code> for <code>work_remaining</code>, and the used nonce
+              appears under <code>consumedReplay</code>:
             </p>
             <Code kind="output" title="Part of the output: candidatePost">
               {transferPost}
@@ -581,9 +621,8 @@ export default function Tutorial() {
         group="Tutorial"
       >
         <p>
-          A test is only useful if its expected numbers come from your own arithmetic, as in Steps 2 and 3 (
-          <a href={`${E}#why-derive-expectations`}>why not copy them from the output</a>). Now you see what the tool
-          reports when an expectation is wrong, and how a test expects a rejection.
+          You make a test fail on purpose, then write a test that expects a rejection (
+          <a href={`${E}#why-derive-expectations`}>why expected numbers come from your own arithmetic</a>).
         </p>
 
         <h3 id="wrong-expectation">Break the owner's expected balance</h3>
@@ -639,8 +678,7 @@ export default function Tutorial() {
         <h3 id="core-rejection">Expect Core to reject an underfunded payment</h3>
         <p>
           You give the owner only 1009 atoms and an allowance of 1009, one atom less than the 1010 the transfer needs.
-          The program is unchanged and still checks. Core, the part of the tool that applies the transfer to the
-          scenario, must refuse it (<a href={`${E}#stipulation`}>what a check and a run each decide</a>).
+          The program is unchanged. Core must refuse it (<a href={`${E}#three-questions`}>what Core decides</a>).
         </p>
         <Steps>
           <li>

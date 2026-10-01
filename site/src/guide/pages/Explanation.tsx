@@ -47,12 +47,12 @@ export default function Explanation() {
           Most contract languages start from code and let the financial meaning emerge from what the code does. Moriarty
           starts from the agreement. The source says what may happen, and the tools check that the text is
           well-formed and, for two operations, work out locally what the agreement would do to a stated starting
-          position. The value of this order is that a reader can audit the terms without simulating a program in
+          position. The value of this order is that a reader can check the terms without simulating a program in
           their head. The cost is verbosity: a ten-dollar transfer takes a page of declarations.
         </p>
         <p>
-          The language is the product. Any developer may write, check and prepare programs in it without approval
-          from a maintainer, a registry or a hosted service. The Federated DeFi Kernel (the <em>kernel</em> for
+          The language is the product. Any developer may write, check and prepare programs in it without anyone's
+          permission and without a registry or hosted service. The Federated DeFi Kernel (the <em>kernel</em> for
           short) is a separate, optional federation of services that may later coordinate evidence and routing
           around such programs. No tutorial here depends on it, and the{' '}
           <a href="#federation">section on federation</a> explains where it fits.
@@ -198,10 +198,10 @@ export default function Explanation() {
           The local authoring tools never produce a signature. In the separate signed-intent flow,{' '}
           <code>mori intent</code> prepares a canonical intent frame, an external signer signs it, and{' '}
           <code>mori verify-intent</code> checks that signature with a native verifier before running the same
-          local preparation. The signed statement binds the exact source SHA-256, the agreement and action, the
-          chain and network claims, the asset representation, scale and symbol, the signer and key reference, the
-          signature metadata, and the owner's operation and bounds. The signature covers that statement, which
-          commits to the hash of the source bytes; it is not a signature over the source file itself. Editing a
+          local preparation. The signed statement binds the SHA-256 of the source bytes together with the agreement,
+          the action and the owner's terms; the full list is in{' '}
+          <a href={`${R}#results`}>Reference: results</a>. The signature covers that statement, which commits to
+          the hash of the source bytes; it is not a signature over the source file itself. Editing a
           comment or a space changes the source SHA-256 and so needs a new signature. Formatting never rewrites
           the commitments written inside an intent, such as its <code>source_hash</code> claim.
         </p>
@@ -214,9 +214,9 @@ export default function Explanation() {
           checks do not establish the current chain time or the global replay state.
         </p>
         <p>
-          A successful signature check gives the result <code>SignedPreparedUnqualified</code>. Its key authority is{' '}
-          <code>Unverified</code>, its state is <code>LocalStipulationOnly</code>, native proof is{' '}
-          <code>NotChecked</code> and the ledger is <code>NotSubmitted</code>. Evidence that a candidate was
+          A successful signature check gives the result <code>SignedPreparedUnqualified</code>. Its result fields
+          are listed in <a href={`${R}#results`}>Reference: results</a>; none of them says that the key may act for
+          the account, that a proof exists or that a ledger saw the transaction. Evidence that a candidate was
           accepted, meaning authenticated state, a native proof and ledger acceptance, is a separate layer that
           these pages do not claim exists. Signed preparation also starts by expanding the action, so it applies
           only to the transfer and the repayment; the eight family examples expand as unsupported, and the flow
@@ -457,16 +457,13 @@ export default function Explanation() {
         </p>
         <h3>Premises and bindings a local result leaves open</h3>
         <p>
-          A local preparation of the transfer or repayment rests on four external premises. They name what a real
-          system would still have to establish: that the owner signed the canonical intent; that the stated
-          starting state really is the state at the named head (snapshot-to-head); that the new head is a valid
-          successor of that head (head extension); and that a ledger checks the head and consumes the replay key in
-          one indivisible step (atomic ledger compare-and-consume). Four bindings are also unverified: the agreement
-          identifier, the selected program, the asset scale and the authenticated predecessor. The predecessor
-          string is echoed into the generated program and stays unauthenticated.
+          A local preparation of the transfer or repayment rests on four external premises and four unverified
+          bindings; <a href={`${R}#premises-bindings`}>Reference: local premises and unverified bindings</a> lists
+          them. What they have in common is that each names something a real system would still have to
+          establish, and none is closed by a matching hash or a passing test.
         </p>
         <p>
-          A matching hash or a passing test closes none of the eight. The same holds for the claims a source makes
+          The same holds for the claims a source makes
           about itself: <code>source_hash</code> and <code>policy_digest</code> are signed claims, while the
           computed <code>sourceHash</code> is a digest of the actual input text, and nothing compares the two for
           you.
@@ -474,7 +471,8 @@ export default function Explanation() {
         <p>
           The premise and binding lists belong to the small set of operations the local evaluator implements,
           called S0 (the transfer and the repayment), and are defined in the package's{' '}
-          <a href={GETTING_STARTED}>GETTING-STARTED.md</a>. On an action that is specified only, the lists are empty.
+          <a href={GETTING_STARTED}>GETTING-STARTED.md</a>. On an action that is{' '}
+          <a href={`${R}#support-labels`}>specified only</a>, the lists are empty.
           Empty means that this particular catalog does not apply, not that the action has no premises or is
           qualified. Authentication and the financial relation stay open there.
         </p>
@@ -506,7 +504,7 @@ export default function Explanation() {
           authenticates them.
         </p>
         <p>
-          The eight family examples are specified only: their source is checked for structure and names, and
+          The eight family examples are <a href={`${R}#support-labels`}>specified only</a>: their source is checked for structure and names, and
           execution is refused as unsupported, with no effects or post-state published. The{' '}
           <code>qualification: local-stipulation-only</code> that appears on such a refusal labels the refusal
           itself. It does not qualify the financial action. Proposed horizon syntax is shown only in its own

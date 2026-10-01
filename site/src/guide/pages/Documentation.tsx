@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { DocShell } from '../DocShell';
-import { ModeLink, Section, Status, ThemedFigure } from '../components';
+import { ModeLink, Section, ThemedFigure } from '../components';
 import { BETA_PATH, FAMILIES, MODE_LETTER, PAGE_HREF, PROFILE, REPOSITORY, blob, type Mode } from '../data';
 
 interface Quadrant {
@@ -69,10 +69,10 @@ const QUADRANTS: Quadrant[] = [
     title: 'Understand why',
     id: 'start-explanation',
     href: E,
-    promise: 'What the language is for, how an intention becomes a candidate, and what a passing test does not show.',
+    promise: 'What the language is for, how an intent becomes a candidate, and what a passing test does not show.',
     links: [
       { href: `${E}#purpose`, label: 'What Moriarty is for' },
-      { href: `${E}#architecture`, label: 'How an intention becomes a candidate' },
+      { href: `${E}#architecture`, label: 'How an intent becomes a candidate' },
       { href: `${E}#stipulation`, label: 'What a passing local run shows' },
       { href: 'kernel.html', label: 'The Federated DeFi Kernel' },
     ],
@@ -142,7 +142,7 @@ export default function Documentation() {
           alt=""
           priority
           className="doc-mark"
-          caption="Each kind of page answers one need: learning, doing a task, looking something up, or understanding. The four cards below sit in the same places as the four squares."
+          caption="Each kind of page answers one need: learning, doing a task, looking something up, or understanding. The four cards below match the four kinds of page in the figure: tutorials, how-to guides, reference and explanation."
         />
         <ul className="doc-quadrants">
           {QUADRANTS.map((q) => (
@@ -165,13 +165,14 @@ export default function Documentation() {
       </Section>
 
       <Section id="examples" title="Examples by operation family" nav="Operation families" group="Examples">
-        <p>All eight are specified only: checked for structure and names, not run.</p>
+        <p>
+          All eight are <a href={`${R}#support-labels`}>specified only</a>: checked for structure and names, not run.
+        </p>
         <ul className="doc-families">
           {FAMILIES.map((f) => (
             <li key={f.id} className="doc-family">
               <p className="doc-family-name">
                 <strong>{f.name}</strong>
-                <Status name="SpecifiedOnly" />
               </p>
               <p className="doc-family-scope">{f.scope}</p>
               <ul className="doc-family-links" aria-label={`${f.name} pages`}>
