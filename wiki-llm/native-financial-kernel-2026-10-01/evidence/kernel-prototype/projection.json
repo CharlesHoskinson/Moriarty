@@ -1,0 +1,623 @@
+{
+  "source": "profile \"moriarty-beta/1\";\nagreement Invoice {\n domain Preview = { id: \"Midnight\", chain: \"midnight\", network: \"preview\" };\n account Buyer = { domain: Preview, id: \"Owner\" };\n account Seller = { domain: Preview, id: \"Recipient\" };\n account Treasury = { domain: Preview, id: \"Fee\" };\n asset USD = { domain: Preview, id: \"A\", scale: 2, representation: \"canonical\", symbol: \"USD\" };\n const price: Qty<USD> = 10.00 USD;\n const fee = 0.10 USD;\n intent Payment = {\n  domain: Preview, asset: USD, signer: Buyer, key: \"key1\", nonce: \"n1\", pre_head: \"h0\",\n  valid: rounds(domain: Preview, from: 0, to: 10), gross_cap: price + fee, fee_cap: fee, net_floor: price,\n  operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee),\n  source_hash: \"src1\", policy_digest: \"policy1\", failure: SuccessOnly,\n  observations: [], disclosures: [], retained_effects: [], retained_duties: [], delegation: None, recovery: None,\n };\n action pay uses Payment;\n}",
+  "artifact": {
+    "signatureHex": "4eedfe0e6e66b924d174dfb35dab0fa465e7d497aed781700bbe49c43f99a05141c0c0664487d84c29be22e07c0872d2727092733c47fda20963d3e98f160f28",
+    "statement": {
+      "actionName": "pay",
+      "agreementId": "Invoice",
+      "asset": {
+        "id": "A",
+        "representation": "canonical",
+        "scale": "2",
+        "symbol": "USD"
+      },
+      "authoringProfile": "moriarty-beta/1",
+      "core": "moriarty-core/5",
+      "domain": {
+        "chain": "midnight",
+        "id": "Midnight",
+        "network": "preview"
+      },
+      "intent": {
+        "advertisedPolicyDigest": "policy1",
+        "advertisedSourceHash": "src1",
+        "delegation": "none",
+        "disclosures": [],
+        "failure": "success_only",
+        "feeCap": "10",
+        "grossCap": "1010",
+        "netFloor": "1000",
+        "nonce": "n1",
+        "notAfter": "10",
+        "notBefore": "0",
+        "observations": [],
+        "operation": {
+          "amount": "1000",
+          "fee": "10",
+          "feeRecipient": "Fee",
+          "from": "Owner",
+          "kind": "Transfer",
+          "recipient": "Recipient"
+        },
+        "preHead": "h0",
+        "recovery": "none",
+        "retainedDuties": [],
+        "retainedEffects": [],
+        "signer": "Owner",
+        "version": "moriarty-intent/3"
+      },
+      "ownerProgramSha256": "fabc99c8650814a483ea6af5172b59e5aad2c76fc64d8c26139b834696cc8035",
+      "profile": "moriarty-signed-intent/1",
+      "selectedActionId": "TransferLiteralFee",
+      "signature": {
+        "framing": "midnight-sign-data",
+        "keyRef": "key1",
+        "publicKeyHex": "026c73c82ae3b6205834b4b10df6f1e8d928e97c30b536db9daa08fa748f3f28ab",
+        "scheme": "ecdsa_secp256k1_sha256"
+      },
+      "sourceProfile": "moriarty-financial-agreement-source/6",
+      "sourceSha256": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c"
+    }
+  },
+  "scenario": {
+    "profile": "moriarty-local-scenario/1",
+    "kind": "local-stipulation",
+    "domain": "Midnight",
+    "asset": "A",
+    "head": "h0",
+    "predecessor": "genesis",
+    "round": "1",
+    "balances": [
+      {
+        "account": "Owner",
+        "amount": "10000"
+      },
+      {
+        "account": "Recipient",
+        "amount": "0"
+      },
+      {
+        "account": "Fee",
+        "amount": "0"
+      }
+    ],
+    "allowance": {
+      "owner": "Owner",
+      "remaining": "10000",
+      "spent": "0"
+    },
+    "replay": "unused",
+    "work_remaining": "10",
+    "work_spent": "0",
+    "post_head": "h1"
+  },
+  "built": {
+    "authority_valid": null,
+    "frame_hex": "6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+    "frame_sha256": "e6bf73619c5827bcf32cd23f0c674512a808cf8d47f104920578c0c3aa43198e",
+    "framing": "midnight-sign-data",
+    "ledger_accepted": false,
+    "qualification": "signature-protocol-only",
+    "scheme": "ecdsa_secp256k1_sha256",
+    "signing_message_hex": "6d69646e696768745f7369676e65645f6d6573736167653a313234393a6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+    "snapshot_membership_valid": null,
+    "statement": {
+      "actionName": "pay",
+      "agreementId": "Invoice",
+      "asset": {
+        "id": "A",
+        "representation": "canonical",
+        "scale": "2",
+        "symbol": "USD"
+      },
+      "authoringProfile": "moriarty-beta/1",
+      "core": "moriarty-core/5",
+      "domain": {
+        "chain": "midnight",
+        "id": "Midnight",
+        "network": "preview"
+      },
+      "intent": {
+        "advertisedPolicyDigest": "policy1",
+        "advertisedSourceHash": "src1",
+        "delegation": "none",
+        "disclosures": [],
+        "failure": "success_only",
+        "feeCap": "10",
+        "grossCap": "1010",
+        "netFloor": "1000",
+        "nonce": "n1",
+        "notAfter": "10",
+        "notBefore": "0",
+        "observations": [],
+        "operation": {
+          "amount": "1000",
+          "fee": "10",
+          "feeRecipient": "Fee",
+          "from": "Owner",
+          "kind": "Transfer",
+          "recipient": "Recipient"
+        },
+        "preHead": "h0",
+        "recovery": "none",
+        "retainedDuties": [],
+        "retainedEffects": [],
+        "signer": "Owner",
+        "version": "moriarty-intent/3"
+      },
+      "ownerProgramSha256": "fabc99c8650814a483ea6af5172b59e5aad2c76fc64d8c26139b834696cc8035",
+      "profile": "moriarty-signed-intent/1",
+      "selectedActionId": "TransferLiteralFee",
+      "signature": {
+        "framing": "midnight-sign-data",
+        "keyRef": "key1",
+        "publicKeyHex": "026c73c82ae3b6205834b4b10df6f1e8d928e97c30b536db9daa08fa748f3f28ab",
+        "scheme": "ecdsa_secp256k1_sha256"
+      },
+      "sourceProfile": "moriarty-financial-agreement-source/6",
+      "sourceSha256": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c"
+    },
+    "status": "IntentBuilt",
+    "transition_valid": null
+  },
+  "framed": {
+    "authority_valid": null,
+    "frame_hex": "6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+    "frame_sha256": "e6bf73619c5827bcf32cd23f0c674512a808cf8d47f104920578c0c3aa43198e",
+    "framing": "midnight-sign-data",
+    "ledger_accepted": false,
+    "qualification": "signature-protocol-only",
+    "scheme": "ecdsa_secp256k1_sha256",
+    "signing_message_hex": "6d69646e696768745f7369676e65645f6d6573736167653a313234393a6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+    "snapshot_membership_valid": null,
+    "statement": {
+      "actionName": "pay",
+      "agreementId": "Invoice",
+      "asset": {
+        "id": "A",
+        "representation": "canonical",
+        "scale": "2",
+        "symbol": "USD"
+      },
+      "authoringProfile": "moriarty-beta/1",
+      "core": "moriarty-core/5",
+      "domain": {
+        "chain": "midnight",
+        "id": "Midnight",
+        "network": "preview"
+      },
+      "intent": {
+        "advertisedPolicyDigest": "policy1",
+        "advertisedSourceHash": "src1",
+        "delegation": "none",
+        "disclosures": [],
+        "failure": "success_only",
+        "feeCap": "10",
+        "grossCap": "1010",
+        "netFloor": "1000",
+        "nonce": "n1",
+        "notAfter": "10",
+        "notBefore": "0",
+        "observations": [],
+        "operation": {
+          "amount": "1000",
+          "fee": "10",
+          "feeRecipient": "Fee",
+          "from": "Owner",
+          "kind": "Transfer",
+          "recipient": "Recipient"
+        },
+        "preHead": "h0",
+        "recovery": "none",
+        "retainedDuties": [],
+        "retainedEffects": [],
+        "signer": "Owner",
+        "version": "moriarty-intent/3"
+      },
+      "ownerProgramSha256": "fabc99c8650814a483ea6af5172b59e5aad2c76fc64d8c26139b834696cc8035",
+      "profile": "moriarty-signed-intent/1",
+      "selectedActionId": "TransferLiteralFee",
+      "signature": {
+        "framing": "midnight-sign-data",
+        "keyRef": "key1",
+        "publicKeyHex": "026c73c82ae3b6205834b4b10df6f1e8d928e97c30b536db9daa08fa748f3f28ab",
+        "scheme": "ecdsa_secp256k1_sha256"
+      },
+      "sourceProfile": "moriarty-financial-agreement-source/6",
+      "sourceSha256": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c"
+    },
+    "status": "IntentFrame",
+    "transition_valid": null
+  },
+  "beta": {
+    "status": "SignedPreparedUnqualified",
+    "sourceMatched": true,
+    "signature": {
+      "authority_valid": null,
+      "frame_hex": "6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+      "frame_sha256": "e6bf73619c5827bcf32cd23f0c674512a808cf8d47f104920578c0c3aa43198e",
+      "framing": "midnight-sign-data",
+      "ledger_accepted": false,
+      "qualification": "signature-protocol-only",
+      "scheme": "ecdsa_secp256k1_sha256",
+      "signature_valid": true,
+      "signing_message_hex": "6d69646e696768745f7369676e65645f6d6573736167653a313234393a6d6f7269617274792d7369676e65642d696e74656e742f3100000004c47b22616374696f6e4e616d65223a22706179222c2261677265656d656e744964223a22496e766f696365222c226173736574223a7b226964223a2241222c22726570726573656e746174696f6e223a2263616e6f6e6963616c222c227363616c65223a2232222c2273796d626f6c223a22555344227d2c22617574686f72696e6750726f66696c65223a226d6f7269617274792d626574612f31222c22636f7265223a226d6f7269617274792d636f72652f35222c22646f6d61696e223a7b22636861696e223a226d69646e69676874222c226964223a224d69646e69676874222c226e6574776f726b223a2270726576696577227d2c22696e74656e74223a7b2261647665727469736564506f6c696379446967657374223a22706f6c69637931222c2261647665727469736564536f7572636548617368223a2273726331222c2264656c65676174696f6e223a226e6f6e65222c22646973636c6f7375726573223a5b5d2c226661696c757265223a22737563636573735f6f6e6c79222c22666565436170223a223130222c2267726f7373436170223a2231303130222c226e6574466c6f6f72223a2231303030222c226e6f6e6365223a226e31222c226e6f744166746572223a223130222c226e6f744265666f7265223a2230222c226f62736572766174696f6e73223a5b5d2c226f7065726174696f6e223a7b22616d6f756e74223a2231303030222c22666565223a223130222c22666565526563697069656e74223a22466565222c2266726f6d223a224f776e6572222c226b696e64223a225472616e73666572222c22726563697069656e74223a22526563697069656e74227d2c2270726548656164223a226830222c227265636f76657279223a226e6f6e65222c2272657461696e6564447574696573223a5b5d2c2272657461696e656445666665637473223a5b5d2c227369676e6572223a224f776e6572222c2276657273696f6e223a226d6f7269617274792d696e74656e742f33227d2c226f776e657250726f6772616d536861323536223a2266616263393963383635303831346134383365613661663531373262353965356161643263373666633634643863323631333962383334363936636338303335222c2270726f66696c65223a226d6f7269617274792d7369676e65642d696e74656e742f31222c2273656c6563746564416374696f6e4964223a225472616e736665724c69746572616c466565222c227369676e6174757265223a7b226672616d696e67223a226d69646e696768742d7369676e2d64617461222c226b6579526566223a226b657931222c227075626c69634b6579486578223a22303236633733633832616533623632303538333462346231306466366631653864393238653937633330623533366462396461613038666137343866336632386162222c22736368656d65223a2265636473615f736563703235366b315f736861323536227d2c22736f7572636550726f66696c65223a226d6f7269617274792d66696e616e6369616c2d61677265656d656e742d736f757263652f36222c22736f75726365536861323536223a2266623530376266623834386138383539613535633032306661663431306535326639653430633030666333393338613930656133633736336531636631643663227d",
+      "snapshot_membership_valid": null,
+      "statement": {
+        "actionName": "pay",
+        "agreementId": "Invoice",
+        "asset": {
+          "id": "A",
+          "representation": "canonical",
+          "scale": "2",
+          "symbol": "USD"
+        },
+        "authoringProfile": "moriarty-beta/1",
+        "core": "moriarty-core/5",
+        "domain": {
+          "chain": "midnight",
+          "id": "Midnight",
+          "network": "preview"
+        },
+        "intent": {
+          "advertisedPolicyDigest": "policy1",
+          "advertisedSourceHash": "src1",
+          "delegation": "none",
+          "disclosures": [],
+          "failure": "success_only",
+          "feeCap": "10",
+          "grossCap": "1010",
+          "netFloor": "1000",
+          "nonce": "n1",
+          "notAfter": "10",
+          "notBefore": "0",
+          "observations": [],
+          "operation": {
+            "amount": "1000",
+            "fee": "10",
+            "feeRecipient": "Fee",
+            "from": "Owner",
+            "kind": "Transfer",
+            "recipient": "Recipient"
+          },
+          "preHead": "h0",
+          "recovery": "none",
+          "retainedDuties": [],
+          "retainedEffects": [],
+          "signer": "Owner",
+          "version": "moriarty-intent/3"
+        },
+        "ownerProgramSha256": "fabc99c8650814a483ea6af5172b59e5aad2c76fc64d8c26139b834696cc8035",
+        "profile": "moriarty-signed-intent/1",
+        "selectedActionId": "TransferLiteralFee",
+        "signature": {
+          "framing": "midnight-sign-data",
+          "keyRef": "key1",
+          "publicKeyHex": "026c73c82ae3b6205834b4b10df6f1e8d928e97c30b536db9daa08fa748f3f28ab",
+          "scheme": "ecdsa_secp256k1_sha256"
+        },
+        "sourceProfile": "moriarty-financial-agreement-source/6",
+        "sourceSha256": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c"
+      },
+      "status": "IntentSignatureChecked",
+      "transition_valid": null
+    },
+    "keyAuthority": "Unverified",
+    "domainMapping": "SourceClaimsBound",
+    "expiry": "LocalRoundWithinWindow",
+    "replay": "LocallyUnused",
+    "financial": "LocallyPrepared",
+    "state": "LocalStipulationOnly",
+    "nativeProof": "NotChecked",
+    "ledger": "NotSubmitted",
+    "ledger_accepted": false,
+    "local": {
+      "status": "PreparedUnqualified",
+      "sourceHash": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c",
+      "scenarioHash": "12928a795bba2435140fc22c0d33f039da3b04c8de6c244d0c4da338900f0430",
+      "result": {
+        "status": "PreparedUnqualified",
+        "ast": {
+          "profile": "moriarty-financial-agreement-source/6",
+          "programId": "Invoice",
+          "domain": "Midnight",
+          "settlement": {
+            "asset": "A",
+            "scale": "2"
+          },
+          "selected": {
+            "actionId": "TransferLiteralFee",
+            "sourceHash": "src1",
+            "policyDigest": "policy1"
+          },
+          "intent": {
+            "signer": "Owner",
+            "keyRef": "key1",
+            "nonce": "n1",
+            "preHead": "h0",
+            "notBefore": "0",
+            "notAfter": "10",
+            "grossCap": "1010",
+            "feeCap": "10",
+            "netFloor": "1000",
+            "signedAction": {
+              "kind": "Transfer",
+              "from": "Owner",
+              "to": "Recipient",
+              "feeTo": "Fee",
+              "value": "1000",
+              "fee": "10"
+            },
+            "failure": "success_only",
+            "observations": "empty",
+            "disclosures": "empty",
+            "retainedEffects": "empty",
+            "retainedDuties": "empty",
+            "delegation": "none",
+            "recovery": "none"
+          },
+          "authenticated": {
+            "head": "h0",
+            "predecessor": "genesis",
+            "round": "1",
+            "balances": [
+              {
+                "account": "Owner",
+                "amount": "10000"
+              },
+              {
+                "account": "Recipient",
+                "amount": "0"
+              },
+              {
+                "account": "Fee",
+                "amount": "0"
+              }
+            ],
+            "allowance": {
+              "owner": "Owner",
+              "remaining": "10000",
+              "spent": "0"
+            },
+            "replay": "unused",
+            "workRemaining": "10",
+            "workSpent": "0"
+          },
+          "submitted": {
+            "action": {
+              "kind": "Transfer",
+              "from": "Owner",
+              "to": "Recipient",
+              "feeTo": "Fee",
+              "value": "1000",
+              "fee": "10"
+            },
+            "effects": [
+              {
+                "kind": "Debit",
+                "account": "Owner",
+                "asset": "A",
+                "amount": "1010"
+              },
+              {
+                "kind": "Credit",
+                "account": "Recipient",
+                "asset": "A",
+                "amount": "1000"
+              },
+              {
+                "kind": "Credit",
+                "account": "Fee",
+                "asset": "A",
+                "amount": "10"
+              },
+              {
+                "kind": "UseAllowance",
+                "owner": "Owner",
+                "amount": "1010"
+              },
+              {
+                "kind": "UseReplay",
+                "key": "n1"
+              },
+              {
+                "kind": "AdvanceHead",
+                "predecessor": "h0",
+                "successor": "h1"
+              }
+            ],
+            "postHead": "h1"
+          }
+        },
+        "candidate": {
+          "status": "PreparedUnqualified",
+          "core": "moriarty-core/5",
+          "preHead": "h0",
+          "effects": [
+            {
+              "kind": "Debit",
+              "account": "Owner",
+              "asset": "A",
+              "amount": "1010"
+            },
+            {
+              "kind": "Credit",
+              "account": "Recipient",
+              "asset": "A",
+              "amount": "1000"
+            },
+            {
+              "kind": "Credit",
+              "account": "Fee",
+              "asset": "A",
+              "amount": "10"
+            },
+            {
+              "kind": "UseAllowance",
+              "owner": "Owner",
+              "amount": "1010"
+            },
+            {
+              "kind": "UseReplay",
+              "key": "[\"Midnight\",\"Owner\",\"n1\"]"
+            },
+            {
+              "kind": "AdvanceHead",
+              "predecessor": "h0",
+              "successor": "h1"
+            }
+          ],
+          "candidatePost": {
+            "core": "moriarty-core/5",
+            "domain": "Midnight",
+            "asset": "A",
+            "head": "h1",
+            "round": "1",
+            "workRemaining": "9",
+            "workSpent": "1",
+            "balances": [
+              {
+                "account": "Owner",
+                "amount": "8990"
+              },
+              {
+                "account": "Recipient",
+                "amount": "1000"
+              },
+              {
+                "account": "Fee",
+                "amount": "10"
+              }
+            ],
+            "allowances": [
+              {
+                "owner": "Owner",
+                "remaining": "8990",
+                "spent": "1010"
+              }
+            ],
+            "obligations": [],
+            "consumedReplay": [
+              "[\"Midnight\",\"Owner\",\"n1\"]"
+            ]
+          },
+          "requiredPremises": [
+            "canonical-intent-signature",
+            "snapshot-to-head",
+            "head-extension",
+            "atomic-ledger-compare-and-consume"
+          ]
+        },
+        "unverifiedBindings": [
+          "agreement-id",
+          "selected-program",
+          "asset-scale",
+          "authenticated-predecessor"
+        ]
+      },
+      "qualification": "local-stipulation-only"
+    },
+    "requiredPremises": [
+      "canonical-intent-signature",
+      "snapshot-to-head",
+      "head-extension",
+      "atomic-ledger-compare-and-consume"
+    ],
+    "unverifiedBindings": [
+      "agreement-id",
+      "selected-program",
+      "asset-scale",
+      "authenticated-predecessor"
+    ]
+  },
+  "publicKey": {
+    "x": "49054356565010214917120755206181583053316331037252269607736633713528127039659",
+    "y": "27683688475984064638554496224520192404593704271091320551284614081137608126812",
+    "identity": false
+  },
+  "expected": {
+    "status": "PreparedUnqualified",
+    "core": "moriarty-core/5",
+    "preHead": "h0",
+    "effects": [
+      {
+        "kind": "Debit",
+        "account": "Owner",
+        "asset": "A",
+        "amount": "1010"
+      },
+      {
+        "kind": "Credit",
+        "account": "Recipient",
+        "asset": "A",
+        "amount": "1000"
+      },
+      {
+        "kind": "Credit",
+        "account": "Fee",
+        "asset": "A",
+        "amount": "10"
+      },
+      {
+        "kind": "UseAllowance",
+        "owner": "Owner",
+        "amount": "1010"
+      },
+      {
+        "kind": "UseReplay",
+        "key": "[\"Midnight\",\"Owner\",\"n1\"]"
+      },
+      {
+        "kind": "AdvanceHead",
+        "predecessor": "h0",
+        "successor": "h1"
+      }
+    ],
+    "candidatePost": {
+      "core": "moriarty-core/5",
+      "domain": "Midnight",
+      "asset": "A",
+      "head": "h1",
+      "round": "1",
+      "workRemaining": "9",
+      "workSpent": "1",
+      "balances": [
+        {
+          "account": "Owner",
+          "amount": "8990"
+        },
+        {
+          "account": "Recipient",
+          "amount": "1000"
+        },
+        {
+          "account": "Fee",
+          "amount": "10"
+        }
+      ],
+      "allowances": [
+        {
+          "owner": "Owner",
+          "remaining": "8990",
+          "spent": "1010"
+        }
+      ],
+      "obligations": [],
+      "consumedReplay": [
+        "[\"Midnight\",\"Owner\",\"n1\"]"
+      ]
+    },
+    "requiredPremises": [
+      "canonical-intent-signature",
+      "snapshot-to-head",
+      "head-extension",
+      "atomic-ledger-compare-and-consume"
+    ]
+  },
+  "beforeHead": "9e4601c9af94102208bd6bdea6693cbf5a9638f6d6b9fa716eae540443cc30e4",
+  "messageSha256": "e59e6a4d1d480387c206088663f6611d29dff98d1ac99dadfe2c582b27cc1a48",
+  "messageLength": 1278,
+  "source_sha256": "fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c",
+  "binary_sha256": "42fa598d8b54334650f60bc13428bff3d79bb240a5bb0c203fc84684b5a30339",
+  "trust": "constructor fixture round/address/color/funding mapping; local escrow, not wallet balance"
+}

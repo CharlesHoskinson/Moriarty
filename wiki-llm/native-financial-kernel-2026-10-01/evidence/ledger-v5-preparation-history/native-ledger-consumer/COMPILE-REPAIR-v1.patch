@@ -1,0 +1,71 @@
+--- source-v4-precompile-repair/src/artifacts.rs
++++ current/src/artifacts.rs
+@@ -1,5 +1,16 @@
+ use crate::*;
+-pub(crate) fn sha(bytes: &[u8]) -> String { format!("{:x}", Sha256::digest(bytes)) }
++pub(crate) fn sha(bytes: &[u8]) -> String {
++    // Encode digest bytes; sha2 0.11's array does not implement LowerHex.
++    // Keep the frozen dependency graph: hex is not a direct dependency.
++    let digest = Sha256::digest(bytes);
++    let alphabet = b"0123456789abcdef";
++    let mut encoded = String::with_capacity(digest.len() * 2);
++    for byte in digest.iter() {
++        encoded.push(alphabet[(*byte >> 4) as usize] as char);
++        encoded.push(alphabet[(*byte & 15) as usize] as char);
++    }
++    encoded
++}
+ pub(crate) fn read_pinned(path: &Path, expected: &str) -> Result<Vec<u8>> {
+     if expected.len()!=64 || !expected.bytes().all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c)) {return Err("invalid supervisor SHA256".into());}
+     let file=fs::File::open(path)?; let mut bytes=Vec::new(); file.take(MAX_FILE+1).read_to_end(&mut bytes)?;
+--- source-v4-precompile-repair/src/main.rs
++++ current/src/main.rs
+@@ -140,7 +140,7 @@
+     // Compare actual constructed preimage to the frozen native fixture before proof allocation.
+     let (prepared,prepared_parent)=single_call(&unproven)?;
+     let actual_context=prepared.clone().context(&block(&c.fixture),&prepared_parent.erase_proofs().erase_signatures(),contract.clone(),&Map::new());
+-    let ProofPreimageVersioned::V2(p)=&prepared.proof;
++    let ProofPreimageVersioned::V2(p)=&prepared.proof else {return Err("unsupported native preimage version; construction refused".into());};
+     let frozen:ProofPreimage=decode(&artifact(&c.retained_preimage)?)?;
+     exclusive(&out.join("genesis.tagged"),&encoded(&state)?)?;
+     exclusive(&out.join("prepared-unproven.tagged"),&encoded(&unproven)?)?;
+@@ -189,7 +189,7 @@
+     let Transaction::Standard(mut ps)=proven else {return Err("not standard".into())};
+     let signed=ps.intents.get(&SEGMENT).ok_or("intent absent")?.deref().clone().sign(&mut rng,SEGMENT,&[key.clone()],&[],&[key])?;
+     ps.intents=ps.intents.insert(SEGMENT,signed);
+-    let tx=Transaction::Standard(ps).seal(&mut rng);
++    let tx=Transaction::Standard(ps).seal(rng);
+     let (sc,sp)=single_call(&tx)?;
+     if sc.public_inputs(sp.binding_commitment.into())!=pis {return Err("sign/seal changed finalized statement".into());}
+     exclusive(&out.join("transaction.tagged"),&encoded(&tx)?)?;
+--- source-v4-precompile-repair/src/verify.rs
++++ current/src/verify.rs
+@@ -25,22 +25,22 @@
+     let registered=state.index(address()).ok_or("contract absent")?.operations.get(&b"pay"[..].into()).ok_or("registered operation absent")?.deref().clone();
+     if encoded(registered.v3_vk().ok_or("v3VK absent")?)?!=vkbytes || registered.v2.is_some() {return Err("registered VK identity/version mismatch".into());}
+     let ProofVersioned::V3(cp)=&call.proof else{return Err("not actual v3 proof".into())};
+-    if cp.0!=raw || call.public_inputs(parent.binding_commitment.into())!=pis || pis.first()==Some(&Fr::from(0u8)){return Err("finalized call/proof/statement mismatch or binding0".into());}
++    if cp.0!=raw || call.public_inputs(parent.binding_commitment.clone().into())!=pis || pis.first()==Some(&Fr::from(0u8)){return Err("finalized call/proof/statement mismatch or binding0".into());}
+     vk.verify(&pv,&proof,pis.iter().copied())?;
+     vk.verify(&transient_crypto::proofs::PARAMS_VERIFIER,&proof,pis.iter().copied())?;
+     for i in 0..pis.len(){let mut p=pis.clone();p[i].0+=Fr::from(1u8).0;refused(&format!("public field {i}+1"),vk.verify(&pv,&proof,p.into_iter()))?;}
+     let mut p=pis.clone();p.pop();refused("missing public field",vk.verify(&pv,&proof,p.into_iter()))?;
+     let mut p=pis.clone();p.push(Fr::from(1u8));refused("extra public field",vk.verify(&pv,&proof,p.into_iter()))?;
+-    let mut bad=call.clone();bad.address=ContractAddress(HashOutput([5;32]));refused("actual call address",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.into()).into_iter()))?;
+-    let mut bad=call.clone();bad.entry_point=EntryPointBuf(b"wrong-pay".to_vec());refused("actual call entrypoint",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.into()).into_iter()))?;
+-    let mut bad=call.clone();bad.communication_commitment.0+=Fr::from(1u8).0;refused("actual call communication",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.into()).into_iter()))?;
++    let mut bad=call.clone();bad.address=ContractAddress(HashOutput([5;32]));refused("actual call address",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.clone().into()).into_iter()))?;
++    let mut bad=call.clone();bad.entry_point=EntryPointBuf(b"wrong-pay".to_vec());refused("actual call entrypoint",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.clone().into()).into_iter()))?;
++    let mut bad=call.clone();bad.communication_commitment.0+=Fr::from(1u8).0;refused("actual call communication",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.clone().into()).into_iter()))?;
+     if let Some(t)=call.guaranteed_transcript.as_ref().or(call.fallible_transcript.as_ref()) {
+         let mut changed=t.deref().clone();changed.gas.compute_time+=state.parameters.cost_model.runtime_cost_model.noop_constant;
+         let mut bad=call.clone();if bad.guaranteed_transcript.is_some(){bad.guaranteed_transcript=Some(Sp::new(changed));}else{bad.fallible_transcript=Some(Sp::new(changed));}
+-        refused("actual declared gas",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.into()).into_iter()))?;
++        refused("actual declared gas",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.clone().into()).into_iter()))?;
+         let mut changed=t.deref().clone();changed.effects.unshielded_outputs=changed.effects.unshielded_outputs.insert(asset(),1011);
+         let mut bad=call.clone();if bad.guaranteed_transcript.is_some(){bad.guaranteed_transcript=Some(Sp::new(changed));}else{bad.fallible_transcript=Some(Sp::new(changed));}
+-        refused("actual declared effects",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.into()).into_iter()))?;
++        refused("actual declared effects",vk.verify(&pv,&proof,bad.public_inputs(parent.binding_commitment.clone().into()).into_iter()))?;
+     }
+     let mut bit=raw.clone();bit[0]^=1;refused("proof corruption",vk.verify(&pv,&Proof(bit),pis.iter().copied()))?;
+     refused("proof truncation",vk.verify(&pv,&Proof(raw[..raw.len()/2].to_vec()),pis.iter().copied()))?;

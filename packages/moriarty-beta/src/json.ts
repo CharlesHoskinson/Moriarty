@@ -35,7 +35,7 @@ export function parseJsonWithinLimits(text: string, byteLimit:number, stringLimi
         try { value = JSON.parse(text.slice(start, i)) as string; }
         catch { return fail('BETA_JSON_SYNTAX', 'Invalid JSON string'); }
         if (!scalarText(value)) fail('BETA_JSON_UNICODE', 'Invalid decoded Unicode scalar');
-        if (Buffer.byteLength(value) > stringLimit) fail('BETA_JSON_STRING', 'JSON string exceeds 1024 bytes');
+        if (Buffer.byteLength(value) > stringLimit) fail('BETA_JSON_STRING', `JSON string exceeds ${stringLimit} bytes`);
         return value;
       }
       if (c === '\\' && !escaped) escaped = true; else escaped = false;

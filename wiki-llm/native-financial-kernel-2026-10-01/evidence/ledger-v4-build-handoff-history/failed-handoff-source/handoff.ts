@@ -1,0 +1,115 @@
+/** Source-only exact compiled-profile consumer. Execution requires separate authorization. */
+import assert from 'node:assert/strict';
+import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {resolve,isAbsolute} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const B='/home/charl/research/moriarty-signed-intent-2026-10-01';
+const R='/home/charl/Moriarty/.worktrees/moriarty-beta-20260930';
+const sha=(b:string|Uint8Array)=>createHash('sha256').update(b).digest('hex');
+const hex=(b:Uint8Array)=>Buffer.from(b).toString('hex');
+const bytes=(h:string)=>Uint8Array.from(Buffer.from(h,'hex'));
+const le=(n:bigint)=>{assert(n>=0n&&n<(1n<<128n));const b=new Uint8Array(32);for(let i=0;i<32;i++){b[i]=Number(n&255n);n>>=8n;}return b;};
+function nativeJson(v:any):string {
+ if(typeof v==='bigint')return v.toString();
+ if(v instanceof Uint8Array)return '['+[...v].join(',')+']';
+ if(v instanceof Map)return nativeJson([...v]);
+ if(Array.isArray(v))return '['+v.map(nativeJson).join(',')+']';
+ if(v&&typeof v==='object')return '{'+Object.entries(v).map(([k,x])=>JSON.stringify(k)+':'+nativeJson(x)).join(',')+'}';
+ if(typeof v==='number')assert(Number.isSafeInteger(v),'unsafe number');
+ return JSON.stringify(v);
+}
+function restore(v:any):any{return Array.isArray(v)?v.map(restore):v&&typeof v==='object'?Object.keys(v).length===1&&'bytes'in v?bytes(v.bytes):Object.keys(v).length===1&&'bigint'in v?BigInt(v.bigint):Object.fromEntries(Object.entries(v).map(([k,x])=>[k,restore(x)])):v;}
+const PREMISES=['canonical-intent-signature','snapshot-to-head','head-extension','atomic-ledger-compare-and-consume'];
+const UNBOUND=['agreement-id','selected-program','asset-scale','authenticated-predecessor'];
+/** No successful candidate, expected pins, mappings or native verdict supplied by caller. */
+export async function prepareExactNativeTransfer(input:{source:string;action:string;scenarioText:string;signatureText:string;cryptoBinary:string;newOutput:string}) {
+ assert.deepEqual(Object.keys(input).sort(),['source','action','scenarioText','signatureText','cryptoBinary','newOutput'].sort());
+ for(const v of Object.values(input))assert.equal(typeof v,'string');
+ assert(isAbsolute(input.newOutput)&&isAbsolute(input.cryptoBinary));
+ const authorityBytes=readFileSync(new URL('./INPUT-SOURCE-HASHES.json',import.meta.url));
+ assert.equal(sha(authorityBytes),'808605933655ebaafb78ac386404cc2ddbf801a15072d5a2a181802f28f6f476','fixed authority manifest identity');
+ const authority=JSON.parse(authorityBytes.toString());
+ for(const [path,digest]of Object.entries(authority.sha256))assert.equal(sha(readFileSync(path)),digest,`source pin ${path}`);
+ const pinned=(path:string)=>{assert(Object.hasOwn(authority.sha256,path),'unregistered source');return readFileSync(path);};
+ const auth=await import(pathToFileURL(R+'/packages/moriarty-beta/src/auth.ts').href);
+ const json=await import(pathToFileURL(R+'/packages/moriarty-beta/src/json.ts').href);
+ const bridge=await import(pathToFileURL(R+'/packages/moriarty-beta/src/bridge.ts').href);
+ const frontend=await import(pathToFileURL(R+'/experiments/moriarty-language/src/successor/financial-agreement-source-v6-frontend.ts').href);
+ assert(Object.hasOwn(authority.sha256,input.cryptoBinary),'unregistered signature verifier');
+ const p=JSON.parse(pinned(B+'/kernel-prototype/projection.json').toString());
+ assert.equal(sha(pinned(B+'/kernel-prototype/projection.json')),'6afe4f734ab85f767eb2578a5b5a8699bfda81de360ce50b8fb9cb9cd82ee381');
+ const supplied=json.parseBoundedJson(input.signatureText),scenario=json.parseBoundedJson(input.scenarioText);
+ assert.equal(input.source,p.source,'unsupported frozen source identity');assert.equal(input.action,'pay');
+ assert.deepEqual(scenario,p.scenario,'unsupported frozen scenario');
+ assert.deepEqual(supplied.statement,p.artifact.statement,'unsupported frozen signed statement');
+ assert.equal(supplied.signatureHex,p.artifact.signatureHex,'unsupported frozen signature/trace identity; not an invalid-signature verdict');
+ assert.equal(sha(input.source),'fb507bfb848a8859a55c020faf410e52f9e40c00fc3938a90ea3c763e1cf1d6c');
+ const verified=await auth.verifyAndPrepare(input.source,input.action,input.scenarioText,input.signatureText,{binaryPath:input.cryptoBinary});
+ assert.equal(verified.status,'SignedPreparedUnqualified');assert.equal(verified.sourceMatched,true);assert.equal(verified.signature.signature_valid,true);
+ assert.equal(verified.nativeProof,'NotChecked');assert.equal(verified.ledger,'NotSubmitted');assert.equal(verified.ledger_accepted,false);assert.equal(verified.keyAuthority,'Unverified');assert.equal(verified.state,'LocalStipulationOnly');
+ assert.deepEqual(verified.requiredPremises,PREMISES);assert.deepEqual(verified.unverifiedBindings,UNBOUND);
+ assert.equal(verified.signature.authority_valid,null);assert.equal(verified.signature.snapshot_membership_valid,null);assert.equal(verified.signature.transition_valid,null);assert.equal(verified.signature.ledger_accepted,false);assert.deepEqual(verified.signature.statement,p.artifact.statement);
+ assert.equal(verified.signature.signing_message_hex,p.framed.signing_message_hex);assert.equal(verified.signature.frame_hex,p.framed.frame_hex);
+ const expansion=bridge.expand(input.source,input.action,input.scenarioText);assert.equal(expansion.status,'Expanded');
+ const lowered=frontend.parseAndLowerSource6(expansion.source6),candidate=verified.local.result.candidate;
+ assert.deepEqual(candidate,p.expected);assert.deepEqual(candidate.requiredPremises,PREMISES);assert.equal(lowered.proposedPostHead,'h1');
+ const pre={core:'moriarty-core/5',domain:'Midnight',asset:'A',head:'h0',round:'1',workRemaining:'10',workSpent:'0',balances:[{account:'Owner',amount:'10000'},{account:'Recipient',amount:'0'},{account:'Fee',amount:'0'}],allowances:[{owner:'Owner',remaining:'10000',spent:'0'}],obligations:[],consumedReplay:[]};
+ assert.deepEqual(lowered.state,pre);
+ const replay=JSON.stringify(['Midnight','Owner','n1']);
+ assert.deepEqual(candidate.effects,[{kind:'Debit',account:'Owner',asset:'A',amount:'1010'},{kind:'Credit',account:'Recipient',asset:'A',amount:'1000'},{kind:'Credit',account:'Fee',asset:'A',amount:'10'},{kind:'UseAllowance',owner:'Owner',amount:'1010'},{kind:'UseReplay',key:replay},{kind:'AdvanceHead',predecessor:'h0',successor:'h1'}]);
+ assert.deepEqual(candidate.candidatePost,{...pre,head:'h1',balances:[{account:'Owner',amount:'8990'},{account:'Recipient',amount:'1000'},{account:'Fee',amount:'10'}],allowances:[{owner:'Owner',remaining:'8990',spent:'1010'}],consumedReplay:[replay],workRemaining:'9',workSpent:'1'});
+ const runtime=await import(pathToFileURL(B+'/kernel-prototype/node_modules/@midnight-ntwrk/compact-runtime/dist/index.js').href);
+ const {Contract,ledger}=await import(pathToFileURL(B+'/kernel-prototype/output/contract/index.js').href);
+ const message=bytes(verified.signature.signing_message_hex),s=verified.signature.statement;
+ // Parse actual checked compressed SEC1 key without generating/signing any key.
+ const x=BigInt('0x'+s.signature.publicKeyHex.slice(2)),mod=(1n<<256n)-(1n<<32n)-977n;
+ const pow=(a:bigint,n:bigint)=>{let r=1n;while(n){if(n&1n)r=r*a%mod;a=a*a%mod;n>>=1n;}return r;};
+ let y=pow((x*x%mod*x+7n)%mod,(mod+1n)/4n);assert.equal(y*y%mod,(x*x%mod*x+7n)%mod);
+ if((y&1n)!==BigInt(parseInt(s.signature.publicKeyHex.slice(0,2),16)&1))y=mod-y;
+ const pk={x,y,identity:false};assert.deepEqual(pk,{x:BigInt(p.publicKey.x),y:BigInt(p.publicKey.y),identity:false});
+ const sig={r:BigInt('0x'+supplied.signatureHex.slice(0,64)),s:BigInt('0x'+supplied.signatureHex.slice(64))};
+ const contract=new Contract({}),color=bytes('a1'.repeat(32)),recipient={bytes:bytes('02'.repeat(32))},fee={bytes:bytes('03'.repeat(32))};
+ const init=await contract.initialState(runtime.createConstructorContext({},'00'.repeat(32)),pk,color,recipient,fee,BigInt(pre.balances[0].amount),BigInt(pre.allowances[0].remaining),BigInt(pre.workRemaining),BigInt(pre.round));
+ init.currentContractState.balance=new Map([[{tag:'unshielded',raw:hex(color)},10000n]]);
+ const operation=new runtime.ContractOperation();assert.equal(operation.verifierKey,undefined);init.currentContractState.setOperation('pay',operation);
+ const beforeHead=bytes(sha('local-fixture:h0'));assert.equal(hex(beforeHead),p.beforeHead);
+ const common={ownerKey:pk,sourceDigest:bytes(s.sourceSha256),ownerProgramDigest:bytes(s.ownerProgramSha256),trustedRound:1n,assetColor:color,recipientAddress:recipient,feeAddress:fee};
+ const initialFields={...common,usedNonce:false,head:beforeHead,revision:0n,ownerBalance:10000n,recipientBalance:0n,feeBalance:0n,workRemaining:10n,workSpent:0n,allowanceRemaining:10000n,allowanceSpent:0n,lastDebit:0n,lastRecipientCredit:0n,lastFeeCredit:0n,lastAllowanceUse:0n};
+ const fields=(v:any)=>Object.fromEntries(Object.keys(initialFields).map(k=>[k,v[k]]));
+ assert.deepEqual(Object.keys(ledger(init.currentContractState.data)).sort(),Object.keys(initialFields).sort());assert.deepEqual(fields(ledger(init.currentContractState.data)),initialFields);
+ assert.deepEqual([...init.currentContractState.balance],[[{tag:'unshielded',raw:hex(color)},10000n]]);
+ const initial=init.currentContractState.serialize();
+ const result=await contract.circuits.pay(runtime.createCircuitContext({circuitId:'pay',contractAddress:'04'.repeat(32),coinPublicKeyOrZswapState:'00'.repeat(32),contractState:init.currentContractState,privateState:{},time:1,parentBlockHash:'00'.repeat(32)}),message,sig);
+ const post=ledger(result.context.callContext.currentQueryContext.state);
+ const headInputs=[beforeHead,bytes(sha(message)),common.sourceDigest,common.ownerProgramDigest,color,recipient.bytes,fee.bytes,...[8990n,1000n,10n,8990n,1010n,9n,1n,1n,1n].map(le)];
+ const head=runtime.persistentHash(new runtime.CompactTypeVector(16,new runtime.CompactTypeBytes(32)),headInputs);
+ assert.deepEqual(fields(post),{...common,usedNonce:true,head,revision:1n,ownerBalance:8990n,recipientBalance:1000n,feeBalance:10n,workRemaining:9n,workSpent:1n,allowanceRemaining:8990n,allowanceSpent:1010n,lastDebit:1010n,lastRecipientCredit:1000n,lastFeeCredit:10n,lastAllowanceUse:1010n});
+ assert.deepEqual(result.result,head);
+ const effects=result.context.callContext.currentQueryContext.effects;
+ assert.deepEqual(Object.keys(effects).sort(),['claimedNullifiers','claimedShieldedReceives','claimedShieldedSpends','claimedContractCalls','shieldedMints','unshieldedMints','unshieldedInputs','unshieldedOutputs','claimedUnshieldedSpends'].sort());
+ for(const k of ['claimedNullifiers','claimedShieldedReceives','claimedShieldedSpends','claimedContractCalls'])assert.equal(effects[k].length,0);
+ for(const k of ['shieldedMints','unshieldedMints','unshieldedInputs'])assert.equal(effects[k].size,0);
+ assert.deepEqual([...effects.unshieldedOutputs],[[{tag:'unshielded',raw:hex(color)},1010n]]);
+ const orderedSpends=[...effects.claimedUnshieldedSpends].sort((a:any,b:any)=>a[0][1].address.localeCompare(b[0][1].address));
+ assert.deepEqual(orderedSpends,[[[{tag:'unshielded',raw:hex(color)},{tag:'user',address:hex(recipient.bytes)}],1000n],[[{tag:'unshielded',raw:hex(color)},{tag:'user',address:hex(fee.bytes)}],10n]]);
+ assert.equal(result.context.callProofDataTrace.length,1);const trace=result.context.callProofDataTrace[0];assert.equal(trace.circuitId,'pay');
+ const normalized={input:trace.input,output:trace.output,publicTranscript:trace.publicTranscript,privateTranscriptOutputs:trace.privateTranscriptOutputs};
+ const retained=restore(JSON.parse(pinned(B+'/native-adapter-successor-v3/runtime-proof-data.json').toString()));assert.equal(nativeJson(normalized),nativeJson(retained));
+ assert.equal(trace.publicTranscript.length,293);assert.equal(trace.publicTranscript.filter((v:any)=>'popeq'in v).length,47);
+ const location='local-public-fixture/pay/c20c6e733500823c478eea885bebab5d62ba9958cfdd1ec8cf2ae89b32f9d7ae';
+ const preimage=runtime.proofDataIntoSerializedPreimage(trace.input,trace.output,trace.publicTranscript,trace.privateTranscriptOutputs,location);
+ assert.deepEqual(Buffer.from(preimage),pinned(B+'/native-adapter-successor-v3/good.preimage'));
+ assert.deepEqual(init.currentContractState.serialize(),initial);
+ const expected=runtime.ContractState.deserialize(initial);expected.data=result.context.callContext.currentQueryContext.state;
+ const artifacts:[string,Uint8Array][]=[['initial-contract.tagged',initial],['expected-contract.tagged',expected.serialize()],['runtime-native.json',Buffer.from(nativeJson(normalized))],['registered-pay-operation.tagged',operation.serialize()]];
+ const output=resolve(input.newOutput);mkdirSync(output); // exclusive; all comparisons precede publication
+ const records=artifacts.map(([name,data])=>{writeFileSync(output+'/'+name,data,{flag:'wx'});return {name,path:output+'/'+name,sha256:sha(data)};});
+ const ref=(name:string)=>{const r=records.find(v=>v.name===name)!;return {path:r.path,sha256:r.sha256};};
+ const artifact=(path:string)=>({path,sha256:authority.sha256[path]});
+ // Fixed public recipe; no chain funding/time authentication. Integers remain exact.
+ const config={ir:artifact(B+'/kernel-prototype/output/zkir/pay.zkir'),initial_contract:ref('initial-contract.tagged'),expected_contract:ref('expected-contract.tagged'),runtime:ref('runtime-native.json'),retained_preimage:artifact(B+'/native-adapter-successor-v3/good.preimage'),fixture:{trust:'TRUSTED_GENESIS_PUBLIC_DEVELOPMENT_ONLY',network:'undeployed',block_seconds:1000000,night_creation_seconds:0,night_value:1000000000000n,fee_allowance:100000000000000000000n,ttl_seconds:1000300}};
+ writeFileSync(output+'/prepare-config.json',nativeJson(config),{flag:'wx'});
+ const receipt={status:'NativeFixturePreparedUnqualified',source_sha256:sha(input.source),scenario_sha256:sha(input.scenarioText),signature_artifact_sha256:sha(input.signatureText),frame_sha256:verified.signature.frame_sha256,core_candidate_sha256:sha(nativeJson(candidate)),artifacts:records,prepare_config_sha256:sha(nativeJson(config)),requiredPremises:PREMISES,unverifiedBindings:UNBOUND,authority_valid:null,ledger_accepted:false,proof_produced:false,well_formed_checked:false,ledger_applied:false,trust:config.fixture.trust,expected_contract_scope:'storage-only; serialized escrow is prestate10000, native application must separately establish8990',head_mapping:{betaPre:'h0',nativePre:hex(beforeHead),betaPost:'h1',nativePost:hex(head),authenticates_predecessor:false},assumptions:['constructor owner/key-role mapping','A=A1 color and fixed public destinations','trusted escrow/funding','constructor round1; not authenticated chain time','NIGHT/DUST public development recipe separate from signed A fee10'],limits:'restricted frozen compiled profile; no generic compiler/formal correspondence/Preview/native PCD/financial closure'};
+ writeFileSync(output+'/receipt.json',JSON.stringify(receipt,null,2),{flag:'wx'});return receipt;
+}
