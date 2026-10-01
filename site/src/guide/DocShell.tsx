@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { PAGES, type PageKey } from './data';
 
 /**
@@ -204,7 +204,12 @@ interface Pin {
 }
 
 
-export function DocShell({ page, eyebrow, title, lead, groups, path = [], children }: DocShellProps) {
+export function DocShell({ page, eyebrow, title, lead, groups: groupsProp, path: pathProp, children }: DocShellProps) {
+  // Pages pass literal arrays; key them by content so a re-render does not re-run the mount effect (and loop).
+  const groupsKey = groupsProp.join('\n');
+  const pathKey = (pathProp ?? []).join('\n');
+  const groups = useMemo(() => groupsProp, [groupsKey]);
+  const path = useMemo(() => pathProp ?? [], [pathKey]);
   const contentRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -423,6 +428,10 @@ export function DocShell({ page, eyebrow, title, lead, groups, path = [], childr
     const onHash = () => {
       const target = hashTarget(location.hash);
       if (target) {
+        // Move focus with the reader (the heading, for a section), as the sidebar links do.
+        const landing = target.matches('section') ? target.querySelector<HTMLElement>('h2') ?? target : target;
+        if (!landing.hasAttribute('tabindex')) landing.setAttribute('tabindex', '-1');
+        landing.focus({ preventScroll: true });
         arrive(target);
         hold(target);
       }
@@ -480,13 +489,14 @@ export function DocShell({ page, eyebrow, title, lead, groups, path = [], childr
     const target = href.startsWith('#') ? hashTarget(href) : null;
     if (!target || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
+    // Close the drawer first: while it is open the main column is inert and cannot take focus.
+    flushSync(() => setMenuOpen(false));
     const landing = target.matches('section') ? target.querySelector<HTMLElement>('h2') ?? target : target;
     if (!landing.hasAttribute('tabindex')) landing.setAttribute('tabindex', '-1');
     landing.focus({ preventScroll: true });
     history.pushState(null, '', href);
     arrive(target);
     target.scrollIntoView();
-    setMenuOpen(false);
   };
 
   const skipToNavigation = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -531,7 +541,7 @@ export function DocShell({ page, eyebrow, title, lead, groups, path = [], childr
         </nav>
       </header>
 
-      <div className="guide-bar" ref={barRef}>
+      <div className="guide-bar" ref={barRef} role="region" aria-label="Current section">
         <button
           type="button"
           ref={browseRef}

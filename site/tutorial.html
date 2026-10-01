@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
     <title>Tutorials — Moriarty</title>
     <meta name="description" content="Learn the Moriarty beta language by doing: install the command-line tool, write a transfer, check it, run it against a local scenario, then make a test fail on purpose." />
     <script>
       // Old single-page links (tutorial.html#syntax, #amm, ...) move to the page that now holds the section.
-      // The hash never reaches the server, so this runs here, before the page renders.
-      (function () {
+      // The hash never reaches the server, so this runs here, before the page renders, and again on a hash change.
+      function route() {
         var h;
         try { h = decodeURIComponent((location.hash || '').slice(1)); } catch (e) { return; }
         if (!h || /^(overview|getting-started|install|transfer(-derive|-files)?|repayment(-derive|-files)?|testing|wrong-expectation|core-rejection|next-steps)$/.test(h)) return;
@@ -37,7 +38,9 @@
         if (!to && (m = new RegExp('^(' + fam + ')-pattern').exec(h))) to = 'how-to.html#write-' + m[1];
         if (!to && (m = new RegExp('^(' + fam + ')-').exec(h))) to = 'explanation.html#' + m[1];
         if (to) location.replace(to);
-      })();
+      }
+      route();
+      addEventListener('hashchange', route);
     </script>
   </head>
   <body class="guide-page" data-page="tutorial">

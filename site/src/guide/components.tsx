@@ -102,13 +102,15 @@ export interface CodeProps {
  */
 export function Code({ kind, title, children, href }: CodeProps) {
   const copy = COPY_LABEL[kind];
+  // A complete file is copied byte for byte, final newline included; the display drops it to avoid an empty last line.
   const text = children.replace(/\n$/, '');
+  const copied = kind === 'file' ? children : text;
   return (
     <figure className="doc-code" data-kind={kind}>
       <figcaption className="doc-code-bar">
         <span className="doc-code-tag">{KIND_TAG[kind]}</span>
         {title ? <span className="doc-code-title">{href ? <a href={href}>{title}</a> : title}</span> : null}
-        {copy ? <CopyButton text={text} label={copy.label} done={copy.done} /> : null}
+        {copy ? <CopyButton text={copied} label={copy.label} done={copy.done} /> : null}
       </figcaption>
       <pre>
         <code>{text}</code>
@@ -203,10 +205,10 @@ export function Section({
 /** A neutral note. `tone="caution"` is reserved for a point where the reader's result would otherwise mislead them. */
 export function Note({ title, tone, children }: { title?: ReactNode; tone?: 'caution'; children: ReactNode }) {
   return (
-    <aside className="doc-note" data-tone={tone} aria-label={typeof title === 'string' ? title : undefined}>
+    <div className="doc-note" role="note" data-tone={tone} aria-label={typeof title === 'string' ? title : undefined}>
       {title ? <p className="doc-note-title">{title}</p> : null}
       {children}
-    </aside>
+    </div>
   );
 }
 
@@ -221,19 +223,22 @@ export function Answer({ summary = 'Check your answer', children }: { summary?: 
 }
 
 /** A link that shows which kind of page it opens (Tutorial, How-to, Reference, Explanation). */
-export function ModeLink({ mode, href, children }: { mode: Mode; href: string; children: ReactNode }) {
+export function ModeLink({ mode, href, children }: { mode?: Mode; href: string; children: ReactNode }) {
   return (
     <a className="doc-modelink" href={href}>
-      <span className="doc-mode" data-mode={mode} aria-label={`${MODE_NAME[mode]}:`} title={MODE_NAME[mode]}>
-        {MODE_LETTER[mode]}
-      </span>
+      {mode ? (
+        <span className="doc-mode" data-mode={mode} aria-label={`${MODE_NAME[mode]}:`} title={MODE_NAME[mode]}>
+          {MODE_LETTER[mode]}
+        </span>
+      ) : null}
       {children}
     </a>
   );
 }
 
 export interface SeeAlsoItem {
-  mode: Mode;
+  /** Omit for a link that is not one of the four kinds, such as the documentation hub. */
+  mode?: Mode;
   href: string;
   label: ReactNode;
 }
@@ -261,20 +266,26 @@ export function SeeAlso({ items, title = 'See also' }: { items: SeeAlsoItem[]; t
  * (`explanation.html#<id>`), the reference entry (`reference.html#family-<id>`) and the how-to recipe
  * (`how-to.html#write-<id>`). Every family is SpecifiedOnly.
  */
-export function FamilyStrip({ id }: { id: FamilyId }) {
+export function FamilyStrip({ id, here }: { id: FamilyId; here?: Exclude<Mode, 'tutorial'> }) {
   const fam = FAMILIES.find((f) => f.id === id);
   return (
     <nav className="doc-familystrip" aria-label={`${fam?.name ?? id} pages`}>
       <Status name="SpecifiedOnly" />
-      <ModeLink mode="explanation" href={`${PAGE_HREF.explanation}#${id}`}>
-        About the example
-      </ModeLink>
-      <ModeLink mode="reference" href={`${PAGE_HREF.reference}#family-${id}`}>
-        Reference entry
-      </ModeLink>
-      <ModeLink mode="howto" href={`${PAGE_HREF.howto}#write-${id}`}>
-        How to write one
-      </ModeLink>
+      {here !== 'explanation' ? (
+        <ModeLink mode="explanation" href={`${PAGE_HREF.explanation}#${id}`}>
+          About the example
+        </ModeLink>
+      ) : null}
+      {here !== 'reference' ? (
+        <ModeLink mode="reference" href={`${PAGE_HREF.reference}#family-${id}`}>
+          Reference entry
+        </ModeLink>
+      ) : null}
+      {here !== 'howto' ? (
+        <ModeLink mode="howto" href={`${PAGE_HREF.howto}#write-${id}`}>
+          How to write one
+        </ModeLink>
+      ) : null}
     </nav>
   );
 }
@@ -290,26 +301,44 @@ export function Steps({ children }: { children: ReactNode }) {
  * public/tutorial-assets: `<name>-light.webp`, `<name>-dark.webp`, with PNG fallbacks.
  * Pass `alt=""` for decoration; the caption still describes what is drawn.
  */
+/** Pixel size of each image in public/tutorial-assets, so the page reserves the right space before it loads. */
+const IMAGE_SIZE: Record<string, [number, number]> = {
+  hero: [1536, 768],
+  pipeline: [1536, 640],
+  'pipeline-mobile': [1024, 1536],
+  quadrant: [640, 640],
+};
+
+/** Images that have a portrait variant for phones, where the wide one would make its text too small to read. */
+const NARROW: Record<string, string> = { pipeline: 'pipeline-mobile' };
+
 export function ThemedFigure({
   name,
   alt,
   caption,
-  width = 1536,
-  height = 1024,
   priority = false,
   className,
 }: {
   name: string;
   alt: string;
   caption: ReactNode;
-  width?: number;
-  height?: number;
   priority?: boolean;
   className?: string;
 }) {
+  const [width, height] = IMAGE_SIZE[name] ?? [1536, 1024];
+  const narrow = NARROW[name];
   const img = (theme: 'light' | 'dark') => (
     <picture className={`doc-themed doc-themed-${theme}`}>
-      <source type="image/webp" srcSet={`tutorial-assets/${name}-${theme}.webp`} />
+      {narrow ? (
+        <source
+          media="(max-width: 640px)"
+          type="image/webp"
+          srcSet={`tutorial-assets/${narrow}-${theme}.webp`}
+          width={IMAGE_SIZE[narrow]?.[0]}
+          height={IMAGE_SIZE[narrow]?.[1]}
+        />
+      ) : null}
+      <source type="image/webp" srcSet={`tutorial-assets/${name}-${theme}.webp`} width={width} height={height} />
       <img
         src={`tutorial-assets/${name}-${theme}.png`}
         width={width}
@@ -322,7 +351,7 @@ export function ThemedFigure({
     </picture>
   );
   return (
-    <figure className={`doc-figure${className ? ` ${className}` : ''}`}>
+    <figure className={`doc-figure${className ? ` ${className}` : ''}${narrow ? ' doc-figure-narrow' : ''}`}>
       {img('light')}
       {img('dark')}
       <figcaption>{caption}</figcaption>

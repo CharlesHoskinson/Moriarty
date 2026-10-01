@@ -47,7 +47,7 @@ export function App() {
           ))}
           <a href="tutorial.html" title="Tutorials: write, check and locally prepare a Moriarty agreement">Tutorials</a>
           <a href="kernel.html" title="The Federated DeFi Kernel: an interactive illustration">Kernel</a>
-          <a href="docs/requirements.html">Docs</a>
+          <a href="documentation.html" title="Documentation: tutorials, how-to guides, reference and explanation for the beta language">Docs</a>
         </nav>
         {compact ? (
           <a
