@@ -140,7 +140,7 @@ main().catch((error)=>{
  if(error instanceof LocalError){
   const detail=error instanceof IntentSourceMismatchError?{pointer:error.pointer,claimed:error.claimed,computed:error.computed}:{};
   const result={status:'FormationRejected',diagnostics:[{code:error.code,message:error.message,...detail}],publishedEffects:null,publishedPost:null};
-  const extra=error instanceof IntentSourceMismatchError?[`  First difference ${error.pointer}`,`  claimed by artifact: ${escapeAscii(asciiJson(error.claimed??null,0))}; computed from this source and action: ${escapeAscii(asciiJson(error.computed??null,0))}`]:[];
+  const extra=error instanceof IntentSourceMismatchError?[`  First difference ${error.pointer}`,`  claimed by artifact: ${asciiJson(error.claimed??null,0)}; computed from this source and action: ${asciiJson(error.computed??null,0)}`]:[];
   if(signedCommand)process.stdout.write(process.argv.includes('--review')?renderErrorReview(error,process.exitCode===2?'unable':'judgment',extra):asciiJson(result)+'\n');else output(result);
  }else{const message=`mori: ${error instanceof Error?error.message:String(error)}`;process.stderr.write((signedCommand?escapeAscii(message):message)+'\n');}
 });
