@@ -32,7 +32,7 @@ For `ecdsa_secp256k1_sha256`, use a 33-byte compressed raw key and a 64-byte raw
 
 `moriarty-midnight-auth-experiment/1\0` UTF-8 bytes, then a four-byte big-endian canonical payload length, then canonical JSON. The statement must be an object. Object keys sort by UTF-8 byte order, arrays retain order, strings contain Unicode scalar values. Null, absence and empty collections differ. JSON numbers, decoded duplicate keys, lone surrogates and trailing content reject. Exact financial quantities are strings; this generic codec does not validate their financial meaning or reject numeric spelling aliases inside strings. The exporter/Core supplies the financial schema checks.
 
-Input and canonical payload limits: 65,536 bytes, depth 32 and 4,096 values. The complete frame also includes the tag and length header. CLI transport is limited to 65,536 bytes. Optional wallet framing is `midnight_signed_message:<frame byte length>:` followed by the complete frame. Cross-language vectors include astral/BMP key ordering, escapes and UTF-8 length.
+Input and canonical payload limits: 65,536 bytes, depth 32 and 4,096 values. The complete frame also includes the tag and length header. CLI transport is limited to 65,536 bytes. Optional wallet framing is `midnight_signed_message:<frame byte length>:` followed by the complete frame. Cross-language vectors include numeric-index keys at three nesting locations, astral/BMP key ordering, escapes and UTF-8 length.
 
 The pure owner-intent statement and the stronger complete candidate claim are distinct signed messages. The complete claim commits local snapshot, effects and post-state assertions; it is not mandatory solver-independent intent. Neither is the production `moriarty-intent/3` codec.
 

@@ -1,0 +1,72 @@
+{
+  "schema": "moriarty-independent-experiment-audit/1",
+  "reviewer": {
+    "model": "gpt-6-astra",
+    "effort": "medium",
+    "identity_source": "assigned fresh independent Astra subagent"
+  },
+  "candidate_commit": "95ff2cb7c9632fde458bd52be53442c96947e6d2",
+  "manifest": "wiki-llm/midnight-crypto-2026-09-30/candidate-manifest.json",
+  "manifest_sha256": "17f412906eae41cc19d3d0a00d912768ff8578fe0a6dc2be67a29a762d5107e3",
+  "manifest_verification": {
+    "files": 65,
+    "mismatches": 0
+  },
+  "disposition": "changes-required",
+  "scope": [
+    "All new Rust codec/library/CLI and six integration-test files",
+    "Cargo manifest/lock and separate source versions",
+    "Fixture exporter, fixture bytes and independent economics",
+    "Original failures and final Rust/beta result receipts",
+    "Design, plan, README, RESULT and preimplementation contract",
+    "Unchanged beta -> Source6 -> Core5 caller path, premises and bindings",
+    "Source receipts and captured source integrity"
+  ],
+  "checks_performed": [
+    "Loaded repository develop skill and AGENTS.md; inspected guarded status. Campaign remains blocked, no pending transactions and no campaign dispatched.",
+    "Resolved HEAD and verified all 65 manifest hashes before review; checkout remained clean.",
+    "Read all new Rust source/tests, exporter, experiment documentation and locked Midnight dependency graph.",
+    "Read final tests-frozen.txt: 12 integration tests pass, 2506 mutated-leaf refusals, 50 fresh valid signatures over 25 rejected Core observations. Read beta-regression.txt: 79 tests pass. Read original failure summaries and proof backtrace; did not infer successful runs from green filenames.",
+    "Executed exporter in memory with only output sink redirected to comparison: all five fixtures/25 rejection assertions ran through actual caller and reproduced fixture SHA256 4460752a951ccd7405cc69c242a45fe1bdaefa3b92a0b2dec8de76a7f4e037f1 exactly.",
+    "Reproduced integer-index-key cross-language mismatch using actual built Rust CLI and exact Node canonicalization expression.",
+    "Verified all 11 manifest-bound production consumers byte-identical to base commit; inspected bridge, Source6 wrapper and Core5 financial/state preparation and unchanged qualification premises.",
+    "Verified all 16 captured source bodies against recorded hashes; inspected pinned upstream KZG Guard::verify -> check -> multi_miller_loop/final_exponentiation and prover debug_assert_eq path.",
+    "Inspected bounded input parser/CLI and signing locations; searched experiment files for private-key/credential markers; no persisted test private keys observed.",
+    "No duplicate full Cargo run, network acquisition, real wallet, production SRS or network transaction performed."
+  ],
+  "findings": [
+    {
+      "id": "ASTRA-1",
+      "severity": "medium",
+      "status": "open",
+      "file": "experiments/midnight-crypto/export-fixtures.mjs",
+      "lines": [
+        11,
+        12
+      ],
+      "title": "Node canonicalization violates UTF-8 key order for integer-index names",
+      "observation": "Object.fromEntries reconstructs a JavaScript object after sorting. JSON.stringify then enumerates integer-index properties numerically, overriding that sort. Rust serializes keys lexicographically.",
+      "reproduction": {
+        "input": {
+          "2": "two",
+          "10": "ten"
+        },
+        "node_payload": "{\"2\":\"two\",\"10\":\"ten\"}",
+        "actual_rust_payload": "{\"10\":\"ten\",\"2\":\"two\"}",
+        "equal": false
+      },
+      "impact": "Both key names are accepted by the documented generic scalar JSON subset. Node and Rust produce different frames, digests and signature messages for this valid statement. Existing fixture and astral/BMP vectors miss the defect; their recorded results remain valid for their exact inputs.",
+      "required_change": "Serialize object members directly in sorted UTF-8 order instead of round-tripping through JavaScript property enumeration, or consistently narrow both accepted subsets. Add a Node/Rust golden regression with integer-index keys at multiple nesting levels, then regenerate/freeze and rerun required tests/audits."
+    }
+  ],
+  "confirmed_scope_limits": [
+    "Schnorr/ECDSA signatures use official native implementations with ephemeral keys; no live wallet interoperability established.",
+    "Authority is a test-only stipulated map; Merkle root is locally selected. Neither authenticates ledger provenance.",
+    "Native proof genuinely reaches final pairing, at k=6 using unsafe ephemeral SRS. It proves one field equality only; no integer ranges, complete economics, signature circuit, compiler correspondence or recursive PCD.",
+    "Disabling upstream proof debug assertions is explicitly recorded, and negative test requires invalid-witness proof generation followed by verifier rejection. This is not a MockProver shortcut.",
+    "Ledger tests exercise privileged reserve/reward system transactions on local in-memory state, not user financial authorization or Moriarty ledger integration.",
+    "Ledger uses registry proofs 0.7.3/curves 0.2.1 while separate latest-ZK smoke uses git proofs 0.8.0/curves 0.3.0; no released/Preview stack compatibility inferred.",
+    "Five fixture economics include complete ordered effects and post state, but do not establish all financial families or product acceptance.",
+    "PreparedUnqualified, four required premises, four unverified bindings, live Preview financial settlement/finality and all broader production gates remain open."
+  ]
+}

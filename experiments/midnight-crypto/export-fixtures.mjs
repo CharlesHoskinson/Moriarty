@@ -8,8 +8,18 @@ import {parseAndLowerSource6} from '../moriarty-language/src/successor/financial
 import {prepareMil4S0} from '../moriarty-language/src/successor/mil4-s0-core-v5.ts';
 import {starterSource,starterScenario,repaymentSource,repaymentScenario} from '../../packages/moriarty-beta/src/starter.ts';
 const hash=s=>createHash('sha256').update(s).digest('hex');
-const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b))).map(k=>[k,stable(v[k])])):v;
-const canonical=v=>JSON.stringify(stable(v));
+// Write members directly: JS object enumeration would reorder integer-index keys.
+const canonical=v=>{
+ if(v===null)return 'null';
+ if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';
+ if(typeof v==='object')return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort((a,b)=>Buffer.compare(Buffer.from(a),Buffer.from(b))).map(k=>{
+  if(!k.isWellFormed())throw new TypeError('non-scalar Unicode key');
+  return JSON.stringify(k)+':'+canonical(v[k]);
+ }).join(',')+'}';
+ if(typeof v==='string'&&!v.isWellFormed())throw new TypeError('non-scalar Unicode string');
+ if(typeof v==='string'||typeof v==='boolean')return JSON.stringify(v);
+ throw new TypeError('experimental JSON subset excludes numbers/undefined array values');
+};
 const frame=v=>{const payload=Buffer.from(canonical(v));const length=Buffer.alloc(4);length.writeUInt32BE(payload.length);return Buffer.concat([Buffer.from('moriarty-midnight-auth-experiment/1\0'),length,payload]);};
 const leafPaths=(v,p='')=>v&&typeof v==='object'&&Object.keys(v).length?Object.entries(v).flatMap(([k,x])=>leafPaths(x,p+'/'+k.replaceAll('~','~0').replaceAll('/','~1'))):[p];
 const fixtures=[];
@@ -51,7 +61,9 @@ emit('transfer-zero-fee',starterSource.replace('const fee = 0.10 USD;','const fe
 emit('repay-interest-only',repaymentSource.replace('30.00 USD','5.00 USD'),'repay_loan',repaymentScenario,{payer:'199500',debit:'500',principal:'100000',accrued:'500',status:'Outstanding'});
 emit('repay-partial',repaymentSource,'repay_loan',repaymentScenario,{payer:'197000',debit:'3000',principal:'98000',accrued:'0',status:'Outstanding'});
 emit('repay-full',repaymentSource.replace('30.00 USD','1010.00 USD'),'repay_loan',repaymentScenario,{payer:'99000',debit:'101000',principal:'0',accrued:'0',status:'Settled'});
+const integerStatement={'2':'two','10':'ten',nested:{'2':'nested two','10':'nested ten'},array:[{'2':'array two','10':'array ten'}]};
+const integerFrame=frame(integerStatement);
 const unicodeStatement={'\u{10000}':'astral','\ue000':'bmp',text:'é😀\n"\\',array:[null,true,'0']};
 const unicodeFrame=frame(unicodeStatement);
-writeFileSync(new URL('./fixtures/moriarty.json',import.meta.url),JSON.stringify({profile:'moriarty-midnight-fixtures/1',codec_vectors:[{statement:unicodeStatement,golden_frame_hex:unicodeFrame.toString('hex'),golden_frame_sha256:hash(unicodeFrame)}],fixtures},null,2)+'\n');
+writeFileSync(new URL('./fixtures/moriarty.json',import.meta.url),JSON.stringify({profile:'moriarty-midnight-fixtures/1',codec_vectors:[{statement:integerStatement,golden_frame_hex:integerFrame.toString('hex'),golden_frame_sha256:hash(integerFrame)},{statement:unicodeStatement,golden_frame_hex:unicodeFrame.toString('hex'),golden_frame_sha256:hash(unicodeFrame)}],fixtures},null,2)+'\n');
 console.log(JSON.stringify({fixtures:fixtures.length,core_negative_cases:fixtures.reduce((n,f)=>n+f.negative_candidates.length,0),qualification:'PreparedUnqualified; ephemeral test signatures do not authenticate ledger provenance'}));
