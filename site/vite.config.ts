@@ -1,10 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Static build with two HTML entries and no backend. Every figure on either
-// page comes from the typed modules under src/data. The relative base keeps
+// Static build with three HTML entries and no backend. Tutorial illustrations
+// are static assets; interactive examples use the typed data modules. The relative base keeps
 // assets resolvable when the site is served under a project subpath such as
-// /Moriarty/, and it applies to kernel.html exactly as it does to index.html.
+// /Moriarty/, and it applies to kernel.html and tutorial.html exactly as it does to index.html.
 export default defineConfig({
   plugins: [react()],
   base: './',
@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         index: 'index.html',
         kernel: 'kernel.html',
+        tutorial: 'tutorial.html',
       },
     },
   },
