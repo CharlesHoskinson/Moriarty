@@ -30,7 +30,7 @@ sources:
 
 ## Native financial kernel — 2026-10-01
 
-[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Native check/proof is pending; fixed runtime and row model do not establish financial acceptance.
+[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Actual native preparation, offline build and key generation are recorded; financial proof/application and authentication gates remain open. Result reviews and source/resource approval remain separate.
 
 ## Signed intent consumer — 2026-10-01
 

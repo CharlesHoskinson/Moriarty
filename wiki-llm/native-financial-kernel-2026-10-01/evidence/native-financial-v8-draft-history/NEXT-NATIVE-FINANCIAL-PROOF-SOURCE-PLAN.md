@@ -1,0 +1,54 @@
+# Next native financial proof: v8 source preparation
+
+2026-10-01. Source-only draft; no allocation or execution authority. No candidate imports, native execution, build, fetch, SRS access, keygen, proof, wallet or transaction dispatch performed. Existing v7/current candidate and all historical artifacts remain unchanged. Moriarty checked-in develop skill and guarded status were loaded: stale operational history/accounting remains, with no pending public transactions. This is continuation of the same delivery, not campaign dispatch.
+
+## Draft and dependency gates
+
+`run-native-financial-proof-v8-draft.py` is a new two-phase successor using the existing v7 supervisor monitor/ownership structure. It deliberately rejects startup because `V7_RESULT_PIN` and `V8_INPUT_PIN` remain TODO values. There is no v8 final sourcefreeze. Root must integrate actual v7 success/result identities and freeze the completed source before two fresh substantive source/resource votes. Previous approvals do not allocate this proof.
+
+Unchanged candidate SOURCE is `73a68f8577c271a236dd737d213742f2a7dcc8d3e5c5e1cab0688ef839adf8df`; v5 actual production Beta/Core handoff and native preparation freeze is `d9c2d56e396e5720a26d1a07183602056d2aef1a9c98ca101a5103968a599d0b`. Candidate Cargo/lock remain byte-identical full consumer graph, with 391 nodes/1220 edges. Full inherited 39/260 source closure and runtime 240+240 files/symlink correspondence are checked explicitly. No new dependencies or executable build are proposed.
+
+Future root-created `NATIVE-FINANCIAL-V8-INPUT-FREEZE.json` closed schema: `sha256` absolute-path map, `binary` {path,sha256,bytes}, `prove_config`, `v7_result_freeze` {path,sha256}. Root must bind every actual v7 build/SRS/keygen reservation/receipt/log/config/output and its sourcefreeze/authorization/reviews; v5 frozen 34 artifacts; original v6 failed transport/partial and retention/archive identities; full current sources/runtime; exact current successful ELF. This exact input map is not authored or guessed now. Final source review must audit its completeness and future v7 result schema.
+
+Before proof, actual v7 build, exact SRS acquisition and keygen must each be successful with source/binary identities intact, correct output tagged identity/EOF, and fresh actual-result freeze plus **both terminal independent actual-result reviews**. The draft authenticates that future full result closure; its exact outcome assertions must be integrated after root supplies actual v7 receipt schema/pins. Current source preparation cannot stand in for these gates.
+
+The closed v8 administrative authorization pins wrapper, candidate, v5/v7 result freezes, input freeze, two Astra/Grok terminal v7 result reviews and two fresh Astra/Grok resource votes. Review hashes/providers/approved values are checked; these are administrative authority, not a circuit acceptance premise. Prove requires `proof_result_freeze:null`. Verify instead requires the supervisor-created immutable proof-result freeze with a pinned parent receipt and every exact proof output. Thus a child or attacker manifest cannot supply verifier authority. The proof and verify authorizations may differ only through appropriately reviewed supervisor records; both pin the same wrapper/input/actual v7 bytes.
+
+## Exact operation and native source path
+
+Future commands, after integration/votes, are:
+
+```
+python3 run-native-financial-proof-v8-draft.py prove AUTHORIZATION AUTH_SHA
+python3 run-native-financial-proof-v8-draft.py verify VERIFY_AUTHORIZATION VERIFY_AUTH_SHA
+```
+
+The actual child command is `unshare -Urn -- env RAYON_NUM_THREADS=2 TARGET/debug/beta-native-ledger-consumer prove|verify CONFIG CONFIG_SHA NEW_OUTPUT`. No Cargo, Node export, keygen, fetch or proof retry exists in this wrapper. Each phase has its own exclusive fsynced attempt/config/log/receipt/output. Consumed failures remain consumed. Catchable signals kill/wait the owned process group and retain partial artifacts; SIGKILL/power loss cannot execute cleanup and leave durable reservations.
+
+Pinned source inspection: `native-ledger-keygen-candidate/src/main.rs:168` calls `construct` with the actual registered VK and exact frozen runtime/context, then `Transaction::prove` with the production provider. `provider.rs` shares one budget through split, requires a nonzero ledger binding override, calls real IR check/prove, retains native pis/pi_skips, and verifies same-VK against both local SRS-derived and embedded native verifier parameters. `main.rs:183` compares every native PI with the finalized call, then signs/seals the public development fixture intent without changing that statement. No host success input is accepted.
+
+ProveConfig fields are exactly ir/pk/vk/srs/initial_contract/expected_contract/runtime/retained_preimage/fixture. The first IR must be **generated tagged** `native-keygen-v7-keys/ir.tagged`, not raw pay.zkir. PK/VK come from the same keygen result. Root freezes exact existing v5 contract/runtime/preimage paths. The fixed trusted fixture values remain unchanged (undeployed, block1000000, creation0, NIGHT principal1e12, allowance1e20, TTL1000300).
+
+`main.rs:202` runs actual default well_formed and real LedgerState.apply with whitelist None. Full Success is mandatory; partial results and poststate are retained before refusal. It checks escrow10000→8990, exact expected storage, native A1 outputs1000/10, removed NIGHT input and same-owner conserved NIGHT principal, one actual dust event, positive consumed fee<=allowance<=availability, accounted remainder, and identical-transaction replay Failure with unchanged state. Native result output preserves complete events. Wrapper additionally checks these result identities and statement/genesis/poststate hashes before declaring phase success.
+
+Actual proof outputs include proof.raw, canonical statement.tagged, native skips.json, signed/sealed transaction.tagged, genesis.tagged, poststate.tagged, application-result.txt, replay-refusal.txt and receipt.json, plus construction diagnostics. Freeze **all** files/bytes after successful proof. No expected golden proof length is assumed.
+
+`verify.rs:11` runs in a separate process, with only root-pinned VK/SRS/proof/statement/transaction/genesis/expected/fixture. It uses strict EOF/canonical tagged decoding, reconstructs exact declared genesis, verifies registered V3 VK identity and proof/call/statement equality with nonzero binding, actual VK verification, then full native acceptance/replay from pristine genesis and original good crypto verification again. Its actual result must equal the original proof-process acceptance result. No witness, PK, private runtime or second proof is required.
+
+## Negative controls and remaining coverage
+
+Implemented native verifier controls: every Fr+1, missing/extra PI, actual call address/entry/communication/gas/effects, proof bit/truncation/suffix, tagged VK/statement/transaction/genesis decoder suffix, absent native ownership signature, identical transaction replay, original good again from pristine state. Logs retain exact refusal categories: native crypto, strict decoder, native well-formedness. A generic exception is not evidence of relation rejection.
+
+The independent financial expectations specify a broader matrix than this unchanged consumer currently executes. Missing/wrong registered VK, swapped resolver keys, wrong registration signature, absent/duplicate/wrong-owner funding, insufficient dust/allowance/time, corrupt state/nonce/head/work, expired TTL and two competing candidates are **not all separate executed controls** in verify.rs. Existing adapter/kernel runtime tests cover some predicates at earlier boundaries; those results must not be relabeled native proof/ledger refusals. Closing all specified native controls would require separately reviewed source edits to the consumer and a new source/build identity; this wrapper does not silently claim that coverage. Report partial/guaranteed financial consequences honestly for any future application-negative cases.
+
+## Proposed diagnostic envelope (fresh review required)
+
+One proof phase: wall600s, cumulative sampled group CPU1200s, group RSS/per-process AS4GiB, Rayon2. This is an explicit proposed amendment from keygen300s/600CPU, not measured proof fit. One separate verification phase: wall120s/CPU240s/RSS-AS2GiB; every-PI controls may exhaust that bound. Stop and preserve failure, no automatic extension/retry. k17/114250 is only the retained row model; no proof time/memory success is inferred.
+
+Both phases: unchanged shared target only, total10GiB, incremental target2GiB/cache1GiB, free floor10GiB, combined new proof/verification outputs512MiB, per-file2GiB. No additional build target or ELF backup. Existing old ELF archive is separately frozen and not charged to this output cap. Apparent target accounting uses sum of rglob file st_size including hardlinks, consistent with prior7,501,078,730 bytes; du unique-hardlink accounting is a different algorithm. Resource observations occur only during authorized future execution. CPU/RSS sampled0.1s/disk5s can overshoot; Rayon setting is not a hard global thread cap.
+
+## Scope and source readiness
+
+This would establish one exact financial native proof and conditional strict local ledger9 acceptance from explicit trusted genesis, with a separate verifier. Current Compact kernel remains manual fixed specialization, not general Moriarty compiler lowering or generic proof/property/intent/transition/history correspondence. The actual production Beta/Core handoff is retained; owner SEC1/source mappings, constructor trust/round provenance, authentic escrow allocation/deployment/funding, actual recipient ownership and public Preview ledger compatibility/settlement remain distinct obligations. No public network settlement is authorized here.
+
+Draft passed Python AST parsing only, without importing or running it. Frozen-input and actual native outcome verification remain unperformed. Root must review draft schema completeness and missing native negative coverage, integrate actual v7 result gates/pins, then obtain fresh exact source/resource votes. No final freeze or execution-ready claim is made.
