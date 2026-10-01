@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
+import { DesignMap } from '../DesignMap';
 import { DocShell } from '../DocShell';
 import { ModeLink, Section, ThemedFigure } from '../components';
 import { BETA_PATH, FAMILIES, MODE_LETTER, PAGE_HREF, PROFILE, REPOSITORY, blob, type Mode } from '../data';
+import { term } from '../explanation/links';
 
 interface Quadrant {
   mode: Mode;
@@ -26,7 +28,7 @@ const QUADRANTS: Quadrant[] = [
     id: 'start-tutorials',
     href: T,
     promise:
-      'Install the command-line tool, write a transfer, check it, run it against a local scenario, then make a test fail. Start here if you have never used Moriarty.',
+      'Build mori from a clone, check and run a 10.00 USD transfer, repay part of a loan, then make a test fail. About 30 minutes. Start here if you have never used Moriarty.',
     links: [
       { href: T, label: 'Start the tutorial' },
       { href: `${T}#transfer`, label: 'Create, check and run a transfer' },
@@ -40,7 +42,7 @@ const QUADRANTS: Quadrant[] = [
     title: 'Get a task done',
     id: 'start-howto',
     href: H,
-    promise: 'Short recipes for a task you already know you want to do.',
+    promise: 'Recipes: install from an archive, write a test, diagnose a failed check, check a DeFi example, verify a signed intent.',
     links: [
       { href: `${H}#write-test`, label: 'How to write a test' },
       { href: `${H}#sign-intent`, label: 'How to verify a signed intent' },
@@ -69,12 +71,13 @@ const QUADRANTS: Quadrant[] = [
     title: 'Understand why',
     id: 'start-explanation',
     href: E,
-    promise: 'What the language is for, how an intent becomes a candidate, and what a passing test does not show.',
+    promise: 'Why every term is written out, how a source file becomes a prepared result, what a passing local run shows, and how Moriarty relates to Midnight.',
     links: [
       { href: `${E}#purpose`, label: 'What Moriarty is for' },
-      { href: `${E}#architecture`, label: 'How an intent becomes a candidate' },
+      { href: `${E}#midnight`, label: 'Moriarty and Midnight' },
+      { href: `${E}#from-solidity`, label: 'If you know Solidity' },
+      { href: `${E}#architecture`, label: 'From source file to prepared result' },
       { href: `${E}#stipulation`, label: 'What a passing local run shows' },
-      { href: 'kernel.html', label: 'The Federated DeFi Kernel' },
     ],
   },
 ];
@@ -87,13 +90,13 @@ const COMPASS: { need: string; mode: Mode; href: string; label: string }[] = [
 ];
 
 const OTHER: { href: string; label: string; note: string }[] = [
-  { href: 'kernel.html', label: 'The Federated DeFi Kernel', note: 'The optional federation layer and where it fits.' },
+  { href: 'kernel.html', label: 'The Federated DeFi Kernel', note: 'Optional services that may later coordinate evidence and routing. No page here needs them.' },
   {
     href: 'docs/language.html',
     label: 'Formal syntax and semantics',
-    note: 'The successor source profile. It is a different language from the beta that these pages teach.',
+    note: 'The successor source profile: a different language, which the beta tools reject.',
   },
-  { href: 'docs/requirements.html', label: 'Requirements', note: 'Proposed requirements for the native backend.' },
+  { href: 'docs/requirements.html', label: 'Requirements', note: 'Design requirements for compiling Moriarty to Midnight ZKIRv3 and proving it natively. They state obligations, not features.' },
   { href: blob(`${BETA_PATH}/README.md`), label: 'Package README', note: `The ${BETA_PATH} package in the repository.` },
   { href: REPOSITORY, label: 'Source repository', note: 'CharlesHoskinson/Moriarty on GitHub.' },
 ];
@@ -129,26 +132,45 @@ export default function Documentation() {
       eyebrow="Moriarty beta"
       title="Moriarty documentation"
       lead={
-        <p>
-          Moriarty is a language for writing bounded financial agreements. These pages cover the beta authoring language{' '}
-          <code>{PROFILE}</code>.
-        </p>
+        <>
+          <p>
+            Moriarty is a language for financial agreements on Midnight, for DeFi developers. A program states every
+            asset, account, amount, cap and deadline, so an owner can sign exactly those terms.
+          </p>
+          <p>
+            These pages cover the beta, <code>{PROFILE}</code>. Its command-line tool, <code>mori</code>, checks
+            programs and runs a transfer or a loan repayment against a scenario you write. Everything runs on your
+            computer. Nothing is signed by these tools, proved, sent or settled; the full limits are in{' '}
+            <a href={`${E}#stance`}>what these pages do not claim</a>.
+          </p>
+        </>
       }
       groups={['Start here', 'Examples', 'More']}
     >
       <Section id="start" title="Four kinds of page" nav="Four kinds of page" group="Start here">
         <ThemedFigure
+          name="hero"
+          alt=""
+          priority
+          className="doc-hero"
+          caption="A blank agreement, three trays of tokens, a route that splits and rejoins, an empty ledger, and a closed gate set apart as the last step."
+        />
+        <ThemedFigure
           name="quadrant"
           alt=""
           priority
           className="doc-mark"
-          caption="Each kind of page answers one need: learning, doing a task, looking something up, or understanding. The four cards below match the four kinds of page in the figure: tutorials, how-to guides, reference and explanation."
+          caption="Tutorials teach, how-to guides give recipes, reference lists facts, explanation gives reasons."
         />
         <ul className="doc-quadrants">
           {QUADRANTS.map((q) => (
             <QuadrantCard key={q.mode} q={q} />
           ))}
         </ul>
+      </Section>
+
+      <Section id="design" title="The design on one page" nav="The design on one page" group="Start here">
+        <DesignMap />
       </Section>
 
       <Section id="compass" title="Which do I need?" nav="Which do I need?" group="Start here">
@@ -166,7 +188,8 @@ export default function Documentation() {
 
       <Section id="examples" title="Examples by operation family" nav="Operation families" group="Examples">
         <p>
-          All eight are <a href={`${R}#support-labels`}>specified only</a>: checked for structure and names, not run.
+          The eight DeFi examples are <a href={term('specified-only')}>specified only</a>: <code>mori check</code>{' '}
+          accepts them, and <code>mori expand</code> and <code>mori simulate</code> refuse to run them.
         </p>
         <ul className="doc-families">
           {FAMILIES.map((f) => (
@@ -197,14 +220,33 @@ export default function Documentation() {
         </ul>
       </Section>
 
-      <Section id="status" title="What runs" nav="What runs" group="More">
+      <Section id="status" title="What works today" nav="What works today" group="More">
+        <ul>
+          <li>
+            <strong>Transfer and loan repayment.</strong> <code>check</code>, <code>fmt</code>, <code>inspect</code>,{' '}
+            <code>expand</code>, <code>simulate</code> and <code>test</code> run locally end to end, against a{' '}
+            <a href={term('scenario')}>scenario</a> you write.
+          </li>
+          <li>
+            <strong>The eight DeFi examples.</strong> <code>check</code> only. <code>expand</code> and{' '}
+            <code>simulate</code> answer <code>Unsupported</code>.
+          </li>
+          <li>
+            <strong>Signatures.</strong> <code>mori intent</code> prepares the bytes for an external signer, and{' '}
+            <code>mori verify-intent</code> checks the signature with a native verifier that you build with Cargo.
+            This works for the transfer and the repayment only.
+          </li>
+          <li>
+            <strong>Not built.</strong> No compiler, no proof, no network connection and no ledger submission. The
+            package is not on the npm registry; you build it from a clone.
+          </li>
+        </ul>
         <p className="doc-statusline">
-          Everything runnable here runs locally: nothing is proved, sent to a network or settled.{' '}
-          <ModeLink mode="explanation" href={`${E}#stance`}>
-            Why the limits are stated this way
-          </ModeLink>{' '}
           <ModeLink mode="reference" href={`${R}#support-labels`}>
             Support labels
+          </ModeLink>{' '}
+          <ModeLink mode="explanation" href={`${E}#stance`}>
+            What these pages do not claim
           </ModeLink>
         </p>
       </Section>

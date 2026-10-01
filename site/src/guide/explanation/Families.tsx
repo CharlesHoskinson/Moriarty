@@ -1,6 +1,7 @@
 import { FamilyStrip, Section, SeeAlso, type SeeAlsoItem } from '../components';
 import { FAMILIES, type FamilyId } from '../data';
-import { FRONTEND, H, R, T } from './links';
+import { FRONTEND, H, R, T, term } from './links';
+import { PRODUCT_CONTRACT } from '../data';
 
 const GROUP = 'The eight examples';
 
@@ -32,21 +33,36 @@ const DIAGNOSTICS = `${R}#diagnostics`;
 export function Families() {
   return (
     <>
+      <Section id="families" title="How to read the eight examples" nav="Reading the examples" group={GROUP}>
+        <p>
+          Each of the eight DeFi examples is <a href={term('specified-only')}>specified only</a>.{' '}
+          <code>check</code> accepts its structure and names; <code>expand</code> and <code>simulate</code>{' '}
+          refuse it as <code>Unsupported</code>. Nothing below is run output. It describes the source text.
+        </p>
+        <p>
+          Every file declares the same setup:{' '}
+          <code>{'domain Preview = {id: "Midnight", chain: "midnight", network: "preview"}'}</code>, accounts{' '}
+          <code>Alice</code> and <code>Bob</code>, and assets <code>USD</code> (economic id{' '}
+          <code>USDCanonical</code>, scale 2) and <code>GOLD</code> (<code>GoldCanonical</code>, scale 3). The
+          essays call the domain by its source name, <code>Preview</code>.
+        </p>
+        <p>
+          Each essay lists what no beta tool decides. Those rules would have to come from a{' '}
+          <a href={term('kernel')}>kernel</a>, or from a Midnight program that uses none. Each essay also has a{' '}
+          <em>hostile case</em>: a wrong reading or result that someone might present as valid, and whether{' '}
+          <code>check</code> stops it. The rejection codes cited come from the checker,{' '}
+          <a href={FRONTEND}>frontend.ts</a>.
+        </p>
+      </Section>
+
       <Section id="amm" title="The swap example: a fixed input and a minimum output" nav="AMM" group={GROUP}>
         <FamilyStrip id="amm" here="explanation" />
-        <p>
-          Each of the eight family examples is <a href={`${R}#support-labels`}>specified only</a>:{' '}
-          <code>check</code> accepts its structure and
-          names, and running it is refused, so everything below is about what the source says rather than what a
-          run produces. Each essay ends with a <em>hostile case</em>, a reading or a result an adversary might try
-          to pass off as valid, and what does or does not stop it.
-        </p>
         <h3>What the AMM file states</h3>
         <p>
           Alice spends exactly 100.00 USD and requires at least 0.900 GOLD. <code>USD</code> and{' '}
           <code>GOLD</code> are names in this file; their economic ids are <code>USDCanonical</code> and{' '}
-          <code>GoldCanonical</code>. All of it sits on domain <code>Preview</code> (economic id{' '}
-          <code>Midnight</code>). Pool <code>Spot</code> lists both assets. The agreement also mints and redeems
+          <code>GoldCanonical</code>. All of it is on domain <code>Preview</code>. Pool <code>Spot</code> lists both
+          assets. The agreement also mints and redeems
           liquidity shares for Alice, and declares Bob, who is not used. The fee cap is 0.30 USD (<AtomsRef id="amm" />).
         </p>
         <h3>What the swap intent fixes and what a kernel must decide</h3>
@@ -58,26 +74,24 @@ export function Families() {
           has no gross cap, and its <code>rounding</code> and <code>failure</code> terms are stored strings.
         </p>
         <p>
-          What the file leaves open is the financial relation. The amount Alice receives, the fee actually charged
-          and any price remain for a later completion, inside the signed bounds. Something, whether a kernel or a
-          Midnight program that uses none, would have to decide how the fee relates to the pool's reserves, how the
-          output is bounded by the reserve, and how the gross debit is counted. Minting and redeeming shares are
+          The file leaves the financial relation open. The amount Alice receives, the fee charged and any price
+          are left for a later completion, inside the signed bounds. No beta tool decides how the fee relates to
+          the pool's reserves, how the reserve bounds the output, or how the gross debit is counted. Minting and redeeming shares are
           separate operations; their share amounts are plain scalars, which asset scale does not change. The
           proposed answers are in <a href="#horizon-amm">the proposed swap relations</a>.
         </p>
         <h3>Hostile case: a completion outside the swap's bounds</h3>
         <p>
           A completion that delivers one gold atom less than the floor misses it. A fee one dollar atom above the
-          cap misses the cap. A fee quietly folded into the reserves breaks the proposed exact-input relation, which pays
-          the fee outside the reserves, even when the floor and the cap both hold. Reading the price as
-          dollars-per-gold when it is gold-per-dollar inverts the direction of the trade and leaves the authored
-          floor behind.
+          cap misses the cap. A fee folded into the reserves breaks the proposed exact-input relation, which pays
+          the fee outside the reserves, even when the floor and the cap both hold. The beta checks none of these,
+          because it never runs the swap.
         </p>
         <p>
-          The <code>rounding</code> and <code>failure</code> strings do not enforce anything. A rounding law and an
-          empty published effect vector on failure are judgments a kernel would make. There is a Midnight-specific
-          subtlety too: a fallible phase can keep effects and fees from the guaranteed phase that ran before it, so
-          the phase policy has to be stated with the intent rather than assumed.
+          The <code>rounding</code> and <code>failure</code> strings enforce nothing. A kernel would have to decide
+          the rounding rule and what a failed swap publishes. On Midnight, a failed fallible phase can keep the
+          effects and fees of the guaranteed phase before it (<a href={PRODUCT_CONTRACT}>product contract</a>). So
+          an intent has to state its phase policy; it cannot assume one.
         </p>
         <FamilySeeAlso id="amm" />
       </Section>
@@ -102,26 +116,27 @@ export function Families() {
         <h3>What the borrow, roll and liquidate intents leave to a kernel</h3>
         <p>
           The checker binds the principal to the obligation's asset. None of the three intents carries a signer, a
-          nonce, a gross cap or a scenario. The relation string records the author's expectations, aggregate locks,
-          funded principal and open financial validation, but the lock total and the funding check stay open. A
-          kernel would have to decide how origination ties the debt to the collateral lock, how often a roll may
+          nonce, a gross cap or a scenario. The relation string lists what the author expects, such as aggregate
+          locks and funded principal. No tool computes the lock total or checks the funding. A kernel would have to
+          decide how origination ties the debt to the collateral lock, how often a roll may
           accrue interest, and what a liquidation leaves owed after the sale. It would also have to keep the debt
           as a liability, separate from any token supply. The proposed answers, with a worked atom path, are in{' '}
           <a href="#horizon-lending">the proposed loan lifecycle</a>.
         </p>
         <h3>Hostile case: a repayment or liquidation that erases debt</h3>
         <p>
-          Taking a whole repayment from principal while interest stays accrued is a different loan; the shipped
-          repayment pays accrued interest first. A payment larger than the
-          outstanding balance is an invalid candidate: principal, accrued, outstanding and status stay as they
-          were, and Core rejects it, at the Intent judgment when that applies and otherwise at the effect range. A
-          rejected candidate is never published as a prepared post-state. A debt reduction without the matching
-          credit to the creditor fails the repayment relation.
+          These cases concern the repayment that runs locally, in the tutorial's starter. A repayment that reduced
+          principal and left accrued interest unpaid would be a different allocation; the shipped{' '}
+          <code>repay</code> pays accrued interest first. A payment above the intent's <code>gross_cap</code> is
+          rejected by Core with <code>S0_INTENT_SCOPE</code>. A payment within the cap but above the outstanding
+          balance is rejected with <code>S0_EFFECT_RANGE</code>. Either way the obligation keeps its values, and
+          no post-state is published. A debt reduction without the matching credit to the creditor fails the
+          repayment relation.
         </p>
         <p>
           On the liquidation side, the hostile reading is a sale that deletes both the obligation and its
-          continuation, so a shortfall vanishes. The continuation string names the persistence of the residual
-          debt, but it is only a string; the financial check that would enforce it is open.
+          continuation, so a shortfall vanishes. The continuation string says the residual debt persists, but it is
+          only a string. No beta tool enforces it.
         </p>
         <FamilySeeAlso
           id="lending"
@@ -147,9 +162,10 @@ export function Families() {
           quantity to its side: supply, burn and claim must be quantities of the issued asset, backing and{' '}
           <code>minimum_backing</code> quantities of the backing asset. Backing written in USD is rejected at
           authoring with <code>BETA_ASSET_MISMATCH</code> (see <a href={DIAGNOSTICS}>Reference: diagnostic
-          codes</a>). The gap between the mint backing and the redeem minimum is simply a distance the author wrote; the redeem output, any
-          fee and any price stay unwritten. The observation string <q>authenticated peg required; open</q> records
-          that the peg is an open requirement.
+          codes</a>). Mint takes 0.200 GOLD (200 atoms) as backing, and redeem asks for at least 0.190 GOLD (190
+          atoms). The 10-atom gap is a number the author chose; no rule relates the two. The redeem output, any fee
+          and any price are not written. The observation string <q>authenticated peg required; open</q> records
+          that the peg is not established.
         </p>
         <p>
           A kernel would have to tie issued supply to the matching debt, release backing at or above the signed
@@ -162,10 +178,10 @@ export function Families() {
         <p>
           A mint that posts <code>USDCanonical</code> as backing fails the instrument split before any reserve is
           considered. A redeem that releases one gold atom less than the signed minimum falls short of it, while a
-          completion that pays more than the minimum is allowed. The subtler attack is an emergency result that
-          burns the claim, pays nothing and deletes the redemption duty, treating a debt as if it were supply. The
-          continuation string states that the duty is preserved, and authoring stores that string. The duty, the
-          peg and any ledger balance stay open.
+          completion that pays more than the minimum is allowed. An emergency result could also burn the claim,
+          pay nothing and delete the redemption duty, treating a debt as if it were supply. The beta cannot detect
+          this, because it never runs the action. The continuation string says the duty is preserved; the checker
+          only stores it.
         </p>
         <FamilySeeAlso id="stablecoins" />
       </Section>
@@ -187,7 +203,7 @@ export function Families() {
           <q>payoff floor benefits reserve</q>. The check accepts this record. It does not multiply a fixing by a
           notional and it does not move the collateral. Bob is declared and is not an argument of any of the three.
         </p>
-        <h3>What the option intents fix and what stays open</h3>
+        <h3>What the option intents fix and what they leave unspecified</h3>
         <p>
           The file has no fee quantity and no fee account, and the optional intent fields <code>gross_cap</code>,{' '}
           <code>fee_cap</code> and <code>net_floor</code> are absent. Settlement's schema is instrument, holder and
@@ -196,8 +212,8 @@ export function Families() {
           If an author added a fee cap and an intent asset here, the check would require the fee cap to be a
           quantity of that asset, and the action would still be{' '}
           <a href={`${R}#support-labels`}>specified only</a>. These files declare no signer,
-          key or signature at all. Everything that would make the call pay out correctly, the fixing, the payoff
-          arithmetic and the reserve, belongs to a kernel; see{' '}
+          key or signature at all. The fixing, the payoff arithmetic and the reserve are all unspecified; a kernel
+          would have to supply them. See{' '}
           <a href="#horizon-options">the proposed option lifecycle</a>.
         </p>
         <h3>Hostile case: a payoff in the wrong asset, or a strike that binds nothing</h3>
@@ -205,16 +221,16 @@ export function Families() {
           The checker catches the structural attacks. A payoff in GOLD fails with <code>BETA_ASSET_MISMATCH</code>.
           An instrument missing its underlying or settlement asset fails with <code>BETA_MISSING_FIELD</code>.
           Instrument, observation and holder on different domains fail with <code>BETA_DOMAIN_MISMATCH</code>. The
-          messages are listed in <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>. These rules live in the checker source,{' '}
-          <a href={FRONTEND}>frontend.ts</a>; the package does not ship a rejected option fixture.
+          messages are listed in <a href={DIAGNOSTICS}>Reference: diagnostic codes</a>.
         </p>
         <p>
-          The economic attacks pass. The payoff is not tied to the strike string, to the fixing round or
-          to the collateral. The continuation string creates no reserve liability or exercise duty, and the
+          The checker does not catch economic errors. Nothing ties the payoff to the strike string, to the fixing
+          round or to the collateral. The continuation string creates no reserve liability or exercise duty, and the
           rounding string selects no beneficiary. The exercise round and the observation's round happen to be the
           same number, 150, but nothing requires them to match, and no round window limits exercise to that round.
-          A signature over a statement that binds this file's SHA-256 would still leave key authority unverified;
-          it would not make Alice the ledger holder or make the source string <code>feed</code> an issuer.
+          The beta cannot sign this file: <code>mori intent</code> expands the action first, and this action
+          expands as <code>Unsupported</code>. Even in a flow that could sign it, a signature would not show that
+          Alice holds the position or that the source string <code>feed</code> is an issuer.
         </p>
         <FamilySeeAlso id="options" />
       </Section>
@@ -233,14 +249,14 @@ export function Families() {
         <h3>Why the observation is a record, not a number</h3>
         <p>
           A later payment may need a GOLD price in USD. The pattern keeps that input as a declared observation
-          rather than a number inside the payment, with the issuer, domain, freshness bound and trust assumption
+          instead of a number inside the payment, with the issuer, domain, freshness bound and trust assumption
           written beside it. Dependent work can then name the same observation, and a duty that depends on it can
           stay pending while the observation is missing, stale or disputed. The options example declares its own
           observation of the same shape with different claims: source <code>feed</code>, round 150, no maximum
           age.
         </p>
         <p>
-          In this file, though, every one of those safeguards is authored data. The source is a string, not an
+          In this file, every one of those safeguards is authored data. The source is a string, not an
           account. Freshness is two scalars stored side by side. Trust is two strings. The check stores the fields;
           it does not compute an age and does not accept or reject the feed. A hash written into provenance would
           still be an authored string, and matching hashes do not establish authority. The product contract treats
@@ -257,7 +273,7 @@ export function Families() {
           those names are not rejection codes this action can produce. An observation has no issuer field; a grant
           record can name an issuer account, and this file declares no grant. A document hash in provenance would
           identify bytes the author claimed, without making the unit string a real quote or discharging the
-          dependent duty. There is no fee to redirect, because no fee is declared.
+          dependent duty.
         </p>
         <FamilySeeAlso id="oracles" />
       </Section>
@@ -273,13 +289,27 @@ export function Families() {
           and add no round fields. The intended change would become eligible at round 180; the authored integers
           and strings do not enforce that.
         </p>
+        <h3>Hostile case: executing a change without its timelock</h3>
+        <p>
+          Execute has no round field. An author can queue epoch 4 and write a separate execute with no timelock,
+          and <code>check</code> accepts both. Writing all three actions in one agreement does not attach round 180
+          or 179 to execute or veto. An author may even give execute <code>earliest_round: 10</code>, before the
+          queue's 180; the check accepts that too, because it stores round fields without comparing them. The
+          string <code>terms-v3</code> is not the SHA-256 of this file and is not
+          compared with it; another label in its place still type-checks.
+        </p>
+        <p>
+          No grant, signer list or quorum is declared, and Alice and Bob receive no authority to amend, veto or
+          execute. The beta cannot sign these intents, because they expand as <code>Unsupported</code>. In a flow
+          that could, a signature would show that a key signed a statement, not that the key is the policy
+          authority.
+        </p>
         <h3>Why queue, execute and veto are separate intents</h3>
         <p>
-          Splitting the change into three intents means a signature on one is not a signature on the others, and
-          that a veto is its own action rather than the absence of an execute. The delay lives on the queue intent,
-          beside the call, which is why the round fields can be present on queue and absent on execute and veto.
-          Existing duties are protected in words: the relation string and the policy value <code>required</code>.
-          Those are stored authoring hints and do not establish that duties keep their terms.
+          With three intents, a signature on one is not a signature on the others, and a veto is its own action,
+          not the absence of an execute. The delay lives on the queue intent, beside the call, which is why the
+          round fields are on queue and absent from execute and veto. The relation string and{' '}
+          <code>duty_preservation: "required"</code> are text. The checker stores them and enforces nothing.
         </p>
         <p>
           The check requires each epoch and round field to be an unsigned scalar when present. It does not order
@@ -287,20 +317,6 @@ export function Families() {
           domain argument, so there is no second domain to compare. No signer or intent domain is named. A kernel
           would have to enforce the timelock and the veto window; see <a href="#horizon-governance">the proposed
           timelock</a>.
-        </p>
-        <h3>Hostile case: executing a change without its timelock</h3>
-        <p>
-          Execute's schema does not include the earliest round, and veto's does not include the deadline. Writing
-          all three actions in one agreement does not attach round 180 or 179 to execute or veto, so a reader can
-          queue epoch 4 and, in a separate intent, execute the policy with no timelock at all, and the check accepts
-          it. The string <code>terms-v3</code> is not the SHA-256 of this file and is not compared with it;
-          replacing it with another label still type-checks.
-        </p>
-        <p>
-          No grant, signer list or quorum is declared, and Alice and Bob receive no authority to amend, veto or
-          execute. A later signature would show that a key signed a statement; it would not show that the key is the
-          policy authority. Nor would it give anyone a role in the project. Checking or running a program needs no
-          quorum or permission; where such roles appear, they are roles inside an agreement.
         </p>
         <FamilySeeAlso id="governance" />
       </Section>
@@ -310,7 +326,7 @@ export function Families() {
         <h3>What the bridge file states</h3>
         <p>
           A bridge names one claim on two domains: a local escrow, a foreign claim, and a recovery of the escrow.
-          Escrow locks 100.00 USD (<code>USDCanonical</code>) of Alice's on <code>Midnight</code>, destination{' '}
+          Escrow locks 100.00 USD (<code>USDCanonical</code>) of Alice's on <code>Preview</code>, destination{' '}
           <code>Foreign</code>, claim id <code>claim-1</code>. Claim pays ForeignAlice 100.00 of{' '}
           <code>WrappedUSD</code> on <code>Foreign</code>, with representation <code>bridge-claim</code>, naming
           Preview as the source. Recover returns the same 100.00 USD to Alice under the same{' '}
@@ -328,15 +344,15 @@ export function Families() {
         <p>
           Running a bridge would require admitting an authentic observation of the foreign result and binding how
           final that observation is. The beta checker does none of that work, and its report lists authentication,
-          native proof, financial correspondence and atomic ledger acceptance as open gates. A kernel, or a
-          Midnight program that uses none, would have to supply that evidence. This example supplies none of it.
+          native proof, financial correspondence and atomic ledger acceptance as open. This example supplies none
+          of that evidence.
         </p>
-        <h3>One pending claim, one terminal consumption</h3>
+        <h3>A claim finishes once: claim or recover, not both</h3>
         <p>
-          The design pattern is one pending claim, <code>claim-1</code>, with exactly one way to finish it. The
-          specified rule admits the claim when an authentic observation says the source lock finalized, and admits
-          the recovery when a separate observation says the foreign side did not receive. Those two terminals are
-          alternatives for the same claim id.
+          The design has one pending claim, <code>claim-1</code>, with exactly one way to finish it. The intended
+          rule admits the claim when an authentic observation says the source lock finalized. It admits the
+          recovery when a separate observation says the foreign side did not receive. The two are alternatives for
+          the same claim id.
         </p>
         <p>
           The beta operations do not carry that observation. The claim takes owner, amount, source and claim id;
@@ -353,13 +369,15 @@ export function Families() {
           have succeeded, spends the escrow and the claim against the same <code>claim-1</code>.
         </p>
         <p>
-          A result that arrives after a refund attempt is a different transition from the refund. Whichever
-          transition is authenticated consumes <code>claim-1</code> once. The other cannot pay again and cannot
-          erase the effects already committed. A committed debit stays committed. A compensating payment is a new
+          A result that arrives after a refund attempt is a different transition from the refund. The design
+          intends that whichever transition is authenticated consumes <code>claim-1</code> once, and the other
+          cannot pay again or erase effects already committed. The beta does not implement this: nothing consumes{' '}
+          <code>claim-1</code>. A committed debit stays committed. A compensating payment is a new
           authorized action with its own fees and residual duties. Midnight phase rules are not a global rollback,
           and this authoring file does not encode one. The same distinction is drawn for conditional settlement on
           the <a href="kernel.html#unknown">kernel page</a>.
         </p>
+        <h3>Hostile case: an escrow split across two domains</h3>
         <p>
           The checker does reject one concrete mis-statement of custody. An escrow whose owner account is on one
           domain and whose amount asset is on the other is <code>AuthoringRejected</code> with{' '}

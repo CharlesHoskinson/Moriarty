@@ -32,16 +32,14 @@ export function Horizon() {
     <Section id="horizon" title="The proposed horizon language" nav="Horizon language" group="Proposed directions">
       <p>
         The horizon is a proposed future profile, <code>moriarty-horizon/0.1</code>, set out in the{' '}
-        <a href={HORIZON_DOC}>full-language horizon</a> document. It is collected here, and only here, so that no
-        page that teaches or describes <code>{PROFILE}</code> mixes it with runnable syntax. Everything in this
-        section is proposed. No beta parser, checker or evaluator accepts it, and none of its figures is a result
-        from any shipped example file.
+        <a href={HORIZON_DOC}>full-language horizon</a> document. Proposed syntax appears only in this section.
+        Everything here is a proposal: no tool for <code>{PROFILE}</code> accepts it, and no figure here is a
+        result from a shipped example file.
       </p>
       <p>
-        The beta stops where it does because each step past it needs evidence the beta cannot produce: typed duties
-        need a lifecycle that outlives a single run, recovery needs authenticated observations of another domain,
-        and solver choice needs refinement proofs that a filled-in value stays inside the signed bounds. The
-        horizon writes down what those pieces would look like so that the beta's shape does not close them off.
+        Each feature past the beta needs something the beta lacks. A loan or duty must outlive a single run. A
+        refund needs an authenticated observation of the other chain. Solver choice needs a proof that the chosen
+        amounts stay inside the signed bounds.
       </p>
 
       <h3 id="horizon-duties">Proposed: duties with a typed shape</h3>
@@ -57,7 +55,7 @@ export function Horizon() {
       <h3 id="horizon-recovery">Proposed: recovery that requires evidence</h3>
       <p>
         What is known about a foreign receipt becomes a type with four cases, and recovery takes a nonreceipt
-        proof as an argument. A release can then require a qualified nonreceipt, and an unknown or conflicting
+        proof as an argument. A release then requires a qualified nonreceipt, and an unknown or conflicting
         outcome cannot release funds. Foreign verification, finality and nullifier proofs are not implemented.
       </p>
       <Code kind="horizon" title="Recovery needs evidence" href={HORIZON_DOC}>
@@ -68,8 +66,8 @@ export function Horizon() {
       <p>
         The owner fixes recipients, assets, the floor and the budgets. A solver may fill only the declared holes,
         each a finite interval with a step. Whatever it picks, the fee hole cannot exceed the signed fee cap and the
-        output cannot fall below the signed floor. The pool invariant and the refinement proofs this relies on are
-        also open.
+        output cannot fall below the signed floor. The pool invariant, and the proofs that a filled value stays
+        inside the bounds, are not written.
       </p>
       <Code kind="horizon" title="Finite holes with fixed bounds" href={HORIZON_DOC}>
         {HORIZON_HOLES}
@@ -88,12 +86,11 @@ export function Horizon() {
       <h3 id="horizon-amm">Proposed swap and liquidity relations</h3>
       <p>
         The horizon treats the swap as an exact input <code>x</code>, a fee <code>f</code> paid outside the
-        reserves, and an output <code>y</code>. The proposed equations require <code>y</code> to be at least the
-        floor and within the output reserve, <code>f</code> to be within the fee cap, and the gross debit to be{' '}
-        <code>x + f</code>. The illustrated budget bounds the input asset at 10030 atoms gross (100.30 at scale 2),
-        of which at most 30 are fee, against a receipt floor of 900 gold atoms. The proposed mint floors the share
-        amount and leaves the excess in the pool reserve; the proposed redeem floors both returned assets and leaves
-        the dust in the reserve.
+        reserves, and an output <code>y</code>. The relations are <code>y ≥ net_floor</code>,{' '}
+        <code>y ≤ reserve_out</code>, <code>f ≤ fee_cap</code> and <code>gross = x + f</code>. The illustrated budget bounds the input asset at 10030 atoms gross (100.30 at scale 2),
+        of which at most 30 are fee, against a receipt floor of 900 gold atoms. Mint rounds the share amount down
+        and leaves the excess in the pool reserve. Redeem rounds both returned assets down and leaves the dust in
+        the reserve.
       </p>
 
       <h3 id="horizon-lending">Proposed loan lifecycle</h3>
@@ -113,15 +110,15 @@ export function Horizon() {
 
       <h3 id="horizon-stablecoins">Proposed stablecoin relations</h3>
       <p>
-        The proposed mint increases issued supply and the matching debt together and takes the backing deposit in
-        the same stage. The proposed redeem burns issued units and releases backing at or above the signed minimum,
-        leaving disclosed reserve dust. The proposed emergency burns once, pays the frozen claim, and keeps a duty
-        for what is owed minus what was paid. A pro-rata backing result below 0.190 GOLD stays pending in that
+        Mint increases issued supply and the matching debt together and takes the backing deposit in the same
+        stage. Redeem burns issued units and releases backing at or above the signed minimum, leaving disclosed
+        reserve dust. Emergency settlement burns once, pays the frozen claim, and keeps a duty for what is owed
+        minus what was paid. A pro-rata backing result below 0.190 GOLD stays pending in that
         illustration, because it has no separate signed haircut. Freeze, which would fix the rate, exists only in
         the horizon and has no entry in the beta operation registry.
       </p>
       <p>
-        The proposed peg direction is <code>Price&lt;GOLD, issued, 6&gt;</code>: units of backing for one unit of
+        The peg direction is <code>Price&lt;GOLD, issued, 6&gt;</code>: units of backing for one unit of
         the issued asset, with backing as the base. Reading 10000 issued atoms against 200 gold atoms as
         issued-per-gold reverses it. The horizon illustration names the issued asset <code>MUSD</code>; the beta
         file names it <code>USD</code> with economic id <code>USDCanonical</code>.
@@ -143,9 +140,10 @@ export function Horizon() {
         The horizon specifies a typed select with Final, Missing, Stale and Disputed results, a requested round, and
         a maximum age compared with a current round. Its candidate uses <code>price&lt;USD,GOLD,2&gt;(14000)</code>,
         which on the same scale reads as 140.00 USD per GOLD, with observed round 150 and received round 151. Age 1
-        at round 151 meets maximum age 5; at round 156 the observation is Stale (156 minus 150 is 6). Value and time
-        remain claims until qualified, a policy record does not compute a median, and no timestamp authenticates a
-        feed. A selector digest binds the query identity without making the price true. The beta observation is a
+        at round 151 meets maximum age 5; at round 156 the observation is Stale (156 minus 150 is 6). The value and
+        the rounds remain claims until the select qualifies them. A policy record does not compute a median. A
+        timestamp does not authenticate a feed. The selector digest identifies which query was asked; it does not
+        make the price true. The beta observation is a
         different record, with observed round 140, no current round and no mantissa, so this age arithmetic does
         not apply to it.
       </p>
@@ -162,7 +160,7 @@ export function Horizon() {
 
       <SeeAlso
         items={[
-          { mode: 'explanation', href: '#patterns', label: 'Design patterns and the reasoning behind them' },
+          { mode: 'explanation', href: '#patterns', label: 'Six recurring design choices' },
           { mode: 'reference', href: `${R}#reading-code-blocks`, label: 'Reference: how the code blocks are labelled' },
           { mode: 'reference', href: `${R}#support-matrix`, label: 'Reference: support by operation family' },
         ]}

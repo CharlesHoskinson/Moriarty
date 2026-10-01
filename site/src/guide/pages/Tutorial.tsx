@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import { DocShell } from '../DocShell';
-import { Answer, Code, CodeDetails, Section, SeeAlso, Steps } from '../components';
+import { Answer, Code, CodeDetails, Section, SeeAlso, Steps, ThemedFigure } from '../components';
 import { PACKAGE_VERSION, PAGE_HREF, PINNED, PINNED_SHORT, REPOSITORY } from '../data';
 import transferSource from '../lessons/transfer.mori?raw';
 import transferScenario from '../lessons/transfer.scenario.json?raw';
@@ -12,6 +13,11 @@ import repaySimulate from '../tutorial/repay-simulate.out.txt?raw';
 const H = PAGE_HREF.howto;
 const R = PAGE_HREF.reference;
 const E = PAGE_HREF.explanation;
+
+/** A link to a term's entry in the Reference glossary. */
+function Term({ slug, children }: { slug: string; children: ReactNode }) {
+  return <a href={`${R}#term-${slug}`}>{children}</a>;
+}
 
 /** The lines of `text` from the first line containing `from` through the first later line containing `to`. */
 function linesFromTo(text: string, from: string, to: string): string {
@@ -222,11 +228,11 @@ export default function Tutorial() {
     <DocShell
       page="tutorial"
       eyebrow="Tutorials"
-      title="Write, check and test your first agreement"
+      title="Check, run and test your first agreement"
       lead={
         <>
-          In this tutorial you build the Moriarty beta command-line tool, check a transfer agreement, run it against a
-          local scenario, repay a loan, and then make a test fail on purpose. It takes about 30 minutes.
+          You build the <code>mori</code> command-line tool, check and run a 10.00 USD transfer, repay part of a loan,
+          and then make a test fail on purpose. It takes about 30 minutes.
         </>
       }
       groups={['Tutorial']}
@@ -234,9 +240,20 @@ export default function Tutorial() {
     >
       <Section id="overview" title="Before you start" nav="Before you start" group="Tutorial">
         <p>
-          Everything in this tutorial runs on your own computer, and nothing in it is signed, proved, sent to a ledger or
-          settled (<a href={`${E}#stance`}>why the tool is limited this way</a>).
+          Everything runs on your computer. Nothing is signed, proved, sent to a network or settled (
+          <a href={`${E}#stance`}>what the beta does not do</a>). At the end you have results in JSON and passing tests,
+          but nothing that you can submit to Midnight.
         </p>
+        <ThemedFigure
+          name="pipeline"
+          alt=""
+          caption={
+            <>
+              The tutorial covers the two local steps, Author and Propose. Signing is a{' '}
+              <a href={`${PAGE_HREF.howto}#sign-intent`}>separate how-to guide</a>; Prove and Settle are not built.
+            </>
+          }
+        />
         <p>You will:</p>
         <ul>
           <li>build the <code>mori</code> command from the Moriarty repository;</li>
@@ -252,21 +269,20 @@ export default function Tutorial() {
         </ul>
         <p>
           The tutorial writes four directories: <code>/tmp/invoice</code>, <code>/tmp/loan</code>,{' '}
-          <code>/tmp/invoice-wrong</code> and <code>/tmp/invoice-underfunded</code>. They must not exist yet, because the
-          tool refuses to create a project in a directory that is already there. If you did this tutorial before, remove
-          them first:
+          <code>/tmp/invoice-wrong</code> and <code>/tmp/invoice-underfunded</code>. They must not exist yet. The tool
+          does not create a project in a directory that already exists. If you did this tutorial before, remove them
+          first:
         </p>
         <Code kind="command" title="Remove the directories from an earlier run">
           {'rm -rf /tmp/invoice /tmp/loan /tmp/invoice-wrong /tmp/invoice-underfunded'}
         </Code>
-        <p>You now know what you will build and what you need.</p>
       </Section>
 
       <Section id="getting-started" title="Step 1. Build the command-line tool" nav="1. Build the tool" group="Tutorial">
         <p>
-          You build the tool from a clone of the whole repository and give it a short name in your shell. The package
-          imports shared files from the repository's <code>experiments</code> directory, so a download of the package
-          directory alone does not build.
+          You build the tool from a clone of the whole repository. The package imports shared files from the
+          repository's <code>experiments</code> directory, so the package directory alone does not build. The package is
+          not published on npm, so you run the built file through a shell function instead of installing it.
         </p>
         <h3 id="install">Build the tool from a checkout</h3>
         <Steps>
@@ -279,7 +295,10 @@ export default function Tutorial() {
             <Code kind="output">{NODE_OUTPUT}</Code>
           </li>
           <li>
-            <p>Clone the repository, switch to the commit this tutorial was written against, and go to the package directory:</p>
+            <p>
+              Clone the repository, switch to commit <code>{PINNED_SHORT}</code>, and go to the package directory. The
+              outputs on this page come from that commit, so your output matches them:
+            </p>
             <Code kind="command" title="Clone the repository">
               {CLONE}
             </Code>
@@ -309,8 +328,8 @@ export default function Tutorial() {
           </li>
           <li>
             <p>
-              Define <code>mori</code> as a shell function that runs the build. Keep this terminal open for the rest of the
-              tutorial, because the function exists only in this shell.
+              Define <code>mori</code> as a shell function that runs <code>dist/cli.js</code>, the file the build wrote.
+              The function exists only in this shell, so keep this terminal open for the rest of the tutorial.
             </p>
             <Code kind="command" title="Define mori">
               {DEFINE_MORI}
@@ -324,9 +343,12 @@ export default function Tutorial() {
             </Code>
             <p>You see one long line that lists every command, and a second line:</p>
             <Code kind="output">{HELP_OUTPUT}</Code>
+            <p>
+              This list shows that the build and the <code>mori</code> function work. The status name{' '}
+              <code>PreparedUnqualified</code> on the second line is explained in step 2.
+            </p>
           </li>
         </Steps>
-        <p>You now have a working <code>mori</code> command.</p>
       </Section>
 
       <Section id="transfer" title="Step 2. Create, check and run a transfer" nav="2. Run a transfer" group="Tutorial">
@@ -361,13 +383,20 @@ export default function Tutorial() {
             <p>Read these lines:</p>
             <ul>
               <li>
+                <code>domain Preview = {'{'} id: "Midnight", chain: "midnight", network: "preview" {'}'};</code>:{' '}
+                <code>Preview</code> is the domain's name in this file and <code>"Midnight"</code> is its id. The{' '}
+                <code>chain</code> and <code>network</code> values are only labels. Nothing in this tutorial connects to a
+                Midnight node or to the Preview network (<a href={`${E}#midnight`}>Moriarty and Midnight</a>).
+              </li>
+              <li>
                 <code>account Buyer = {'{'} domain: Preview, id: "Owner" {'}'};</code>: <code>Buyer</code> is the name in
                 this file, and <code>"Owner"</code> is the id that the scenario and the results use. <code>Seller</code> is{' '}
                 <code>"Recipient"</code> and <code>Treasury</code> is <code>"Fee"</code>.
               </li>
               <li>
-                <code>asset USD = {'{'} … scale: 2 … {'}'};</code>: with scale 2, 10.00 USD is 1000 atoms, the
-                whole units the tool counts in (<a href={`${E}#names-ids-symbols`}>why atoms and scales</a>).
+                <code>asset USD = {'{'} … scale: 2 … {'}'};</code>: an <Term slug="atom">atom</Term> is the smallest unit
+                of an asset. Amounts are whole numbers of atoms; at scale 2, 10.00 USD is 1000 atoms (
+                <a href={`${E}#names-ids-symbols`}>why atoms and scales</a>).
               </li>
               <li>
                 <code>const price: Qty&lt;USD&gt; = 10.00 USD;</code> and <code>const fee = 0.10 USD;</code>: the two
@@ -379,7 +408,12 @@ export default function Tutorial() {
               </li>
               <li>
                 <code>operation: transfer(from: Buyer, to: Seller, fee_to: Treasury, value: price, fee: fee)</code>: the
-                transfer itself.
+                buyer pays the price to the seller and the fee to the treasury.
+              </li>
+              <li>
+                The other fields of <code>intent Payment</code>, such as <code>key</code>, <code>source_hash</code> and
+                the empty lists, are required terms that this tutorial does not change (
+                <a href={`${R}#intent-fields`}>every intent field</a>).
               </li>
               <li>
                 <code>action pay uses Payment;</code>: <code>pay</code> is the action name you give the tool when you run
@@ -403,18 +437,22 @@ export default function Tutorial() {
             </p>
             <ul>
               <li>
-                <code>head</code> names the state the transfer extends, <code>h0</code>. A run moves it to{' '}
-                <code>post_head</code>, <code>h1</code>.
+                <code>head</code>, <code>h0</code>, is a label for the state that the transfer starts from. A run moves the{' '}
+                <Term slug="head">head</Term> to <code>post_head</code>, <code>h1</code>. It is text in the file, not a
+                Midnight block or state root.
               </li>
               <li>
-                <code>allowance</code> is how much of the owner's balance the transfer may spend.
+                <code>allowance</code> is how much of the owner's balance the transfer may spend (
+                <Term slug="allowance">allowance</Term>).
               </li>
               <li>
-                <code>replay</code> is <code>"unused"</code>: the transfer's one-time label, its nonce{' '}
-                <code>"n1"</code>, has not been used yet. A run marks it as consumed.
+                <code>replay: "unused"</code> means that this transfer's <Term slug="replay-key">replay key</Term> is not
+                spent yet. The key is the domain, the signer and the nonce: <code>Midnight</code>, <code>Owner</code>,{' '}
+                <code>n1</code>. A run marks the key as spent.
               </li>
               <li>
-                <code>work_remaining</code> is a local step budget. Each run spends one step.
+                <code>work_remaining</code> is a <Term slug="work-counter">work counter</Term>: a local step budget. Each
+                run spends one step.
               </li>
             </ul>
           </li>
@@ -432,9 +470,18 @@ export default function Tutorial() {
             </p>
             <Code kind="output">{CHECK_INVOICE_OUTPUT}</Code>
             <p>
-              <code>pay: LocalS0</code> means the tool can run this action on your computer against a scenario. A run that
-              succeeds produces <code>PreparedUnqualified</code>: a candidate result that is not signed, proved or settled (
-              <a href={`${R}#support-labels`}>every support label</a>).
+              <code>pay: LocalS0</code> means that <code>pay</code> uses an <Term slug="s0">S0</Term> operation, transfer
+              or repay, so the tool can run it on your computer against a scenario (<a href={`${R}#support-labels`}>every support label</a>).
+            </p>
+            <p>
+              The run itself is done by <Term slug="core">Core</Term>, the evaluator that <code>mori simulate</code> and{' '}
+              <code>mori test</code> call. A run that succeeds returns{' '}
+              <Term slug="qualification">
+                <code>PreparedUnqualified</code>
+              </Term>
+              : Core prepared a <Term slug="candidate">candidate</Term> result that no authentication, proof or ledger has
+              qualified. The <code>qualification</code> field, <code>local-stipulation-only</code>, says what the result
+              rests on: the scenario you wrote.
             </p>
           </li>
           <li>
@@ -455,7 +502,10 @@ export default function Tutorial() {
         </Steps>
 
         <h3 id="transfer-derive">Work out the transfer result first</h3>
-        <p>Before you run the transfer, write down your answers to these questions on paper:</p>
+        <p>
+          Work these out before you run the transfer (<a href={`${E}#why-derive-expectations`}>why</a>). The answers are
+          in the box below.
+        </p>
         <Steps>
           <li>How many atoms are 10.00 USD and 0.10 USD?</li>
           <li>How many atoms leave the owner's account in total?</li>
@@ -487,8 +537,8 @@ export default function Tutorial() {
             <p>
               The output is long JSON with <code>"status": "PreparedUnqualified"</code> at the top. Find{' '}
               <code>candidatePost</code>, the state the tool computes after the transfer, and compare it with your
-              answers. The output writes <code>workRemaining</code> for <code>work_remaining</code>, and the used nonce
-              appears under <code>consumedReplay</code>:
+              answers. The output writes <code>workRemaining</code> for <code>work_remaining</code>. The spent replay key
+              is under <code>consumedReplay</code>:
             </p>
             <Code kind="output" title="Part of the output: candidatePost">
               {transferPost}
@@ -508,7 +558,11 @@ export default function Tutorial() {
             <Code kind="output">{TEST_INVOICE_OUTPUT}</Code>
           </li>
         </Steps>
-        <p>You now have a transfer that checks, runs and passes its test, and you predicted its result yourself.</p>
+        <p>
+          Your arithmetic and <code>candidatePost</code> agree: <code>Owner</code> 8990, <code>Recipient</code> 1000,{' '}
+          <code>Fee</code> 10. The test file holds the same numbers, so <code>mori test</code> prints{' '}
+          <code>TestsPassed</code>.
+        </p>
       </Section>
 
       <Section id="repayment" title="Step 3. Repay a loan, interest first" nav="3. Repay a loan" group="Tutorial">
@@ -560,14 +614,15 @@ export default function Tutorial() {
             </Code>
             <p>
               Look at the <code>obligation</code> at the end: principal 100000 atoms, accrued interest 1000 atoms,
-              outstanding 101000 atoms. The payer holds 200000 atoms.
+              outstanding 101000 atoms. The payer holds 200000 atoms. The beta computes no interest. You write{' '}
+              <code>accrued</code> in the scenario, and Core only splits the payment between interest and principal.
             </p>
             <Code kind="output">{repayScenario}</Code>
           </li>
         </Steps>
 
         <h3 id="repayment-derive">Work out the 30.00 USD repayment</h3>
-        <p>Write down your answers before you run anything:</p>
+        <p>Work these out before you run the repayment:</p>
         <Steps>
           <li>How many atoms is the payment?</li>
           <li>How much of it pays interest, and how much pays principal?</li>
@@ -599,6 +654,11 @@ export default function Tutorial() {
             <Code kind="output" title="Part of the output: candidatePost">
               {repayPost}
             </Code>
+            <p>
+              In the complete output, the effects pay all 3000 atoms to <code>Creditor</code> in one{' '}
+              <code>Credit</code>. The split between interest and principal appears only in the{' '}
+              <code>SetObligation</code> effect: accrued goes from 1000 to 0 and principal from 100000 to 98000.
+            </p>
             <CodeDetails kind="output" summary="The complete output of mori simulate">
               {repaySimulate}
             </CodeDetails>
@@ -611,7 +671,10 @@ export default function Tutorial() {
             <Code kind="output">{TEST_LOAN_OUTPUT}</Code>
           </li>
         </Steps>
-        <p>You now have a loan repayment that you worked out by hand and that the tool confirms.</p>
+        <p>
+          Your numbers match <code>candidatePost</code>: <code>Payer</code> 197000, <code>Creditor</code> 3000, and the
+          loan at principal 98000 with accrued 0.
+        </p>
       </Section>
 
       <Section
@@ -620,11 +683,6 @@ export default function Tutorial() {
         nav="4. Fail and reject"
         group="Tutorial"
       >
-        <p>
-          You make a test fail on purpose, then write a test that expects a rejection (
-          <a href={`${E}#why-derive-expectations`}>why expected numbers come from your own arithmetic</a>).
-        </p>
-
         <h3 id="wrong-expectation">Break the owner's expected balance</h3>
         <p>You copy the transfer project and change the expected owner balance from 8990 to 8991, which is wrong.</p>
         <Steps>
@@ -659,8 +717,8 @@ export default function Tutorial() {
               {'mori test /tmp/invoice-wrong'}
             </Code>
             <p>
-              The test fails. The transfer itself still runs (<code>PreparedUnqualified</code>); the mismatch names the field
-              and shows what you expected and what the tool computed:
+              The test fails. The transfer still runs and returns <code>PreparedUnqualified</code>. The mismatch shows the
+              field, the value you expected and the value the tool computed:
             </p>
             <Code kind="output">{WRONG_TEST_OUTPUT}</Code>
           </li>
@@ -669,16 +727,18 @@ export default function Tutorial() {
             <Code kind="command" title="Show the exit status">
               {'echo $?'}
             </Code>
-            <p>A failed test exits with status 1:</p>
+            <p>A failed test exits with status 1, so a script or a CI job can detect it:</p>
             <Code kind="output">{'1'}</Code>
           </li>
         </Steps>
-        <p>You now have a failing test that points to the exact number that is wrong.</p>
+        <p>
+          The mismatch names <code>/post/balances/0/amount</code>, the owner's balance: expected 8991, actual 8990.
+        </p>
 
         <h3 id="core-rejection">Expect Core to reject an underfunded payment</h3>
         <p>
           You give the owner only 1009 atoms and an allowance of 1009, one atom less than the 1010 the transfer needs.
-          The program is unchanged. Core must refuse it (<a href={`${E}#three-questions`}>what Core decides</a>).
+          The program is unchanged. Core must refuse the payment (<a href={`${E}#three-questions`}>what Core decides</a>).
         </p>
         <Steps>
           <li>
@@ -717,10 +777,13 @@ export default function Tutorial() {
             <Code kind="command" title="Test /tmp/invoice-underfunded">
               {'mori test /tmp/invoice-underfunded'}
             </Code>
-            <p>
-              Core rejects the transfer, the test expected exactly that, so the test passes:
-            </p>
+            <p>Core rejects the transfer. The test expects that rejection, so the test passes:</p>
             <Code kind="output">{REJECT_TEST_OUTPUT}</Code>
+            <p>
+              <code>S0_EFFECT_RANGE</code> means that the payer's balance, 1009, is below the gross debit, 1010. The
+              allowance is also too small, but Core reports only the first check that fails, and the balance check comes
+              before the allowance check.
+            </p>
           </li>
           <li>
             <p>Show the exit status:</p>
@@ -731,17 +794,25 @@ export default function Tutorial() {
             <Code kind="output">{'0'}</Code>
           </li>
         </Steps>
-        <p>
-          This test checks only the status and the code, not which amounts would have moved. You now have one test that
-          fails because its expectation is wrong, and one that passes because it expects a rejection.
-        </p>
+        <p>This test checks only the status and the code. It does not check any amount.</p>
       </Section>
 
       <Section id="next-steps" title="Where to go next" nav="Next steps" group="Tutorial">
         <p>
-          You have built the tool, run a transfer and a repayment, and written tests that fail and that expect a
-          rejection. If you open a new terminal, <a href={`${H}#restore-shell`}>restore the mori function</a>. To use
-          the tool from another project, <a href={`${H}#install-archive`}>pack and install a local archive</a>.
+          The tool on your machine checks a program and simulates a transfer or a repayment. Each result is a JSON
+          candidate that rests on a scenario you wrote. Nothing you made can be submitted: Moriarty programs are meant to
+          compile to ZKIRv3 and run on Midnight, but the beta has no compiler, no proof and no ledger submission (
+          <a href={`${E}#midnight`}>Moriarty and Midnight</a>).
+        </p>
+        <p>
+          Signing is a separate flow. <code>mori intent</code> prepares the bytes to sign, and{' '}
+          <code>mori verify-intent</code> checks a signature. Both commands need a native verifier binary that you build
+          (
+          <a href={`${H}#sign-intent`}>how to verify a signed intent</a>).
+        </p>
+        <p>
+          If you open a new terminal, <a href={`${H}#restore-shell`}>restore the mori function</a>. To use the tool from
+          another project, <a href={`${H}#install-archive`}>pack and install a local archive</a>.
         </p>
         <SeeAlso
           title="Continue with"
@@ -749,7 +820,7 @@ export default function Tutorial() {
             { mode: 'howto', href: `${H}#write-test`, label: 'How to write a test with complete effects and post state' },
             { mode: 'reference', href: `${R}#test-format`, label: 'Reference: test file format' },
             { mode: 'explanation', href: `${E}#stipulation`, label: 'What a passing local run does and does not show' },
-            { href: PAGE_HREF.documentation, label: 'Documentation home: every tutorial and guide' },
+            { href: PAGE_HREF.documentation, label: 'Documentation home' },
           ]}
         />
         <p className="doc-provenance">
