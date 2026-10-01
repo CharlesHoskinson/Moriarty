@@ -71,10 +71,10 @@ jobs:
           CHROME= SHOTS="${RUNNER_TEMP}/shots" python3 test/site.spec.py
           CHROME= DOCS_SHOT="${RUNNER_TEMP}/shots/semantics.png" python3 test/docs.spec.py
 
-      # The kernel page is also driven under the project subpath it will be
-      # published at, so a direct refresh of /Moriarty/kernel.html and its
+      # Kernel and tutorial pages are driven under the project subpath they will
+      # be published at, so direct refreshes of their /Moriarty/ routes and
       # relative assets are checked rather than assumed from the origin root.
-      - name: Serve the build under the project subpath and drive the kernel page
+      - name: Serve the build under the project subpath and drive the kernel and tutorial pages
         run: |
           mkdir -p "${RUNNER_TEMP}/pages"
           ln -sfn "$PWD/dist" "${RUNNER_TEMP}/pages/Moriarty"
@@ -84,6 +84,7 @@ jobs:
             sleep 1
           done
           CHROME= SHOTS="${RUNNER_TEMP}/shots" URL=http://localhost:8892/Moriarty/ python3 test/kernel.spec.py
+          CHROME= SHOTS="${RUNNER_TEMP}/shots" URL=http://localhost:8892/Moriarty/ python3 test/tutorial.spec.py
 
       - name: Keep the captures
         if: always()

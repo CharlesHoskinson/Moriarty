@@ -1,6 +1,6 @@
 # Tests
 
-Four suites, and they check different kinds of claim.
+The suites check different kinds of claim.
 
 ## `npm test`
 
@@ -92,6 +92,31 @@ URL=http://localhost:8892/Moriarty/ npm run test:kernel
 
 Set `URL` to point somewhere else, `CHROME` to pick a browser binary, and
 `SHOTS` to choose where the captures land.
+
+## `python3 test/tutorial.spec.py`
+
+Drives the built tutorial at desktop and mobile widths. It checks the lesson
+sections, domain navigation, local fragments, direct transfer refresh, mobile
+home entry and lesson drawer, focus after selection, browser errors and page
+overflow. It opens every lesson URL in a fresh document at desktop and mobile
+widths, checks the current lesson and sticky-header clearance after layout
+settles, and reloads the architecture and kernel subsection links. Pipeline
+captures require the actual illustration to be loaded and visible. Distant
+lazy images with reserved dimensions do not have to load before these checks.
+It downloads the transfer and repayment program, scenario and test
+files through their real links and compares their bytes with the versioned
+lessons. It retains the downloads, screenshots and a JSON result under `SHOTS`.
+This browser gate does not run the beta CLI or establish proof or settlement.
+
+The Pages job runs it against the same `/Moriarty/` build used by the kernel
+suite. With that local server already running:
+
+```
+CHROME= URL=http://localhost:8892/Moriarty/ python3 test/tutorial.spec.py
+```
+
+`URL` selects the project directory, `CHROME` selects an installed binary (empty
+uses Playwright Chromium), and `SHOTS` selects the artifact directory.
 
 ### Why it drives rather than looks
 
