@@ -1,0 +1,99 @@
+{
+  "duration_api_ms": 436179,
+  "stop_reason": "end_turn",
+  "session_id": "c6327650-59af-4847-a55f-2f574f07d607",
+  "total_cost_usd": 2.7863568,
+  "usage": {
+    "input_tokens": 66,
+    "cache_creation_input_tokens": 166887,
+    "cache_read_input_tokens": 3057584,
+    "output_tokens": 41974,
+    "output_tokens_details": {
+      "thinking_tokens": 18839
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 166887,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1429,
+        "cache_read_input_tokens": 166560,
+        "cache_creation_input_tokens": 327,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 327
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 66,
+      "outputTokens": 41974,
+      "cacheReadInputTokens": 3057584,
+      "cacheCreationInputTokens": 166887,
+      "webSearchRequests": 0,
+      "costUSD": 2.7863568,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 18839,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "is_error": false,
+  "num_turns": 34,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "I approve all three scopes (A source, B actual result, C resources), with conditions on C for the live launch decision. This is a review only: nothing native ran, and nothing financial was accepted.\n\n**Report:** `/home/charl/research/moriarty-signed-intent-2026-10-01/NATIVE-FINANCIAL-V10-R4-PROOF-OPUS-REVIEW.md`\n**SHA-256:** `595f9649e97ed911d634d438927ed4602beb3909ad2d581d1e5ff387db9eb4f0`\nThe model asked for was `claude-opus-5-5` at high effort. The identity actually returned is for the root to record separately.\n\n**Identities.** I rehashed everything independently and found no mismatches:\n- source freeze `312c0d1d\u2026`, wrapper `839f6fa0\u2026`, helper `4dc92714\u2026`, input freeze `5e8e11b4\u2026` and handoff `94ace0ff\u2026`;\n- all 1039 input entries (3.3 GB);\n- the native source manifest `f7e7eaf4\u2026` and the ELF `ae7e8dab\u2026` (698,019,744 bytes);\n- the R3 interrupted freeze `de08a1a6\u2026` with its 35 entries, plus the cleanup record, its plan and the launch smoke record.\n\nBoth scripts parse cleanly. I didn't import or run them.\n\n**Votes**\n- **A, source: APPROVE_SCOPED.** After normalising the r3/r4 names, the only changes are the new pins, the exact interrupted-freeze authorization key, the R3 receipt checks (run before and after the child) and the virgin R4 paths. The other 1003 inputs are unchanged and the 36 new ones are exactly what was expected. I re-read the whole proof, acceptance, verification and history-control logic, not just the diff.\n- **B, actual result: APPROVE_SCOPED.** R3 was a consumed stop from a catchable SIGTERM. The receipt and samples match every figure in your summary, and none of the 35 files records who sent the signal. It was not a financial refusal, a disk-floor stop or an identity failure. The cleanup removed only generated `.lake/build` folders; both trashed repos still have their `.git`, trash records and source files.\n- **C, resources: APPROVE_SCOPED.** No limit changes; the 900 s systemd cap only wraps the supervisor.\n\n**Conditions on C for the root's launch decision**\n1. **CPU load (C-1):** R3 got about 0.49 CPU-seconds per second, against about 1.0 in the old V10 attempt. That attempt reached 2.76 GB of memory without finishing the proof, and the binary is a debug build. Load during this review was about 25 on 6 CPUs. Launching under that load risks hitting the 600 s wall and using up the one attempt. I'm not suggesting a bigger budget, only waiting for CPU headroom.\n2. **User sessions (C-2):** lingering is off, so the user service manager depends on the login sessions. If the last session ends or WSL stops, the service is killed. The smoke test showed only that the service launches on its own, not that it survives a restart or session loss.\n3. **Lower-severity items:**\n   - Root must record the unit, InvocationID and MainPID at launch, because `--collect` discards the unit state afterwards (C-4).\n   - Right before launch, check the service manager's own environment, not the shell's, for `PYTHON*`/`COVERAGE*` variables. Every check in the wrapper is an `assert`, so Python optimisation would strip them. A user-site `.pth` file also runs at startup when coverage variables are set (A-2 / C-5).\n   - The wrapper accepts any review entry with the right provider label and hash, so it cannot stop old R3 reviews being reused; root has to enforce that (A-1).\n   - The 120 s verification phase is untimed and runs nine native invocations.\n\n**Disclosure:** besides the report, I briefly wrote a temporary hashing script and its output to `/tmp`, then deleted both. The report mentions this.\n\nThe open financial gates (trusted genesis, manual A1, the specialised kernel, authenticated history/state, PCD and Preview settlement) are unchanged.",
+  "ttft_ms": 3310,
+  "type": "result",
+  "duration_ms": 458443,
+  "uuid": "434865b8-49c1-41c3-a153-87799fc90d91",
+  "ttft_stream_ms": 1732,
+  "time_to_request_ms": 332,
+  "first_content_frame_ms": 1733,
+  "queued_turn_count": 0,
+  "result_index": 0,
+  "provider_thought_omitted": true
+}

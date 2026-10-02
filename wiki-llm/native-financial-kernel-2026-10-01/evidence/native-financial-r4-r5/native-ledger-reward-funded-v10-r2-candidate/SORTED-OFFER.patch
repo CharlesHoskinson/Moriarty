@@ -1,0 +1,59 @@
+--- v9-r2/src/main.rs
++++ v9-r3/src/main.rs
+@@ -143,9 +143,18 @@
+     if op.v2.is_some() || op.v3.is_some() || op.ir.is_some() {return Err(format!("{label}: prepare operation must have v2/v3/ir all None").into());}
+     Ok(())
+ }
++fn public_stage(name:&str)->Result<()> {
++    // Public phase name only: no values, witness or accepted-status flag.
++    let mut stderr=io::stderr().lock();
++    writeln!(stderr,"NATIVE_PUBLIC_STAGE {name}")?;stderr.flush()?;Ok(())
++}
+ fn construct(c:&PrepareConfig,vk:Option<VerifierKey>,out:&Path)->Result<Prepared> {
++    public_stage("ir_parse_begin")?;
+     let irbytes=artifact(&c.ir)?;let ir=IrSource::load(irbytes.as_slice())?;
++    public_stage("ir_parse_end")?;
++    public_stage("k_model_begin")?;
+     if ir.k()!=17 {return Err("unapproved IR k".into());}
++    public_stage("k_model_end")?;
+     let initial:ContractState<DB>=decode(&artifact(&c.initial_contract)?)?;
+     let vk_present=vk.is_some();
+     if !vk_present {require_prepare_operation(&initial,"incoming initial contract")?;}
+@@ -159,13 +168,17 @@
+     let mut qc=QueryContext::new(contract.data.clone(),address());
+     qc.call_context.own_address=address();qc.call_context.tblock=block(&c.fixture).tblock;qc.call_context.tblock_err=0;qc.call_context.parent_block_hash=HashOutput([0;32]);qc.call_context.last_block_time=block(&c.fixture).last_block_time;qc.call_context.balance=contract.balance.clone();qc.call_context.caller=Some(PublicAddress::User(payer));
+     let replay_call_context=qc.call_context.clone();
++    public_stage("replay_begin")?;
+     let replay=qc.query(&data.public_transcript,None,&state.parameters.cost_model.runtime_cost_model)?;
++    public_stage("replay_end")?;
+     if replay.context.state.get_ref()!=expected.data.get_ref() {return Err("actual native replay disagrees with exported generated kernel poststate".into());}
+     let _=financial_outputs(&replay.context.effects)?;
+     let call=PrePartitionContractCall{address:address(),entry_point:EntryPointBuf(b"pay".to_vec()),op:contract.operations.get(&b"pay"[..].into()).ok_or("registered pay absent")?.deref().clone(),pre_transcript:PreTranscript{context:qc,program:data.public_transcript.clone(),comm_comm:None},private_transcript_outputs:data.private_transcript_outputs,input:data.input,output:data.output,communication_commitment_rand:Fr::from(0u8),key_location:KeyLocation(LOCATION.into())};
+     let mut rng=StdRng::seed_from_u64(0x4d4f524941525459);
+     let empty:StandardTransaction<Signature,ProofPreimageMarker,PedersenRandomness,DB>=StandardTransaction::new(c.fixture.network.clone(),HashMap::new(),None,HashMap::new());
++    public_stage("add_calls_begin")?;
+     let mut stx=empty.add_calls::<ProofPreimage>(&mut rng,SegmentSpecifier::Specific(SEGMENT),&[call],&state.parameters,Timestamp::from_secs(c.fixture.ttl_seconds),&[],&[],&[])?;
++    public_stage("add_calls_end")?;
+     let mut intent=stx.intents.get(&SEGMENT).ok_or("partition intent absent")?.deref().clone();
+     let provisional=Transaction::Standard(stx.clone());let (call,_)=single_call(&provisional)?;
+     let mut guaranteed=vec![UtxoOutput{value:c.fixture.night_value,owner:payer,type_:NIGHT}];
+@@ -177,7 +190,9 @@
+     intent.dust_actions=Some(Sp::new(DustActions{spends:vec![].into(),registrations:vec![DustRegistration{night_key:key.verifying_key(),dust_address:Some(Sp::new(DustPublicKey(Fr::from(0x44u8)))),allow_fee_payment:c.fixture.fee_allowance,signature:None}].into(),ctime:Timestamp::from_secs(c.fixture.block_seconds)}));
+     stx=stx.set_intent(SEGMENT,intent);stx.recompute_binding_randomness();
+     let unproven=Transaction::Standard(stx);
++    public_stage("envelope_begin")?;
+     envelope_preflight(&unproven,out)?;
++    public_stage("envelope_end")?;
+     // Compare actual constructed preimage to the frozen native fixture before proof allocation.
+     let (prepared,prepared_parent)=single_call(&unproven)?;
+     let actual_context=prepared.clone().context(&block(&c.fixture),&prepared_parent.erase_proofs().erase_signatures(),contract.clone(),&Map::new());
+@@ -198,7 +213,9 @@
+     exclusive(&out.join("preliminary-fees.json"),&serde_json::to_vec_pretty(&serde_json::json!({"scope":"native unproven pre-proof estimate; not actual consumed fees","method":"Transaction::fees_with_margin(default LedgerParameters,2)","margin":2,"unproven":true,"keyless":!vk_present,"limitation":"No actual final proof/signature/noop serialized size or real VK read cost established in keyless preparation; proving repeats construction with real VK and acceptance checks native consumed fees","native_parameter_sha256":sha(&encoded(state.parameters.deref())?),"estimate_with_margin2":preliminary_fee.to_string(),"allowance":c.fixture.fee_allowance.to_string(),"vk_present":vk_present,"estimate_within_allowance":preliminary_fee<=c.fixture.fee_allowance}))?)?;
+     if preliminary_fee>c.fixture.fee_allowance {return Err("preliminary native fee estimate exceeds frozen allowance before allocation".into());}
+     // Estimate is preparation only; final fees are evidenced by strict validation and native dust event.
++    public_stage("ir_check_begin")?;
+     let checked=ir.check(p);
++    public_stage("ir_check_end")?;
+     exclusive(&out.join("native-check-result.txt"),format!("{checked:#?}").as_bytes())?;
+     let native_skips=checked?;
+     exclusive(&out.join("native-check-skips.json"),&serde_json::to_vec_pretty(&native_skips)?)?;

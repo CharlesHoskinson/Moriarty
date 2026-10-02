@@ -3,7 +3,7 @@ title: "Moriarty current direction"
 type: research
 status: research-draft
 created: 2026-09-19
-updated: 2026-09-30
+updated: 2026-10-02
 diataxis: reference
 tags: [moriarty, consolidation, recursion]
 ---
@@ -22,6 +22,10 @@ tags: [moriarty, consolidation, recursion]
 
 [U0 unified proposal, 2026-09-28](sessions/u0-unified-proposal-2026-09-28.md): nine reviewers across three lenses propose splitting the U0 gate into U0-F, U0-S and U0-T, naming first slice S0, classifying numeric remainders, and separating the ZKIRv3 target from the historical v2 and native-IVC profiles. Specified-only; six owner decisions are open and nothing is committed.
 
-## Native financial iteration — 2026-10-01
+## Historical R3 financial iteration — 2026-10-01
 
-[[wiki/sessions/native-financial-kernel-2026-10-01|Current native proof work]] follows published PR13. Keep actual source check, native proof and financial ledger acceptance separate. Actual signed Beta handoff, keys and finalized proof are recorded. The sorted R3 attempt passed producing-process default Real WF, then application returned excess-NIGHT Failure with unchanged genesis. Two fresh full actual-result audits approve this failure classification only (SRC-0118). Retained-genesis native diagnosis and supply-consistent funding are next; independent verification, full financial Success, authenticated custody/history and Preview acceptance remain open.
+[[wiki/sessions/native-financial-kernel-2026-10-01|Current native proof work]] follows published PR13. Keep actual source check, native proof and financial ledger acceptance separate. Actual signed Beta handoff, keys and finalized proof are recorded. The sorted R3 attempt passed producing-process default Real WF, then application returned excess-NIGHT Failure with unchanged genesis. Two fresh full actual-result audits approve this failure classification only (SRC-0118). At that checkpoint, retained-genesis diagnosis and supply-consistent funding were next; independent verification and full financial Success had not run. R4/R5 below supersedes those two local-fixture gaps. Authenticated custody/history and Preview acceptance remain open.
+
+## Current reviewed R4/R5 result — 2026-10-02
+
+[[wiki/sessions/native-financial-kernel-2026-10-01|Reviewed fixed-fixture R4 financial Success and complete R5 independent verification]] (SRC-0119). Three actual-result reviews and portable evidence retained; generic correspondence, authenticated custody/history/PCD and Preview remain open.
