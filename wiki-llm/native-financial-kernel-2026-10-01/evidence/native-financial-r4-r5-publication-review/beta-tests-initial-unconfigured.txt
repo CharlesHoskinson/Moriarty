@@ -1,0 +1,1093 @@
+
+> @moriarty-lang/beta@0.1.0-beta.1 test
+> node --test tests/*.test.mjs
+
+✖ pinned native verifier binary is present (23.707875ms)
+✖ fixture fee transfer 1000+10: hand effects, derived head, post state and Core5 cross-check (43.484934ms)
+✖ fixture zero-fee transfer 1000: hand effects, derived head, post state and Core5 cross-check (20.662736ms)
+✖ fixture repay 500 (accrual first, partial interest): hand effects, derived head, post state and Core5 cross-check (14.447654ms)
+✖ fixture repay 3000 (interest 1000 then principal 2000): hand effects, derived head, post state and Core5 cross-check (22.366783ms)
+✖ fixture repay 101000 (full settlement): hand effects, derived head, post state and Core5 cross-check (12.944196ms)
+✔ construction bounds and closed schemas (8.184353ms)
+✖ crypto configuration is copied; later mutation cannot redirect the verifier (5.510595ms)
+✖ snapshots are immutable clones with local-stipulation provenance only (9.402317ms)
+✔ state digest covers state, receipts, registry revision and bindings (2.36304ms)
+✖ owner bytes are state independent: equal statement/frame across different stores (6.750385ms)
+✖ closed settle input rejects invented flags and malformed values; nothing changes (7.095939ms)
+✖ closed settle input: missing/ill-typed/oversize/accessor/array/prototype values refused (6.734564ms)
+✖ R1 same artifact twice concurrently: one LocalCommitted, exact repeat AlreadyCommitted, one effect (5.283968ms)
+✖ R1b eight concurrent identical deliveries: exactly one effect (8.284559ms)
+✖ R2 two different intents (n1,n2) with same preHead: one commits, loser ATOMIC_STALE_STATE and no effect (7.240031ms)
+✖ R2b same nonce, different statement, concurrently: loser is ATOMIC_STALE_STATE, never AlreadyCommitted (4.254109ms)
+✖ stale expected digest is refused before any native process is spawned (7.777608ms)
+✖ R3 same nonce re-signed with preHead=h1 is S0_HISTORY_REPLAY; changed statement with old head is stale; neither consumes (8.053011ms)
+✖ R4 allowance 1500 allows one gross-1010 transfer; second is S0_AUTH_SCOPE after first only (3.88703ms)
+✖ R5 workRemaining 0 is S0_AUTH_SCOPE; R6 balance 1009 < gross 1010 is S0_EFFECT_RANGE; R8 round 11 is S0_INTENT_SCOPE (5.479729ms)
+✖ R7 revocation racing an in-flight settle refuses with AUTH_REVOKED and consumes nothing (10.184859ms)
+✖ R7b revoke API: unknown ids, closed input, monotone revision, effective round semantics (4.115203ms)
+✖ revocation at, before and after the state round (2.971013ms)
+✖ R9 attacker with a native-valid signature under a different key is AUTH_KEY_MISMATCH; wrong-key signature over owner key is SIGNATURE_INVALID (4.663193ms)
+✖ binding matrix: no binding for keyRef -> AUTH_NO_BINDING (18.728325ms)
+✖ binding matrix: binding for a different account -> AUTH_NO_BINDING (5.722883ms)
+✖ binding matrix: wrong network binding -> AUTH_DOMAIN_MISMATCH (15.714822ms)
+✖ binding matrix: wrong chain binding -> AUTH_DOMAIN_MISMATCH (15.247098ms)
+✖ binding matrix: wrong domain id binding -> AUTH_DOMAIN_MISMATCH (12.759468ms)
+✖ binding matrix: source network differs from the ledger -> AUTH_DOMAIN_MISMATCH (6.102714ms)
+✖ binding matrix: source chain differs from the ledger -> AUTH_DOMAIN_MISMATCH (4.358399ms)
+✖ binding matrix: cross-network replay: binding registered for another network and a source naming it -> AUTH_DOMAIN_MISMATCH (5.072313ms)
+✖ binding matrix: scheme differs -> AUTH_KEY_MISMATCH (5.275162ms)
+✖ binding matrix: public key differs -> AUTH_KEY_MISMATCH (3.17599ms)
+✖ binding matrix: expired -> AUTH_EXPIRED (6.379214ms)
+✖ binding matrix: not yet valid -> AUTH_NOT_YET_VALID (5.080127ms)
+✖ binding matrix: revoked from the round -> AUTH_REVOKED (5.798242ms)
+✔ domain id in source that differs from the store is a source-layer refusal (0.951273ms)
+✖ midnight-sign-data framing settles with the same binding and a different frame-bound head (4.228845ms)
+✖ tampering: statement, source, signature and digest are refused before any write (4.749051ms)
+✖ transport faults leave signature validity unknown and never commit (fake binary: transport negatives only) (5.486747ms)
+✖ R11 fault before commit leaves state byte-identical; retry commits exactly once with the same head (3.709083ms)
+✖ R13 fault at write step balances (transfer) leaves state, digest and registry unchanged; clean retry commits (4.270186ms)
+✖ R13 fault at write step balances (repay) leaves state, digest and registry unchanged; clean retry commits (4.54621ms)
+✖ R13 fault at write step allowances (transfer) leaves state, digest and registry unchanged; clean retry commits (6.564343ms)
+✖ R13 fault at write step allowances (repay) leaves state, digest and registry unchanged; clean retry commits (5.127095ms)
+✖ R13 fault at write step obligations (transfer) leaves state, digest and registry unchanged; clean retry commits (9.104093ms)
+✖ R13 fault at write step obligations (repay) leaves state, digest and registry unchanged; clean retry commits (5.200671ms)
+✖ R13 fault at write step replay (transfer) leaves state, digest and registry unchanged; clean retry commits (3.719992ms)
+✖ R13 fault at write step replay (repay) leaves state, digest and registry unchanged; clean retry commits (9.507607ms)
+✖ R13 fault at write step work (transfer) leaves state, digest and registry unchanged; clean retry commits (4.588812ms)
+✖ R13 fault at write step work (repay) leaves state, digest and registry unchanged; clean retry commits (4.543317ms)
+✖ R13 fault at write step head (transfer) leaves state, digest and registry unchanged; clean retry commits (5.246318ms)
+✖ R13 fault at write step head (repay) leaves state, digest and registry unchanged; clean retry commits (5.575479ms)
+✖ R13 fault at write step receipt (transfer) leaves state, digest and registry unchanged; clean retry commits (5.236526ms)
+✖ R13 fault at write step receipt (repay) leaves state, digest and registry unchanged; clean retry commits (4.399054ms)
+✖ R13 fault at write step swap (transfer) leaves state, digest and registry unchanged; clean retry commits (4.638805ms)
+✖ R13 fault at write step swap (repay) leaves state, digest and registry unchanged; clean retry commits (7.637592ms)
+✖ fault hook can only abort: its return value never admits a refused request (12.734179ms)
+✖ R12 ack loss: retry with the pre-commit expected digest is AlreadyCommitted and changes nothing; different statement is not (18.031044ms)
+✖ R14 repay: a competing repayment changes accrual after prepare; stale loser has no partial effect; chained repay uses accrued state (8.19455ms)
+✖ repay chain: 500 then 3000 follows accrual-first from the stored obligation, and settlement refuses a further S0 repay (19.400526ms)
+✖ transfer chain: second intent signs the derived head; stale digest from before the first commit is refused with no partial effect (17.465916ms)
+✖ changed state between snapshot and settle: every changed cell invalidates the expected digest (12.815345ms)
+✔ deriveSuccessorHead is deterministic, domain-separated and bound to frame, preHead, domain and every effect field (1.527883ms)
+✔ R15/R16 validateSuccessor accepts only the exact derived head and untampered complete effects (4.663806ms)
+✖ no result, snapshot or error ever claims ledger or external authority qualification (12.719515ms)
+﹣ native fixture matrix is the 5 manual fixtures x 2 schemes x 2 framings (1.000058ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ real Rust-signed artifacts reach unqualified Core with hand-written effects and post state (0.225847ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ source rebinds (network, representation, symbol, account, asset, amount, key, agreement, bytes) never reuse a signature (4.315329ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ the scenario is not signed: a real valid signature is portable and only Core decides (0.397093ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ hostile artifact JSON and schema fields reject before any Core result (0.275028ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ unknown (thrown) and false (SignatureRejected) stay distinct for real signatures (0.283461ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+﹣ every statement leaf of all 20 real artifacts is bound: mutating any one never yields a prepared result (0.235909ms) # native verifier or intent-fixture example not built; set MORIARTY_CRYPTO_BINARY
+✔ timeout rejects even when a descendant retains native stdout/stderr pipes (325.844404ms)
+✔ malformed native JSON always reports a crypto response failure, never a caller JSON judgment (351.329614ms)
+✔ malformed actual child response in --json is exit2 and unknown signature validity (350.762603ms)
+✔ malformed actual child response in --review is exit2 and unknown signature validity (326.134071ms)
+✔ malformed caller signature JSON remains an input judgment with exit1 (277.525026ms)
+✔ explicit absolute executable configuration is mandatory (36.732332ms)
+✔ missing native verifier never falls back to host acceptance (14.017455ms)
+✖ real native ECDSA raw reaches unqualified Core and retains gates (17.247755ms)
+✖ real native ECDSA midnight-sign-data reaches unqualified Core and retains gates (8.085159ms)
+✔ native transport rejects timeout (29.761929ms)
+✔ native transport rejects stdout overflow (54.644584ms)
+✔ native transport rejects stderr overflow (46.243622ms)
+✔ native transport rejects invalid UTF8 (61.049931ms)
+✔ native transport rejects duplicate field (71.877843ms)
+✔ native transport rejects unknown fields (46.513429ms)
+✔ native transport rejects extra output (79.4002ms)
+✖ actual bundled CLI builds and verifies portable signature artifact (141.565223ms)
+✔ transfer: independent explicit Source6 field and complete result correspondence (19.332415ms)
+✔ repay: independent explicit Source6 field and complete result correspondence (8.928277ms)
+✔ transfer has all gross effects, exact accounting and external gates (4.600454ms)
+✔ scenario closure rejects raw duplicates and unknown or missing fields (4.988993ms)
+✔ hostile candidate missing fee remains an Effect rejection (2.019359ms)
+✔ overpay remains Core Effect and expiry remains earlier Intent (4.223468ms)
+✔ receiver overflow, authority and replay use actual Core order (9.839479ms)
+✔ zero fee retains exact three snapshot cells but no fee effect (3.638973ms)
+✔ renaming declarations leaves economic Core identities unchanged (4.245725ms)
+✔ origin map identifies agreement, source reference uses and derived replay dependencies (1.843909ms)
+✔ init creates self-contained tested project and refuses overwrites (1432.035911ms)
+✔ CLI rejects unknown flags, unsafe fmt and invalid source (822.786259ms)
+✔ actual CLI inspect exposes transfer and repayment signed scope (348.564576ms)
+✔ check distinguishes readable output from explicit machine JSON (470.949435ms)
+✔ malformed UTF8 and BOM never get rewritten or silently reinterpreted (586.597275ms)
+✔ case failures explain the first exact mismatch without dumping containers (272.662423ms)
+✔ repayment template has independent complete money expectations (251.584198ms)
+
+> @moriarty-lang/beta@0.1.0-beta.1 prepack
+> npm run build && node editor/vscode/prepare.mjs
+
+
+> @moriarty-lang/beta@0.1.0-beta.1 build
+> node build.mjs
+
+✔ packed install outside checkout supports CLI, side-effect-free public API and declaration imports (3791.783863ms)
+✔ amm authoring example is checked and explicitly unsupported for execution (30.372769ms)
+✔ lending authoring example is checked and explicitly unsupported for execution (7.54057ms)
+✔ stablecoin authoring example is checked and explicitly unsupported for execution (12.623487ms)
+✔ derivatives authoring example is checked and explicitly unsupported for execution (4.493933ms)
+✔ oracle authoring example is checked and explicitly unsupported for execution (0.950502ms)
+✔ governance authoring example is checked and explicitly unsupported for execution (9.098866ms)
+✔ bridge authoring example is checked and explicitly unsupported for execution (1.838249ms)
+✔ staking authoring example is checked and explicitly unsupported for execution (11.482601ms)
+✔ exact decimals, separated comments and quantity algebra (8.567707ms)
+✔ nominal types and annotation matching (3.025792ms)
+✔ strict prior references, duplicate declarations, keys and args (1.013038ms)
+✔ economic identities, source6 alphabet, schema closure (1.877038ms)
+✔ local S0 sealed schemas, nominal domains and UInt127 assignments (7.382556ms)
+✔ horizon closed operation schema and truthful check coverage (4.10107ms)
+✔ byte spans, UTF16 boundaries, CRLF and malformed unicode (0.928257ms)
+✔ bounded source, nesting, declaration memo DAG and immutable values (5.850615ms)
+✔ formatter preserves spelling/comments/meaning, is idempotent, rejects incomplete edits (12.882048ms)
+✔ horizon resource roles require declared assets and retain closed call schemas (1.464512ms)
+✔ expression spans belong to use site; annotations resolve before self binding (0.401192ms)
+✔ quantity precision never rounds even trailing zero; operation width leaves sums to Core (2.645252ms)
+✔ invalid arbitrary host calls, field keys and malformed profiles stay rejected (2.721794ms)
+✔ published horizon catalog accepts every fixed schema and rejects added args (19.810167ms)
+✔ domain nominal identity, exact width and token/field bounds (8.051027ms)
+✔ bounded reference metadata preserves use and declaration without cloning DAG (1.951053ms)
+✔ annotation nominal references retain their own editor use spans (0.392496ms)
+✔ specified declaration fields preserve nominal and textual authoring roles (2.403433ms)
+✔ agreement origin is its exact declaration identifier (0.576692ms)
+✔ line comments terminate on CR, LF and CRLF without consuming subsequent declarations (1.525615ms)
+✔ public error renderer escapes supplementary rejection detail lines (0.730423ms)
+﹣ real native CLI escapes artifact keys in mismatch review while JSON preserves pointer (0.086498ms) # SKIP
+✔ escapeText is escape-by-default: only printable ASCII passes, every other scalar is visible (1.005911ms)
+✔ asciiJson keeps the parsed value while emitting only printable ASCII and newlines (0.769395ms)
+✔ formatAtoms derives exact scaled decimals with BigInt only (0.770147ms)
+✔ every signed statement leaf has a label and every leaf value appears in the review (8.32094ms)
+✔ unlabeled, missing and extra statement leaves fail closed (1.235702ms)
+✔ owner intent review separates signed terms from claims, computed hashes and unsigned context (1.455375ms)
+✔ midnight-sign-data review names the exact prefix and wallet mode has no fallback (1.918241ms)
+✔ hostile text is escaped everywhere in readable review, with a warning (0.807303ms)
+✔ a returned frame hash that differs from the recomputed hash is displayed as a mismatch, never hidden (0.539787ms)
+✔ verification review reports signature, authority gap and local result separately (3.638217ms)
+✔ verification review covers core rejection, invalid signature and repay (1.683533ms)
+✔ error review keeps actual status and code, escapes hostile messages and separates judgment from inability to judge (0.855806ms)
+✔ new commands: --review and --json are mutually exclusive and usage errors stay ASCII (1310.178953ms)
+✔ existing commands keep their exact output behavior (720.056613ms)
+✔ missing, relative or fake native verifier gives exit 2 and never a validity claim (1760.982661ms)
+✔ source and scenario judgments stay exit 1 while keeping JSON compatibility (427.310428ms)
+﹣ real native: intent review and JSON agree and match source-derived terms (0.213815ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+﹣ real native: verify review for transfer and repay, expired scenario, bad signature and edited source (0.101078ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+﹣ real native: hostile source text is escaped in readable and JSON output (0.029143ms) # native verifier absent: set MORIARTY_CRYPTO_BINARY to an absolute path of a locally built moriarty-midnight-crypto
+✔ rejects decoded duplicate names before lossy JSON parsing (4.520668ms)
+✔ bounds and scalar-validates JSON rather than invoking opaque object input (1.025678ms)
+✔ preserves plain data and closes syntax without accepting trailing material (1.316374ms)
+✔ LSP framing accepts split Unicode frames and rejects excess before body admission (25.9917ms)
+✔ real LSP full sync publishes UTF16 diagnostics, honors versions, navigates and formats (258.714244ms)
+✔ real MCP initialization and tools use bounded closed text arguments (213.403683ms)
+✔ LSP hover range covers the reference and lexical completion excludes comments and strings (159.14782ms)
+✔ new over-budget Full source invalidates old analysis; diagnostic locations count UTF16 (85.013031ms)
+✔ LSP uses identical CR, CRLF and LF positions for navigation and comment completion (120.953245ms)
+✔ document count admits at most32; duplicate opens do not replace current source (134.055877ms)
+✔ real MCP expands and previews S0 through shared library with retained unqualified premises (100.168156ms)
+✔ aggregate document bytes are bounded independently of document count (118.853599ms)
+✔ framing violations close real stdio processes with no nonprotocol stdout (157.869956ms)
+✔ invalid JSON-RPC envelopes receive Invalid Request, not internal errors (56.998674ms)
+✔ hover and definition distinguish record keys from real source references (76.485078ms)
+✔ LSP quantity hover describes exact atoms rather than an identity claim (64.13064ms)
+✔ representable invalid nonce reaches original Core Intent judgment (59.268173ms)
+✔ inspect exposes actual request, signed caps and validity (2.190929ms)
+✔ operation origins include every defining constant in dependency closure (8.300157ms)
+✔ escaped transport strings preserve direct Core first failure and unpublished outputs (30.636428ms)
+✔ inspection summarizes transfer and repay terms with economic claims and no declaration DAG (12.83184ms)
+✔ field roots preserve actual uses, arithmetic definitions and economic declarations (1.927967ms)
+✔ shared declaration origins stay linear and origin exhaustion publishes no artifact (52.020918ms)
+✔ inspection bounds shared nested values before serialization and returns no partial signed scope (11.76103ms)
+✔ SpecifiedOnly inspection has open financial relations and no S0 obligations (13.019401ms)
+✔ mixed inspection scopes conditional Core coverage and signed bounds to actual LocalS0 actions (1.247161ms)
+✔ automatic overpayment note describes only effects actually emitted (18.734217ms)
+✔ root missing scenario fields use RFC6901 pointers (0.48197ms)
+✔ format keeps named calls compact with unchanged financial elaboration (13.594911ms)
+✔ inspection refuses deep shared value projections before stack overflow (16.65967ms)
+✔ bridge local custody domain is checked without forbidding a foreign counterpart (6.114996ms)
+✔ horizon monetary caps preserve explicit or bridge-inferred nominal assets (2.226521ms)
+✔ share identities and duty hints have explicit authoring shapes (4.28178ms)
+﹣ packed signed fixtures verify with the copied actual Rust binary outside checkout and empty PATH (0.828886ms) # SKIP
+ℹ tests 193
+ℹ suites 0
+ℹ pass 115
+ℹ fail 66
+ℹ cancelled 0
+ℹ skipped 12
+ℹ todo 0
+ℹ duration_ms 5557.385586
+
+✖ failing tests:
+
+test at tests/atomic.test.mjs:45:1
+✖ pinned native verifier binary is present (23.707875ms)
+  AssertionError [ERR_ASSERTION]: missing /home/charl/Moriarty/.worktrees/moriarty-beta-20260930/experiments/midnight-crypto/target/debug/moriarty-midnight-crypto; set MORIARTY_CRYPTO_BINARY
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/atomic.test.mjs:45:61)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/atomic.test.mjs:65:88
+✖ fixture fee transfer 1000+10: hand effects, derived head, post state and Core5 cross-check (43.484934ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:65:88
+✖ fixture zero-fee transfer 1000: hand effects, derived head, post state and Core5 cross-check (20.662736ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:65:88
+✖ fixture repay 500 (accrual first, partial interest): hand effects, derived head, post state and Core5 cross-check (14.447654ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:65:88
+✖ fixture repay 3000 (interest 1000 then principal 2000): hand effects, derived head, post state and Core5 cross-check (22.366783ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:65:88
+✖ fixture repay 101000 (full settlement): hand effects, derived head, post state and Core5 cross-check (12.944196ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:99:1
+✖ crypto configuration is copied; later mutation cannot redirect the verifier (5.510595ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:104:1
+✖ snapshots are immutable clones with local-stipulation provenance only (9.402317ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:127:1
+✖ owner bytes are state independent: equal statement/frame across different stores (6.750385ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:140:1
+✖ closed settle input rejects invented flags and malformed values; nothing changes (7.095939ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:146:1
+✖ closed settle input: missing/ill-typed/oversize/accessor/array/prototype values refused (6.734564ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:158:1
+✖ R1 same artifact twice concurrently: one LocalCommitted, exact repeat AlreadyCommitted, one effect (5.283968ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:167:1
+✖ R1b eight concurrent identical deliveries: exactly one effect (8.284559ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:174:1
+✖ R2 two different intents (n1,n2) with same preHead: one commits, loser ATOMIC_STALE_STATE and no effect (7.240031ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:183:1
+✖ R2b same nonce, different statement, concurrently: loser is ATOMIC_STALE_STATE, never AlreadyCommitted (4.254109ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:190:1
+✖ stale expected digest is refused before any native process is spawned (7.777608ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:195:1
+✖ R3 same nonce re-signed with preHead=h1 is S0_HISTORY_REPLAY; changed statement with old head is stale; neither consumes (8.053011ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:202:1
+✖ R4 allowance 1500 allows one gross-1010 transfer; second is S0_AUTH_SCOPE after first only (3.88703ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:208:1
+✖ R5 workRemaining 0 is S0_AUTH_SCOPE; R6 balance 1009 < gross 1010 is S0_EFFECT_RANGE; R8 round 11 is S0_INTENT_SCOPE (5.479729ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:215:1
+✖ R7 revocation racing an in-flight settle refuses with AUTH_REVOKED and consumes nothing (10.184859ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:223:1
+✖ R7b revoke API: unknown ids, closed input, monotone revision, effective round semantics (4.115203ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:232:1
+✖ revocation at, before and after the state round (2.971013ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:239:1
+✖ R9 attacker with a native-valid signature under a different key is AUTH_KEY_MISMATCH; wrong-key signature over owner key is SIGNATURE_INVALID (4.663193ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: no binding for keyRef -> AUTH_NO_BINDING (18.728325ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: binding for a different account -> AUTH_NO_BINDING (5.722883ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: wrong network binding -> AUTH_DOMAIN_MISMATCH (15.714822ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: wrong chain binding -> AUTH_DOMAIN_MISMATCH (15.247098ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: wrong domain id binding -> AUTH_DOMAIN_MISMATCH (12.759468ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: source network differs from the ledger -> AUTH_DOMAIN_MISMATCH (6.102714ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: source chain differs from the ledger -> AUTH_DOMAIN_MISMATCH (4.358399ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: cross-network replay: binding registered for another network and a source naming it -> AUTH_DOMAIN_MISMATCH (5.072313ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: scheme differs -> AUTH_KEY_MISMATCH (5.275162ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: public key differs -> AUTH_KEY_MISMATCH (3.17599ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: expired -> AUTH_EXPIRED (6.379214ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: not yet valid -> AUTH_NOT_YET_VALID (5.080127ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:260:54
+✖ binding matrix: revoked from the round -> AUTH_REVOKED (5.798242ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:268:1
+✖ midnight-sign-data framing settles with the same binding and a different frame-bound head (4.228845ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:274:1
+✖ tampering: statement, source, signature and digest are refused before any write (4.749051ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:292:1
+✖ transport faults leave signature validity unknown and never commit (fake binary: transport negatives only) (5.486747ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:306:1
+✖ R11 fault before commit leaves state byte-identical; retry commits exactly once with the same head (3.709083ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step balances (transfer) leaves state, digest and registry unchanged; clean retry commits (4.270186ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step balances (repay) leaves state, digest and registry unchanged; clean retry commits (4.54621ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step allowances (transfer) leaves state, digest and registry unchanged; clean retry commits (6.564343ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step allowances (repay) leaves state, digest and registry unchanged; clean retry commits (5.127095ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step obligations (transfer) leaves state, digest and registry unchanged; clean retry commits (9.104093ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step obligations (repay) leaves state, digest and registry unchanged; clean retry commits (5.200671ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step replay (transfer) leaves state, digest and registry unchanged; clean retry commits (3.719992ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step replay (repay) leaves state, digest and registry unchanged; clean retry commits (9.507607ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step work (transfer) leaves state, digest and registry unchanged; clean retry commits (4.588812ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step work (repay) leaves state, digest and registry unchanged; clean retry commits (4.543317ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step head (transfer) leaves state, digest and registry unchanged; clean retry commits (5.246318ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step head (repay) leaves state, digest and registry unchanged; clean retry commits (5.575479ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step receipt (transfer) leaves state, digest and registry unchanged; clean retry commits (5.236526ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step receipt (repay) leaves state, digest and registry unchanged; clean retry commits (4.399054ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step swap (transfer) leaves state, digest and registry unchanged; clean retry commits (4.638805ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:315:2
+✖ R13 fault at write step swap (repay) leaves state, digest and registry unchanged; clean retry commits (7.637592ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:321:1
+✖ fault hook can only abort: its return value never admits a refused request (12.734179ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:325:1
+✖ R12 ack loss: retry with the pre-commit expected digest is AlreadyCommitted and changes nothing; different statement is not (18.031044ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:337:1
+✖ R14 repay: a competing repayment changes accrual after prepare; stale loser has no partial effect; chained repay uses accrued state (8.19455ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:344:1
+✖ repay chain: 500 then 3000 follows accrual-first from the stored obligation, and settlement refuses a further S0 repay (19.400526ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:356:1
+✖ transfer chain: second intent signs the derived head; stale digest from before the first commit is refused with no partial effect (17.465916ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:365:1
+✖ changed state between snapshot and settle: every changed cell invalidates the expected digest (12.815345ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/atomic.test.mjs:399:1
+✖ no result, snapshot or error ever claims ledger or external authority qualification (12.719515ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(seen.length>20)
+  
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/atomic.test.mjs:400:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/auth.test.mjs:20:51
+✖ real native ECDSA raw reaches unqualified Core and retains gates (17.247755ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/auth.test.mjs:20:51
+✖ real native ECDSA midnight-sign-data reaches unqualified Core and retains gates (8.085159ms)
+  Error [LocalError]: Native verifier unavailable; configure an installed binary
+      at stop (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:74:192)
+      at ChildProcess.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/src/auth.ts:76:23)
+      at ChildProcess.emit (node:events:514:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:293:12)
+      at onErrorNT (node:internal/child_process:525:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'BETA_CRYPTO_BINARY_UNAVAILABLE',
+    pointer: '/'
+  }
+
+test at tests/auth.test.mjs:50:1
+✖ actual bundled CLI builds and verifies portable signature artifact (141.565223ms)
+  Error: Command failed: /home/charl/.foreman/tools/fnm/node-versions/v24.21.0/installation/bin/node /home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/dist/cli.js intent /tmp/mori-auth-cli-AqwuqD/invoice.mori --action pay --scenario /tmp/mori-auth-cli-AqwuqD/scenario.json --scheme ecdsa_secp256k1_sha256 --public-key 022be893732cda9ef9a09acad7c2f9c4b205462aeead2fae15896d8179282c1589 --framing raw --crypto-binary /home/charl/Moriarty/.worktrees/moriarty-beta-20260930/experiments/midnight-crypto/target/debug/moriarty-midnight-crypto
+      at genericNodeError (node:internal/errors:986:15)
+      at wrappedFn (node:internal/errors:540:14)
+      at checkExecSyncError (node:child_process:942:11)
+      at execFileSync (node:child_process:978:15)
+      at run (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/auth.test.mjs:54:29)
+      at TestContext.<anonymous> (file:///home/charl/Moriarty/.worktrees/moriarty-beta-20260930/packages/moriarty-beta/tests/auth.test.mjs:55:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19) {
+    status: 2,
+    signal: null,
+    output: [ null, '{\n  "status": "FormationRejected",\n  "diagnostics": [\n    {\n      "code": "BETA_CRYPTO_BINARY_UNAVAILABLE",\n      "message": "Native verifier unavailable; configure an installed binary"\n    }\n  ],\n  "publishedEffects": null,\n  "publishedPost": null\n}\n', '' ],
+    pid: 3163104,
+    stdout: '{\n  "status": "FormationRejected",\n  "diagnostics": [\n    {\n      "code": "BETA_CRYPTO_BINARY_UNAVAILABLE",\n      "message": "Native verifier unavailable; configure an installed binary"\n    }\n  ],\n  "publishedEffects": null,\n  "publishedPost": null\n}\n',
+    stderr: ''
+  }

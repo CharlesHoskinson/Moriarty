@@ -4,12 +4,13 @@ title: Moriarty research index
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-30
+updated: 2026-10-02
 tags:
   - moriarty
   - navigation
 updated_at: 2026-09-30T21:34:04Z
 sources:
+  - SRC-0119
   - SRC-0118
   - SRC-0111
   - SRC-0112
@@ -29,9 +30,9 @@ sources:
 
 # Moriarty language wiki index
 
-## Native financial kernel — 2026-10-01
+## Native financial kernel — reviewed R4/R5, 2026-10-02
 
-[[wiki/sessions/native-financial-kernel-2026-10-01|Native proof route, resource repair and open ledger gates]] · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md) · [published signed-intent delivery](../wiki-llm/signed-intent-2026-10-01/DELIVERY.md). Actual native preparation, keys and finalized proof are recorded. The latest sorted attempt passed producing-process default Real WF, then application refused excess NIGHT in its test genesis. Independent verification, financial Success, authenticated state and Preview remain open. SRC-0118 retains both actual-result reviews; source/resource approval remains separate.
+[[wiki/sessions/native-financial-kernel-2026-10-01|Reviewed native financial proof and verification]] · [R4/R5 result](../wiki-llm/native-financial-kernel-2026-10-01/R4-R5-REVIEWED-SUCCESS.md) · [working dossier](../wiki-llm/native-financial-kernel-2026-10-01/README.md). SRC-0119 records finalized proof, default Real financial Success, complete independent verification, positive consumed DUST and replay/fault refusals for the fixed trusted public fixture. All three current actual-result reviews approved this scope. The earlier R3 excess-NIGHT refusal remains historical evidence in SRC-0118. Generic compiler correspondence, source-owner/native-payer and authenticated funding/deployment, general history/PCD and Preview financial settlement remain open; source/resource approval remains separate.
 
 ## Signed intent consumer — 2026-10-01
 
@@ -337,4 +338,4 @@ Current reviewer rules are in [AGENTS.md](../AGENTS.md). [Review guidance](../do
 
 - [Whole-language design review and integration gaps](research/language-design-review/index.md)
 
-2026-10-01 update: [[wiki/sessions/native-financial-kernel-2026-10-01|Native financial work]] now records reviewed actual keyless preparation and conditional Preview published-format incompatibility; proof/application/authentication gates remain open.
+Historical preparation snapshot, 2026-10-01: [[wiki/sessions/native-financial-kernel-2026-10-01|Native financial work]] recorded reviewed actual keyless preparation and conditional Preview published-format incompatibility; proof/application/authentication gates were open at that checkpoint; R4/R5 above supersedes the local fixture proof/application gaps.

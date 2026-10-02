@@ -4,9 +4,9 @@ title: Native financial kernel and actual proof route
 type: session
 status: research-draft
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 tags: [moriarty, midnight, native-proof, signatures]
-sources: [SRC-0115, SRC-0116, SRC-0117, SRC-0118]
+sources: [SRC-0115, SRC-0116, SRC-0117, SRC-0118, SRC-0119]
 ---
 
 # Native financial kernel and actual proof route
@@ -55,3 +55,9 @@ Experiment observation, SRC-0118: [the sorted R3 attempt](../../wiki-llm/native-
 Both fresh full actual-result audits approve source and failed-result faithfulness only; root inspected both complete reports and actual terminal Grok metadata. Requested Grok4.6 high returned grok-4.6-build/end_turn/process0. Astra was requested as gpt-6-astra medium without separate returned-provider attestation. [Collection](../../raw/sources/native-financial-r3-failure-2026-10-01/collection.json) binds the portable byte-identical evidence archive and preserves the original failed attempt; no new accepted financial claim follows.
 
 Source fact and inference: native default genesis reserves the entire NIGHT supply; the test fixture manually adds1e12 NIGHT. Their sum equals the observed excess. A separately reviewed retained-genesis invariant diagnostic is the next empirical predicate; this intake establishes no completed diagnostic or funded repair. A supply-consistent local funding route would still require a new context-bound proof and would not authenticate public-chain funding, owner mappings, time/history or general compiler/property/intent/transition/PCD correspondence. Existing Preview format limitations and all product exits remain open.
+
+## Reviewed R4 proof and complete R5 verification — 2026-10-02
+
+Experiment observation, SRC-0119, S3: [R4/R5 evidence](../../wiki-llm/native-financial-kernel-2026-10-01/R4-R5-REVIEWED-SUCCESS.md) supersedes the earlier R3 refusal for the fixed trusted public fixture. The retained finalized proof passed default Real native application with Success, complete accepted effects, positive consumed DUST and replay refusal. R5 independently verified it, checked 1035 public-input mutations twice and completed all six native history/claim fault refusals. Three fresh actual-result audits approved only this scope; unchanged reports, receipts, source, proof and full logs are mapped in the portable archive. [Source collection](../../raw/sources/native-financial-r4-r5-2026-10-02/collection.json) pins the exact original acceptance and freeze.
+
+The partial R4 verification helper failure and earlier consumed attempts remain failures. Resource figures are sampled; 293 operations/47 reads were enforced at R4 construction, not recounted by R5. Large compiled/key/parameter bodies and dependency closures remain external and hash-bound; this publication is not a self-contained native rebuild. Generic compiler correspondence, source-owner/native-payer and authenticated funding/deployment, general contract/intent/transition/history/PCD and Preview financial settlement remain open. No public transaction was submitted, and no canonical financial claim is promoted.
