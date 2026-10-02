@@ -2,13 +2,13 @@
 
 This iteration follows signed-intent integration merged to `main` in PR13, commit `033e9a90465d4c06b787dedb5010e4e18715e030`. It tests the next missing predicate: whether the exact financial runtime invocation is accepted by the matching native ZKIR relation and can subsequently produce a verified native proof.
 
-## Latest status after V8-03
+## Latest reviewed result — R4 proof and R5 verification
 
-V7 completed the offline build, parameter acquisition and native key generation. After the preserved V8-03 unsorted-output refusal, the sorted R3 attempt produced a finalized proof and signed transaction, passed default Real native well-formedness in its producing process, then application refused excess NIGHT in the test genesis. Independent verification did not run. Full financial acceptance, authenticated custody, general source correspondence and Preview settlement remain open. See [the latest application refusal](R3-04-ACTUAL-APPLICATION-REFUSAL.md), [the historical V8 refusal](V8-03-ACTUAL-REFUSAL.md) and [the alignment review](../ALIGNMENT-REVIEW-2026-10-01.md).
+[Reviewed R4/R5 success](R4-R5-REVIEWED-SUCCESS.md) supersedes the R3 application refusal as the latest experiment: finalized financial proof, default Real native application Success, independent verification, positive consumed DUST, accepted state and replay refusal, and all six native history/claim fault controls. All three current actual-result reviewers approved this fixed trusted public fixture scope. Generic compiler correspondence, authenticated funding/deployment, history/PCD and Preview financial settlement remain open. The earlier refused runs remain unchanged.
 
 The next sections retain the preparation-stage record from before V7 key generation and V8-03 execution. Their statements about missing keys and proofs describe that earlier stage.
 
-## Historical evidence before V7 key generation
+## Historical evidence through R3, before R4/R5
 
 | Predicate | Status | Evidence and limit |
 |---|---|---|
@@ -18,7 +18,7 @@ The next sections retain the preparation-stage record from before V7 key generat
 | Native source check | Locally observed, scoped result reviewed | [Result](evidence/ADAPTER-V3-RESULT.json): actual native relation accepted good and refused five forged preimages. No proof. |
 | Production signed Beta to native ledger preparation | Locally observed, narrow result reviewed | [Actual v5 result](V5-ACTUAL-PREPARATION.md): handoff and actual Rust preparation succeeded; complete preimage and eight contexts matched, actual IR preprocessing passed. No keys/proof/application. |
 | Finalized financial proof cryptography | Locally observed, failed financial application | [R3 evidence](R3-04-ACTUAL-APPLICATION-REFUSAL.md): real proof and same-process default Real WF; independent verifier and full Success remain open. |
-| Actual ledger financial acceptance | Open | Latest sorted finalized proof passed default Real WF, then native application returned NightBalance Failure. Complete effects, consumed fees, independent verification and authenticated custody remain required. |
+| Actual ledger financial acceptance | Open at R3 | As of the R3 checkpoint, the sorted finalized proof passed default Real WF, then native application returned NightBalance Failure. Complete effects, consumed fees and independent verification had not succeeded. R4/R5 above supersedes those local fixture gaps; authenticated custody remains open. |
 | Preview transfer and repayment | Incompatible matching published formats, open capability | Live Preview reports ledger8.1.2; matching published release supports older proof/operation/IR encodings. Conditional on live release correspondence; no live build attestation or observed candidate rejection. No transaction submitted. |
 
 ## Historical design choices before V7 key generation
@@ -55,10 +55,10 @@ Research artifacts currently live under `/home/charl/research/moriarty-signed-in
 
 [Reviewed key generation and next execution boundary](REVIEWED-KEYGEN-MILESTONE.md) records both terminal approvals, the separately reviewed CLI repair and the actual one-proof launch. Earlier sections preserve their preparation-time status; they do not describe current review completion. Full financial proof, independent verification, authenticated custody and Preview acceptance are not established by this milestone.
 
-## Latest actual native refusal
+## Historical V8 native refusal
 
 [V8-03 actual attempt](V8-03-ACTUAL-REFUSAL.md) retained a finalized 6,336-byte native proof and signed transaction, then native well-formedness refused unsorted offer outputs before application. The attempt is consumed; separate verification did not run. Fresh actual-result review and a distinct reviewed source/resource repair are required.
 
-## Latest actual application refusal
+## Historical R3 application refusal
 
-[R3 actual attempt](R3-04-ACTUAL-APPLICATION-REFUSAL.md) supersedes earlier current-status statements above: real finalized proof and producing-process default Real WF succeeded; native application failed the NIGHT-supply invariant with unchanged state. Two fresh actual-result audits approve this failure classification only. The immediate predicate is native diagnosis of the retained genesis, followed by supply-consistent funding and a distinct reviewed complete financial attempt.
+[R3 actual attempt](R3-04-ACTUAL-APPLICATION-REFUSAL.md) superseded by R4/R5 for the fixed trusted fixture: real finalized proof and producing-process default Real WF succeeded; native application failed the NIGHT-supply invariant with unchanged state. Two fresh actual-result audits approve this failure classification only. At that checkpoint, the next predicate was native diagnosis of the retained genesis, followed by supply-consistent funding and a distinct reviewed complete financial attempt. The reviewed R4/R5 result above records the subsequent local-fixture Success.

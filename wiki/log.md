@@ -4,12 +4,13 @@ title: Moriarty research log
 type: overview
 status: active
 created: 2026-09-02
-updated: 2026-09-30
+updated: 2026-10-02
 tags:
   - moriarty
   - navigation
 updated_at: 2026-09-30T21:34:04Z
 sources:
+  - SRC-0119
   - SRC-0109
   - SRC-0110
   - SRC-0108
@@ -24,6 +25,8 @@ sources:
 ---
 
 # Wiki log
+
+2026-10-02 — Filed SRC-0119: [[wiki/sessions/native-financial-kernel-2026-10-01|reviewed fixed-fixture R4 financial Success and complete R5 independent verification]]. Finalized proof, default Real application Success, positive consumed DUST, accepted state, replay and six native history/claim fault refusals are preserved with all three actual-result reviews and exact portable copies. Supersedes the local proof/application/verification gaps in the dated R3 entry below. Generic compiler correspondence, authenticated funding/deployment, general history/PCD and Preview settlement remain open; no public transaction or canonical financial claim promotion.
 
 2026-10-01 — Filed SRC-0118: sorted financial R3 produced a finalized proof and signed transaction and passed default Real WF in its producing process, then native application returned NightBalance Failure with unchanged genesis. Both fresh complete actual-result audits approve failure faithfulness only. Retained-genesis diagnosis and supply-consistent funding remain subsequent predicates; independent verification and all full financial/authentication/Preview gates stay open.
 
