@@ -1,0 +1,18 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  intent invoice = { operation: transfer() };\n  action amount uses invoice;\n}\n"
+---
+mori::check::reserved_by_source6
+
+  × `amount` cannot be used as an action name.
+   ╭─[test.mori:4:10]
+ 3 │   intent invoice = { operation: transfer() };
+ 4 │   action amount uses invoice;
+   ·          ───┬──
+   ·             ╰── reserved by Source/6
+ 5 │ }
+   ╰────
+  help: Agreements and actions are expanded into Source/6, which reserves
+        `amount`. Choose another name, for example:
+
+            action amount_action uses invoice;
