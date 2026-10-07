@@ -11,9 +11,9 @@ documents it. Beta lowers to Source/6 and Core/5
 ([contract](experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md)).
 
 The surface syntax is not frozen. Keep grammar-specific code separate from the
-later phases so it can change. Parity with the TypeScript frontend is measured
-on accept/reject and `BETA_*` diagnostic codes, not message text or spans,
-except for the intentional differences below.
+later phases so it can change. The Rust toolchain accepts and rejects the same
+programs as the TypeScript frontend, except for the intentional differences
+below. Error codes, messages and spans are our own.
 
 ### Intentional differences
 
@@ -27,8 +27,7 @@ difference is listed here and agreed before it is made.
   here. The 65,536-byte source bound still caps comments.
 - **Syntax errors are reported before name and type errors.** The TypeScript
   frontend resolves names while parsing, so in a file with several errors it
-  may report a different first one. Files with a single error behave the same,
-  and parity checks use such files.
+  may report a different first one. Files with a single error behave the same.
 
 ## Workspace
 
@@ -59,7 +58,7 @@ difference is listed here and agreed before it is made.
 - **Tokens store only `tag` and `start`.** The end is recovered by re-lexing.
 - **Comments are kept for the formatter** in their own `start`/`end` table, not
   in the token stream. Only tokens, including the end-of-file token, count toward
-  the 8,192-token bound (`BETA_TOKEN_BOUND`); whitespace and comments do not.
+  the 8,192-token bound; whitespace and comments do not.
 - **Crates.** `mori-span` holds spans, `mori-lexer` the tokens and lexer,
   `mori-ast` the struct-of-arrays AST and its tree printer, and `mori-parser`
   the parser that produces it.
@@ -77,15 +76,18 @@ difference is listed here and agreed before it is made.
 - Each compiler crate has a `diagnostics.rs` of builder functions:
 
   ```rust
-  pub fn quantity_separator(span: Span) -> MoriDiagnostic {
-      MoriDiagnostic::error("A quantity needs a space before its asset")
-          .with_label(span)
-          .with_help("Write it like `10 USD`")
+  pub fn quantity_separator(span: Span, source: &str) -> MoriDiagnostic {
+      MoriDiagnostic::error("A quantity needs a space between the number and its asset.")
+          .with_code("mori::syntax::quantity_without_space")
+          .with_label(span.label("no space here"))
+          .with_help_code("Put a space between them:", corrected_line(source, span, ...))
   }
   ```
 
-- Hot paths record compact data (code, token, context, expected tokens). Build
-  `MoriDiagnostic`s only when reporting.
+- The lexer and parser stop at the first error, so they build the
+  `MoriDiagnostic` where the error is found. A phase that collects many errors
+  records compact data (code, token, context) and builds diagnostics when
+  reporting.
 - Messages must be Elm-quality: say what was being parsed, what was expected,
   show a correct example and give a specific hint. Errors should teach the
   language.
@@ -97,13 +99,22 @@ difference is listed here and agreed before it is made.
   forward reference, an unknown call (suggest the closest of the known calls),
   a reserved word as a name, `/` (no division), a dotted name that is not a
   call, and adding quantities of different assets.
-- Diagnostic codes keep the existing `BETA_*` strings.
+- Codes follow miette's style, one per kind of error:
+  `mori::<phase>::<kind>`, such as `mori::lex::leading_zero` or
+  `mori::syntax::missing_comma`.
+- No title banners. A help that suggests a fix shows the corrected code on its
+  own indented lines, not inside a sentence:
+
+  ```
+    help: Fields in a record are separated by commas:
+
+              { domain: Preview, id: "A" }
+  ```
 - Spans are UTF-8 byte ranges, matching miette's `SourceSpan` and beta. Editors
   and a future language server need UTF-16 line/character positions, converted
   from the same compact records.
 - The lexer and parser stop at the first error, like the TypeScript frontend.
-  Recovery at declaration boundaries may come later; if it does, parity compares
-  only the first error.
+  Recovery at declaration boundaries may come later.
 - `mori-span` converts `Span` into miette's span types, as `oxc_span` does.
 - The `fancy` feature of `mori-diagnostics` enables miette's
   `fancy-no-backtrace`. The `mori` CLI turns it on; library crates turn it on
@@ -113,6 +124,8 @@ difference is listed here and agreed before it is made.
 ## Testing
 
 - Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
+- Test inputs live inside the crates, such as `crates/mori-parser/fixtures/`.
+  Nothing under `crates/` reads files outside it; copy anything needed in.
 - **Any test that consumes `.mori` source must put the source, not the Rust
   expression, in the snapshot.** Use a macro that takes an `indoc!` literal and
   sets `description` and `omit_expression`:
@@ -131,6 +144,9 @@ difference is listed here and agreed before it is made.
   `GraphicalTheme::unicode_nocolor()` and a fixed width, so the snapshot is
   exactly what a user sees.
 - Snapshot the AST through a tree printer, not `Debug` of the struct-of-arrays.
+- Every phase that consumes source has a `proptest` property that it never
+  panics, fed random strings, sequences of tricky fragments and, from the
+  parser on, real programs with random damage.
 - Formatter tests also assert that formatting the output again changes nothing.
 - **Never write tests that invoke the CLI binary**, and never snapshot `--help`.
   Test the library crates; keep the CLI a thin layer over them.

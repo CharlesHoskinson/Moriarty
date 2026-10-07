@@ -1,0 +1,16 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement StablecoinDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+instrument Stable = {domain: Preview, id: "Stable", asset: USD, backing: GOLD};
+intent Mint = {operation: stablecoin.mint(instrument: Stable, owner: Alice, supply: 100.00 USD, backing: 0.200 GOLD), observation: "authenticated peg required; open"};
+action mint uses Mint;
+intent Redeem = {operation: stablecoin.redeem(instrument: Stable, owner: Alice, burn: 100.00 USD, minimum_backing: 0.190 GOLD)};
+action redeem uses Redeem;
+intent Emergency = {operation: stablecoin.emergency_settle(instrument: Stable, owner: Alice, claim: 100.00 USD), continuation: "existing redemption duties preserved"};
+action emergency uses Emergency;
+}
