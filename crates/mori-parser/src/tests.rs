@@ -1,4 +1,7 @@
+use std::fmt::Write;
 use std::path::Path;
+
+use mori_ast::{Ast, NodeIdx};
 
 use mori_diagnostics::Diagnostic;
 use mori_diagnostics::render::render_plain;
@@ -31,6 +34,34 @@ macro_rules! assert_parse_error_snapshot {
             insta::assert_snapshot!(render_plain(&error, "test.mori", source));
         });
     }};
+}
+
+/// Parses the source and snapshots every node's span text, in tree order.
+macro_rules! assert_spans_snapshot {
+    ($source:literal) => {{
+        let source = indoc::indoc!($source);
+        let ast = parse(source).unwrap_or_else(|error| panic!("expected a tree, got: {error}"));
+        insta::with_settings!({
+            description => format!("Code:\n\n{source}"),
+            omit_expression => true,
+        }, {
+            insta::assert_snapshot!(spans(&ast));
+        });
+    }};
+}
+
+fn spans(ast: &Ast<'_>) -> String {
+    fn visit(ast: &Ast<'_>, node: NodeIdx, depth: usize, out: &mut String) {
+        let tag = format!("{:?}", ast.tag(node));
+        let text = ast.span(node).source_text(ast.source);
+        writeln!(out, "{}{tag:<12} {text:?}", "  ".repeat(depth)).unwrap();
+        for child in ast.children(node) {
+            visit(ast, child, depth + 1, out);
+        }
+    }
+    let mut out = String::new();
+    visit(ast, NodeIdx::ROOT, 0, &mut out);
+    out
 }
 
 fn error_code(source: &str) -> Option<String> {
@@ -141,6 +172,25 @@ fn comments_are_ignored() {
         profile "moriarty-beta/1"; /* inline */
         agreement Commented {
           const fee = 0.10 /* cents */ USD; // trailing
+        }
+        "#
+    );
+}
+
+#[test]
+fn node_spans() {
+    assert_spans_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Spans {
+          const a: Map<String, Qty<USD>> = (1 + 2) * 3 - 4;
+          const b = [1, 2,];
+          const c = {};
+          const d = { key: 10.50 USD, nested: [], };
+          const e = amm.swap_exact_input(pool: p, input: 5 USD,);
+          const f = rounds();
+          const g = None;
+          action pay uses e;
         }
         "#
     );

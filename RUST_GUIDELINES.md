@@ -60,12 +60,32 @@ difference is listed here and agreed before it is made.
   in the token stream. Only tokens, including the end-of-file token, count toward
   the 8,192-token bound; whitespace and comments do not.
 - **Crates.** `mori-span` holds spans, `mori-lexer` the tokens and lexer,
-  `mori-ast` the struct-of-arrays AST and its tree printer, and `mori-parser`
-  the parser that produces it.
+  `mori-ast` the struct-of-arrays AST and its tree printer, `mori-parser` the
+  parser that produces it, and `mori-checker` the checker that consumes it.
 - **Separate phases.** Lex → parse → resolve and check → evaluate constants.
   Do not copy the TypeScript parser, which evaluates while parsing.
 - **Numbers.** Values fit in `u128`; no bigint library. Decimal quantities are
   scaled by their asset during checking.
+- **Node spans are computed, not stored.** Like Zig's `firstToken` and
+  `lastToken`, `Ast` derives a node's first and last token from its tag and
+  children when a diagnostic needs it.
+
+## Checker
+
+- **One `mori-checker` crate,** with modules for names, values, declaration
+  rules, calls and intents. Checking is one ordered walk: each declaration's
+  names are resolved, its value computed and its rules checked before the next,
+  because later declarations depend on earlier values. Its codes are
+  `mori::check::<kind>`.
+- **Output is side tables and a value store,** in the same style as the AST: a
+  `Soa` of declarations (kind, name token, value handle) and a `Soa` of values
+  with `u16` handles, an `extra` array for records and lists, and amounts in a
+  separate `u128` array. No boxed value trees.
+- **It reports every independent error.** A declaration that fails is marked
+  failed, and anything depending on it is skipped without further errors, so
+  one mistake never cascades. Which programs are accepted does not change.
+- **The built-in call schemas are a static Rust table:** each call's name and
+  its required and optional arguments with their expected types.
 
 ## Diagnostics
 
