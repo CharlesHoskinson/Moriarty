@@ -8,7 +8,8 @@
 
 mod print;
 
-use mori_lexer::{TokenIdx, Tokens};
+use mori_lexer::{TokenIdx, TokenKind, Tokens};
+use mori_span::Span;
 use soa_rs::{Soa, Soars};
 
 /// What a node is, and how to read its `lhs` and `rhs`.
@@ -135,9 +136,114 @@ impl<'src> Ast<'src> {
     }
 
     /// The nodes in the extra range `lhs..rhs` of a list node.
+    pub fn list(&self, node: NodeIdx) -> impl Iterator<Item = NodeIdx> + '_ {
+        self.extra[self.list_range(node)]
+            .iter()
+            .copied()
+            .map(NodeIdx::from_raw)
+    }
+
+    /// Every child of `node`, in source order.
     pub fn children(&self, node: NodeIdx) -> impl Iterator<Item = NodeIdx> + '_ {
-        let range = usize::from(self.lhs(node))..usize::from(self.rhs(node));
-        self.extra[range].iter().copied().map(NodeIdx::from_raw)
+        let (pair, list) = match self.tag(node) {
+            NodeTag::Agreement
+            | NodeTag::Type
+            | NodeTag::Array
+            | NodeTag::Record
+            | NodeTag::Call => ([None, None], self.list_range(node)),
+            NodeTag::Declaration | NodeTag::Add | NodeTag::Sub | NodeTag::Mul => {
+                ([self.lhs_node(node), self.rhs_node(node)], 0..0)
+            }
+            NodeTag::Paren | NodeTag::Field => ([self.lhs_node(node), None], 0..0),
+            NodeTag::Action
+            | NodeTag::String
+            | NodeTag::Number
+            | NodeTag::Quantity
+            | NodeTag::Bool
+            | NodeTag::Tag
+            | NodeTag::Reference => ([None, None], 0..0),
+        };
+        pair.into_iter()
+            .flatten()
+            .chain(self.extra[list].iter().copied().map(NodeIdx::from_raw))
+    }
+
+    /// The first token of `node`'s source text.
+    pub fn first_token(&self, node: NodeIdx) -> TokenIdx {
+        let main = self.main_token(node);
+        match self.tag(node) {
+            // `agreement NAME {`: the main token is the name.
+            NodeTag::Agreement => TokenIdx::new(main.index() - 1),
+            NodeTag::Add | NodeTag::Sub | NodeTag::Mul => self.first_token(self.operand(node, 0)),
+            _ => main,
+        }
+    }
+
+    /// The last token of `node`'s source text.
+    pub fn last_token(&self, node: NodeIdx) -> TokenIdx {
+        let main = self.main_token(node);
+        match self.tag(node) {
+            // A parsed file ends with the agreement's `}` and then end of file.
+            NodeTag::Agreement => TokenIdx::new(self.tokens.len() - 2),
+            NodeTag::Declaration => self.token_after(self.last_token(self.operand(node, 1)), 1),
+            NodeTag::Action => self.token_after(main, 4),
+            NodeTag::Type => match self.list(node).last() {
+                Some(argument) => self.token_after(self.last_token(argument), 1),
+                None => main,
+            },
+            NodeTag::Add | NodeTag::Sub | NodeTag::Mul => self.last_token(self.operand(node, 1)),
+            NodeTag::Paren => self.token_after(self.last_token(self.operand(node, 0)), 1),
+            NodeTag::Field => self.last_token(self.operand(node, 0)),
+            NodeTag::Quantity => self.token_after(main, 1),
+            NodeTag::Array | NodeTag::Record => self.closer(node, main),
+            NodeTag::Call => {
+                let mut segment = main;
+                while self.tokens.kind(self.token_after(segment, 1)) == TokenKind::Dot {
+                    segment = self.token_after(segment, 2);
+                }
+                self.closer(node, self.token_after(segment, 1))
+            }
+            NodeTag::String
+            | NodeTag::Number
+            | NodeTag::Bool
+            | NodeTag::Tag
+            | NodeTag::Reference => main,
+        }
+    }
+
+    /// The source span of `node`, from its first token to its last.
+    pub fn span(&self, node: NodeIdx) -> Span {
+        let first = self.tokens.span(self.first_token(node), self.source);
+        let last = self.tokens.span(self.last_token(node), self.source);
+        Span::new(first.start, last.end)
+    }
+
+    /// The closing token of a list opened at `open`, after any trailing comma.
+    fn closer(&self, node: NodeIdx, open: TokenIdx) -> TokenIdx {
+        match self.list(node).last() {
+            None => self.token_after(open, 1),
+            Some(item) => {
+                let after = self.token_after(self.last_token(item), 1);
+                match self.tokens.kind(after) {
+                    TokenKind::Comma => self.token_after(after, 1),
+                    _ => after,
+                }
+            }
+        }
+    }
+
+    /// The required `lhs` (`0`) or `rhs` (`1`) child of `node`.
+    fn operand(&self, node: NodeIdx, which: usize) -> NodeIdx {
+        let raw = if which == 0 {
+            self.lhs(node)
+        } else {
+            self.rhs(node)
+        };
+        child(raw).expect("this node always has the operand")
+    }
+
+    fn list_range(&self, node: NodeIdx) -> std::ops::Range<usize> {
+        usize::from(self.lhs(node))..usize::from(self.rhs(node))
     }
 
     /// The source text of a token.

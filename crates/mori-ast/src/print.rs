@@ -52,25 +52,7 @@ fn node(ast: &Ast<'_>, idx: NodeIdx, depth: usize, out: &mut String) {
     };
     writeln!(out, "{indent}{line}").expect("writing to a String cannot fail");
 
-    let children: Vec<NodeIdx> = match tag {
-        NodeTag::Agreement | NodeTag::Type | NodeTag::Array | NodeTag::Record | NodeTag::Call => {
-            ast.children(idx).collect()
-        }
-        NodeTag::Declaration | NodeTag::Add | NodeTag::Sub | NodeTag::Mul => ast
-            .lhs_node(idx)
-            .into_iter()
-            .chain(ast.rhs_node(idx))
-            .collect(),
-        NodeTag::Paren | NodeTag::Field => ast.lhs_node(idx).into_iter().collect(),
-        NodeTag::Action
-        | NodeTag::String
-        | NodeTag::Number
-        | NodeTag::Quantity
-        | NodeTag::Bool
-        | NodeTag::Tag
-        | NodeTag::Reference => Vec::new(),
-    };
-    for child in children {
+    for child in ast.children(idx) {
         node(ast, child, depth + 1, out);
     }
 }
