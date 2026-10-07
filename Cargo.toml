@@ -1,0 +1,28 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# Standalone experiment and evidence crates keep their own builds.
+exclude = ["experiments", "raw", "wiki-llm", "deliverables"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+repository = "https://github.com/CharlesHoskinson/Moriarty"
+
+[workspace.dependencies]
+mori-diagnostics = { path = "crates/mori-diagnostics" }
+
+anstream = "1.0.0"
+anstyle = "1.0.14"
+clap = { version = "4.6.7", features = ["derive"] }
+indoc = "2.0.7"
+insta = "1.49.0"
+miette = { version = "7.6.0", default-features = false }
+soa-rs = "1.0.1"
+thiserror = "2.0.21"
+
+# Faster snapshot diffing, as recommended by insta.
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
