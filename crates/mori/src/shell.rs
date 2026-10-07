@@ -20,13 +20,13 @@ pub enum Verbosity {
 
 /// Writes status lines such as `    Checking invoice.mori` to stderr.
 ///
-/// Command results go to stdout and never pass through the shell.
+/// Command results go to stdout and never pass through the shell. Output is
+/// best effort: if stderr cannot be written, there is nowhere to report it.
 pub struct Shell {
     err: AutoStream<Stderr>,
     verbosity: Verbosity,
 }
 
-#[expect(dead_code, reason = "used once command handlers are filled in")]
 impl Shell {
     pub fn new(verbosity: Verbosity, color: ColorChoice) -> Self {
         Self {
@@ -35,54 +35,38 @@ impl Shell {
         }
     }
 
-    pub fn verbosity(&self) -> Verbosity {
-        self.verbosity
-    }
-
-    /// Silences status lines and warnings, for example under `--json`.
-    pub fn set_verbosity(&mut self, verbosity: Verbosity) {
-        self.verbosity = verbosity;
-    }
-
     /// Prints a right-aligned green verb followed by a message.
-    pub fn status(&mut self, verb: &str, message: impl Display) -> io::Result<()> {
-        if self.verbosity == Verbosity::Quiet {
-            return Ok(());
+    pub fn status(&mut self, verb: &str, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.aligned(verb, styles::HEADER, message);
         }
-        self.line(verb, styles::HEADER, message, true)
     }
 
     /// Like [`Shell::status`], but only under `--verbose`.
-    pub fn verbose_status(&mut self, verb: &str, message: impl Display) -> io::Result<()> {
-        if self.verbosity != Verbosity::Verbose {
-            return Ok(());
+    pub fn verbose_status(&mut self, verb: &str, message: impl Display) {
+        if self.verbosity == Verbosity::Verbose {
+            self.aligned(verb, styles::HEADER, message);
         }
-        self.line(verb, styles::HEADER, message, true)
     }
 
-    pub fn warn(&mut self, message: impl Display) -> io::Result<()> {
-        if self.verbosity == Verbosity::Quiet {
-            return Ok(());
+    pub fn note(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("note", styles::HEADER, message);
         }
-        self.line("warning", styles::WARN, message, false)
     }
 
-    /// Prints an error line. Errors are shown even under `--quiet`.
-    pub fn error(&mut self, message: impl Display) -> io::Result<()> {
-        self.line("error", styles::ERROR, message, false)
+    #[expect(dead_code, reason = "used once a command emits warnings")]
+    pub fn warn(&mut self, message: impl Display) {
+        if self.verbosity != Verbosity::Quiet {
+            self.prefixed("warning", styles::WARN, message);
+        }
     }
 
-    fn line(
-        &mut self,
-        label: &str,
-        style: Style,
-        message: impl Display,
-        aligned: bool,
-    ) -> io::Result<()> {
-        if aligned {
-            writeln!(self.err, "{style}{label:>VERB_WIDTH$}{style:#} {message}")
-        } else {
-            writeln!(self.err, "{style}{label}:{style:#} {message}")
-        }
+    fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
+        let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
+    }
+
+    fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {
+        let _ = writeln!(self.err, "{style}{label}:{style:#} {message}");
     }
 }
