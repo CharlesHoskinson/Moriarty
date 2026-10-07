@@ -6,7 +6,7 @@
 //! own functions. Where the fix is known, the help shows the user's own line
 //! corrected.
 
-use mori_diagnostics::MoriDiagnostic;
+use mori_diagnostics::{MoriDiagnostic, corrected_line, suggest};
 use mori_lexer::{TokenIdx, TokenKind, Tokens};
 use mori_span::Span;
 
@@ -103,7 +103,7 @@ pub fn unexpected(error: Unexpected<'_>) -> MoriDiagnostic {
         };
         return MoriDiagnostic::error(message)
             .with_code(code)
-            .with_label(Span::empty(end).label(format!("I expected {wanted} here")))
+            .with_label(Span::empty(end).primary_label(format!("I expected {wanted} here")))
             .with_help_code(
                 format!("Add {wanted} at the end of the line:"),
                 corrected_line(source, Span::empty(end), kind_text(kind)),
@@ -117,7 +117,7 @@ pub fn unexpected(error: Unexpected<'_>) -> MoriDiagnostic {
     };
     let mut diagnostic = MoriDiagnostic::error(message)
         .with_code(code)
-        .with_label(found_span.label(format!("I expected {wanted} here")));
+        .with_label(found_span.primary_label(format!("I expected {wanted} here")));
 
     if let (Some(frame), Some(what)) = (frame, &what) {
         let start = tokens.span(frame.start, source);
@@ -143,7 +143,7 @@ pub fn unclosed_agreement(eof: Span, name: Span, name_text: &str) -> MoriDiagnos
     MoriDiagnostic::error(format!("The agreement `{name_text}` never closes."))
         .with_code("mori::syntax::unclosed_agreement")
         .with_label(name.label("the agreement starts here"))
-        .with_label(eof.label("the file ends here"))
+        .with_label(eof.primary_label("the file ends here"))
         .with_help_code(
             "Add a `}` after the last declaration or action:",
             format!("agreement {name_text} {{\n  ...\n}}"),
@@ -171,7 +171,7 @@ const ITEM_KEYWORDS: [&str; 16] = [
 ];
 
 pub fn unknown_item(span: Span, word: Option<&str>, source: &str) -> MoriDiagnostic {
-    let suggestion = word.and_then(closest_item_keyword);
+    let suggestion = word.and_then(|word| suggest(word, ITEM_KEYWORDS));
     let message = match (word, suggestion) {
         (Some(word), Some(_)) => format!("I do not know what `{word}` means here."),
         (Some(word), None) => format!("`{word}` cannot start a declaration or action."),
@@ -257,7 +257,7 @@ pub fn duplicate_field(span: Span, earlier: Span, key: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("The field `{key}` appears twice."))
         .with_code("mori::syntax::duplicate_field")
         .with_label(earlier.label("first here"))
-        .with_label(span.label("and again here"))
+        .with_label(span.primary_label("and again here"))
         .with_help("Each field can appear only once in a record or call.")
 }
 
@@ -299,21 +299,6 @@ pub fn trailing_input(span: Span) -> MoriDiagnostic {
             "A file holds exactly one agreement. Move this inside the agreement's braces, \
              or remove it.",
         )
-}
-
-/// The source line containing `span`, with the span replaced by `replacement`
-/// and surrounding whitespace removed.
-fn corrected_line(source: &str, span: Span, replacement: &str) -> String {
-    let start = span.start as usize;
-    let end = span.end as usize;
-    let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
-    let line_end = source[end..].find('\n').map_or(source.len(), |i| end + i);
-    let line = format!(
-        "{}{replacement}{}",
-        &source[line_start..start],
-        &source[end..line_end]
-    );
-    line.trim().to_owned()
 }
 
 fn describe_context(frame: Frame, tokens: &Tokens, source: &str) -> String {
@@ -484,38 +469,4 @@ fn is_punctuation(kind: TokenKind) -> bool {
 
 fn line_break_between(source: &str, start: u32, end: u32) -> bool {
     start < end && source[start as usize..end as usize].contains('\n')
-}
-
-/// The item keyword within two edits of `word`, if any.
-fn closest_item_keyword(word: &str) -> Option<&'static str> {
-    ITEM_KEYWORDS
-        .iter()
-        .map(|&keyword| (edit_distance(word, keyword), keyword))
-        .filter(|&(distance, keyword)| distance <= 2 && distance < keyword.len())
-        .min_by_key(|&(distance, _)| distance)
-        .map(|(_, keyword)| keyword)
-}
-
-/// Levenshtein distance, counting a swap of adjacent letters as one edit.
-fn edit_distance(a: &str, b: &str) -> usize {
-    let a = a.as_bytes();
-    let b = b.as_bytes();
-    let mut rows = vec![vec![0; b.len() + 1]; a.len() + 1];
-    for (i, row) in rows.iter_mut().enumerate() {
-        row[0] = i;
-    }
-    rows[0] = (0..=b.len()).collect();
-    for i in 1..=a.len() {
-        for j in 1..=b.len() {
-            let cost = usize::from(a[i - 1] != b[j - 1]);
-            let mut best = (rows[i - 1][j] + 1)
-                .min(rows[i][j - 1] + 1)
-                .min(rows[i - 1][j - 1] + cost);
-            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
-                best = best.min(rows[i - 2][j - 2] + 1);
-            }
-            rows[i][j] = best;
-        }
-    }
-    rows[a.len()][b.len()]
 }
