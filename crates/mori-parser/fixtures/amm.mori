@@ -1,0 +1,16 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement AmmDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+pool Spot = {domain: Preview, id: "Spot", assets: [USD, GOLD]};
+intent Swap = {operation: amm.swap_exact_input(pool: Spot, owner: Alice, input: 100.00 USD, output_asset: GOLD, net_floor: 0.900 GOLD, fee_cap: 0.30 USD), rounding: "output floor benefits pool", failure: "first failure; no effects"};
+action swap uses Swap;
+intent MintLP = {operation: amm.mint(pool: Spot, owner: Alice, amounts: [100.00 USD, 1.000 GOLD], minimum_share_atoms: 10)};
+action mint_lp uses MintLP;
+intent RedeemLP = {operation: amm.redeem(pool: Spot, owner: Alice, share_atoms: 10)};
+action redeem_lp uses RedeemLP;
+}
