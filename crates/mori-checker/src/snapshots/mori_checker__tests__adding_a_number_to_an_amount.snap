@@ -1,0 +1,32 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  const tip = 5;\n  const total = 10 + 5 USD;\n  const other = 5 USD - tip;\n}\n"
+---
+mori::check::number_and_amount
+
+  × I cannot add a plain number and a `USD` amount.
+   ╭─[test.mori:6:22]
+ 5 │   const tip = 5;
+ 6 │   const total = 10 + 5 USD;
+   ·                 ─┬   ──┬──
+   ·                  │     ╰── this is a `USD` amount
+   ·                  ╰── this is a plain number
+ 7 │   const other = 5 USD - tip;
+   ╰────
+  help: Give the number its asset, so both sides are `USD` amounts:
+
+            const total = 10 USD + 5 USD;
+
+mori::check::number_and_amount
+
+  × I cannot subtract a plain number from a `USD` amount.
+   ╭─[test.mori:7:25]
+ 6 │   const total = 10 + 5 USD;
+ 7 │   const other = 5 USD - tip;
+   ·                 ──┬──   ─┬─
+   ·                   │      ╰── this is a plain number
+   ·                   ╰── this is a `USD` amount
+ 8 │ }
+   ╰────
+  help: A plain number and an amount cannot be combined. Use amounts of the
+        same asset on both sides.

@@ -1,0 +1,55 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Assets {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset A = 5;\n  asset B = { domain: Preview, id: \"b\", representation: \"native\" };\n  asset C = { domain: Preview, id: \"c\", scale: 19, representation: \"native\" };\n  asset D = { domain: Preview, id: \"d\", scale: \"2\", representation: \"native\" };\n}\n"
+---
+mori::check::expected_record
+
+  × An `asset` declaration needs a record of fields, but this is a plain
+  │ number.
+   ╭─[test.mori:4:13]
+ 3 │   domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+ 4 │   asset A = 5;
+   ·             ┬
+   ·             ╰── not a record
+ 5 │   asset B = { domain: Preview, id: "b", representation: "native" };
+   ╰────
+  help: Write its fields in braces, for example:
+
+            { domain: Preview, id: "usd", scale: 2, representation: "native" }
+
+mori::check::missing_scale
+
+  × This asset has no `scale`.
+   ╭─[test.mori:5:13]
+ 4 │   asset A = 5;
+ 5 │   asset B = { domain: Preview, id: "b", representation: "native" };
+   ·             ───────────────────────────┬──────────────────────────
+   ·                                        ╰── needs a `scale` field
+ 6 │   asset C = { domain: Preview, id: "c", scale: 19, representation: "native" };
+   ╰────
+  help: `scale` is the asset's number of decimal places, from 0 to 18:
+
+            scale: 2,
+
+mori::check::invalid_scale
+
+  × An asset's `scale` must be a whole number from 0 to 18, but this is `19`.
+   ╭─[test.mori:6:48]
+ 5 │   asset B = { domain: Preview, id: "b", representation: "native" };
+ 6 │   asset C = { domain: Preview, id: "c", scale: 19, representation: "native" };
+   ·                                                ─┬
+   ·                                                 ╰── invalid scale
+ 7 │   asset D = { domain: Preview, id: "d", scale: "2", representation: "native" };
+   ╰────
+
+mori::check::invalid_scale
+
+  × An asset's `scale` must be a whole number from 0 to 18, but this is a
+  │ string.
+   ╭─[test.mori:7:48]
+ 6 │   asset C = { domain: Preview, id: "c", scale: 19, representation: "native" };
+ 7 │   asset D = { domain: Preview, id: "d", scale: "2", representation: "native" };
+   ·                                                ─┬─
+   ·                                                 ╰── invalid scale
+ 8 │ }
+   ╰────

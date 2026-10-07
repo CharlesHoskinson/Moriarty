@@ -1,0 +1,25 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  const literal = 340282366920938463463374607431768211456;\n  const product = 340282366920938463463374607431768211455 * 2;\n}\n"
+---
+mori::check::too_large
+
+  × This value is larger than the largest allowed number, 2^128 - 1.
+   ╭─[test.mori:3:19]
+ 2 │ agreement Values {
+ 3 │   const literal = 340282366920938463463374607431768211456;
+   ·                   ───────────────────┬───────────────────
+   ·                                      ╰── too large
+ 4 │   const product = 340282366920938463463374607431768211455 * 2;
+   ╰────
+
+mori::check::too_large
+
+  × This value is larger than the largest allowed number, 2^128 - 1.
+   ╭─[test.mori:4:19]
+ 3 │   const literal = 340282366920938463463374607431768211456;
+ 4 │   const product = 340282366920938463463374607431768211455 * 2;
+   ·                   ─────────────────────┬─────────────────────
+   ·                                        ╰── too large
+ 5 │ }
+   ╰────

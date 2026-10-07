@@ -1,0 +1,57 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Calls {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  const a = rouns(domain: Preview, from: 0, to: 10);\n  const b = rounds(domain: Preview, from: 0);\n  const c = rounds(domain: Preview, from: 0, to: 10, too: 1);\n  const d = rounds(domain: alice, from: 0, to: 10);\n}\n"
+---
+mori::check::unknown_call
+
+  × There is no built-in call named `rouns`.
+   ╭─[test.mori:5:13]
+ 4 │   account alice = { domain: Preview, id: "alice" };
+ 5 │   const a = rouns(domain: Preview, from: 0, to: 10);
+   ·             ──┬──
+   ·               ╰── unknown call
+ 6 │   const b = rounds(domain: Preview, from: 0);
+   ╰────
+  help: Did you mean `rounds`?
+
+            const a = rounds(domain: Preview, from: 0, to: 10);
+
+mori::check::missing_argument
+
+  × `rounds` is missing the argument `to`.
+   ╭─[test.mori:6:13]
+ 5 │   const a = rouns(domain: Preview, from: 0, to: 10);
+ 6 │   const b = rounds(domain: Preview, from: 0);
+   ·             ───┬──
+   ·                ╰── needs `to`
+ 7 │   const c = rounds(domain: Preview, from: 0, to: 10, too: 1);
+   ╰────
+  help: `rounds` takes:
+
+            rounds(domain: domain, from: number, to: number)
+
+mori::check::unknown_argument
+
+  × `rounds` has no argument named `too`.
+   ╭─[test.mori:7:54]
+ 6 │   const b = rounds(domain: Preview, from: 0);
+ 7 │   const c = rounds(domain: Preview, from: 0, to: 10, too: 1);
+   ·                                                      ─┬─
+   ·                                                       ╰── unknown argument
+ 8 │   const d = rounds(domain: alice, from: 0, to: 10);
+   ╰────
+  help: Did you mean `to`? `rounds` takes:
+
+            rounds(domain: domain, from: number, to: number)
+
+mori::check::wrong_argument
+
+  × The argument `domain` of `rounds` must be a domain, but this is the
+  │ account `alice`.
+   ╭─[test.mori:8:28]
+ 7 │   const c = rounds(domain: Preview, from: 0, to: 10, too: 1);
+ 8 │   const d = rounds(domain: alice, from: 0, to: 10);
+   ·                            ──┬──
+   ·                              ╰── this is the account `alice`
+ 9 │ }
+   ╰────

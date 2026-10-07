@@ -1,0 +1,31 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset SHARE = { domain: Preview, id: \"share\", scale: 0, representation: \"native\" };\n  const price = 10.505 USD;\n  const shares = 1.5 SHARE;\n}\n"
+---
+mori::check::too_precise
+
+  × `USD` has 2 decimal places, but this amount has 3.
+   ╭─[test.mori:6:17]
+ 5 │   asset SHARE = { domain: Preview, id: "share", scale: 0, representation: "native" };
+ 6 │   const price = 10.505 USD;
+   ·                 ─────┬────
+   ·                      ╰── too many decimal places
+ 7 │   const shares = 1.5 SHARE;
+   ╰────
+  help: Use at most 2 decimal places, for example:
+
+            const price = 10.50 USD;
+
+mori::check::too_precise
+
+  × `SHARE` has no decimal places, but this amount has 1.
+   ╭─[test.mori:7:18]
+ 6 │   const price = 10.505 USD;
+ 7 │   const shares = 1.5 SHARE;
+   ·                  ────┬────
+   ·                      ╰── too many decimal places
+ 8 │ }
+   ╰────
+  help: Write a whole amount, for example:
+
+            const shares = 1 SHARE;

@@ -1,0 +1,17 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  const owed = 10 alice;\n}\n"
+---
+mori::check::not_an_asset
+
+  × I expected an asset here, but this is the account `alice`.
+   ╭─[test.mori:5:19]
+ 3 │   domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+ 4 │   account alice = { domain: Preview, id: "alice" };
+   ·           ──┬──
+   ·             ╰── declared here
+ 5 │   const owed = 10 alice;
+   ·                   ──┬──
+   ·                     ╰── not an asset
+ 6 │ }
+   ╰────
