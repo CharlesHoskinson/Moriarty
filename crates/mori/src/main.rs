@@ -18,7 +18,7 @@ fn main() -> ExitCode {
     match commands::run(cli.command, &mut shell) {
         Ok(code) => code,
         Err(report) => {
-            eprintln!("{report:?}");
+            shell.report(&report);
             ExitCode::FAILURE
         }
     }
