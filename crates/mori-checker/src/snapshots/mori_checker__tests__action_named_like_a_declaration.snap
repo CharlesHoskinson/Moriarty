@@ -1,0 +1,18 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  intent pay = { operation: transfer() };\n  action pay uses pay;\n}\n"
+---
+mori::check::duplicate_name
+
+  × `pay` is declared twice.
+   ╭─[test.mori:4:10]
+ 2 │ agreement Invoice {
+ 3 │   intent pay = { operation: transfer() };
+   ·          ─┬─
+   ·           ╰── first declared here
+ 4 │   action pay uses pay;
+   ·          ─┬─
+   ·           ╰── declared again here
+ 5 │ }
+   ╰────
+  help: Each declaration and action in an agreement needs its own name.

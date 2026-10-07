@@ -9,10 +9,10 @@ use crate::parse;
 
 /// Real programs to damage, so random edits reach deep into the grammar.
 const EXAMPLES: &[&str] = &[
-    include_str!("../fixtures/amm.mori"),
-    include_str!("../fixtures/lending.mori"),
-    include_str!("../fixtures/repayment.mori"),
-    include_str!("../fixtures/lesson-transfer.mori"),
+    include_str!("../../fixtures/amm.mori"),
+    include_str!("../../fixtures/lending.mori"),
+    include_str!("../../fixtures/repayment.mori"),
+    include_str!("../../fixtures/lesson-transfer.mori"),
 ];
 
 /// Pieces of syntax, to insert into examples or to string together.

@@ -81,6 +81,9 @@ difference is listed here and agreed before it is made.
   `Soa` of declarations (kind, name token, value handle) and a `Soa` of values
   with `u16` handles, an `extra` array for records and lists, and amounts in a
   separate `u128` array. No boxed value trees.
+- **`check` returns what was checked together with its diagnostics,** so valid
+  declarations stay usable when others fail, as a language server needs. A
+  program is accepted only when there are no diagnostics.
 - **It reports every independent error.** A declaration that fails is marked
   failed, and anything depending on it is skipped without further errors, so
   one mistake never cascades. Which programs are accepted does not change.
@@ -104,10 +107,8 @@ difference is listed here and agreed before it is made.
   }
   ```
 
-- The lexer and parser stop at the first error, so they build the
-  `MoriDiagnostic` where the error is found. A phase that collects many errors
-  records compact data (code, token, context) and builds diagnostics when
-  reporting.
+- Every phase builds a `MoriDiagnostic` where the error is found, through a
+  builder in its `diagnostics.rs`. Errors are rare and never on a hot path.
 - Messages must be Elm-quality: say what was being parsed, what was expected,
   show a correct example and give a specific hint. Errors should teach the
   language.
@@ -144,8 +145,9 @@ difference is listed here and agreed before it is made.
 ## Testing
 
 - Snapshot tests use [`insta`](https://insta.rs) and `cargo-insta`.
-- Test inputs live inside the crates, such as `crates/mori-parser/fixtures/`.
-  Nothing under `crates/` reads files outside it; copy anything needed in.
+- Test programs shared by several crates live in `crates/fixtures/`, which is
+  excluded from the workspace. Nothing under `crates/` reads files outside it;
+  copy anything needed in.
 - **Any test that consumes `.mori` source must put the source, not the Rust
   expression, in the snapshot.** Use a macro that takes an `indoc!` literal and
   sets `description` and `omit_expression`:

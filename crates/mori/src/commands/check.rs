@@ -17,7 +17,7 @@ pub struct Args {
     pub json: bool,
 }
 
-/// Checks syntax only, until name resolution and type checking exist.
+/// Checks syntax and names. Values, types and declaration rules come later.
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     if args.json {
         todo!("mori check --json");
@@ -30,16 +30,33 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
 
     shell.status("Checking", &name);
     let started = Instant::now();
-    let ast = mori_parser::parse(&source)
-        .map_err(|error| error.with_source_code(NamedSource::new(&name, source.clone())))?;
-    shell.verbose_status(
-        "Parsed",
-        format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
-    );
+    let diagnostics = match mori_parser::parse(&source) {
+        Err(error) => vec![error],
+        Ok(ast) => {
+            shell.verbose_status(
+                "Parsed",
+                format!("{} tokens, {} nodes", ast.tokens.len(), ast.nodes.len()),
+            );
+            mori_checker::check(&ast).diagnostics
+        }
+    };
+
+    if !diagnostics.is_empty() {
+        let count = diagnostics.len();
+        for diagnostic in diagnostics {
+            shell.report(&diagnostic.with_source_code(NamedSource::new(&name, source.clone())));
+        }
+        let plural = if count == 1 { "" } else { "s" };
+        shell.error(format!(
+            "could not check `{name}` due to {count} previous error{plural}"
+        ));
+        return Ok(ExitCode::FAILURE);
+    }
+
     shell.status(
         "Finished",
-        format!("syntax check in {:.2}s", started.elapsed().as_secs_f64()),
+        format!("check in {:.2}s", started.elapsed().as_secs_f64()),
     );
-    shell.note("names, types and values are not checked yet");
+    shell.note("values, types and declaration rules are not checked yet");
     Ok(ExitCode::SUCCESS)
 }
