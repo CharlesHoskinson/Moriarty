@@ -39,6 +39,12 @@ impl Span {
     pub fn label(self, text: impl Into<String>) -> LabeledSpan {
         LabeledSpan::new_with_span(Some(text.into()), self)
     }
+
+    /// Like [`Span::label`], but marks where the error is when a diagnostic
+    /// has several labels. Its position is the one shown in the header.
+    pub fn primary_label(self, text: impl Into<String>) -> LabeledSpan {
+        LabeledSpan::new_primary_with_span(Some(text.into()), self)
+    }
 }
 
 impl From<Span> for SourceSpan {
