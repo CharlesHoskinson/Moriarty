@@ -1,0 +1,31 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  const price = 10 USD;\n  const list = [pirce, 1.234 USD, price];\n}\n"
+---
+mori::check::unknown_name
+
+  × I cannot find a declaration named `pirce`.
+   ╭─[test.mori:6:17]
+ 5 │   const price = 10 USD;
+ 6 │   const list = [pirce, 1.234 USD, price];
+   ·                 ──┬──
+   ·                   ╰── not declared above
+ 7 │ }
+   ╰────
+  help: Did you mean `price`?
+
+            const list = [price, 1.234 USD, price];
+
+mori::check::too_precise
+
+  × `USD` has 2 decimal places, but this amount has 3.
+   ╭─[test.mori:6:24]
+ 5 │   const price = 10 USD;
+ 6 │   const list = [pirce, 1.234 USD, price];
+   ·                        ────┬────
+   ·                            ╰── too many decimal places
+ 7 │ }
+   ╰────
+  help: Use at most 2 decimal places, for example:
+
+            const list = [pirce, 1.23 USD, price];

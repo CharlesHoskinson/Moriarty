@@ -5,10 +5,14 @@
 //! failed, and anything that depends on it is skipped without further errors,
 //! so each mistake is reported once.
 
+mod calls;
 mod checker;
 mod diagnostics;
+mod eval;
 mod names;
 mod reserved;
+mod types;
+mod values;
 
 #[cfg(test)]
 mod proptests;
@@ -21,6 +25,7 @@ use mori_lexer::TokenKind;
 use soa_rs::{Soa, Soars};
 
 pub use checker::check;
+pub use values::{Value, ValueIdx, ValueTag, Values};
 
 /// Everything [`check`] could check, and every error it found. The program
 /// is accepted only when there are no diagnostics.
@@ -56,6 +61,8 @@ pub struct Declaration {
     pub node: NodeIdx,
     /// It has an error, or depends on a declaration that does.
     pub failed: bool,
+    /// Its value, unless it failed.
+    pub value: Option<ValueIdx>,
 }
 
 /// An action, in source order.
@@ -72,6 +79,7 @@ pub struct Checked<'a> {
     pub ast: &'a Ast<'a>,
     pub declarations: Soa<Declaration>,
     pub actions: Soa<Action>,
+    pub values: Values,
     /// For each node, the declaration it names: a reference, a quantity's
     /// asset or an action's intent. [`UNRESOLVED`] otherwise.
     resolutions: Vec<u16>,
@@ -84,6 +92,11 @@ impl<'a> Checked<'a> {
     pub fn kind(&self, decl: DeclIdx) -> TokenKind {
         let node = self.declarations.node()[decl.index()];
         self.ast.tokens.kind(self.ast.main_token(node))
+    }
+
+    /// The value of a declaration that did not fail.
+    pub fn value(&self, decl: DeclIdx) -> Option<ValueIdx> {
+        self.declarations.value()[decl.index()]
     }
 
     pub fn name(&self, decl: DeclIdx) -> &'a str {

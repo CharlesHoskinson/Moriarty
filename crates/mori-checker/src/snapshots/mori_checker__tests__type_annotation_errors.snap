@@ -1,0 +1,76 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Types {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  const a: Qyt<USD> = 1 USD;\n  const b: Qty<USD> = 1 GOLD;\n  const c: Scalar = \"one\";\n  const d: Qty = 1 USD;\n  const e: Account<Other> = alice;\n  const f: Asset = alice;\n}\n"
+---
+mori::check::unknown_type
+
+  × I do not know the type `Qyt`.
+   ╭─[test.mori:8:12]
+ 7 │   account alice = { domain: Preview, id: "alice" };
+ 8 │   const a: Qyt<USD> = 1 USD;
+   ·            ─┬─
+   ·             ╰── unknown type
+ 9 │   const b: Qty<USD> = 1 GOLD;
+   ╰────
+  help: Did you mean `Qty`?
+
+            const a: Qty<USD> = 1 USD;
+
+mori::check::type_mismatch
+
+  × The type says a `USD` amount, but the value is a `GOLD` amount.
+    ╭─[test.mori:9:23]
+  8 │   const a: Qyt<USD> = 1 USD;
+  9 │   const b: Qty<USD> = 1 GOLD;
+    ·            ────┬───   ───┬──
+    ·                │         ╰── this is a `GOLD` amount
+    ·                ╰── the declared type
+ 10 │   const c: Scalar = "one";
+    ╰────
+
+mori::check::type_mismatch
+
+  × The type says a plain number, but the value is a string.
+    ╭─[test.mori:10:21]
+  9 │   const b: Qty<USD> = 1 GOLD;
+ 10 │   const c: Scalar = "one";
+    ·            ───┬──   ──┬──
+    ·               │       ╰── this is a string
+    ·               ╰── the declared type
+ 11 │   const d: Qty = 1 USD;
+    ╰────
+
+mori::check::wrong_type_arguments
+
+  × `Qty` needs one asset, like `Qty<USD>`.
+    ╭─[test.mori:11:12]
+ 10 │   const c: Scalar = "one";
+ 11 │   const d: Qty = 1 USD;
+    ·            ─┬─
+    ·             ╰── wrong type arguments
+ 12 │   const e: Account<Other> = alice;
+    ╰────
+
+mori::check::wrong_domain
+
+  × The type says domain `Other`, but the account `alice` is on `Preview`.
+    ╭─[test.mori:12:29]
+ 11 │   const d: Qty = 1 USD;
+ 12 │   const e: Account<Other> = alice;
+    ·                    ──┬──    ──┬──
+    ·                      │        ╰── this is on `Preview`
+    ·                      ╰── the declared domain
+ 13 │   const f: Asset = alice;
+    ╰────
+
+mori::check::type_mismatch
+
+  × The type says an asset, but the value is the account `alice`.
+    ╭─[test.mori:13:20]
+ 12 │   const e: Account<Other> = alice;
+ 13 │   const f: Asset = alice;
+    ·            ──┬──   ──┬──
+    ·              │       ╰── this is the account `alice`
+    ·              ╰── the declared type
+ 14 │ }
+    ╰────
