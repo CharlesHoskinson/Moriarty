@@ -1,0 +1,15 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const count = count + 1;\n}\n"
+---
+mori::check::refers_to_itself
+
+  × `count` refers to itself.
+   ╭─[test.mori:3:17]
+ 2 │ agreement Invoice {
+ 3 │   const count = count + 1;
+   ·                 ──┬──
+   ·                   ╰── used in its own declaration
+ 4 │ }
+   ╰────
+  help: A value cannot be defined in terms of itself.

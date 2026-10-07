@@ -560,10 +560,10 @@ fn item_bound() {
 
 // Fixtures
 
-/// Every program in `fixtures/` parses, except the deliberately invalid one.
+/// Every program in `crates/fixtures/` parses, except the deliberately invalid one.
 #[test]
 fn fixtures_parse() {
-    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures");
     let mut checked = 0;
     for entry in std::fs::read_dir(&fixtures).expect("fixtures directory exists") {
         let path = entry.expect("directory entry is readable").path();

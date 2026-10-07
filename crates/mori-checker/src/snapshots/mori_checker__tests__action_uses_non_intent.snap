@@ -1,0 +1,21 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  action pay uses price;\n}\n"
+---
+mori::check::uses_non_intent
+
+  × An action must use an intent, but `price` is a `const`.
+   ╭─[test.mori:4:19]
+ 2 │ agreement Invoice {
+ 3 │   const price = 10;
+   ·         ──┬──
+   ·           ╰── declared with `const` here
+ 4 │   action pay uses price;
+   ·                   ──┬──
+   ·                     ╰── this must name an intent
+ 5 │ }
+   ╰────
+  help: An action runs an intent declared above it:
+
+            intent invoice = { ... };
+            action pay uses invoice;

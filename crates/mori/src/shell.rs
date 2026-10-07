@@ -64,12 +64,17 @@ impl Shell {
         }
     }
 
+    /// Prints an error line. Errors are shown even under `--quiet`.
+    pub fn error(&mut self, message: impl Display) {
+        self.prefixed("error", styles::ERROR, message);
+    }
+
     /// Renders an error report, wrapped to the terminal width up to 80 columns.
     /// Errors are shown even under `--quiet`.
     pub fn report(&mut self, report: &Report) {
         let width = terminal_size::terminal_size_of(io::stderr())
             .map_or(WIDTH, |(width, _)| usize::from(width.0));
-        let _ = write!(self.err, "{}", render::render_colored(report, width));
+        let _ = writeln!(self.err, "{}", render::render_colored(report, width));
     }
 
     fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
