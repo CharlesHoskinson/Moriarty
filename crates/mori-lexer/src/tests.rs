@@ -264,7 +264,7 @@ fn source_bound() {
     assert_eq!(error_code(&" ".repeat(MAX_SOURCE_BYTES)), None);
     assert_eq!(
         error_code(&" ".repeat(MAX_SOURCE_BYTES + 1)).as_deref(),
-        Some("BETA_SOURCE_BOUND")
+        Some("mori::lex::source_too_large")
     );
 }
 
@@ -275,7 +275,10 @@ fn token_bound_counts_eof_but_not_comments() {
     assert_eq!(lex(&within).unwrap().len(), MAX_TOKENS);
 
     let over = ";".repeat(MAX_TOKENS);
-    assert_eq!(error_code(&over).as_deref(), Some("BETA_TOKEN_BOUND"));
+    assert_eq!(
+        error_code(&over).as_deref(),
+        Some("mori::lex::too_many_tokens")
+    );
 
     let commented = format!("{within}{}", "/**/".repeat(100));
     assert_eq!(error_code(&commented), None);
@@ -287,11 +290,17 @@ fn string_bound_counts_decoded_utf8_bytes() {
     assert_eq!(error_code(&at_limit), None);
 
     let over = format!("\"{}\"", "a".repeat(MAX_STRING_BYTES + 1));
-    assert_eq!(error_code(&over).as_deref(), Some("BETA_STRING_BOUND"));
+    assert_eq!(
+        error_code(&over).as_deref(),
+        Some("mori::lex::string_too_long")
+    );
 
     // `é` is two bytes in UTF-8, so 513 of them exceed the limit.
     let escaped = format!("\"{}\"", "\\u00e9".repeat(MAX_STRING_BYTES / 2 + 1));
-    assert_eq!(error_code(&escaped).as_deref(), Some("BETA_STRING_BOUND"));
+    assert_eq!(
+        error_code(&escaped).as_deref(),
+        Some("mori::lex::string_too_long")
+    );
 }
 
 #[test]
@@ -299,6 +308,6 @@ fn identifier_bound() {
     assert_eq!(error_code(&"a".repeat(64)), None);
     assert_eq!(
         error_code(&"a".repeat(65)).as_deref(),
-        Some("BETA_IDENTIFIER_BOUND")
+        Some("mori::lex::name_too_long")
     );
 }

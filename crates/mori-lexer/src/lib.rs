@@ -12,6 +12,8 @@ mod string;
 mod token;
 
 #[cfg(test)]
+mod proptests;
+#[cfg(test)]
 mod tests;
 
 use mori_diagnostics::MoriDiagnostic;

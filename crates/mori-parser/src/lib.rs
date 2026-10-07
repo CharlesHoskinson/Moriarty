@@ -8,6 +8,8 @@ mod diagnostics;
 mod parser;
 
 #[cfg(test)]
+mod proptests;
+#[cfg(test)]
 mod tests;
 
 use mori_ast::Ast;

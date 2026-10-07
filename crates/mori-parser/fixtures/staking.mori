@@ -1,0 +1,20 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement StakingDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+share_class Shares = {domain: Preview, id: "VaultShare", backing: USD};
+intent Deposit = {operation: staking.deposit(owner: Alice, shares: Shares, backing: 100.00 USD), rounding: "share mint floor benefits vault"};
+action deposit uses Deposit;
+intent Reward = {operation: staking.reward(shares: Shares, amount: 5.00 USD)};
+action reward uses Reward;
+intent Slash = {operation: staking.slash(shares: Shares, amount: 3.00 USD), loss: "signed slash priority; pending withdrawal remains explicit"};
+action slash uses Slash;
+intent Unbond = {operation: staking.unbond(owner: Alice, shares: Shares, share_atoms: 100)};
+action unbond uses Unbond;
+intent Withdraw = {operation: staking.withdraw(owner: Alice, shares: Shares, share_atoms: 100, minimum_backing: 90.00 USD)};
+action withdraw uses Withdraw;
+}
