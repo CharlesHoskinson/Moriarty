@@ -1,0 +1,17 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Values {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  const total = 10 USD + 5 GOLD;\n}\n"
+---
+mori::check::mixed_assets
+
+  × I cannot add a `USD` amount and a `GOLD` amount.
+   ╭─[test.mori:6:26]
+ 5 │   asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+ 6 │   const total = 10 USD + 5 GOLD;
+   ·                 ───┬──   ───┬──
+   ·                    │        ╰── this is a `GOLD` amount
+   ·                    ╰── this is a `USD` amount
+ 7 │ }
+   ╰────
+  help: Amounts of different assets never combine. Both sides must be amounts
+        of the same asset.
