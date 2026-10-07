@@ -5,10 +5,13 @@ use std::collections::HashMap;
 use mori_ast::{Ast, NodeIdx, NodeTag};
 use mori_diagnostics::{Diagnostic, MoriDiagnostic, suggest};
 use mori_lexer::{TokenIdx, TokenKind};
+use mori_span::Span;
 use soa_rs::Soa;
 
+use crate::eval::MAX_SCALE;
 use crate::names::{Names, name_token};
 use crate::reserved::SOURCE6_RESERVED;
+use crate::values::{ValueIdx, ValueTag, Values};
 use crate::{Action, CheckResult, Checked, DeclIdx, Declaration, UNRESOLVED, diagnostics};
 
 /// Checks `ast`, returning everything checked and every error found.
@@ -19,6 +22,7 @@ pub fn check<'a>(ast: &'a Ast<'a>) -> CheckResult<'a> {
         names: Names::default(),
         declarations: Soa::with_capacity(items.len()),
         actions: Soa::new(),
+        values: Values::default(),
         resolutions: vec![UNRESOLVED; ast.nodes.len()],
         visible: HashMap::new(),
         diagnostics: Vec::new(),
@@ -31,6 +35,7 @@ pub fn check<'a>(ast: &'a Ast<'a>) -> CheckResult<'a> {
             ast,
             declarations: checker.declarations,
             actions: checker.actions,
+            values: checker.values,
             resolutions: checker.resolutions,
         },
         diagnostics: checker.diagnostics,
@@ -50,11 +55,12 @@ fn position(diagnostic: &MoriDiagnostic) -> usize {
         .map_or(0, |label| label.offset())
 }
 
-struct Checker<'a> {
-    ast: &'a Ast<'a>,
+pub(crate) struct Checker<'a> {
+    pub(crate) ast: &'a Ast<'a>,
     names: Names<'a>,
-    declarations: Soa<Declaration>,
+    pub(crate) declarations: Soa<Declaration>,
     actions: Soa<Action>,
+    pub(crate) values: Values,
     resolutions: Vec<u16>,
     /// Declarations checked so far, by name. Later items may use them.
     visible: HashMap<&'a str, DeclIdx>,
@@ -74,17 +80,86 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn declaration(&mut self, order: usize, node: NodeIdx) {
-        let mut failed = self.names.is_duplicate(order);
-        let value = self.ast.rhs_node(node).expect("a declaration has a value");
-        failed |= !self.resolve_all(order, value);
+    pub(crate) fn report(&mut self, diagnostic: MoriDiagnostic) {
+        self.diagnostics.push(diagnostic);
+    }
 
+    fn declaration(&mut self, order: usize, node: NodeIdx) {
         let decl = DeclIdx::new(self.declarations.len());
-        self.declarations.push(Declaration { node, failed });
+        let value_node = self.operand(node, 1);
+        let mut value = self.eval(order, value_node);
+
+        let keyword = self.ast.tokens.kind(self.ast.main_token(node));
+        if let Some(record) = value
+            && keyword != TokenKind::KwConst
+        {
+            value = self.entity(decl, node, record, value_node);
+        }
+        if let Some(asset) = value
+            && keyword == TokenKind::KwAsset
+            && !self.check_scale(asset, value_node)
+        {
+            value = None;
+        }
+        if let (Some(checked), Some(ty)) = (value, self.ast.lhs_node(node))
+            && !self.check_annotation(order, ty, checked, value_node)
+        {
+            value = None;
+        }
+
+        let failed = value.is_none() || self.names.is_duplicate(order);
+        let value = value.filter(|_| !failed);
+        self.declarations.push(Declaration {
+            node,
+            failed,
+            value,
+        });
         if !self.names.is_duplicate(order) {
             let name = self.ast.token_text(name_token(self.ast, node));
             self.visible.insert(name, decl);
         }
+    }
+
+    /// Every declaration except `const` is a record of fields, and becomes an
+    /// entity that other declarations can refer to.
+    fn entity(
+        &mut self,
+        decl: DeclIdx,
+        node: NodeIdx,
+        record: ValueIdx,
+        value_node: NodeIdx,
+    ) -> Option<ValueIdx> {
+        if self.values.tag(record) != ValueTag::Record {
+            let keyword = self.ast.token_text(self.ast.main_token(node));
+            let description = self.describe(record);
+            self.report(diagnostics::expected_record(
+                self.ast.span(value_node),
+                keyword,
+                &description,
+            ));
+            return None;
+        }
+        let row = record.index();
+        let (b, c) = (self.values.rows.b()[row], self.values.rows.c()[row]);
+        Some(self.values.push(ValueTag::Entity, node, decl.0, b, c))
+    }
+
+    /// An asset's `scale` is its number of decimal places, a whole number up to 18.
+    fn check_scale(&mut self, asset: ValueIdx, value_node: NodeIdx) -> bool {
+        let Some(scale) = self.field(asset, "scale") else {
+            self.report(diagnostics::missing_scale(self.ast.span(value_node)));
+            return false;
+        };
+        if self.values.tag(scale) == ValueTag::Scalar && self.values.amount(scale) <= MAX_SCALE {
+            return true;
+        }
+        let description = match self.values.tag(scale) {
+            ValueTag::Scalar => format!("`{}`", self.values.amount(scale)),
+            _ => self.describe(scale),
+        };
+        let span = self.ast.span(self.values.node(scale));
+        self.report(diagnostics::invalid_scale(span, &description));
+        false
     }
 
     fn action(&mut self, order: usize, node: NodeIdx) {
@@ -96,30 +171,15 @@ impl<'a> Checker<'a> {
         self.actions.push(Action { node, intent });
     }
 
-    /// Resolves every name used inside `node`. False if any failed.
-    fn resolve_all(&mut self, order: usize, node: NodeIdx) -> bool {
-        let mut ok = match self.ast.tag(node) {
-            NodeTag::Reference => {
-                let token = self.ast.main_token(node);
-                self.resolve(order, token, node).is_some()
-            }
-            NodeTag::Quantity => {
-                let asset = self.ast.token_after(self.ast.main_token(node), 1);
-                self.resolve(order, asset, node).is_some()
-            }
-            _ => true,
-        };
-        let children: Vec<NodeIdx> = self.ast.children(node).collect();
-        for child in children {
-            ok &= self.resolve_all(order, child);
-        }
-        ok
-    }
-
     /// Resolves the name at `token`, used by item number `order`, recording
     /// it for `node`. `None` if it does not name a usable declaration; an
     /// error is reported unless that declaration already failed.
-    fn resolve(&mut self, order: usize, token: TokenIdx, node: NodeIdx) -> Option<DeclIdx> {
+    pub(crate) fn resolve(
+        &mut self,
+        order: usize,
+        token: TokenIdx,
+        node: NodeIdx,
+    ) -> Option<DeclIdx> {
         let name = self.ast.token_text(token);
         if let Some(&decl) = self.visible.get(name) {
             if self.declarations.failed()[decl.index()] {
@@ -129,40 +189,37 @@ impl<'a> Checker<'a> {
             return Some(decl);
         }
 
-        let span = self.ast.tokens.span(token, self.ast.source);
+        let span = self.token_span(token);
         let diagnostic = match self.names.get(name) {
             Some(item) if self.ast.tag(item.node) == NodeTag::Action => {
-                let action = self.name_span(item.node);
-                diagnostics::action_is_not_a_value(span, name, action)
+                diagnostics::action_is_not_a_value(span, name, self.name_span(item.node))
             }
             Some(item) if item.order == order => diagnostics::refers_to_itself(span, name),
             Some(item) if item.order > order => {
                 diagnostics::used_before_declared(span, name, self.name_span(item.node))
             }
             _ => {
-                let visible = (0..self.declarations.len()).map(|index| {
-                    self.ast
-                        .token_text(name_token(self.ast, self.declarations.node()[index]))
-                });
+                let visible =
+                    (0..self.declarations.len()).map(|index| self.name(DeclIdx::new(index)));
                 let suggestion = suggest(name, visible);
                 diagnostics::unknown_name(span, name, suggestion, self.ast.source)
             }
         };
-        self.diagnostics.push(diagnostic);
+        self.report(diagnostic);
         None
     }
 
     /// An action's `uses` must name an intent.
     fn check_is_intent(&mut self, decl: DeclIdx, token: TokenIdx) -> bool {
-        let node = self.declarations.node()[decl.index()];
-        let keyword = self.ast.main_token(node);
-        if self.ast.tokens.kind(keyword) == TokenKind::KwIntent {
+        if self.is_kind(decl, TokenKind::KwIntent) {
             return true;
         }
-        self.diagnostics.push(diagnostics::uses_non_intent(
-            self.ast.tokens.span(token, self.ast.source),
+        let node = self.declarations.node()[decl.index()];
+        let keyword = self.ast.token_text(self.ast.main_token(node));
+        self.report(diagnostics::uses_non_intent(
+            self.token_span(token),
             self.ast.token_text(token),
-            self.ast.token_text(keyword),
+            keyword,
             self.name_span(node),
         ));
         false
@@ -172,9 +229,8 @@ impl<'a> Checker<'a> {
     fn check_source6_name(&mut self, token: TokenIdx, role: &str) {
         let name = self.ast.token_text(token);
         if SOURCE6_RESERVED.contains(&name) {
-            let span = self.ast.tokens.span(token, self.ast.source);
-            self.diagnostics.push(diagnostics::reserved_by_source6(
-                span,
+            self.report(diagnostics::reserved_by_source6(
+                self.token_span(token),
                 name,
                 role,
                 self.ast.source,
@@ -182,9 +238,20 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn name_span(&self, item: NodeIdx) -> mori_span::Span {
-        self.ast
-            .tokens
-            .span(name_token(self.ast, item), self.ast.source)
+    pub(crate) fn name(&self, decl: DeclIdx) -> &'a str {
+        let node = self.declarations.node()[decl.index()];
+        self.ast.token_text(name_token(self.ast, node))
+    }
+
+    pub(crate) fn token_span(&self, token: TokenIdx) -> Span {
+        self.ast.tokens.span(token, self.ast.source)
+    }
+
+    fn name_span(&self, item: NodeIdx) -> Span {
+        self.token_span(name_token(self.ast, item))
+    }
+
+    pub(crate) fn decl_name_span(&self, decl: DeclIdx) -> Span {
+        self.name_span(self.declarations.node()[decl.index()])
     }
 }

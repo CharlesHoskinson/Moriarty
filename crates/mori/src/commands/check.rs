@@ -57,6 +57,6 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         "Finished",
         format!("check in {:.2}s", started.elapsed().as_secs_f64()),
     );
-    shell.note("values, types and declaration rules are not checked yet");
+    shell.note("declaration, call and intent rules are not checked yet");
     Ok(ExitCode::SUCCESS)
 }
