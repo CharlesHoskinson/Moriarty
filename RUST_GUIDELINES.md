@@ -12,7 +12,23 @@ documents it. Beta lowers to Source/6 and Core/5
 
 The surface syntax is not frozen. Keep grammar-specific code separate from the
 later phases so it can change. Parity with the TypeScript frontend is measured
-on accept/reject and `BETA_*` diagnostic codes, not message text.
+on accept/reject and `BETA_*` diagnostic codes, not message text or spans,
+except for the intentional differences below.
+
+### Intentional differences
+
+The TypeScript frontend is the reference for what the language accepts and
+what values mean, not for incidental implementation choices. Every deliberate
+difference is listed here and agreed before it is made.
+
+- **Comments do not count toward the 8,192-token bound.** The bound limits
+  analysis, and comments are not analyzed. The TypeScript lexer counts them, so
+  a file whose comments push it past the bound is rejected there and accepted
+  here. The 65,536-byte source bound still caps comments.
+- **Syntax errors are reported before name and type errors.** The TypeScript
+  frontend resolves names while parsing, so in a file with several errors it
+  may report a different first one. Files with a single error behave the same,
+  and parity checks use such files.
 
 ## Workspace
 
@@ -42,8 +58,11 @@ on accept/reject and `BETA_*` diagnostic codes, not message text.
 - **Preallocate.** Size the token container with `source.len() / 8`, as Zig does.
 - **Tokens store only `tag` and `start`.** The end is recovered by re-lexing.
 - **Comments are kept for the formatter** in their own `start`/`end` table, not
-  in the token stream. The lexer still counts comments and whitespace toward the
-  8,192-token bound (`BETA_TOKEN_BOUND`).
+  in the token stream. Only tokens, including the end-of-file token, count toward
+  the 8,192-token bound (`BETA_TOKEN_BOUND`); whitespace and comments do not.
+- **Crates.** `mori-span` holds spans, `mori-lexer` the tokens and lexer,
+  `mori-ast` the struct-of-arrays AST and its tree printer, and `mori-parser`
+  the parser that produces it.
 - **Separate phases.** Lex → parse → resolve and check → evaluate constants.
   Do not copy the TypeScript parser, which evaluates while parsing.
 - **Numbers.** Values fit in `u128`; no bigint library. Decimal quantities are
@@ -82,12 +101,13 @@ on accept/reject and `BETA_*` diagnostic codes, not message text.
 - Spans are UTF-8 byte ranges, matching miette's `SourceSpan` and beta. Editors
   and a future language server need UTF-16 line/character positions, converted
   from the same compact records.
-- Open question: stop at the first error like the TypeScript frontend, or
-  recover and report several. If recovering, compare only the first error for
-  parity.
-- Only `mori-diagnostics` depends on miette. Its `fancy` feature enables miette's
-  `fancy-no-backtrace`. The `mori` CLI turns it on; library crates turn it on only
-  in `[dev-dependencies]`.
+- The lexer and parser stop at the first error, like the TypeScript frontend.
+  Recovery at declaration boundaries may come later; if it does, parity compares
+  only the first error.
+- `mori-span` converts `Span` into miette's span types, as `oxc_span` does.
+- The `fancy` feature of `mori-diagnostics` enables miette's
+  `fancy-no-backtrace`. The `mori` CLI turns it on; library crates turn it on
+  only in `[dev-dependencies]`.
 - Use `thiserror` for errors that never point at source, such as I/O.
 
 ## Testing

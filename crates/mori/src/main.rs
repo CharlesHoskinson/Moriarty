@@ -7,6 +7,7 @@ use crate::shell::Shell;
 
 mod cli;
 mod commands;
+mod error;
 mod shell;
 mod styles;
 
