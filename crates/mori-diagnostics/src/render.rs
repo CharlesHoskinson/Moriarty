@@ -15,13 +15,17 @@ pub fn render_colored(report: &Report, width: usize) -> String {
 
 /// Renders a diagnostic against its source with no color and a fixed width.
 ///
-/// The output is exactly what a user sees, minus color, so it is stable
-/// across terminals and suitable for snapshots.
+/// The output is what a user sees, minus color and trailing spaces, so it is
+/// stable across terminals and editors and suitable for snapshots.
 pub fn render_plain(diagnostic: &MoriDiagnostic, name: &str, source: &str) -> String {
     let report = diagnostic
         .clone()
         .with_source_code(NamedSource::new(name, source.to_owned()));
-    render(GraphicalTheme::unicode_nocolor(), WIDTH, report.as_ref())
+    let rendered = render(GraphicalTheme::unicode_nocolor(), WIDTH, report.as_ref());
+    rendered
+        .lines()
+        .map(|line| line.trim_end().to_owned() + "\n")
+        .collect()
 }
 
 fn render(theme: GraphicalTheme, width: usize, diagnostic: &dyn Diagnostic) -> String {
@@ -64,12 +68,12 @@ mod tests {
             |source| {
                 let asset = source.find("USD").unwrap();
                 MoriDiagnostic::error("I need a space between a number and its asset.")
-                    .with_code("BETA_QUANTITY_SEPARATOR")
+                    .with_code("mori::syntax::quantity_without_space")
                     .with_label(LabeledSpan::at(
                         asset..asset + 3,
                         "this asset touches the number",
                     ))
-                    .with_help("Write the quantity as `10 USD`.")
+                    .with_help_code("Put a space between them:", "const price = 10 USD;")
             }
         );
     }

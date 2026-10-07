@@ -1,0 +1,18 @@
+// Authoring only: financial relation, evidence and execution remain open.
+profile "moriarty-beta/1";
+agreement BridgeDemo {
+domain Preview = {id: "Midnight", chain: "midnight", network: "preview"};
+account Alice = {domain: Preview, id: "Alice"};
+account Bob = {domain: Preview, id: "Bob"};
+asset USD = {domain: Preview, id: "USDCanonical", scale: 2, representation: "canonical", symbol: "USD"};
+asset GOLD = {domain: Preview, id: "GoldCanonical", scale: 3, representation: "canonical", symbol: "GOLD"};
+domain Foreign = {id: "Foreign", chain: "example", network: "test"};
+account ForeignAlice = {domain: Foreign, id: "ForeignAlice"};
+asset WrappedUSD = {domain: Foreign, id: "WrappedUSD", scale: 2, representation: "bridge-claim"};
+intent Escrow = {operation: bridge.escrow(owner: Alice, amount: 100.00 USD, destination: Foreign, claim_id: "claim-1")};
+action escrow uses Escrow;
+intent Claim = {operation: bridge.claim(owner: ForeignAlice, amount: 100.00 WrappedUSD, source: Preview, claim_id: "claim-1")};
+action claim uses Claim;
+intent Recover = {operation: bridge.recover(owner: Alice, amount: 100.00 USD, claim_id: "claim-1"), failure: "timeout alone is not proof of foreign nonreceipt"};
+action recover uses Recover;
+}

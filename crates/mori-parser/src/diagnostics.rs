@@ -3,7 +3,8 @@
 //! Most syntax errors go through [`unexpected`], which explains what was being
 //! parsed (from the innermost [`Frame`]), what was found and what would have
 //! been valid, with an example of the correct form. Common mistakes get their
-//! own functions.
+//! own functions. Where the fix is known, the help shows the user's own line
+//! corrected.
 
 use mori_diagnostics::MoriDiagnostic;
 use mori_lexer::{TokenIdx, TokenKind, Tokens};
@@ -85,35 +86,46 @@ pub fn unexpected(error: Unexpected<'_>) -> MoriDiagnostic {
     let what = frame.map(|frame| describe_context(*frame, tokens, source));
 
     // A missing `;` or `)` is usually noticed on the next line; point at the
-    // end of the line where it belongs instead.
-    let missing_at_line_end = matches!(expected, [Expected::Token(kind)] if is_punctuation(*kind))
-        && previous_end.is_some_and(|end| line_break_between(source, end, found_span.start));
+    // end of the line where it belongs and show that line fixed.
+    let missing_at_line_end = match (expected, previous_end) {
+        ([Expected::Token(kind)], Some(end))
+            if is_punctuation(*kind) && line_break_between(source, end, found_span.start) =>
+        {
+            Some((*kind, end))
+        }
+        _ => None,
+    };
 
-    let mut diagnostic = if let (true, Some(end)) = (missing_at_line_end, previous_end) {
+    if let Some((kind, end)) = missing_at_line_end {
         let message = match &what {
             Some(what) => format!("It looks like {what} is missing {wanted}."),
             None => format!("It looks like {wanted} is missing."),
         };
-        MoriDiagnostic::error(message)
+        return MoriDiagnostic::error(message)
             .with_code(code)
             .with_label(Span::empty(end).label(format!("I expected {wanted} here")))
-    } else {
-        let found_text = describe_token(tokens.kind(found), found_span.source_text(source));
-        let message = match &what {
-            Some(what) => format!("I was partway through {what} when I found {found_text}."),
-            None => format!("I did not expect {found_text} here."),
-        };
-        MoriDiagnostic::error(message)
-            .with_code(code)
-            .with_label(found_span.label(format!("I expected {wanted} here")))
+            .with_help_code(
+                format!("Add {wanted} at the end of the line:"),
+                corrected_line(source, Span::empty(end), kind_text(kind)),
+            );
+    }
+
+    let found_text = describe_token(tokens.kind(found), found_span.source_text(source));
+    let message = match &what {
+        Some(what) => format!("I was partway through {what} when I found {found_text}."),
+        None => format!("I did not expect {found_text} here."),
     };
+    let mut diagnostic = MoriDiagnostic::error(message)
+        .with_code(code)
+        .with_label(found_span.label(format!("I expected {wanted} here")));
 
     if let (Some(frame), Some(what)) = (frame, &what) {
         let start = tokens.span(frame.start, source);
         if line_break_between(source, start.end, found_span.start) {
             diagnostic = diagnostic.with_label(start.label(format!("{what} starts here")));
         }
-        diagnostic = diagnostic.with_help(context_help(frame.context));
+        let (help, example) = context_example(frame.context);
+        diagnostic = diagnostic.with_help_code(help, example);
     }
     diagnostic
 }
@@ -122,17 +134,20 @@ pub fn wrong_profile(span: Span, profile: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "This file asks for profile `{profile}`, but I only understand `{PROFILE}`."
     ))
-    .with_code("BETA_PROFILE")
+    .with_code("mori::syntax::unsupported_profile")
     .with_label(span.label("unsupported profile"))
-    .with_help(format!("Start the file with `profile \"{PROFILE}\";`."))
+    .with_help_code("Start the file with:", format!("profile \"{PROFILE}\";"))
 }
 
 pub fn unclosed_agreement(eof: Span, name: Span, name_text: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("The agreement `{name_text}` never closes."))
-        .with_code("BETA_CONSTRUCT")
+        .with_code("mori::syntax::unclosed_agreement")
         .with_label(name.label("the agreement starts here"))
         .with_label(eof.label("the file ends here"))
-        .with_help("Add a `}` after the last declaration or action.")
+        .with_help_code(
+            "Add a `}` after the last declaration or action:",
+            format!("agreement {name_text} {{\n  ...\n}}"),
+        )
 }
 
 /// Declaration kinds and `action`, the words that can start an item.
@@ -155,73 +170,92 @@ const ITEM_KEYWORDS: [&str; 16] = [
     "action",
 ];
 
-pub fn unknown_item(span: Span, word: Option<&str>) -> MoriDiagnostic {
+pub fn unknown_item(span: Span, word: Option<&str>, source: &str) -> MoriDiagnostic {
     let suggestion = word.and_then(closest_item_keyword);
-    let message = match word {
-        Some(word) if suggestion.is_some() => format!("I do not know what `{word}` means here."),
-        Some(word) => format!("`{word}` cannot start a declaration or action."),
-        None => "I was expecting a declaration or action here.".to_owned(),
+    let message = match (word, suggestion) {
+        (Some(word), Some(_)) => format!("I do not know what `{word}` means here."),
+        (Some(word), None) => format!("`{word}` cannot start a declaration or action."),
+        (None, _) => "I was expecting a declaration or action here.".to_owned(),
     };
-    let help = match suggestion {
-        Some(keyword) => format!("Did you mean `{keyword}`?"),
-        None => format!(
+    let diagnostic = MoriDiagnostic::error(message)
+        .with_code("mori::syntax::unknown_item")
+        .with_label(span.label("expected a declaration or action"));
+    match suggestion {
+        Some(keyword) => diagnostic.with_help_code(
+            format!("Did you mean `{keyword}`?"),
+            corrected_line(source, span, keyword),
+        ),
+        None => diagnostic.with_help(format!(
             "Each item starts with `action` or a declaration keyword: {}.",
             ITEM_KEYWORDS[..ITEM_KEYWORDS.len() - 1]
                 .iter()
                 .map(|keyword| format!("`{keyword}`"))
                 .collect::<Vec<_>>()
                 .join(", ")
-        ),
-    };
-    MoriDiagnostic::error(message)
-        .with_code("BETA_CONSTRUCT")
-        .with_label(span.label("expected a declaration or action"))
-        .with_help(help)
+        )),
+    }
 }
 
-pub fn keyword_as_name(span: Span, word: &str) -> MoriDiagnostic {
+pub fn keyword_as_name(span: Span, word: &str, source: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "`{word}` is a keyword, so it cannot be used as a name."
     ))
-    .with_code("BETA_IDENTIFIER")
+    .with_code("mori::syntax::keyword_as_name")
     .with_label(span.label("keyword"))
-    .with_help(format!("Choose another name, such as `my_{word}`."))
+    .with_help_code(
+        "Choose another name, for example:",
+        corrected_line(source, span, &format!("my_{word}")),
+    )
 }
 
 pub fn quantity_separator(number: Span, asset: Span, source: &str) -> MoriDiagnostic {
-    let number_text = number.source_text(source);
-    let asset_text = asset.source_text(source);
     MoriDiagnostic::error("A quantity needs a space between the number and its asset.")
-        .with_code("BETA_QUANTITY_SEPARATOR")
+        .with_code("mori::syntax::quantity_without_space")
         .with_label(Span::new(number.start, asset.end).label("no space here"))
-        .with_help(format!("Write `{number_text} {asset_text}`."))
-}
-
-pub fn decimal_without_asset(span: Span) -> MoriDiagnostic {
-    MoriDiagnostic::error("A decimal number needs an asset.")
-        .with_code("BETA_DECIMAL_SCALAR")
-        .with_label(span.label("which asset is this an amount of?"))
-        .with_help(
-            "Decimals are only allowed for amounts, because the asset decides how many \
-             decimal places are valid. Write an amount like `10.50 USD`, or use a whole \
-             number.",
+        .with_help_code(
+            "Put a space between them:",
+            corrected_line(source, Span::empty(number.end), " "),
         )
 }
 
-pub fn dotted_reference(span: Span, text: &str) -> MoriDiagnostic {
+pub fn decimal_without_asset(span: Span, source: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error("A decimal number needs an asset.")
+        .with_code("mori::syntax::decimal_without_asset")
+        .with_label(span.label("which asset is this an amount of?"))
+        .with_help_code(
+            "Decimals are only allowed for amounts, because the asset decides how many \
+             decimal places are valid. Name the asset, or use a whole number:",
+            corrected_line(source, Span::empty(span.end), " USD"),
+        )
+}
+
+pub fn dotted_reference(span: Span, text: &str, source: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "`{text}` looks like a call, but it has no arguments."
     ))
-    .with_code("BETA_SYNTAX")
+    .with_code("mori::syntax::dotted_name_without_call")
     .with_label(span.label("dotted names are only used for calls"))
-    .with_help(format!(
-        "Add the arguments in parentheses, like `{text}(...)`."
+    .with_help_code(
+        "Add the arguments in parentheses:",
+        corrected_line(source, Span::empty(span.end), "(...)"),
+    )
+}
+
+pub fn missing_comma(at: Span, between: &str, source: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "It looks like a comma is missing between two {between}."
     ))
+    .with_code("mori::syntax::missing_comma")
+    .with_label(at.label("add a comma here"))
+    .with_help_code(
+        format!("Separate {between} with commas:"),
+        corrected_line(source, at, ","),
+    )
 }
 
 pub fn duplicate_field(span: Span, earlier: Span, key: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("The field `{key}` appears twice."))
-        .with_code("BETA_DUPLICATE_FIELD")
+        .with_code("mori::syntax::duplicate_field")
         .with_label(earlier.label("first here"))
         .with_label(span.label("and again here"))
         .with_help("Each field can appear only once in a record or call.")
@@ -231,7 +265,7 @@ pub fn too_many_items(span: Span) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "This agreement has more than {MAX_ITEMS} declarations and actions."
     ))
-    .with_code("BETA_DECLARATION_BOUND")
+    .with_code("mori::syntax::too_many_items")
     .with_label(span.label("the limit is reached here"))
     .with_help("Agreements are kept small so every check stays bounded.")
 }
@@ -240,31 +274,46 @@ pub fn too_many_fields(span: Span) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "This record or call has more than {MAX_FIELDS} fields."
     ))
-    .with_code("BETA_FIELD_BOUND")
+    .with_code("mori::syntax::too_many_fields")
     .with_label(span.label("the limit is reached here"))
 }
 
 pub fn too_many_type_arguments(span: Span) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("This type has more than {MAX_FIELDS} arguments."))
-        .with_code("BETA_FIELD_BOUND")
+        .with_code("mori::syntax::too_many_type_arguments")
         .with_label(span.label("these arguments"))
 }
 
 pub fn too_deep(span: Span) -> MoriDiagnostic {
     MoriDiagnostic::error(format!("This is nested more than {MAX_DEPTH} levels deep."))
-        .with_code("BETA_DEPTH_BOUND")
+        .with_code("mori::syntax::too_deep")
         .with_label(span.label("the limit is reached here"))
         .with_help("Move inner parts into their own declarations and refer to them by name.")
 }
 
 pub fn trailing_input(span: Span) -> MoriDiagnostic {
     MoriDiagnostic::error("I found more code after the agreement ended.")
-        .with_code("BETA_TRAILING_INPUT")
+        .with_code("mori::syntax::trailing_input")
         .with_label(span.label("the agreement already closed before this"))
         .with_help(
             "A file holds exactly one agreement. Move this inside the agreement's braces, \
              or remove it.",
         )
+}
+
+/// The source line containing `span`, with the span replaced by `replacement`
+/// and surrounding whitespace removed.
+fn corrected_line(source: &str, span: Span, replacement: &str) -> String {
+    let start = span.start as usize;
+    let end = span.end as usize;
+    let line_start = source[..start].rfind('\n').map_or(0, |i| i + 1);
+    let line_end = source[end..].find('\n').map_or(source.len(), |i| end + i);
+    let line = format!(
+        "{}{replacement}{}",
+        &source[line_start..start],
+        &source[end..line_end]
+    );
+    line.trim().to_owned()
 }
 
 fn describe_context(frame: Frame, tokens: &Tokens, source: &str) -> String {
@@ -298,33 +347,51 @@ fn describe_context(frame: Frame, tokens: &Tokens, source: &str) -> String {
     }
 }
 
-fn context_help(context: Context) -> String {
+/// A sentence introducing an example of `context`, and the example.
+fn context_example(context: Context) -> (&'static str, String) {
     match context {
-        Context::Profile => format!("Every file starts with `profile \"{PROFILE}\";`."),
-        Context::Agreement => {
-            "After the profile comes the agreement, like `agreement Invoice { ... }`.".to_owned()
-        }
-        Context::Body => "An agreement holds declarations like `const fee = 0.10 USD;` and \
-                          actions like `action pay uses invoice;`, then ends with `}`."
-            .to_owned(),
-        Context::Declaration => "A declaration looks like `const fee: Qty<USD> = 0.10 USD;`. \
-                                 The type after `:` is optional."
-            .to_owned(),
-        Context::Action => "An action looks like `action pay uses invoice;`.".to_owned(),
-        Context::Type => "Type arguments go between `<` and `>`, like `Qty<USD>`.".to_owned(),
-        Context::Paren => "Parentheses group an expression, like `(price + fee) * 2`.".to_owned(),
-        Context::Array => {
-            "A list looks like `[USD, GOLD]`. A trailing comma is allowed.".to_owned()
-        }
-        Context::Record => "A record looks like `{ domain: Preview, id: \"A\" }`. \
-                            A trailing comma is allowed."
-            .to_owned(),
-        Context::Call => {
-            "Arguments are named, like `rounds(domain: Preview, from: 0, to: 10)`.".to_owned()
-        }
-        Context::CallName => {
-            "A dotted call name continues with a name, like `amm.swap_exact_input(...)`.".to_owned()
-        }
+        Context::Profile => ("Every file starts with:", format!("profile \"{PROFILE}\";")),
+        Context::Agreement => (
+            "After the profile comes the agreement:",
+            "agreement Invoice {\n  ...\n}".to_owned(),
+        ),
+        Context::Body => (
+            "An agreement holds declarations and actions, then ends with `}`:",
+            "agreement Invoice {\n  const fee = 0.10 USD;\n  action pay uses invoice;\n}"
+                .to_owned(),
+        ),
+        Context::Declaration => (
+            "A declaration looks like this. The type after `:` is optional:",
+            "const fee: Qty<USD> = 0.10 USD;".to_owned(),
+        ),
+        Context::Action => (
+            "An action looks like this:",
+            "action pay uses invoice;".to_owned(),
+        ),
+        Context::Type => (
+            "Type arguments go between `<` and `>`:",
+            "Qty<USD>".to_owned(),
+        ),
+        Context::Paren => (
+            "Parentheses group an expression:",
+            "(price + fee) * 2".to_owned(),
+        ),
+        Context::Array => (
+            "A list looks like this. A trailing comma is allowed:",
+            "[USD, GOLD]".to_owned(),
+        ),
+        Context::Record => (
+            "A record looks like this. A trailing comma is allowed:",
+            "{ domain: Preview, id: \"A\" }".to_owned(),
+        ),
+        Context::Call => (
+            "Arguments are named:",
+            "rounds(domain: Preview, from: 0, to: 10)".to_owned(),
+        ),
+        Context::CallName => (
+            "A dotted call name continues with a name:",
+            "amm.swap_exact_input(...)".to_owned(),
+        ),
     }
 }
 
