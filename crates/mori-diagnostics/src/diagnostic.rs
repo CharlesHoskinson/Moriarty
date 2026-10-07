@@ -43,7 +43,7 @@ impl MoriDiagnostic {
         }
     }
 
-    /// Sets the stable diagnostic code, such as `BETA_SYNTAX`.
+    /// Sets the stable diagnostic code, such as `mori::syntax::missing_comma`.
     pub fn with_code(mut self, code: impl Into<Cow<'static, str>>) -> Self {
         self.inner.code = Some(code.into());
         self
@@ -58,6 +58,19 @@ impl MoriDiagnostic {
     pub fn with_help(mut self, help: impl Into<Cow<'static, str>>) -> Self {
         self.inner.help = Some(help.into());
         self
+    }
+
+    /// Sets a help that ends with example code on its own indented lines.
+    pub fn with_help_code(self, help: impl AsRef<str>, code: impl AsRef<str>) -> Self {
+        let mut text = format!("{}\n", help.as_ref());
+        for line in code.as_ref().lines() {
+            text.push('\n');
+            if !line.is_empty() {
+                text.push_str("    ");
+                text.push_str(line);
+            }
+        }
+        self.with_help(text)
     }
 
     /// Attaches the source the labels point into, producing a renderable report.

@@ -2,15 +2,16 @@
 source: crates/mori-parser/src/tests.rs
 description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Records {\n  const r = { name: \"usd\" id: \"dollar\" };\n}\n"
 ---
-BETA_SYNTAX
+mori::syntax::missing_comma
 
-  × I was partway through a record when I found the name `id`.
-   ╭─[test.mori:3:27]
+  × It looks like a comma is missing between two fields.
+   ╭─[test.mori:3:26]
  2 │ agreement Records {
  3 │   const r = { name: "usd" id: "dollar" };
-   ·                           ─┬
-   ·                            ╰── I expected `,` or `}` here
+   ·                          ▲
+   ·                          ╰── add a comma here
  4 │ }
    ╰────
-  help: A record looks like `{ domain: Preview, id: "A" }`. A trailing comma
-        is allowed.
+  help: Separate fields with commas:
+
+            const r = { name: "usd", id: "dollar" };

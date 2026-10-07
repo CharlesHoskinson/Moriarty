@@ -332,6 +332,42 @@ fn missing_comma_between_fields() {
 }
 
 #[test]
+fn missing_comma_between_list_items() {
+    assert_parse_error_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Lists {
+          const sizes = [1, 2 3];
+        }
+        "#
+    );
+}
+
+#[test]
+fn missing_comma_between_call_arguments() {
+    assert_parse_error_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Valid {
+          const window = rounds(domain: Preview from: 0, to: 10);
+        }
+        "#
+    );
+}
+
+#[test]
+fn unclosed_record() {
+    assert_parse_error_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Records {
+          const r = { name: "usd";
+        }
+        "#
+    );
+}
+
+#[test]
 fn unclosed_list() {
     assert_parse_error_snapshot!(
         r#"
@@ -442,7 +478,7 @@ fn depth_bound() {
     assert_eq!(error_code(&nested(MAX_DEPTH)), None);
     assert_eq!(
         error_code(&nested(MAX_DEPTH + 1)).as_deref(),
-        Some("BETA_DEPTH_BOUND")
+        Some("mori::syntax::too_deep")
     );
 }
 
@@ -455,7 +491,7 @@ fn field_bound() {
     assert_eq!(error_code(&record(MAX_FIELDS)), None);
     assert_eq!(
         error_code(&record(MAX_FIELDS + 1)).as_deref(),
-        Some("BETA_FIELD_BOUND")
+        Some("mori::syntax::too_many_fields")
     );
 }
 
@@ -468,48 +504,30 @@ fn item_bound() {
     assert_eq!(error_code(&items(MAX_ITEMS)), None);
     assert_eq!(
         error_code(&items(MAX_ITEMS + 1)).as_deref(),
-        Some("BETA_DECLARATION_BOUND")
+        Some("mori::syntax::too_many_items")
     );
 }
 
-// Parity
+// Fixtures
 
-/// Every example shipped with the TypeScript beta must parse, except the one
-/// that is deliberately invalid.
+/// Every program in `fixtures/` parses, except the deliberately invalid one.
 #[test]
-fn beta_examples_parse() {
-    let beta = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packages/moriarty-beta");
+fn fixtures_parse() {
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
     let mut checked = 0;
-    for directory in ["examples", "ai/examples"] {
-        visit(&beta.join(directory), &mut |path| {
-            let source = std::fs::read_to_string(path).expect("example is readable");
-            let result = parse(&source);
-            if path.ends_with("ai/examples/invalid.mori") {
-                assert_eq!(
-                    result
-                        .err()
-                        .and_then(|e| e.code().map(|c| c.to_string()))
-                        .as_deref(),
-                    Some("BETA_NUMBER"),
-                    "{}",
-                    path.display()
-                );
-            } else if let Err(error) = result {
-                panic!("{} failed to parse: {error}", path.display());
-            }
-            checked += 1;
-        });
-    }
-    assert!(checked >= 14, "only found {checked} examples");
-}
-
-fn visit(directory: &Path, f: &mut impl FnMut(&Path)) {
-    for entry in std::fs::read_dir(directory).expect("example directory exists") {
+    for entry in std::fs::read_dir(&fixtures).expect("fixtures directory exists") {
         let path = entry.expect("directory entry is readable").path();
-        if path.is_dir() {
-            visit(&path, f);
-        } else if path.extension().is_some_and(|ext| ext == "mori") {
-            f(&path);
+        let source = std::fs::read_to_string(&path).expect("fixture is readable");
+        let result = parse(&source);
+        if path.ends_with("invalid.mori") {
+            let code = result
+                .err()
+                .and_then(|error| error.code().map(|code| code.to_string()));
+            assert_eq!(code.as_deref(), Some("mori::lex::leading_zero"));
+        } else if let Err(error) = result {
+            panic!("{} failed to parse: {error}", path.display());
         }
+        checked += 1;
     }
+    assert_eq!(checked, 16);
 }

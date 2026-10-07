@@ -60,16 +60,16 @@ impl<'a> Parser<'a> {
 
         let profile = self.current();
         self.frames.push(Frame::new(Context::Profile, profile));
-        self.expect(TokenKind::KwProfile)?;
+        self.expect(TokenKind::KwProfile, "mori::syntax::missing_profile")?;
         self.profile_string()?;
-        self.expect(TokenKind::Semicolon)?;
+        self.expect(TokenKind::Semicolon, "mori::syntax::missing_semicolon")?;
         self.frames.pop();
 
         let agreement = self.current();
         self.frames.push(Frame::new(Context::Agreement, agreement));
-        self.expect(TokenKind::KwAgreement)?;
+        self.expect(TokenKind::KwAgreement, "mori::syntax::missing_agreement")?;
         let name = self.name()?;
-        self.expect(TokenKind::LBrace)?;
+        self.expect(TokenKind::LBrace, "mori::syntax::missing_opening_brace")?;
         self.frames.pop();
 
         self.frames.push(Frame::new(Context::Body, name));
@@ -96,7 +96,9 @@ impl<'a> Parser<'a> {
 
     fn profile_string(&mut self) -> Result<()> {
         if self.peek() != TokenKind::String {
-            return Err(self.unexpected("BETA_PROFILE", &[Expected::ProfileString]));
+            return Err(
+                self.unexpected("mori::syntax::expected_profile", &[Expected::ProfileString])
+            );
         }
         let token = self.bump();
         let span = self.span(token);
@@ -122,10 +124,12 @@ impl<'a> Parser<'a> {
                     let name = self.span(self.agreement_name());
                     diagnostics::unclosed_agreement(span, name, name.source_text(self.source))
                 }
-                TokenKind::Ident => {
-                    diagnostics::unknown_item(span, Some(span.source_text(self.source)))
-                }
-                _ => diagnostics::unknown_item(span, None),
+                TokenKind::Ident => diagnostics::unknown_item(
+                    span,
+                    Some(span.source_text(self.source)),
+                    self.source,
+                ),
+                _ => diagnostics::unknown_item(span, None, self.source),
             })
         }
     }
@@ -139,9 +143,9 @@ impl<'a> Parser<'a> {
             Some(_) => self.ty(1)?,
             None => 0,
         };
-        self.expect(TokenKind::Eq)?;
+        self.expect(TokenKind::Eq, "mori::syntax::missing_equals")?;
         let value = self.expression(1, 0)?;
-        self.expect(TokenKind::Semicolon)?;
+        self.expect(TokenKind::Semicolon, "mori::syntax::missing_semicolon")?;
         self.frames.pop();
         Ok(self.push(NodeTag::Declaration, kind, ty, value))
     }
@@ -151,9 +155,9 @@ impl<'a> Parser<'a> {
         let action = self.bump();
         self.frames.push(Frame::new(Context::Action, action));
         self.name()?;
-        self.expect(TokenKind::KwUses)?;
+        self.expect(TokenKind::KwUses, "mori::syntax::missing_uses")?;
         self.name()?;
-        self.expect(TokenKind::Semicolon)?;
+        self.expect(TokenKind::Semicolon, "mori::syntax::missing_semicolon")?;
         self.frames.pop();
         Ok(self.push(NodeTag::Action, action, 0, 0))
     }
@@ -167,9 +171,10 @@ impl<'a> Parser<'a> {
                 Err(diagnostics::keyword_as_name(
                     span,
                     span.source_text(self.source),
+                    self.source,
                 ))
             }
-            _ => Err(self.unexpected("BETA_IDENTIFIER", &[Expected::Name])),
+            _ => Err(self.unexpected("mori::syntax::expected_name", &[Expected::Name])),
         }
     }
 
@@ -177,7 +182,7 @@ impl<'a> Parser<'a> {
     fn ty(&mut self, depth: usize) -> Result<u16> {
         self.check_depth(depth)?;
         if !self.peek().is_word() {
-            return Err(self.unexpected("BETA_ANNOTATION", &[Expected::Type]));
+            return Err(self.unexpected("mori::syntax::expected_type", &[Expected::Type]));
         }
         let name = self.bump();
         let start = self.scratch.len();
@@ -193,7 +198,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
             }
-            self.expect(TokenKind::Gt)?;
+            self.expect(TokenKind::Gt, "mori::syntax::unclosed_type_arguments")?;
             self.frames.pop();
         }
         let (lhs, rhs) = self.finish_list(start);
@@ -232,7 +237,7 @@ impl<'a> Parser<'a> {
                 let open = self.bump();
                 self.frames.push(Frame::new(Context::Paren, open));
                 let inner = self.expression(depth + 1, 0)?;
-                self.expect(TokenKind::RParen)?;
+                self.expect(TokenKind::RParen, "mori::syntax::unclosed_parenthesis")?;
                 self.frames.pop();
                 Ok(self.push(NodeTag::Paren, open, inner, 0))
             }
@@ -245,7 +250,7 @@ impl<'a> Parser<'a> {
                 Ok(self.push(NodeTag::Record, open, lhs, rhs))
             }
             _ if kind.is_word() => self.name_or_call(depth),
-            _ => Err(self.unexpected("BETA_SYNTAX", &[Expected::Expression])),
+            _ => Err(self.unexpected("mori::syntax::expected_value", &[Expected::Expression])),
         }
     }
 
@@ -266,7 +271,7 @@ impl<'a> Parser<'a> {
             return Ok(self.push(NodeTag::Quantity, number, 0, 0));
         }
         if number_span.source_text(self.source).contains('.') {
-            return Err(diagnostics::decimal_without_asset(number_span));
+            return Err(diagnostics::decimal_without_asset(number_span, self.source));
         }
         Ok(self.push(NodeTag::Number, number, 0, 0))
     }
@@ -283,7 +288,13 @@ impl<'a> Parser<'a> {
                 if self.eat(TokenKind::RBracket).is_some() {
                     break;
                 }
-                self.expect_one_of(&[TokenKind::Comma, TokenKind::RBracket])?;
+                if self.starts_expression() {
+                    return Err(self.missing_comma("items"));
+                }
+                self.expect_one_of(
+                    &[TokenKind::Comma, TokenKind::RBracket],
+                    "mori::syntax::unclosed_list",
+                )?;
                 if self.eat(TokenKind::RBracket).is_some() {
                     break;
                 }
@@ -301,7 +312,10 @@ impl<'a> Parser<'a> {
         while self.eat(TokenKind::Dot).is_some() {
             if !self.peek().is_word() {
                 self.frames.push(Frame::new(Context::CallName, first));
-                return Err(self.unexpected("BETA_SYNTAX", &[Expected::NameSegment]));
+                return Err(self.unexpected(
+                    "mori::syntax::incomplete_call_name",
+                    &[Expected::NameSegment],
+                ));
             }
             last = self.bump();
         }
@@ -316,6 +330,7 @@ impl<'a> Parser<'a> {
             return Err(diagnostics::dotted_reference(
                 span,
                 span.source_text(self.source),
+                self.source,
             ));
         }
         Ok(self.push(NodeTag::Reference, first, 0, 0))
@@ -330,18 +345,30 @@ impl<'a> Parser<'a> {
                     return Err(diagnostics::too_many_fields(self.current_span()));
                 }
                 if !self.peek().is_word() {
-                    return Err(self.unexpected("BETA_SYNTAX", &[Expected::FieldName]));
+                    return Err(self
+                        .unexpected("mori::syntax::expected_field_name", &[Expected::FieldName]));
                 }
                 let key = self.bump();
                 self.check_duplicate_field(start, key)?;
-                self.expect(TokenKind::Colon)?;
+                self.expect(TokenKind::Colon, "mori::syntax::missing_colon")?;
                 let value = self.expression(depth + 1, 0)?;
                 let field = self.push(NodeTag::Field, key, value, 0);
                 self.scratch.push(field);
                 if self.eat(close).is_some() {
                     break;
                 }
-                self.expect_one_of(&[TokenKind::Comma, close])?;
+                if self.peek().is_word() && self.peek_at(1) == TokenKind::Colon {
+                    let between = match close {
+                        TokenKind::RBrace => "fields",
+                        _ => "arguments",
+                    };
+                    return Err(self.missing_comma(between));
+                }
+                let unclosed = match close {
+                    TokenKind::RBrace => "mori::syntax::unclosed_record",
+                    _ => "mori::syntax::unclosed_call",
+                };
+                self.expect_one_of(&[TokenKind::Comma, close], unclosed)?;
                 if self.eat(close).is_some() {
                     break;
                 }
@@ -361,6 +388,27 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(())
+    }
+
+    /// Whether the current token can begin an expression, so a list item
+    /// was probably meant to follow.
+    fn starts_expression(&self) -> bool {
+        let kind = self.peek();
+        kind.is_word()
+            || matches!(
+                kind,
+                TokenKind::String
+                    | TokenKind::Number
+                    | TokenKind::LParen
+                    | TokenKind::LBracket
+                    | TokenKind::LBrace
+            )
+    }
+
+    /// Another item follows without a separating comma.
+    fn missing_comma(&self, between: &str) -> MoriDiagnostic {
+        let previous = self.span(TokenIdx::new(self.pos - 1));
+        diagnostics::missing_comma(Span::empty(previous.end), between, self.source)
     }
 
     fn check_depth(&self, depth: usize) -> Result<()> {
@@ -390,6 +438,12 @@ impl<'a> Parser<'a> {
         self.tokens.kind(self.current())
     }
 
+    /// The kind `ahead` tokens after the current one, or end of file.
+    fn peek_at(&self, ahead: usize) -> TokenKind {
+        let index = (self.pos + ahead).min(self.tokens.len() - 1);
+        self.tokens.kind(TokenIdx::new(index))
+    }
+
     fn span(&self, token: TokenIdx) -> Span {
         self.tokens.span(token, self.source)
     }
@@ -410,18 +464,20 @@ impl<'a> Parser<'a> {
         (self.peek() == kind).then(|| self.bump())
     }
 
-    fn expect(&mut self, kind: TokenKind) -> Result<TokenIdx> {
-        self.expect_one_of(&[kind])
+    /// Consumes `kind`, or reports `code`.
+    fn expect(&mut self, kind: TokenKind, code: &'static str) -> Result<TokenIdx> {
+        self.expect_one_of(&[kind], code)
     }
 
-    /// Consumes `expected[0]`; the rest only describe what else was valid here.
-    fn expect_one_of(&mut self, expected: &[TokenKind]) -> Result<TokenIdx> {
+    /// Consumes `expected[0]`, or reports `code`. The other kinds only
+    /// describe what else was valid here.
+    fn expect_one_of(&mut self, expected: &[TokenKind], code: &'static str) -> Result<TokenIdx> {
         match self.eat(expected[0]) {
             Some(token) => Ok(token),
             None => {
                 let expected: Vec<Expected> =
                     expected.iter().map(|&k| Expected::Token(k)).collect();
-                Err(self.unexpected("BETA_SYNTAX", &expected))
+                Err(self.unexpected(code, &expected))
             }
         }
     }
