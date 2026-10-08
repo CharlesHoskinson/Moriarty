@@ -1,0 +1,55 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Transfer {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 0, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 0, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  account carol = { domain: Preview, id: \"carol\" };\n  intent pay = {\n    domain: Preview, asset: USD, signer: bob, key: \"k\", nonce: \"n\", pre_head: \"h\",\n    valid: rounds(domain: Preview, from: 0, to: 10),\n    gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,\n    operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),\n    source_hash: \"s\", policy_digest: \"p\", failure: SuccessOnly,\n    observations: [], disclosures: [], retained_effects: [], retained_duties: [],\n    delegation: None, recovery: None,\n  };\n}\n"
+---
+mori::check::wrong_signer
+
+  × The signer must be the `from` account, `alice`, but it is `bob`.
+    ╭─[test.mori:10:42]
+  9 │   intent pay = {
+ 10 │     domain: Preview, asset: USD, signer: bob, key: "k", nonce: "n", pre_head: "h",
+    ·                                          ─┬─
+    ·                                           ╰── the signer
+ 11 │     valid: rounds(domain: Preview, from: 0, to: 10),
+ 12 │     gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),
+    ·                               ──┬──
+    ·                                 ╰── the `from` account
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────
+  help: Only the owner of the funds can sign for them.
+
+mori::check::too_large_for_s0
+
+  × `gross_cap` is too large for an operation that runs locally.
+    ╭─[test.mori:12:16]
+ 11 │     valid: rounds(domain: Preview, from: 0, to: 10),
+ 12 │     gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,
+    ·                ─────────────────────┬─────────────────────
+    ·                                     ╰── more than 2^127-1
+ 13 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),
+    ╰────
+
+mori::check::wrong_asset
+
+  × `value` must be a `USD` amount because it must be in the intent's `asset`,
+  │ but it is a `GOLD` amount.
+    ╭─[test.mori:13:69]
+ 12 │     gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),
+    ·                                                                     ───┬──
+    ·                                                                        ╰── a `GOLD` amount
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────
+
+mori::check::wrong_asset
+
+  × `fee` must be a `USD` amount because it must be in the intent's `asset`,
+  │ but it is a `GOLD` amount.
+    ╭─[test.mori:13:82]
+ 12 │     gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),
+    ·                                                                                  ───┬──
+    ·                                                                                     ╰── a `GOLD` amount
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────

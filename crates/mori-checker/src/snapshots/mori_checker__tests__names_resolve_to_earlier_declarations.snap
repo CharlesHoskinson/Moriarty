@@ -1,6 +1,6 @@
 ---
 source: crates/mori-checker/src/tests.rs
-description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  account carol = { domain: Preview, id: \"carol\" };\n  const price = 10.00 USD;\n  const total = price + 0.10 USD;\n  intent invoice = {\n    operation: transfer(from: alice, to: bob, fee_to: carol, value: total, fee: 0.10 USD),\n  };\n  action pay uses invoice;\n}\n"
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  account carol = { domain: Preview, id: \"carol\" };\n  const price = 10.00 USD;\n  const total = price + 0.10 USD;\n  intent invoice = {\n    domain: Preview, asset: USD, signer: alice, key: \"k\", nonce: \"n\", pre_head: \"h\",\n    valid: rounds(domain: Preview, from: 0, to: 10),\n    gross_cap: total + 0.10 USD, fee_cap: 0.10 USD, net_floor: total,\n    operation: transfer(from: alice, to: bob, fee_to: carol, value: total, fee: 0.10 USD),\n    source_hash: \"s\", policy_digest: \"p\", failure: SuccessOnly,\n    observations: [], disclosures: [], retained_effects: [], retained_duties: [],\n    delegation: None, recovery: None,\n  };\n  action pay uses invoice;\n}\n"
 ---
 Preview                      -> domain Preview
 Preview                      -> domain Preview
@@ -9,6 +9,14 @@ Preview                      -> domain Preview
 10.00 USD                    -> asset USD
 price                        -> const price
 0.10 USD                     -> asset USD
+Preview                      -> domain Preview
+USD                          -> asset USD
+alice                        -> account alice
+Preview                      -> domain Preview
+total                        -> const total
+0.10 USD                     -> asset USD
+0.10 USD                     -> asset USD
+total                        -> const total
 alice                        -> account alice
 bob                          -> account bob
 carol                        -> account carol

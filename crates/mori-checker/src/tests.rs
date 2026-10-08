@@ -187,7 +187,13 @@ fn names_resolve_to_earlier_declarations() {
           const price = 10.00 USD;
           const total = price + 0.10 USD;
           intent invoice = {
+            domain: Preview, asset: USD, signer: alice, key: "k", nonce: "n", pre_head: "h",
+            valid: rounds(domain: Preview, from: 0, to: 10),
+            gross_cap: total + 0.10 USD, fee_cap: 0.10 USD, net_floor: total,
             operation: transfer(from: alice, to: bob, fee_to: carol, value: total, fee: 0.10 USD),
+            source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+            observations: [], disclosures: [], retained_effects: [], retained_duties: [],
+            delegation: None, recovery: None,
           };
           action pay uses invoice;
         }
@@ -295,7 +301,9 @@ fn action_named_like_a_declaration() {
         r#"
         profile "moriarty-beta/1";
         agreement Invoice {
-          intent pay = {};
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          observation price = { id: "price", domain: Preview };
+          intent pay = { operation: oracle.select(observation: price) };
           action pay uses pay;
         }
         "#
@@ -308,7 +316,9 @@ fn action_used_as_value() {
         r#"
         profile "moriarty-beta/1";
         agreement Invoice {
-          intent invoice = {};
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          observation price = { id: "price", domain: Preview };
+          intent invoice = { operation: oracle.select(observation: price) };
           action pay uses invoice;
           const copy = pay;
         }
@@ -345,7 +355,9 @@ fn reserved_action_name() {
         r#"
         profile "moriarty-beta/1";
         agreement Invoice {
-          intent invoice = {};
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          observation price = { id: "price", domain: Preview };
+          intent invoice = { operation: oracle.select(observation: price) };
           action amount uses invoice;
         }
         "#
@@ -836,4 +848,152 @@ fn family_arguments_share_one_domain() {
         }
         "#
     );
+}
+
+// Intents
+
+#[test]
+fn s0_intent_header_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Header {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          account bob = { domain: Preview, id: "bob" };
+          account carol = { domain: Preview, id: "carol" };
+          intent pay = {
+            domain: Preview, asset: USD, signer: alice, key: "k", nonce: "", pre_head: "h",
+            valid: [0, 10],
+            gross_cap: 1 GOLD, fee_cap: 0 USD, net_floor: 1 USD,
+            operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 USD, fee: 0 USD),
+            source_hash: "s", policy_digest: "p", failure: None,
+            observations: ["price"], disclosures: [], retained_effects: [], retained_duties: [],
+            delegation: SuccessOnly, recovery: None,
+          };
+        }
+        "#
+    );
+}
+
+#[test]
+fn s0_transfer_must_match_the_intent() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Transfer {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          asset USD = { domain: Preview, id: "usd", scale: 0, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 0, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          account bob = { domain: Preview, id: "bob" };
+          account carol = { domain: Preview, id: "carol" };
+          intent pay = {
+            domain: Preview, asset: USD, signer: bob, key: "k", nonce: "n", pre_head: "h",
+            valid: rounds(domain: Preview, from: 0, to: 10),
+            gross_cap: 170141183460469231731687303715884105728 USD, fee_cap: 0 USD, net_floor: 1 USD,
+            operation: transfer(from: alice, to: bob, fee_to: carol, value: 1 GOLD, fee: 0 GOLD),
+            source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+            observations: [], disclosures: [], retained_effects: [], retained_duties: [],
+            delegation: None, recovery: None,
+          };
+        }
+        "#
+    );
+}
+
+#[test]
+fn s0_repay_must_match_the_intent() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Repay {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          account bob = { domain: Preview, id: "bob" };
+          obligation loan = { domain: Preview, id: "loan", asset: GOLD };
+          intent repayment = {
+            domain: Preview, asset: USD, signer: bob, key: "k", nonce: "n", pre_head: "h",
+            valid: rounds(domain: Preview, from: 0, to: 10),
+            gross_cap: 1 USD, fee_cap: 0 USD, net_floor: 1 USD,
+            operation: repay(obligation: loan, payer: alice, amount: 1 GOLD),
+            source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+            observations: [], disclosures: [], retained_effects: [], retained_duties: [],
+            delegation: None, recovery: None,
+          };
+        }
+        "#
+    );
+}
+
+#[test]
+fn intent_operation_errors() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Operations {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          intent none = { nonce: "n" };
+          intent text = { operation: "transfer" };
+          intent window = { operation: rounds(domain: Preview, from: 0, to: 1) };
+        }
+        "#
+    );
+}
+
+#[test]
+fn family_intent_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Family {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          pool amm = { domain: Preview, id: "amm", assets: [USD, GOLD] };
+          intent swap = {
+            operation: amm.swap_exact_input(
+              pool: amm, owner: alice, input: 10 USD, output_asset: GOLD,
+              net_floor: 1 GOLD, fee_cap: 0.1 USD,
+            ),
+            asset: USD,
+            net_floor: 1 USD,
+            valid: [0, 10, 20],
+          };
+          intent out = {
+            operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: "c"),
+            asset: GOLD,
+            domain: Other,
+          };
+        }
+        "#
+    );
+}
+
+/// `transfer` and `repay` intents run locally; family intents do not.
+#[test]
+fn actions_record_their_support() {
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures");
+    for (file, expected) in [
+        ("lesson-transfer.mori", crate::Support::LocalS0),
+        ("repayment.mori", crate::Support::LocalS0),
+        ("amm.mori", crate::Support::SpecifiedOnly),
+    ] {
+        let source = std::fs::read_to_string(fixtures.join(file)).expect("fixture is readable");
+        let ast = mori_parser::parse(&source).expect("fixture parses");
+        let result = check(&ast);
+        assert!(result.is_accepted(), "{file} is accepted");
+        let actions = &result.checked.actions;
+        assert!(!actions.is_empty(), "{file} has actions");
+        for support in actions.support() {
+            assert_eq!(*support, Some(expected), "{file}");
+        }
+    }
 }

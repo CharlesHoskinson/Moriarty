@@ -1,0 +1,45 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Operations {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  intent none = { nonce: \"n\" };\n  intent text = { operation: \"transfer\" };\n  intent window = { operation: rounds(domain: Preview, from: 0, to: 1) };\n}\n"
+---
+mori::check::intent_without_operation
+
+  × This intent has no `operation`.
+   ╭─[test.mori:4:17]
+ 3 │   domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+ 4 │   intent none = { nonce: "n" };
+   ·                 ───────┬──────
+   ·                        ╰── needs an `operation`
+ 5 │   intent text = { operation: "transfer" };
+   ╰────
+  help: An intent authorizes one operation, written as a call:
+
+            operation: transfer(
+              from: alice, to: bob, fee_to: carol,
+              value: 10 USD, fee: 0 USD,
+            ),
+
+mori::check::operation_not_a_call
+
+  × An intent's `operation` must be a call, but this is a string.
+   ╭─[test.mori:5:30]
+ 4 │   intent none = { nonce: "n" };
+ 5 │   intent text = { operation: "transfer" };
+   ·                              ─────┬────
+   ·                                   ╰── this is a string
+ 6 │   intent window = { operation: rounds(domain: Preview, from: 0, to: 1) };
+   ╰────
+  help: Write the operation as a call, like `transfer(...)` or `repay(...)`.
+
+mori::check::unsupported_operation
+
+  × `rounds` cannot be an intent's operation.
+   ╭─[test.mori:6:32]
+ 5 │   intent text = { operation: "transfer" };
+ 6 │   intent window = { operation: rounds(domain: Preview, from: 0, to: 1) };
+   ·                                ───────────────────┬───────────────────
+   ·                                                   ╰── not an operation
+ 7 │ }
+   ╰────
+  help: An intent runs `transfer` or `repay`, or a family call such as
+        `amm.swap_exact_input`.

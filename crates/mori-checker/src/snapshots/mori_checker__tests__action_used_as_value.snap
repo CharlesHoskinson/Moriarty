@@ -1,19 +1,19 @@
 ---
 source: crates/mori-checker/src/tests.rs
-description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  intent invoice = {};\n  action pay uses invoice;\n  const copy = pay;\n}\n"
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent invoice = { operation: oracle.select(observation: price) };\n  action pay uses invoice;\n  const copy = pay;\n}\n"
 ---
 mori::check::action_is_not_a_value
 
   × `pay` is an action, so it cannot be used as a value.
-   ╭─[test.mori:5:16]
- 3 │   intent invoice = {};
- 4 │   action pay uses invoice;
+   ╭─[test.mori:7:16]
+ 5 │   intent invoice = { operation: oracle.select(observation: price) };
+ 6 │   action pay uses invoice;
    ·          ─┬─
    ·           ╰── declared as an action here
- 5 │   const copy = pay;
+ 7 │   const copy = pay;
    ·                ─┬─
    ·                 ╰── used as a value here
- 6 │ }
+ 8 │ }
    ╰────
   help: Only declarations can be used in expressions. Refer to the intent the
         action uses instead.

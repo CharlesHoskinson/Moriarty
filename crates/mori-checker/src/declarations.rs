@@ -24,6 +24,9 @@ pub enum FieldRole {
     Asset,
     Domain,
     Account,
+    Policy,
+    /// A string, or a list of strings.
+    StringOrStringList,
     /// A grant, or a string describing the authority.
     GrantOrString,
     /// A quantity, or a string describing the floor.
@@ -46,6 +49,8 @@ impl FieldRole {
             Self::Asset => "an asset",
             Self::Domain => "a domain",
             Self::Account => "an account",
+            Self::Policy => "a policy",
+            Self::StringOrStringList => "a string or a list of strings",
             Self::GrantOrString => "a grant or a string",
             Self::QuantityOrString => "an amount or a string",
             Self::StringList => "a list of strings",
@@ -64,6 +69,8 @@ impl FieldRole {
             Self::Asset => "asset",
             Self::Domain => "domain",
             Self::Account => "account",
+            Self::Policy => "policy",
+            Self::StringOrStringList => "string or [string]",
             Self::GrantOrString => "grant or string",
             Self::QuantityOrString => "amount or string",
             Self::StringList => "[string]",
@@ -106,7 +113,7 @@ impl Rules {
     }
 }
 
-const fn required(name: &'static str, role: FieldRole) -> Field {
+pub(crate) const fn required(name: &'static str, role: FieldRole) -> Field {
     Field {
         name,
         required: true,
@@ -114,7 +121,7 @@ const fn required(name: &'static str, role: FieldRole) -> Field {
     }
 }
 
-const fn optional(name: &'static str, role: FieldRole) -> Field {
+pub(crate) const fn optional(name: &'static str, role: FieldRole) -> Field {
     Field {
         name,
         required: false,
@@ -304,6 +311,19 @@ impl<'a> Checker<'a> {
             return true;
         };
         let fields = self.field_nodes(value_node);
+        // Relations only make sense once every field has the right kind.
+        self.check_fields(rules, entity, value_node, &fields)
+            && self.check_relations(kind, entity, &fields, value_node)
+    }
+
+    /// Reports unknown and missing fields, and fields of the wrong kind.
+    pub(crate) fn check_fields(
+        &mut self,
+        rules: &Rules,
+        entity: ValueIdx,
+        value_node: NodeIdx,
+        fields: &[NodeIdx],
+    ) -> bool {
         let keyword = self
             .ast
             .token_text(self.ast.main_token(self.values.node(entity)));
@@ -313,7 +333,7 @@ impl<'a> Checker<'a> {
             let name = self.ast.token_text(TokenIdx::new(usize::from(key)));
             if rules.field(name).is_none() {
                 let suggestion = suggest(name, rules.fields.iter().map(|field| field.name));
-                let span = self.key_span(&fields, name, value_node);
+                let span = self.key_span(fields, name, value_node);
                 self.report(diagnostics::unknown_field(
                     span,
                     keyword,
@@ -338,13 +358,13 @@ impl<'a> Checker<'a> {
                 }
                 continue;
             };
-            let span = self.value_span(&fields, field.name, value_node);
+            let span = self.value_span(fields, field.name, value_node);
             if !self.has_field_role(value, field.role) {
                 let diagnostic = match self.bad_item(value, field.role) {
                     // Point at the first item of the wrong kind.
                     Some((index, item)) => {
                         let count = self.values.items(value).count();
-                        let item_span = self.item_spans(&fields, field.name, count, span)[index];
+                        let item_span = self.item_spans(fields, field.name, count, span)[index];
                         let description = self.describe(item);
                         diagnostics::wrong_list_item(
                             item_span,
@@ -369,8 +389,7 @@ impl<'a> Checker<'a> {
                 ok = false;
             }
         }
-        // Relations only make sense once every field has the right kind.
-        ok && self.check_relations(kind, entity, &fields, value_node)
+        ok
     }
 
     fn check_relations(
@@ -502,7 +521,7 @@ impl<'a> Checker<'a> {
     /// For a list role given a list, the first item of the wrong kind.
     fn bad_item(&self, value: ValueIdx, role: FieldRole) -> Option<(usize, ValueIdx)> {
         let kind = match role {
-            FieldRole::StringList => None,
+            FieldRole::StringList | FieldRole::StringOrStringList => None,
             FieldRole::AccountList => Some(TokenKind::KwAccount),
             FieldRole::StageList => Some(TokenKind::KwStage),
             FieldRole::AssetList => Some(TokenKind::KwAsset),
@@ -523,7 +542,7 @@ impl<'a> Checker<'a> {
             })
     }
 
-    fn has_field_role(&self, value: ValueIdx, role: FieldRole) -> bool {
+    pub(crate) fn has_field_role(&self, value: ValueIdx, role: FieldRole) -> bool {
         let tag = self.values.tag(value);
         let is_entity = |value: ValueIdx, kind: TokenKind| {
             self.values.tag(value) == ValueTag::Entity
@@ -543,6 +562,8 @@ impl<'a> Checker<'a> {
             FieldRole::Asset => is_entity(value, TokenKind::KwAsset),
             FieldRole::Domain => is_entity(value, TokenKind::KwDomain),
             FieldRole::Account => is_entity(value, TokenKind::KwAccount),
+            FieldRole::Policy => is_entity(value, TokenKind::KwPolicy),
+            FieldRole::StringOrStringList => tag == ValueTag::String || all(None, ValueTag::String),
             FieldRole::GrantOrString => {
                 tag == ValueTag::String || is_entity(value, TokenKind::KwGrant)
             }
@@ -557,7 +578,7 @@ impl<'a> Checker<'a> {
 
     /// The field nodes of a declaration's value, when it is written as a
     /// record literal.
-    fn field_nodes(&self, value_node: NodeIdx) -> Vec<NodeIdx> {
+    pub(crate) fn field_nodes(&self, value_node: NodeIdx) -> Vec<NodeIdx> {
         match self.ast.tag(value_node) {
             NodeTag::Record => self.ast.list(value_node).collect(),
             _ => Vec::new(),
@@ -573,7 +594,7 @@ impl<'a> Checker<'a> {
 
     /// The span of field `name`'s key, or the whole value when it is not a
     /// record literal.
-    fn key_span(&self, fields: &[NodeIdx], name: &str, value_node: NodeIdx) -> Span {
+    pub(crate) fn key_span(&self, fields: &[NodeIdx], name: &str, value_node: NodeIdx) -> Span {
         match self.find_field(fields, name) {
             Some(field) => self.token_span(self.ast.main_token(field)),
             None => self.ast.span(value_node),
@@ -582,7 +603,7 @@ impl<'a> Checker<'a> {
 
     /// The span of field `name`'s value, or the whole value when it is not a
     /// record literal.
-    fn value_span(&self, fields: &[NodeIdx], name: &str, value_node: NodeIdx) -> Span {
+    pub(crate) fn value_span(&self, fields: &[NodeIdx], name: &str, value_node: NodeIdx) -> Span {
         match self.find_field(fields, name) {
             Some(field) => self.ast.span(self.operand(field, 0)),
             None => self.ast.span(value_node),
