@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, expand, fmt, init, inspect, intent, lsp, mcp, simulate, test, verify_intent,
+    check, expand, format, init, inspect, intent, lsp, mcp, simulate, test, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -97,8 +97,9 @@ pub enum Command {
     Init(init::Args),
     /// Check syntax, names, types and action support
     Check(check::Args),
-    /// Format a source file
-    Fmt(fmt::Args),
+    /// Format source files in place
+    #[command(visible_alias = "fmt")]
+    Format(format::Args),
     /// Show identity claims, operative bounds and open premises
     Inspect(inspect::Args),
     /// Expand an action into Source/6 with an input origin map
