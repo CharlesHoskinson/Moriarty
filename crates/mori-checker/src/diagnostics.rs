@@ -513,3 +513,94 @@ pub fn layout(open: &str, items: &[String], close: &str) -> String {
     let body: Vec<String> = items.iter().map(|item| format!("  {item},")).collect();
     format!("{open}\n{}\n{close}", body.join("\n"))
 }
+
+pub fn inverted_rounds(from: Span, start: u128, to: Span, end: u128) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "This round window ends before it starts: `from` is {start} but `to` is {end}."
+    ))
+    .with_code("mori::check::inverted_rounds")
+    .with_label(from.label("starts here"))
+    .with_label(to.primary_label("ends earlier"))
+    .with_help("`from` must be less than or equal to `to`.")
+}
+
+pub fn same_account(
+    earlier: Span,
+    earlier_role: &str,
+    span: Span,
+    role: &str,
+    account: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "`{earlier_role}` and `{role}` are the same account, `{account}`."
+    ))
+    .with_code("mori::check::same_account")
+    .with_label(earlier.label(format!("`{earlier_role}`")))
+    .with_label(span.primary_label(format!("`{role}` is the same account")))
+    .with_help(
+        "A transfer needs three different accounts. Even when the fee is zero, `fee_to` \
+         must be its own account.",
+    )
+}
+
+pub fn different_domains(
+    span: Span,
+    role: &str,
+    domain: &str,
+    first: Span,
+    first_role: &str,
+    expected: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "`{role}` is on `{domain}`, but `{first_role}` is on `{expected}`."
+    ))
+    .with_code("mori::check::different_domains")
+    .with_label(first.label(format!("on `{expected}`")))
+    .with_label(span.primary_label(format!("on `{domain}`")))
+    .with_help("Everything an operation touches must be on one domain.")
+}
+
+pub fn wrong_asset(
+    span: Span,
+    what: &str,
+    expected: &str,
+    actual: &str,
+    because: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "{what} must be a `{expected}` amount because {because}, but it is a `{actual}` amount."
+    ))
+    .with_code("mori::check::wrong_asset")
+    .with_label(span.primary_label(format!("a `{actual}` amount")))
+}
+
+pub fn not_in_pool(span: Span, asset: &str, pool: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "`{asset}` is not one of the pool `{pool}`'s assets."
+    ))
+    .with_code("mori::check::not_in_pool")
+    .with_label(span.primary_label("not in the pool"))
+    .with_help("A pool only trades the assets listed in its `assets` field.")
+}
+
+pub fn instrument_missing_field(
+    span: Span,
+    call: &str,
+    instrument: &str,
+    field: &str,
+) -> MoriDiagnostic {
+    let article = if field.starts_with(['a', 'e', 'i', 'o', 'u']) {
+        "an"
+    } else {
+        "a"
+    };
+    MoriDiagnostic::error(format!(
+        "`{call}` needs the instrument `{instrument}` to have {article} `{field}` field."
+    ))
+    .with_code("mori::check::instrument_missing_field")
+    .with_label(span.primary_label(format!("`{instrument}` has no `{field}`")))
+    .with_help_code(
+        format!("Add `{field}` to the instrument's declaration, naming an asset:"),
+        format!("{field}: USD,"),
+    )
+}

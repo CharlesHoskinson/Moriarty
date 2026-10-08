@@ -221,7 +221,9 @@ impl<'a> Checker<'a> {
         let value = self
             .values
             .push(ValueTag::Call, node, raw(self.ast.main_token(node)), b, c);
-        if !self.check_arguments(call, node, value) {
+        if !self.check_arguments(call, node, value)
+            || !self.check_relations_of_call(call, node, value)
+        {
             return None;
         }
         match call.name {
