@@ -11,6 +11,7 @@ mod declarations;
 mod diagnostics;
 mod eval;
 mod names;
+mod relations;
 mod reserved;
 mod types;
 mod values;
