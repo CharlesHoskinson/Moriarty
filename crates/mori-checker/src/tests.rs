@@ -611,3 +611,87 @@ fn independent_value_errors_in_one_list() {
         "#
     );
 }
+
+// Declaration rules
+
+#[test]
+fn field_errors() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Fields {
+          domain Preview = { id: "preview", chain: "midnight" };
+          domain Main = { id: "main", chain: "midnight", network: "main", netwrok: "x" };
+          account alice = { domain: "Preview", id: "alice" };
+        }
+        "#
+    );
+}
+
+#[test]
+fn ids_must_be_unique_and_valid() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Ids {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Mainnet = { id: "main", chain: "midnight", network: "main" };
+          account alice = { domain: Preview, id: "alice" };
+          account alice2 = { domain: Preview, id: "alice" };
+          account alice_main = { domain: Mainnet, id: "alice" };
+          account bad = { domain: Preview, id: "not-valid" };
+          account reserved = { domain: Preview, id: "transfer" };
+        }
+        "#
+    );
+}
+
+#[test]
+fn assets_must_share_the_domain() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Domains {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Other, id: "gold", scale: 3, representation: "native" };
+          obligation loan = { domain: Preview, id: "loan", asset: GOLD };
+          share_class shares = { domain: Preview, id: "shares", backing: GOLD };
+        }
+        "#
+    );
+}
+
+#[test]
+fn pool_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Pools {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Other, id: "gold", scale: 3, representation: "native" };
+          pool empty = { domain: Preview, id: "empty", assets: [] };
+          pool mixed = { domain: Preview, id: "mixed", assets: [USD, GOLD, USD] };
+        }
+        "#
+    );
+}
+
+#[test]
+fn list_and_choice_fields() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Lists {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          account alice = { domain: Preview, id: "alice" };
+          grant g = { signers: [alice, "bob"] };
+          stage s = { domain: Preview, reads: "balance", authority: 5 };
+          episode e = { id: "e", stages: [g] };
+        }
+        "#
+    );
+}
