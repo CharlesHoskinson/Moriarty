@@ -1,0 +1,85 @@
+---
+source: crates/mori/src/json.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  const price = 10;\n  const price = pirce;\n}\n"
+---
+{
+  "status": "rejected",
+  "file": "test.mori",
+  "source_hash": "4ad933a610329747a6cfb0258a5040e583880d28705eb355d4dd4374c57eba6b",
+  "agreement": {
+    "name": "Invoice",
+    "span": {
+      "start": 37,
+      "end": 44
+    }
+  },
+  "declarations": [
+    {
+      "kind": "const",
+      "name": "price",
+      "span": {
+        "start": 49,
+        "end": 66
+      },
+      "name_span": {
+        "start": 55,
+        "end": 60
+      }
+    },
+    {
+      "kind": "const",
+      "name": "price",
+      "span": {
+        "start": 69,
+        "end": 89
+      },
+      "name_span": {
+        "start": 75,
+        "end": 80
+      }
+    }
+  ],
+  "actions": [],
+  "diagnostics": [
+    {
+      "code": "mori::check::duplicate_name",
+      "severity": "error",
+      "message": "`price` is declared twice.",
+      "help": "Each declaration and action in an agreement needs its own name.",
+      "labels": [
+        {
+          "span": {
+            "start": 55,
+            "end": 60
+          },
+          "text": "first declared here",
+          "primary": false
+        },
+        {
+          "span": {
+            "start": 75,
+            "end": 80
+          },
+          "text": "declared again here",
+          "primary": true
+        }
+      ]
+    },
+    {
+      "code": "mori::check::unknown_name",
+      "severity": "error",
+      "message": "I cannot find a declaration named `pirce`.",
+      "help": "Did you mean `price`?\n\n    const price = price;",
+      "labels": [
+        {
+          "span": {
+            "start": 83,
+            "end": 88
+          },
+          "text": "not declared above",
+          "primary": true
+        }
+      ]
+    }
+  ]
+}
