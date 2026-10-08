@@ -4,7 +4,7 @@ use std::path::Path;
 use mori_ast::{NodeIdx, NodeTag};
 use mori_diagnostics::render::render_plain;
 
-use mori_lexer::{TokenIdx, decode_string};
+use mori_lexer::{TokenIdx, TokenKind, decode_string};
 
 use crate::calls::CALLS;
 use crate::{CheckResult, Checked, DeclIdx, ValueIdx, ValueTag, check};
@@ -121,7 +121,16 @@ fn show(checked: &Checked<'_>, value: ValueIdx) -> String {
             format!("[{}]", items.join(", "))
         }
         ValueTag::Record => format!("{{ {} }}", pairs(value)),
-        ValueTag::Call => format!("{}({})", key(values.rows.a()[row]), pairs(value)),
+        ValueTag::Call => {
+            // The dotted name runs from the call's first token to its `(`.
+            let call = values.node(value);
+            let name: String = (ast.main_token(call).index()..)
+                .map(TokenIdx::new)
+                .take_while(|&token| ast.tokens.kind(token) != TokenKind::LParen)
+                .map(|token| ast.token_text(token))
+                .collect();
+            format!("{name}({})", pairs(value))
+        }
         ValueTag::Entity => {
             let decl = values.entity(value);
             format!(
@@ -691,6 +700,139 @@ fn list_and_choice_fields() {
           grant g = { signers: [alice, "bob"] };
           stage s = { domain: Preview, reads: "balance", authority: 5 };
           episode e = { id: "e", stages: [g] };
+        }
+        "#
+    );
+}
+
+// Call rules
+
+#[test]
+fn round_window_must_not_be_inverted() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Rounds {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          const window = rounds(domain: Preview, from: 10, to: 5);
+        }
+        "#
+    );
+}
+
+#[test]
+fn transfer_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Transfers {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          asset EUR = { domain: Other, id: "eur", scale: 2, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          account bob = { domain: Preview, id: "bob" };
+          account carol = { domain: Other, id: "carol" };
+          account dave = { domain: Preview, id: "dave" };
+          const same = transfer(from: alice, to: bob, fee_to: alice, value: 1 USD, fee: 0 USD);
+          const far = transfer(from: alice, to: carol, fee_to: bob, value: 1 USD, fee: 0 USD);
+          const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);
+          const foreign = transfer(from: alice, to: bob, fee_to: carol, value: 1 EUR, fee: 0 EUR);
+        }
+        "#
+    );
+}
+
+#[test]
+fn repay_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Repay {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          account carol = { domain: Other, id: "carol" };
+          obligation loan = { domain: Preview, id: "loan", asset: USD };
+          const wrong_asset = repay(obligation: loan, payer: alice, amount: 5 GOLD);
+          const wrong_domain = repay(obligation: loan, payer: carol, amount: 5 USD);
+        }
+        "#
+    );
+}
+
+#[test]
+fn amm_rules() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Amm {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          asset GOLD = { domain: Preview, id: "gold", scale: 3, representation: "native" };
+          asset EUR = { domain: Preview, id: "eur", scale: 2, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          pool amm = { domain: Preview, id: "amm", assets: [USD, GOLD] };
+          const swap = amm.swap_exact_input(
+            pool: amm,
+            owner: alice,
+            input: 10 USD,
+            output_asset: EUR,
+            net_floor: 1 GOLD,
+            fee_cap: 0.1 EUR,
+          );
+        }
+        "#
+    );
+}
+
+#[test]
+fn stablecoin_needs_instrument_assets() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Stable {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          instrument coin = { domain: Preview, id: "coin", asset: USD };
+          const mint = stablecoin.mint(instrument: coin, owner: alice, supply: 1 USD, backing: 1 USD);
+        }
+        "#
+    );
+}
+
+#[test]
+fn bridge_crosses_domains_only_at_its_endpoints() {
+    assert_values_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Bridge {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Cardano = { id: "cardano", chain: "cardano", network: "mainnet" };
+          asset USD = { domain: Preview, id: "usd", scale: 2, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          const out = bridge.escrow(owner: alice, amount: 5 USD, destination: Cardano, claim_id: "c1");
+        }
+        "#
+    );
+}
+
+#[test]
+fn family_arguments_share_one_domain() {
+    assert_check_errors_snapshot!(
+        r#"
+        profile "moriarty-beta/1";
+        agreement Family {
+          domain Preview = { id: "preview", chain: "midnight", network: "preview" };
+          domain Other = { id: "other", chain: "midnight", network: "other" };
+          asset USD = { domain: Other, id: "usd", scale: 2, representation: "native" };
+          account alice = { domain: Preview, id: "alice" };
+          share_class shares = { domain: Other, id: "shares", backing: USD };
+          const deposit = staking.deposit(owner: alice, shares: shares, backing: 5 USD);
         }
         "#
     );
