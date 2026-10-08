@@ -1,0 +1,41 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Pools {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Other, id: \"gold\", scale: 3, representation: \"native\" };\n  pool empty = { domain: Preview, id: \"empty\", assets: [] };\n  pool mixed = { domain: Preview, id: \"mixed\", assets: [USD, GOLD, USD] };\n}\n"
+---
+mori::check::empty_pool
+
+  × A pool needs at least one asset.
+   ╭─[test.mori:7:56]
+ 6 │   asset GOLD = { domain: Other, id: "gold", scale: 3, representation: "native" };
+ 7 │   pool empty = { domain: Preview, id: "empty", assets: [] };
+   ·                                                        ─┬
+   ·                                                         ╰── no assets
+ 8 │   pool mixed = { domain: Preview, id: "mixed", assets: [USD, GOLD, USD] };
+   ╰────
+  help: List the assets the pool holds:
+
+            assets: [USD, GOLD]
+
+mori::check::wrong_asset_domain
+
+  × The asset `GOLD` is on `Other`, but this pool is on `Preview`.
+   ╭─[test.mori:8:62]
+ 7 │   pool empty = { domain: Preview, id: "empty", assets: [] };
+ 8 │   pool mixed = { domain: Preview, id: "mixed", assets: [USD, GOLD, USD] };
+   ·                                                              ──┬─
+   ·                                                                ╰── on `Other`
+ 9 │ }
+   ╰────
+  help: An asset used by a declaration must be on the same domain.
+
+mori::check::duplicate_pool_asset
+
+  × The asset `USD` appears twice in this pool.
+   ╭─[test.mori:8:68]
+ 7 │   pool empty = { domain: Preview, id: "empty", assets: [] };
+ 8 │   pool mixed = { domain: Preview, id: "mixed", assets: [USD, GOLD, USD] };
+   ·                                                         ─┬─        ─┬─
+   ·                                                          │          ╰── and again here
+   ·                                                          ╰── first here
+ 9 │ }
+   ╰────

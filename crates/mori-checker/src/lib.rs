@@ -7,6 +7,7 @@
 
 mod calls;
 mod checker;
+mod declarations;
 mod diagnostics;
 mod eval;
 mod names;

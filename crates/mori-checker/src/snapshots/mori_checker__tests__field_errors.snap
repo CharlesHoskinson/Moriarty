@@ -1,0 +1,42 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Fields {\n  domain Preview = { id: \"preview\", chain: \"midnight\" };\n  domain Main = { id: \"main\", chain: \"midnight\", network: \"main\", netwrok: \"x\" };\n  account alice = { domain: \"Preview\", id: \"alice\" };\n}\n"
+---
+mori::check::missing_field
+
+  × This domain is missing the field `network`.
+   ╭─[test.mori:3:20]
+ 2 │ agreement Fields {
+ 3 │   domain Preview = { id: "preview", chain: "midnight" };
+   ·                    ──────────────────┬─────────────────
+   ·                                      ╰── needs `network`
+ 4 │   domain Main = { id: "main", chain: "midnight", network: "main", netwrok: "x" };
+   ╰────
+  help: A domain takes these fields; `?` marks optional ones:
+
+            { id: string, chain: string, network: string }
+
+mori::check::unknown_field
+
+  × A domain has no field named `netwrok`.
+   ╭─[test.mori:4:67]
+ 3 │   domain Preview = { id: "preview", chain: "midnight" };
+ 4 │   domain Main = { id: "main", chain: "midnight", network: "main", netwrok: "x" };
+   ·                                                                   ───┬───
+   ·                                                                      ╰── unknown field
+ 5 │   account alice = { domain: "Preview", id: "alice" };
+   ╰────
+  help: Did you mean `network`? A domain takes:
+
+            { id: string, chain: string, network: string }
+
+mori::check::wrong_field
+
+  × The field `domain` of an account must be a domain, but this is a string.
+   ╭─[test.mori:5:29]
+ 4 │   domain Main = { id: "main", chain: "midnight", network: "main", netwrok: "x" };
+ 5 │   account alice = { domain: "Preview", id: "alice" };
+   ·                             ────┬────
+   ·                                 ╰── this is a string
+ 6 │ }
+   ╰────

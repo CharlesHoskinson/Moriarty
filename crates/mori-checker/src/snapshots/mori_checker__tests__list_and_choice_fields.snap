@@ -1,0 +1,39 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Lists {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  grant g = { signers: [alice, \"bob\"] };\n  stage s = { domain: Preview, reads: \"balance\", authority: 5 };\n  episode e = { id: \"e\", stages: [g] };\n}\n"
+---
+mori::check::wrong_field
+
+  × The field `signers` of a grant must be a list of accounts, but this item
+  │ is a string.
+   ╭─[test.mori:5:32]
+ 4 │   account alice = { domain: Preview, id: "alice" };
+ 5 │   grant g = { signers: [alice, "bob"] };
+   ·                                ──┬──
+   ·                                  ╰── this is a string
+ 6 │   stage s = { domain: Preview, reads: "balance", authority: 5 };
+   ╰────
+
+mori::check::wrong_field
+
+  × The field `reads` of a stage must be a list of strings, but this is a
+  │ string.
+   ╭─[test.mori:6:39]
+ 5 │   grant g = { signers: [alice, "bob"] };
+ 6 │   stage s = { domain: Preview, reads: "balance", authority: 5 };
+   ·                                       ────┬────
+   ·                                           ╰── this is a string
+ 7 │   episode e = { id: "e", stages: [g] };
+   ╰────
+
+mori::check::wrong_field
+
+  × The field `authority` of a stage must be a grant or a string, but this is
+  │ a plain number.
+   ╭─[test.mori:6:61]
+ 5 │   grant g = { signers: [alice, "bob"] };
+ 6 │   stage s = { domain: Preview, reads: "balance", authority: 5 };
+   ·                                                             ┬
+   ·                                                             ╰── this is a plain number
+ 7 │   episode e = { id: "e", stages: [g] };
+   ╰────
