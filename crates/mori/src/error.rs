@@ -13,6 +13,20 @@ pub enum CliError {
         #[source]
         source: io::Error,
     },
+    #[error("could not write `{}`", path.display())]
+    Write {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
+    #[error("`{}` does not exist", path.display())]
+    NotFound { path: PathBuf },
+    #[error("could not list `{}`", path.display())]
+    Walk {
+        path: PathBuf,
+        #[source]
+        source: ignore::Error,
+    },
 }
 
 impl Diagnostic for CliError {}
