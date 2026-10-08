@@ -1,0 +1,68 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Transfers {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  asset EUR = { domain: Other, id: \"eur\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  account carol = { domain: Other, id: \"carol\" };\n  account dave = { domain: Preview, id: \"dave\" };\n  const same = transfer(from: alice, to: bob, fee_to: alice, value: 1 USD, fee: 0 USD);\n  const far = transfer(from: alice, to: carol, fee_to: bob, value: 1 USD, fee: 0 USD);\n  const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);\n  const foreign = transfer(from: alice, to: bob, fee_to: carol, value: 1 EUR, fee: 0 EUR);\n}\n"
+---
+mori::check::same_account
+
+  × `from` and `fee_to` are the same account, `alice`.
+    ╭─[test.mori:12:55]
+ 11 │   account dave = { domain: Preview, id: "dave" };
+ 12 │   const same = transfer(from: alice, to: bob, fee_to: alice, value: 1 USD, fee: 0 USD);
+    ·                               ──┬──                   ──┬──
+    ·                                 │                       ╰── `fee_to` is the same account
+    ·                                 ╰── `from`
+ 13 │   const far = transfer(from: alice, to: carol, fee_to: bob, value: 1 USD, fee: 0 USD);
+    ╰────
+  help: A transfer needs three different accounts. Even when the fee is zero,
+        `fee_to` must be its own account.
+
+mori::check::different_domains
+
+  × `to` is on `Other`, but `from` is on `Preview`.
+    ╭─[test.mori:13:41]
+ 12 │   const same = transfer(from: alice, to: bob, fee_to: alice, value: 1 USD, fee: 0 USD);
+ 13 │   const far = transfer(from: alice, to: carol, fee_to: bob, value: 1 USD, fee: 0 USD);
+    ·                              ──┬──      ──┬──
+    ·                                │          ╰── on `Other`
+    ·                                ╰── on `Preview`
+ 14 │   const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);
+    ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::wrong_asset
+
+  × `fee` must be a `USD` amount because it must match `value`, but it is a
+  │ `GOLD` amount.
+    ╭─[test.mori:14:79]
+ 13 │   const far = transfer(from: alice, to: carol, fee_to: bob, value: 1 USD, fee: 0 USD);
+ 14 │   const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);
+    ·                                                                               ───┬──
+    ·                                                                                  ╰── a `GOLD` amount
+ 15 │   const foreign = transfer(from: alice, to: bob, fee_to: carol, value: 1 EUR, fee: 0 EUR);
+    ╰────
+
+mori::check::different_domains
+
+  × `fee_to` is on `Other`, but `from` is on `Preview`.
+    ╭─[test.mori:15:58]
+ 14 │   const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);
+ 15 │   const foreign = transfer(from: alice, to: bob, fee_to: carol, value: 1 EUR, fee: 0 EUR);
+    ·                                  ──┬──                   ──┬──
+    ·                                    │                       ╰── on `Other`
+    ·                                    ╰── on `Preview`
+ 16 │ }
+    ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::different_domains
+
+  × `value` is on `Other`, but `from` is on `Preview`.
+    ╭─[test.mori:15:72]
+ 14 │   const fee = transfer(from: alice, to: bob, fee_to: dave, value: 1 USD, fee: 0 GOLD);
+ 15 │   const foreign = transfer(from: alice, to: bob, fee_to: carol, value: 1 EUR, fee: 0 EUR);
+    ·                                  ──┬──                                 ──┬──
+    ·                                    │                                     ╰── on `Other`
+    ·                                    ╰── on `Preview`
+ 16 │ }
+    ╰────
+  help: Everything an operation touches must be on one domain.
