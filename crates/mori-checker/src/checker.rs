@@ -8,7 +8,7 @@ use mori_lexer::{TokenIdx, TokenKind};
 use mori_span::Span;
 use soa_rs::Soa;
 
-use crate::eval::MAX_SCALE;
+use crate::declarations::Identities;
 use crate::names::{Names, name_token};
 use crate::reserved::SOURCE6_RESERVED;
 use crate::values::{ValueIdx, ValueTag, Values};
@@ -25,6 +25,7 @@ pub fn check<'a>(ast: &'a Ast<'a>) -> CheckResult<'a> {
         values: Values::default(),
         resolutions: vec![UNRESOLVED; ast.nodes.len()],
         visible: HashMap::new(),
+        identities: Identities::new(),
         diagnostics: Vec::new(),
     };
     checker.run(&items);
@@ -64,6 +65,8 @@ pub(crate) struct Checker<'a> {
     resolutions: Vec<u16>,
     /// Declarations checked so far, by name. Later items may use them.
     visible: HashMap<&'a str, DeclIdx>,
+    /// Economic identities declared so far, which must be unique.
+    pub(crate) identities: Identities,
     diagnostics: Vec<MoriDiagnostic>,
 }
 
@@ -95,9 +98,9 @@ impl<'a> Checker<'a> {
         {
             value = self.entity(decl, node, record, value_node);
         }
-        if let Some(asset) = value
-            && keyword == TokenKind::KwAsset
-            && !self.check_scale(asset, value_node)
+        if let Some(entity) = value
+            && !matches!(keyword, TokenKind::KwConst | TokenKind::KwIntent)
+            && !self.check_declaration(keyword, entity, value_node)
         {
             value = None;
         }
@@ -142,24 +145,6 @@ impl<'a> Checker<'a> {
         let row = record.index();
         let (b, c) = (self.values.rows.b()[row], self.values.rows.c()[row]);
         Some(self.values.push(ValueTag::Entity, node, decl.0, b, c))
-    }
-
-    /// An asset's `scale` is its number of decimal places, a whole number up to 18.
-    fn check_scale(&mut self, asset: ValueIdx, value_node: NodeIdx) -> bool {
-        let Some(scale) = self.field(asset, "scale") else {
-            self.report(diagnostics::missing_scale(self.ast.span(value_node)));
-            return false;
-        };
-        if self.values.tag(scale) == ValueTag::Scalar && self.values.amount(scale) <= MAX_SCALE {
-            return true;
-        }
-        let description = match self.values.tag(scale) {
-            ValueTag::Scalar => format!("`{}`", self.values.amount(scale)),
-            _ => self.describe(scale),
-        };
-        let span = self.ast.span(self.values.node(scale));
-        self.report(diagnostics::invalid_scale(span, &description));
-        false
     }
 
     fn action(&mut self, order: usize, node: NodeIdx) {

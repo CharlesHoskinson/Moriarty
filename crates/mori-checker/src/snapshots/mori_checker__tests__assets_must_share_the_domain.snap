@@ -1,0 +1,27 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Domains {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Other, id: \"gold\", scale: 3, representation: \"native\" };\n  obligation loan = { domain: Preview, id: \"loan\", asset: GOLD };\n  share_class shares = { domain: Preview, id: \"shares\", backing: GOLD };\n}\n"
+---
+mori::check::wrong_asset_domain
+
+  × The asset `GOLD` is on `Other`, but this obligation is on `Preview`.
+   ╭─[test.mori:7:59]
+ 6 │   asset GOLD = { domain: Other, id: "gold", scale: 3, representation: "native" };
+ 7 │   obligation loan = { domain: Preview, id: "loan", asset: GOLD };
+   ·                                                           ──┬─
+   ·                                                             ╰── on `Other`
+ 8 │   share_class shares = { domain: Preview, id: "shares", backing: GOLD };
+   ╰────
+  help: An asset used by a declaration must be on the same domain.
+
+mori::check::wrong_asset_domain
+
+  × The asset `GOLD` is on `Other`, but this share class is on `Preview`.
+   ╭─[test.mori:8:66]
+ 7 │   obligation loan = { domain: Preview, id: "loan", asset: GOLD };
+ 8 │   share_class shares = { domain: Preview, id: "shares", backing: GOLD };
+   ·                                                                  ──┬─
+   ·                                                                    ╰── on `Other`
+ 9 │ }
+   ╰────
+  help: An asset used by a declaration must be on the same domain.

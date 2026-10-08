@@ -17,19 +17,25 @@ mori::check::expected_record
 
             { domain: Preview, id: "usd", scale: 2, representation: "native" }
 
-mori::check::missing_scale
+mori::check::missing_field
 
-  × This asset has no `scale`.
+  × This asset is missing the field `scale`.
    ╭─[test.mori:5:13]
  4 │   asset A = 5;
  5 │   asset B = { domain: Preview, id: "b", representation: "native" };
    ·             ───────────────────────────┬──────────────────────────
-   ·                                        ╰── needs a `scale` field
+   ·                                        ╰── needs `scale`
  6 │   asset C = { domain: Preview, id: "c", scale: 19, representation: "native" };
    ╰────
-  help: `scale` is the asset's number of decimal places, from 0 to 18:
+  help: An asset takes these fields; `?` marks optional ones:
 
-            scale: 2,
+            {
+              domain: domain,
+              id: string,
+              scale: number,
+              representation: string,
+              symbol?: string,
+            }
 
 mori::check::invalid_scale
 
@@ -42,14 +48,14 @@ mori::check::invalid_scale
  7 │   asset D = { domain: Preview, id: "d", scale: "2", representation: "native" };
    ╰────
 
-mori::check::invalid_scale
+mori::check::wrong_field
 
-  × An asset's `scale` must be a whole number from 0 to 18, but this is a
+  × The field `scale` of an asset must be a whole number, but this is a
   │ string.
    ╭─[test.mori:7:48]
  6 │   asset C = { domain: Preview, id: "c", scale: 19, representation: "native" };
  7 │   asset D = { domain: Preview, id: "d", scale: "2", representation: "native" };
    ·                                                ─┬─
-   ·                                                 ╰── invalid scale
+   ·                                                 ╰── this is a string
  8 │ }
    ╰────
