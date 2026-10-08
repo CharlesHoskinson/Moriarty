@@ -10,6 +10,7 @@ mod checker;
 mod declarations;
 mod diagnostics;
 mod eval;
+mod intents;
 mod names;
 mod relations;
 mod reserved;
@@ -27,6 +28,7 @@ use mori_lexer::TokenKind;
 use soa_rs::{Soa, Soars};
 
 pub use checker::check;
+pub use intents::Support;
 pub use values::{Value, ValueIdx, ValueTag, Values};
 
 /// Everything [`check`] could check, and every error it found. The program
@@ -74,6 +76,8 @@ pub struct Action {
     pub node: NodeIdx,
     /// The intent it uses, when that resolved to an intent declaration.
     pub intent: Option<DeclIdx>,
+    /// What that intent can do, when it was checked.
+    pub support: Option<Support>,
 }
 
 /// The checked program, as side tables over the [`Ast`].

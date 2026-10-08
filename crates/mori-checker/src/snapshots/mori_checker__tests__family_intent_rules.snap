@@ -1,0 +1,89 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Family {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  pool amm = { domain: Preview, id: \"amm\", assets: [USD, GOLD] };\n  intent swap = {\n    operation: amm.swap_exact_input(\n      pool: amm, owner: alice, input: 10 USD, output_asset: GOLD,\n      net_floor: 1 GOLD, fee_cap: 0.1 USD,\n    ),\n    asset: USD,\n    net_floor: 1 USD,\n    valid: [0, 10, 20],\n  };\n  intent out = {\n    operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: \"c\"),\n    asset: GOLD,\n    domain: Other,\n  };\n}\n"
+---
+mori::check::wrong_asset
+
+  × `net_floor` must be a `GOLD` amount because a swap's floor is measured in
+  │ its `output_asset`, but it is a `USD` amount.
+    ╭─[test.mori:15:16]
+ 14 │     asset: USD,
+ 15 │     net_floor: 1 USD,
+    ·                ──┬──
+    ·                  ╰── a `USD` amount
+ 16 │     valid: [0, 10, 20],
+    ╰────
+
+mori::check::invalid_validity
+
+  × An intent's `valid` must be a `rounds(...)` window or two round numbers.
+    ╭─[test.mori:16:12]
+ 15 │     net_floor: 1 USD,
+ 16 │     valid: [0, 10, 20],
+    ·            ─────┬─────
+    ·                 ╰── not a round window
+ 17 │   };
+    ╰────
+  help: For example:
+
+            valid: rounds(domain: Preview, from: 0, to: 100),
+            valid: [0, 100],
+
+mori::check::different_domains
+
+  × `owner` is on `Preview`, but `domain` is on `Other`.
+    ╭─[test.mori:19:37]
+ 18 │   intent out = {
+ 19 │     operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: "c"),
+    ·                                     ──┬──
+    ·                                       ╰── on `Preview`
+ 20 │     asset: GOLD,
+ 21 │     domain: Other,
+    ·             ──┬──
+    ·               ╰── on `Other`
+ 22 │   };
+    ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::different_domains
+
+  × `amount` is on `Preview`, but `domain` is on `Other`.
+    ╭─[test.mori:19:52]
+ 18 │   intent out = {
+ 19 │     operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: "c"),
+    ·                                                    ──┬──
+    ·                                                      ╰── on `Preview`
+ 20 │     asset: GOLD,
+ 21 │     domain: Other,
+    ·             ──┬──
+    ·               ╰── on `Other`
+ 22 │   };
+    ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::different_domains
+
+  × `asset` is on `Preview`, but `domain` is on `Other`.
+    ╭─[test.mori:20:12]
+ 19 │     operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: "c"),
+ 20 │     asset: GOLD,
+    ·            ──┬─
+    ·              ╰── on `Preview`
+ 21 │     domain: Other,
+    ·             ──┬──
+    ·               ╰── on `Other`
+ 22 │   };
+    ╰────
+  help: Everything an operation touches must be on one domain.
+
+mori::check::wrong_intent_asset
+
+  × The intent's `asset` is `GOLD`, but the bridge moves its `amount`, which
+  │ is in `USD`.
+    ╭─[test.mori:20:12]
+ 19 │     operation: bridge.escrow(owner: alice, amount: 5 USD, destination: Other, claim_id: "c"),
+ 20 │     asset: GOLD,
+    ·            ──┬─
+    ·              ╰── `GOLD`
+ 21 │     domain: Other,
+    ╰────

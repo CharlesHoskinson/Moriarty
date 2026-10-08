@@ -328,7 +328,7 @@ impl<'a> Checker<'a> {
     }
 
     /// `value` is on `domain`, the domain of the argument `first_role`.
-    fn check_same_domain(
+    pub(crate) fn check_same_domain(
         &mut self,
         value: ValueIdx,
         span: Span,
@@ -356,7 +356,7 @@ impl<'a> Checker<'a> {
 
     /// The domain a value lives on: a domain itself, an entity's `domain`
     /// field, or an amount's asset's domain.
-    fn domain_of(&self, value: ValueIdx) -> Option<DeclIdx> {
+    pub(crate) fn domain_of(&self, value: ValueIdx) -> Option<DeclIdx> {
         match self.values.tag(value) {
             ValueTag::Entity => {
                 let decl = self.values.entity(value);
@@ -383,7 +383,7 @@ impl<'a> Checker<'a> {
     }
 
     /// The declaration an entity field names, such as an obligation's `asset`.
-    fn entity_field(&self, value: ValueIdx, name: &str) -> Option<DeclIdx> {
+    pub(crate) fn entity_field(&self, value: ValueIdx, name: &str) -> Option<DeclIdx> {
         let field = self.field(value, name)?;
         (self.values.tag(field) == ValueTag::Entity).then(|| self.values.entity(field))
     }
