@@ -293,16 +293,6 @@ fn record_example(keyword: &str) -> &'static str {
     }
 }
 
-pub fn missing_scale(span: Span) -> MoriDiagnostic {
-    MoriDiagnostic::error("This asset has no `scale`.")
-        .with_code("mori::check::missing_scale")
-        .with_label(span.primary_label("needs a `scale` field"))
-        .with_help_code(
-            "`scale` is the asset's number of decimal places, from 0 to 18:",
-            "scale: 2,",
-        )
-}
-
 pub fn invalid_scale(span: Span, desc: &str) -> MoriDiagnostic {
     MoriDiagnostic::error(format!(
         "An asset's `scale` must be a whole number from 0 to 18, but this is {desc}."
@@ -365,4 +355,161 @@ pub fn wrong_domain(
     .with_code("mori::check::wrong_domain")
     .with_label(arg.label("the declared domain"))
     .with_label(value.primary_label(format!("this is on `{actual}`")))
+}
+
+pub fn unknown_field(
+    span: Span,
+    keyword: &str,
+    name: &str,
+    suggestion: Option<&str>,
+    signature: &str,
+) -> MoriDiagnostic {
+    let kind = capitalize(&a_kind(keyword));
+    let help = match suggestion {
+        Some(suggestion) => format!("Did you mean `{suggestion}`? {kind} takes:"),
+        None => format!("{kind} takes:"),
+    };
+    MoriDiagnostic::error(format!("{kind} has no field named `{name}`."))
+        .with_code("mori::check::unknown_field")
+        .with_label(span.primary_label("unknown field"))
+        .with_help_code(help, signature)
+}
+
+pub fn missing_field(span: Span, keyword: &str, name: &str, signature: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "This {} is missing the field `{name}`.",
+        keyword.replace('_', " ")
+    ))
+    .with_code("mori::check::missing_field")
+    .with_label(span.primary_label(format!("needs `{name}`")))
+    .with_help_code(
+        format!(
+            "{} takes these fields; `?` marks optional ones:",
+            capitalize(&a_kind(keyword))
+        ),
+        signature,
+    )
+}
+
+pub fn wrong_field(
+    span: Span,
+    keyword: &str,
+    name: &str,
+    role: crate::declarations::FieldRole,
+    desc: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "The field `{name}` of {} must be {}, but this is {desc}.",
+        a_kind(keyword),
+        role.describe()
+    ))
+    .with_code("mori::check::wrong_field")
+    .with_label(span.primary_label(format!("this is {desc}")))
+}
+
+pub fn wrong_list_item(
+    span: Span,
+    keyword: &str,
+    name: &str,
+    role: crate::declarations::FieldRole,
+    desc: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "The field `{name}` of {} must be {}, but this item is {desc}.",
+        a_kind(keyword),
+        role.describe()
+    ))
+    .with_code("mori::check::wrong_field")
+    .with_label(span.primary_label(format!("this is {desc}")))
+}
+
+pub fn invalid_id(span: Span, id: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!("The id `{id}` cannot be used in Source/6."))
+        .with_code("mori::check::invalid_id")
+        .with_label(span.primary_label("not a valid Source/6 id"))
+        .with_help(
+            "Ids start with an ASCII letter, continue with letters, digits or `_`, are at most \
+             64 characters, and avoid Source/6's reserved words.",
+        )
+}
+
+pub fn duplicate_id(
+    span: Span,
+    earlier: Span,
+    keyword: &str,
+    id: &str,
+    domain: Option<&str>,
+) -> MoriDiagnostic {
+    let place = domain
+        .map(|domain| format!(" on `{domain}`"))
+        .unwrap_or_default();
+    MoriDiagnostic::error(format!(
+        "Another {}{place} already has the id `{id}`.",
+        keyword.replace('_', " ")
+    ))
+    .with_code("mori::check::duplicate_id")
+    .with_label(earlier.label("first used here"))
+    .with_label(span.primary_label("used again here"))
+    .with_help("Each economic identity is declared once. Refer to the existing declaration instead of declaring an alias.")
+}
+
+pub fn wrong_asset_domain(
+    span: Span,
+    asset: &str,
+    asset_domain: &str,
+    keyword: &str,
+    domain: &str,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "The asset `{asset}` is on `{asset_domain}`, but this {} is on `{domain}`.",
+        keyword.replace('_', " ")
+    ))
+    .with_code("mori::check::wrong_asset_domain")
+    .with_label(span.primary_label(format!("on `{asset_domain}`")))
+    .with_help("An asset used by a declaration must be on the same domain.")
+}
+
+pub fn empty_pool(span: Span) -> MoriDiagnostic {
+    MoriDiagnostic::error("A pool needs at least one asset.")
+        .with_code("mori::check::empty_pool")
+        .with_label(span.primary_label("no assets"))
+        .with_help_code("List the assets the pool holds:", "assets: [USD, GOLD]")
+}
+
+pub fn duplicate_pool_asset(span: Span, earlier: Span, asset: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!("The asset `{asset}` appears twice in this pool."))
+        .with_code("mori::check::duplicate_pool_asset")
+        .with_label(earlier.label("first here"))
+        .with_label(span.primary_label("and again here"))
+}
+
+/// "an asset", "a share class".
+fn a_kind(keyword: &str) -> String {
+    let words = keyword.replace('_', " ");
+    let article = if words.starts_with(['a', 'e', 'i', 'o', 'u']) {
+        "an"
+    } else {
+        "a"
+    };
+    format!("{article} {words}")
+}
+
+fn capitalize(text: &str) -> String {
+    let mut chars = text.chars();
+    chars
+        .next()
+        .map(|first| first.to_uppercase().chain(chars).collect())
+        .unwrap_or_default()
+}
+
+/// Items joined on one line, or one per line when that would be too long.
+pub fn layout(open: &str, items: &[String], close: &str) -> String {
+    let line = format!("{open}{}{close}", items.join(", "));
+    if line.len() <= 60 {
+        return line;
+    }
+    let open = open.trim_end();
+    let close = close.trim_start();
+    let body: Vec<String> = items.iter().map(|item| format!("  {item},")).collect();
+    format!("{open}\n{}\n{close}", body.join("\n"))
 }

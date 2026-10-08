@@ -98,7 +98,7 @@ impl Call {
             .iter()
             .map(|(name, role)| format!("{name}: {}", role.signature()))
             .collect();
-        format!("{}({})", self.name, args.join(", "))
+        crate::diagnostics::layout(&format!("{}(", self.name), &args, ")")
     }
 
     pub fn role(&self, arg: &str) -> Option<Role> {
