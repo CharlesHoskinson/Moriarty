@@ -1,0 +1,28 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Repay {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  domain Other = { id: \"other\", chain: \"midnight\", network: \"other\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account carol = { domain: Other, id: \"carol\" };\n  obligation loan = { domain: Preview, id: \"loan\", asset: USD };\n  const wrong_asset = repay(obligation: loan, payer: alice, amount: 5 GOLD);\n  const wrong_domain = repay(obligation: loan, payer: carol, amount: 5 USD);\n}\n"
+---
+mori::check::wrong_asset
+
+  × `amount` must be a `USD` amount because the obligation is owed in `USD`,
+  │ but it is a `GOLD` amount.
+    ╭─[test.mori:10:69]
+  9 │   obligation loan = { domain: Preview, id: "loan", asset: USD };
+ 10 │   const wrong_asset = repay(obligation: loan, payer: alice, amount: 5 GOLD);
+    ·                                                                     ───┬──
+    ·                                                                        ╰── a `GOLD` amount
+ 11 │   const wrong_domain = repay(obligation: loan, payer: carol, amount: 5 USD);
+    ╰────
+
+mori::check::different_domains
+
+  × `payer` is on `Other`, but `obligation` is on `Preview`.
+    ╭─[test.mori:11:55]
+ 10 │   const wrong_asset = repay(obligation: loan, payer: alice, amount: 5 GOLD);
+ 11 │   const wrong_domain = repay(obligation: loan, payer: carol, amount: 5 USD);
+    ·                                          ──┬─         ──┬──
+    ·                                            │            ╰── on `Other`
+    ·                                            ╰── on `Preview`
+ 12 │ }
+    ╰────
+  help: Everything an operation touches must be on one domain.

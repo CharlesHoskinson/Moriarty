@@ -1,0 +1,39 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Amm {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  asset EUR = { domain: Preview, id: \"eur\", scale: 2, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  pool amm = { domain: Preview, id: \"amm\", assets: [USD, GOLD] };\n  const swap = amm.swap_exact_input(\n    pool: amm,\n    owner: alice,\n    input: 10 USD,\n    output_asset: EUR,\n    net_floor: 1 GOLD,\n    fee_cap: 0.1 EUR,\n  );\n}\n"
+---
+mori::check::not_in_pool
+
+  × `EUR` is not one of the pool `amm`'s assets.
+    ╭─[test.mori:13:19]
+ 12 │     input: 10 USD,
+ 13 │     output_asset: EUR,
+    ·                   ─┬─
+    ·                    ╰── not in the pool
+ 14 │     net_floor: 1 GOLD,
+    ╰────
+  help: A pool only trades the assets listed in its `assets` field.
+
+mori::check::wrong_asset
+
+  × `net_floor` must be a `EUR` amount because it is measured in
+  │ `output_asset`, but it is a `GOLD` amount.
+    ╭─[test.mori:14:16]
+ 13 │     output_asset: EUR,
+ 14 │     net_floor: 1 GOLD,
+    ·                ───┬──
+    ·                   ╰── a `GOLD` amount
+ 15 │     fee_cap: 0.1 EUR,
+    ╰────
+
+mori::check::wrong_asset
+
+  × `fee_cap` must be a `USD` amount because fees are paid in the `input`
+  │ asset, but it is a `EUR` amount.
+    ╭─[test.mori:15:14]
+ 14 │     net_floor: 1 GOLD,
+ 15 │     fee_cap: 0.1 EUR,
+    ·              ───┬───
+    ·                 ╰── a `EUR` amount
+ 16 │   );
+    ╰────
