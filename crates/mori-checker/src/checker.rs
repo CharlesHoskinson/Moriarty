@@ -99,10 +99,15 @@ impl<'a> Checker<'a> {
             value = self.entity(decl, node, record, value_node);
         }
         if let Some(entity) = value
-            && !matches!(keyword, TokenKind::KwConst | TokenKind::KwIntent)
-            && !self.check_declaration(keyword, entity, value_node)
+            && keyword != TokenKind::KwConst
         {
-            value = None;
+            let ok = match keyword {
+                TokenKind::KwIntent => self.check_intent(entity, value_node),
+                _ => self.check_declaration(keyword, entity, value_node),
+            };
+            if !ok {
+                value = None;
+            }
         }
         if let (Some(checked), Some(ty)) = (value, self.ast.lhs_node(node))
             && !self.check_annotation(order, ty, checked, value_node)
@@ -153,7 +158,12 @@ impl<'a> Checker<'a> {
         let intent = self
             .resolve(order, intent_token, node)
             .filter(|&decl| self.check_is_intent(decl, intent_token));
-        self.actions.push(Action { node, intent });
+        let support = intent.and_then(|intent| self.support(intent));
+        self.actions.push(Action {
+            node,
+            intent,
+            support,
+        });
     }
 
     /// Resolves the name at `token`, used by item number `order`, recording
