@@ -25,6 +25,11 @@ difference is listed here and agreed before it is made.
   analysis, and comments are not analyzed. The TypeScript lexer counts them, so
   a file whose comments push it past the bound is rejected there and accepted
   here. The 65,536-byte source bound still caps comments.
+- **`mori format` formats any file that parses,** including files with name or
+  type errors, as rustfmt and prettier do. The TypeScript formatter refuses any
+  file with an error. Its layout also differs: ours fits lines to 80 columns.
+  And `mori format` (alias `fmt`) writes in place by default, with `--check` instead of the
+  TypeScript CLI's `--write`.
 - **Syntax errors are reported before name and type errors.** The TypeScript
   frontend resolves names while parsing, so in a file with several errors it
   may report a different first one. Files with a single error behave the same.
@@ -89,6 +94,35 @@ difference is listed here and agreed before it is made.
   one mistake never cascades. Which programs are accepted does not change.
 - **The built-in call schemas are a static Rust table:** each call's name and
   its required and optional arguments with their expected types.
+
+## Formatter
+
+- **`mori-fmt` is a Wadler-style pretty printer.** It builds a document of
+  text, line breaks, groups and indentation from the AST, then fits each group
+  on one line within 80 columns or breaks it one item per line, with trailing
+  commas when broken.
+- **No `Format` trait.** The document is built by a `match` over `NodeTag`,
+  like the other phases, into an arena of rows.
+- **Output depends only on the program and its comments.** The profile line and
+  every agreement item are followed by exactly one blank line, and comments
+  above an item stay attached to it. Numbers and strings keep their spelling.
+- **Comments come from the comment table** and stay next to the token they
+  were written beside: on the same line, or on their own line above.
+- **Correctness is proven by tests, not checked at run time.** Snapshot tests
+  show each layout case with its `.mori` source, and every one also asserts
+  that formatting the output again changes nothing. A property test checks
+  that output reparses to the same tokens and comments.
+- **`mori format [PATHS]...` (alias `fmt`) rewrites files in place.** A file formats that
+  file, a directory every `.mori` file under it, and no arguments the current
+  directory. Directories are walked with `ignore` (respecting `.gitignore`)
+  and files are formatted in parallel with `rayon`; output is printed in
+  sorted path order. A file that does not parse is reported and skipped.
+- **`mori format --check [PATHS]...`** writes nothing and exits 1 when a file is
+  not formatted, for CI. Each such file gets a `mori::fmt::not_formatted`
+  diagnostic header (no snippet, no help), then the diff exactly as
+  `cargo fmt --check` prints it (one `Diff in FILE:LINE:` per region, three
+  context lines, red `-` and green `+`, via `similar`), indented to line up
+  with the message. One summary line at the end says how to fix it.
 
 ## Diagnostics
 

@@ -413,7 +413,7 @@ fn values_are_computed_exactly() {
           const lower = min(a: price, b: fee);
           const higher = max(a: 7, b: 9);
           const shares = 4 SHARE;
-          const memo: String = "café";
+          const memo: String = "caf\u00e9";
           const ok: Bool = true;
           const failure_mode = SuccessOnly;
           const amounts = [1 USD, 2.5 USD,];
