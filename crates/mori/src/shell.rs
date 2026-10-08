@@ -78,6 +78,24 @@ impl Shell {
         let _ = writeln!(self.err, "{}", render::render_colored(report, width));
     }
 
+    /// Prints `hunks` as `cargo fmt --check` does, indented to line up with a
+    /// diagnostic's message.
+    pub fn diff(&mut self, file: &str, hunks: &[mori_fmt::Hunk]) {
+        const INDENT: &str = "    ";
+        for hunk in hunks {
+            let _ = writeln!(self.err, "{INDENT}Diff in {file}:{}:", hunk.line);
+            for (change, line) in &hunk.lines {
+                let (sign, style) = match change {
+                    mori_fmt::Change::Context => (' ', Style::new()),
+                    mori_fmt::Change::Removed => ('-', styles::REMOVED),
+                    mori_fmt::Change::Added => ('+', styles::ADDED),
+                };
+                let _ = writeln!(self.err, "{INDENT}{style}{sign}{line}{style:#}");
+            }
+        }
+        let _ = writeln!(self.err);
+    }
+
     fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
         let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
     }
