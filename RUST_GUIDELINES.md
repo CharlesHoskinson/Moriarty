@@ -180,7 +180,9 @@ difference is listed here and agreed before it is made.
 - Cargo-style status lines on stderr: a right-aligned, bold, colored verb, then
   details (`    Checking invoice.mori`, `    Finished check in 3.2ms`). Use
   `anstream` and `anstyle`.
-- Results go to stdout. `--json` turns status lines off.
+- Results go to stdout. `--json` turns status lines off. JSON reports are our
+  own format, not the TypeScript beta's; spans are UTF-8 byte ranges and every
+  diagnostic has exactly one primary label.
 - Global `-q`/`--quiet`, `-v`/`--verbose` and `--color` (`auto` respects
   `NO_COLOR` and non-terminal output). Verbose adds stage timings and
   token/node counts.
