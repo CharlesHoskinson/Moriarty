@@ -1,18 +1,18 @@
 ---
 source: crates/mori-checker/src/tests.rs
-description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  intent pay = {};\n  action pay uses pay;\n}\n"
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Invoice {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  observation price = { id: \"price\", domain: Preview };\n  intent pay = { operation: oracle.select(observation: price) };\n  action pay uses pay;\n}\n"
 ---
 mori::check::duplicate_name
 
   × `pay` is declared twice.
-   ╭─[test.mori:4:10]
- 2 │ agreement Invoice {
- 3 │   intent pay = {};
+   ╭─[test.mori:6:10]
+ 4 │   observation price = { id: "price", domain: Preview };
+ 5 │   intent pay = { operation: oracle.select(observation: price) };
    ·          ─┬─
    ·           ╰── first declared here
- 4 │   action pay uses pay;
+ 6 │   action pay uses pay;
    ·          ─┬─
    ·           ╰── declared again here
- 5 │ }
+ 7 │ }
    ╰────
   help: Each declaration and action in an agreement needs its own name.

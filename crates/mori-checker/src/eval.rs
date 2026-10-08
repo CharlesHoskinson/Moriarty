@@ -417,11 +417,21 @@ impl<'a> Checker<'a> {
     pub(crate) fn describe(&self, value: ValueIdx) -> String {
         match self.values.tag(value) {
             ValueTag::String => "a string".to_owned(),
-            ValueTag::Bool => "a true or false value".to_owned(),
+            ValueTag::Bool => match self.values.rows.a()[value.index()] {
+                1 => "`true`".to_owned(),
+                _ => "`false`".to_owned(),
+            },
             ValueTag::Scalar => "a plain number".to_owned(),
             ValueTag::Quantity => format!("a `{}` amount", self.name(self.values.asset(value))),
-            ValueTag::Tag => "a tag".to_owned(),
-            ValueTag::List => "a list".to_owned(),
+            ValueTag::Tag => match self.values.rows.a()[value.index()] {
+                1 => "`SuccessOnly`".to_owned(),
+                _ => "`None`".to_owned(),
+            },
+            ValueTag::List => match self.values.items(value).count() {
+                0 => "an empty list".to_owned(),
+                1 => "a list of 1 item".to_owned(),
+                count => format!("a list of {count} items"),
+            },
             ValueTag::Record => "a record".to_owned(),
             ValueTag::Call => format!("a `{}` call", self.call_name(self.values.node(value))),
             ValueTag::Entity => self.describe_decl(self.values.entity(value)),
@@ -451,7 +461,7 @@ impl<'a> Checker<'a> {
         }
     }
 
-    fn call_name(&self, node: NodeIdx) -> String {
+    pub(crate) fn call_name(&self, node: NodeIdx) -> String {
         let mut token = self.ast.main_token(node);
         let mut name = self.ast.token_text(token).to_owned();
         while self.ast.tokens.kind(self.ast.token_after(token, 1)) == TokenKind::Dot {

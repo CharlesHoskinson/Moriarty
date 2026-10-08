@@ -51,6 +51,7 @@ impl Shell {
         }
     }
 
+    #[expect(dead_code, reason = "used once a command prints notes")]
     pub fn note(&mut self, message: impl Display) {
         if self.verbosity != Verbosity::Quiet {
             self.prefixed("note", styles::HEADER, message);
