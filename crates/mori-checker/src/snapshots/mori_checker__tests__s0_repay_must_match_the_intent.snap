@@ -1,0 +1,45 @@
+---
+source: crates/mori-checker/src/tests.rs
+description: "Code:\n\nprofile \"moriarty-beta/1\";\nagreement Repay {\n  domain Preview = { id: \"preview\", chain: \"midnight\", network: \"preview\" };\n  asset USD = { domain: Preview, id: \"usd\", scale: 2, representation: \"native\" };\n  asset GOLD = { domain: Preview, id: \"gold\", scale: 3, representation: \"native\" };\n  account alice = { domain: Preview, id: \"alice\" };\n  account bob = { domain: Preview, id: \"bob\" };\n  obligation loan = { domain: Preview, id: \"loan\", asset: GOLD };\n  intent repayment = {\n    domain: Preview, asset: USD, signer: bob, key: \"k\", nonce: \"n\", pre_head: \"h\",\n    valid: rounds(domain: Preview, from: 0, to: 10),\n    gross_cap: 1 USD, fee_cap: 0 USD, net_floor: 1 USD,\n    operation: repay(obligation: loan, payer: alice, amount: 1 GOLD),\n    source_hash: \"s\", policy_digest: \"p\", failure: SuccessOnly,\n    observations: [], disclosures: [], retained_effects: [], retained_duties: [],\n    delegation: None, recovery: None,\n  };\n}\n"
+---
+mori::check::wrong_signer
+
+  × The signer must be the `payer` account, `alice`, but it is `bob`.
+    ╭─[test.mori:10:42]
+  9 │   intent repayment = {
+ 10 │     domain: Preview, asset: USD, signer: bob, key: "k", nonce: "n", pre_head: "h",
+    ·                                          ─┬─
+    ·                                           ╰── the signer
+ 11 │     valid: rounds(domain: Preview, from: 0, to: 10),
+ 12 │     gross_cap: 1 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: repay(obligation: loan, payer: alice, amount: 1 GOLD),
+    ·                                               ──┬──
+    ·                                                 ╰── the `payer` account
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────
+  help: Only the owner of the funds can sign for them.
+
+mori::check::wrong_obligation_asset
+
+  × This obligation is owed in `GOLD`, but the intent's `asset` is `USD`.
+    ╭─[test.mori:13:34]
+ 12 │     gross_cap: 1 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: repay(obligation: loan, payer: alice, amount: 1 GOLD),
+    ·                                  ──┬─
+    ·                                    ╰── owed in `GOLD`
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────
+  help: A repayment intent's `asset` must be the asset the obligation is owed
+        in.
+
+mori::check::wrong_asset
+
+  × `amount` must be a `USD` amount because it must be in the intent's
+  │ `asset`, but it is a `GOLD` amount.
+    ╭─[test.mori:13:62]
+ 12 │     gross_cap: 1 USD, fee_cap: 0 USD, net_floor: 1 USD,
+ 13 │     operation: repay(obligation: loan, payer: alice, amount: 1 GOLD),
+    ·                                                              ───┬──
+    ·                                                                 ╰── a `GOLD` amount
+ 14 │     source_hash: "s", policy_digest: "p", failure: SuccessOnly,
+    ╰────

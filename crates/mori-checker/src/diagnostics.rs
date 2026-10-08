@@ -163,9 +163,10 @@ pub fn below_zero(span: Span, shown: &str) -> MoriDiagnostic {
 }
 
 pub fn too_large(span: Span) -> MoriDiagnostic {
-    MoriDiagnostic::error("This value is larger than the largest allowed number, 2^128 - 1.")
+    MoriDiagnostic::error("This value is too large.")
         .with_code("mori::check::too_large")
-        .with_label(span.primary_label("too large"))
+        .with_label(span.primary_label("more than 2^128-1"))
+        .with_help("Numbers and amounts are unsigned 128-bit integers.")
 }
 
 pub fn too_precise(
@@ -603,4 +604,111 @@ pub fn instrument_missing_field(
         format!("Add `{field}` to the instrument's declaration, naming an asset:"),
         format!("{field}: USD,"),
     )
+}
+
+pub fn intent_without_operation(span: Span) -> MoriDiagnostic {
+    MoriDiagnostic::error("This intent has no `operation`.")
+        .with_code("mori::check::intent_without_operation")
+        .with_label(span.primary_label("needs an `operation`"))
+        .with_help_code(
+            "An intent authorizes one operation, written as a call:",
+            "operation: transfer(\n  from: alice, to: bob, fee_to: carol,\n  value: 10 USD, fee: 0 USD,\n),",
+        )
+}
+
+pub fn operation_not_a_call(span: Span, desc: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "An intent's `operation` must be a call, but this is {desc}."
+    ))
+    .with_code("mori::check::operation_not_a_call")
+    .with_label(span.primary_label(format!("this is {desc}")))
+    .with_help("Write the operation as a call, like `transfer(...)` or `repay(...)`.")
+}
+
+pub fn unsupported_operation(span: Span, name: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!("`{name}` cannot be an intent's operation."))
+        .with_code("mori::check::unsupported_operation")
+        .with_label(span.primary_label("not an operation"))
+        .with_help(
+            "An intent runs `transfer` or `repay`, or a family call such as \
+             `amm.swap_exact_input`.",
+        )
+}
+
+pub fn empty_claim(span: Span, field: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!("The intent's `{field}` cannot be empty."))
+        .with_code("mori::check::empty_claim")
+        .with_label(span.primary_label("empty"))
+        .with_help("This value is part of what the owner signs, so it must be filled in.")
+}
+
+pub fn s0_policy(span: Span, field: &str, expected: &str, desc: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "A `transfer` or `repay` intent requires `{field}: {expected}`, but this is {desc}."
+    ))
+    .with_code("mori::check::s0_policy")
+    .with_label(span.primary_label(format!("must be `{expected}`")))
+    .with_help(
+        "Intents that run locally use the simplest policy: they succeed or fail as a \
+         whole, with nothing observed, disclosed, retained, delegated or recovered.",
+    )
+}
+
+pub fn wrong_signer(
+    span: Span,
+    signer: &str,
+    role: &str,
+    account: &str,
+    account_span: Span,
+) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "The signer must be the `{role}` account, `{account}`, but it is `{signer}`."
+    ))
+    .with_code("mori::check::wrong_signer")
+    .with_label(account_span.label(format!("the `{role}` account")))
+    .with_label(span.primary_label("the signer"))
+    .with_help("Only the owner of the funds can sign for them.")
+}
+
+pub fn wrong_obligation_asset(span: Span, owed: &str, because: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "This obligation is owed in `{owed}`, but {because}."
+    ))
+    .with_code("mori::check::wrong_obligation_asset")
+    .with_label(span.primary_label(format!("owed in `{owed}`")))
+    .with_help("A repayment intent's `asset` must be the asset the obligation is owed in.")
+}
+
+pub fn wrong_intent_asset(span: Span, declared: &str, because: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "The intent's `asset` is `{declared}`, but {because}."
+    ))
+    .with_code("mori::check::wrong_intent_asset")
+    .with_label(span.primary_label(format!("`{declared}`")))
+}
+
+pub fn invalid_validity(span: Span, s0: bool) -> MoriDiagnostic {
+    let (message, example) = if s0 {
+        (
+            "A `transfer` or `repay` intent's `valid` must be a `rounds(...)` window.",
+            "valid: rounds(domain: Preview, from: 0, to: 100),",
+        )
+    } else {
+        (
+            "An intent's `valid` must be a `rounds(...)` window or two round numbers.",
+            "valid: rounds(domain: Preview, from: 0, to: 100),\nvalid: [0, 100],",
+        )
+    };
+    MoriDiagnostic::error(message)
+        .with_code("mori::check::invalid_validity")
+        .with_label(span.primary_label("not a round window"))
+        .with_help_code("For example:", example)
+}
+
+pub fn too_large_for_s0(span: Span, field: &str) -> MoriDiagnostic {
+    MoriDiagnostic::error(format!(
+        "`{field}` is too large for an operation that runs locally."
+    ))
+    .with_code("mori::check::too_large_for_s0")
+    .with_label(span.primary_label("more than 2^127-1"))
 }

@@ -17,7 +17,7 @@ pub struct Args {
     pub json: bool,
 }
 
-/// Checks syntax and names. Values, types and declaration rules come later.
+/// Checks syntax, names, values, types, declarations, calls and intents.
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     if args.json {
         todo!("mori check --json");
@@ -57,6 +57,5 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         "Finished",
         format!("check in {:.2}s", started.elapsed().as_secs_f64()),
     );
-    shell.note("declaration, call and intent rules are not checked yet");
     Ok(ExitCode::SUCCESS)
 }
