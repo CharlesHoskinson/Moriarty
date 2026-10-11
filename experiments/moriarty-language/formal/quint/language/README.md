@@ -122,3 +122,28 @@ reached its acceptance witness before the model was extended. Current controls
 are deterministic; identity tests enumerate all alternatives rather than rely
 on random negative-case sampling. Simulation uses Quint's default init/step.
 No `quint verify` command was run.
+
+## Native local proof binding QA
+
+`native_transition.qnt` and `native_transition_test.qnt` model the new public
+local proof verifier separately from ledger acceptance. Five deterministic
+tests cover every claim field, repaired metadata with a reused proof, derived
+relation identity, native refusal, pinned parameters, canonical proof framing,
+residual liability refusal and explicit k caps. Seeded simulation checks
+receipt binding with positive verification and refusal witnesses.
+
+`Claim` corresponds to `proving.rs::Claim`; expected claim reconstruction and
+metadata comparison correspond to `prepare` and `verify`. `proofClaim` and
+`nativeValid` are symbolic cryptographic premises, exercised separately by
+genuine Rust/CLI proof controls. `pinnedParameters` corresponds to the offline
+snapshot SHA-256 check before upstream decoding. The model assumes collision
+resistance and source-to-constraint correspondence; it does not establish
+them. Complete execution includes host-reconstructed untouched framing.
+There is no ledger, signature, nonce consumption or history acceptance in
+this local verifier model.
+
+```sh
+quint typecheck native_transition_test.qnt
+quint test native_transition_test.qnt --main native_transition_test --match 'Test$' --seed 1010
+quint run native_transition.qnt --main native_transition --invariant safety --witnesses verifiedWitness refusedWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
+```
