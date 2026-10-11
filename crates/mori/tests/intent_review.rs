@@ -11,7 +11,7 @@ fn signing_review_escapes_identities_and_preserves_exact_statement() {
         }
     }
     let _cleanup = Cleanup(directory.clone());
-    let hostile = "issuer\u{1b}[2J\u{1b}[H\n\r\u{7f}\u{9b}\u{202e}";
+    let hostile = "issuer\u{1b}[2J\u{1b}[H\n\r\u{7f}\u{9b}\u{202e}\u{1f4b0}";
     let asset =
         serde_json::json!({"network": "local", "issuer": hostile, "reference": "usd", "scale": 0});
     let source = format!(
@@ -65,6 +65,11 @@ fn signing_review_escapes_identities_and_preserves_exact_statement() {
     };
     let plain = invoke(false);
     let review = invoke(true);
+    assert!(
+        review.is_ascii(),
+        "the entire human review must escape Unicode controls"
+    );
+    assert!(review.chars().all(|c| !c.is_control() || c == '\n'));
     let (header, statement) = review
         .split_once("Exact canonical statement and signing bytes:\n")
         .unwrap();
