@@ -478,3 +478,5 @@ Plan: docs/superpowers/plans/2026-10-10-moriarty-language.md.
 ## Native persistent liabilities — 2026-10-11
 
 PR25 merged at60b3657a with reviewed tree d8d5b445. New plan docs/superpowers/plans/2026-10-11-native-liabilities.md, branchfeat/moriarty-native-liabilities-20261011, planning commitse8acc37d/adaec92c. Both substantive selected design votes APPROVE. NativeLiabilityTask1: in progress; source lowering/typed full frame only, native execution unauthorized pending exact measurements and separate resource votes. Prior milestone results remain historical.
+
+Native liabilities Task 1: complete (commits215686bf..02ffcd9f, independent GPT-6.1 Sol HIGH spec PASS and quality APPROVED; audit `/home/charl/Moriarty/.moriarty-dev/runtime/native-liabilities-20261011/sol-task-1-review.md`). Compiler-only behavior and actual compile CLI checked; proof2 integration/native resource/final pair remain open. Task 2 is next.
