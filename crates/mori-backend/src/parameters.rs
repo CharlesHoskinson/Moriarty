@@ -39,6 +39,8 @@ pub(crate) struct OfflineParameters {
 }
 impl OfflineParameters {
     pub(crate) fn load(directory: &Path, k: u8) -> Result<Self, Error> {
+        #[cfg(test)]
+        crate::proving::task4_native_driver::charge("params_load");
         let expected = PINNED_HASHES
             .get(k as usize)
             .ok_or_else(|| error("parameters", "No pinned SRS for the circuit degree."))?;
@@ -100,6 +102,8 @@ impl OfflineParameters {
 }
 impl ParamsProverProvider for OfflineParameters {
     async fn get_params(&self, k: u8) -> io::Result<ParamsProver> {
+        #[cfg(test)]
+        crate::proving::task4_native_driver::charge("params_get");
         if k != self.k {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
