@@ -1,0 +1,19 @@
+language "moriarty/1";
+agreement OwnerBoundPayment {
+  asset QA = { network: "local", issuer: "signed-native-qa", reference: "QA", scale: 0 };
+  state paid: UInt = 0;
+  action originate() {
+    liability("payment", QA, "alice", "bob", 50);
+    liability("reserve", QA, "alice", "auditor", 5);
+    liability("zero", QA, "alice", "auditor", 0);
+  }
+  action settle(amount: UInt) {
+    requires amount == 70;
+    transfer(QA, "alice", "bob", amount);
+    fee(QA, "alice", "treasury", 2);
+    discharge("payment", 20);
+    next paid = paid + amount;
+    emit "paid"(paid);
+  }
+  action observe() { emit "paid"(paid); }
+}

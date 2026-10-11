@@ -33,13 +33,20 @@ pub(crate) struct Layout {
     assets: Vec<(AssetId, [u128; 2])>,
 }
 
-/// Source-wide single-owner admission, before any proportional allocation.
-/// Every action counts, including actions that a scenario never selects.
-pub(crate) fn admit(
-    program: &Program,
-    policy: &SignedPolicy,
-    registry: &[LiabilityIdentity],
-) -> Result<Layout, Error> {
+/// Signed-profile label rule for a relevant source label, as admission.
+fn label(kind: &str, value: &str) -> Result<(), Error> {
+    authorization::validate_label(value).map_err(|_| {
+        error(
+            "signed",
+            format!("Signed profile refuses {kind} label {value:?}: expected 1..1024 UTF-8 bytes without C0/C1 controls."),
+        )
+    })
+}
+
+/// Source-wide single-owner and label admission, before the duty registry or
+/// any proportional allocation. Every action counts, including actions that a
+/// scenario never selects. Unsigned compilation keeps Core's own rules.
+pub(crate) fn admit(program: &Program, policy: &SignedPolicy) -> Result<Layout, Error> {
     if program.assets.len() > MAX_SIGNED_ASSETS {
         return Err(error(
             "limit",
@@ -47,10 +54,20 @@ pub(crate) fn admit(
         ));
     }
     let refuse = |message: String| error("signed", message);
+    label("program", &program.name)?;
+    for state in &program.states {
+        label("state", &state.name)?;
+    }
     let mut assets = Vec::with_capacity(program.assets.len());
     for decl in &program.assets {
-        authorization::validate_label(&decl.name)?;
-        authorization::validate_asset(&decl.identity)?;
+        label("asset", &decl.name)?;
+        for part in [
+            &decl.identity.network,
+            &decl.identity.issuer,
+            &decl.identity.reference,
+        ] {
+            label("asset identity", part)?;
+        }
         assets.push(decl.identity.clone());
     }
     assets.sort();
@@ -60,12 +77,15 @@ pub(crate) fn admit(
         ));
     }
     for action in &program.actions {
-        authorization::validate_label(&action.name)?;
+        label("action", &action.name)?;
+        for input in &action.inputs {
+            label("input", &input.name)?;
+        }
         for statement in &action.statements {
             match statement {
                 Statement::Transfer { from, to, .. } | Statement::Fee { from, to, .. } => {
-                    authorization::validate_label(from)?;
-                    authorization::validate_label(to)?;
+                    label("account", from)?;
+                    label("account", to)?;
                     if *from != policy.owner {
                         return Err(refuse(format!(
                             "Action {:?} pays from {from:?}; the signed profile admits only owner {:?}.",
@@ -74,10 +94,14 @@ pub(crate) fn admit(
                     }
                 }
                 Statement::Liability {
-                    debtor, creditor, ..
+                    name,
+                    debtor,
+                    creditor,
+                    ..
                 } => {
-                    authorization::validate_label(debtor)?;
-                    authorization::validate_label(creditor)?;
+                    label("duty", name)?;
+                    label("debtor", debtor)?;
+                    label("creditor", creditor)?;
                     if *debtor != policy.owner {
                         return Err(refuse(format!(
                             "Action {:?} creates a duty owed by {debtor:?}; the signed profile admits only owner {:?}.",
@@ -85,17 +109,16 @@ pub(crate) fn admit(
                         )));
                     }
                 }
-                _ => {}
+                Statement::Discharge { name, .. } => label("duty", name)?,
+                Statement::Emit { name, .. } => label("event", name)?,
+                Statement::Let { name, .. } => label("local", name)?,
+                Statement::Next { state, .. } => label("state", state)?,
+                Statement::Requires { .. } | Statement::Ensures { .. } => {}
             }
         }
     }
-    // Discharges name registry entries; each registered debtor is checked here.
-    if let Some(other) = registry.iter().find(|r| r.debtor != policy.owner) {
-        return Err(refuse(format!(
-            "Registered duty {:?} has a debtor other than the owner.",
-            other.name
-        )));
-    }
+    // Every registry debtor comes from a Liability statement checked above, so
+    // discharges of a registered duty can only reduce an owner duty.
     let assets = assets
         .into_iter()
         .map(|asset| {
@@ -371,11 +394,7 @@ pub(crate) fn append(
         b: Operand::Variable(e_key),
         output: rhs.clone(),
     });
-    let fens = b.binary(
-        Operand::Variable(lhs),
-        Operand::Variable(rhs),
-        BinaryOp::Eq,
-    );
+    let fens = b.binary(Operand::Variable(lhs), Operand::Variable(rhs), BinaryOp::Eq);
     assert_true(b, fens);
 
     // Supplied logical time is public, interval-checked and outside the message.
@@ -460,6 +479,121 @@ fn tag(ty: Type) -> u128 {
         Type::Bool => 1,
         Type::UInt => 2,
     }
+}
+const FIXED_AUTHORIZATION: [(&str, AuthorizationType); 11] = [
+    ("payload.lo", AuthorizationType::UInt),
+    ("payload.hi", AuthorizationType::UInt),
+    ("public_key.x", AuthorizationType::Native),
+    ("public_key.y", AuthorizationType::Native),
+    ("message", AuthorizationType::Native),
+    ("nonce", AuthorizationType::UInt),
+    ("not_before", AuthorizationType::UInt),
+    ("not_after", AuthorizationType::UInt),
+    ("predecessor.lo", AuthorizationType::UInt),
+    ("predecessor.hi", AuthorizationType::UInt),
+    ("at", AuthorizationType::UInt),
+];
+const CAP_FIELDS: [&str; 4] = ["gross_cap", "fee_cap", "net_floor", "liability_cap"];
+
+/// Exact v3 descriptor shape for an explicit mode, used when decoding an
+/// artifact or Claim. Consumers still reconstruct the trusted layout; this
+/// refuses downgraded, reordered or partial shapes at the schema boundary.
+pub(crate) fn validate_shape(
+    mode: &str,
+    financial: &[PublicBinding],
+    auth: &[AuthorizationBinding],
+    private: Option<&[PrivateBinding]>,
+) -> Result<(), Error> {
+    let refuse = |message: &str| Err(error("artifact", message));
+    if financial.len() < 2 {
+        return refuse("Financial layout lacks its two context positions.");
+    }
+    for (i, b) in financial[..2].iter().enumerate() {
+        let canonical = b
+            .constant
+            .as_deref()
+            .and_then(|c| c.parse::<u128>().ok().filter(|n| n.to_string() == c));
+        if b.role != "context"
+            || b.name != format!("program_target_action.{i}")
+            || b.ty != Type::UInt
+            || b.asset.is_some()
+            || canonical.is_none()
+        {
+            return refuse("Context positions 0/1 must be canonical UInt constants.");
+        }
+    }
+    match mode {
+        crate::UNSIGNED_MODE => {
+            if !auth.is_empty() || private.is_some_and(|p| !p.is_empty()) {
+                return refuse(
+                    "Unsigned artifacts have no authorization descriptors or signature witness.",
+                );
+            }
+        }
+        INTENT_PROFILE => {
+            let expected_private = [
+                ("public_key", PrivateType::JubjubPoint),
+                ("R", PrivateType::JubjubPoint),
+                ("response", PrivateType::Native),
+            ];
+            if private.is_some_and(|private| {
+                private.len() != 3
+                    || private
+                        .iter()
+                        .zip(expected_private)
+                        .any(|(p, (name, ty))| p.name != name || p.ty != ty)
+            }) {
+                return refuse(
+                    "Signed artifacts require exactly public_key, R and response private inputs.",
+                );
+            }
+            let caps = auth.len().checked_sub(11).filter(|n| n % 4 == 0);
+            let assets = match caps {
+                Some(n) if n / 4 <= MAX_SIGNED_ASSETS => n / 4,
+                _ => {
+                    return refuse(
+                        "Signed artifacts require exactly 11+4A authorization descriptors.",
+                    );
+                }
+            };
+            let mut previous: Option<&AssetId> = None;
+            for (i, b) in auth.iter().enumerate() {
+                let (name, ty, asset) = if i < 11 {
+                    (
+                        FIXED_AUTHORIZATION[i].0.to_owned(),
+                        FIXED_AUTHORIZATION[i].1,
+                        None,
+                    )
+                } else {
+                    let (a, field) = ((i - 11) / 4, (i - 11) % 4);
+                    let asset = b.asset.as_ref();
+                    if field == 0 {
+                        if asset.is_none() || (previous.is_some() && previous >= asset) {
+                            return refuse("Cap descriptors require strictly ascending AssetIds.");
+                        }
+                        previous = asset;
+                    }
+                    (
+                        format!("limits.{a}.{}", CAP_FIELDS[field]),
+                        AuthorizationType::UInt,
+                        previous,
+                    )
+                };
+                if b.position as usize != financial.len() + i
+                    || b.role != "authorization"
+                    || b.name != name
+                    || b.ty != ty
+                    || b.constant.is_some()
+                    || b.asset.as_ref() != asset
+                {
+                    return refuse("Authorization descriptors differ from the exact signed order.");
+                }
+            }
+            debug_assert!(assets <= MAX_SIGNED_ASSETS);
+        }
+        _ => return refuse("Unknown authorization mode."),
+    }
+    Ok(())
 }
 
 /// Host-reconstructed signed statement for one trusted authority and time.
@@ -635,6 +769,21 @@ fn signed_statement(
     };
     let source_assets: Vec<_> = program.assets.iter().map(|a| a.identity.clone()).collect();
     payload.validate_assets(&source_assets)?;
+    // Refuse before any attachment is requested: the eventual wrapper with a
+    // canonical 192-hex attachment must fit the same 65536-byte bound.
+    let wrapper = serde_json::json!({"payload": &payload, "signature_hex": "0".repeat(192)});
+    let wrapper_bytes = mori_core::intent::canonical(&wrapper)
+        .map_err(|e| error("serialization", e.to_string()))?
+        .len();
+    if wrapper_bytes > authorization::MAX_ENVELOPE_BYTES {
+        return Err(error(
+            "authorization",
+            format!(
+                "Signed wrapper would be {wrapper_bytes} canonical bytes, above the {} limit; the payload is unsignable.",
+                authorization::MAX_ENVELOPE_BYTES
+            ),
+        ));
+    }
     let payload_hash = payload.hash()?;
     let context = authorization::decode_digest(&circuit.context_hash)?;
     let predecessor = authorization::digest_limbs(payload.predecessor_hash()?);
@@ -772,11 +921,20 @@ fn check_caps(execution: &Execution, payload: &UnsignedPayload) -> Result<(), Er
             }
         }
         let refusal = if gross > limit.gross_cap.0 {
-            Some(format!("gross {gross} exceeds gross_cap {}", limit.gross_cap.0))
+            Some(format!(
+                "gross {gross} exceeds gross_cap {}",
+                limit.gross_cap.0
+            ))
         } else if fees > limit.fee_cap.0 {
-            Some(format!("fee total {fees} exceeds fee_cap {}", limit.fee_cap.0))
+            Some(format!(
+                "fee total {fees} exceeds fee_cap {}",
+                limit.fee_cap.0
+            ))
         } else if net < limit.net_floor.0 {
-            Some(format!("net {net} is below net_floor {}", limit.net_floor.0))
+            Some(format!(
+                "net {net} is below net_floor {}",
+                limit.net_floor.0
+            ))
         } else if duty > limit.liability_cap.0 {
             Some(format!(
                 "closing owner liability {duty} exceeds liability_cap {}",
@@ -792,11 +950,10 @@ fn check_caps(execution: &Execution, payload: &UnsignedPayload) -> Result<(), Er
     Ok(())
 }
 
-/// Strict signed acceptance shared by verify-intent, prove and verify: the
-/// exact wrapper equals the reconstruction, the attachment satisfies FENS
-/// under the reconstructed message and key, and the compiled relation accepts
-/// that witness under the ordinary ZKIR checker. Returns the raw private
-/// witness `[PK.x,PK.y,R.x,R.y,s]`.
+/// Strict public signed acceptance shared by verify-intent, prove and verify:
+/// the exact wrapper equals the reconstruction and the attachment satisfies
+/// strict FENS under the reconstructed message and key. No private witness is
+/// built here; native verification uses only reconstructed public values.
 pub(crate) fn accept(
     source: &str,
     action: &str,
@@ -805,7 +962,7 @@ pub(crate) fn accept(
     authority: &ExpectedAuthority,
     at: UInt,
     signed: &SignedIntent,
-) -> Result<(Reconstruction, Vec<Fr>), Error> {
+) -> Result<Reconstruction, Error> {
     signed.validate()?;
     let statement = reconstruct(source, action, scenario, target, Some((authority, at)))?;
     let s = statement.signed.as_ref().expect("signed reconstruction");
@@ -820,13 +977,21 @@ pub(crate) fn accept(
         ));
     }
     schnorr::verify_attachment(&s.payload.public_key_hex, &signed.signature_hex, s.message)?;
+    Ok(statement)
+}
+
+/// Prover-side raw private witness `[PK.x,PK.y,R.x,R.y,s]` from the exact
+/// accepted attachment, checked against the compiled relation by the
+/// ordinary ZKIR checker. Used by proving and by verify-intent's check.
+pub(crate) fn witness(statement: &Reconstruction, signed: &SignedIntent) -> Result<Vec<Fr>, Error> {
+    let s = statement.signed.as_ref().expect("signed reconstruction");
     let key = schnorr::decode_key(&s.payload.public_key_hex)?;
     let signature = schnorr::decode_signature(&signed.signature_hex)?;
     let (key_x, key_y) = schnorr::coordinates(key);
     let (r_x, r_y) = schnorr::coordinates(signature.r);
     let witness = vec![key_x, key_y, r_x, r_y, signature.response];
     check_relation(&statement.circuit, &statement.public_values(), &witness)?;
-    Ok((statement, witness))
+    Ok(witness)
 }
 
 /// Ordinary off-circuit ZKIR checker; not native proving or verification.
@@ -896,7 +1061,20 @@ pub fn prepare_intent(
         review: statement.execution,
     };
     prepared.validate()?;
+    // The complete report must pass the bounded public exporter/reader too.
+    proving::validate_json_profile(&prepared)?;
     Ok(prepared)
+}
+
+/// Publicly identifying result of strict host acceptance. It names the
+/// reconstructed statement only; the attachment, R and s are not included.
+#[derive(Debug, Clone, Serialize)]
+pub struct AcceptedIntent {
+    pub payload_hash: String,
+    pub context_hash: String,
+    pub message_hex: String,
+    pub at: UInt,
+    pub execution: Execution,
 }
 
 /// Host acceptance of an exact signed wrapper; returns the complete local
@@ -910,8 +1088,29 @@ pub fn verify_intent(
     at: UInt,
     signed: &SignedIntent,
 ) -> Result<Execution, Error> {
-    let (statement, _) = accept(source, action, scenario, target, authority, at, signed)?;
-    Ok(statement.execution)
+    accept_intent(source, action, scenario, target, authority, at, signed).map(|a| a.execution)
+}
+
+/// [`verify_intent`] with the reconstructed public identities for reporting.
+pub fn accept_intent(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authority: &ExpectedAuthority,
+    at: UInt,
+    signed: &SignedIntent,
+) -> Result<AcceptedIntent, Error> {
+    let statement = accept(source, action, scenario, target, authority, at, signed)?;
+    witness(&statement, signed)?;
+    let s = statement.signed.expect("signed reconstruction");
+    Ok(AcceptedIntent {
+        payload_hash: proving::hex(&s.payload_hash),
+        context_hash: statement.circuit.context_hash,
+        message_hex: schnorr::native_hex(s.message),
+        at: s.at,
+        execution: statement.execution,
+    })
 }
 
 #[cfg(test)]
@@ -961,8 +1160,10 @@ mod tests {
             action: "repay",
             scenario: serde_json::from_value(g["scenario"].clone()).unwrap(),
             target: Target::from_json(g["target_canonical_utf8"].as_str().unwrap()).unwrap(),
-            authority: ExpectedAuthority::from_json(&serde_json::Value::Object(authority).to_string())
-                .unwrap(),
+            authority: ExpectedAuthority::from_json(
+                &serde_json::Value::Object(authority).to_string(),
+            )
+            .unwrap(),
             signed: SignedIntent::from_json(&g["signed_wrapper"].to_string()).unwrap(),
         }
     }
@@ -1019,8 +1220,16 @@ mod tests {
         check(&r, &values, &raw(golden_key(), ALTERNATIVE)).unwrap();
         let mut alternative = c.signed.clone();
         alternative.signature_hex = ALTERNATIVE.into();
-        let (a, _) = accept(&c.source, c.action, &c.scenario, &c.target, &c.authority, UInt(15), &alternative)
-            .unwrap();
+        let a = accept(
+            &c.source,
+            c.action,
+            &c.scenario,
+            &c.target,
+            &c.authority,
+            UInt(15),
+            &alternative,
+        )
+        .unwrap();
         assert_eq!(a.public_values(), values);
         // Changing private R or s alone refuses in the checker.
         let honest = raw(golden_key(), &c.signed.signature_hex);
@@ -1048,7 +1257,14 @@ mod tests {
                 // message, a different (valid) native public statement.
                 result.unwrap();
             } else {
-                assert!(result.is_err(), "public position {i}");
+                let err = result.unwrap_err();
+                // Equality, assertion or declared-type range constraint.
+                assert!(
+                    [EQUALITY, ASSERTION, "Expected boolean", "Bit bound failed"]
+                        .iter()
+                        .any(|kind| err.message.contains(kind)),
+                    "public position {i}: {err}"
+                );
             }
         }
         // A different valid key in both public and private positions still needs
@@ -1079,65 +1295,165 @@ mod tests {
         }
     }
 
+    /// Constraint sites of the signed tail, in emission order.
+    #[derive(Clone, Copy, Debug)]
+    enum Site {
+        KeyNonidentity,
+        RNonidentity,
+        Fens,
+        Roundtrip,
+    }
+    /// Copy of the circuit with exactly one identified constraint neutralised.
+    fn ablate(r: &Reconstruction, site: Site) -> CircuitArtifact {
+        let mut ir = IrSource::load(r.circuit.zkir.as_bytes()).unwrap();
+        let mut instructions = (*ir.instructions).clone();
+        let first = instructions
+            .iter()
+            .position(|i| matches!(i, Instruction::PrivateInput { .. }))
+            .unwrap();
+        let asserts: Vec<usize> = (first..instructions.len())
+            .filter(|&i| matches!(instructions[i], Instruction::Assert { .. }))
+            .collect();
+        let index = match site {
+            Site::KeyNonidentity => asserts[0],
+            Site::RNonidentity => asserts[1],
+            Site::Fens => asserts[2],
+            Site::Roundtrip => {
+                1 + instructions
+                    .iter()
+                    .position(|i| matches!(i, Instruction::Encode { .. }))
+                    .unwrap()
+            }
+        };
+        instructions[index] = match &instructions[index] {
+            Instruction::Assert { .. } => Instruction::Assert { cond: immediate(1) },
+            Instruction::ConstrainEq { a, .. } => Instruction::ConstrainEq {
+                a: a.clone(),
+                b: a.clone(),
+            },
+            other => panic!("unexpected site {site:?}: {other:?}"),
+        };
+        ir.instructions = std::sync::Arc::new(instructions);
+        let mut disk = serde_json::to_value(&ir).unwrap();
+        disk["version"] = serde_json::json!({"major":3,"minor":0});
+        let mut circuit = r.circuit.clone();
+        circuit.zkir = serde_json::to_string(&disk).unwrap();
+        circuit
+    }
+    /// The checker refuses with the expected kind, and neutralising only the
+    /// identified site makes the same hostile witness pass: that constraint,
+    /// not an arbitrary interpreter error, is the refusal.
+    fn refused_at(r: &Reconstruction, values: &[Fr], witness: &[Fr], site: Site, kind: &str) {
+        let err = check(r, values, witness).unwrap_err();
+        assert_eq!(err.code, "mori::backend::relation");
+        assert!(err.message.contains(kind), "{site:?}: {err}");
+        check_relation(&ablate(r, site), values, witness)
+            .unwrap_or_else(|e| panic!("{site:?} ablated: {e}"));
+    }
+    const ASSERTION: &str = "Failed direct assertion";
+    const EQUALITY: &str = "Equality constraint failed";
+    const TYPED: &str = "Failed to decode";
+    fn challenge(r_xy: (Fr, Fr), key: JubjubSubgroup, message: Fr) -> Scalar {
+        let (px, py) = schnorr::coordinates(key);
+        let h = transient_hash(&[
+            Fr::from(schnorr::FENS_DOMAIN),
+            r_xy.0,
+            r_xy.1,
+            px,
+            py,
+            message,
+        ]);
+        let mut wide = [0u8; 64];
+        wide[..32].copy_from_slice(&h.as_le_bytes());
+        Scalar::from_bytes_wide(&wide)
+    }
+    fn native(s: Scalar) -> Fr {
+        Fr::from_le_bytes(&s.to_bytes()).unwrap()
+    }
+
     #[test]
     fn strict_fens_tag_order_canonical_response_and_points() {
         let c = golden();
         let r = statement(&c, 15);
         let values = r.public_values();
+        let n = r.financial.len();
         let message = r.signed.as_ref().unwrap().message;
-        for (domain, swap) in [(0x46454e54u64, false), (0x46454e53, true), (0, false)] {
-            let sig = qa_sign(7, 11, message, domain, swap);
-            assert!(check(&r, &values, &raw(golden_key(), &sig)).is_err());
-        }
         check(
             &r,
             &values,
             &raw(golden_key(), &qa_sign(7, 11, message, 0x46454e53, false)),
         )
         .unwrap();
+        // Valid signatures under a wrong tag or challenge order: FENS assertion.
+        for (domain, swap) in [(0x46454e54u64, false), (0x46454e53, true), (0, false)] {
+            let sig = qa_sign(7, 11, message, domain, swap);
+            refused_at(&r, &values, &raw(golden_key(), &sig), Site::Fens, ASSERTION);
+        }
         let honest = raw(golden_key(), &c.signed.signature_hex);
-        // r = Jubjub scalar order; s+r and r refuse by roundtrip, 0/1/r-1 by equation.
         let order = Fr::from_le_bytes(&[
             183, 44, 247, 214, 94, 14, 151, 208, 130, 16, 200, 204, 147, 32, 104, 166, 0, 59, 52,
             1, 1, 59, 103, 6, 169, 175, 51, 101, 234, 180, 125, 14,
         ])
         .unwrap();
-        for s in [
-            honest[4] + order,
-            order,
-            order + Fr::from(1u64),
-            Fr::from(0u64),
-            Fr::from(1u64),
-            order - Fr::from(1u64),
-        ] {
+        // s+r reduces to the valid s: only the canonical roundtrip refuses it.
+        let mut bad = honest.clone();
+        bad[4] = honest[4] + order;
+        refused_at(&r, &values, &bad, Site::Roundtrip, EQUALITY);
+        // r and r+1 refuse at the roundtrip first, then (ablated) at FENS.
+        for s in [order, order + Fr::from(1u64)] {
             let mut bad = honest.clone();
             bad[4] = s;
-            assert!(check(&r, &values, &bad).is_err());
+            let err = check(&r, &values, &bad).unwrap_err();
+            assert!(err.message.contains(EQUALITY), "{err}");
+            let err = check_relation(&ablate(&r, Site::Roundtrip), &values, &bad).unwrap_err();
+            assert!(err.message.contains(ASSERTION), "{err}");
         }
-        // Identity R is a typed subgroup point and refuses by the nonidentity check;
-        // torsion and mixed points refuse typed subgroup assignment.
-        let identity = [Fr::from(0u64), Fr::from(1u64)];
+        // 0, 1 and r-1 are range-valid and refuse only by the FENS equation.
+        for s in [Fr::from(0u64), Fr::from(1u64), order - Fr::from(1u64)] {
+            let mut bad = honest.clone();
+            bad[4] = s;
+            let err = check(&r, &values, &bad).unwrap_err();
+            assert!(err.message.contains(ASSERTION), "{err}");
+            let err = check_relation(&ablate(&r, Site::Roundtrip), &values, &bad).unwrap_err();
+            assert!(err.message.contains(ASSERTION), "{err}");
+        }
+        // Identity R with a response satisfying s*B = R + e*PK: only the R
+        // nonidentity assertion refuses it.
+        let identity = (Fr::from(0u64), Fr::from(1u64));
+        let s = challenge(identity, golden_key(), message) * Scalar::from(7u64);
+        let forged = vec![honest[0], honest[1], identity.0, identity.1, native(s)];
+        refused_at(&r, &values, &forged, Site::RNonidentity, ASSERTION);
+        // Identity public key in both public and private positions with
+        // s = k: only the key nonidentity assertion refuses it.
+        let k = Scalar::from(11u64);
+        let (rx, ry) = schnorr::coordinates(JubjubSubgroup::generator() * k);
+        let mut public = values.clone();
+        public[n + 2] = identity.0;
+        public[n + 3] = identity.1;
+        let forged = vec![identity.0, identity.1, rx, ry, native(k)];
+        refused_at(&r, &public, &forged, Site::KeyNonidentity, ASSERTION);
+        // Torsion and mixed-order points refuse typed subgroup assignment.
         let torsion = JubjubAffine::from_raw_unchecked(Fq::ZERO, -Fq::ONE);
         let mixed = JubjubAffine::from(
             JubjubExtended::from(JubjubSubgroup::generator()) + JubjubExtended::from(torsion),
         );
         for (x, y) in [
-            (identity[0], identity[1]),
             (Fr(torsion.get_u()), Fr(torsion.get_v())),
             (Fr(mixed.get_u()), Fr(mixed.get_v())),
         ] {
             let mut bad = honest.clone();
             bad[2] = x;
             bad[3] = y;
-            assert!(check(&r, &values, &bad).is_err());
+            let err = check(&r, &values, &bad).unwrap_err();
+            assert!(err.message.contains(TYPED), "{err}");
             let mut key = honest.clone();
             key[0] = x;
             key[1] = y;
             let mut public = values.clone();
-            let n = r.financial.len();
             public[n + 2] = x;
             public[n + 3] = y;
-            assert!(check(&r, &public, &key).is_err());
+            let err = check(&r, &public, &key).unwrap_err();
+            assert!(err.message.contains(TYPED), "{err}");
         }
     }
 
@@ -1264,8 +1580,18 @@ mod tests {
         };
         // Owner = beneficiary self-transfer 10: gross 10, net 0.
         run(vec![transfer(10)], limit(10, 0, 0)).unwrap();
-        assert!(run(vec![transfer(10)], limit(9, 0, 0)).unwrap_err().message.contains("gross"));
-        assert!(run(vec![transfer(10)], limit(10, 0, 1)).unwrap_err().message.contains("net"));
+        assert!(
+            run(vec![transfer(10)], limit(9, 0, 0))
+                .unwrap_err()
+                .message
+                .contains("gross")
+        );
+        assert!(
+            run(vec![transfer(10)], limit(10, 0, 1))
+                .unwrap_err()
+                .message
+                .contains("net")
+        );
         // A nonzero owner fee makes the self-beneficiary net underflow.
         assert!(
             run(vec![transfer(10), fee(1)], limit(11, 1, 0))
@@ -1274,10 +1600,13 @@ mod tests {
                 .contains("underflow")
         );
         assert!(
-            run(vec![transfer(u128::MAX), transfer(1)], limit(u128::MAX, 0, 0))
-                .unwrap_err()
-                .message
-                .contains("overflow")
+            run(
+                vec![transfer(u128::MAX), transfer(1)],
+                limit(u128::MAX, 0, 0)
+            )
+            .unwrap_err()
+            .message
+            .contains("overflow")
         );
     }
 }

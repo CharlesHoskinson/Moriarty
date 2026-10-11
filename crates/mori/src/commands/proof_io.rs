@@ -20,13 +20,61 @@ pub struct Input {
     /// Maximum permitted native circuit degree (1 through 19)
     #[arg(long, default_value_t = 9)]
     pub max_k: u8,
+    /// Exact signed owner-intent wrapper (required with a signed Target)
+    #[arg(long, value_name = "FILE")]
+    pub signature: Option<PathBuf>,
+    /// Expected owner authority JSON (required with a signed Target)
+    #[arg(long, value_name = "FILE")]
+    pub authority: Option<PathBuf>,
+    /// Logical time checked against the signed interval (required with a signed Target)
+    #[arg(long)]
+    pub at: Option<u128>,
 }
+/// The complete signed group accompanying a trusted signed Target.
+pub struct Signed {
+    pub authority: mori_backend::authorization::ExpectedAuthority,
+    pub at: mori_core::UInt,
+    pub intent: mori_backend::authorization::SignedIntent,
+}
+pub type Inputs = (
+    String,
+    mori_core::Scenario,
+    mori_backend::Target,
+    Option<Signed>,
+);
 impl Input {
-    pub fn read(&self) -> super::Result<(String, mori_core::Scenario, mori_backend::Target)> {
+    /// The trusted Target selects the mode. A signed Target requires the whole
+    /// signed group; an unsigned Target refuses any part of it.
+    pub fn read(&self) -> super::Result<Inputs> {
+        let target: mori_backend::Target = core_io::read_json(&self.target)?;
+        let signed = match (
+            target.signed_policy.is_some(),
+            &self.signature,
+            &self.authority,
+            self.at,
+        ) {
+            (true, Some(signature), Some(authority), Some(at)) => Some(Signed {
+                authority: core_io::authority(authority)?,
+                at: mori_core::UInt(at),
+                intent: core_io::signed_intent(signature)?,
+            }),
+            (true, ..) => {
+                return Err(core_io::operation(
+                    "a signed Target requires --signature, --authority and --at together; it never falls back to unsigned proofs",
+                ));
+            }
+            (false, None, None, None) => None,
+            (false, ..) => {
+                return Err(core_io::operation(
+                    "--signature, --authority and --at require a signed Target; unsigned proofs never accept signed inputs",
+                ));
+            }
+        };
         Ok((
             core_io::read_source(&self.action.file)?,
             core_io::read_json(&self.action.scenario)?,
-            core_io::read_json(&self.target)?,
+            target,
+            signed,
         ))
     }
     pub fn options(&self) -> mori_backend::proving::ProofOptions {
