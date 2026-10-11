@@ -484,3 +484,10 @@ Native liabilities Task 1: complete (commits215686bf..02ffcd9f, independent GPT-
 Native liabilities Task 2: complete (commits4c636b8a..6dd67aea, independent GPT-6.1 Sol HIGH spec PASS and quality APPROVED; audit `/home/charl/Moriarty/.moriarty-dev/runtime/native-liabilities-20261011/sol-task-2-review.md`). Actual trusted consumer/proof2/CLI complete effects checked with ordinary preparation; Quint QA, exact shape measures, separate native resource pair and final whole-candidate pair remain open. Task 3 is next.
 
 - Native liability Task3 scoped QA/model/measurement review: Sol specPASS/qualityAPPROVED on d06d128d. Both exact resource votes approved; one bounded native k11 repayment proof and six verifier calls including self completed, full effect readback and four native negatives passed. Allocation consumed. Final fresh full source/result SolHIGH/GrokHIGH pair and merge remain owed.
+
+
+## Native owner intent — 2026-10-11
+
+Native liabilities completed: PR26 merged3748fe82 with exact reviewedtree85ad41f4; both final source/actual-result SolHIGH and GrokHIGH APPROVE. Prior Task3 line above describes the pre-audit freeze. One k11 liability proof/six genuine verifications allocation consumed; all wider gates remain open.
+
+Next design adopted: exact native-owner-intent speca4a01236/golden9c035c8e after fresh SolHIGH609ad465 and GrokHIGH terminalAPPROVE (session01a12af9-b06c-7883-b78e-d33131c6d2fc, returnedgrok-4.6-build). Root and Sol independently reproduced vector; historical firstproposal dissent retained in runtime. Plan docs/superpowers/plans/2026-10-11-native-owner-intent.md. Task1 strict schemas/hostFENS component is next; Task2 actual compiler/CLI relation, Task3 Quint/ordinary/shape QA and Task4 separately reviewed native resources plus fresh whole-source/result pair remain owed. No implementation/native result approval from design votes. Worktree native-intents-20261011; entire roadmapgoal active.
