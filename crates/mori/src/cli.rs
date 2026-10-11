@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, expand, format, init, inspect, intent, lsp, mcp, prove, simulate, test, verify,
-    verify_intent,
+    check, compile, expand, format, init, inspect, intent, lsp, mcp, prove, replay, simulate, test,
+    verify, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -120,6 +120,8 @@ pub enum Command {
     Expand(expand::Args),
     /// Run an action locally against a scenario
     Simulate(simulate::Args),
+    /// Independently replay a public record against separately trusted inputs
+    Replay(replay::Args),
     /// Run the test cases in a project directory
     Test(test::Args),
     /// Produce the owner signing bytes for an action

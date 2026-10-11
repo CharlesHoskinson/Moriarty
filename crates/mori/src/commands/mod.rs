@@ -19,6 +19,7 @@ pub mod lsp;
 pub mod mcp;
 mod proof_io;
 pub mod prove;
+pub mod replay;
 pub mod simulate;
 pub mod test;
 pub mod verify;
@@ -37,6 +38,7 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Inspect(args) => inspect::run(args, shell),
         Command::Expand(args) => expand::run(args, shell),
         Command::Simulate(args) => simulate::run(args, shell),
+        Command::Replay(args) => replay::run(args, shell),
         Command::Test(args) => test::run(args, shell),
         Command::Intent(args) => intent::run(args, shell),
         Command::VerifyIntent(args) => verify_intent::run(args, shell),
