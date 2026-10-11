@@ -1,11 +1,13 @@
 //! Portable bounded transition relations for the pinned ledger-9 ZKIRv3.
 //! Compilation emits a relation and public ABI without a scenario or success
 //! flag. Explicit offline native proofs are available for the admitted public
-//! frame; authenticated ledger correspondence remains an open gate.
+//! frame; authenticated ledger correspondence remains an open gate. A signed
+//! Target appends the strict owner-intent statement to the same circuit.
 use midnight_transient_crypto::curve::Fr;
 use midnight_zkir_v3::ir::Operand;
 use midnight_zkir_v3::ir_types::IrType;
 use midnight_zkir_v3::{Identifier, Instruction, IrSource};
+use authorization::{AuthorizationBinding, SignedPolicy};
 use mori_core::{Action, AssetId, BinaryOp, Expr, ExprId, Program, Statement, Type, Value};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -14,6 +16,7 @@ use std::sync::Arc;
 
 pub mod authorization;
 pub mod schnorr;
+pub mod signed_relation;
 
 mod liabilities;
 pub use liabilities::{
@@ -22,9 +25,11 @@ pub use liabilities::{
 mod parameters;
 pub mod proving;
 
-pub const ARTIFACT_FORMAT: &str = "moriarty-zkir-artifact/2";
-pub const PUBLIC_ABI_VERSION: &str = "moriarty-public-abi/2";
-pub const RELATION_VERSION: &str = "moriarty-zkir-relation/2";
+pub const ARTIFACT_FORMAT: &str = "moriarty-zkir-artifact/3";
+pub const PUBLIC_ABI_VERSION: &str = "moriarty-public-abi/3";
+pub const RELATION_VERSION: &str = "moriarty-zkir-relation/3";
+/// Explicit authorization discriminator of an unsigned v3 artifact.
+pub const UNSIGNED_MODE: &str = "unsigned";
 
 pub const LEDGER_REVISION: &str = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14";
 pub const ZKIR_VERSION: &str = "3.0.0-rc.2";
@@ -38,6 +43,16 @@ pub struct Target {
     pub zkir_version: String,
     pub max_instructions: u32,
     pub max_artifact_bytes: u32,
+    /// Absent (omitted) for unsigned targets; explicit null refuses.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_policy"
+    )]
+    pub signed_policy: Option<SignedPolicy>,
+}
+fn present_policy<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<SignedPolicy>, D::Error> {
+    SignedPolicy::deserialize(d).map(Some)
 }
 impl Target {
     pub fn ledger9(network: impl Into<String>, anchor: impl Into<String>) -> Self {
@@ -49,10 +64,20 @@ impl Target {
             zkir_version: ZKIR_VERSION.into(),
             max_instructions: 100_000,
             max_artifact_bytes: 16_777_216,
+            signed_policy: None,
         }
     }
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|e| error("target", e.to_string()))
+        let value = mori_core::json::parse(text).map_err(|e| error("target", e.to_string()))?;
+        serde_json::from_value(value).map_err(|e| error("target", e.to_string()))
+    }
+    /// The explicit authorization discriminator selected by this Target.
+    pub fn authorization_mode(&self) -> &'static str {
+        if self.signed_policy.is_some() {
+            authorization::INTENT_PROFILE
+        } else {
+            UNSIGNED_MODE
+        }
     }
     fn validate(&self) -> Result<(), Error> {
         if self.profile != "ledger-9"
@@ -80,6 +105,11 @@ impl Target {
                 "Instruction and artifact limits must be positive.",
             ));
         }
+        if let Some(policy) = &self.signed_policy {
+            policy.validate()?;
+            authorization::validate_label(&self.network)?;
+            authorization::validate_label(&self.anchor)?;
+        }
         Ok(())
     }
 }
@@ -95,12 +125,32 @@ pub struct PublicBinding {
     pub constant: Option<String>,
     pub asset: Option<AssetId>,
 }
+/// Typed private witness descriptor; points are assigned as curve values.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PrivateType {
+    #[serde(rename = "Point<Jubjub>")]
+    JubjubPoint,
+    Native,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PrivateBinding {
+    pub name: String,
+    pub ty: PrivateType,
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CircuitArtifact {
     pub action: String,
     pub zkir: String,
+    /// SHA256 of the canonical 18-element source-fixed context preimage.
+    pub context_hash: String,
+    /// Financial positions 0..N, including context constants 0/1.
     pub public_inputs: Vec<PublicBinding>,
+    /// Signed positions N..N+11+4A; empty for unsigned artifacts.
+    pub authorization_bindings: Vec<AuthorizationBinding>,
+    /// Typed private inputs, flattened `[PK.x,PK.y,R.x,R.y,s]`; empty if unsigned.
+    pub private_inputs: Vec<PrivateBinding>,
     pub instruction_count: u32,
     pub effect_frame: Vec<EffectDescriptor>,
     pub balance_frame: Vec<BalanceDescriptor>,
@@ -163,6 +213,8 @@ pub struct Artifact {
     pub abi: String,
     #[serde(deserialize_with = "decode_relation_version")]
     pub relation: String,
+    #[serde(deserialize_with = "decode_authorization_mode")]
+    pub authorization_mode: String,
     pub program_hash: String,
     pub semantics: String,
     #[serde(deserialize_with = "decode_artifact_target")]
@@ -191,6 +243,15 @@ fn decode_abi_version<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, 
 }
 fn decode_relation_version<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
     decode_version(d, RELATION_VERSION)
+}
+fn decode_authorization_mode<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    let value = String::deserialize(d)?;
+    if value != UNSIGNED_MODE && value != authorization::INTENT_PROFILE {
+        return Err(serde::de::Error::custom(
+            "Unknown authorization mode; recompile for this backend revision.",
+        ));
+    }
+    Ok(value)
 }
 fn decode_registry_entries<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
     let value = u32::deserialize(d)?;
@@ -235,7 +296,28 @@ fn digest<T: Serialize>(value: &T) -> Result<[u8; 32], Error> {
 /// Lower a validated program. Financial relations constrain the declared touched
 /// balance frame. An authenticated ledger adapter must preserve all accounts
 /// outside it and bind the actual predecessor; that adapter is an open gate.
+/// This unsigned entry point refuses a signed Target rather than dropping it.
 pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
+    if target.signed_policy.is_some() {
+        return Err(error(
+            "target",
+            "A signed Target requires the signed compiler; unsigned compilation refuses it.",
+        ));
+    }
+    compile_mode(program, target)
+}
+/// Lower every action with the strict owner signature and checked caps in the
+/// same circuit. Source-wide signed admission precedes any layout allocation.
+pub fn compile_signed(program: &Program, target: &Target) -> Result<Artifact, Error> {
+    if target.signed_policy.is_none() {
+        return Err(error(
+            "target",
+            "Signed compilation requires a Target signed_policy.",
+        ));
+    }
+    compile_mode(program, target)
+}
+pub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifact, Error> {
     target.validate()?;
     mori_core::validate(program).map_err(|e| error("program", e.to_string()))?;
     if program
@@ -249,6 +331,10 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
         ));
     }
     let registry = liabilities::registry(program)?;
+    let signed = match &target.signed_policy {
+        Some(policy) => Some(signed_relation::admit(program, policy, &registry)?),
+        None => None,
+    };
     let hash = digest(program)?;
     let program_hash = hash.iter().map(|b| format!("{b:02x}")).collect();
     let mut circuits = Vec::with_capacity(program.actions.len());
@@ -265,7 +351,7 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
         max_liability_registry_entries: MAX_LIABILITY_REGISTRY_ENTRIES as u32,
     };
     for action in &program.actions {
-        let circuit = lower_action(program, action, target, &registry)?;
+        let circuit = lower_action(program, action, target, &registry, signed.as_ref())?;
         resources.instructions = resources
             .instructions
             .checked_add(circuit.instruction_count)
@@ -279,7 +365,7 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
             .ok_or_else(|| error("limit", "Artifact size overflow."))?;
         resources.public_values = resources
             .public_values
-            .checked_add(circuit.public_inputs.len() as u32)
+            .checked_add((circuit.public_inputs.len() + circuit.authorization_bindings.len()) as u32)
             .ok_or_else(|| error("limit", "Public ABI size overflow."))?;
         resources.max_replay_steps = resources.max_replay_steps.max(circuit.replay_steps);
         if resources.instructions > target.max_instructions
@@ -296,6 +382,7 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
         format: ARTIFACT_FORMAT.into(),
         abi: PUBLIC_ABI_VERSION.into(),
         relation: RELATION_VERSION.into(),
+        authorization_mode: target.authorization_mode().into(),
         program_hash,
         semantics: program.semantics.clone(),
         target: target.clone(),
@@ -352,6 +439,8 @@ fn immediate(n: u128) -> Operand {
 struct Builder {
     instructions: Vec<Instruction>,
     bindings: Vec<PublicBinding>,
+    /// Actual public wire of each financial position, in binding order.
+    wires: Vec<Operand>,
     serial: u32,
 }
 impl Builder {
@@ -485,6 +574,7 @@ impl Builder {
             guard: immediate(1),
             inputs: vec![operand.clone()],
         });
+        self.wires.push(operand.clone());
         self.bindings.push(PublicBinding {
             role: role.into(),
             name: name.into(),
@@ -594,27 +684,22 @@ fn lower_action(
     action: &Action,
     target: &Target,
     registry: &[LiabilityIdentity],
+    signed: Option<&signed_relation::Layout>,
 ) -> Result<CircuitArtifact, Error> {
     let mut builder = Builder::default();
-    let context = digest(&(
-        RELATION_VERSION,
-        PUBLIC_ABI_VERSION,
-        MAX_LIABILITY_REGISTRY_ENTRIES,
-        registry,
-        program,
-        target,
-        &action.name,
-    ))?;
-    for (i, chunk) in context.chunks_exact(16).enumerate() {
-        let value = u128::from_le_bytes(chunk.try_into().expect("16-byte digest limb"));
+    // Stage positions 0/1 with placeholders. Their constants are the hash of
+    // the frozen financial layout, inserted only after that layout exists.
+    let mut context_checks = Vec::with_capacity(2);
+    for i in 0..2 {
         builder.public(
             "context",
             &format!("program_target_action.{i}"),
             Type::UInt,
-            Some(immediate(value)),
-            Some(value.to_string()),
+            Some(immediate(0)),
+            None,
             None,
         );
+        context_checks.push(builder.instructions.len() - 2);
     }
     let mut env = BTreeMap::new();
     for state in &program.states {
@@ -937,6 +1022,39 @@ fn lower_action(
         builder.canonical_liability(presence.operand.clone(), amount.operand.clone());
         outputs.extend([presence.operand, amount.operand]);
     }
+    let replay_steps = action.statements.len() as u32;
+    let context = signed_relation::context_hash(
+        target,
+        registry,
+        program,
+        &action.name,
+        &builder.bindings,
+        &effect_frame,
+        &balance_frame,
+        &liability_frame,
+        replay_steps,
+    )?;
+    for (i, index) in context_checks.into_iter().enumerate() {
+        let value = authorization::digest_limbs(context)[i].0;
+        builder.instructions[index] = Instruction::ConstrainEq {
+            a: builder.wires[i].clone(),
+            b: immediate(value),
+        };
+        builder.bindings[i].constant = Some(value.to_string());
+    }
+    let (authorization_bindings, private_inputs) = match signed {
+        Some(layout) => signed_relation::append(
+            &mut builder,
+            layout,
+            context,
+            &effect_frame,
+            &liability_frame,
+        )?,
+        None => (Vec::new(), Vec::new()),
+    };
+    if builder.instructions.len() > target.max_instructions as usize {
+        return Err(error("limit", "Action exceeds target instruction limit."));
+    }
     let output_types = vec![IrType::Native; outputs.len()];
     builder
         .instructions
@@ -960,11 +1078,14 @@ fn lower_action(
     Ok(CircuitArtifact {
         action: action.name.clone(),
         zkir,
+        context_hash: proving::hex(&context),
         public_inputs: builder.bindings,
+        authorization_bindings,
+        private_inputs,
         instruction_count,
         effect_frame,
         balance_frame,
         liability_frame,
-        replay_steps: action.statements.len() as u32,
+        replay_steps,
     })
 }

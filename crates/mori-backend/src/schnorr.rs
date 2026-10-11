@@ -76,7 +76,8 @@ pub fn decode_signature(hex: &str) -> Result<SignatureWitness, Error> {
         response: native(response_bytes)?,
     })
 }
-fn xy(point: JubjubSubgroup) -> (Fr, Fr) {
+/// Affine native coordinates of a decoded subgroup point.
+pub fn coordinates(point: JubjubSubgroup) -> (Fr, Fr) {
     let affine = JubjubAffine::from(JubjubExtended::from(point));
     (Fr(affine.get_u()), Fr(affine.get_v()))
 }
@@ -85,8 +86,8 @@ fn xy(point: JubjubSubgroup) -> (Fr, Fr) {
 pub fn verify_attachment(key_hex: &str, signature_hex: &str, message: Fr) -> Result<(), Error> {
     let key = decode_key(key_hex)?;
     let signature = decode_signature(signature_hex)?;
-    let (rx, ry) = xy(signature.r);
-    let (pkx, pky) = xy(key);
+    let (rx, ry) = coordinates(signature.r);
+    let (pkx, pky) = coordinates(key);
     let h = transient_hash(&[Fr::from(FENS_DOMAIN), rx, ry, pkx, pky, message]);
     let mut wide = [0u8; 64];
     wide[..32].copy_from_slice(&h.as_le_bytes());
