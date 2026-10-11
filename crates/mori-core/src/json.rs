@@ -91,6 +91,34 @@ pub fn parse(text: &str) -> Result<Value, Error> {
         .map_err(|e| Error::new("json", e.to_string()))?;
     Ok(value)
 }
+
+/// ASCII-safe pretty JSON that fits the same public reader profile, including
+/// the final newline added by CLI printing. Parsed values and signing bytes
+/// are preserved; terminal-controlled Unicode remains visibly escaped.
+pub fn export(value: &impl serde::Serialize) -> Result<String, Error> {
+    let json =
+        serde_json::to_string_pretty(value).map_err(|e| Error::new("json", e.to_string()))?;
+    parse(&json)?;
+    let mut display = String::with_capacity(json.len());
+    for character in json.chars() {
+        if character.is_ascii() && (!character.is_control() || character == '\n') {
+            display.push(character);
+        } else {
+            for unit in character.encode_utf16(&mut [0; 2]) {
+                use std::fmt::Write;
+                write!(&mut display, "\\u{unit:04x}").expect("writing to String cannot fail");
+            }
+        }
+        if display.len() >= MAX_BYTES {
+            return Err(Error::new(
+                "json",
+                "Escaped JSON and final newline exceed 1 MiB",
+            ));
+        }
+    }
+    parse(&display)?;
+    Ok(display)
+}
 #[cfg(test)]
 mod tests {
     use super::*;

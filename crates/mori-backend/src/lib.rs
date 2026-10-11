@@ -1,6 +1,7 @@
 //! Portable bounded transition relations for the pinned ledger-9 ZKIRv3.
 //! Compilation emits a relation and public ABI without a scenario or success
-//! flag. Proof generation and authenticated ledger correspondence are open gates.
+//! flag. Explicit offline native proofs are available for the admitted public
+//! frame; authenticated ledger correspondence remains an open gate.
 use midnight_transient_crypto::curve::Fr;
 use midnight_zkir_v3::ir::Operand;
 use midnight_zkir_v3::ir_types::IrType;
@@ -10,6 +11,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
+
+mod parameters;
+pub mod proving;
 
 pub const LEDGER_REVISION: &str = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14";
 pub const ZKIR_VERSION: &str = "3.0.0-rc.2";

@@ -28,7 +28,8 @@ Its local network/anchor are an explicitly unqualified development example.
 Supply an exact target JSON with the actual network/anchor for another
 installation. Unsupported revisions and cross-network assets refuse.
 Artifact bytes are compiler output size; they are not encoded transaction
-size. Native proof generation, measured circuit/fraud k, replay timing,
+size. Compilation does not execute a prover or certify costs. Proof receipts
+report the circuit k actually executed; fraud k, replay timing,
 ledger frame/phase correspondence and deployment remain open.
 
 The [language reference](../crates/mori-core/README.md) defines the grammar
@@ -45,6 +46,52 @@ The native core profile does not yet use the beta formatter or editor.
 snapshots. A refused action commits no effects. The library's `replay`
 recomputes each step and reports the first divergence. This is a reference
 replay API; no external fraud-game implementation is included.
+
+## Native public transition proofs
+
+```sh
+mori prove examples/core/native-payment/payment.mori --action run \
+  --scenario examples/core/native-payment/scenario.json \
+  --target toolchains/ledger-9.json --params-dir /path/to/pinned/offline-srs \
+  --max-k 10 --out payment-proof.json
+mori verify examples/core/native-payment/payment.mori --action run \
+  --scenario examples/core/native-payment/scenario.json \
+  --target toolchains/ledger-9.json --params-dir /path/to/pinned/offline-srs \
+  --max-k 10 --proof payment-proof.json
+```
+
+The public local UInt/Bool, transfer, fee, state and event profile uses the
+pinned native prover and verifier. Both commands print a receipt with complete
+local execution, steps, effects, prestate and poststate. `prove` genuinely
+self-verifies before publishing a new bundle. Existing output files and
+symlinks refuse; publication atomically preserves a concurrently created
+destination. `verify` is read-only and derives its own verifier key from
+recompiled source and trusted parameters. A supplied key or status flag does
+not provide verification authority.
+
+The proof commits to original source bytes, canonical program, exact target,
+scenario, full execution, action and actual circuit k. Hashing uses SHA-256;
+the domain-separated claim digest is interpreted little-endian and reduced
+into the pinned field, without truncating to 128 bits. The native statement
+also includes every trusted compiled ABI value. Changed context cannot be
+repaired by relabelling bundle metadata. Empty, oversized or noncanonical hex
+refuses; the pinned native verifier rejects trailing proof bytes.
+
+Parameters come exclusively from the caller's explicit directory, named
+`bls_midnight_2p{k}`. A bounded immutable snapshot must match the exact upstream
+SHA-256 before decoding. There is no download or parameter search. The default
+caller cap is k9 and the maximum is k19; measured degree is checked before
+parameter loading. The payment example needs k10. These objective public tool
+bounds are independent of maintainer experiment authorization.
+
+This receipt qualifies a **local native transition proof**. Host reconstruction
+and the binding commitment preserve untouched balances in the full local
+report; the circuit constrains its declared touched frame. This does not prove
+an in-circuit hash of the entire report or authenticate ledger state, owner
+authority or predecessor history. Nonempty residual scenario liabilities and
+source liability/discharge lowering refuse until their relation is encoded.
+Private execution, native recursion, compiler soundness, fraud limits, target
+qualification and deployment remain separate requirements.
 
 `test DIRECTORY` loads `mori-tests.json`, profile `moriarty-tests/1`. Each
 case supplies a source, scenario, action and either exact accepted poststate
@@ -92,13 +139,13 @@ soundness or general compiler correspondence.
 
 The [Quint stack](../experiments/moriarty-language/formal/quint/language/README.md)
 models complete-effect acceptance, scoped authority, sponsorship, pending
-recovery and bounded batch clearing. Its deterministic witnesses and seeded
+recovery, bounded batch clearing and native local proof bindings. Its deterministic witnesses and seeded
 simulations are separate evidence. Symbolic signature/proof premises do not
 verify cryptography, and the correspondence table names runtime gaps.
 
 This slice updates Moriarty itself. It supplies foundations for M1, M2,
 M5–M7, M9, M10 and the financial library requirements. It does not close all
-U0/U1/U2 obligations or M1–M17. Prove/verify/deploy/call, strict in-circuit
+U0/U1/U2 obligations or M1–M17. Deploy/call, strict in-circuit
 JubJub, authenticated persisted acceptance and the full launch libraries
 remain required subsequent language/toolchain work. External targets are
 integration constraints; no Fenrir node, consensus or application code is
