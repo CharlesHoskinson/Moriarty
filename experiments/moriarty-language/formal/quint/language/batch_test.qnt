@@ -1,0 +1,21 @@
+module batch_test {
+  import batch.* from "./batch"
+  run uniformPriceClearingTest = init.then(clear(good)).expect(state.buyerCash == 13 and state.sellerCash == 6 and state.solverCash == 1 and state.buyerToken == 2 and safety)
+  run unequalPricesTest = init.then(refuse({ ...good, orders: good.orders.set(1, { ...good.orders.get(1), executionPrice: 4 }) })).expect(state.buyerCash == 20 and state.accepts == 0)
+  run solverBoundTest = init.then(refuse({ ...good, solverFee: 3 })).expect(state.fees == 0)
+  run unauthorizedSolverTest = init.then(refuse({ ...good, solver: "other" })).expect(state.gross == 0)
+  run staleOracleTest = init.then(refuse({ ...good, oracleTime: 6 })).expect(state.accepts == 0)
+  run futureOracleTest = init.then(refuse({ ...good, oracleTime: 11 })).expect(state.accepts == 0)
+  run unauthorizedOracleTest = init.then(refuse({ ...good, oracle: "other" })).expect(state.accepts == 0)
+  run unverifiedOracleTest = init.then(refuse({ ...good, oracleVerified: false })).expect(state.accepts == 0)
+  run oraclePriceBoundTest = init.then(refuse({ ...good, oraclePrice: 5 })).expect(state.accepts == 0)
+  run buyerLimitTest = init.then(refuse({ ...good, orders: good.orders.set(1, { ...good.orders.get(1), limitPrice: 2 }) })).expect(state.accepts == 0)
+  run excessiveFillTest = init.then(refuse({ ...good, orders: good.orders.set(1, { ...good.orders.get(1), filled: 3 }) })).expect(state.accepts == 0)
+  run crossDomainAtomicityTest = init.then(refuse({ ...good, network: "other" })).expect(state.accepts == 0)
+  run assetIdentityTest = init.then(refuse({ ...good, buyAsset: "other-issuer/cash/0" })).expect(state.accepts == 0)
+  run missingOrderTest = init.then(refuse({ ...good, orders: Map(0 -> good.orders.get(0)) })).expect(state.accepts == 0)
+  run incompleteEffectsTest = init.then(refuse({ ...good, complete: false })).expect(state.accepts == 0)
+  run cumulativeGrossTest = init.then(clear(good)).then(clear(good)).then(refuse(good)).expect(state.gross == 14 and state.accepts == 2)
+  run liabilitiesPersistTest = init.then(clear({ ...good, liability: 2 })).then(clear(good)).expect(state.liability == 2)
+  run liabilityCapTest = init.then(refuse({ ...good, liability: 4 })).expect(state.liability == 0)
+}

@@ -30,6 +30,35 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         shell.status("Checking", &name);
     }
     let started = Instant::now();
+    if mori_lexer::lex(&source).is_ok_and(|tokens| {
+        tokens
+            .span(mori_lexer::TokenIdx::new(0), &source)
+            .source_text(&source)
+            == "language"
+    }) {
+        let result = mori_core::parse(&source);
+        if args.json {
+            let report = match &result {
+                Ok(program) => {
+                    serde_json::json!({"status":"accepted", "file":name,"source_hash":mori_core::intent::hash_bytes(source.as_bytes()),"language":program.language,"agreement":program.name,"actions":program.actions,"diagnostics":[]})
+                }
+                Err(error) => {
+                    serde_json::json!({"status":"rejected","file":name,"diagnostics":[error]})
+                }
+            };
+            super::core_io::print(&report)?;
+        } else {
+            match &result {
+                Ok(_) => shell.status("Finished", "bounded core check"),
+                Err(error) => shell.error(error),
+            }
+        }
+        return Ok(if result.is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        });
+    }
     let (accepted, report) = match mori_parser::parse(&source) {
         Err(error) => {
             let diagnostics = vec![error];

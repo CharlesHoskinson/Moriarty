@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, expand, format, init, inspect, intent, lsp, mcp, simulate, test, verify_intent,
+    check, compile, expand, format, init, inspect, intent, lsp, mcp, simulate, test, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -97,12 +97,14 @@ pub enum Command {
     Init(init::Args),
     /// Check syntax, names, types and action support
     Check(check::Args),
+    /// Compile a bounded Moriarty program into ledger-9 ZKIRv3 circuits
+    Compile(compile::Args),
     /// Format source files in place
     #[command(visible_alias = "fmt")]
     Format(format::Args),
     /// Show identity claims, operative bounds and open premises
     Inspect(inspect::Args),
-    /// Expand an action into Source/6 with an input origin map
+    /// Show the native core IR after checking an action against a scenario
     Expand(expand::Args),
     /// Run an action locally against a scenario
     Simulate(simulate::Args),
