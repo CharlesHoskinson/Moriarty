@@ -1,7 +1,7 @@
 //! Signed compiler and host reconstruction. Ordinary compile/reference checks
 //! only: no SRS, key generation, proving, MockProver or native verification.
-use midnight_curves::{Fr as Scalar, JubjubAffine, JubjubExtended, JubjubSubgroup};
 use midnight_curves::pairing::group::Group;
+use midnight_curves::{Fr as Scalar, JubjubAffine, JubjubExtended, JubjubSubgroup};
 use midnight_transient_crypto::{curve::Fr, hash::transient_hash};
 use midnight_zkir_v3::{Instruction, IrSource, ir::Operand};
 use mori_backend::{
@@ -109,7 +109,10 @@ fn signed_target_policy_is_omitted_when_absent_and_null_refuses() {
     let signed = golden_target();
     assert_eq!(
         mori_core::intent::canonical(&signed).unwrap(),
-        golden()["target_canonical_utf8"].as_str().unwrap().as_bytes()
+        golden()["target_canonical_utf8"]
+            .as_str()
+            .unwrap()
+            .as_bytes()
     );
     let mut extra = serde_json::to_value(&signed).unwrap();
     extra["signed_policy"]["key"] = "x".into();
@@ -127,8 +130,15 @@ fn golden_signed_compile_stages_exact_context_and_authorization_layout() {
     assert_eq!(artifact.format, "moriarty-zkir-artifact/3");
     assert_eq!(artifact.abi, "moriarty-public-abi/3");
     assert_eq!(artifact.relation, "moriarty-zkir-relation/3");
-    assert_eq!(artifact.authorization_mode, "moriarty-jubjub-owner-intent/1");
-    let c = artifact.circuits.iter().find(|c| c.action == "repay").unwrap();
+    assert_eq!(
+        artifact.authorization_mode,
+        "moriarty-jubjub-owner-intent/1"
+    );
+    let c = artifact
+        .circuits
+        .iter()
+        .find(|c| c.action == "repay")
+        .unwrap();
     assert_eq!(c.context_hash, g["context_hash"]);
     assert_eq!(c.context_hash, g["payload"]["relation_hash"]);
     // All 28 financial descriptors keep role/name/type/asset/constant and order.
@@ -148,15 +158,28 @@ fn golden_signed_compile_stages_exact_context_and_authorization_layout() {
         serde_json::to_value(&c.private_inputs).unwrap(),
         json!([{"name":"public_key","ty":"Point<Jubjub>"},{"name":"R","ty":"Point<Jubjub>"},{"name":"response","ty":"Native"}])
     );
-    assert_eq!(serde_json::to_value(&c.effect_frame).unwrap(), g["effect_frame"]);
-    assert_eq!(serde_json::to_value(&c.balance_frame).unwrap(), g["balance_frame"]);
-    assert_eq!(serde_json::to_value(&c.liability_frame).unwrap(), g["liability_frame"]);
+    assert_eq!(
+        serde_json::to_value(&c.effect_frame).unwrap(),
+        g["effect_frame"]
+    );
+    assert_eq!(
+        serde_json::to_value(&c.balance_frame).unwrap(),
+        g["balance_frame"]
+    );
+    assert_eq!(
+        serde_json::to_value(&c.liability_frame).unwrap(),
+        g["liability_frame"]
+    );
     assert_eq!(c.replay_steps, 6);
     // Unchanged unsigned source behavior remains available, with its own context.
-    let unsigned = mori_backend::compile(&program, &Target::ledger9("local", "native-liability-qa"))
-        .unwrap();
+    let unsigned =
+        mori_backend::compile(&program, &Target::ledger9("local", "native-liability-qa")).unwrap();
     assert_eq!(unsigned.authorization_mode, "unsigned");
-    let u = unsigned.circuits.iter().find(|c| c.action == "repay").unwrap();
+    let u = unsigned
+        .circuits
+        .iter()
+        .find(|c| c.action == "repay")
+        .unwrap();
     assert!(u.authorization_bindings.is_empty() && u.private_inputs.is_empty());
     assert_eq!(u.public_inputs.len(), 28);
     assert_ne!(u.context_hash, c.context_hash);
@@ -167,7 +190,11 @@ fn golden_zkir_binds_direct_financial_operands_message_key_and_unconditional_imp
     let g = golden();
     let program = mori_core::parse(g["source_utf8"].as_str().unwrap()).unwrap();
     let artifact = mori_backend::compile_signed(&program, &golden_target()).unwrap();
-    let c = artifact.circuits.iter().find(|c| c.action == "repay").unwrap();
+    let c = artifact
+        .circuits
+        .iter()
+        .find(|c| c.action == "repay")
+        .unwrap();
     let ir = IrSource::load(c.zkir.as_bytes()).unwrap();
     assert!(!ir.do_communications_commitment && ir.inputs.is_empty());
     let mut publics = Vec::new();
@@ -199,30 +226,58 @@ fn golden_zkir_binds_direct_financial_operands_message_key_and_unconditional_imp
     assert_eq!(impacts, publics);
     assert_eq!(
         privates,
-        vec![json!("Point<Jubjub>"), json!("Point<Jubjub>"), json!("Scalar<BLS12-381>")]
+        vec![
+            json!("Point<Jubjub>"),
+            json!("Point<Jubjub>"),
+            json!("Scalar<BLS12-381>")
+        ]
     );
-    let message = hashes.iter().find(|h| h.len() == 75).expect("75-field MOI1 hash");
+    let message = hashes
+        .iter()
+        .find(|h| h.len() == 75)
+        .expect("75-field MOI1 hash");
     assert_eq!(message[0], Operand::Immediate(Fr::from(0x31494f4du64)));
     assert_eq!(message[1], Operand::Immediate(Fr::from(1u64)));
     assert_eq!(message[6], Operand::Immediate(Fr::from(28u64)));
     for i in 0..28 {
-        let tag = if c.public_inputs[i].ty == mori_core::Type::Bool { 1u64 } else { 2 };
-        assert_eq!(message[7 + 2 * i], Operand::Immediate(Fr::from(tag)), "tag {i}");
-        assert_eq!(message[8 + 2 * i], publics[i], "direct financial operand {i}");
+        let tag = if c.public_inputs[i].ty == mori_core::Type::Bool {
+            1u64
+        } else {
+            2
+        };
+        assert_eq!(
+            message[7 + 2 * i],
+            Operand::Immediate(Fr::from(tag)),
+            "tag {i}"
+        );
+        assert_eq!(
+            message[8 + 2 * i],
+            publics[i],
+            "direct financial operand {i}"
+        );
     }
     assert_eq!(message[63], Operand::Immediate(Fr::from(1u64)));
     // payload limbs, caps and metadata are the public authorization identifiers.
     assert_eq!(message[4..6], publics[28..30]);
     assert_eq!(message[66..70], publics[39..43]);
-    assert_eq!(message[70..75], [&publics[33..36], &publics[36..38]].concat());
+    assert_eq!(
+        message[70..75],
+        [&publics[33..36], &publics[36..38]].concat()
+    );
     let limbs = g["asset_limbs"].as_array().unwrap();
     for (i, limb) in limbs.iter().enumerate() {
         let n: u128 = limb.as_str().unwrap().parse().unwrap();
         assert_eq!(message[64 + i], Operand::Immediate(Fr::from(n)));
     }
-    let challenge = hashes.iter().find(|h| h.len() == 6).expect("FENS challenge");
+    let challenge = hashes
+        .iter()
+        .find(|h| h.len() == 6)
+        .expect("FENS challenge");
     assert_eq!(challenge[0], Operand::Immediate(Fr::from(0x46454e53u64)));
-    assert!(asserts >= 1, "strict FENS equation is an unconditional Assert");
+    assert!(
+        asserts >= 1,
+        "strict FENS equation is an unconditional Assert"
+    );
 }
 
 #[test]
@@ -255,7 +310,12 @@ fn golden_preparation_reconstructs_exact_payload_message_and_projections() {
             mori_core::Value::UInt(n) => n.0.to_string(),
             mori_core::Value::Bool(b) => u8::from(*b).to_string(),
         };
-        assert_eq!(raw, want["value"].as_str().unwrap(), "position {}", v.position);
+        assert_eq!(
+            raw,
+            want["value"].as_str().unwrap(),
+            "position {}",
+            v.position
+        );
     }
     let auth = g["authorization_bindings"].as_array().unwrap();
     assert_eq!(prepared.authorization_projection.len(), 15);
@@ -292,7 +352,10 @@ fn golden_attachments_verify_under_reconstruction_and_interval() {
         run(&golden_signed(), at).unwrap();
     }
     for at in [9, 21] {
-        assert_eq!(run(&golden_signed(), at).unwrap_err().code, "mori::backend::authorization");
+        assert_eq!(
+            run(&golden_signed(), at).unwrap_err().code,
+            "mori::backend::authorization"
+        );
     }
     // Independent alternative attachment (public QA nonce 23) for the same payload.
     let mut alternative = golden_signed();
@@ -302,26 +365,30 @@ fn golden_attachments_verify_under_reconstruction_and_interval() {
     let mut bytes = flipped.signature_hex.into_bytes();
     bytes[130] = if bytes[130] == b'0' { b'1' } else { b'0' };
     flipped.signature_hex = String::from_utf8(bytes).unwrap();
-    assert_eq!(run(&flipped, 15).unwrap_err().code, "mori::backend::signature");
+    assert_eq!(
+        run(&flipped, 15).unwrap_err().code,
+        "mori::backend::signature"
+    );
 }
 
 #[test]
 fn trusted_authority_target_and_payload_substitutions_refuse() {
     let g = golden();
     let source = g["source_utf8"].as_str().unwrap();
-    let check = |target: &Target, authority: &ExpectedAuthority, signed: &SignedIntent, src: &str| {
-        signed_relation::verify_intent(
-            src,
-            "repay",
-            &golden_scenario(),
-            target,
-            authority,
-            UInt(15),
-            signed,
-        )
-        .unwrap_err()
-        .code
-    };
+    let check =
+        |target: &Target, authority: &ExpectedAuthority, signed: &SignedIntent, src: &str| {
+            signed_relation::verify_intent(
+                src,
+                "repay",
+                &golden_scenario(),
+                target,
+                authority,
+                UInt(15),
+                signed,
+            )
+            .unwrap_err()
+            .code
+        };
     let (t, a, s) = (golden_target(), golden_authority(), golden_signed());
     for (field, value) in [
         ("network", json!("other")),
@@ -333,7 +400,12 @@ fn trusted_authority_target_and_payload_substitutions_refuse() {
         ("predecessor", json!("local/head/1")),
         ("not_before", json!("11")),
         ("target_hash", json!("00".repeat(32))),
-        ("public_key_hex", json!("0677506737143823730512c5525e0b30acb75906fa7d53f494ba689b78620133d4cdab997110c2f1e02bb16ebef816c9d0a6025386825581a688b9bfa326360a")),
+        (
+            "public_key_hex",
+            json!(
+                "0677506737143823730512c5525e0b30acb75906fa7d53f494ba689b78620133d4cdab997110c2f1e02bb16ebef816c9d0a6025386825581a688b9bfa326360a"
+            ),
+        ),
     ] {
         let mut au = serde_json::to_value(&a).unwrap();
         au[field] = value;
@@ -341,7 +413,11 @@ fn trusted_authority_target_and_payload_substitutions_refuse() {
             au["limits"][0]["beneficiary"] = "alice".into();
         }
         let au = ExpectedAuthority::from_json(&au.to_string()).unwrap();
-        assert_eq!(check(&t, &au, &s, source), "mori::backend::authorization", "{field}");
+        assert_eq!(
+            check(&t, &au, &s, source),
+            "mori::backend::authorization",
+            "{field}"
+        );
     }
     let mut au = serde_json::to_value(&a).unwrap();
     au["limits"][0]["gross_cap"] = "10".into();
@@ -355,7 +431,10 @@ fn trusted_authority_target_and_payload_substitutions_refuse() {
     let mut asset = serde_json::to_value(&a).unwrap();
     asset["limits"][0]["asset"]["scale"] = 1.into();
     let asset = ExpectedAuthority::from_json(&asset.to_string()).unwrap();
-    assert_eq!(check(&t, &asset, &s, source), "mori::backend::authorization");
+    assert_eq!(
+        check(&t, &asset, &s, source),
+        "mori::backend::authorization"
+    );
     let unsigned = Target::ledger9("local", "native-liability-qa");
     assert_eq!(check(&unsigned, &a, &s, source), "mori::backend::target");
 }
@@ -376,10 +455,18 @@ fn signed_admission_refuses_second_payer_debtor_aliases_and_seventeen_before_all
             &format!("action other() {{ {body} }}\n  action observe() {{"),
         )
     };
-    assert_eq!(code(&unexecuted("transfer(QA, \"carol\", \"bob\", 1);")), "mori::backend::signed");
-    assert_eq!(code(&unexecuted("fee(QA, \"bob\", \"treasury\", 1);")), "mori::backend::signed");
     assert_eq!(
-        code(&unexecuted("liability(\"loan\", QA, \"carol\", \"alice\", 1);")),
+        code(&unexecuted("transfer(QA, \"carol\", \"bob\", 1);")),
+        "mori::backend::signed"
+    );
+    assert_eq!(
+        code(&unexecuted("fee(QA, \"bob\", \"treasury\", 1);")),
+        "mori::backend::signed"
+    );
+    assert_eq!(
+        code(&unexecuted(
+            "liability(\"loan\", QA, \"carol\", \"alice\", 1);"
+        )),
         "mori::backend::signed"
     );
     // Core already refuses identity aliases in source and in a direct Program.
@@ -393,7 +480,9 @@ fn signed_admission_refuses_second_payer_debtor_aliases_and_seventeen_before_all
     copy.name = "QB".into();
     program.assets.push(copy);
     assert_eq!(
-        mori_backend::compile_signed(&program, &target).unwrap_err().code,
+        mori_backend::compile_signed(&program, &target)
+            .unwrap_err()
+            .code,
         "mori::backend::program"
     );
     let assets: String = (0..17)
@@ -418,9 +507,14 @@ fn signed_admission_refuses_second_payer_debtor_aliases_and_seventeen_before_all
             "action observe() {",
             &format!("action other() {{ {full_duties} }}\n  action observe() {{"),
         );
-    let artifact = mori_backend::compile_signed(&mori_core::parse(&full).unwrap(), &target).unwrap();
+    let artifact =
+        mori_backend::compile_signed(&mori_core::parse(&full).unwrap(), &target).unwrap();
     assert_eq!(artifact.resources.liability_registry_entries, 16);
-    let observe = artifact.circuits.iter().find(|c| c.action == "observe").unwrap();
+    let observe = artifact
+        .circuits
+        .iter()
+        .find(|c| c.action == "observe")
+        .unwrap();
     assert_eq!(observe.authorization_bindings.len(), 11 + 4 * 16);
     assert_eq!(observe.liability_frame.len(), 16);
     // Zero assets and zero duties: pure state action still requires authorization.
@@ -438,7 +532,9 @@ fn unsigned_and_signed_entry_points_refuse_the_other_target_mode() {
     let source = g["source_utf8"].as_str().unwrap();
     let program = mori_core::parse(source).unwrap();
     assert_eq!(
-        mori_backend::compile(&program, &golden_target()).unwrap_err().code,
+        mori_backend::compile(&program, &golden_target())
+            .unwrap_err()
+            .code,
         "mori::backend::target"
     );
     assert_eq!(
@@ -448,9 +544,15 @@ fn unsigned_and_signed_entry_points_refuse_the_other_target_mode() {
         "mori::backend::target"
     );
     assert_eq!(
-        proving::prove(source, "repay", &golden_scenario(), &golden_target(), &params())
-            .unwrap_err()
-            .code,
+        proving::prove(
+            source,
+            "repay",
+            &golden_scenario(),
+            &golden_target(),
+            &params()
+        )
+        .unwrap_err()
+        .code,
         "mori::backend::target"
     );
 }
@@ -473,15 +575,27 @@ fn honest_signed_prove_reaches_missing_parameters_and_bad_inputs_refuse_earlier(
         .unwrap_err()
         .code
     };
-    assert_eq!(prove(&golden_signed(), &golden_authority(), 15), "mori::backend::parameters");
+    assert_eq!(
+        prove(&golden_signed(), &golden_authority(), 15),
+        "mori::backend::parameters"
+    );
     let mut flipped = golden_signed();
     flipped.signature_hex.replace_range(130..132, "00");
-    assert_eq!(prove(&flipped, &golden_authority(), 15), "mori::backend::signature");
-    assert_eq!(prove(&golden_signed(), &golden_authority(), 21), "mori::backend::authorization");
+    assert_eq!(
+        prove(&flipped, &golden_authority(), 15),
+        "mori::backend::signature"
+    );
+    assert_eq!(
+        prove(&golden_signed(), &golden_authority(), 21),
+        "mori::backend::authorization"
+    );
     let mut payload = serde_json::to_value(golden_signed()).unwrap();
     payload["payload"]["nonce"] = "2".into();
     let changed = SignedIntent::from_json(&payload.to_string()).unwrap();
-    assert_eq!(prove(&changed, &golden_authority(), 15), "mori::backend::authorization");
+    assert_eq!(
+        prove(&changed, &golden_authority(), 15),
+        "mori::backend::authorization"
+    );
     let mut opt = params();
     opt.max_k = 0;
     assert_eq!(
@@ -539,8 +653,17 @@ fn independent_payment_expectations_accept_exact_caps_and_each_tighter_cap_refus
             .unwrap();
     let e = &prepared.review;
     for (account, amount) in expected["post_balances"].as_object().unwrap() {
-        let b = e.post.balances.iter().find(|b| &b.account == account).unwrap();
-        assert_eq!(b.amount.0.to_string(), amount.as_str().unwrap(), "{account}");
+        let b = e
+            .post
+            .balances
+            .iter()
+            .find(|b| &b.account == account)
+            .unwrap();
+        assert_eq!(
+            b.amount.0.to_string(),
+            amount.as_str().unwrap(),
+            "{account}"
+        );
     }
     for (name, amount) in expected["post_liabilities"].as_object().unwrap() {
         let l = e.post.liabilities.iter().find(|l| &l.name == name).unwrap();
@@ -552,14 +675,41 @@ fn independent_payment_expectations_accept_exact_caps_and_each_tighter_cap_refus
         .map(|f| serde_json::to_value(f).unwrap()["kind"].clone())
         .collect();
     assert_eq!(Value::Array(kinds), expected["effect_kinds"]);
+    for (state, value) in expected["post_state"].as_object().unwrap() {
+        assert_eq!(
+            serde_json::to_value(&e.post.state[state]).unwrap(),
+            json!({"type":"UInt","value":value})
+        );
+    }
+    // Complete ordered effects from the independent brief:
+    // Transfer70 / Fee2 / Liability50->30 / State0->70 / Emit70.
+    let asset = json!({"network":"local","issuer":"signed-native-qa","reference":"QA","scale":0});
+    assert_eq!(
+        serde_json::to_value(&e.effects).unwrap(),
+        json!([
+            {"kind":"Transfer","asset":asset,"from":"alice","to":"bob","amount":"70"},
+            {"kind":"Fee","asset":asset,"from":"alice","to":"treasury","amount":"2"},
+            {"kind":"Liability","name":"payment","asset":asset,"debtor":"alice","creditor":"bob","before":"50","after":"30"},
+            {"kind":"State","name":"paid","before":{"type":"UInt","value":"0"},"after":{"type":"UInt","value":"70"}},
+            {"kind":"Emit","name":"paid","value":{"type":"UInt","value":"70"}}
+        ])
+    );
     // A freshly QA-signed exact statement passes host acceptance.
     let message = schnorr::decode_native_hex(&prepared.message_hex).unwrap();
     let signed = SignedIntent {
         payload: prepared.payload.clone(),
         signature_hex: qa_sign(7, 29, message),
     };
-    signed_relation::verify_intent(source, "settle", &scenario, &target, &exact, UInt(15), &signed)
-        .unwrap();
+    signed_relation::verify_intent(
+        source,
+        "settle",
+        &scenario,
+        &target,
+        &exact,
+        UInt(15),
+        &signed,
+    )
+    .unwrap();
     for (caps, word) in expected["individual_cap_refusals"]
         .as_array()
         .unwrap()
@@ -583,9 +733,262 @@ fn independent_payment_expectations_accept_exact_caps_and_each_tighter_cap_refus
             signature_hex: qa_sign(7, 31, message),
         };
         let err = signed_relation::verify_intent(
-            source, "settle", &scenario, &target, &tight, UInt(15), &signed,
+            source,
+            "settle",
+            &scenario,
+            &target,
+            &tight,
+            UInt(15),
+            &signed,
         )
         .unwrap_err();
         assert!(err.message.contains(word), "{word}: {err}");
     }
+}
+
+const ADMISSION: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/programs/signed-admission/"
+);
+
+#[test]
+fn independent_source_label_cases_refuse_before_lowering() {
+    use sha2::{Digest, Sha256};
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(format!("{ADMISSION}manifest.json")).unwrap())
+            .unwrap();
+    let (_, _, target, _, _) = payment();
+    let cases = manifest["source_cases"].as_array().unwrap();
+    assert_eq!(cases.len(), 12);
+    for case in cases {
+        let file = case["file"].as_str().unwrap();
+        let bytes = std::fs::read(format!("{ADMISSION}{file}")).unwrap();
+        assert_eq!(
+            mori_core::intent::hex(&Sha256::digest(&bytes)),
+            case["source_sha256"]
+        );
+        let program = mori_core::parse(std::str::from_utf8(&bytes).unwrap())
+            .unwrap_or_else(|e| panic!("{file}: Core parse {e}"));
+        let result = mori_backend::compile_signed(&program, &target);
+        match case["expected"].as_str().unwrap() {
+            "signed-label-refusal" => {
+                let err = result.unwrap_err();
+                assert_eq!(err.code, "mori::backend::signed", "{file}: {err}");
+                assert!(err.message.contains("label"), "{file}: {err}");
+            }
+            "signed-label-admission" => {
+                let a = result.unwrap_or_else(|e| panic!("{file}: {e}"));
+                assert!(
+                    a.circuits
+                        .iter()
+                        .any(|c| c.action == case["selected_action"])
+                );
+            }
+            "unknown-duty-refusal" => {
+                let err = result.unwrap_err();
+                assert_eq!(err.code, "mori::backend::unsupported", "{file}: {err}");
+                assert!(
+                    err.message.contains("no source-derived liability"),
+                    "{file}: {err}"
+                );
+            }
+            other => panic!("{other}"),
+        }
+        // Unsigned behavior stays separate: no signed label rule applies, but a
+        // discharge-only file still names an unregistered duty.
+        let unsigned = mori_backend::compile(&program, &Target::ledger9("local", "anchor"));
+        if file.starts_with("discharge-only") {
+            let err = unsigned.unwrap_err();
+            assert_eq!(err.code, "mori::backend::unsupported", "{file}: {err}");
+        } else {
+            unsigned.unwrap_or_else(|e| panic!("{file}: unsigned {e}"));
+        }
+    }
+}
+
+fn golden_artifact_json() -> Value {
+    let program = mori_core::parse(golden()["source_utf8"].as_str().unwrap()).unwrap();
+    serde_json::to_value(mori_backend::compile_signed(&program, &golden_target()).unwrap()).unwrap()
+}
+fn decodes(v: &Value) -> bool {
+    serde_json::from_value::<mori_backend::Artifact>(v.clone()).is_ok()
+}
+
+#[test]
+fn required_null_descriptor_members_refuse_when_deleted() {
+    let manifest: Value =
+        serde_json::from_slice(&std::fs::read(format!("{ADMISSION}manifest.json")).unwrap())
+            .unwrap();
+    let artifact = golden_artifact_json();
+    assert!(decodes(&artifact));
+    let repay = artifact["circuits"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .position(|c| c["action"] == "repay")
+        .unwrap();
+    for case in manifest["descriptor_cases"].as_array().unwrap() {
+        let file = case["file"].as_str().unwrap();
+        let text = std::fs::read_to_string(format!("{ADMISSION}{file}")).unwrap();
+        let mut deleted: Value = serde_json::from_str(&text).unwrap();
+        deleted.as_object_mut().unwrap().remove("position");
+        assert!(
+            serde_json::from_value::<mori_backend::PublicBinding>(deleted).is_err(),
+            "{file}"
+        );
+        let position = case["position"].as_u64().unwrap() as usize;
+        let mut baseline = case["baseline"].clone();
+        baseline.as_object_mut().unwrap().remove("position");
+        assert_eq!(
+            artifact["circuits"][repay]["public_inputs"][position], baseline,
+            "{file}"
+        );
+        let mut bad = artifact.clone();
+        bad["circuits"][repay]["public_inputs"][position]
+            .as_object_mut()
+            .unwrap()
+            .remove(case["removed_member"].as_str().unwrap());
+        assert!(!decodes(&bad), "{file} embedded in a full v3 artifact");
+    }
+    // Static frame Option members are explicit null and required.
+    for member in ["name", "asset", "from", "to", "liability", "operation"] {
+        let mut bad = artifact.clone();
+        bad["circuits"][repay]["effect_frame"][3]
+            .as_object_mut()
+            .unwrap()
+            .remove(member);
+        assert!(!decodes(&bad), "effect member {member}");
+    }
+}
+
+#[test]
+fn whole_artifact_mode_target_and_descriptor_shape_must_agree() {
+    let signed = golden_artifact_json();
+    let program = mori_core::parse(golden()["source_utf8"].as_str().unwrap()).unwrap();
+    let unsigned = serde_json::to_value(
+        mori_backend::compile(&program, &Target::ledger9("local", "native-liability-qa")).unwrap(),
+    )
+    .unwrap();
+    assert!(decodes(&signed) && decodes(&unsigned));
+    let mutate = |base: &Value, f: &dyn Fn(&mut Value)| {
+        let mut v = base.clone();
+        f(&mut v);
+        decodes(&v)
+    };
+    assert!(!mutate(&signed, &|v| v["authorization_mode"] = "unsigned".into()));
+    assert!(!mutate(&signed, &|v| {
+        v["target"].as_object_mut().unwrap().remove("signed_policy");
+    }));
+    assert!(!mutate(
+        &signed,
+        &|v| v["circuits"][0]["authorization_bindings"] = json!([])
+    ));
+    assert!(!mutate(&signed, &|v| v["circuits"][0]["private_inputs"] = json!([])));
+    assert!(!mutate(&signed, &|v| {
+        v["circuits"][0]["private_inputs"]
+            .as_array_mut()
+            .unwrap()
+            .swap(0, 2);
+    }));
+    assert!(!mutate(&signed, &|v| {
+        v["circuits"][0]["authorization_bindings"]
+            .as_array_mut()
+            .unwrap()
+            .swap(0, 1);
+    }));
+    assert!(!mutate(
+        &signed,
+        &|v| v["circuits"][0]["authorization_bindings"][4]["ty"] = "UInt".into()
+    ));
+    assert!(!mutate(
+        &signed,
+        &|v| v["circuits"][0]["authorization_bindings"][0]["position"] = 0.into()
+    ));
+    assert!(!mutate(&signed, &|v| v["circuits"][0]["context_hash"] = "x".into()));
+    assert!(!mutate(&unsigned, &|v| v["authorization_mode"] =
+        "moriarty-jubjub-owner-intent/1".into()));
+    assert!(!mutate(&unsigned, &|v| {
+        v["circuits"][0]["private_inputs"] = signed["circuits"][0]["private_inputs"].clone()
+    }));
+}
+
+#[test]
+fn preparation_preflights_exported_report_and_signed_wrapper_budget() {
+    let (source, _, target, authority, _) = payment();
+    // Escaped Unicode untouched balances: compact report bytes fit, while the
+    // bounded public exporter refuses. Preparation must refuse, not truncate.
+    let asset = json!({"network":"local","issuer":"signed-native-qa","reference":"QA","scale":0});
+    let mut scenario: Value = serde_json::from_str(include_str!(
+        "../../../examples/core/native-owner-intent/payment.scenario.json"
+    ))
+    .unwrap();
+    scenario["inputs"] = json!({});
+    for i in 0..120 {
+        scenario["balances"].as_array_mut().unwrap().push(
+            json!({"account":format!("{i:03}{}", "Ж".repeat(500)),"asset":asset,"amount":"1"}),
+        );
+    }
+    let scenario: Scenario = serde_json::from_value(scenario).unwrap();
+    let mut caps = serde_json::to_value(&authority).unwrap();
+    caps["limits"][0]["net_floor"] = "0".into();
+    caps["limits"][0]["liability_cap"] = "55".into();
+    let observe = ExpectedAuthority::from_json(&caps.to_string()).unwrap();
+    let err =
+        signed_relation::prepare_intent(source, "observe", &scenario, &target, &observe, UInt(15))
+            .unwrap_err();
+    assert_eq!(err.code, "mori::backend::limit", "{err}");
+
+    // Signed wrapper: a 192-hex attachment adds exactly 223 canonical bytes, so
+    // the largest signable payload is 65313 bytes. Long legal labels reach it.
+    let wide = |predecessor: usize, issuer: usize| {
+        let network = "n".repeat(1000);
+        let beneficiary = "b".repeat(1000);
+        let reference = |i: usize| format!("r{i:02}{}", "r".repeat(997));
+        let assets: String = (0..16)
+            .map(|i| format!("  asset A{i:02} = {{ network: \"{network}\", issuer: \"{}\", reference: \"{}\", scale: 0 }};\n", "i".repeat(issuer), reference(i)))
+            .collect();
+        let src = format!(
+            "language \"moriarty/1\";\nagreement Wide {{\n{assets}  state n: UInt = 0;\n  action bump() {{ next n = n + 1; }}\n}}\n"
+        );
+        let mut t = Target::ledger9(network.clone(), "local/signed-native-qa");
+        t.signed_policy = target.signed_policy.clone();
+        let policy = t.signed_policy.as_mut().unwrap();
+        policy.program_address = "local/Wide".into();
+        policy.beneficiary = beneficiary.clone();
+        let mut a = serde_json::to_value(&authority).unwrap();
+        a["network"] = network.clone().into();
+        a["program_address"] = "local/Wide".into();
+        a["beneficiary"] = beneficiary.clone().into();
+        a["target_hash"] = mori_core::intent::hex(&{
+            use sha2::{Digest, Sha256};
+            Sha256::digest(mori_core::intent::canonical(&t).unwrap())
+        })
+        .into();
+        a["predecessor"] = "p".repeat(predecessor).into();
+        a["limits"] = (0..16)
+            .map(|i| json!({"asset":{"network":network,"issuer":"i".repeat(issuer),"reference":reference(i),"scale":0},
+                "beneficiary":beneficiary,"gross_cap":"0","fee_cap":"0","net_floor":"0","liability_cap":"0"}))
+            .collect();
+        let a = ExpectedAuthority::from_json(&a.to_string()).unwrap();
+        signed_relation::prepare_intent(&src, "bump", &Scenario::default(), &t, &a, UInt(15))
+    };
+    let size = |p: &mori_backend::authorization::PreparedIntent| {
+        mori_core::intent::canonical(&p.payload).unwrap().len()
+    };
+    // Each issuer byte appears once per limit (16 bytes of payload).
+    let probe = size(&wide(1, 500).unwrap());
+    let issuer = 500 + (65313 - 600 - probe) / 16;
+    let base_len = size(&wide(1, issuer).unwrap());
+    assert!(
+        base_len <= 65313 - 584 && base_len + 1023 > 65314,
+        "{base_len}"
+    );
+    let fit = 1 + 65313 - base_len;
+    let largest = wide(fit, issuer).unwrap();
+    assert_eq!(size(&largest), 65313);
+    let wrapper = json!({"payload":largest.payload,"signature_hex":"0".repeat(192)});
+    assert_eq!(mori_core::intent::canonical(&wrapper).unwrap().len(), 65536);
+    let err = wide(fit + 1, issuer).unwrap_err();
+    assert_eq!(err.code, "mori::backend::authorization", "{err}");
+    assert!(err.message.contains("wrapper"), "{err}");
 }

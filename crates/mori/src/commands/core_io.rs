@@ -42,3 +42,30 @@ pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
     println!("{display}");
     Ok(())
 }
+/// Trusted signed Target, separately supplied expected authority and logical time.
+pub fn signed_target(path: &Path) -> super::Result<mori_backend::Target> {
+    let target: mori_backend::Target = read_json(path)?;
+    if target.signed_policy.is_none() {
+        return Err(operation(
+            "the signed profile requires a trusted Target with signed_policy",
+        ));
+    }
+    Ok(target)
+}
+pub fn authority(path: &Path) -> super::Result<mori_backend::authorization::ExpectedAuthority> {
+    mori_backend::authorization::ExpectedAuthority::from_json(&read_source(path)?)
+        .map_err(operation)
+}
+pub fn signed_intent(path: &Path) -> super::Result<mori_backend::authorization::SignedIntent> {
+    mori_backend::authorization::SignedIntent::from_json(&read_source(path)?).map_err(operation)
+}
+/// Quote display identities without giving source text terminal control.
+pub fn review_identity(value: &str) -> String {
+    format!(
+        "\"{}\"",
+        value
+            .chars()
+            .flat_map(char::escape_default)
+            .collect::<String>()
+    )
+}

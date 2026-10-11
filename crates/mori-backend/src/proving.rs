@@ -2,9 +2,12 @@
 //! frame. Reconstruction and the binding commitment supply the complete local
 //! report framing; neither authenticates ledger state, owner authority or history.
 use crate::{
-    CircuitArtifact, Error, LiabilityIdentity, LiabilityOperation, PUBLIC_ABI_VERSION, PublicBinding, RELATION_VERSION, Target,
-    UNSIGNED_MODE, authorization::{AuthorizationBinding, ExpectedAuthority, SignedIntent},
-    digest, error, parameters::OfflineParameters, schnorr, signed_relation,
+    CircuitArtifact, Error, LiabilityIdentity, LiabilityOperation, PUBLIC_ABI_VERSION,
+    PublicBinding, RELATION_VERSION, Target, UNSIGNED_MODE,
+    authorization::{AuthorizationBinding, ExpectedAuthority, SignedIntent},
+    digest, error,
+    parameters::OfflineParameters,
+    schnorr, signed_relation,
 };
 use midnight_transient_crypto::{
     curve::Fr,
@@ -72,19 +75,49 @@ impl ProofBundle {
                 "Stale or unsupported native proof, ABI, relation or binding revision; recompile and prove again.",
             ));
         }
-        let signed = match self.authorization_mode.as_str() {
-            UNSIGNED_MODE => false,
-            crate::authorization::INTENT_PROFILE => true,
-            _ => return Err(error("claim", "Unknown authorization mode.")),
-        };
-        if signed != self.authorization.is_some()
-            || signed == self.authorization_bindings.is_empty()
-            || self.public_values.len()
-                != self.financial_bindings.len() + self.authorization_bindings.len()
+        self.validate_claim()
+            .map_err(|e| error("claim", format!("Noncanonical v3 Claim: {}", e.message)))
+    }
+    /// Exact v3 Claim encodings and mode/descriptor/statement consistency.
+    fn validate_claim(&self) -> Result<(), Error> {
+        use crate::authorization::decode_digest;
+        for digest in [
+            &self.source_hash,
+            &self.program_hash,
+            &self.target_hash,
+            &self.scenario_hash,
+            &self.execution_hash,
+            &self.context_hash,
+        ] {
+            decode_digest(digest)?;
+        }
+        signed_relation::validate_shape(
+            &self.authorization_mode,
+            &self.financial_bindings,
+            &self.authorization_bindings,
+            // Claims carry no private descriptors or witness values.
+            None,
+        )?;
+        match (&self.authorization, self.authorization_mode.as_str()) {
+            (None, UNSIGNED_MODE) => {}
+            (Some(a), crate::authorization::INTENT_PROFILE) => {
+                decode_digest(&a.payload_hash)?;
+                schnorr::decode_native_hex(&a.message_hex)?;
+                schnorr::decode_key(&a.public_key_hex)?;
+            }
+            _ => {
+                return Err(error(
+                    "claim",
+                    "Authorization object disagrees with the authorization mode.",
+                ));
+            }
+        }
+        if self.public_values.len()
+            != self.financial_bindings.len() + self.authorization_bindings.len()
         {
             return Err(error(
                 "claim",
-                "Authorization mode, descriptors and public statement are inconsistent.",
+                "Public statement length differs from its descriptors.",
             ));
         }
         for value in &self.public_values {
@@ -153,25 +186,38 @@ pub(crate) fn value_fr(value: &Value) -> Fr {
 }
 
 type SignedInputs<'a> = (&'a ExpectedAuthority, UInt, &'a SignedIntent);
+/// Preparation mode. Only proving constructs the private witness.
+enum Mode<'a> {
+    Unsigned,
+    Prove(SignedInputs<'a>),
+    Verify(SignedInputs<'a>),
+}
 fn prepare(
     source: &str,
     action: &str,
     scenario: &Scenario,
     target: &Target,
     options: &ProofOptions,
-    signed: Option<SignedInputs>,
+    mode: Mode,
 ) -> Result<Prepared, Error> {
     if options.max_k == 0 || options.max_k > MAX_K {
         return Err(error("limit", "Native k cap must be between 1 and 19."));
     }
-    let (statement, private) = match signed {
-        Some((authority, at, intent)) => signed_relation::accept(
-            source, action, scenario, target, authority, at, intent,
-        )?,
-        None => (
+    let (statement, private) = match mode {
+        Mode::Unsigned => (
             signed_relation::reconstruct(source, action, scenario, target, None)?,
             Vec::new(),
         ),
+        Mode::Verify((authority, at, intent)) => (
+            signed_relation::accept(source, action, scenario, target, authority, at, intent)?,
+            Vec::new(),
+        ),
+        Mode::Prove((authority, at, intent)) => {
+            let statement =
+                signed_relation::accept(source, action, scenario, target, authority, at, intent)?;
+            let witness = signed_relation::witness(&statement, intent)?;
+            (statement, witness)
+        }
     };
     let circuit = &statement.circuit;
     let values = statement.public_values();
@@ -200,15 +246,12 @@ fn prepare(
             "Public statement exceeds the pinned verifier capacity.",
         ));
     }
-    let authorization = match &statement.signed {
-        Some(s) => Some(ClaimAuthorization {
-            payload_hash: hex(&s.payload_hash),
-            message_hex: schnorr::native_hex(s.message),
-            public_key_hex: s.payload.public_key_hex.clone(),
-            at: s.at,
-        }),
-        None => None,
-    };
+    let authorization = statement.signed.as_ref().map(|s| ClaimAuthorization {
+        payload_hash: hex(&s.payload_hash),
+        message_hex: schnorr::native_hex(s.message),
+        public_key_hex: s.payload.public_key_hex.clone(),
+        at: s.at,
+    });
     let claim = Claim {
         abi: PUBLIC_ABI_VERSION.into(),
         relation: RELATION_VERSION.into(),
@@ -268,12 +311,13 @@ fn prepare(
     })
 }
 fn with_proof(claim: &Claim, proof_hex: &str) -> Result<serde_json::Value, Error> {
-    let mut value = serde_json::to_value(claim).map_err(|e| error("serialization", e.to_string()))?;
+    let mut value =
+        serde_json::to_value(claim).map_err(|e| error("serialization", e.to_string()))?;
     value["proof_hex"] = proof_hex.into();
     Ok(value)
 }
 
-fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
+pub(crate) fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
     mori_core::json::export(value).map_err(|e| {
         error(
             "limit",
@@ -324,7 +368,10 @@ pub fn prove(
     target: &Target,
     options: &ProofOptions,
 ) -> Result<(ProofBundle, ProofReceipt), Error> {
-    produce(prepare(source, action, scenario, target, options, None)?, options)
+    produce(
+        prepare(source, action, scenario, target, options, Mode::Unsigned)?,
+        options,
+    )
 }
 /// Signed local proof: strict host acceptance of the exact attachment and the
 /// ordinary relation check precede any parameter access.
@@ -345,11 +392,14 @@ pub fn prove_signed(
         scenario,
         target,
         options,
-        Some((authority, at, signed)),
+        Mode::Prove((authority, at, signed)),
     )?;
     produce(prepared, options)
 }
-fn produce(prepared: Prepared, options: &ProofOptions) -> Result<(ProofBundle, ProofReceipt), Error> {
+fn produce(
+    prepared: Prepared,
+    options: &ProofOptions,
+) -> Result<(ProofBundle, ProofReceipt), Error> {
     let params = OfflineParameters::load(&options.params_dir, prepared.claim.circuit_k)?;
     let expected = statement(&prepared);
     let preimage = ProofPreimage {
@@ -441,7 +491,7 @@ pub fn verify(
 ) -> Result<ProofReceipt, Error> {
     bundle.validate_versions()?;
     check(
-        prepare(source, action, scenario, target, options, None)?,
+        prepare(source, action, scenario, target, options, Mode::Unsigned)?,
         bundle,
         options,
     )
@@ -467,19 +517,22 @@ pub fn verify_signed(
         scenario,
         target,
         options,
-        Some((authority, at, signed)),
+        Mode::Verify((authority, at, signed)),
     )?;
     check(prepared, bundle, options)
 }
-fn check(prepared: Prepared, bundle: &ProofBundle, options: &ProofOptions) -> Result<ProofReceipt, Error> {
+fn check(
+    prepared: Prepared,
+    bundle: &ProofBundle,
+    options: &ProofOptions,
+) -> Result<ProofReceipt, Error> {
     let mut candidate =
         serde_json::to_value(bundle).map_err(|e| error("serialization", e.to_string()))?;
-    candidate
-        .as_object_mut()
-        .map(|o| o.remove("proof_hex"));
+    candidate.as_object_mut().map(|o| o.remove("proof_hex"));
     let reconstructed =
         serde_json::to_value(&prepared.claim).map_err(|e| error("serialization", e.to_string()))?;
-    if mori_core::intent::canonical(&candidate).map_err(|e| error("serialization", e.to_string()))?
+    if mori_core::intent::canonical(&candidate)
+        .map_err(|e| error("serialization", e.to_string()))?
         != mori_core::intent::canonical(&reconstructed)
             .map_err(|e| error("serialization", e.to_string()))?
     {
@@ -1048,7 +1101,8 @@ mod tests {
             params_dir: PathBuf::from("/unused"),
             max_k: 19,
         };
-        let prepared = prepare(source, "pay", &scenario, &target, &options, None).unwrap();
+        let prepared =
+            prepare(source, "pay", &scenario, &target, &options, Mode::Unsigned).unwrap();
         let expected: Vec<Fr> = [0u128, 5, 1, 20, 1, 2, 5, 2, 0, 5, 5, 5, 13, 6, 4]
             .into_iter()
             .map(Fr::from)
@@ -1070,7 +1124,7 @@ mod tests {
         );
         let mut different = scenario.clone();
         different.balances[3].amount = UInt(8);
-        let other = prepare(source, "pay", &different, &target, &options, None).unwrap();
+        let other = prepare(source, "pay", &different, &target, &options, Mode::Unsigned).unwrap();
         assert_eq!(
             prepared.values, other.values,
             "untouched account is outside the declared circuit frame"
@@ -1089,14 +1143,22 @@ mod tests {
             params_dir: PathBuf::from("/unused"),
             max_k: 9,
         };
-        let first = prepare(source, "run", &Scenario::default(), &target, &options, None).unwrap();
+        let first = prepare(
+            source,
+            "run",
+            &Scenario::default(),
+            &target,
+            &options,
+            Mode::Unsigned,
+        )
+        .unwrap();
         let second = prepare(
             &format!("{source}\n"),
             "run",
             &Scenario::default(),
             &target,
             &options,
-            None,
+            Mode::Unsigned,
         )
         .unwrap();
         assert_eq!(first.claim.program_hash, second.claim.program_hash);
@@ -1185,7 +1247,15 @@ mod tests {
         };
         let artifact = compile(&program, &target).unwrap();
         let c = &artifact.circuits[1];
-        let prepared = prepare(source, "repay", &scenario, &target, &options, None).unwrap();
+        let prepared = prepare(
+            source,
+            "repay",
+            &scenario,
+            &target,
+            &options,
+            Mode::Unsigned,
+        )
+        .unwrap();
         assert_honest_preimage(&prepared);
         assert_eq!(prepared.claim.abi, PUBLIC_ABI_VERSION);
         assert_eq!(prepared.claim.relation, RELATION_VERSION);
@@ -1436,7 +1506,7 @@ mod tests {
                 params_dir: "/unused".into(),
                 max_k: 19,
             },
-            None,
+            Mode::Unsigned,
         )
         .unwrap();
         let absent = prepare(
@@ -1448,12 +1518,187 @@ mod tests {
                 params_dir: "/unused".into(),
                 max_k: 19,
             },
-            None,
+            Mode::Unsigned,
         )
         .unwrap();
         assert_honest_preimage(&present);
         assert_honest_preimage(&absent);
         assert_ne!(present.values, absent.values);
         assert_ne!(present.binding, absent.binding);
+    }
+
+    struct Golden {
+        source: String,
+        scenario: Scenario,
+        target: Target,
+        authority: ExpectedAuthority,
+        signed: SignedIntent,
+    }
+    fn golden() -> Golden {
+        let g: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../examples/core/native-owner-intent/golden-vector.json"
+        ))
+        .unwrap();
+        let mut authority = serde_json::Map::new();
+        for k in [
+            "profile",
+            "network",
+            "anchor",
+            "program_address",
+            "target_hash",
+            "owner",
+            "beneficiary",
+            "public_key_hex",
+            "nonce",
+            "predecessor",
+            "not_before",
+            "not_after",
+            "limits",
+        ] {
+            authority.insert(k.into(), g["payload"][k].clone());
+        }
+        Golden {
+            source: g["source_utf8"].as_str().unwrap().into(),
+            scenario: serde_json::from_value(g["scenario"].clone()).unwrap(),
+            target: Target::from_json(g["target_canonical_utf8"].as_str().unwrap()).unwrap(),
+            authority: ExpectedAuthority::from_json(
+                &serde_json::Value::Object(authority).to_string(),
+            )
+            .unwrap(),
+            signed: SignedIntent::from_json(&g["signed_wrapper"].to_string()).unwrap(),
+        }
+    }
+    fn signed_options() -> ProofOptions {
+        ProofOptions {
+            params_dir: "/nonexistent/moriarty-task2-claim".into(),
+            max_k: 19,
+        }
+    }
+    fn golden_prepared(g: &Golden, verify: bool) -> Prepared {
+        let inputs = (&g.authority, UInt(15), &g.signed);
+        prepare(
+            &g.source,
+            "repay",
+            &g.scenario,
+            &g.target,
+            &signed_options(),
+            if verify {
+                Mode::Verify(inputs)
+            } else {
+                Mode::Prove(inputs)
+            },
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn only_proving_constructs_the_private_witness() {
+        let g = golden();
+        let prove = golden_prepared(&g, false);
+        let verify = golden_prepared(&g, true);
+        assert_eq!(prove.private.len(), 5);
+        assert!(
+            verify.private.is_empty(),
+            "verification uses only public values"
+        );
+        assert_eq!(prove.values, verify.values);
+        assert_eq!(prove.binding, verify.binding);
+        let bundle: ProofBundle =
+            serde_json::from_value(with_proof(&verify.claim, "00").unwrap()).unwrap();
+        let options = signed_options();
+        let run = |signed: &SignedIntent| {
+            verify_signed(
+                &g.source,
+                "repay",
+                &g.scenario,
+                &g.target,
+                &g.authority,
+                UInt(15),
+                signed,
+                &bundle,
+                &options,
+            )
+            .unwrap_err()
+            .code
+        };
+        assert_eq!(run(&g.signed), "mori::backend::parameters");
+        // Another valid attachment shares the attachment-free Claim and statement.
+        let mut alternative = g.signed.clone();
+        alternative.signature_hex = "fec0b07c971073c462c88d722fb5fe8df764311114dbcc79e46263b74a863850e92947318a0258f88a6869c98a7e96733662780d4936401c0e732a4c87fb651a98b9a4ecb5630fefa96bd5f061388d910c95dabfa7f2c089c2d3651ca422e900".into();
+        assert_eq!(run(&alternative), "mori::backend::parameters");
+        let mut flipped = g.signed.clone();
+        flipped.signature_hex.replace_range(130..132, "00");
+        assert_eq!(run(&flipped), "mori::backend::signature");
+        let claim = serde_json::to_string(&verify.claim).unwrap();
+        assert!(!claim.contains(&g.signed.signature_hex[..64]));
+        assert!(!claim.contains(&g.signed.signature_hex[128..]));
+    }
+
+    #[test]
+    fn canonical_v3_claim_decoding_refuses_deletions_mode_and_encodings() {
+        let g = golden();
+        let prepared = golden_prepared(&g, true);
+        let base = with_proof(&prepared.claim, "00").unwrap();
+        assert!(ProofBundle::from_json(&base.to_string()).is_ok());
+        let refuses = |f: &dyn Fn(&mut serde_json::Value)| {
+            let mut v = base.clone();
+            f(&mut v);
+            ProofBundle::from_json(&v.to_string()).is_err()
+        };
+        // Independent descriptor cases: required explicit nulls inside the Claim.
+        assert!(refuses(&|v| {
+            v["financial_bindings"][2]
+                .as_object_mut()
+                .unwrap()
+                .remove("constant");
+        }));
+        assert!(refuses(&|v| {
+            v["financial_bindings"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("asset");
+        }));
+        assert!(refuses(&|v| {
+            v["authorization_bindings"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("asset");
+        }));
+        assert!(refuses(&|v| v["authorization_mode"] = "unsigned".into()));
+        assert!(refuses(
+            &|v| v["authorization_bindings"] = serde_json::json!([])
+        ));
+        assert!(refuses(&|v| v["authorization"] = serde_json::Value::Null));
+        assert!(refuses(&|v| {
+            v["authorization_bindings"]
+                .as_array_mut()
+                .unwrap()
+                .swap(2, 3);
+        }));
+        for field in [
+            "source_hash",
+            "program_hash",
+            "target_hash",
+            "scenario_hash",
+            "execution_hash",
+            "context_hash",
+        ] {
+            assert!(refuses(&|v| v[field] = "x".into()), "{field}");
+            assert!(refuses(&|v| v[field] = "A".repeat(64).into()), "{field}");
+        }
+        let p = "01000000fffffffffe5bfeff02a4bd5305d8a10908d83933487d9d2953a7ed73";
+        assert!(refuses(&|v| v["authorization"]["payload_hash"] = "x".into()));
+        assert!(refuses(&|v| v["authorization"]["message_hex"] = p.into()));
+        assert!(refuses(
+            &|v| v["authorization"]["public_key_hex"] = "0".repeat(128).into()
+        ));
+        assert!(refuses(&|v| v["authorization"]["at"] = "015".into()));
+        assert!(refuses(&|v| v["public_values"][0] = p.into()));
+        assert!(refuses(&|v| {
+            v["authorization"].as_object_mut().unwrap().remove("at");
+        }));
+        assert!(refuses(
+            &|v| v["authorization"]["signature_hex"] = "00".into()
+        ));
     }
 }

@@ -3,11 +3,11 @@
 //! flag. Explicit offline native proofs are available for the admitted public
 //! frame; authenticated ledger correspondence remains an open gate. A signed
 //! Target appends the strict owner-intent statement to the same circuit.
+use authorization::{AuthorizationBinding, SignedPolicy};
 use midnight_transient_crypto::curve::Fr;
 use midnight_zkir_v3::ir::Operand;
 use midnight_zkir_v3::ir_types::IrType;
 use midnight_zkir_v3::{Identifier, Instruction, IrSource};
-use authorization::{AuthorizationBinding, SignedPolicy};
 use mori_core::{Action, AssetId, BinaryOp, Expr, ExprId, Program, Statement, Type, Value};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -51,7 +51,9 @@ pub struct Target {
     )]
     pub signed_policy: Option<SignedPolicy>,
 }
-fn present_policy<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<SignedPolicy>, D::Error> {
+fn present_policy<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<SignedPolicy>, D::Error> {
     SignedPolicy::deserialize(d).map(Some)
 }
 impl Target {
@@ -122,7 +124,10 @@ pub struct PublicBinding {
     pub role: String,
     pub name: String,
     pub ty: Type,
+    /// Explicit null when absent; omission refuses rather than defaulting.
+    #[serde(deserialize_with = "Option::deserialize")]
     pub constant: Option<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub asset: Option<AssetId>,
 }
 /// Typed private witness descriptor; points are assigned as curve values.
@@ -164,14 +169,21 @@ pub struct CircuitArtifact {
 pub struct EffectDescriptor {
     pub step: u32,
     pub kind: String,
+    // Static frame members are explicit null when absent; omission refuses.
+    #[serde(deserialize_with = "Option::deserialize")]
     pub name: Option<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub asset: Option<AssetId>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub from: Option<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub to: Option<String>,
     /// Liability effects use [before_presence, before_amount, after_presence, after_amount].
     pub public_positions: Vec<u32>,
     /// Full source-fixed duty identity; balance transfer fields remain separate.
+    #[serde(deserialize_with = "Option::deserialize")]
     pub liability: Option<LiabilityIdentity>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub operation: Option<LiabilityOperation>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,7 +202,9 @@ pub struct Resources {
     pub artifact_bytes: u32,
     pub public_values: u32,
     pub max_replay_steps: u32,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub circuit_k: Option<u8>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub fraud_max_k: Option<u8>,
     pub cost_measured: bool,
     #[serde(deserialize_with = "decode_registry_entries")]
@@ -204,24 +218,73 @@ pub struct Gate {
     pub predicate: String,
     pub status: String,
 }
+/// Decoding validates the whole artifact: versions, Target, the explicit mode
+/// against the Target, and every circuit's exact descriptor shape.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "ArtifactFields")]
 pub struct Artifact {
-    #[serde(deserialize_with = "decode_artifact_format")]
     pub format: String,
-    #[serde(deserialize_with = "decode_abi_version")]
     pub abi: String,
-    #[serde(deserialize_with = "decode_relation_version")]
     pub relation: String,
-    #[serde(deserialize_with = "decode_authorization_mode")]
     pub authorization_mode: String,
     pub program_hash: String,
     pub semantics: String,
-    #[serde(deserialize_with = "decode_artifact_target")]
     pub target: Target,
     pub circuits: Vec<CircuitArtifact>,
     pub resources: Resources,
     pub gates: Vec<Gate>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ArtifactFields {
+    #[serde(deserialize_with = "decode_artifact_format")]
+    format: String,
+    #[serde(deserialize_with = "decode_abi_version")]
+    abi: String,
+    #[serde(deserialize_with = "decode_relation_version")]
+    relation: String,
+    #[serde(deserialize_with = "decode_authorization_mode")]
+    authorization_mode: String,
+    program_hash: String,
+    semantics: String,
+    #[serde(deserialize_with = "decode_artifact_target")]
+    target: Target,
+    circuits: Vec<CircuitArtifact>,
+    resources: Resources,
+    gates: Vec<Gate>,
+}
+impl TryFrom<ArtifactFields> for Artifact {
+    type Error = Error;
+    fn try_from(f: ArtifactFields) -> Result<Self, Error> {
+        if f.authorization_mode != f.target.authorization_mode() {
+            return Err(error(
+                "artifact",
+                "Authorization mode differs from the Target signed_policy; recompile.",
+            ));
+        }
+        authorization::decode_digest(&f.program_hash)?;
+        for circuit in &f.circuits {
+            authorization::decode_digest(&circuit.context_hash)?;
+            signed_relation::validate_shape(
+                &f.authorization_mode,
+                &circuit.public_inputs,
+                &circuit.authorization_bindings,
+                Some(&circuit.private_inputs),
+            )?;
+        }
+        Ok(Self {
+            format: f.format,
+            abi: f.abi,
+            relation: f.relation,
+            authorization_mode: f.authorization_mode,
+            program_hash: f.program_hash,
+            semantics: f.semantics,
+            target: f.target,
+            circuits: f.circuits,
+            resources: f.resources,
+            gates: f.gates,
+        })
+    }
 }
 fn decode_version<'de, D: serde::Deserializer<'de>>(
     d: D,
@@ -330,11 +393,12 @@ pub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifac
             "Asset network differs from the target domain; cross-domain assets are unsupported.",
         ));
     }
-    let registry = liabilities::registry(program)?;
+    // Signed label/owner admission precedes the registry's own refusals.
     let signed = match &target.signed_policy {
-        Some(policy) => Some(signed_relation::admit(program, policy, &registry)?),
+        Some(policy) => Some(signed_relation::admit(program, policy)?),
         None => None,
     };
+    let registry = liabilities::registry(program)?;
     let hash = digest(program)?;
     let program_hash = hash.iter().map(|b| format!("{b:02x}")).collect();
     let mut circuits = Vec::with_capacity(program.actions.len());
@@ -365,7 +429,9 @@ pub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifac
             .ok_or_else(|| error("limit", "Artifact size overflow."))?;
         resources.public_values = resources
             .public_values
-            .checked_add((circuit.public_inputs.len() + circuit.authorization_bindings.len()) as u32)
+            .checked_add(
+                (circuit.public_inputs.len() + circuit.authorization_bindings.len()) as u32,
+            )
             .ok_or_else(|| error("limit", "Public ABI size overflow."))?;
         resources.max_replay_steps = resources.max_replay_steps.max(circuit.replay_steps);
         if resources.instructions > target.max_instructions

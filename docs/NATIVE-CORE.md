@@ -98,11 +98,15 @@ Private execution, native recursion, compiler soundness, fraud limits, target
 qualification and deployment remain separate requirements.
 
 The current artifact, ABI, relation, proof and binding revisions are explicitly
-`moriarty-zkir-artifact/2`, `moriarty-public-abi/2`, `moriarty-zkir-relation/2`,
-`moriarty-native-transition-proof/2` and `moriarty-native-transition-binding/2`.
-Current consumers refuse revision 1 artifacts and proofs; unchanged source can
-recompile under revision 2. Historical revision 1 measurements and native results
-retain their original scope.
+`moriarty-zkir-artifact/3`, `moriarty-public-abi/3`, `moriarty-zkir-relation/3`,
+`moriarty-native-transition-proof/3` and `moriarty-native-transition-binding/3`.
+Each carries an explicit authorization mode: `unsigned`, or
+`moriarty-jubjub-owner-intent/1` when the trusted Target has a `signed_policy`.
+Current consumers refuse revision 1 and 2 artifacts and proofs; unchanged source
+can recompile under revision 3. Historical revision 1 and 2 measurements and
+native results retain their original scope. The signed profile's contract is
+[the native owner-intent design](superpowers/specs/2026-10-11-native-owner-intent-design.md);
+its native proof results remain separate from ordinary checks.
 
 Each program registers zero through sixteen unique duty names across all its
 actions. A name binds the exact asset network/issuer/reference/scale, debtor and
