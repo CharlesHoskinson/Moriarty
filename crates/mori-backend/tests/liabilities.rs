@@ -160,9 +160,10 @@ fn every_action_has_sorted_typed_complete_frame_and_explicit_revision() {
     let p = parse(SOURCE).unwrap();
     let a = artifact(SOURCE);
     let json = serde_json::to_value(&a).unwrap();
-    assert_eq!(json["format"], "moriarty-zkir-artifact/2");
-    assert_eq!(json["abi"], "moriarty-public-abi/2");
-    assert_eq!(json["relation"], "moriarty-zkir-relation/2");
+    assert_eq!(json["format"], "moriarty-zkir-artifact/3");
+    assert_eq!(json["abi"], "moriarty-public-abi/3");
+    assert_eq!(json["relation"], "moriarty-zkir-relation/3");
+    assert_eq!(json["authorization_mode"], "unsigned");
     assert_eq!(json["resources"]["liability_registry_entries"], 2);
     assert_eq!(json["resources"]["max_liability_registry_entries"], 16);
     assert!(
@@ -433,6 +434,10 @@ fn strict_artifact_revision_and_profile_decoding_refuse_stale_or_unknown_fields(
         ("format", "moriarty-zkir-artifact/1"),
         ("abi", "moriarty-public-abi/1"),
         ("relation", "moriarty-zkir-relation/1"),
+        ("format", "moriarty-zkir-artifact/2"),
+        ("abi", "moriarty-public-abi/2"),
+        ("relation", "moriarty-zkir-relation/2"),
+        ("authorization_mode", "signed"),
     ] {
         let mut changed = j.clone();
         changed[key] = bad.into();
@@ -635,18 +640,40 @@ fn context_commits_revision_profile_and_sorted_exact_registry() {
         serde_json::json!({"name":f["name"],"asset":f["asset"],"debtor":f["debtor"],"creditor":f["creditor"]})
     }).collect::<Vec<_>>();
     use sha2::{Digest, Sha256};
+    // Independent v3 construction: the 18-element context array with the
+    // constant-free financial projection of the staged layout.
+    let json = serde_json::to_value(c).unwrap();
+    let projection: Vec<_> = json["public_inputs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .map(|(i, b)| serde_json::json!({"position":i,"role":b["role"],"name":b["name"],"ty":b["ty"],"asset":b["asset"]}))
+        .collect();
     let expected = Sha256::digest(
-        mori_core::intent::canonical(&(
-            "moriarty-zkir-relation/2",
-            "moriarty-public-abi/2",
-            16usize,
+        mori_core::intent::canonical(&serde_json::json!([
+            "moriarty-financial-context/3",
+            "unsigned",
+            "moriarty-zkir-artifact/3",
+            "moriarty-public-abi/3",
+            "moriarty-zkir-relation/3",
+            "moriarty-native-transition-binding/3",
+            "moriarty-native-transition-proof/3",
+            16,
+            16,
             frame,
             &p,
             &a.target,
             "repay",
-        ))
+            projection,
+            json["effect_frame"],
+            json["balance_frame"],
+            json["liability_frame"],
+            json["replay_steps"]
+        ]))
         .unwrap(),
     );
+    assert_eq!(c.context_hash, mori_core::intent::hex(&expected));
     for (b, bytes) in c
         .public_inputs
         .iter()
