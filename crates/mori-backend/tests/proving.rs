@@ -105,33 +105,86 @@ fn financial_fixture_resource_measurement_without_parameters_or_proving() {
 fn strict_bundle_schema_and_hex() {
     assert!(ProofBundle::from_json(r#"{"format":"x","format":"y"}"#).is_err());
     assert!(ProofBundle::from_json("{} []").is_err());
+    let digest = "0".repeat(64);
+    let context = |i: u32| mori_backend::PublicBinding {
+        role: "context".into(),
+        name: format!("program_target_action.{i}"),
+        ty: mori_core::Type::UInt,
+        constant: Some(i.to_string()),
+        asset: None,
+    };
     let bundle = ProofBundle {
-        format: "moriarty-native-transition-proof/2".into(),
-        abi: "moriarty-public-abi/2".into(),
-        relation: "moriarty-zkir-relation/2".into(),
-        binding: "moriarty-native-transition-binding/2".into(),
+        format: "moriarty-native-transition-proof/3".into(),
+        abi: "moriarty-public-abi/3".into(),
+        relation: "moriarty-zkir-relation/3".into(),
+        binding: "moriarty-native-transition-binding/3".into(),
         profile: "ledger-9".into(),
         registry: vec![],
-        source_hash: "x".into(),
-        program_hash: "x".into(),
-        target_hash: "x".into(),
-        scenario_hash: "x".into(),
-        execution_hash: "x".into(),
+        source_hash: digest.clone(),
+        program_hash: digest.clone(),
+        target_hash: digest.clone(),
+        scenario_hash: digest.clone(),
+        execution_hash: digest.clone(),
         action: "advance".into(),
         circuit_k: 9,
+        authorization_mode: "unsigned".into(),
+        context_hash: digest.clone(),
+        financial_bindings: vec![context(0), context(1)],
+        authorization_bindings: vec![],
+        public_values: vec![digest.clone(), format!("01{}", "0".repeat(62))],
+        authorization: None,
         proof_hex: "".into(),
     };
     let current = serde_json::to_value(&bundle).unwrap();
+    assert_eq!(current["authorization"], serde_json::Value::Null);
     assert!(ProofBundle::from_json(&current.to_string()).is_ok());
     for field in ["format", "abi", "relation", "binding"] {
         let mut stale = current.clone();
         stale[field] = "stale/1".into();
         assert!(ProofBundle::from_json(&stale.to_string()).is_err());
+        let mut v2 = current.clone();
+        v2[field] = current[field].as_str().unwrap().replace("/3", "/2").into();
+        let err = ProofBundle::from_json(&v2.to_string()).unwrap_err();
+        assert!(err.message.contains("recompile"), "{err}");
     }
-    for field in ["abi", "relation", "binding", "profile", "registry"] {
+    for field in [
+        "abi",
+        "relation",
+        "binding",
+        "profile",
+        "registry",
+        "authorization_mode",
+        "context_hash",
+        "financial_bindings",
+        "authorization_bindings",
+        "public_values",
+        "authorization",
+    ] {
         let mut missing = current.clone();
         missing.as_object_mut().unwrap().remove(field);
-        assert!(ProofBundle::from_json(&missing.to_string()).is_err());
+        assert!(
+            ProofBundle::from_json(&missing.to_string()).is_err(),
+            "{field}"
+        );
+    }
+    // Mode, descriptors, authorization object and statement must agree.
+    for (field, value) in [
+        (
+            "authorization_mode",
+            serde_json::json!("moriarty-jubjub-owner-intent/1"),
+        ),
+        ("authorization_mode", serde_json::json!("signed")),
+        ("public_values", serde_json::json!(["00"])),
+        ("context_hash", serde_json::json!("x")),
+        ("source_hash", serde_json::json!("A".repeat(64))),
+        (
+            "authorization",
+            serde_json::json!({"payload_hash":"x","message_hex":"x","public_key_hex":"x","at":"1"}),
+        ),
+    ] {
+        let mut bad = current.clone();
+        bad[field] = value;
+        assert!(ProofBundle::from_json(&bad.to_string()).is_err(), "{field}");
     }
     let mut json = current;
     json["verifier_key"] = "hostile".into();

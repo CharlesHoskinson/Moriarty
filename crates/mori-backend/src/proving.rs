@@ -3,7 +3,11 @@
 //! report framing; neither authenticates ledger state, owner authority or history.
 use crate::{
     CircuitArtifact, Error, LiabilityIdentity, LiabilityOperation, PUBLIC_ABI_VERSION,
-    RELATION_VERSION, Target, compile, digest, error, parameters::OfflineParameters,
+    PublicBinding, RELATION_VERSION, Target, UNSIGNED_MODE,
+    authorization::{AuthorizationBinding, ExpectedAuthority, SignedIntent},
+    digest, error,
+    parameters::OfflineParameters,
+    schnorr, signed_relation,
 };
 use midnight_transient_crypto::{
     curve::Fr,
@@ -12,17 +16,27 @@ use midnight_transient_crypto::{
 use midnight_zkir_v3::IrSource;
 use mori_core::{Effect, Execution, Liability, Program, Scenario, Statement, UInt, Value};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
 pub const MAX_PROOF_BYTES: usize = 262_144;
 pub const MAX_K: u8 = 19;
-const FORMAT: &str = "moriarty-native-transition-proof/2";
-const BINDING: &str = "moriarty-native-transition-binding/2";
+pub const PROOF_FORMAT: &str = "moriarty-native-transition-proof/3";
+pub const BINDING_VERSION: &str = "moriarty-native-transition-binding/3";
+const KEY_LOCATION: &str = "moriarty-local-native-transition/3";
 #[derive(Debug, Clone)]
 pub struct ProofOptions {
     pub params_dir: PathBuf,
     pub max_k: u8,
+}
+/// Public signed statement identity. It excludes the attachment, R and s:
+/// the native statement is existential over a valid private signature.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct ClaimAuthorization {
+    pub payload_hash: String,
+    pub message_hex: String,
+    pub public_key_hex: String,
+    pub at: UInt,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -40,19 +54,74 @@ pub struct ProofBundle {
     pub execution_hash: String,
     pub action: String,
     pub circuit_k: u8,
+    pub authorization_mode: String,
+    pub context_hash: String,
+    pub financial_bindings: Vec<PublicBinding>,
+    pub authorization_bindings: Vec<AuthorizationBinding>,
+    pub public_values: Vec<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub authorization: Option<ClaimAuthorization>,
     pub proof_hex: String,
 }
 impl ProofBundle {
     fn validate_versions(&self) -> Result<(), Error> {
-        if self.format != FORMAT
+        if self.format != PROOF_FORMAT
             || self.abi != PUBLIC_ABI_VERSION
             || self.relation != RELATION_VERSION
-            || self.binding != BINDING
+            || self.binding != BINDING_VERSION
         {
             return Err(error(
                 "claim",
-                "Stale or unsupported native proof, ABI, relation or binding revision.",
+                "Stale or unsupported native proof, ABI, relation or binding revision; recompile and prove again.",
             ));
+        }
+        self.validate_claim()
+            .map_err(|e| error("claim", format!("Noncanonical v3 Claim: {}", e.message)))
+    }
+    /// Exact v3 Claim encodings and mode/descriptor/statement consistency.
+    fn validate_claim(&self) -> Result<(), Error> {
+        use crate::authorization::decode_digest;
+        for digest in [
+            &self.source_hash,
+            &self.program_hash,
+            &self.target_hash,
+            &self.scenario_hash,
+            &self.execution_hash,
+            &self.context_hash,
+        ] {
+            decode_digest(digest)?;
+        }
+        signed_relation::validate_shape(
+            &self.authorization_mode,
+            &self.financial_bindings,
+            &self.authorization_bindings,
+            // Claims carry no private descriptors or witness values.
+            None,
+        )?;
+        match (&self.authorization, self.authorization_mode.as_str()) {
+            (None, UNSIGNED_MODE) => {}
+            (Some(a), crate::authorization::INTENT_PROFILE) => {
+                decode_digest(&a.payload_hash)?;
+                schnorr::decode_native_hex(&a.message_hex)?;
+                schnorr::decode_key(&a.public_key_hex)?;
+            }
+            _ => {
+                return Err(error(
+                    "claim",
+                    "Authorization object disagrees with the authorization mode.",
+                ));
+            }
+        }
+        if self.public_values.len()
+            != self.financial_bindings.len() + self.authorization_bindings.len()
+        {
+            return Err(error(
+                "claim",
+                "Public statement length differs from its descriptors.",
+            ));
+        }
+        for value in &self.public_values {
+            schnorr::decode_native_hex(value)?;
         }
         Ok(())
     }
@@ -73,6 +142,7 @@ pub struct ProofReceipt {
     pub proof_bytes: u32,
     pub open_gates: Vec<String>,
 }
+/// Exactly the bundle without `proof_hex`; candidate fields never replace it.
 #[derive(Serialize)]
 #[serde(deny_unknown_fields)]
 struct Claim {
@@ -89,48 +159,68 @@ struct Claim {
     execution_hash: String,
     action: String,
     circuit_k: u8,
+    authorization_mode: String,
+    context_hash: String,
+    financial_bindings: Vec<PublicBinding>,
+    authorization_bindings: Vec<AuthorizationBinding>,
+    public_values: Vec<String>,
+    authorization: Option<ClaimAuthorization>,
 }
 struct Prepared {
     claim: Claim,
     execution: Execution,
     ir: IrSource,
     values: Vec<Fr>,
+    /// Raw `[PK.x,PK.y,R.x,R.y,s]` for proving; empty when unsigned.
+    private: Vec<Fr>,
     binding: Fr,
 }
 pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
-fn value_fr(value: &Value) -> Fr {
+pub(crate) fn value_fr(value: &Value) -> Fr {
     match value {
         Value::UInt(n) => Fr::from(n.0),
         Value::Bool(b) => Fr::from(*b),
     }
 }
 
+type SignedInputs<'a> = (&'a ExpectedAuthority, UInt, &'a SignedIntent);
+/// Preparation mode. Only proving constructs the private witness.
+enum Mode<'a> {
+    Unsigned,
+    Prove(SignedInputs<'a>),
+    Verify(SignedInputs<'a>),
+}
 fn prepare(
     source: &str,
     action: &str,
     scenario: &Scenario,
     target: &Target,
     options: &ProofOptions,
+    mode: Mode,
 ) -> Result<Prepared, Error> {
     if options.max_k == 0 || options.max_k > MAX_K {
         return Err(error("limit", "Native k cap must be between 1 and 19."));
     }
-    let program = mori_core::parse(source).map_err(|e| error("program", e.to_string()))?;
-    let artifact = compile(&program, target)?;
-    let mut selected = artifact.circuits.iter().filter(|c| c.action == action);
-    let circuit = selected
-        .next()
-        .ok_or_else(|| error("action", "Selected action is absent."))?;
-    if selected.next().is_some() {
-        return Err(error("action", "Selected action is ambiguous."));
-    }
-    let registry = crate::liabilities::registry(&program)?;
-    liability_slots(&registry, &scenario.liabilities)?;
-    let execution = mori_core::simulate(&program, action, scenario)
-        .map_err(|e| error("scenario", e.to_string()))?;
-    let values = public_values(&program, circuit, scenario, &execution)?;
+    let (statement, private) = match mode {
+        Mode::Unsigned => (
+            signed_relation::reconstruct(source, action, scenario, target, None)?,
+            Vec::new(),
+        ),
+        Mode::Verify((authority, at, intent)) => (
+            signed_relation::accept(source, action, scenario, target, authority, at, intent)?,
+            Vec::new(),
+        ),
+        Mode::Prove((authority, at, intent)) => {
+            let statement =
+                signed_relation::accept(source, action, scenario, target, authority, at, intent)?;
+            let witness = signed_relation::witness(&statement, intent)?;
+            (statement, witness)
+        }
+    };
+    let circuit = &statement.circuit;
+    let values = statement.public_values();
     let ir = IrSource::load(circuit.zkir.as_bytes()).map_err(|e| error("zkir", e.to_string()))?;
     if ir.do_communications_commitment || !ir.inputs.is_empty() {
         return Err(error(
@@ -156,26 +246,38 @@ fn prepare(
             "Public statement exceeds the pinned verifier capacity.",
         ));
     }
+    let authorization = statement.signed.as_ref().map(|s| ClaimAuthorization {
+        payload_hash: hex(&s.payload_hash),
+        message_hex: schnorr::native_hex(s.message),
+        public_key_hex: s.payload.public_key_hex.clone(),
+        at: s.at,
+    });
     let claim = Claim {
         abi: PUBLIC_ABI_VERSION.into(),
         relation: RELATION_VERSION.into(),
-        binding: BINDING.into(),
+        binding: BINDING_VERSION.into(),
         profile: target.profile.clone(),
-        registry,
-        format: FORMAT.into(),
-        source_hash: hex(&Sha256::digest(source.as_bytes())),
-        program_hash: artifact.program_hash,
+        registry: statement.registry.clone(),
+        format: PROOF_FORMAT.into(),
+        source_hash: statement.source_hash.clone(),
+        program_hash: statement.program_hash.clone(),
         target_hash: hex(&digest(target)?),
         scenario_hash: hex(&digest(scenario)?),
-        execution_hash: hex(&digest(&execution)?),
+        execution_hash: hex(&digest(&statement.execution)?),
         action: action.into(),
         circuit_k: k,
+        authorization_mode: target.authorization_mode().into(),
+        context_hash: circuit.context_hash.clone(),
+        financial_bindings: circuit.public_inputs.clone(),
+        authorization_bindings: circuit.authorization_bindings.clone(),
+        public_values: values.iter().map(|v| schnorr::native_hex(*v)).collect(),
+        authorization,
     };
     // SHA-256 is interpreted little-endian as low128 + 2^128 * high128,
     // reduced modulo the pinned Fr by field arithmetic. This is not truncation.
     // binding_input binds this host-reconstructed claim; it does not prove an
     // in-circuit hash of the entire local report.
-    let hash = digest(&(BINDING, &claim))?;
+    let hash = digest(&(BINDING_VERSION, &claim))?;
     let low = u128::from_le_bytes(
         hash[..16]
             .try_into()
@@ -191,18 +293,31 @@ fn prepare(
     // JSON reader; validate it before native key generation or proving.
     // Reserve the largest admitted decimal proof count in the actual escaped
     // receipt so a size refusal cannot first appear after expensive proving.
-    let report = receipt(execution.clone(), k, MAX_PROOF_BYTES as u32);
+    let report = receipt(
+        &claim.authorization_mode,
+        statement.execution.clone(),
+        k,
+        MAX_PROOF_BYTES as u32,
+    );
     validate_json_profile(&report)?;
+    validate_json_profile(&with_proof(&claim, &"00".repeat(MAX_PROOF_BYTES))?)?;
     Ok(Prepared {
         claim,
-        execution,
+        execution: statement.execution,
         ir,
         values,
+        private,
         binding,
     })
 }
+fn with_proof(claim: &Claim, proof_hex: &str) -> Result<serde_json::Value, Error> {
+    let mut value =
+        serde_json::to_value(claim).map_err(|e| error("serialization", e.to_string()))?;
+    value["proof_hex"] = proof_hex.into();
+    Ok(value)
+}
 
-fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
+pub(crate) fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
     mori_core::json::export(value).map_err(|e| {
         error(
             "limit",
@@ -211,16 +326,26 @@ fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
     })?;
     Ok(())
 }
-fn receipt(execution: Execution, circuit_k: u8, proof_bytes: u32) -> ProofReceipt {
+fn receipt(mode: &str, execution: Execution, circuit_k: u8, proof_bytes: u32) -> ProofReceipt {
+    let signed = mode != UNSIGNED_MODE;
     ProofReceipt {
-        qualification: "local-native-transition-proof".into(),
+        qualification: if signed {
+            "local-native-transition-proof-with-existential-owner-signature"
+        } else {
+            "local-native-transition-proof"
+        }
+        .into(),
         execution,
         circuit_k,
         proof_bytes,
         open_gates: [
             "adversarial-source-to-constraint-soundness",
             "authenticated-ledger-frame-and-phase-correspondence",
-            "signed-intent-and-predecessor-history-verification",
+            if signed {
+                "account-key-association-nonce-consumption-and-predecessor-history"
+            } else {
+                "signed-intent-and-predecessor-history-verification"
+            },
             "recursive-private-history",
             "fraud-proof-cost-and-k-measurement",
             "live-ledger-deployment",
@@ -235,6 +360,7 @@ fn statement(prepared: &Prepared) -> Vec<Fr> {
         .chain(prepared.values.iter().copied())
         .collect()
 }
+/// Unsigned local proof. A signed Target refuses here; it never falls back.
 pub fn prove(
     source: &str,
     action: &str,
@@ -242,17 +368,50 @@ pub fn prove(
     target: &Target,
     options: &ProofOptions,
 ) -> Result<(ProofBundle, ProofReceipt), Error> {
-    let prepared = prepare(source, action, scenario, target, options)?;
+    produce(
+        prepare(source, action, scenario, target, options, Mode::Unsigned)?,
+        options,
+    )
+}
+/// Signed local proof: strict host acceptance of the exact attachment and the
+/// ordinary relation check precede any parameter access.
+#[allow(clippy::too_many_arguments)]
+pub fn prove_signed(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authority: &ExpectedAuthority,
+    at: UInt,
+    signed: &SignedIntent,
+    options: &ProofOptions,
+) -> Result<(ProofBundle, ProofReceipt), Error> {
+    let prepared = prepare(
+        source,
+        action,
+        scenario,
+        target,
+        options,
+        Mode::Prove((authority, at, signed)),
+    )?;
+    produce(prepared, options)
+}
+fn produce(
+    prepared: Prepared,
+    options: &ProofOptions,
+) -> Result<(ProofBundle, ProofReceipt), Error> {
     let params = OfflineParameters::load(&options.params_dir, prepared.claim.circuit_k)?;
     let expected = statement(&prepared);
     let preimage = ProofPreimage {
         inputs: vec![],
-        private_transcript: vec![],
+        private_transcript: prepared.private.clone(),
         public_transcript_inputs: prepared.values.clone(),
         public_transcript_outputs: prepared.values.clone(),
         binding_input: prepared.binding,
         communications_commitment: None,
-        key_location: KeyLocation("moriarty-local-native-transition/2".into()),
+        key_location: KeyLocation(
+            format!("{KEY_LOCATION}/{}", prepared.claim.authorization_mode).into(),
+        ),
     };
     let proof = futures::executor::block_on(async {
         let (pk, vk) = prepared
@@ -285,24 +444,14 @@ pub fn prove(
         Ok(proof)
     })?;
     let count = proof.0.len() as u32;
-    let claim = prepared.claim;
-    let bundle = ProofBundle {
-        abi: claim.abi,
-        relation: claim.relation,
-        binding: claim.binding,
-        profile: claim.profile,
-        registry: claim.registry,
-        format: claim.format,
-        source_hash: claim.source_hash,
-        program_hash: claim.program_hash,
-        target_hash: claim.target_hash,
-        scenario_hash: claim.scenario_hash,
-        execution_hash: claim.execution_hash,
-        action: claim.action,
-        circuit_k: claim.circuit_k,
-        proof_hex: hex(&proof.0),
-    };
-    let report = receipt(prepared.execution, bundle.circuit_k, count);
+    let bundle: ProofBundle = serde_json::from_value(with_proof(&prepared.claim, &hex(&proof.0))?)
+        .map_err(|e| error("serialization", e.to_string()))?;
+    let report = receipt(
+        &prepared.claim.authorization_mode,
+        prepared.execution,
+        bundle.circuit_k,
+        count,
+    );
     validate_json_profile(&bundle)?;
     validate_json_profile(&report)?;
     Ok((bundle, report))
@@ -331,6 +480,7 @@ fn decode_proof(text: &str) -> Result<Proof, Error> {
     }
     Ok(Proof(bytes))
 }
+/// Unsigned verification. A signed Target refuses here; it never falls back.
 pub fn verify(
     source: &str,
     action: &str,
@@ -340,27 +490,58 @@ pub fn verify(
     options: &ProofOptions,
 ) -> Result<ProofReceipt, Error> {
     bundle.validate_versions()?;
-    let prepared = prepare(source, action, scenario, target, options)?;
-    let c = &prepared.claim;
-    if bundle.abi != c.abi
-        || bundle.relation != c.relation
-        || bundle.binding != c.binding
-        || bundle.profile != c.profile
-        || bundle.registry != c.registry
-        || bundle.format != c.format
-        || bundle.source_hash != c.source_hash
-        || bundle.program_hash != c.program_hash
-        || bundle.target_hash != c.target_hash
-        || bundle.scenario_hash != c.scenario_hash
-        || bundle.execution_hash != c.execution_hash
-        || bundle.action != c.action
-        || bundle.circuit_k != c.circuit_k
+    check(
+        prepare(source, action, scenario, target, options, Mode::Unsigned)?,
+        bundle,
+        options,
+    )
+}
+/// Signed verification reconstructs the public statement, circuit and key
+/// itself and separately requires strict host acceptance of the attachment.
+#[allow(clippy::too_many_arguments)]
+pub fn verify_signed(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authority: &ExpectedAuthority,
+    at: UInt,
+    signed: &SignedIntent,
+    bundle: &ProofBundle,
+    options: &ProofOptions,
+) -> Result<ProofReceipt, Error> {
+    bundle.validate_versions()?;
+    let prepared = prepare(
+        source,
+        action,
+        scenario,
+        target,
+        options,
+        Mode::Verify((authority, at, signed)),
+    )?;
+    check(prepared, bundle, options)
+}
+fn check(
+    prepared: Prepared,
+    bundle: &ProofBundle,
+    options: &ProofOptions,
+) -> Result<ProofReceipt, Error> {
+    let mut candidate =
+        serde_json::to_value(bundle).map_err(|e| error("serialization", e.to_string()))?;
+    candidate.as_object_mut().map(|o| o.remove("proof_hex"));
+    let reconstructed =
+        serde_json::to_value(&prepared.claim).map_err(|e| error("serialization", e.to_string()))?;
+    if mori_core::intent::canonical(&candidate)
+        .map_err(|e| error("serialization", e.to_string()))?
+        != mori_core::intent::canonical(&reconstructed)
+            .map_err(|e| error("serialization", e.to_string()))?
     {
         return Err(error(
             "claim",
             "Proof metadata differs from the independently reconstructed local transition.",
         ));
     }
+    let c = &prepared.claim;
     let proof = decode_proof(&bundle.proof_hex)?;
     let params = OfflineParameters::load(&options.params_dir, c.circuit_k)?;
     let expected = statement(&prepared);
@@ -375,14 +556,19 @@ pub fn verify(
         vk.verify(&PARAMS_VERIFIER, &proof, expected.into_iter())
             .map_err(|e| error("verification", e.to_string()))
     })?;
-    let report = receipt(prepared.execution, c.circuit_k, proof.0.len() as u32);
+    let report = receipt(
+        &c.authorization_mode,
+        prepared.execution,
+        c.circuit_k,
+        proof.0.len() as u32,
+    );
     validate_json_profile(&report)?;
     Ok(report)
 }
 
 // Presence follows membership, including amount zero. Every supplied identity must
 // match the complete source-derived registry; callers cannot supply a registry.
-fn liability_slots(
+pub(crate) fn liability_slots(
     registry: &[LiabilityIdentity],
     duties: &[Liability],
 ) -> Result<Vec<(bool, UInt)>, Error> {
@@ -404,12 +590,25 @@ fn liability_slots(
     Ok(values)
 }
 
+#[cfg(test)]
 fn public_values(
     program: &Program,
     c: &CircuitArtifact,
     s: &Scenario,
     e: &Execution,
 ) -> Result<Vec<Fr>, Error> {
+    Ok(financial_values(program, c, s, e)?
+        .iter()
+        .map(value_fr)
+        .collect())
+}
+/// Financial positions 0..N reconstructed from the exact execution.
+pub(crate) fn financial_values(
+    program: &Program,
+    c: &CircuitArtifact,
+    s: &Scenario,
+    e: &Execution,
+) -> Result<Vec<Value>, Error> {
     let registry = crate::liabilities::registry(program)?;
     if c.liability_frame.len() != registry.len()
         || c.liability_frame.iter().zip(&registry).any(|(f, r)| {
@@ -824,17 +1023,14 @@ fn public_values(
     }
     slots
         .into_iter()
-        .map(|value| {
-            value
-                .map(|v| value_fr(&v))
-                .ok_or_else(|| error("abi", "An ABI position was not reconstructed."))
-        })
+        .map(|value| value.ok_or_else(|| error("abi", "An ABI position was not reconstructed.")))
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::compile;
     use mori_core::{AssetId, Balance};
     use std::collections::BTreeMap;
 
@@ -905,7 +1101,8 @@ mod tests {
             params_dir: PathBuf::from("/unused"),
             max_k: 19,
         };
-        let prepared = prepare(source, "pay", &scenario, &target, &options).unwrap();
+        let prepared =
+            prepare(source, "pay", &scenario, &target, &options, Mode::Unsigned).unwrap();
         let expected: Vec<Fr> = [0u128, 5, 1, 20, 1, 2, 5, 2, 0, 5, 5, 5, 13, 6, 4]
             .into_iter()
             .map(Fr::from)
@@ -927,7 +1124,7 @@ mod tests {
         );
         let mut different = scenario.clone();
         different.balances[3].amount = UInt(8);
-        let other = prepare(source, "pay", &different, &target, &options).unwrap();
+        let other = prepare(source, "pay", &different, &target, &options, Mode::Unsigned).unwrap();
         assert_eq!(
             prepared.values, other.values,
             "untouched account is outside the declared circuit frame"
@@ -946,19 +1143,28 @@ mod tests {
             params_dir: PathBuf::from("/unused"),
             max_k: 9,
         };
-        let first = prepare(source, "run", &Scenario::default(), &target, &options).unwrap();
+        let first = prepare(
+            source,
+            "run",
+            &Scenario::default(),
+            &target,
+            &options,
+            Mode::Unsigned,
+        )
+        .unwrap();
         let second = prepare(
             &format!("{source}\n"),
             "run",
             &Scenario::default(),
             &target,
             &options,
+            Mode::Unsigned,
         )
         .unwrap();
         assert_eq!(first.claim.program_hash, second.claim.program_hash);
         assert_ne!(first.claim.source_hash, second.claim.source_hash);
         assert_ne!(first.binding, second.binding);
-        let bytes = digest(&(BINDING, &first.claim)).unwrap();
+        let bytes = digest(&(BINDING_VERSION, &first.claim)).unwrap();
         let low = Fr::from(u128::from_le_bytes(bytes[..16].try_into().unwrap()));
         let high = Fr::from(u128::from_le_bytes(bytes[16..].try_into().unwrap()));
         assert_eq!(
@@ -1041,11 +1247,19 @@ mod tests {
         };
         let artifact = compile(&program, &target).unwrap();
         let c = &artifact.circuits[1];
-        let prepared = prepare(source, "repay", &scenario, &target, &options).unwrap();
+        let prepared = prepare(
+            source,
+            "repay",
+            &scenario,
+            &target,
+            &options,
+            Mode::Unsigned,
+        )
+        .unwrap();
         assert_honest_preimage(&prepared);
         assert_eq!(prepared.claim.abi, PUBLIC_ABI_VERSION);
         assert_eq!(prepared.claim.relation, RELATION_VERSION);
-        assert_eq!(prepared.claim.binding, BINDING);
+        assert_eq!(prepared.claim.binding, BINDING_VERSION);
         assert_eq!(prepared.claim.profile, target.profile);
         assert_eq!(
             prepared.claim.registry,
@@ -1292,6 +1506,7 @@ mod tests {
                 params_dir: "/unused".into(),
                 max_k: 19,
             },
+            Mode::Unsigned,
         )
         .unwrap();
         let absent = prepare(
@@ -1303,11 +1518,187 @@ mod tests {
                 params_dir: "/unused".into(),
                 max_k: 19,
             },
+            Mode::Unsigned,
         )
         .unwrap();
         assert_honest_preimage(&present);
         assert_honest_preimage(&absent);
         assert_ne!(present.values, absent.values);
         assert_ne!(present.binding, absent.binding);
+    }
+
+    struct Golden {
+        source: String,
+        scenario: Scenario,
+        target: Target,
+        authority: ExpectedAuthority,
+        signed: SignedIntent,
+    }
+    fn golden() -> Golden {
+        let g: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../examples/core/native-owner-intent/golden-vector.json"
+        ))
+        .unwrap();
+        let mut authority = serde_json::Map::new();
+        for k in [
+            "profile",
+            "network",
+            "anchor",
+            "program_address",
+            "target_hash",
+            "owner",
+            "beneficiary",
+            "public_key_hex",
+            "nonce",
+            "predecessor",
+            "not_before",
+            "not_after",
+            "limits",
+        ] {
+            authority.insert(k.into(), g["payload"][k].clone());
+        }
+        Golden {
+            source: g["source_utf8"].as_str().unwrap().into(),
+            scenario: serde_json::from_value(g["scenario"].clone()).unwrap(),
+            target: Target::from_json(g["target_canonical_utf8"].as_str().unwrap()).unwrap(),
+            authority: ExpectedAuthority::from_json(
+                &serde_json::Value::Object(authority).to_string(),
+            )
+            .unwrap(),
+            signed: SignedIntent::from_json(&g["signed_wrapper"].to_string()).unwrap(),
+        }
+    }
+    fn signed_options() -> ProofOptions {
+        ProofOptions {
+            params_dir: "/nonexistent/moriarty-task2-claim".into(),
+            max_k: 19,
+        }
+    }
+    fn golden_prepared(g: &Golden, verify: bool) -> Prepared {
+        let inputs = (&g.authority, UInt(15), &g.signed);
+        prepare(
+            &g.source,
+            "repay",
+            &g.scenario,
+            &g.target,
+            &signed_options(),
+            if verify {
+                Mode::Verify(inputs)
+            } else {
+                Mode::Prove(inputs)
+            },
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn only_proving_constructs_the_private_witness() {
+        let g = golden();
+        let prove = golden_prepared(&g, false);
+        let verify = golden_prepared(&g, true);
+        assert_eq!(prove.private.len(), 5);
+        assert!(
+            verify.private.is_empty(),
+            "verification uses only public values"
+        );
+        assert_eq!(prove.values, verify.values);
+        assert_eq!(prove.binding, verify.binding);
+        let bundle: ProofBundle =
+            serde_json::from_value(with_proof(&verify.claim, "00").unwrap()).unwrap();
+        let options = signed_options();
+        let run = |signed: &SignedIntent| {
+            verify_signed(
+                &g.source,
+                "repay",
+                &g.scenario,
+                &g.target,
+                &g.authority,
+                UInt(15),
+                signed,
+                &bundle,
+                &options,
+            )
+            .unwrap_err()
+            .code
+        };
+        assert_eq!(run(&g.signed), "mori::backend::parameters");
+        // Another valid attachment shares the attachment-free Claim and statement.
+        let mut alternative = g.signed.clone();
+        alternative.signature_hex = "fec0b07c971073c462c88d722fb5fe8df764311114dbcc79e46263b74a863850e92947318a0258f88a6869c98a7e96733662780d4936401c0e732a4c87fb651a98b9a4ecb5630fefa96bd5f061388d910c95dabfa7f2c089c2d3651ca422e900".into();
+        assert_eq!(run(&alternative), "mori::backend::parameters");
+        let mut flipped = g.signed.clone();
+        flipped.signature_hex.replace_range(130..132, "00");
+        assert_eq!(run(&flipped), "mori::backend::signature");
+        let claim = serde_json::to_string(&verify.claim).unwrap();
+        assert!(!claim.contains(&g.signed.signature_hex[..64]));
+        assert!(!claim.contains(&g.signed.signature_hex[128..]));
+    }
+
+    #[test]
+    fn canonical_v3_claim_decoding_refuses_deletions_mode_and_encodings() {
+        let g = golden();
+        let prepared = golden_prepared(&g, true);
+        let base = with_proof(&prepared.claim, "00").unwrap();
+        assert!(ProofBundle::from_json(&base.to_string()).is_ok());
+        let refuses = |f: &dyn Fn(&mut serde_json::Value)| {
+            let mut v = base.clone();
+            f(&mut v);
+            ProofBundle::from_json(&v.to_string()).is_err()
+        };
+        // Independent descriptor cases: required explicit nulls inside the Claim.
+        assert!(refuses(&|v| {
+            v["financial_bindings"][2]
+                .as_object_mut()
+                .unwrap()
+                .remove("constant");
+        }));
+        assert!(refuses(&|v| {
+            v["financial_bindings"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("asset");
+        }));
+        assert!(refuses(&|v| {
+            v["authorization_bindings"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("asset");
+        }));
+        assert!(refuses(&|v| v["authorization_mode"] = "unsigned".into()));
+        assert!(refuses(
+            &|v| v["authorization_bindings"] = serde_json::json!([])
+        ));
+        assert!(refuses(&|v| v["authorization"] = serde_json::Value::Null));
+        assert!(refuses(&|v| {
+            v["authorization_bindings"]
+                .as_array_mut()
+                .unwrap()
+                .swap(2, 3);
+        }));
+        for field in [
+            "source_hash",
+            "program_hash",
+            "target_hash",
+            "scenario_hash",
+            "execution_hash",
+            "context_hash",
+        ] {
+            assert!(refuses(&|v| v[field] = "x".into()), "{field}");
+            assert!(refuses(&|v| v[field] = "A".repeat(64).into()), "{field}");
+        }
+        let p = "01000000fffffffffe5bfeff02a4bd5305d8a10908d83933487d9d2953a7ed73";
+        assert!(refuses(&|v| v["authorization"]["payload_hash"] = "x".into()));
+        assert!(refuses(&|v| v["authorization"]["message_hex"] = p.into()));
+        assert!(refuses(
+            &|v| v["authorization"]["public_key_hex"] = "0".repeat(128).into()
+        ));
+        assert!(refuses(&|v| v["authorization"]["at"] = "015".into()));
+        assert!(refuses(&|v| v["public_values"][0] = p.into()));
+        assert!(refuses(&|v| {
+            v["authorization"].as_object_mut().unwrap().remove("at");
+        }));
+        assert!(refuses(
+            &|v| v["authorization"]["signature_hex"] = "00".into()
+        ));
     }
 }

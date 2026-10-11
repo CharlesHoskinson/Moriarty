@@ -538,9 +538,10 @@ fn liability_cli_consumes_supported_and_refused_contexts_without_publication() {
         );
         let artifact: serde_json::Value =
             serde_json::from_slice(&std::fs::read(out.join("artifact.json")).unwrap()).unwrap();
-        assert_eq!(artifact["format"], "moriarty-zkir-artifact/2");
-        assert_eq!(artifact["abi"], "moriarty-public-abi/2");
-        assert_eq!(artifact["relation"], "moriarty-zkir-relation/2");
+        assert_eq!(artifact["format"], "moriarty-zkir-artifact/3");
+        assert_eq!(artifact["abi"], "moriarty-public-abi/3");
+        assert_eq!(artifact["relation"], "moriarty-zkir-relation/3");
+        assert_eq!(artifact["authorization_mode"], "unsigned");
     }
     let output = Command::new(env!("CARGO_BIN_EXE_mori"))
         .args(["--color", "never", "simulate"])
