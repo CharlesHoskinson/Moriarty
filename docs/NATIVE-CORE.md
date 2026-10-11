@@ -197,3 +197,5 @@ JubJub, authenticated persisted acceptance and the full launch libraries
 remain required subsequent language/toolchain work. External targets are
 integration constraints; no Fenrir node, consensus or application code is
 part of this implementation.
+
+The [2026-10-11 local liability result](evidence/2026-10-11-native-liabilities.md) records one revision2 native repayment proof, independent complete-effect verification and four actual native negative controls under the separately approved k11 allocation. This extends the observed local subset; authenticated signed authority, predecessor/history and ledger qualification remain open.
