@@ -12,8 +12,16 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+mod liabilities;
+pub use liabilities::{
+    LiabilityDescriptor, LiabilityIdentity, LiabilityOperation, MAX_LIABILITY_REGISTRY_ENTRIES,
+};
 mod parameters;
 pub mod proving;
+
+pub const ARTIFACT_FORMAT: &str = "moriarty-zkir-artifact/2";
+pub const PUBLIC_ABI_VERSION: &str = "moriarty-public-abi/2";
+pub const RELATION_VERSION: &str = "moriarty-zkir-relation/2";
 
 pub const LEDGER_REVISION: &str = "04c9c5d9bcebb8d4427d8589fb54d58a55599c14";
 pub const ZKIR_VERSION: &str = "3.0.0-rc.2";
@@ -76,6 +84,7 @@ impl Target {
 /// explicitly published by Impact in the same position in transcript_inputs.
 /// Upstream PublicInput alone assigns a witness; it does not bind a public value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PublicBinding {
     pub role: String,
     pub name: String,
@@ -84,6 +93,7 @@ pub struct PublicBinding {
     pub asset: Option<AssetId>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CircuitArtifact {
     pub action: String,
     pub zkir: String,
@@ -91,11 +101,13 @@ pub struct CircuitArtifact {
     pub instruction_count: u32,
     pub effect_frame: Vec<EffectDescriptor>,
     pub balance_frame: Vec<BalanceDescriptor>,
+    pub liability_frame: Vec<LiabilityDescriptor>,
     pub replay_steps: u32,
 }
 /// Static effect identities are committed through program/action context.
 /// Every effect amount/value is separately public and constrained.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EffectDescriptor {
     pub step: u32,
     pub kind: String,
@@ -103,9 +115,14 @@ pub struct EffectDescriptor {
     pub asset: Option<AssetId>,
     pub from: Option<String>,
     pub to: Option<String>,
+    /// Liability effects use [before_presence, before_amount, after_presence, after_amount].
     pub public_positions: Vec<u32>,
+    /// Full source-fixed duty identity; balance transfer fields remain separate.
+    pub liability: Option<LiabilityIdentity>,
+    pub operation: Option<LiabilityOperation>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BalanceDescriptor {
     pub asset: AssetId,
     pub account: String,
@@ -113,6 +130,7 @@ pub struct BalanceDescriptor {
     pub post_position: u32,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Resources {
     pub instructions: u32,
     pub zkir_bytes: u32,
@@ -122,21 +140,77 @@ pub struct Resources {
     pub circuit_k: Option<u8>,
     pub fraud_max_k: Option<u8>,
     pub cost_measured: bool,
+    #[serde(deserialize_with = "decode_registry_entries")]
+    pub liability_registry_entries: u32,
+    #[serde(deserialize_with = "decode_registry_ceiling")]
+    pub max_liability_registry_entries: u32,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Gate {
     pub predicate: String,
     pub status: String,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Artifact {
+    #[serde(deserialize_with = "decode_artifact_format")]
     pub format: String,
+    #[serde(deserialize_with = "decode_abi_version")]
+    pub abi: String,
+    #[serde(deserialize_with = "decode_relation_version")]
+    pub relation: String,
     pub program_hash: String,
     pub semantics: String,
+    #[serde(deserialize_with = "decode_artifact_target")]
     pub target: Target,
     pub circuits: Vec<CircuitArtifact>,
     pub resources: Resources,
     pub gates: Vec<Gate>,
+}
+fn decode_version<'de, D: serde::Deserializer<'de>>(
+    d: D,
+    expected: &str,
+) -> Result<String, D::Error> {
+    let value = String::deserialize(d)?;
+    if value != expected {
+        return Err(serde::de::Error::custom(format!(
+            "Expected {expected}; recompile for this backend revision."
+        )));
+    }
+    Ok(value)
+}
+fn decode_artifact_format<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    decode_version(d, ARTIFACT_FORMAT)
+}
+fn decode_abi_version<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    decode_version(d, PUBLIC_ABI_VERSION)
+}
+fn decode_relation_version<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    decode_version(d, RELATION_VERSION)
+}
+fn decode_registry_entries<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
+    let value = u32::deserialize(d)?;
+    if value as usize > MAX_LIABILITY_REGISTRY_ENTRIES {
+        return Err(serde::de::Error::custom(
+            "Liability registry exceeds the compiler profile.",
+        ));
+    }
+    Ok(value)
+}
+fn decode_registry_ceiling<'de, D: serde::Deserializer<'de>>(d: D) -> Result<u32, D::Error> {
+    let value = u32::deserialize(d)?;
+    if value as usize != MAX_LIABILITY_REGISTRY_ENTRIES {
+        return Err(serde::de::Error::custom(
+            "Stale liability compiler profile.",
+        ));
+    }
+    Ok(value)
+}
+fn decode_artifact_target<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Target, D::Error> {
+    let value = Target::deserialize(d)?;
+    value.validate().map_err(serde::de::Error::custom)?;
+    Ok(value)
 }
 #[derive(Debug, Clone, Serialize, Deserialize, thiserror::Error)]
 #[error("{code}: {message}")]
@@ -171,6 +245,7 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
             "Asset network differs from the target domain; cross-domain assets are unsupported.",
         ));
     }
+    let registry = liabilities::registry(program)?;
     let hash = digest(program)?;
     let program_hash = hash.iter().map(|b| format!("{b:02x}")).collect();
     let mut circuits = Vec::with_capacity(program.actions.len());
@@ -183,9 +258,11 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
         circuit_k: None,
         fraud_max_k: None,
         cost_measured: false,
+        liability_registry_entries: registry.len() as u32,
+        max_liability_registry_entries: MAX_LIABILITY_REGISTRY_ENTRIES as u32,
     };
     for action in &program.actions {
-        let circuit = lower_action(program, action, target)?;
+        let circuit = lower_action(program, action, target, &registry)?;
         resources.instructions = resources
             .instructions
             .checked_add(circuit.instruction_count)
@@ -213,7 +290,9 @@ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
         circuits.push(circuit);
     }
     let mut artifact = Artifact {
-        format: "moriarty-zkir-artifact/1".into(),
+        format: ARTIFACT_FORMAT.into(),
+        abi: PUBLIC_ABI_VERSION.into(),
+        relation: RELATION_VERSION.into(),
         program_hash,
         semantics: program.semantics.clone(),
         target: target.clone(),
@@ -329,6 +408,11 @@ impl Builder {
     }
     fn equal(&mut self, a: Operand, b: Operand) {
         self.instructions.push(Instruction::ConstrainEq { a, b });
+    }
+    fn canonical_liability(&mut self, presence: Operand, amount: Operand) {
+        let absent = self.unary(presence, "not");
+        let absent_amount = self.binary(absent, amount, BinaryOp::Mul);
+        self.equal(absent_amount, immediate(0));
     }
     fn split64(&mut self, val: Operand) -> (Operand, Operand) {
         let high = self.fresh();
@@ -506,9 +590,18 @@ fn lower_action(
     program: &Program,
     action: &Action,
     target: &Target,
+    registry: &[LiabilityIdentity],
 ) -> Result<CircuitArtifact, Error> {
     let mut builder = Builder::default();
-    let context = digest(&("moriarty-zkir-relation/1", program, target, &action.name))?;
+    let context = digest(&(
+        RELATION_VERSION,
+        PUBLIC_ABI_VERSION,
+        MAX_LIABILITY_REGISTRY_ENTRIES,
+        registry,
+        program,
+        target,
+        &action.name,
+    ))?;
     for (i, chunk) in context.chunks_exact(16).enumerate() {
         let value = u128::from_le_bytes(chunk.try_into().expect("16-byte digest limb"));
         builder.public(
@@ -545,12 +638,6 @@ fn lower_action(
                 keys.insert((asset.clone(), from.clone()));
                 keys.insert((asset.clone(), to.clone()));
             }
-            Statement::Liability { .. } | Statement::Discharge { .. } => {
-                return Err(error(
-                    "unsupported",
-                    "Liability presence and typed predecessor identities are not yet lowered; compile refuses this action.",
-                ));
-            }
             _ => {}
         }
     }
@@ -582,6 +669,40 @@ fn lower_action(
             post_position: 0,
         });
     }
+    let mut liabilities = BTreeMap::new();
+    let mut liability_frame = Vec::with_capacity(registry.len());
+    for identity in registry {
+        let pre_presence_position = builder.bindings.len() as u32;
+        let presence = builder.public(
+            "pre_liability_presence",
+            &identity.name,
+            Type::Bool,
+            None,
+            None,
+            Some(identity.asset.clone()),
+        );
+        let pre_amount_position = builder.bindings.len() as u32;
+        let amount = builder.public(
+            "pre_liability_amount",
+            &identity.name,
+            Type::UInt,
+            None,
+            None,
+            Some(identity.asset.clone()),
+        );
+        builder.canonical_liability(presence.operand.clone(), amount.operand.clone());
+        liabilities.insert(identity.name.clone(), (presence, amount));
+        liability_frame.push(LiabilityDescriptor {
+            name: identity.name.clone(),
+            asset: identity.asset.clone(),
+            debtor: identity.debtor.clone(),
+            creditor: identity.creditor.clone(),
+            pre_presence_position,
+            pre_amount_position,
+            post_presence_position: 0,
+            post_amount_position: 0,
+        });
+    }
     let mut effect_frame = Vec::new();
     for (step, statement) in action.statements.iter().enumerate() {
         let mut effect = EffectDescriptor {
@@ -592,6 +713,8 @@ fn lower_action(
             from: None,
             to: None,
             public_positions: Vec::new(),
+            liability: None,
+            operation: None,
         };
         match statement {
             Statement::Let { name, value } => {
@@ -694,8 +817,65 @@ fn lower_action(
                     effect.asset.clone(),
                 );
             }
-            Statement::Liability { .. } | Statement::Discharge { .. } => {
-                unreachable!("unsupported operations rejected before lowering")
+            Statement::Liability { name, amount, .. } | Statement::Discharge { name, amount } => {
+                let delta = builder.expression(program, *amount, &env)?;
+                builder.range(delta.operand.clone(), Type::UInt);
+                let (before_presence, before_amount) = liabilities[name].clone();
+                let discharge = matches!(statement, Statement::Discharge { .. });
+                if discharge {
+                    builder.instructions.push(Instruction::Assert {
+                        cond: before_presence.operand.clone(),
+                    });
+                }
+                let after_amount = Wire {
+                    operand: builder.arithmetic(
+                        before_amount.operand.clone(),
+                        delta.operand,
+                        if discharge {
+                            BinaryOp::Sub
+                        } else {
+                            BinaryOp::Add
+                        },
+                    ),
+                    ty: Type::UInt,
+                };
+                let after_presence = if discharge {
+                    before_presence.clone()
+                } else {
+                    Wire {
+                        operand: immediate(1),
+                        ty: Type::Bool,
+                    }
+                };
+                let identity = registry
+                    .iter()
+                    .find(|entry| &entry.name == name)
+                    .expect("closed liability registry")
+                    .clone();
+                effect.kind = "liability".into();
+                effect.liability = Some(identity.clone());
+                effect.operation = Some(if discharge {
+                    LiabilityOperation::Discharge
+                } else {
+                    LiabilityOperation::CreateOrAccrue
+                });
+                for (field, wire) in [
+                    ("before_presence", before_presence),
+                    ("before_amount", before_amount),
+                    ("after_presence", after_presence.clone()),
+                    ("after_amount", after_amount.clone()),
+                ] {
+                    effect.public_positions.push(builder.bindings.len() as u32);
+                    builder.public(
+                        "effect",
+                        &format!("{step}.{field}"),
+                        wire.ty,
+                        Some(wire.operand),
+                        None,
+                        Some(identity.asset.clone()),
+                    );
+                }
+                liabilities.insert(name.clone(), (after_presence, after_amount));
             }
         }
         if !effect.kind.is_empty() {
@@ -731,6 +911,29 @@ fn lower_action(
         );
         outputs.push(wire.operand);
     }
+    for frame in &mut liability_frame {
+        let (presence, amount) = &liabilities[&frame.name];
+        frame.post_presence_position = builder.bindings.len() as u32;
+        let presence = builder.public(
+            "post_liability_presence",
+            &frame.name,
+            Type::Bool,
+            Some(presence.operand.clone()),
+            None,
+            Some(frame.asset.clone()),
+        );
+        frame.post_amount_position = builder.bindings.len() as u32;
+        let amount = builder.public(
+            "post_liability_amount",
+            &frame.name,
+            Type::UInt,
+            Some(amount.operand.clone()),
+            None,
+            Some(frame.asset.clone()),
+        );
+        builder.canonical_liability(presence.operand.clone(), amount.operand.clone());
+        outputs.extend([presence.operand, amount.operand]);
+    }
     let output_types = vec![IrType::Native; outputs.len()];
     builder
         .instructions
@@ -758,6 +961,7 @@ fn lower_action(
         instruction_count,
         effect_frame,
         balance_frame,
+        liability_frame,
         replay_steps: action.statements.len() as u32,
     })
 }
