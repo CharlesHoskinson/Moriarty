@@ -47,6 +47,60 @@ snapshots. A refused action commits no effects. The library's `replay`
 recomputes each step and reports the first divergence. This is a reference
 replay API; no external fraud-game implementation is included.
 
+## Target-bound public reference replay
+
+`simulate --trace --target` produces a separate `moriarty-reference-replay/1`
+sidecar. `replay` independently reconstructs it from separately supplied raw
+source, action, Scenario and trusted Target. For signed Targets, both commands
+require the complete profile, expected-authority, logical-time and actual
+signature group. The record never supplies those trusted inputs.
+
+```sh
+mori simulate deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
+  --action settle \
+  --scenario deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.scenario.json \
+  --target deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.target.json \
+  --profile moriarty-jubjub-owner-intent/1 \
+  --authority deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.authority.json \
+  --at 15 --signature deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.signed.json \
+  --trace > payment.replay.json
+mori replay deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.mori \
+  --action settle \
+  --scenario deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.scenario.json \
+  --target deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.target.json \
+  --profile moriarty-jubjub-owner-intent/1 \
+  --authority deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.authority.json \
+  --at 15 --signature deliverables/native-owner-intent-2026-10-11/inputs/independent-payment.signed.json \
+  --record payment.replay.json
+```
+
+Trace stdout is the entire valid record. Shell redirection controls its destination
+and can overwrite a file. Existing ordinary `simulate` output remains unchanged.
+Replay succeeds with `qualification: local-reference-replay`; divergence exits1
+with the first step ordinal and an RFC6901 field such as
+`/body/execution/steps/1/effects/0/amount`. File/schema/argument errors use the
+existing stderr diagnostics. Source or execution refusal publishes no record or
+proposed financial effects.
+
+The sidecar binds unchanged full Execution and revision3 Claim bytes, actual
+selected ZKIR, source/program/Scenario/Target identities, network/Anchor and
+signed public authority/time. It includes every ordered step and effect, full
+pre/post and untouched/present-zero duties. Semantic comparison precedes mutable
+execution/message/public-value/trace/record hashes, so rehashing false content
+cannot hide the first difference. Signed replay validates the separately supplied
+attachment; valid alternative attachments for one payload produce the same
+public record. The record contains no attachment R/s, private witness or proof keys.
+
+Every read and final ASCII-safe export respects Core's1MiB/depth32/nodes65536
+profile, including the print newline. Oversized records refuse intact.
+`source_step_count` counts completed source statements only, including guards and
+local bindings; it measures no expression visits, curve work, time or native cost.
+The [design](superpowers/specs/2026-10-11-bound-replay-design.md) defines exact hash
+framing and comparison order; the [local result](evidence/2026-10-11-bound-replay.md)
+records independent oracles and compatibility checks. Complete Fenrir fraud-game
+interfaces, ledger authentication/history/time/nonce consumption, transaction
+size, replay timing/work, DUST and live qualification remain open.
+
 ## Native public transition proofs
 
 ```sh
@@ -173,7 +227,8 @@ prove history compliance or establish chain acceptance. JubJub in-circuit
 verification is implemented in the separate signed revision3 compiler profile;
 a bounded integrated native result is recorded in the
 [October 11 signed payment evidence](../deliverables/native-owner-intent-2026-10-11/RESULT.md).
-Fresh whole-source and actual-result review remains pending.
+Both fresh full-source and actual-result audits approved the selected local
+package, retained in [PR28](https://github.com/CharlesHoskinson/Moriarty/pull/28).
 
 The integrated signed profile uses `mori intent SOURCE --profile
 moriarty-jubjub-owner-intent/1 --action ACTION --scenario SCENARIO --target
@@ -207,7 +262,8 @@ it does not commit attached signature bytes. Source Tasks1/2 are merged. The
 produced and independently verified the full original k13 circuit with complete
 financial readback, six produced-proof hostile refusals, six reused-proof native
 negatives and an accepted alternative valid attachment. Both exact resource votes
-preceded the one-shot run; fresh whole-source and actual-result review is pending.
+preceded the one-shot run; both fresh full-source and actual-result audits
+approved the selected package in [PR28](https://github.com/CharlesHoskinson/Moriarty/pull/28).
 This local result does not establish ledger settlement, ownership, authenticated
 time/history, nonce consumption, recursion or full supported-language coverage.
 Task3's full16-asset/16-duty production preparation still refuses the1MiB report
@@ -239,9 +295,10 @@ verify cryptography, and the correspondence table names runtime gaps.
 
 This slice updates Moriarty itself. It supplies foundations for M1, M2,
 M5–M7, M9, M10 and the financial library requirements. It does not close all
-U0/U1/U2 obligations or M1–M17. Deploy/call, genuine native qualification of the integrated signed JubJub
-relation, authenticated persisted acceptance and the full launch libraries
-remain required subsequent language/toolchain work. External targets are
+U0/U1/U2 obligations or M1–M17. The retained October11 selected payment produced
+and independently verified a genuine local integrated signed native proof.
+Broader native/U1 qualification, deploy/call, authenticated persisted acceptance
+and the full launch libraries remain required subsequent language/toolchain work. External targets are
 integration constraints; no Fenrir node, consensus or application code is
 part of this implementation.
 
@@ -288,5 +345,10 @@ size, proving time, memory, transaction/replay costs or native feasibility.
 Exact source/scenario/Target/authority/artifact/layout/IR and payload/signature
 bindings, full current ordinary QA results and Task4's specified native controls
 are in [the signed Task3 report](../.superpowers/sdd/native-owner-task-3-report.md).
-Source Tasks1/2 are merged; Task3 still requires fresh independent scoped review,
-and genuine signed native/ledger qualification remains open.
+Source Tasks1/2 are merged. Both fresh Sol HIGH and Grok HIGH audits approved
+Tasks3/4 and the selected actual-result package on head27fe45c0, merged in
+[PR28](https://github.com/CharlesHoskinson/Moriarty/pull/28).
+The retained [selected payment result](../deliverables/native-owner-intent-2026-10-11/RESULT.md)
+establishes one genuine local integrated signed native case; broader native/U1
+and ledger qualification remain open. Reference replay adds no native allocation
+or proof-verification claim.
