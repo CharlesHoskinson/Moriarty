@@ -1,0 +1,14 @@
+language "moriarty/1";
+agreement ZeroDutyLifecycle {
+  asset UNIT = { network: "local", issuer: "native-liability-qa", reference: "QA", scale: 0 };
+  state closed: Bool = false;
+  action close(approved: Bool) {
+    requires approved;
+    liability("note", UNIT, "writer", "holder", 0);
+    discharge("note", 0);
+    liability("note", UNIT, "writer", "holder", 2);
+    discharge("note", 2);
+    next closed = true;
+    emit "closed"(closed);
+  }
+}

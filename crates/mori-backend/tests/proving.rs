@@ -106,7 +106,12 @@ fn strict_bundle_schema_and_hex() {
     assert!(ProofBundle::from_json(r#"{"format":"x","format":"y"}"#).is_err());
     assert!(ProofBundle::from_json("{} []").is_err());
     let bundle = ProofBundle {
-        format: "moriarty-native-transition-proof/1".into(),
+        format: "moriarty-native-transition-proof/2".into(),
+        abi: "moriarty-public-abi/2".into(),
+        relation: "moriarty-zkir-relation/2".into(),
+        binding: "moriarty-native-transition-binding/2".into(),
+        profile: "ledger-9".into(),
+        registry: vec![],
         source_hash: "x".into(),
         program_hash: "x".into(),
         target_hash: "x".into(),
@@ -116,7 +121,19 @@ fn strict_bundle_schema_and_hex() {
         circuit_k: 9,
         proof_hex: "".into(),
     };
-    let mut json = serde_json::to_value(&bundle).unwrap();
+    let current = serde_json::to_value(&bundle).unwrap();
+    assert!(ProofBundle::from_json(&current.to_string()).is_ok());
+    for field in ["format", "abi", "relation", "binding"] {
+        let mut stale = current.clone();
+        stale[field] = "stale/1".into();
+        assert!(ProofBundle::from_json(&stale.to_string()).is_err());
+    }
+    for field in ["abi", "relation", "binding", "profile", "registry"] {
+        let mut missing = current.clone();
+        missing.as_object_mut().unwrap().remove(field);
+        assert!(ProofBundle::from_json(&missing.to_string()).is_err());
+    }
+    let mut json = current;
     json["verifier_key"] = "hostile".into();
     assert!(ProofBundle::from_json(&json.to_string()).is_err());
 }
@@ -369,4 +386,216 @@ fn genuine_native_authored_actions_and_mutations() {
         Value::UInt(UInt(15))
     );
     proving::verify(SOURCE, "advance", &explicit, &target, &second, &options).unwrap();
+}
+
+#[test]
+fn registered_duties_reach_missing_srs_and_closed_registry_refuses() {
+    let target = Target::ledger9("local", "anchor");
+    let mut opts = options();
+    opts.max_k = 19;
+    let settlement = include_str!("../../../examples/core/native-liability/settlement.mori");
+    let zero = include_str!("../../../examples/core/native-liability/zero-lifecycle.mori");
+    let manifest: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../examples/core/native-liability/mori-tests.json"
+    ))
+    .unwrap();
+    let scenarios = [
+        include_str!("../../../examples/core/native-liability/partial.scenario.json"),
+        include_str!("../../../examples/core/native-liability/full.scenario.json"),
+        include_str!("../../../examples/core/native-liability/present-zero.scenario.json"),
+    ];
+    for (i, text) in scenarios.into_iter().enumerate() {
+        let s: Scenario = serde_json::from_str(text).unwrap();
+        let (source, action) = if i == 2 {
+            (zero, "close")
+        } else {
+            (settlement, "repay")
+        };
+        let execution =
+            mori_core::simulate(&mori_core::parse(source).unwrap(), action, &s).unwrap();
+        assert_eq!(
+            serde_json::to_value(&execution.post).unwrap(),
+            manifest["cases"][i]["expected"]["post"]
+        );
+        assert_eq!(
+            serde_json::to_value(&execution.effects).unwrap(),
+            manifest["cases"][i]["expected"]["effects"]
+        );
+        assert_code(
+            proving::prove(source, action, &s, &target, &opts),
+            "parameters",
+        );
+    }
+    for text in [
+        include_str!(
+            "../../../examples/core/native-liability/reference-broader-wrong-party.scenario.json"
+        ),
+        include_str!(
+            "../../../examples/core/native-liability/reference-broader-hidden-name.scenario.json"
+        ),
+    ] {
+        let s: Scenario = serde_json::from_str(text).unwrap();
+        assert!(mori_core::simulate(&mori_core::parse(settlement).unwrap(), "repay", &s).is_ok());
+        assert_code(
+            proving::prove(settlement, "repay", &s, &target, &opts),
+            "unsupported",
+        );
+    }
+}
+
+#[test]
+fn stale_proof_revision_refuses_at_schema_boundary() {
+    let old = serde_json::json!({"format":"moriarty-native-transition-proof/1","source_hash":"x","program_hash":"x","target_hash":"x","scenario_hash":"x","execution_hash":"x","action":"advance","circuit_k":9,"proof_hex":"00"});
+    assert!(ProofBundle::from_json(&old.to_string()).is_err());
+}
+
+#[test]
+fn source_registry_validates_all_scenario_tuples_and_untouched_slots() {
+    let source = include_str!("../../../examples/core/native-liability/settlement.mori");
+    let scenario: Scenario = serde_json::from_str(include_str!(
+        "../../../examples/core/native-liability/partial.scenario.json"
+    ))
+    .unwrap();
+    let target = Target::ledger9("local", "anchor");
+    let opts = ProofOptions {
+        max_k: 19,
+        ..options()
+    };
+    // No duty effect is emitted by observe, yet the complete registry persists.
+    let mut untouched = scenario.clone();
+    untouched.inputs.clear();
+    assert_code(
+        proving::prove(source, "observe", &untouched, &target, &opts),
+        "parameters",
+    );
+    for mutation in 0..8 {
+        let mut bad = untouched.clone();
+        let duty = &mut bad.liabilities[1];
+        match mutation {
+            0 => duty.name = "hidden".into(),
+            1 => duty.debtor = "changed".into(),
+            2 => duty.creditor = "changed".into(),
+            3 => duty.asset.network = "changed".into(),
+            4 => duty.asset.issuer = "changed".into(),
+            5 => duty.asset.reference = "changed".into(),
+            6 => duty.asset.scale = 1,
+            _ => {
+                let copy = duty.clone();
+                bad.liabilities.push(copy);
+            }
+        }
+        assert_code(
+            proving::prove(source, "observe", &bad, &target, &opts),
+            "unsupported",
+        );
+    }
+    // Absence is allowed for a registered untouched identity and consumes a slot.
+    untouched.liabilities.clear();
+    assert_code(
+        proving::prove(source, "observe", &untouched, &target, &opts),
+        "parameters",
+    );
+}
+
+/// Exact fixture shapes only: no parameters, key generation or prover/verifier.
+#[test]
+fn liability_fixture_shapes_without_parameters_or_proving() {
+    use midnight_transient_crypto::proofs::Zkir;
+    use sha2::{Digest, Sha256};
+    let digest = |bytes: &[u8]| -> String {
+        Sha256::digest(bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    };
+    let wide = r#"language "moriarty/1";
+agreement CompleteSixteenDuties {
+  asset UNIT = { network: "local", issuer: "native-liability-qa", reference: "WIDE", scale: 0 };
+  action originate(amount: UInt) {
+    liability("duty00", UNIT, "debtor00", "creditor00", amount);
+    liability("duty01", UNIT, "debtor01", "creditor01", 0);
+    liability("duty02", UNIT, "debtor02", "creditor02", amount);
+    liability("duty03", UNIT, "debtor03", "creditor03", 0);
+    liability("duty04", UNIT, "debtor04", "creditor04", amount);
+    liability("duty05", UNIT, "debtor05", "creditor05", 0);
+    liability("duty06", UNIT, "debtor06", "creditor06", amount);
+    liability("duty07", UNIT, "debtor07", "creditor07", 0);
+    liability("duty08", UNIT, "debtor08", "creditor08", amount);
+    liability("duty09", UNIT, "debtor09", "creditor09", 0);
+    liability("duty10", UNIT, "debtor10", "creditor10", amount);
+    liability("duty11", UNIT, "debtor11", "creditor11", 0);
+    liability("duty12", UNIT, "debtor12", "creditor12", amount);
+    liability("duty13", UNIT, "debtor13", "creditor13", 0);
+    liability("duty14", UNIT, "debtor14", "creditor14", amount);
+    liability("duty15", UNIT, "debtor15", "creditor15", 0);
+  }
+  action progress(amount: UInt) {
+    discharge("duty00", amount);
+    liability("duty15", UNIT, "debtor15", "creditor15", 1);
+    discharge("duty15", 1);
+  }
+  action observe() { emit "ordinary"(1); }
+}
+"#;
+    let target = Target::ledger9("local", "native-liability-qa");
+    let target_bytes =
+        mori_core::intent::canonical(&serde_json::to_value(&target).unwrap()).unwrap();
+    let output = std::env::var_os("MORIARTY_LIABILITY_MEASUREMENT_DIR").map(PathBuf::from);
+    if let Some(dir) = &output {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    let fixtures = [
+        (
+            "zero-lifecycle",
+            1,
+            include_str!("../../../examples/core/native-liability/zero-lifecycle.mori"),
+        ),
+        (
+            "settlement",
+            2,
+            include_str!("../../../examples/core/native-liability/settlement.mori"),
+        ),
+        ("complete-sixteen", 16, wide),
+    ];
+    for (label, width, source) in fixtures {
+        let program = mori_core::parse(source).unwrap();
+        let artifact = mori_backend::compile(&program, &target).unwrap();
+        assert_eq!(artifact.resources.liability_registry_entries, width);
+        let artifact_bytes =
+            mori_core::intent::canonical(&serde_json::to_value(&artifact).unwrap()).unwrap();
+        if let Some(dir) = &output {
+            std::fs::write(dir.join(format!("{label}.mori")), source).unwrap();
+            std::fs::write(dir.join(format!("{label}.artifact.json")), &artifact_bytes).unwrap();
+            std::fs::write(dir.join("target.json"), &target_bytes).unwrap();
+        }
+        for circuit in &artifact.circuits {
+            assert_eq!(circuit.liability_frame.len(), width as usize);
+            let ir = midnight_zkir_v3::IrSource::load(circuit.zkir.as_bytes()).unwrap();
+            let model = ir.model();
+            let frame_bytes = mori_core::intent::canonical(
+                &serde_json::to_value(&circuit.liability_frame).unwrap(),
+            )
+            .unwrap();
+            let effect_bytes =
+                mori_core::intent::canonical(&serde_json::to_value(&circuit.effect_frame).unwrap())
+                    .unwrap();
+            println!(
+                "LIABILITY_MEASUREMENT {}",
+                serde_json::json!({
+                    "fixture": label, "source_sha256": digest(source.as_bytes()), "program_sha256": artifact.program_hash,
+                    "target_sha256": digest(&target_bytes), "artifact_sha256": digest(&artifact_bytes),
+                    "action": circuit.action, "registry_width": width, "liability_frame_entries": circuit.liability_frame.len(),
+                    "liability_frame_sha256": digest(&frame_bytes), "effect_frame_entries": circuit.effect_frame.len(),
+                    "effect_frame_sha256": digest(&effect_bytes), "balance_frame_entries": circuit.balance_frame.len(),
+                    "public_inputs": circuit.public_inputs.len(), "replay_steps": circuit.replay_steps,
+                    "instructions": circuit.instruction_count, "zkir_sha256": digest(circuit.zkir.as_bytes()),
+                    "optimal_k": ir.k(), "model_k": model.k(), "model_rows": model.rows(),
+                })
+            );
+            assert!(
+                ir.k() <= 19,
+                "measured engineering ceiling exceeded; native work requires revised design"
+            );
+        }
+    }
 }
