@@ -474,3 +474,7 @@ Plan: docs/superpowers/plans/2026-10-10-moriarty-language.md.
 - Task 3 Quint acceptance/lifecycle/batch QA: 59 deterministic tests and seeded samples recorded; symbolic premises and correspondence gaps explicit; review pending.
 - Task 4 CLI consumer/domain intent/resource APIs: authored, smoke-tested; current workspace verification and independent review in progress.
 - M1–M17 and U0/U1/U2 remain owed. No devnet qualification, native proof, in-circuit JubJub or full launch-library completion has been inferred from these local results.
+
+## Native persistent liabilities — 2026-10-11
+
+PR25 merged at60b3657a with reviewed tree d8d5b445. New plan docs/superpowers/plans/2026-10-11-native-liabilities.md, branchfeat/moriarty-native-liabilities-20261011, planning commitse8acc37d/adaec92c. Both substantive selected design votes APPROVE. NativeLiabilityTask1: in progress; source lowering/typed full frame only, native execution unauthorized pending exact measurements and separate resource votes. Prior milestone results remain historical.
