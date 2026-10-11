@@ -70,6 +70,16 @@ failure returns a coded error with the failed step and commits no effects.
 checks the complete effect sequence and poststate. Balance and liability
 ordering is canonical, independent of input JSON order.
 
+`replay_detailed` and `compare_execution` add first-step and RFC6901 field
+paths through a separate API. They preserve existing `replay` diagnostics and
+Step/Execution JSON. Execution comparison visits semantics/action/pre, ordered
+steps (index/statement/value/snapshot/effects), full effects and post. Nested
+object keys are lexical; arrays retain order. Generic array length differences
+report the array path; missing/extra steps report their first ordinal. The
+backend's [public replay sidecar](../mori-backend/README.md) prefixes these
+paths with `/body/execution` and binds source/Target/authorization identities.
+Core comparison alone does not supply target or ledger authority.
+
 The language bounds source to 65,536 bytes, 8,192 tokens and expression nodes,
 256 declarations, 256 inputs per action, 1,024 statements per action and
 expression depth 64. Scenario bounds and a trace allocation budget limit
