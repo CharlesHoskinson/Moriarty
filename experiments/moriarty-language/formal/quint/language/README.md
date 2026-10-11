@@ -207,7 +207,78 @@ Simulation uses default `init`/`step`. No `quint verify` or Apalache was used.
 Source-to-constraint correspondence, public input publication, hash collision
 resistance, native cryptography, signed authority, authenticated predecessor/full
 real duty completeness, ledger phases/unique consumption/history, recovery and
-private recursion remain external premises or open work. Current artifact/proof2
+private recursion remain external premises or open work. Historical artifact/proof2
 revisions and scoped circuit measurements are documented in
 [NATIVE-CORE](../../../../../docs/NATIVE-CORE.md); neither this model nor ordinary
 checks establish native proof2 roundtrip or any full roadmap exit.
+
+## Revision 3 integrated signed stage QA
+
+`signed_transition.qnt` models the adopted native-owner contract as one cohesive
+shared local `State`: immutable source AssetIds and duty identities, complete
+balance and presence/amount maps, independently supplied policy/authority,
+ordered financial effects, previous published state and an identified refusal.
+There are no messages or distributed actors. Pure admission, arithmetic, cap,
+guard, update and property functions feed separate thin `accept` and `refuse`
+actions. Refusal preserves the previous ledger/effects and records its reason.
+A trace ends after 12 attempts; no blanket stutter hides a refusal or deadlock.
+
+Assets compare all network/issuer/reference/scale fields. Reference/name integers
+are opaque symbolic labels; maps abstract the admitted canonical source registry
+and unique exact asset-limit membership. This model does not implement JSON,
+lexical ordering, source-expression evaluation, hashes or signature arithmetic.
+An authentic external `signatureVerified` premise is bound by exact equality of
+`signedStatement` and the complete reconstructed `Statement` (source, full
+opening frame, operations and all authority/domain/cap fields). It is never a
+claim that a caller boolean supplies verification authority. The current logical
+`at` is independently checked and deliberately excluded from the signed message.
+Account/key association, source-to-circuit correspondence, authenticated real
+duty completeness, predecessor history, ledger time/acceptance and cryptographic
+soundness remain external obligations. This model does not qualify M8.
+
+All financial values and every gross/fee/credit/debit/net/closing-duty accumulator
+use the actual UInt128 maximum 340282366920938463463374607431768211455. Simulation
+uses Quint 0.32.0's TypeScript evaluator because its Rust evaluator cannot represent
+this bound. Gross retains owner outgoing transfers and fees; beneficiary net
+subtracts transfer debits and owner fees once, including the self-beneficiary
+case. Complete present, absent and present-zero duty membership remains distinct;
+partial/full discharge retains presence and conveys no payment or consent.
+
+Experiment observation, 2026-10-11: **44 deterministic tests pass**. They reproduce
+independent payment alice 28 / bob 80 / treasury 2 / paid 70 / duties 30, 5, present-zero and exact
+Transfer70/Fee2/Liability50→30/State0→70/Emit70 order. Other controls cover each
+fresh cap refusal, state-only/zero finance, selftransfer, self-beneficiary fee
+accounting, partial/full/zero/absent duties, full candidate signature mismatch,
+every domain dimension, policy/key/nonce/predecessor/time mismatch, source-wide
+hidden payer/debtor, exact asset mismatch,16/17 admission, atomic intermediate
+failure, exact UInt128 maximum and individual accumulator overflow.
+
+The final seeded run sampled 10,000 traces at 12 steps with no `safety` violation.
+Actual witness counts: accepted payment 4,339; state-only 6,178; selftransfer 6,123;
+partial discharge 4,319; full discharge 6,242; present-zero accrual 6,046; refusal 10,000.
+Each witness requires an actual accepted/refused action. These are sampled
+reachability observations, not exhaustive verification.
+
+| Requirement | Pure guard/property | Runtime correspondence and limitation |
+|---|---|---|
+| Source-wide exact owner/assets/duties | `admitted`, `complete` | Signed compiler admission and full frames; symbolic source labels, no parser proof |
+| Separate policy/domain/key/interval | `reason` policy/domain/authority/time clauses | Trusted Target/ExpectedAuthority/at reconstruction; no ledger identity/time authentication |
+| Whole candidate signature binding | `signedStatement == statement` | Strict reconstructed MOI1/FENS reference path; authentic verifier result is an external premise |
+| Checked sums and each cap | `totals`, `checked`, `authorityCaps` | Actual effect/closing-duty compiler wires and host cap checks; no compiler correspondence proof |
+| Atomic effects and refusal | `orderedEffects`, `conservation`, `persistence`, `refusalAtomic` | Ordered reference replay and local clone-and-commit; no ledger settlement or nonce consumption |
+
+```sh
+quint typecheck signed_transition_test.qnt
+quint test signed_transition_test.qnt --main signed_transition_test --backend typescript --match 'Test$' --seed 1011
+quint run signed_transition.qnt --main signed_transition --backend typescript --invariant safety --witnesses acceptedPaymentWitness stateOnlyWitness selfTransferWitness partialWitness fullWitness presentZeroWitness refusalWitness --seed 1011 --max-samples 10000 --max-steps 12 --verbosity 1
+```
+
+The [signed Task3 report](../../../../../.superpowers/sdd/native-owner-task-3-report.md)
+names exact model/source/log digests, current ordinary checks, integrated shape
+measurements and the retained max-shape report-size refusal. No Quint verify or
+Apalache, real SRS, key generation, proving, native verification, MockProver or
+ignored tests ran. Historical beta native signature adapters remain a separate
+compatibility scope. The signed compiler/CLI is implemented; genuine integrated
+native and ledger qualification, full U0–U7 and M1–M17 remain open. Update this
+model against the approved semantic contract when that contract changes, and
+rerun the matching Rust/CLI controls before extending its correspondence claims.

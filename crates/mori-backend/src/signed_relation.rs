@@ -1609,4 +1609,94 @@ mod tests {
             .contains("overflow")
         );
     }
+    mod shape_fixture {
+        use crate::{Target, authorization::ExpectedAuthority};
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/support/signed_shapes.rs"
+        ));
+    }
+
+    #[test]
+    fn full_sixteen_shape_statement_remains_bound_when_public_report_refuses() {
+        // This ordinary internal reconstruction is measurement evidence only.
+        // Production preparation still refuses its oversized full report.
+        let target = Target::from_json(include_str!(
+            "../../../examples/core/native-owner-intent/payment.target.json"
+        ))
+        .unwrap();
+        let authority = ExpectedAuthority::from_json(include_str!(
+            "../../../examples/core/native-owner-intent/payment.authority.json"
+        ))
+        .unwrap();
+        let (source, scenario, target, authority) =
+            shape_fixture::fixture(16, 16, "settle", &target, &authority);
+        let r = reconstruct(
+            &source,
+            "settle",
+            &scenario,
+            &target,
+            Some((&authority, UInt(15))),
+        )
+        .unwrap();
+        let s = r.signed.as_ref().unwrap();
+        let signed = SignedIntent {
+            payload: s.payload.clone(),
+            signature_hex: qa_sign(7, 29, s.message, schnorr::FENS_DOMAIN, false),
+        };
+        schnorr::verify_attachment(&authority.public_key_hex, &signed.signature_hex, s.message)
+            .unwrap();
+        witness(&r, &signed).unwrap();
+        assert_eq!(r.registry.len(), 16);
+        assert_eq!(r.circuit.liability_frame.len(), 16);
+        assert_eq!(r.circuit.balance_frame.len(), 48);
+        assert_eq!(r.execution.effects.len(), 50);
+        assert_eq!(s.payload.limits.len(), 16);
+        for balance in &r.execution.post.balances {
+            assert_eq!(
+                balance.amount.0,
+                if balance.account == "alice" { 8 } else { 1 }
+            );
+        }
+        assert!(r.execution.post.liabilities.iter().all(|l| l.amount.0 == 1));
+        let refusal = prepare_intent(&source, "settle", &scenario, &target, &authority, UInt(15))
+            .unwrap_err();
+        assert_eq!(refusal.code, "mori::backend::limit");
+        assert!(refusal.message.contains("JSON exceeds 1 MiB"));
+        let digest = |bytes: &[u8]| proving::hex(&Sha256::digest(bytes));
+        let canonical = |v: &serde_json::Value| mori_core::intent::canonical(v).unwrap();
+        let payload = canonical(&serde_json::to_value(&s.payload).unwrap());
+        let wrapper = canonical(&serde_json::to_value(&signed).unwrap());
+        let execution = canonical(&serde_json::to_value(&r.execution).unwrap());
+        let values: Vec<_> = r
+            .public_values()
+            .iter()
+            .map(|v| schnorr::native_hex(*v))
+            .collect();
+        let record = serde_json::json!({
+            "fixture":"max-sixteen-assets-duties", "qualification":"internal-ordinary-reconstruction-only-production-report-refused",
+            "source_sha256":digest(source.as_bytes()), "program_sha256":r.program_hash,
+            "scenario_sha256":digest(&canonical(&serde_json::to_value(&scenario).unwrap())),
+            "target_sha256":digest(&canonical(&serde_json::to_value(&target).unwrap())),
+            "authority_sha256":digest(&canonical(&serde_json::to_value(&authority).unwrap())),
+            "payload_sha256":digest(&payload), "signed_wrapper_sha256":digest(&wrapper),
+            "execution_sha256":digest(&execution), "compact_execution_bytes":execution.len(),
+            "context_sha256":r.circuit.context_hash, "zkir_sha256":digest(r.circuit.zkir.as_bytes()),
+            "message_hex":schnorr::native_hex(s.message), "at":"15", "public_values":values,
+            "signed_wrapper":signed, "refusal":{"code":refusal.code,"message":refusal.message},
+            "qa_secret_scalar":"7-public-laboratory-only", "qa_nonce_scalar":"29-public-laboratory-only"
+        });
+        println!(
+            "MAX_SIGNED_STATEMENT {}",
+            serde_json::to_string(&record).unwrap()
+        );
+        if let Some(dir) = std::env::var_os("MORIARTY_SIGNED_MEASUREMENT_DIR") {
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(
+                std::path::Path::new(&dir).join("max-sixteen-internal-statement.json"),
+                serde_json::to_vec_pretty(&record).unwrap(),
+            )
+            .unwrap();
+        }
+    }
 }
