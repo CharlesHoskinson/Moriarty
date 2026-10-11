@@ -96,6 +96,13 @@ resource and acceptance gates. Merge status is not product acceptance.
 
 ## Current implementation and review routing
 
+The [October 10 user update](raw/assignments/moriarty-sol-review-routing-2026-10-10.md)
+selects a fresh independent `gpt-6.1-sol` review at **high effort**, alongside
+Grok 4.6 high, for the current Moriarty language roadmap work. This replaces
+Astra in the required review pair for that work. Earlier Astra verdicts remain
+historical evidence. Apply this override to older routing statements below and
+in the development skill; preserve all acceptance gates and exact-candidate audits.
+
 The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews; historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
 
 ## Autonomous sprint decisions

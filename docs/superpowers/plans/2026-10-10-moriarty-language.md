@@ -19,7 +19,7 @@
 - Sampling in Quint is not exhaustive verification or cryptographic soundness.
 - General compile does not consume scenario state or project review/campaign records.
 - Existing wallet identities, credentials and external dirty work remain intact.
-- Mandatory whole-candidate independent Astra and Grok reviews retain actual returned identities.
+- Mandatory whole-candidate independent GPT-6.1 Sol high and Grok 4.6 high reviews retain available returned identities separately from requested routing, per the October 10 user update. Earlier Astra reviews remain historical evidence.
 
 ## Task 1: Native composable language and reference execution
 
