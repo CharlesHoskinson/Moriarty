@@ -15,6 +15,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 pub mod authorization;
+pub mod replay;
 pub mod schnorr;
 pub mod signed_relation;
 

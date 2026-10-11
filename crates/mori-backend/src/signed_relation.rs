@@ -608,6 +608,9 @@ pub(crate) struct SignedStatement {
 /// Shared reconstruction: one compile, one simulation and one framing for
 /// every signed and unsigned consumer.
 pub(crate) struct Reconstruction {
+    pub program_name: String,
+    pub language: String,
+    pub semantics: String,
     pub source_hash: String,
     pub program_hash: String,
     pub circuit: CircuitArtifact,
@@ -698,6 +701,9 @@ fn reconstruct_statement(
         _ => None,
     };
     Ok(Reconstruction {
+        program_name: program.name,
+        language: program.language,
+        semantics: program.semantics,
         source_hash,
         program_hash: artifact.program_hash,
         circuit,
