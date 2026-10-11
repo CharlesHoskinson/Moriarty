@@ -160,7 +160,9 @@ fn prepare(
     let binding = Fr::from(low) + (Fr::from(u128::MAX) + Fr::from(1u64)) * Fr::from(high);
     // The exported report must itself remain admissible to the public bounded
     // JSON reader; validate it before native key generation or proving.
-    let report = receipt(execution.clone(), k, 0);
+    // Reserve the largest admitted decimal proof count in the actual escaped
+    // receipt so a size refusal cannot first appear after expensive proving.
+    let report = receipt(execution.clone(), k, MAX_PROOF_BYTES as u32);
     validate_json_profile(&report)?;
     Ok(Prepared {
         claim,
@@ -172,9 +174,7 @@ fn prepare(
 }
 
 fn validate_json_profile(value: &impl Serialize) -> Result<(), Error> {
-    let text =
-        serde_json::to_string_pretty(value).map_err(|e| error("serialization", e.to_string()))?;
-    mori_core::json::parse(&text).map_err(|e| {
+    mori_core::json::export(value).map_err(|e| {
         error(
             "limit",
             format!("Export exceeds the bounded JSON profile: {e}"),

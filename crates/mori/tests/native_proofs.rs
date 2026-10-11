@@ -148,6 +148,97 @@ fn missing_srs_does_not_publish_or_change_inputs() {
             .starts_with(".mori-proof-")
     }));
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn srs_named_pipe_refuses_without_waiting_for_a_writer() {
+    use std::{
+        process::Stdio,
+        time::{Duration, Instant},
+    };
+    let files = Files::new();
+    let params = files.0.join("pipes");
+    std::fs::create_dir(&params).unwrap();
+    for k in 1..=9 {
+        assert!(
+            Command::new("mkfifo")
+                .arg(params.join(format!("bls_midnight_2p{k}")))
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+    let out = files.0.join("pipe-proof.json");
+    let mut command = files.command_with_params("prove", &params);
+    command
+        .arg("--out")
+        .arg(&out)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command.spawn().unwrap();
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while child.try_wait().unwrap().is_none() {
+        if Instant::now() >= deadline {
+            child.kill().unwrap();
+            let _ = child.wait();
+            panic!("named SRS pipe blocked waiting for a writer");
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    let output = child.wait_with_output().unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("regular file"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(output.stdout.is_empty());
+    assert!(!out.exists());
+}
+
+#[test]
+fn escaped_receipt_size_refuses_before_parameters_or_publication() {
+    let files = Files::new();
+    let issuer = "Ж".repeat(500);
+    let reference = "界".repeat(330);
+    let source = format!(
+        "language \"moriarty/1\"; agreement Wide {{ asset QA = {{ network: \"local\", issuer: \"{issuer}\", reference: \"{reference}\", scale: 0 }}; action run() {{ }} }}"
+    );
+    std::fs::write(files.0.join("source.mori"), &source).unwrap();
+    let asset =
+        serde_json::json!({"network":"local","issuer":issuer,"reference":reference,"scale":0});
+    let balances: Vec<_> = (0..120).map(|i| serde_json::json!({"account":format!("{i:03}{}", "Ж".repeat(500)),"asset":asset,"amount":"1"})).collect();
+    let scenario_json =
+        serde_json::json!({"state":{},"inputs":{},"balances":balances,"liabilities":[]});
+    let encoded = serde_json::to_vec(&scenario_json).unwrap();
+    assert!(encoded.len() < 1_048_576);
+    std::fs::write(files.0.join("scenario.json"), encoded).unwrap();
+    let scenario: mori_core::Scenario = serde_json::from_value(scenario_json).unwrap();
+    let execution =
+        mori_core::simulate(&mori_core::parse(&source).unwrap(), "run", &scenario).unwrap();
+    let raw = serde_json::to_string_pretty(&execution).unwrap();
+    assert!(raw.len() < 1_048_576);
+    assert!(
+        mori_core::json::export(&execution).is_err(),
+        "escaped complete frame exceeds the public output profile"
+    );
+    let out = files.0.join("wide-proof.json");
+    let output = files
+        .command("prove")
+        .arg("--out")
+        .arg(&out)
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("Escaped JSON"), "{stderr}");
+    assert!(
+        !stderr.contains("Cannot open explicit local SRS"),
+        "must refuse before parameters"
+    );
+    assert!(output.stdout.is_empty());
+    assert!(!out.exists());
+}
 #[test]
 #[ignore = "requires explicitly supplied pinned local SRS via MORIARTY_TEST_PARAMS"]
 fn genuine_native_source_proof_verifies_and_changed_proof_refuses() {
