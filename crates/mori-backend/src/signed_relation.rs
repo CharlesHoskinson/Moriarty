@@ -1700,3 +1700,15 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+pub(crate) fn task4_reconstruct_before_caps(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authority: &ExpectedAuthority,
+    at: UInt,
+) -> Result<Reconstruction, Error> {
+    reconstruct_statement(source, action, scenario, target, Some((authority, at)))
+}
