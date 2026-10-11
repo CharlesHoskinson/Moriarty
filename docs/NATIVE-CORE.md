@@ -171,7 +171,9 @@ current logical time must come from the caller's trusted context. This
 command does not authenticate ledger account ownership, consume a nonce,
 prove history compliance or establish chain acceptance. JubJub in-circuit
 verification is implemented in the separate signed revision3 compiler profile;
-its genuine native qualification remains pending Task4.
+a bounded integrated native result is recorded in the
+[October 11 signed payment evidence](../deliverables/native-owner-intent-2026-10-11/RESULT.md).
+Fresh whole-source and actual-result review remains pending.
 
 The integrated signed profile uses `mori intent SOURCE --profile
 moriarty-jubjub-owner-intent/1 --action ACTION --scenario SCENARIO --target
@@ -200,8 +202,16 @@ Ordinary CLI/compiler/reference checks reconstruct and verify the exact supplied
 attachment before parameter access. Host JSON/SHA256 reconstruction, authenticated
 account/key association, actual predecessor completeness, ledger time and history
 remain external obligations. The native statement is existential over private R/s;
-it does not commit attached signature bytes. Source Tasks1/2 are merged, while
-integrated native proving/verification and resource qualification remain pending.
+it does not commit attached signature bytes. Source Tasks1/2 are merged. The
+[October 11 bounded signed payment](../deliverables/native-owner-intent-2026-10-11/RESULT.md)
+produced and independently verified the full original k13 circuit with complete
+financial readback, six produced-proof hostile refusals, six reused-proof native
+negatives and an accepted alternative valid attachment. Both exact resource votes
+preceded the one-shot run; fresh whole-source and actual-result review is pending.
+This local result does not establish ledger settlement, ownership, authenticated
+time/history, nonce consumption, recursion or full supported-language coverage.
+Task3's full16-asset/16-duty production preparation still refuses the1MiB report
+bound; that shape and the JSON profile remain unchanged.
 All signing scalars in QA are fixed public laboratory data, with no wallet custody
 or private handoff.
 
