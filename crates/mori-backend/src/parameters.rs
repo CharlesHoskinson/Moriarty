@@ -4,7 +4,6 @@ use crate::{Error, error};
 use midnight_transient_crypto::proofs::{ParamsProver, ParamsProverProvider};
 use sha2::{Digest, Sha256};
 use std::{
-    fs::File,
     io::{self, Cursor, Read},
     path::Path,
 };
@@ -44,7 +43,19 @@ impl OfflineParameters {
             .get(k as usize)
             .ok_or_else(|| error("parameters", "No pinned SRS for the circuit degree."))?;
         let path = directory.join(format!("bls_midnight_2p{k}"));
-        let file = File::open(path)
+        // Nonblocking open avoids waiting for a FIFO writer before we can
+        // inspect the opened descriptor. A pre-open stat alone has a race.
+        #[cfg(unix)]
+        let opened = {
+            use std::os::unix::fs::OpenOptionsExt;
+            std::fs::OpenOptions::new()
+                .read(true)
+                .custom_flags(libc::O_NONBLOCK)
+                .open(&path)
+        };
+        #[cfg(not(unix))]
+        let opened = std::fs::File::open(&path);
+        let file = opened
             .map_err(|e| error("parameters", format!("Cannot open explicit local SRS: {e}")))?;
         if !file
             .metadata()
