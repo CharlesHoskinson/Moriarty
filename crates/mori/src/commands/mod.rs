@@ -17,8 +17,11 @@ pub mod inspect;
 pub mod intent;
 pub mod lsp;
 pub mod mcp;
+mod proof_io;
+pub mod prove;
 pub mod simulate;
 pub mod test;
+pub mod verify;
 pub mod verify_intent;
 
 pub type Result<T> = std::result::Result<T, Report>;
@@ -28,6 +31,8 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
+        Command::Prove(args) => prove::run(args, shell),
+        Command::Verify(args) => verify::run(args, shell),
         Command::Format(args) => format::run(args, shell),
         Command::Inspect(args) => inspect::run(args, shell),
         Command::Expand(args) => expand::run(args, shell),
