@@ -5,6 +5,17 @@ use clap::ValueEnum;
 use crate::cli::{ActionInput, SigningOutputArgs};
 use crate::shell::Shell;
 
+/// Quote display identities without giving source text terminal control.
+fn review_identity(value: &str) -> String {
+    format!(
+        "\"{}\"",
+        value
+            .chars()
+            .flat_map(char::escape_default)
+            .collect::<String>()
+    )
+}
+
 #[derive(Debug, clap::Args)]
 pub struct Args {
     #[command(flatten)]
@@ -82,28 +93,35 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     if args.output.review {
         println!(
             "Authorize action {} of program {}",
-            prepared.intent.action, prepared.intent.program_hash
+            review_identity(&prepared.intent.action),
+            review_identity(&prepared.intent.program_hash)
         );
         println!(
             "Network: {}; anchor: {}; contract: {}",
-            authority.network, authority.anchor, authority.program_address
+            review_identity(&authority.network),
+            review_identity(&authority.anchor),
+            review_identity(&authority.program_address)
         );
         println!(
             "Signer: {}; key: {}",
-            authority.signer, authority.public_key_hex
+            review_identity(&authority.signer),
+            review_identity(&authority.public_key_hex)
         );
         println!(
             "Predecessor: {}; nonce: {}; validity: {}..{}",
-            authority.predecessor, authority.nonce.0, authority.not_before.0, authority.not_after.0
+            review_identity(&authority.predecessor),
+            authority.nonce.0,
+            authority.not_before.0,
+            authority.not_after.0
         );
         for limit in &authority.limits {
             println!(
                 "Asset {}/{}/{} (scale {}), beneficiary {}: gross <= {}, fee <= {}, net >= {}, closing liability <= {}",
-                limit.asset.network,
-                limit.asset.issuer,
-                limit.asset.reference,
+                review_identity(&limit.asset.network),
+                review_identity(&limit.asset.issuer),
+                review_identity(&limit.asset.reference),
                 limit.asset.scale,
-                limit.beneficiary,
+                review_identity(&limit.beneficiary),
                 limit.gross_cap.0,
                 limit.fee_cap.0,
                 limit.net_floor.0,
