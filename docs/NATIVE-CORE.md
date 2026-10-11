@@ -37,9 +37,9 @@ and exact local semantics. States and inputs are UInt or Bool; financial
 amounts are checked u128 atomic units. Asset identity carries network,
 issuer, reference and scale. Scenarios must provide every touched balance,
 including zero entries. Transfers and fees preserve per-asset balances.
-Liability creation and explicit partial discharge run in the reference
-interpreter; their compilation currently refuses. No loops, branch
-statements, division, records or dynamic account selection are admitted.
+Liability creation and explicit partial discharge compile under the closed
+source identity registry described below and run in the reference interpreter.
+No loops, branch statements, division, records or dynamic account selection are admitted.
 The native core profile does not yet use the beta formatter or editor.
 
 `simulate` returns ordered steps, complete effects and canonical pre/post
@@ -60,8 +60,10 @@ mori verify examples/core/native-payment/payment.mori --action run \
   --max-k 10 --proof payment-proof.json
 ```
 
-The public local UInt/Bool, transfer, fee, state and event profile uses the
-pinned native prover and verifier. Both commands print a receipt with complete
+The current public local UInt/Bool, transfer, fee, state, event and registered
+liability profile connects to the pinned native prover and verifier. Earlier
+liability-free native experiments used revision 1; they do not demonstrate a
+revision 2 liability proof roundtrip. Both commands print a receipt with complete
 local execution, steps, effects, prestate and poststate. `prove` genuinely
 self-verifies before publishing a new bundle. Existing output files and
 symlinks refuse; publication atomically preserves a concurrently created
@@ -88,10 +90,55 @@ This receipt qualifies a **local native transition proof**. Host reconstruction
 and the binding commitment preserve untouched balances in the full local
 report; the circuit constrains its declared touched frame. This does not prove
 an in-circuit hash of the entire report or authenticate ledger state, owner
-authority or predecessor history. Nonempty residual scenario liabilities and
-source liability/discharge lowering refuse until their relation is encoded.
+authority or predecessor history. Registered residual duties and
+liability/discharge lowering now use the complete source registry relation. Unknown scenario identities, duplicate names or changed
+immutable tuples refuse before parameters. Actual native liability proof results
+remain separate from ordinary checks and circuit measurements.
 Private execution, native recursion, compiler soundness, fraud limits, target
 qualification and deployment remain separate requirements.
+
+The current artifact, ABI, relation, proof and binding revisions are explicitly
+`moriarty-zkir-artifact/2`, `moriarty-public-abi/2`, `moriarty-zkir-relation/2`,
+`moriarty-native-transition-proof/2` and `moriarty-native-transition-binding/2`.
+Current consumers refuse revision 1 artifacts and proofs; unchanged source can
+recompile under revision 2. Historical revision 1 measurements and native results
+retain their original scope.
+
+Each program registers zero through sixteen unique duty names across all its
+actions. A name binds the exact asset network/issuer/reference/scale, debtor and
+creditor. Identical declarations share one slot; conflicting tuples, unresolved
+discharges and a seventeenth name refuse. Every action publishes every registered
+opening and closing presence/UInt128 amount slot, including untouched duties.
+Absent means `(false, 0)`; present-zero is distinct and consumes capacity.
+Accrual sets presence true, including accrual of zero. Discharge requires presence
+and preserves it, including full discharge to zero; discharge implies no payment.
+Sequential effects publish before/after presence and amount in source order.
+Intermediate UInt128 overflow or underflow refuses the entire local action.
+Scenario closure is a compiler profile restriction, not authentication of the
+complete real predecessor or absence of obligations outside the source registry.
+
+Experiment observation, 2026-10-11: upstream IR/model inspection of exact authored
+circuits, without parameters or proving, measured the following shapes under
+`Target::ledger9("local", "native-liability-qa")`. Actual registry width is used;
+there is no padding to sixteen.
+
+| Source/action | Width | Optimal k / model k | Model rows |
+|---|---:|---:|---:|
+| `zero-lifecycle.mori` / close | 1 | 10 / 10 | 724 |
+| `settlement.mori` / seed | 2 | 10 / 10 | 605 |
+| `settlement.mori` / repay | 2 | 11 / 11 | 1,059 |
+| `settlement.mori` / observe | 2 | 9 / 9 | 328 |
+| Complete sixteen-duty fixture / originate | 16 | 12 / 12 | 3,568 |
+| Complete sixteen-duty fixture / progress | 16 | 11 / 11 | 1,773 |
+| Complete sixteen-duty fixture / observe | 16 | 11 / 11 | 1,352 |
+
+The sixteen-duty source is independently authored in the ordinary measurement test
+in `crates/mori-backend/tests/proving.rs`; its statements create all sixteen exact
+duties, and its progress/observe actions retain all sixteen slots. These shapes
+measure neither transaction/replay cost nor key generation/proving feasibility.
+The engineering registry cap is not an empirical performance measurement. Exact
+source, target, artifact, frame and IR digests and raw logs are recorded in
+[the Task 3 report](../.superpowers/sdd/native-liability-task-3-report.md).
 
 `test DIRECTORY` loads `mori-tests.json`, profile `moriarty-tests/1`. Each
 case supplies a source, scenario, action and either exact accepted poststate
