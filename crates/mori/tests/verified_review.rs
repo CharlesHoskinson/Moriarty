@@ -103,4 +103,29 @@ fn signed_verification_and_simulation_escape_the_complete_display() {
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(!stderr.contains(['\u{9b}', '\u{202e}']));
     assert!(!stderr.contains("\u{1b}[2J"));
+    let malformed_source = "// profile dispatch must survive later lexical errors\nlanguage \"moriarty/1\"; agreement Bad { action run() { emit \"event\u{9b}2J\u{202e}\\q\"(1); } }";
+    let malformed_path = directory.join("malformed\u{9b}2J\u{202e}.mori");
+    std::fs::write(&malformed_path, malformed_source).unwrap();
+    for json in [false, true] {
+        let mut invoke = Command::new(env!("CARGO_BIN_EXE_mori"));
+        invoke
+            .args(["--color", "always", "check"])
+            .arg(&malformed_path);
+        if json {
+            invoke.arg("--json");
+        }
+        let output = invoke.output().unwrap();
+        assert!(!output.status.success());
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(!stdout.contains(['\u{9b}', '\u{202e}']));
+        assert!(!stderr.contains(['\u{9b}', '\u{202e}']));
+        if json {
+            let report: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+            assert_eq!(report["status"], "rejected");
+            assert_eq!(report["diagnostics"][0]["code"], "mori::core::lex");
+        } else {
+            assert!(stderr.contains("mori::core::lex"));
+        }
+    }
 }
