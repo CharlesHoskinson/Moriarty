@@ -170,7 +170,40 @@ message matches the pinned Midnight native verifier. The key, authority and
 current logical time must come from the caller's trusted context. This
 command does not authenticate ledger account ownership, consume a nonce,
 prove history compliance or establish chain acceptance. JubJub in-circuit
-verification remains a separate unimplemented primitive.
+verification is implemented in the separate signed revision3 compiler profile;
+its genuine native qualification remains pending Task4.
+
+The integrated signed profile uses `mori intent SOURCE --profile
+moriarty-jubjub-owner-intent/1 --action ACTION --scenario SCENARIO --target
+TARGET --authority AUTHORITY --at TIME`. Its `--review` output includes the exact
+payload, message, complete financial projection and authorization projection.
+Preparation produces `moriarty-jubjub-prepared-intent/1` without signing it.
+`verify-intent` additionally takes `--signature SIGNED_WRAPPER`. For `prove` and
+`verify`, the trusted signed Target selects the mode and requires `--signature`,
+`--authority` and `--at` together, alongside explicit `--params-dir` and `--max-k`;
+these proof commands have no `--profile` argument. Legacy scheme/key/framing arguments are
+separate and refuse in this profile. A signed Target cannot fall back to unsigned
+preparation or proving.
+
+The trusted Target policy fixes owner, beneficiary and program address. Separate
+expected authority supplies the key, domain, predecessor label, nonce, interval
+and all exact asset limits; the verifier supplies current logical `at`. Source-wide
+admission restricts every transfer/fee payer and duty debtor to the owner, including
+unselected actions, with at most 16 distinct AssetIds and 16 registered duties.
+The same compiled circuit binds every original financial slot, computes the exact
+MOI1 message, constrains strict FENS JubJub verification and checks UInt128 gross,
+fee, beneficiary net and all closing owner duties. Refunds retain gross debit;
+fees reduce net once; discharge grants neither payment nor creditor consent.
+State-only and observation actions still require authorization.
+
+Ordinary CLI/compiler/reference checks reconstruct and verify the exact supplied
+attachment before parameter access. Host JSON/SHA256 reconstruction, authenticated
+account/key association, actual predecessor completeness, ledger time and history
+remain external obligations. The native statement is existential over private R/s;
+it does not commit attached signature bytes. Source Tasks1/2 are merged, while
+integrated native proving/verification and resource qualification remain pending.
+All signing scalars in QA are fixed public laboratory data, with no wallet custody
+or private handoff.
 
 `mori_core::policy` supplies local typed fee-capability reservations,
 independent logical/DUST/service/external cost counters, and epoch/domain/
@@ -196,10 +229,54 @@ verify cryptography, and the correspondence table names runtime gaps.
 
 This slice updates Moriarty itself. It supplies foundations for M1, M2,
 M5–M7, M9, M10 and the financial library requirements. It does not close all
-U0/U1/U2 obligations or M1–M17. Deploy/call, strict in-circuit
-JubJub, authenticated persisted acceptance and the full launch libraries
+U0/U1/U2 obligations or M1–M17. Deploy/call, genuine native qualification of the integrated signed JubJub
+relation, authenticated persisted acceptance and the full launch libraries
 remain required subsequent language/toolchain work. External targets are
 integration constraints; no Fenrir node, consensus or application code is
 part of this implementation.
 
 The [2026-10-11 local liability result](evidence/2026-10-11-native-liabilities.md) records one revision2 native repayment proof, independent complete-effect verification and four actual native negative controls under the separately approved k11 allocation. This extends the observed local subset; authenticated signed authority, predecessor/history and ledger qualification remain open.
+
+## Integrated signed shape observations
+
+Experiment observation, 2026-10-11: exact revision3 signed circuits were loaded
+and measured through the pinned upstream IR/model only. No SRS decoding, key
+generation, proving, native verification, MockProver or ignored test ran.
+
+| Signed source/action | Assets / duties | Public values / message fields | Instructions / steps | Optimal k / model k | Model rows |
+|---|---:|---:|---:|---:|---:|
+| golden-repayment / repay | 1 / 2 | 43 / 75 | 232 / 6 | 12 / 12 | 4,047 |
+| independent-payment / settle | 1 / 3 | 47 / 83 | 254 / 6 | 13 / 13 | 4,193 |
+| signed-observation / observe | 1 / 3 | 32 / 53 | 177 / 1 | 12 / 12 | 3,176 |
+| zero-registry / settle | 0 / 0 | 18 / 27 | 92 / 2 | 12 / 12 | 2,435 |
+| full-sixteen-registry / settle | 1 / 16 | 158 / 305 | 849 / 20 | 14 / 14 | 10,153 |
+| max-sixteen-assets-duties / settle | 16 / 16 | 338 / 635 | 1884 / 50 | 15 / 15 | 23,814 |
+| max-sixteen-observation / observe | 16 / 16 | 144 / 247 | 913 / 1 | 14 / 14 | 10,476 |
+
+Every row retains all original financial/public/duty slots and all signed
+authorization inputs. There are three typed private inputs, five flattened
+private fields, and one unconditional Impact per public value. MOI1 has
+13+2N+6A fields and FENS has six challenge fields. The complete maximum settlement
+has 48 touched balance frames and 50 ordered effects. All measured degrees are
+at most k19; a shape above that ceiling must refuse without reducing its frame.
+
+The maximum settlement's production preparation report exceeds the existing
+1 MiB bounded JSON exporter and refuses. Its internal ordinary reconstruction,
+full payload/message/signature and relation checker still pass; this supplies
+measurement bindings and does not establish public preparation acceptance. The
+maximum observation retains all 16 duty slots and all 16 asset-limit entries and
+prepares successfully. The full settlement was preserved without shrinking its
+slots or effects.
+
+An isolated strict signature basis, extracted from the actual compiler while
+replacing MOI1 by a separately public digest, measures 1,529 rows at k11 with
+30 instructions, three public fields and the same five private fields. This
+excludes financial constraints, message framing, interval and caps, so it cannot
+stand in for integrated circuit costs. Row counts and k do not measure SRS/key
+size, proving time, memory, transaction/replay costs or native feasibility.
+
+Exact source/scenario/Target/authority/artifact/layout/IR and payload/signature
+bindings, full current ordinary QA results and Task4's specified native controls
+are in [the signed Task3 report](../.superpowers/sdd/native-owner-task-3-report.md).
+Source Tasks1/2 are merged; Task3 still requires fresh independent scoped review,
+and genuine signed native/ledger qualification remains open.

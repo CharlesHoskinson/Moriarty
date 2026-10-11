@@ -1,5 +1,6 @@
 //! Signed compiler and host reconstruction. Ordinary compile/reference checks
 //! only: no SRS, key generation, proving, MockProver or native verification.
+#![recursion_limit = "256"]
 use midnight_curves::pairing::group::Group;
 use midnight_curves::{Fr as Scalar, JubjubAffine, JubjubExtended, JubjubSubgroup};
 use midnight_transient_crypto::{curve::Fr, hash::transient_hash};
@@ -991,4 +992,311 @@ fn preparation_preflights_exported_report_and_signed_wrapper_budget() {
     let err = wide(fit + 1, issuer).unwrap_err();
     assert_eq!(err.code, "mori::backend::authorization", "{err}");
     assert!(err.message.contains("wrapper"), "{err}");
+}
+
+mod shapes {
+    use mori_backend::{Target, authorization::ExpectedAuthority};
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/support/signed_shapes.rs"
+    ));
+}
+
+// Actual integrated shapes; load/model only. No parameter access or native work.
+// All generated signatures use the fixed PUBLIC QA scalar7/nonce29 helper above.
+#[test]
+fn exact_signed_integrated_shape_measurements() {
+    use midnight_transient_crypto::proofs::Zkir;
+    use sha2::{Digest, Sha256};
+    use std::path::PathBuf;
+    let digest = |bytes: &[u8]| mori_core::intent::hex(&Sha256::digest(bytes));
+    let canonical = |v: &Value| mori_core::intent::canonical(v).unwrap();
+    let output = std::env::var_os("MORIARTY_SIGNED_MEASUREMENT_DIR").map(PathBuf::from);
+    if let Some(dir) = &output {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    let mut cases = Vec::new();
+    let g = golden();
+    cases.push((
+        "golden-repayment".to_owned(),
+        g["source_utf8"].as_str().unwrap().to_owned(),
+        "repay".to_owned(),
+        golden_scenario(),
+        golden_target(),
+        golden_authority(),
+        Some(golden_signed()),
+    ));
+    let (source, scenario, target, authority, _) = payment();
+    cases.push((
+        "independent-payment".to_owned(),
+        source.to_owned(),
+        "settle".to_owned(),
+        scenario.clone(),
+        target.clone(),
+        authority.clone(),
+        None,
+    ));
+    let mut observe: Value = serde_json::to_value(&authority).unwrap();
+    observe["limits"][0]["net_floor"] = "0".into();
+    observe["limits"][0]["liability_cap"] = "55".into();
+    let mut observation = scenario;
+    observation.inputs.clear();
+    cases.push((
+        "signed-observation".to_owned(),
+        source.to_owned(),
+        "observe".to_owned(),
+        observation,
+        target.clone(),
+        ExpectedAuthority::from_json(&observe.to_string()).unwrap(),
+        None,
+    ));
+    for (label, assets, duties, action) in [
+        ("zero-registry", 0, 0, "settle"),
+        ("full-sixteen-registry", 1, 16, "settle"),
+        ("max-sixteen-assets-duties", 16, 16, "settle"),
+        ("max-sixteen-observation", 16, 16, "observe"),
+    ] {
+        let (source, scenario, t, a) = shapes::fixture(assets, duties, action, &target, &authority);
+        cases.push((
+            label.to_owned(),
+            source,
+            action.to_owned(),
+            scenario,
+            t,
+            a,
+            None,
+        ));
+    }
+    let mut records = Vec::new();
+    for (label, source, action, scenario, target, authority, fixed) in cases {
+        let program = mori_core::parse(&source).unwrap();
+        let artifact = mori_backend::compile_signed(&program, &target).unwrap();
+        let c = artifact
+            .circuits
+            .iter()
+            .find(|c| c.action == action)
+            .unwrap();
+        let preparation = signed_relation::prepare_intent(
+            &source,
+            &action,
+            &scenario,
+            &target,
+            &authority,
+            UInt(15),
+        );
+        let (prepared, refusal) = match preparation {
+            Ok(p) => (Some(p), None),
+            Err(e) => {
+                assert_eq!(label, "max-sixteen-assets-duties");
+                assert_eq!(e.code, "mori::backend::limit");
+                assert!(e.message.contains("JSON exceeds 1 MiB"));
+                (None, Some(e.message))
+            }
+        };
+        let signed = prepared.as_ref().map(|p| {
+            fixed.unwrap_or_else(|| SignedIntent {
+                payload: p.payload.clone(),
+                signature_hex: qa_sign(7, 29, schnorr::decode_native_hex(&p.message_hex).unwrap()),
+            })
+        });
+        if let Some(signed) = &signed {
+            signed_relation::verify_intent(
+                &source,
+                &action,
+                &scenario,
+                &target,
+                &authority,
+                UInt(15),
+                signed,
+            )
+            .unwrap();
+        }
+        let ir = IrSource::load(c.zkir.as_bytes()).unwrap();
+        let model = ir.model();
+        let financial = c.public_inputs.len();
+        let assets = program.assets.len();
+        let public = financial + c.authorization_bindings.len();
+        assert_eq!(c.authorization_bindings.len(), 11 + 4 * assets);
+        assert_eq!(c.private_inputs.len(), 3);
+        if let Some(p) = &prepared {
+            assert_eq!(p.financial_projection.len(), financial);
+            assert_eq!(p.authorization_projection.len(), 11 + 4 * assets);
+        }
+        let public_reads = ir
+            .instructions
+            .iter()
+            .filter(|i| matches!(i, Instruction::PublicInput { .. }))
+            .count();
+        let impacts = ir
+            .instructions
+            .iter()
+            .filter(|i| matches!(i, Instruction::Impact { .. }))
+            .count();
+        assert_eq!(public_reads, public);
+        assert_eq!(impacts, public);
+        let hash_lengths: Vec<_> = ir
+            .instructions
+            .iter()
+            .filter_map(|i| {
+                if let Instruction::TransientHash { inputs, .. } = i {
+                    Some(inputs.len())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(hash_lengths, [13 + 2 * financial + 6 * assets, 6]);
+        if label == "independent-payment" {
+            assert_eq!(prepared.as_ref().unwrap().review.post.liabilities.len(), 3);
+            assert_eq!(prepared.as_ref().unwrap().review.effects.len(), 5);
+        }
+        let artifact_json = canonical(&serde_json::to_value(&artifact).unwrap());
+        let scenario_json = canonical(&serde_json::to_value(&scenario).unwrap());
+        let target_json = canonical(&serde_json::to_value(&target).unwrap());
+        let authority_json = canonical(&serde_json::to_value(&authority).unwrap());
+        let prepared_json = canonical(&serde_json::to_value(&prepared).unwrap());
+        let payload_json =
+            canonical(&serde_json::to_value(signed.as_ref().map(|s| &s.payload)).unwrap());
+        let wrapper_json = canonical(&serde_json::to_value(&signed).unwrap());
+        let layout_json = canonical(
+            &json!({"financial":c.public_inputs,"authorization":c.authorization_bindings,"private":c.private_inputs,"effects":c.effect_frame,"balances":c.balance_frame,"duties":c.liability_frame,"replay_steps":c.replay_steps}),
+        );
+        let record = json!({"fixture":label,"action":action,"at":"15","qualification":"ordinary-host-and-IR-model-only",
+            "source_sha256":digest(source.as_bytes()),"program_sha256":artifact.program_hash,"scenario_sha256":digest(&scenario_json),"target_sha256":digest(&target_json),"authority_sha256":digest(&authority_json),
+            "artifact_sha256":digest(&artifact_json),"artifact_bytes":artifact_json.len(),"layout_sha256":digest(&layout_json),"zkir_sha256":digest(c.zkir.as_bytes()),"zkir_bytes":c.zkir.len(),
+            "payload_sha256":signed.as_ref().map(|_| digest(&payload_json)),"prepared_sha256":prepared.as_ref().map(|_| digest(&prepared_json)),"signed_wrapper_sha256":signed.as_ref().map(|_| digest(&wrapper_json)),"signature_hex":signed.as_ref().map(|s| &s.signature_hex),
+            "context_sha256":c.context_hash,"message_hex":prepared.as_ref().map(|p| &p.message_hex),"preparation_refusal":refusal,"public_key_hex":authority.public_key_hex,
+            "asset_count":assets,"duty_registry_count":artifact.resources.liability_registry_entries,"duty_frame_count":c.liability_frame.len(),"balance_frame_count":c.balance_frame.len(),"effect_count":c.effect_frame.len(),
+            "financial_public_values":financial,"authorization_public_values":c.authorization_bindings.len(),"public_values":public,"public_field_elements":public,"financial_uint_values":c.public_inputs.iter().filter(|b| b.ty == mori_core::Type::UInt).count(),"financial_bool_values":c.public_inputs.iter().filter(|b| b.ty == mori_core::Type::Bool).count(),"private_typed_inputs":3,"private_flattened_fields":5,"message_fields":hash_lengths[0],"fens_challenge_fields":6,
+            "instructions":c.instruction_count,"public_input_instructions":public_reads,"impact_instructions":impacts,"replay_steps":c.replay_steps,
+            "optimal_k":ir.k(),"model_k":model.k(),"model_rows":model.rows(),"supported_native_degree":ir.k() <= proving::MAX_K,"native_degree_ceiling":proving::MAX_K});
+        println!("SIGNED_MEASUREMENT {record}");
+        if let Some(dir) = &output {
+            for (ext, bytes) in [
+                ("mori", source.as_bytes()),
+                ("scenario.json", scenario_json.as_slice()),
+                ("target.json", target_json.as_slice()),
+                ("authority.json", authority_json.as_slice()),
+                ("artifact.json", artifact_json.as_slice()),
+                ("layout.json", layout_json.as_slice()),
+                ("prepared.json", prepared_json.as_slice()),
+                ("payload.json", payload_json.as_slice()),
+                ("signed.json", wrapper_json.as_slice()),
+                ("zkir", c.zkir.as_bytes()),
+            ] {
+                if prepared.is_none()
+                    && ["prepared.json", "payload.json", "signed.json"].contains(&ext)
+                {
+                    continue;
+                }
+                std::fs::write(dir.join(format!("{label}.{ext}")), bytes).unwrap();
+            }
+        }
+        // Engineering support is an objective degree bound. Unsupported full
+        // shapes are retained and explicitly refused; never alter their slots.
+        if ir.k() > proving::MAX_K {
+            let err = proving::prove_signed(
+                &source,
+                &action,
+                &scenario,
+                &target,
+                &authority,
+                UInt(15),
+                signed.as_ref().unwrap(),
+                &params(),
+            )
+            .unwrap_err();
+            assert_eq!(err.code, "mori::backend::limit");
+        }
+        records.push(record);
+        if label == "zero-registry" {
+            let basis = strict_signature_basis(&ir, financial);
+            let mut disk = serde_json::to_value(&basis).unwrap();
+            disk["version"] = json!({"major":3,"minor":0});
+            let bytes = serde_json::to_vec(&disk).unwrap();
+            let basis = IrSource::load(bytes.as_slice()).unwrap();
+            let basis_model = basis.model();
+            let record = json!({"fixture":"strict-signature-basis","qualification":"isolated-crypto-IR-model-only-excludes-MOI1-and-financial-caps","instructions":basis.instructions.len(),"public_values":3,"private_typed_inputs":3,"private_flattened_fields":5,"optimal_k":basis.k(),"model_k":basis_model.k(),"model_rows":basis_model.rows(),"zkir_sha256":digest(&bytes)});
+            println!("SIGNED_MEASUREMENT {record}");
+            if let Some(dir) = &output {
+                std::fs::write(dir.join("strict-signature-basis.zkir"), bytes).unwrap();
+            }
+            records.push(record);
+        }
+    }
+    if let Some(dir) = &output {
+        std::fs::write(
+            dir.join("measurements.json"),
+            serde_json::to_vec_pretty(&records).unwrap(),
+        )
+        .unwrap();
+    }
+}
+
+// Extract the strict cryptographic instruction sequence from the actual
+// compiler, replacing MOI1 with its separately public digest. No result here
+// qualifies the integrated circuit. Input types and strict checks stay intact.
+fn strict_signature_basis(ir: &IrSource, financial: usize) -> IrSource {
+    let reads: Vec<_> = ir
+        .instructions
+        .iter()
+        .filter(|i| matches!(i, Instruction::PublicInput { .. }))
+        .cloned()
+        .collect();
+    let mut instructions = Vec::new();
+    let mut message = None;
+    for position in [financial + 2, financial + 3, financial + 4] {
+        let i = reads[position].clone();
+        let Instruction::PublicInput { output, .. } = &i else {
+            unreachable!()
+        };
+        let value = Operand::Variable(output.clone());
+        if position == financial + 4 {
+            message = Some(value.clone());
+        }
+        instructions.push(i);
+        instructions.push(Instruction::Impact {
+            guard: Operand::Immediate(Fr::from(1)),
+            inputs: vec![value],
+        });
+    }
+    let start = ir
+        .instructions
+        .iter()
+        .position(|i| matches!(i, Instruction::PrivateInput { .. }))
+        .unwrap();
+    let moi = (start..ir.instructions.len())
+        .find(|&i| matches!(ir.instructions[i], Instruction::TransientHash { .. }))
+        .unwrap();
+    let fens = (moi + 1..ir.instructions.len())
+        .find(|&i| matches!(ir.instructions[i], Instruction::TransientHash { .. }))
+        .unwrap();
+    let end = (fens + 1..ir.instructions.len())
+        .find(|&i| matches!(ir.instructions[i], Instruction::Assert { .. }))
+        .unwrap();
+    assert!(matches!(
+        ir.instructions[moi + 1],
+        Instruction::ConstrainEq { .. }
+    ));
+    for i in start..=end {
+        if i == moi || i == moi + 1 {
+            continue;
+        }
+        let mut instruction = ir.instructions[i].clone();
+        if i == fens {
+            let Instruction::TransientHash { inputs, .. } = &mut instruction else {
+                unreachable!()
+            };
+            inputs[5] = message.clone().unwrap();
+        }
+        instructions.push(instruction);
+    }
+    instructions.push(Instruction::Output { vals: vec![] });
+    IrSource {
+        version: ir.version.clone(),
+        inputs: vec![],
+        outputs: vec![],
+        do_communications_commitment: false,
+        instructions: std::sync::Arc::new(instructions),
+    }
 }
