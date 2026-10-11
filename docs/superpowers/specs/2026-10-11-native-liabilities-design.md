@@ -67,8 +67,6 @@ Keep these gates open: adversarial source-to-constraint soundness; authenticated
 No source edits, native calls, resource executions, network, external Fenrir changes or commit made for this vote. Earlier expectations, resource votes and audit findings remain preserved.
 
 
-I will load the Moriarty develop skill and AGENTS override first, then inspect the Sol recommendation, expectations, and actual IR/runtime/proof paths before voting.Next I’ll load the Moriarty develop skill and AGENTS override, then inspect the Sol recommendation and source paths.I’ll load the develop skill, AGENTS override, and the next-liability expectations packet next.The skill requires `status` at startup. I’ll run that, then locate the expectations packet and the frozen source identity.Status is loaded. I’ll locate the expectations packet and confirm the frozen commit identity next.Found the packet under `.moriarty-dev/runtime`. I’ll read the Sol recommendation, expectations, and supporting source next.Sol’s packet is loaded. I’ll inspect core IR, runtime, parser, backend, and the U2/U3/M13 contract before voting.I’ll now inspect the actual liability/discharge paths in core IR, runtime, parser, and backend.I’ll read the runtime liability semantics, backend refusals, proof reconstruction, and ABI next.Status loaded. Frozen checkout matches `c22aea0574c7ee0b544a711a43f6f6a68f2eaf73` / tree `d8d5b4459d7ce921b1ff52700377532f96441bf7`. This vote does not approve that implementation.
-
 ## Decision
 
 **APPROVE** the Sol 6.1 HIGH static typed registry as the next source-to-ZKIR/local-proof slice after the frozen native-proof pair closes.
