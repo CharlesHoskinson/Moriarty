@@ -458,3 +458,19 @@ Runtime goal remains active. The user was asked asynchronously for existing
 human pilot teams/results; no response is required for current independent work.
 New user direction: Quint via quint-co/quint-llm-kit, not TLC. S02 design in
 main now specifies .qnt models and Quint CLI with Apalache for model checking.
+
+## Moriarty native language update — 2026-10-10
+
+User approved the integration design, then clarified implementation is in
+Moriarty's language/compiler/runtime/libraries/CLI. External Fenrir requirements
+constrain interfaces only. The old campaign and work queues above are superseded
+for this user-selected task.
+
+Current branch: feat/moriarty-language-20261010, base 63dbfb6755e5f1d7debcb5bf4c28b4a27e605452.
+Plan: docs/superpowers/plans/2026-10-10-moriarty-language.md.
+
+- Task 1 native composable core/interpreter: authored and locally tested; review pending.
+- Task 2 exact portable ledger-9 ZKIR relation backend: authored and locally tested; native proof/ledger gates open; review pending.
+- Task 3 Quint acceptance/lifecycle/batch QA: 59 deterministic tests and seeded samples recorded; symbolic premises and correspondence gaps explicit; review pending.
+- Task 4 CLI consumer/domain intent/resource APIs: authored, smoke-tested; current workspace verification and independent review in progress.
+- M1–M17 and U0/U1/U2 remain owed. No devnet qualification, native proof, in-circuit JubJub or full launch-library completion has been inferred from these local results.

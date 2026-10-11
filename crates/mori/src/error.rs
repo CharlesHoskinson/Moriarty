@@ -7,6 +7,8 @@ use mori_diagnostics::Diagnostic;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
+    #[error("{code}: {message}")]
+    Operation { code: String, message: String },
     #[error("could not read `{}`", path.display())]
     Read {
         path: PathBuf,
