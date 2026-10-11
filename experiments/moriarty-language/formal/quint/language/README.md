@@ -275,10 +275,15 @@ quint run signed_transition.qnt --main signed_transition --backend typescript --
 
 The [signed Task3 report](../../../../../.superpowers/sdd/native-owner-task-3-report.md)
 names exact model/source/log digests, current ordinary checks, integrated shape
-measurements and the retained max-shape report-size refusal. No Quint verify or
-Apalache, real SRS, key generation, proving, native verification, MockProver or
-ignored tests ran. Historical beta native signature adapters remain a separate
-compatibility scope. The signed compiler/CLI is implemented; genuine integrated
-native and ledger qualification, full U0–U7 and M1–M17 remain open. Update this
+measurements and the retained max-shape report-size refusal. Those Task3 checks
+ran no Quint verify or Apalache, real SRS, key generation, proving, native
+verification, MockProver or ignored tests. Historical beta native signature adapters remain a separate
+compatibility scope. The signed compiler/CLI is implemented. The separately
+retained [October11 selected payment](../../../../../deliverables/native-owner-intent-2026-10-11/RESULT.md)
+produced and independently verified one genuine local integrated signed native
+case; broader native/U1 and ledger qualification, full U0–U7 and M1–M17 remain
+open. The [target-bound reference replay slice](../../../../../docs/evidence/2026-10-11-bound-replay.md)
+adds an actual CLI consumer without changing this model or certifying its
+cryptographic premises. Update this
 model against the approved semantic contract when that contract changes, and
 rerun the matching Rust/CLI controls before extending its correspondence claims.

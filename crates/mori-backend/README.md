@@ -28,17 +28,19 @@ preparation. Original source bytes are a separate intent identity; a compiler
 receiving only `Program` cannot infer a byte-for-byte source hash.
 
 Cross-domain assets refuse compilation: every declared asset network must match
-the selected target. Liability creation and discharge currently refuse compilation: typed liability
-presence, identity and predecessor authentication are not yet lowered. They remain
-available in the reference evaluator. There are no native escape hatches,
+the selected target. Registered liability creation/discharge lower under the
+closed source-wide identity registry, with explicit presence and amount slots.
+Authenticated ledger predecessor/duty correspondence remains open. There are no native escape hatches,
 unconstrained host verdicts, arbitrary recursion or floating point amounts.
 
 These circuits express bounded transition relations. An authenticated ledger
 adapter must bind the predecessor, state/balance frame, exact assets and complete
 effects to actual ledger reads/writes, preserve untouched accounts and duties,
 and implement the selected ledger phases. That correspondence remains an open
-gate. Signature/authority/history verification, proof generation, proof-cost and
-fraud-proof k measurement, deployment and real settlement are also open gates.
+gate. Strict local signed owner-intent and selected genuine local native proof
+results exist; account/key authority, authenticated history, general native
+qualification, proof-cost/fraud-k measurement, deployment and settlement remain
+open. See [the native guide](../../docs/NATIVE-CORE.md) for their exact scopes.
 Instruction counts, emitted ZKIR bytes, the complete pretty JSON artifact envelope
 size and source replay step counts are measured;
 `cost_measured` is false and k fields are null. Successful upstream preimage
@@ -54,3 +56,27 @@ preimages with reference execution. Changed context/state/effects/balances,
 false conditions, wide inputs, integer overflow/underflow, malformed IR, unknown
 targets and unsupported semantics reject. Integer multiplication also has
 randomized correspondence checks. Run `cargo test -p mori-backend --locked`.
+
+
+## Public reference replay sidecars
+
+`replay::generate` and `replay::replay` reconstruct from caller-trusted raw source,
+action, Scenario and Target; signed mode also requires separate ExpectedAuthority,
+logical at and the actual SignedIntent attachment. They use the general compiler,
+reference interpreter and shared exact v3 TransitionClaim constructor. Native
+prepare/verify still independently reconstruct their original bindings and guards.
+These APIs do not accept parameters or invoke proof operations.
+
+The separate `moriarty-reference-replay/1` record contains public identities,
+selected raw-ZKIR hash, full unchanged Execution and public Claim. Its new hashes
+use bounded Core canonical JSON; existing native/signing hashes stay unchanged.
+Strict decoding and direct typed calls respect the public JSON profile. Detailed
+ordered Execution comparison occurs before trace-sensitive public values/message
+and digests; a self-consistent rehashed false record still refuses. No attachment,
+private witness, SRS or proof keys are exported. Source-step count is a statement count,
+not a time/work certificate. See the [CLI workflow](../../docs/NATIVE-CORE.md#target-bound-public-reference-replay)
+and [local evidence](../../docs/evidence/2026-10-11-bound-replay.md).
+
+This is local reference replay. Complete external fraud-game transport,
+authenticated ledger state/time/history, replay consumption, resource and live
+qualification remain separate open predicates.
