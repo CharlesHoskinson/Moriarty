@@ -125,8 +125,8 @@ No `quint verify` command was run.
 
 ## Native local proof binding QA
 
-`native_transition.qnt` and `native_transition_test.qnt` model the new public
-local proof verifier separately from ledger acceptance. Five deterministic
+`native_transition.qnt` and `native_transition_test.qnt` preserve the historical
+revision 1 public local proof verifier model separately from ledger acceptance. Five deterministic
 tests cover every claim field, repaired metadata with a reused proof, derived
 relation identity, native refusal, pinned parameters, canonical proof framing,
 residual liability refusal and explicit k caps. Seeded simulation checks
@@ -147,3 +147,67 @@ quint typecheck native_transition_test.qnt
 quint test native_transition_test.qnt --main native_transition_test --match 'Test$' --seed 1010
 quint run native_transition.qnt --main native_transition --invariant safety --witnesses verifiedWitness refusedWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
 ```
+
+## Current revision 2 liability stage QA
+
+`liability_transition.qnt` is a separate current local-stage model. It does not
+replace the earlier revision 1 `native_transition` model or its recorded results.
+The approved requirements and independent outcomes select one shared local record
+and one atomic stage; there are no messages, time, concurrent owners or ledger
+phases. Immutable source names are represented by integer labels, and the full
+asset/party tuple by exact symbolic strings and scale. These labels abstract source
+names; serialization, lexical sorting and hashes are outside this model.
+
+The state groups the complete immutable registry and presence/amount map with
+ordered published duty effects, prior-frame evidence and acceptance/refusal
+counters. Source admission allows up to sixteen unique names with identical repeats;
+scenario rows must have exactly one canonical slot for every name. The default
+simulation has two slots and samples deltas zero through four; deterministic tests
+also use zero and sixteen slots. Amount arithmetic uses the exact mathematical
+UInt128 maximum, not a smaller ceiling. Quint 0.32.0's TypeScript evaluator is
+required because its Rust evaluator rejects integer literals beyond i64.
+
+| Requirement | Model guard/property | Actual consumer correspondence and limit |
+|---|---|---|
+| Immutable exact source registry, cap16 | `sourceAdmitted`, `contextAdmitted`, `exactClosure` | `liabilities::registry`, compiler descriptors/resources; source closure does not authenticate actual duties |
+| Canonical absence and persistent present-zero | `canonicalFrame`, `persistence` | Bool/UInt128 opening/closing constraints and full `LiabilityDescriptor` positions; no deletion or implied payment |
+| Ordered checked accrual/discharge | `canOperation`, `canStage`, `orderedEffects` | Compiler sequential wires and `proving::public_values` reconstruction; honest preimage checks are separate Rust evidence |
+| Complete slots and unchanged unrelated duties | `untouched`, `exactClosure` | Every action's actual-width `liability_frame`; no hidden-name omission is admitted |
+| Atomic observable refusal | `refuse`, `refusalAtomic` | Local clone-and-commit simulation and preparation refusal; no ledger finality claim |
+| Exact effect-bearing source steps | `descriptorSteps`, `orderedEffects` | Task 2 source descriptor sequence check; swapped identical zero effects refuse by source step identity |
+
+Pure guards and updates are separate; thin `accept`/`refuse` actions publish the
+whole state only after every ordered operation is checked. Intermediate scratch
+updates never publish on refusal, which increments observable refusal accounting
+and preserves duty state and prior published effects. No native-valid or
+cryptographic truth flag is used. An empty duty-operation list represents an
+action without duty effects, including transfers; this model does not check that
+transfer's balances, fees, state or event values.
+
+Experiment observation, 2026-10-11: 25 deterministic tests pass. They cover exact
+zero lifecycle, partial/full discharge, untouched present-zero, absent discharge0,
+canonical/malformed frames, duplicate/hidden/missing names, all six tuple identity
+dimensions, source/operation substitution, cap16/17, ordered identical zero effects,
+actual UInt128 maximum and intermediate overflow/underflow. The seeded run explored
+10,000 traces at 12 steps with no `safety` violation. Witnesses require actual
+accepted/refused actions: accrual 9,927; discharge 9,569; partial discharge 8,890;
+full discharge 1,565; absent-zero creation 1,778; refusal 9,985 traces. These are
+sampled reachability counts, not exhaustive proofs. The four historical models'
+64 deterministic tests and typechecks were rerun unchanged.
+
+```sh
+quint typecheck liability_transition_test.qnt
+quint test liability_transition_test.qnt --main liability_transition_test --backend typescript --match 'Test$' --seed 1010
+quint run liability_transition.qnt --main liability_transition --backend typescript --invariant safety --witnesses accruedWitness dischargedWitness partialWitness fullWitness zeroCreationWitness refusedWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
+```
+
+Logs, failures and exact model digests are in the runtime evidence named by
+[the Task 3 report](../../../../../.superpowers/sdd/native-liability-task-3-report.md).
+Simulation uses default `init`/`step`. No `quint verify` or Apalache was used.
+Source-to-constraint correspondence, public input publication, hash collision
+resistance, native cryptography, signed authority, authenticated predecessor/full
+real duty completeness, ledger phases/unique consumption/history, recovery and
+private recursion remain external premises or open work. Current artifact/proof2
+revisions and scoped circuit measurements are documented in
+[NATIVE-CORE](../../../../../docs/NATIVE-CORE.md); neither this model nor ordinary
+checks establish native proof2 roundtrip or any full roadmap exit.

@@ -457,3 +457,108 @@ fn hash_bytes(bytes: &[u8]) -> String {
         .map(|b| format!("{b:02x}"))
         .collect()
 }
+
+#[test]
+fn liability_cli_consumes_supported_and_refused_contexts_without_publication() {
+    let files = Files::new();
+    let root =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/core/native-liability");
+    for (source, action, scenario, expected) in [
+        ("settlement.mori", "repay", "partial", "SRS"),
+        ("settlement.mori", "repay", "full", "SRS"),
+        ("zero-lifecycle.mori", "close", "present-zero", "SRS"),
+        (
+            "settlement.mori",
+            "repay",
+            "reference-broader-wrong-party",
+            "unsupported",
+        ),
+        (
+            "settlement.mori",
+            "repay",
+            "reference-broader-hidden-name",
+            "unsupported",
+        ),
+        ("settlement.mori", "repay", "zero-guard", "scenario"),
+        ("settlement.mori", "repay", "overdischarge", "scenario"),
+        ("settlement.mori", "repay", "absent-discharge", "scenario"),
+    ] {
+        let out = files.0.join(format!("{scenario}.proof.json"));
+        let output = Command::new(env!("CARGO_BIN_EXE_mori"))
+            .args(["--color", "never", "prove"])
+            .arg(root.join(source))
+            .args(["--action", action, "--scenario"])
+            .arg(root.join(format!("{scenario}.scenario.json")))
+            .arg("--target")
+            .arg(files.0.join("target.json"))
+            .arg("--params-dir")
+            .arg(files.0.join("missing-params"))
+            .args(["--max-k", "19", "--out"])
+            .arg(&out)
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        let err = String::from_utf8_lossy(&output.stderr);
+        assert!(err.contains(expected), "{scenario}: {err}");
+        if expected != "SRS" {
+            assert!(!err.contains("Cannot open explicit local SRS"));
+        }
+        assert!(output.stdout.is_empty());
+        assert!(!out.exists());
+    }
+    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
+        .args(["--color", "never", "test"])
+        .arg(&root)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{} {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["status"], "passed");
+    assert_eq!(report["cases"].as_array().unwrap().len(), 6);
+    for source in ["settlement.mori", "zero-lifecycle.mori"] {
+        let out = files.0.join(format!("{source}.compiled"));
+        let output = Command::new(env!("CARGO_BIN_EXE_mori"))
+            .args(["--color", "never", "compile"])
+            .arg(root.join(source))
+            .arg("--target")
+            .arg(files.0.join("target.json"))
+            .arg("--out")
+            .arg(&out)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let artifact: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out.join("artifact.json")).unwrap()).unwrap();
+        assert_eq!(artifact["format"], "moriarty-zkir-artifact/2");
+        assert_eq!(artifact["abi"], "moriarty-public-abi/2");
+        assert_eq!(artifact["relation"], "moriarty-zkir-relation/2");
+    }
+    let output = Command::new(env!("CARGO_BIN_EXE_mori"))
+        .args(["--color", "never", "simulate"])
+        .arg(root.join("settlement.mori"))
+        .args(["--action", "repay", "--scenario"])
+        .arg(root.join("partial.scenario.json"))
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let execution: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let manifest: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(root.join("mori-tests.json")).unwrap()).unwrap();
+    assert_eq!(
+        execution["execution"]["post"],
+        manifest["cases"][0]["expected"]["post"]
+    );
+    assert_eq!(
+        execution["execution"]["effects"],
+        manifest["cases"][0]["expected"]["effects"]
+    );
+}

@@ -1,0 +1,18 @@
+language "moriarty/1";
+agreement DutySettlement {
+  asset QA = { network: "local", issuer: "native-liability-qa", reference: "QA", scale: 0 };
+  state settled: UInt = 0;
+  action seed(amount: UInt) {
+    liability("payment", QA, "alice", "bob", amount);
+    liability("reserve", QA, "alice", "auditor", 0);
+  }
+  action repay(amount: UInt) {
+    requires amount > 0;
+    transfer(QA, "alice", "bob", amount);
+    fee(QA, "alice", "treasury", 2);
+    discharge("payment", amount);
+    next settled = settled + amount;
+    emit "settled"(settled);
+  }
+  action observe() { emit "settled"(settled); }
+}
