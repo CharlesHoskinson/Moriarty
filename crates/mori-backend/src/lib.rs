@@ -12,6 +12,9 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
+pub mod authorization;
+pub mod schnorr;
+
 mod liabilities;
 pub use liabilities::{
     LiabilityDescriptor, LiabilityIdentity, LiabilityOperation, MAX_LIABILITY_REGISTRY_ENTRIES,
