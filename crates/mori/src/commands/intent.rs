@@ -16,24 +16,6 @@ fn review_identity(value: &str) -> String {
     )
 }
 
-/// JSON permits literal Unicode controls; escape them for terminal review.
-/// Escaping UTF-16 units preserves the parsed statement and signing bytes.
-fn review_statement(prepared: &mori_core::intent::PreparedIntent) -> super::Result<String> {
-    let json = serde_json::to_string_pretty(prepared).map_err(super::core_io::operation)?;
-    let mut display = String::with_capacity(json.len());
-    for character in json.chars() {
-        if character.is_ascii() && (!character.is_control() || character == '\n') {
-            display.push(character);
-        } else {
-            for unit in character.encode_utf16(&mut [0; 2]) {
-                use std::fmt::Write;
-                write!(&mut display, "\\u{unit:04x}").expect("writing to String cannot fail");
-            }
-        }
-    }
-    Ok(display)
-}
-
 #[derive(Debug, clap::Args)]
 pub struct Args {
     #[command(flatten)]
@@ -147,9 +129,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
             );
         }
         println!("Exact canonical statement and signing bytes:");
-        println!("{}", review_statement(&prepared)?);
-    } else {
-        super::core_io::print(&prepared)?;
     }
+    super::core_io::print(&prepared)?;
     Ok(ExitCode::SUCCESS)
 }

@@ -38,9 +38,20 @@ pub fn program(path: &Path) -> super::Result<(String, mori_core::Program)> {
     Ok((source, program))
 }
 pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
-    println!(
-        "{}",
-        serde_json::to_string_pretty(value).map_err(operation)?
-    );
+    // JSON permits literal Unicode controls. Use JSON Unicode escapes in the
+    // display while preserving parsed values and canonical signing bytes.
+    let json = serde_json::to_string_pretty(value).map_err(operation)?;
+    let mut display = String::with_capacity(json.len());
+    for character in json.chars() {
+        if character.is_ascii() && (!character.is_control() || character == '\n') {
+            display.push(character);
+        } else {
+            for unit in character.encode_utf16(&mut [0; 2]) {
+                use std::fmt::Write;
+                write!(&mut display, "\\u{unit:04x}").expect("writing to String cannot fail");
+            }
+        }
+    }
+    println!("{display}");
     Ok(())
 }
