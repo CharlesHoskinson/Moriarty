@@ -353,7 +353,7 @@ fn exact_add_subtract_reject_overflow_underflow_and_wide_inputs() {
     }
 }
 #[test]
-fn target_limits_invalid_ir_and_unsupported_liabilities_refuse() {
+fn target_limits_invalid_ir_and_unresolved_discharge_refuse() {
     let program = increment();
     let mut target = Target::ledger9("local", "anchor");
     target.max_instructions = 3;
