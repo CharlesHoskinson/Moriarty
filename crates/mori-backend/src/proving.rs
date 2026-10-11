@@ -414,11 +414,15 @@ fn produce(
         ),
     };
     let proof = futures::executor::block_on(async {
+        #[cfg(test)]
+        task4_native_driver::charge("keygen");
         let (pk, vk) = prepared
             .ir
             .keygen(&params)
             .await
             .map_err(|e| error("keygen", e.to_string()))?;
+        #[cfg(test)]
+        task4_native_driver::charge("prove");
         let (proof, actual, skips) = prepared
             .ir
             .prove(rand::rngs::OsRng, &params, pk, &preimage)
@@ -439,6 +443,8 @@ fn produce(
                 "Native proof exceeds the nonempty 262144-byte cap.",
             ));
         }
+        #[cfg(test)]
+        task4_native_driver::charge("verify");
         vk.verify(&PARAMS_VERIFIER, &proof, expected.into_iter())
             .map_err(|e| error("verification", e.to_string()))?;
         Ok(proof)
@@ -546,6 +552,8 @@ fn check(
     let params = OfflineParameters::load(&options.params_dir, c.circuit_k)?;
     let expected = statement(&prepared);
     futures::executor::block_on(async {
+        #[cfg(test)]
+        task4_native_driver::charge("keygen_vk");
         let vk = prepared
             .ir
             .keygen_vk(&params)
@@ -553,6 +561,8 @@ fn check(
             .map_err(|e| error("keygen", e.to_string()))?;
         // The pinned real verifier enforces transcript EOF. No exported VK,
         // supplied statement, status flag or metadata is verification authority.
+        #[cfg(test)]
+        task4_native_driver::charge("verify");
         vk.verify(&PARAMS_VERIFIER, &proof, expected.into_iter())
             .map_err(|e| error("verification", e.to_string()))
     })?;
@@ -1702,3 +1712,7 @@ mod tests {
         ));
     }
 }
+
+#[cfg(test)]
+#[path = "task4_native_driver.rs"]
+pub(crate) mod task4_native_driver;

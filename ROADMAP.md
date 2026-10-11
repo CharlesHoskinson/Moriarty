@@ -10,7 +10,25 @@ Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifec
 
 General source-to-ledger correspondence, mandatory native proof-carrying acceptance across the full supported language, recursive/private history, federated integrations and complete conformance remain open. All U milestones below are specified-only until their exact exits are demonstrated. Documentation and advisor agreement do not complete them.
 
-## Current delivery observation — 2026-10-01
+## Current delivery observation — 2026-10-11
+
+The [bounded integrated signed payment](deliverables/native-owner-intent-2026-10-11/RESULT.md)
+produced and independently verified a genuine local proof for the full original
+k13 signed financial circuit, with complete balances, ordered effects and duty
+readback. Six produced hostile-witness proofs and six unchanged-proof statement
+or byte mutations were rejected by the actual native verifier. A second valid
+attachment reused the same proof, as required by the existential R/s contract.
+Both exact resource votes preceded the one-shot ten-process run; fresh independent
+whole-source and actual-result audits remain pending.
+
+This is one local laboratory case. Account/key ownership, authenticated ledger
+state/time/history, nonce consumption, Preview financial settlement, recursion,
+private handoff, fraud-replay qualification and all U0-U7/M1-M17 exits remain open.
+Task3's full16-asset/16-duty shape and1MiB production-preparation refusal remain
+unchanged. The historical ledger attempt below retains its original failure and
+unresolved independent-verification/financial-acceptance scope.
+
+## Delivery observation — 2026-10-01 (retained)
 
 The [authoring beta](wiki-llm/beta-language-2026-09-30/CHECKLIST.md), [Midnight Rust primitives](wiki-llm/midnight-crypto-2026-09-30/DELIVERY.md), [actual signed-intent Beta consumer](wiki-llm/signed-intent-2026-10-01/DELIVERY.md) and [reviewed native key generation](wiki-llm/native-financial-kernel-2026-10-01/REVIEWED-KEYGEN-MILESTONE.md) are delivered precursors. The latest [sorted native financial attempt](wiki-llm/native-financial-kernel-2026-10-01/R3-04-ACTUAL-APPLICATION-REFUSAL.md) produced a finalized proof and signed transaction and passed default Real native well-formedness in the producing process. Application then refused an excess-NIGHT test genesis and returned unchanged state. Independent verification and complete financial acceptance remain open.
 
