@@ -9,6 +9,10 @@ pub struct Args {
     pub file: PathBuf,
 }
 
-pub fn run(_args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
-    todo!("mori inspect")
+pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
+    let (_, program) = super::core_io::program(&args.file)?;
+    super::core_io::print(
+        &serde_json::json!({"language":program.language,"semantics":program.semantics,"agreement":program.name,"states":program.states,"assets":program.assets,"actions":program.actions,"open_premises":["ledger authentication and acceptance","native proof soundness and compiler correspondence","account and sponsor authority"]}),
+    )?;
+    Ok(ExitCode::SUCCESS)
 }

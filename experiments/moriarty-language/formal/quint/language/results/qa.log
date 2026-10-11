@@ -1,0 +1,130 @@
+UTC 2026-10-11T03:16:38.444786+00:00
+0484cfaddcad754ed19621dba451cf854a6050a823053eef33f77080cdcbf40b  acceptance.qnt
+dc211010ffe80c47f44154c1b040f90c34f68ca0d214ea2d5fe7bae85a71ecfe  acceptance_test.qnt
+8ee1f95fa46a9be945ee7fadac7f3843a4ac7cf7371ec83d82bd5b2c624f7347  batch.qnt
+ae4cacb668d7a17ee8825c1044813cb52de758eb3c329a234d7f6cf4475033d0  batch_test.qnt
+2b4036edd3413cd6350885670e1bd25f990edce0743a74697f22d01c312cca52  lifecycle.qnt
+cf341add4e09c81940a084d315a6465681856c9b1a91c948456f2358e81209ad  lifecycle_test.qnt
+
+$ quint --version
+0.32.0
+exit=0
+
+$ quint typecheck acceptance_test.qnt
+exit=0
+
+$ quint test acceptance_test.qnt --main acceptance_test --match 'Test$' --seed 1010
+
+  acceptance_test
+    ok validTransferTest passed 1 test(s)
+    ok sponsoredFeesTest passed 1 test(s)
+    ok sameNonceTest passed 1 test(s)
+    ok stalePredecessorTest passed 1 test(s)
+    ok wrongBindingsTest passed 1 test(s)
+    ok wrongAssetTest passed 1 test(s)
+    ok missingEffectsTest passed 1 test(s)
+    ok incompleteEffectsTest passed 1 test(s)
+    ok conservationTest passed 1 test(s)
+    ok insufficientBalanceTest passed 1 test(s)
+    ok grossRefundCapTest passed 1 test(s)
+    ok cumulativeFeesTest passed 1 test(s)
+    ok feeReducesNetGoalTest passed 1 test(s)
+    ok liabilityCapTest passed 1 test(s)
+    ok persistentLiabilityTest passed 1 test(s)
+    ok insufficientSponsorNoFallbackTest passed 1 test(s)
+    ok wrongSponsorScopeTest passed 1 test(s)
+    ok sponsorNonceReplayTest passed 1 test(s)
+    ok missingReplayCircuitTest passed 1 test(s)
+    ok falseVerificationPremisesTest passed 1 test(s)
+    ok expiredIntentTest passed 1 test(s)
+    ok oversizedResourcesTest passed 1 test(s)
+    ok independentAssetsTest passed 1 test(s)
+    ok wrongSuccessorTest passed 1 test(s)
+    ok wrongSignerTest passed 1 test(s)
+    ok unauthorizedSponsorTest passed 1 test(s)
+    ok unverifiedSponsorTest passed 1 test(s)
+    ok excessiveReplayWorkTest passed 1 test(s)
+    ok negativeEffectTest passed 1 test(s)
+    ok beforeValidityTest passed 1 test(s)
+
+  30 passing (1041ms)
+exit=0
+
+$ quint run acceptance.qnt --main acceptance --invariant safety --witnesses acceptedWitness rejectedWitness sponsoredWitness competingWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
+[ok] No violation found (7620ms at 1312 traces/second).
+Witnesses:
+acceptedWitness was witnessed in 9999 trace(s) out of 10000 explored (99.99%)
+rejectedWitness was witnessed in 10000 trace(s) out of 10000 explored (100.00%)
+sponsoredWitness was witnessed in 8245 trace(s) out of 10000 explored (82.45%)
+competingWitness was witnessed in 9999 trace(s) out of 10000 explored (99.99%)
+Use --seed=0x756c2 --backend=rust to reproduce.
+exit=0
+
+$ quint typecheck lifecycle_test.qnt
+exit=0
+
+$ quint test lifecycle_test.qnt --main lifecycle_test --match 'Test$' --seed 1010
+
+  lifecycle_test
+    ok reservationTest passed 1 test(s)
+    ok concurrentReservationCapTest passed 1 test(s)
+    ok duplicateReservationTest passed 1 test(s)
+    ok timeoutIsNotUnusedTest passed 1 test(s)
+    ok lateSuccessTest passed 1 test(s)
+    ok partialSuccessPreservesDutyTest passed 1 test(s)
+    ok provedUnusedRecoveryTest passed 1 test(s)
+    ok refundPreventsLateSuccessTest passed 1 test(s)
+    ok successPreventsRefundTest passed 1 test(s)
+    ok falseSuccessReceiptTest passed 1 test(s)
+    ok falseUnusedReceiptTest passed 1 test(s)
+
+  11 passing (216ms)
+exit=0
+
+$ quint run lifecycle.qnt --main lifecycle --invariant safety --witnesses reservedWitness unknownWitness lateSuccessWitness recoveredWitness residualDutyWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
+[ok] No violation found (4017ms at 2489 traces/second).
+Witnesses:
+reservedWitness was witnessed in 10000 trace(s) out of 10000 explored (100.00%)
+unknownWitness was witnessed in 7502 trace(s) out of 10000 explored (75.02%)
+lateSuccessWitness was witnessed in 4348 trace(s) out of 10000 explored (43.48%)
+recoveredWitness was witnessed in 4396 trace(s) out of 10000 explored (43.96%)
+residualDutyWitness was witnessed in 6097 trace(s) out of 10000 explored (60.97%)
+Use --seed=0x1e90a8 --backend=rust to reproduce.
+exit=0
+
+$ quint typecheck batch_test.qnt
+exit=0
+
+$ quint test batch_test.qnt --main batch_test --match 'Test$' --seed 1010
+
+  batch_test
+    ok uniformPriceClearingTest passed 1 test(s)
+    ok unequalPricesTest passed 1 test(s)
+    ok solverBoundTest passed 1 test(s)
+    ok unauthorizedSolverTest passed 1 test(s)
+    ok staleOracleTest passed 1 test(s)
+    ok futureOracleTest passed 1 test(s)
+    ok unauthorizedOracleTest passed 1 test(s)
+    ok unverifiedOracleTest passed 1 test(s)
+    ok oraclePriceBoundTest passed 1 test(s)
+    ok buyerLimitTest passed 1 test(s)
+    ok excessiveFillTest passed 1 test(s)
+    ok crossDomainAtomicityTest passed 1 test(s)
+    ok assetIdentityTest passed 1 test(s)
+    ok missingOrderTest passed 1 test(s)
+    ok incompleteEffectsTest passed 1 test(s)
+    ok cumulativeGrossTest passed 1 test(s)
+    ok liabilitiesPersistTest passed 1 test(s)
+    ok liabilityCapTest passed 1 test(s)
+
+  18 passing (435ms)
+exit=0
+
+$ quint run batch.qnt --main batch --invariant safety --witnesses clearedWitness rejectedWitness partialFillWitness --seed 1010 --max-samples 10000 --max-steps 12 --verbosity 1
+[ok] No violation found (4643ms at 2154 traces/second).
+Witnesses:
+clearedWitness was witnessed in 8853 trace(s) out of 10000 explored (88.53%)
+rejectedWitness was witnessed in 10000 trace(s) out of 10000 explored (100.00%)
+partialFillWitness was witnessed in 8853 trace(s) out of 10000 explored (88.53%)
+Use --seed=0x5820e --backend=rust to reproduce.
+exit=0
