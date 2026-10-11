@@ -80,6 +80,68 @@ impl ProofBundle {
     }
     /// Exact v3 Claim encodings and mode/descriptor/statement consistency.
     fn validate_claim(&self) -> Result<(), Error> {
+        TransitionClaim::from(self).validate()
+    }
+    pub fn from_json(text: &str) -> Result<Self, Error> {
+        let value = mori_core::json::parse(text).map_err(|e| error("json", e.to_string()))?;
+        let bundle: Self =
+            serde_json::from_value(value).map_err(|e| error("json", e.to_string()))?;
+        bundle.validate_versions()?;
+        Ok(bundle)
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProofReceipt {
+    pub qualification: String,
+    pub execution: Execution,
+    pub circuit_k: u8,
+    pub proof_bytes: u32,
+    pub open_gates: Vec<String>,
+}
+/// Exactly the bundle without `proof_hex`; candidate fields never replace it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TransitionClaim {
+    pub abi: String,
+    pub relation: String,
+    pub binding: String,
+    pub profile: String,
+    pub registry: Vec<LiabilityIdentity>,
+    pub format: String,
+    pub source_hash: String,
+    pub program_hash: String,
+    pub target_hash: String,
+    pub scenario_hash: String,
+    pub execution_hash: String,
+    pub action: String,
+    pub circuit_k: u8,
+    pub authorization_mode: String,
+    pub context_hash: String,
+    pub financial_bindings: Vec<PublicBinding>,
+    pub authorization_bindings: Vec<AuthorizationBinding>,
+    pub public_values: Vec<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub authorization: Option<ClaimAuthorization>,
+}
+impl TransitionClaim {
+    /// Bounded strict v3 public Claim decoding, without proof or parameters.
+    pub fn from_json(text: &str) -> Result<Self, Error> {
+        let value = mori_core::json::parse(text).map_err(|e| error("json", e.to_string()))?;
+        let claim: Self =
+            serde_json::from_value(value).map_err(|e| error("json", e.to_string()))?;
+        claim.validate()?;
+        Ok(claim)
+    }
+    /// Exact v3 Claim encodings and mode/descriptor/statement consistency.
+    pub(crate) fn validate(&self) -> Result<(), Error> {
+        if self.format != PROOF_FORMAT
+            || self.abi != PUBLIC_ABI_VERSION
+            || self.relation != RELATION_VERSION
+            || self.binding != BINDING_VERSION
+        {
+            return Err(error("claim", "Unsupported v3 Claim revision."));
+        }
         use crate::authorization::decode_digest;
         for digest in [
             &self.source_hash,
@@ -125,49 +187,34 @@ impl ProofBundle {
         }
         Ok(())
     }
-    pub fn from_json(text: &str) -> Result<Self, Error> {
-        let value = mori_core::json::parse(text).map_err(|e| error("json", e.to_string()))?;
-        let bundle: Self =
-            serde_json::from_value(value).map_err(|e| error("json", e.to_string()))?;
-        bundle.validate_versions()?;
-        Ok(bundle)
+}
+impl From<&ProofBundle> for TransitionClaim {
+    fn from(bundle: &ProofBundle) -> Self {
+        Self {
+            abi: bundle.abi.clone(),
+            relation: bundle.relation.clone(),
+            binding: bundle.binding.clone(),
+            profile: bundle.profile.clone(),
+            registry: bundle.registry.clone(),
+            format: bundle.format.clone(),
+            source_hash: bundle.source_hash.clone(),
+            program_hash: bundle.program_hash.clone(),
+            target_hash: bundle.target_hash.clone(),
+            scenario_hash: bundle.scenario_hash.clone(),
+            execution_hash: bundle.execution_hash.clone(),
+            action: bundle.action.clone(),
+            circuit_k: bundle.circuit_k,
+            authorization_mode: bundle.authorization_mode.clone(),
+            context_hash: bundle.context_hash.clone(),
+            financial_bindings: bundle.financial_bindings.clone(),
+            authorization_bindings: bundle.authorization_bindings.clone(),
+            public_values: bundle.public_values.clone(),
+            authorization: bundle.authorization.clone(),
+        }
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ProofReceipt {
-    pub qualification: String,
-    pub execution: Execution,
-    pub circuit_k: u8,
-    pub proof_bytes: u32,
-    pub open_gates: Vec<String>,
-}
-/// Exactly the bundle without `proof_hex`; candidate fields never replace it.
-#[derive(Serialize)]
-#[serde(deny_unknown_fields)]
-struct Claim {
-    abi: String,
-    relation: String,
-    binding: String,
-    profile: String,
-    registry: Vec<LiabilityIdentity>,
-    format: String,
-    source_hash: String,
-    program_hash: String,
-    target_hash: String,
-    scenario_hash: String,
-    execution_hash: String,
-    action: String,
-    circuit_k: u8,
-    authorization_mode: String,
-    context_hash: String,
-    financial_bindings: Vec<PublicBinding>,
-    authorization_bindings: Vec<AuthorizationBinding>,
-    public_values: Vec<String>,
-    authorization: Option<ClaimAuthorization>,
-}
 struct Prepared {
-    claim: Claim,
+    claim: TransitionClaim,
     execution: Execution,
     ir: IrSource,
     values: Vec<Fr>,
@@ -246,33 +293,7 @@ fn prepare(
             "Public statement exceeds the pinned verifier capacity.",
         ));
     }
-    let authorization = statement.signed.as_ref().map(|s| ClaimAuthorization {
-        payload_hash: hex(&s.payload_hash),
-        message_hex: schnorr::native_hex(s.message),
-        public_key_hex: s.payload.public_key_hex.clone(),
-        at: s.at,
-    });
-    let claim = Claim {
-        abi: PUBLIC_ABI_VERSION.into(),
-        relation: RELATION_VERSION.into(),
-        binding: BINDING_VERSION.into(),
-        profile: target.profile.clone(),
-        registry: statement.registry.clone(),
-        format: PROOF_FORMAT.into(),
-        source_hash: statement.source_hash.clone(),
-        program_hash: statement.program_hash.clone(),
-        target_hash: hex(&digest(target)?),
-        scenario_hash: hex(&digest(scenario)?),
-        execution_hash: hex(&digest(&statement.execution)?),
-        action: action.into(),
-        circuit_k: k,
-        authorization_mode: target.authorization_mode().into(),
-        context_hash: circuit.context_hash.clone(),
-        financial_bindings: circuit.public_inputs.clone(),
-        authorization_bindings: circuit.authorization_bindings.clone(),
-        public_values: values.iter().map(|v| schnorr::native_hex(*v)).collect(),
-        authorization,
-    };
+    let claim = claim_from_reconstruction(&statement, action, scenario, target, k)?;
     // SHA-256 is interpreted little-endian as low128 + 2^128 * high128,
     // reduced modulo the pinned Fr by field arithmetic. This is not truncation.
     // binding_input binds this host-reconstructed claim; it does not prove an
@@ -310,7 +331,45 @@ fn prepare(
         binding,
     })
 }
-fn with_proof(claim: &Claim, proof_hex: &str) -> Result<serde_json::Value, Error> {
+/// Shared exact v3 Claim construction. This does not load parameters or build a private witness.
+pub(crate) fn claim_from_reconstruction(
+    statement: &signed_relation::Reconstruction,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    circuit_k: u8,
+) -> Result<TransitionClaim, Error> {
+    let circuit = &statement.circuit;
+    let values = statement.public_values();
+    let authorization = statement.signed.as_ref().map(|s| ClaimAuthorization {
+        payload_hash: hex(&s.payload_hash),
+        message_hex: schnorr::native_hex(s.message),
+        public_key_hex: s.payload.public_key_hex.clone(),
+        at: s.at,
+    });
+    Ok(TransitionClaim {
+        abi: PUBLIC_ABI_VERSION.into(),
+        relation: RELATION_VERSION.into(),
+        binding: BINDING_VERSION.into(),
+        profile: target.profile.clone(),
+        registry: statement.registry.clone(),
+        format: PROOF_FORMAT.into(),
+        source_hash: statement.source_hash.clone(),
+        program_hash: statement.program_hash.clone(),
+        target_hash: hex(&digest(target)?),
+        scenario_hash: hex(&digest(scenario)?),
+        execution_hash: hex(&digest(&statement.execution)?),
+        action: action.into(),
+        circuit_k,
+        authorization_mode: target.authorization_mode().into(),
+        context_hash: circuit.context_hash.clone(),
+        financial_bindings: circuit.public_inputs.clone(),
+        authorization_bindings: circuit.authorization_bindings.clone(),
+        public_values: values.iter().map(|v| schnorr::native_hex(*v)).collect(),
+        authorization,
+    })
+}
+fn with_proof(claim: &TransitionClaim, proof_hex: &str) -> Result<serde_json::Value, Error> {
     let mut value =
         serde_json::to_value(claim).map_err(|e| error("serialization", e.to_string()))?;
     value["proof_hex"] = proof_hex.into();
