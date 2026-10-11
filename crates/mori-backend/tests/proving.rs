@@ -106,7 +106,12 @@ fn strict_bundle_schema_and_hex() {
     assert!(ProofBundle::from_json(r#"{"format":"x","format":"y"}"#).is_err());
     assert!(ProofBundle::from_json("{} []").is_err());
     let bundle = ProofBundle {
-        format: "moriarty-native-transition-proof/1".into(),
+        format: "moriarty-native-transition-proof/2".into(),
+        abi: "moriarty-public-abi/2".into(),
+        relation: "moriarty-zkir-relation/2".into(),
+        binding: "moriarty-native-transition-binding/2".into(),
+        profile: "ledger-9".into(),
+        registry: vec![],
         source_hash: "x".into(),
         program_hash: "x".into(),
         target_hash: "x".into(),
@@ -116,7 +121,19 @@ fn strict_bundle_schema_and_hex() {
         circuit_k: 9,
         proof_hex: "".into(),
     };
-    let mut json = serde_json::to_value(&bundle).unwrap();
+    let current = serde_json::to_value(&bundle).unwrap();
+    assert!(ProofBundle::from_json(&current.to_string()).is_ok());
+    for field in ["format", "abi", "relation", "binding"] {
+        let mut stale = current.clone();
+        stale[field] = "stale/1".into();
+        assert!(ProofBundle::from_json(&stale.to_string()).is_err());
+    }
+    for field in ["abi", "relation", "binding", "profile", "registry"] {
+        let mut missing = current.clone();
+        missing.as_object_mut().unwrap().remove(field);
+        assert!(ProofBundle::from_json(&missing.to_string()).is_err());
+    }
+    let mut json = current;
     json["verifier_key"] = "hostile".into();
     assert!(ProofBundle::from_json(&json.to_string()).is_err());
 }
@@ -369,4 +386,113 @@ fn genuine_native_authored_actions_and_mutations() {
         Value::UInt(UInt(15))
     );
     proving::verify(SOURCE, "advance", &explicit, &target, &second, &options).unwrap();
+}
+
+#[test]
+fn registered_duties_reach_missing_srs_and_closed_registry_refuses() {
+    let target = Target::ledger9("local", "anchor");
+    let mut opts = options();
+    opts.max_k = 19;
+    let settlement = include_str!("../../../examples/core/native-liability/settlement.mori");
+    let zero = include_str!("../../../examples/core/native-liability/zero-lifecycle.mori");
+    let manifest: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../examples/core/native-liability/mori-tests.json"
+    ))
+    .unwrap();
+    let scenarios = [
+        include_str!("../../../examples/core/native-liability/partial.scenario.json"),
+        include_str!("../../../examples/core/native-liability/full.scenario.json"),
+        include_str!("../../../examples/core/native-liability/present-zero.scenario.json"),
+    ];
+    for (i, text) in scenarios.into_iter().enumerate() {
+        let s: Scenario = serde_json::from_str(text).unwrap();
+        let (source, action) = if i == 2 {
+            (zero, "close")
+        } else {
+            (settlement, "repay")
+        };
+        let execution =
+            mori_core::simulate(&mori_core::parse(source).unwrap(), action, &s).unwrap();
+        assert_eq!(
+            serde_json::to_value(&execution.post).unwrap(),
+            manifest["cases"][i]["expected"]["post"]
+        );
+        assert_eq!(
+            serde_json::to_value(&execution.effects).unwrap(),
+            manifest["cases"][i]["expected"]["effects"]
+        );
+        assert_code(
+            proving::prove(source, action, &s, &target, &opts),
+            "parameters",
+        );
+    }
+    for text in [
+        include_str!(
+            "../../../examples/core/native-liability/reference-broader-wrong-party.scenario.json"
+        ),
+        include_str!(
+            "../../../examples/core/native-liability/reference-broader-hidden-name.scenario.json"
+        ),
+    ] {
+        let s: Scenario = serde_json::from_str(text).unwrap();
+        assert!(mori_core::simulate(&mori_core::parse(settlement).unwrap(), "repay", &s).is_ok());
+        assert_code(
+            proving::prove(settlement, "repay", &s, &target, &opts),
+            "unsupported",
+        );
+    }
+}
+
+#[test]
+fn stale_proof_revision_refuses_at_schema_boundary() {
+    let old = serde_json::json!({"format":"moriarty-native-transition-proof/1","source_hash":"x","program_hash":"x","target_hash":"x","scenario_hash":"x","execution_hash":"x","action":"advance","circuit_k":9,"proof_hex":"00"});
+    assert!(ProofBundle::from_json(&old.to_string()).is_err());
+}
+
+#[test]
+fn source_registry_validates_all_scenario_tuples_and_untouched_slots() {
+    let source = include_str!("../../../examples/core/native-liability/settlement.mori");
+    let scenario: Scenario = serde_json::from_str(include_str!(
+        "../../../examples/core/native-liability/partial.scenario.json"
+    ))
+    .unwrap();
+    let target = Target::ledger9("local", "anchor");
+    let opts = ProofOptions {
+        max_k: 19,
+        ..options()
+    };
+    // No duty effect is emitted by observe, yet the complete registry persists.
+    let mut untouched = scenario.clone();
+    untouched.inputs.clear();
+    assert_code(
+        proving::prove(source, "observe", &untouched, &target, &opts),
+        "parameters",
+    );
+    for mutation in 0..8 {
+        let mut bad = untouched.clone();
+        let duty = &mut bad.liabilities[1];
+        match mutation {
+            0 => duty.name = "hidden".into(),
+            1 => duty.debtor = "changed".into(),
+            2 => duty.creditor = "changed".into(),
+            3 => duty.asset.network = "changed".into(),
+            4 => duty.asset.issuer = "changed".into(),
+            5 => duty.asset.reference = "changed".into(),
+            6 => duty.asset.scale = 1,
+            _ => {
+                let copy = duty.clone();
+                bad.liabilities.push(copy);
+            }
+        }
+        assert_code(
+            proving::prove(source, "observe", &bad, &target, &opts),
+            "unsupported",
+        );
+    }
+    // Absence is allowed for a registered untouched identity and consumes a slot.
+    untouched.liabilities.clear();
+    assert_code(
+        proving::prove(source, "observe", &untouched, &target, &opts),
+        "parameters",
+    );
 }
