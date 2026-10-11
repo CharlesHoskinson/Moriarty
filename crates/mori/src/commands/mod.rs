@@ -8,6 +8,8 @@ use crate::cli::Command;
 use crate::shell::Shell;
 
 pub mod check;
+pub mod compile;
+mod core_io;
 pub mod expand;
 pub mod format;
 pub mod init;
@@ -25,6 +27,7 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
     match command {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
+        Command::Compile(args) => compile::run(args, shell),
         Command::Format(args) => format::run(args, shell),
         Command::Inspect(args) => inspect::run(args, shell),
         Command::Expand(args) => expand::run(args, shell),

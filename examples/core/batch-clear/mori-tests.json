@@ -1,0 +1,199 @@
+{
+  "profile": "moriarty-tests/1",
+  "cases": [
+    {
+      "name": "uniform-price-and-fees",
+      "source": "batch.mori",
+      "scenario": "scenario.json",
+      "action": "clear",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "rounds": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          "balances": [
+            {
+              "account": "alice",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "night",
+                "scale": 0
+              },
+              "amount": "1"
+            },
+            {
+              "account": "bob",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "night",
+                "scale": 0
+              },
+              "amount": "2"
+            },
+            {
+              "account": "maker",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "night",
+                "scale": 0
+              },
+              "amount": "7"
+            },
+            {
+              "account": "alice",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "usd",
+                "scale": 2
+              },
+              "amount": "94"
+            },
+            {
+              "account": "bob",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "usd",
+                "scale": 2
+              },
+              "amount": "89"
+            },
+            {
+              "account": "maker",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "usd",
+                "scale": 2
+              },
+              "amount": "15"
+            },
+            {
+              "account": "pool",
+              "asset": {
+                "network": "local",
+                "issuer": "issuer",
+                "reference": "usd",
+                "scale": 2
+              },
+              "amount": "2"
+            }
+          ],
+          "liabilities": []
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "night",
+              "scale": 0
+            },
+            "from": "maker",
+            "to": "alice",
+            "amount": "1"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "night",
+              "scale": 0
+            },
+            "from": "maker",
+            "to": "bob",
+            "amount": "2"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "usd",
+              "scale": 2
+            },
+            "from": "alice",
+            "to": "maker",
+            "amount": "5"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "usd",
+              "scale": 2
+            },
+            "from": "bob",
+            "to": "maker",
+            "amount": "10"
+          },
+          {
+            "kind": "Fee",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "usd",
+              "scale": 2
+            },
+            "from": "alice",
+            "to": "pool",
+            "amount": "1"
+          },
+          {
+            "kind": "Fee",
+            "asset": {
+              "network": "local",
+              "issuer": "issuer",
+              "reference": "usd",
+              "scale": 2
+            },
+            "from": "bob",
+            "to": "pool",
+            "amount": "1"
+          },
+          {
+            "kind": "State",
+            "name": "rounds",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "uniform_price",
+            "value": {
+              "type": "UInt",
+              "value": "5"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "stale-oracle-refuses",
+      "source": "batch.mori",
+      "scenario": "stale.json",
+      "action": "clear",
+      "expected": {
+        "status": "rejected",
+        "code": "mori::core::requires"
+      }
+    }
+  ]
+}

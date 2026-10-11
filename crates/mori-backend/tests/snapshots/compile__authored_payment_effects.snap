@@ -1,0 +1,77 @@
+---
+source: crates/mori-backend/tests/compile.rs
+description: "Code:\n\nlanguage \"moriarty/1\";\nagreement IndependentPayment {\n  state paid: UInt = 0;\n  asset USD = { network: \"local\", issuer: \"issuer\", reference: \"usd\", scale: 2 };\n  action pay(amount: UInt, accepted: Bool) {\n    requires accepted;\n    requires amount > 0;\n    transfer(USD, \"payer\", \"recipient\", amount);\n    fee(USD, \"payer\", \"sponsor\", 2);\n    next paid = paid + amount;\n    emit \"receipt\"(paid);\n  }\n}\n"
+---
+[
+    EffectDescriptor {
+        step: 2,
+        kind: "transfer",
+        name: None,
+        asset: Some(
+            AssetId {
+                network: "local",
+                issuer: "issuer",
+                reference: "usd",
+                scale: 2,
+            },
+        ),
+        from: Some(
+            "payer",
+        ),
+        to: Some(
+            "recipient",
+        ),
+        public_positions: [
+            8,
+        ],
+    },
+    EffectDescriptor {
+        step: 3,
+        kind: "fee",
+        name: None,
+        asset: Some(
+            AssetId {
+                network: "local",
+                issuer: "issuer",
+                reference: "usd",
+                scale: 2,
+            },
+        ),
+        from: Some(
+            "payer",
+        ),
+        to: Some(
+            "sponsor",
+        ),
+        public_positions: [
+            9,
+        ],
+    },
+    EffectDescriptor {
+        step: 4,
+        kind: "state",
+        name: Some(
+            "paid",
+        ),
+        asset: None,
+        from: None,
+        to: None,
+        public_positions: [
+            10,
+            11,
+        ],
+    },
+    EffectDescriptor {
+        step: 5,
+        kind: "emit",
+        name: Some(
+            "receipt",
+        ),
+        asset: None,
+        from: None,
+        to: None,
+        public_positions: [
+            12,
+        ],
+    },
+]

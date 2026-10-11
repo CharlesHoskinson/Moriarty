@@ -7,21 +7,23 @@ use mori_diagnostics::Diagnostic;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
-    #[error("could not read `{}`", path.display())]
+    #[error("{code}: {message}")]
+    Operation { code: String, message: String },
+    #[error("could not read `{}`", crate::display::text(&path.display().to_string()))]
     Read {
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("could not write `{}`", path.display())]
+    #[error("could not write `{}`", crate::display::text(&path.display().to_string()))]
     Write {
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("`{}` does not exist", path.display())]
+    #[error("`{}` does not exist", crate::display::text(&path.display().to_string()))]
     NotFound { path: PathBuf },
-    #[error("could not list `{}`", path.display())]
+    #[error("could not list `{}`", crate::display::text(&path.display().to_string()))]
     Walk {
         path: PathBuf,
         #[source]

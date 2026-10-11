@@ -29,6 +29,15 @@ funded repayment examples. Local preparation remains **PreparedUnqualified**. Th
 [Research, design reviews and delivery evidence](wiki-llm/beta-language-2026-09-30/README.md)
 preserve the rationale and the separate proposed full-language horizon.
 
+## Native language and ZKIR compiler
+
+The native `language "moriarty/1";` profile supports composable bounded action
+bodies, deterministic reference execution and ledger-9 ZKIRv3 compilation.
+The Rust CLI now supplies `compile`, `simulate`, manifest-based `test`,
+`intent` and `verify-intent` for this profile. See the
+[native core guide](docs/NATIVE-CORE.md) for commands, exact support limits
+and the open proof/ledger gates. The existing beta profile remains separate.
+
 ## From a transaction to an agreement
 
 Consider a buyer who authorizes payment for goods once a seller accepts the terms, a designated issuer attests to a shipping document and a delivery condition is satisfied. The funds may already be in escrow. The seller may fulfill the order in parts. Payment may involve another chain whose outcome is temporarily unknown. A useful account of this agreement must say which conditions have been established, how much may be released, who still owes what and which remedies remain available.
