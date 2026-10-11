@@ -49,7 +49,17 @@ pub fn lex(source: &str) -> Result<Tokens, MoriDiagnostic> {
     if source.len() > MAX_SOURCE_BYTES {
         return Err(diagnostics::source_too_large(source.len()));
     }
-    Lexer::new(source).run()
+    Lexer::new(source).run(false)
+}
+
+/// Identify a leading profile token without requiring the remaining source to
+/// lex successfully. Inspect only a bounded prefix; full parsing retains all
+/// source and token limits.
+pub fn first_token_text(source: &str) -> Result<&str, MoriDiagnostic> {
+    let end = source.floor_char_boundary(source.len().min(MAX_SOURCE_BYTES));
+    let prefix = &source[..end];
+    let tokens = Lexer::new(prefix).run(true)?;
+    Ok(tokens.span(TokenIdx::new(0), prefix).source_text(prefix))
 }
 
 struct Lexer<'src> {
@@ -72,7 +82,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn run(mut self) -> Result<Tokens, MoriDiagnostic> {
+    fn run(mut self, first_only: bool) -> Result<Tokens, MoriDiagnostic> {
         while let Some(&b) = self.bytes.get(self.pos) {
             let start = self.pos;
             match b {
@@ -87,11 +97,14 @@ impl<'src> Lexer<'src> {
                     None => return Err(self.unexpected_character(start)),
                 },
             }
+            if first_only && !self.tokens.is_empty() {
+                break;
+            }
         }
         // The end-of-file token is always pushed: the bound reserves room for it.
         self.tokens.push(Token {
             kind: TokenKind::Eof,
-            start: offset(self.bytes.len()),
+            start: offset(self.pos),
         });
         Ok(Tokens {
             tokens: self.tokens,

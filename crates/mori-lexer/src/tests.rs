@@ -311,3 +311,17 @@ fn identifier_bound() {
         Some("mori::lex::name_too_long")
     );
 }
+#[test]
+fn leading_token_survives_invalid_body_without_accepting_it() {
+    let source = "// preamble\n/* profile */ language \"moriarty/1\"; @";
+    assert_eq!(crate::first_token_text(source).unwrap(), "language");
+    assert!(crate::lex(source).is_err());
+    assert_eq!(crate::first_token_text(" /* comment */ ").unwrap(), "");
+    assert_eq!(
+        crate::first_token_text("language_beta @").unwrap(),
+        "language_beta"
+    );
+    let oversized = format!("language {}", "x".repeat(crate::MAX_SOURCE_BYTES));
+    assert_eq!(crate::first_token_text(&oversized).unwrap(), "language");
+    assert!(crate::lex(&oversized).is_err());
+}

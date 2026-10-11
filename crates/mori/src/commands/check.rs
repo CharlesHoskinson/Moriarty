@@ -30,12 +30,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         shell.status("Checking", &name);
     }
     let started = Instant::now();
-    if mori_lexer::lex(&source).is_ok_and(|tokens| {
-        tokens
-            .span(mori_lexer::TokenIdx::new(0), &source)
-            .source_text(&source)
-            == "language"
-    }) {
+    if mori_lexer::first_token_text(&source).is_ok_and(|token| token == "language") {
         let result = mori_core::parse(&source);
         if args.json {
             let report = match &result {
@@ -94,8 +89,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     };
 
     if let Some(report) = report {
-        let json = serde_json::to_string_pretty(&report).expect("the report serializes");
-        println!("{json}");
+        super::core_io::print(&report)?;
     } else if accepted {
         shell.status(
             "Finished",
