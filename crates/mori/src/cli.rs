@@ -75,6 +75,13 @@ pub struct SigningOutputArgs {
     pub json: bool,
 }
 
+/// Signed native owner-intent profile selected explicitly by name.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum SignedProfile {
+    #[value(name = "moriarty-jubjub-owner-intent/1")]
+    JubjubOwnerIntent,
+}
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Color {
     Auto,
