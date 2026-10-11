@@ -496,3 +496,106 @@ fn source_registry_validates_all_scenario_tuples_and_untouched_slots() {
         "parameters",
     );
 }
+
+/// Exact fixture shapes only: no parameters, key generation or prover/verifier.
+#[test]
+fn liability_fixture_shapes_without_parameters_or_proving() {
+    use midnight_transient_crypto::proofs::Zkir;
+    use sha2::{Digest, Sha256};
+    let digest = |bytes: &[u8]| -> String {
+        Sha256::digest(bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    };
+    let wide = r#"language "moriarty/1";
+agreement CompleteSixteenDuties {
+  asset UNIT = { network: "local", issuer: "native-liability-qa", reference: "WIDE", scale: 0 };
+  action originate(amount: UInt) {
+    liability("duty00", UNIT, "debtor00", "creditor00", amount);
+    liability("duty01", UNIT, "debtor01", "creditor01", 0);
+    liability("duty02", UNIT, "debtor02", "creditor02", amount);
+    liability("duty03", UNIT, "debtor03", "creditor03", 0);
+    liability("duty04", UNIT, "debtor04", "creditor04", amount);
+    liability("duty05", UNIT, "debtor05", "creditor05", 0);
+    liability("duty06", UNIT, "debtor06", "creditor06", amount);
+    liability("duty07", UNIT, "debtor07", "creditor07", 0);
+    liability("duty08", UNIT, "debtor08", "creditor08", amount);
+    liability("duty09", UNIT, "debtor09", "creditor09", 0);
+    liability("duty10", UNIT, "debtor10", "creditor10", amount);
+    liability("duty11", UNIT, "debtor11", "creditor11", 0);
+    liability("duty12", UNIT, "debtor12", "creditor12", amount);
+    liability("duty13", UNIT, "debtor13", "creditor13", 0);
+    liability("duty14", UNIT, "debtor14", "creditor14", amount);
+    liability("duty15", UNIT, "debtor15", "creditor15", 0);
+  }
+  action progress(amount: UInt) {
+    discharge("duty00", amount);
+    liability("duty15", UNIT, "debtor15", "creditor15", 1);
+    discharge("duty15", 1);
+  }
+  action observe() { emit "ordinary"(1); }
+}
+"#;
+    let target = Target::ledger9("local", "native-liability-qa");
+    let target_bytes =
+        mori_core::intent::canonical(&serde_json::to_value(&target).unwrap()).unwrap();
+    let output = std::env::var_os("MORIARTY_LIABILITY_MEASUREMENT_DIR").map(PathBuf::from);
+    if let Some(dir) = &output {
+        std::fs::create_dir_all(dir).unwrap();
+    }
+    let fixtures = [
+        (
+            "zero-lifecycle",
+            1,
+            include_str!("../../../examples/core/native-liability/zero-lifecycle.mori"),
+        ),
+        (
+            "settlement",
+            2,
+            include_str!("../../../examples/core/native-liability/settlement.mori"),
+        ),
+        ("complete-sixteen", 16, wide),
+    ];
+    for (label, width, source) in fixtures {
+        let program = mori_core::parse(source).unwrap();
+        let artifact = mori_backend::compile(&program, &target).unwrap();
+        assert_eq!(artifact.resources.liability_registry_entries, width);
+        let artifact_bytes =
+            mori_core::intent::canonical(&serde_json::to_value(&artifact).unwrap()).unwrap();
+        if let Some(dir) = &output {
+            std::fs::write(dir.join(format!("{label}.mori")), source).unwrap();
+            std::fs::write(dir.join(format!("{label}.artifact.json")), &artifact_bytes).unwrap();
+            std::fs::write(dir.join("target.json"), &target_bytes).unwrap();
+        }
+        for circuit in &artifact.circuits {
+            assert_eq!(circuit.liability_frame.len(), width as usize);
+            let ir = midnight_zkir_v3::IrSource::load(circuit.zkir.as_bytes()).unwrap();
+            let model = ir.model();
+            let frame_bytes = mori_core::intent::canonical(
+                &serde_json::to_value(&circuit.liability_frame).unwrap(),
+            )
+            .unwrap();
+            let effect_bytes =
+                mori_core::intent::canonical(&serde_json::to_value(&circuit.effect_frame).unwrap())
+                    .unwrap();
+            println!(
+                "LIABILITY_MEASUREMENT {}",
+                serde_json::json!({
+                    "fixture": label, "source_sha256": digest(source.as_bytes()), "program_sha256": artifact.program_hash,
+                    "target_sha256": digest(&target_bytes), "artifact_sha256": digest(&artifact_bytes),
+                    "action": circuit.action, "registry_width": width, "liability_frame_entries": circuit.liability_frame.len(),
+                    "liability_frame_sha256": digest(&frame_bytes), "effect_frame_entries": circuit.effect_frame.len(),
+                    "effect_frame_sha256": digest(&effect_bytes), "balance_frame_entries": circuit.balance_frame.len(),
+                    "public_inputs": circuit.public_inputs.len(), "replay_steps": circuit.replay_steps,
+                    "instructions": circuit.instruction_count, "zkir_sha256": digest(circuit.zkir.as_bytes()),
+                    "optimal_k": ir.k(), "model_k": model.k(), "model_rows": model.rows(),
+                })
+            );
+            assert!(
+                ir.k() <= 19,
+                "measured engineering ceiling exceeded; native work requires revised design"
+            );
+        }
+    }
+}
