@@ -23,7 +23,7 @@ pub fn read_source(path: &Path) -> super::Result<String> {
 pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
     CliError::Operation {
         code: "mori::command".into(),
-        message: error.to_string(),
+        message: crate::display::text(&error.to_string()),
     }
     .into()
 }

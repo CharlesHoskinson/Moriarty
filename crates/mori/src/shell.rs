@@ -97,10 +97,12 @@ impl Shell {
     }
 
     fn aligned(&mut self, verb: &str, style: Style, message: impl Display) {
+        let message = crate::display::text(&message.to_string());
         let _ = writeln!(self.err, "{style}{verb:>VERB_WIDTH$}{style:#} {message}");
     }
 
     fn prefixed(&mut self, label: &str, style: Style, message: impl Display) {
+        let message = crate::display::text(&message.to_string());
         let _ = writeln!(self.err, "{style}{label}:{style:#} {message}");
     }
 }
