@@ -34,6 +34,8 @@ pub struct ActionKeyMetadata {
 #[serde(deny_unknown_fields)]
 pub struct PublicKeysetManifest {
     pub profile: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub signer_policy: Option<crate::signed::FixedSignerPolicy>,
     pub bindings: StaticBindings,
     pub build: String,
     pub actions: Vec<ActionKeyMetadata>,
@@ -66,7 +68,11 @@ pub struct ImportedProvingKeyset {
     pub(crate) snapshot_total: usize,
 }
 pub fn public_identity(m: &PublicKeysetManifest) -> Result<String> {
-    codec::object_hash(&(&m.profile, &m.bindings, &m.build, &m.actions))
+    if let Some(policy) = &m.signer_policy {
+        codec::object_hash(&(&m.profile, &m.bindings, &m.build, &m.actions, policy))
+    } else {
+        codec::object_hash(&(&m.profile, &m.bindings, &m.build, &m.actions))
+    }
 }
 pub(crate) fn ordinal_leaf(index: usize, suffix: &str) -> String {
     format!("action-{index:06}.{suffix}")
@@ -150,6 +156,13 @@ pub fn snapshot_public_keyset(
     directory: &Path,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedPublicKeyset> {
+    snapshot_public_profile(directory, limits, false)
+}
+pub(crate) fn snapshot_public_profile(
+    directory: &Path,
+    limits: &NativeWorkLimits,
+    signed: bool,
+) -> Result<ImportedPublicKeyset> {
     limits.validate()?;
     let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let cap = remaining_read_cap(
@@ -160,7 +173,13 @@ pub fn snapshot_public_keyset(
     let marker = read_bounded_file(&directory.join("public-keyset.json"), cap)?;
     let manifest: PublicKeysetManifest =
         codec::json(std::str::from_utf8(&marker).map_err(|_| refusal("manifest-utf8"))?)?;
-    if manifest.profile != "moriarty-native-call-public-keyset/1"
+    if manifest.profile
+        != if signed {
+            crate::signed::KEYSET
+        } else {
+            "moriarty-native-call-public-keyset/1"
+        }
+        || manifest.signer_policy.is_some() != signed
         || manifest.actions.is_empty()
         || manifest.actions.len() > NativeWorkLimits::cap(limits.max_actions)?
         || manifest.identity != public_identity(&manifest)?
@@ -249,7 +268,15 @@ pub fn snapshot_proving_keyset(
     action: &str,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvingKeyset> {
-    let public = snapshot_public_keyset(directory, limits)?;
+    snapshot_proving_profile(directory, action, limits, false)
+}
+pub(crate) fn snapshot_proving_profile(
+    directory: &Path,
+    action: &str,
+    limits: &NativeWorkLimits,
+    signed: bool,
+) -> Result<ImportedProvingKeyset> {
+    let public = snapshot_public_profile(directory, limits, signed)?;
     let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let marker_cap = remaining_read_cap(
         public.snapshot_total,
@@ -259,7 +286,12 @@ pub fn snapshot_proving_keyset(
     let bytes = read_bounded_file(&directory.join("proving-keyset.json"), marker_cap)?;
     let marker: ProvingKeysetManifest =
         codec::json(std::str::from_utf8(&bytes).map_err(|_| refusal("manifest-utf8"))?)?;
-    if marker.profile != "moriarty-native-call-proving-keyset/1"
+    if marker.profile
+        != if signed {
+            crate::signed::KEYSET
+        } else {
+            "moriarty-native-call-proving-keyset/1"
+        }
         || marker.action != action
         || marker.public_identity != public.manifest.identity
     {
@@ -380,6 +412,8 @@ impl ArtifactLeaves {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProofContext {
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub signed: Option<crate::signed::SignedProofContext>,
     pub source_hash: String,
     pub keyset_identity: String,
     pub deployment_hash: String,
@@ -443,6 +477,13 @@ pub fn snapshot_proven_call(
     directory: &Path,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvenCall> {
+    snapshot_proven_profile(directory, limits, false)
+}
+pub(crate) fn snapshot_proven_profile(
+    directory: &Path,
+    limits: &NativeWorkLimits,
+    signed: bool,
+) -> Result<ImportedProvenCall> {
     limits.validate()?;
     let cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let marker_cap =
@@ -450,7 +491,13 @@ pub fn snapshot_proven_call(
     let marker = read_bounded_file(&directory.join("proven-call.json"), marker_cap)?;
     let m: ProvenManifest =
         codec::json(std::str::from_utf8(&marker).map_err(|_| refusal("manifest-utf8"))?)?;
-    if m.profile != "moriarty-native-call-proven/1"
+    if m.profile
+        != if signed {
+            crate::signed::PROOF_CONTEXT
+        } else {
+            "moriarty-native-call-proven/1"
+        }
+        || m.context.signed.is_some() != signed
         || !m.leaves.contains_key("final-intent.bin")
         || !m.leaves.contains_key("verification.json")
         || !m.leaves.contains_key("final-readback.json")
@@ -507,7 +554,12 @@ pub fn export_proven_call(
         json_bytes(proven.verification(), limits.max_leaf_bytes)?,
     );
     let manifest = ProvenManifest {
-        profile: "moriarty-native-call-proven/1".into(),
+        profile: if context.signed.is_some() {
+            crate::signed::PROOF_CONTEXT
+        } else {
+            "moriarty-native-call-proven/1"
+        }
+        .into(),
         context,
         leaves: inspection
             .iter()

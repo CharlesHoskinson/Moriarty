@@ -96,6 +96,7 @@ fn public_fixture() -> std::path::PathBuf {
         srs_bytes: 1,
     };
     let mut marker = PublicKeysetManifest {
+        signer_policy: None,
         profile: "moriarty-native-call-public-keyset/1".into(),
         bindings,
         build: "untrusted-build".into(),

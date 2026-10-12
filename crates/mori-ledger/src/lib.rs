@@ -15,6 +15,7 @@ pub mod prepare;
 pub mod profile;
 pub mod proving;
 pub mod relation;
+pub mod signed;
 
 /// Metadata for a refused already-discovered local deployment degree.
 /// This carries no parameter bytes, paths, keys or private inputs.

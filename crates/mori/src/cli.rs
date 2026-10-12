@@ -3,8 +3,10 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, compile_call, expand, format, init, inspect, intent, keygen_call, lsp, mcp,
-    prepare_call, prove, prove_call, replay, simulate, test, verify, verify_call, verify_intent,
+    check, compile, compile_call, expand, format, init, inspect, intent, keygen_call,
+    keygen_signed_call, lsp, mcp, prepare_call, prepare_signed_call, prove, prove_call,
+    prove_signed_call, replay, simulate, test, verify, verify_call, verify_intent,
+    verify_signed_call,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -111,6 +113,14 @@ pub enum Command {
     CompileCall(compile_call::Args),
     /// Derive all source action keys and an explicit local installed snapshot
     KeygenCall(keygen_call::Args),
+    /// Derive the complete local signed action map under a fixed JubJub policy
+    KeygenSignedCall(keygen_signed_call::Args),
+    /// Reconstruct a signature-free canonical local call signing package
+    PrepareSignedCall(prepare_signed_call::Args),
+    /// Prove the actual local typed SDK call with an external FENS attachment
+    ProveSignedCall(prove_signed_call::Args),
+    /// Cold public-only reconstruction and Real verification of a signed call
+    VerifySignedCall(verify_signed_call::Args),
     /// Cold rederive keys and prove an actual local installed SDK call
     ProveCall(prove_call::Args),
     /// Cold rederive public keys and Real-verify an installed call without PK files

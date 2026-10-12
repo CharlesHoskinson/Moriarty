@@ -24,7 +24,7 @@ struct Wire {
     val: Operand,
     ty: Type,
 }
-struct Compiler<'a> {
+pub(crate) struct Compiler<'a> {
     p: &'a Program,
     d: &'a StaticBindings,
     action: &'a str,
@@ -33,9 +33,74 @@ struct Compiler<'a> {
     states: BTreeMap<String, Type>,
     duties: BTreeMap<String, (Operand, Operand)>,
     claims: BTreeMap<String, Operand>,
+    signed: Option<&'a crate::signed::SignedStaticBindings>,
+    wires: Vec<(crate::signed::WireDescriptor, Operand)>,
+    payments: Vec<(String, String, String, bool, Operand)>,
+    statement_index: usize,
 }
 impl Compiler<'_> {
-    fn duty(&mut self, name: &str, value: Operand, discharge: bool) -> Result<()> {
+    fn wires_effect_index(&self) -> usize {
+        self.statement_index
+    }
+    fn record(&mut self, descriptor: String, ty: Type, val: Operand) {
+        if self.signed.is_some() {
+            self.wires.push((
+                crate::signed::WireDescriptor {
+                    position: self.wires.len(),
+                    descriptor,
+                    ty,
+                },
+                val,
+            ));
+        }
+    }
+    fn observations(&mut self, post: bool) -> Result<()> {
+        let phase = if post { "post" } else { "pre" };
+        let state_count = self.b.open(imm(1));
+        self.b.equal(state_count, imm(self.p.states.len() as u128));
+        for op in ops::map_size(0, self.p.states.len()) {
+            self.b.op(op, imm(1), &[], "signed-state-cardinality")?;
+        }
+        for state in &self.p.states {
+            self.read(&state.name)?;
+            self.record(
+                format!("{phase}.state.{}", state.name),
+                state.ty,
+                self.env[&state.name].val.clone(),
+            );
+        }
+        let duties = self.signed.ok_or(refusal("signed-layout"))?.duties.clone();
+        let count = self.b.open(imm(1));
+        self.b.range(count.clone(), Type::UInt);
+        for (i, op) in ops::map_size(1, 0).into_iter().enumerate() {
+            let r = if i == 3 {
+                vec![(op.field_size() - 1, count.clone())]
+            } else {
+                vec![]
+            };
+            self.b.op(op, imm(1), &r, "signed-duty-cardinality")?;
+        }
+        let mut sum = imm(0);
+        for d in &duties {
+            let (member, amount) = self.observe_duty(&d.name)?;
+            sum = self.b.expression(sum, member.clone(), BinaryOp::Add);
+            self.record(
+                format!("{phase}.duty.{}.present", d.name),
+                Type::Bool,
+                member.clone(),
+            );
+            self.record(
+                format!("{phase}.duty.{}.amount", d.name),
+                Type::UInt,
+                amount.clone(),
+            );
+            self.duties.insert(d.name.clone(), (member, amount));
+        }
+        self.b.equal(count, sum);
+        Ok(())
+    }
+
+    fn observe_duty(&mut self, name: &str) -> Result<(Operand, Operand)> {
         let binding = self
             .d
             .duties
@@ -71,6 +136,8 @@ impl Compiler<'_> {
                 self.b.equal(open.clone(), expected);
             } else {
                 self.b.range(open.clone(), Type::UInt);
+                let absent = self.b.select(member.clone(), imm(0), open.clone());
+                self.b.equal(absent, imm(0));
                 if let Some((_, known)) = self.duties.get(name) {
                     let expected = self.b.select(member.clone(), known.clone(), imm(0));
                     self.b.equal(open.clone(), expected);
@@ -94,6 +161,36 @@ impl Compiler<'_> {
             };
             self.b.op(op, member.clone(), &r, "duty-old-read")?;
         }
+        Ok((member, before))
+    }
+    fn duty(&mut self, name: &str, value: Operand, discharge: bool) -> Result<()> {
+        let binding = self
+            .d
+            .duties
+            .iter()
+            .find(|d| d.name == name)
+            .ok_or(refusal("duty-binding"))?;
+        let key = layout::name_key("duty", name);
+        let sample = layout::duty_value(binding, 0, &self.d.roles)?;
+        let (member, before) = self.observe_duty(name)?;
+        if discharge {
+            self.record(
+                format!(
+                    "effect.{}.discharge.{name}.amount",
+                    self.wires_effect_index()
+                ),
+                Type::UInt,
+                value.clone(),
+            );
+        }
+        self.record(
+            format!(
+                "effect.{}.liability.{name}.before",
+                self.wires_effect_index()
+            ),
+            Type::UInt,
+            before.clone(),
+        );
         if discharge {
             self.b.assert(member.clone());
         }
@@ -114,6 +211,14 @@ impl Compiler<'_> {
             };
             self.b.op(op, imm(1), &r, "duty-write")?;
         }
+        self.record(
+            format!(
+                "effect.{}.liability.{name}.after",
+                self.wires_effect_index()
+            ),
+            Type::UInt,
+            next.clone(),
+        );
         self.duties.insert(name.into(), (imm(1), next));
         Ok(())
     }
@@ -315,6 +420,16 @@ impl Compiler<'_> {
                 if !names.contains(state) {
                     self.read(state)?;
                 }
+                self.record(
+                    format!("effect.{}.state.{state}.before", self.statement_index),
+                    value.ty,
+                    self.env[state].val.clone(),
+                );
+                self.record(
+                    format!("effect.{}.state.{state}.after", self.statement_index),
+                    value.ty,
+                    value.val.clone(),
+                );
                 let sample: AlignedValue = match value.ty {
                     Type::UInt => 0u128.into(),
                     Type::Bool => false.into(),
@@ -330,12 +445,39 @@ impl Compiler<'_> {
                 }
                 self.env.insert(state.clone(), value);
             }
-            Statement::Transfer { asset, to, .. } | Statement::Fee { asset, to, .. } => {
+            Statement::Transfer {
+                asset, from, to, ..
+            }
+            | Statement::Fee {
+                asset, from, to, ..
+            } => {
+                let fee = matches!(s, Statement::Fee { .. });
+                self.record(
+                    format!(
+                        "effect.{}.{}.{asset}.{from}.{to}.amount",
+                        self.statement_index,
+                        if fee { "fee" } else { "transfer" }
+                    ),
+                    Type::UInt,
+                    value.val.clone(),
+                );
+                self.payments.push((
+                    asset.clone(),
+                    from.clone(),
+                    to.clone(),
+                    fee,
+                    value.val.clone(),
+                ));
                 self.claim(asset, to, value.val)?
             }
             Statement::Liability { name, .. } => self.duty(name, value.val, false)?,
             Statement::Discharge { name, .. } => self.duty(name, value.val, true)?,
             Statement::Emit { name, .. } => {
+                self.record(
+                    format!("effect.{}.event.{name}.value", self.statement_index),
+                    value.ty,
+                    value.val.clone(),
+                );
                 super::event::emit(&mut self.b, name, self.action, value.val, value.ty)?
             }
         }
@@ -346,6 +488,32 @@ pub fn compile(
     validated: &layout::ValidatedStaticBindings<'_>,
     action: &str,
 ) -> Result<(IrSource, Vec<Group>, usize)> {
+    compile_inner(validated, action, None, None).map(|(ir, g, n, _)| (ir, g, n))
+}
+pub(crate) fn compile_signed(
+    validated: &layout::ValidatedStaticBindings<'_>,
+    action: &str,
+    signed: &crate::signed::SignedStaticBindings,
+    context: Option<[u128; 2]>,
+) -> Result<(
+    IrSource,
+    Vec<Group>,
+    usize,
+    Vec<crate::signed::WireDescriptor>,
+)> {
+    compile_inner(validated, action, Some(signed), context)
+}
+fn compile_inner(
+    validated: &layout::ValidatedStaticBindings<'_>,
+    action: &str,
+    signed: Option<&crate::signed::SignedStaticBindings>,
+    context: Option<[u128; 2]>,
+) -> Result<(
+    IrSource,
+    Vec<Group>,
+    usize,
+    Vec<crate::signed::WireDescriptor>,
+)> {
     let p = validated.program();
     let d = validated.bindings();
     let a: &Action = p
@@ -362,6 +530,10 @@ pub fn compile(
         states: p.states.iter().map(|s| (s.name.clone(), s.ty)).collect(),
         duties: BTreeMap::new(),
         claims: BTreeMap::new(),
+        signed,
+        wires: vec![],
+        payments: vec![],
+        statement_index: 0,
     };
     let mut inputs = vec![];
     for (i, input) in a.inputs.iter().enumerate() {
@@ -372,7 +544,11 @@ pub fn compile(
         inputs.push(typed);
         let val = Operand::Variable(id);
         c.b.range(val.clone(), input.ty);
+        c.record(format!("input.{}", input.name), input.ty, val.clone());
         c.env.insert(input.name.clone(), Wire { val, ty: input.ty });
+    }
+    if let Some(s) = signed {
+        crate::signed::constraints::arguments(&mut inputs, a.inputs.len(), s.assets.len())?;
     }
     for op in ops::abi_guard() {
         if matches!(op, midnight_onchain_vm::ops::Op::Popeq { .. }) {
@@ -381,8 +557,26 @@ pub fn compile(
         }
         c.b.op(op, imm(1), &[], "abi-root")?;
     }
-    for statement in &a.statements {
+    if signed.is_some() {
+        c.observations(false)?;
+    }
+    for (i, statement) in a.statements.iter().enumerate() {
+        c.statement_index = i;
         c.statement(statement)?;
+    }
+    if let Some(signed) = signed {
+        c.observations(true)?;
+        if let Some(context) = context {
+            crate::signed::constraints::append(
+                &mut c.b,
+                signed,
+                context,
+                a.inputs.len(),
+                &c.wires,
+                &c.payments,
+                &c.duties,
+            )?;
+        }
     }
     c.b.instructions.push(Instruction::Output { vals: vec![] });
     if c.b.instructions.len() > 1_000_000 || c.b.groups.len() > 100_000 {
@@ -397,6 +591,7 @@ pub fn compile(
             instructions: Arc::new(c.b.instructions),
         },
         c.b.groups,
-        a.inputs.len(),
+        a.inputs.len() + signed.map_or(0, |s| 13 + 4 * s.assets.len()),
+        c.wires.into_iter().map(|(d, _)| d).collect(),
     ))
 }
