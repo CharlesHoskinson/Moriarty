@@ -1,0 +1,21 @@
+language "moriarty/1";
+agreement ToggleCounter {
+  state count: UInt = 0;
+  state active: Bool = true;
+  action step(delta: UInt) {
+    requires active;
+    let old = count;
+    next count = count + delta;
+    next active = not active;
+    emit "count"(count);
+    emit "active"(active);
+    ensures count == old + delta;
+    ensures active == false;
+  }
+  action reset() {
+    next count = 0;
+    next active = true;
+    emit "count"(count);
+    ensures active;
+  }
+}

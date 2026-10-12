@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, compile_call, expand, format, init, inspect, intent, lsp, mcp, prepare_call,
-    prove, replay, simulate, test, verify, verify_intent,
+    check, compile, compile_call, expand, format, init, inspect, intent, keygen_call, lsp, mcp,
+    prepare_call, prove, prove_call, replay, simulate, test, verify, verify_call, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -109,6 +109,12 @@ pub enum Command {
     Compile(compile::Args),
     /// Compile a source-static ordinary native contract-call relation
     CompileCall(compile_call::Args),
+    /// Derive all source action keys and an explicit local installed snapshot
+    KeygenCall(keygen_call::Args),
+    /// Cold rederive keys and prove an actual local installed SDK call
+    ProveCall(prove_call::Args),
+    /// Cold rederive public keys and Real-verify an installed call without PK files
+    VerifyCall(verify_call::Args),
     /// Prove a public local action using pinned offline parameters
     Prove(prove::Args),
     /// Prepare an unsigned, unproven local native call and public offer

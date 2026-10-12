@@ -30,8 +30,137 @@ The final consumer compares the whole unsigned intent against the independently 
 
 The result is a local unsigned call-proof predicate under supplied parameters and a supplied operation. It records remaining SRS/derivation, source correspondence, installed-state, authorization, replay, fees, apply, settlement and history predicates. Full transaction well-formedness and ledger acceptance are separate APIs and remain open here.
 
-## Current blockers
+## Qualification still owed
 
-The legacy deployment profile deliberately rejects any installed VK or IR in `layout::decode_predecessor`. Safe CLI key generation/proving/verification against installed predecessor state requires a separately reviewed versioned profile, complete action-map policy, installed key authorization and source/VK/parameter correspondence. This adapter does not weaken the old refusal, relabel forged state, or invent that policy. There is no `prove-call`, `verify-call` or `keygen-call` CLI success stub.
+The legacy deployment profile still rejects installed VK/IR operations in
+`layout::decode_predecessor`. The adopted installed-local source design below
+adds a separate complete-map consumer and durable export/reopen/import path;
+it preserves that legacy refusal. Both paths remain local and unauthenticated.
 
-Durable key export/reopen/import, cold verifier artifact admission, authenticated deployment and operation lookup remain dependent on that design. Native model degree/fit, exact offline SRS provenance/compatibility, real PK/VK/SRS sizes, numerical process budgets and the admitted positive/hostile matrix are also unresolved. Source-only compilation or ordinary relation checks cannot establish these predicates. The candidate remains unmerged pending complete fresh independent audits and any later native resource decision.
+Native degree/fit, actual pinned SRS compatibility, PK/VK/SRS sizes, canonical
+cold reproducibility, complete positive/hostile results and physical process
+budgets remain unresolved for the installed consumer. Ordinary compilation and
+relation checks do not establish these predicates. Its final exact source audits
+and later current native resource admission remain required. Authenticated
+deployment, signatures, consumption, application and settlement are further
+independent obligations.
+
+## Installed local command consumers
+
+`keygen-call`, `prove-call` and `verify-call` now have actual library and CLI
+consumers. Their source bodies compile and ordinary refusal tests run. Native
+model selection, SRS decoding, key derivation, proof creation and cryptographic
+verification remain unrun for this installed-call candidate. The complete
+U0–U7/M1–M17 objective and independent source/native acceptance gates remain open.
+
+The installed descriptor uses `moriarty-ledger-installed-local/1`, qualification
+`local-source-derived-installed-unqualified`, anchor `local-unqualified` and
+`guaranteed-only`. It is an explicit local snapshot, with independently supplied
+source, ledger parameters and request. It authenticates no chain installation,
+account, time, signature, nonce consumption, funding, application or settlement.
+A supplied noninitial state or existing duty is a local premise, never constrained
+genesis or history evidence. Legacy `compile-call`/`prepare-call` schemas and
+installed-key refusal remain; `prove`/`verify` keep their separate statement.
+
+The native commands are:
+
+```text
+mori keygen-call SOURCE --seed-deployment D --seed-state S --parameters L --action A --params-dir P --work-limits W --out K
+mori prove-call SOURCE --deployment D2 --predecessor S2 --parameters L --request Q --action A --keyset K --params-dir P --work-limits W --out PROVEN
+mori verify-call SOURCE --deployment D2 --predecessor S2 --parameters L --request Q --action A --public-keyset K --proof PROVEN --params-dir P --work-limits W
+```
+
+`keygen-call` fully admits a keyless source/ABI/frame/state/duty/UTXO/parameters/
+NIGHT-supply seed before any circuit model or SRS work. It requires no request
+and invents no successful transition. Derivation compiles every declared action,
+generates every public VK plus the selected full PK/VK pair, and creates private
+`PublicLocalDeployment`/`DerivedLocalDeployment` capabilities. Replacing only the
+cloned contract operations map preserves charged data/bookkeeping, balances,
+maintenance, UTXOs, extensions and all other ledger fields. This writes a local
+artifact without ledger apply or wallet funding.
+
+Every operation, including unused actions, must match the source-derived current
+VK and exact tagged IR, with no legacy key, missing key/IR or extra action.
+`prepare_installed_native_call` retains the selected actual stored operation in
+its private owner. `prove_installed_call` consumes its raw owner through the
+existing SDK `Intent::prove`, then verifies the actual final V3 call through
+`ProofMarker` and `ProofVerificationMode::Real`. `verify_installed_call` checks
+independently prepared context and the actual stored operation. The dependency
+explicitly enables `proof-verifying`, including no-default-features builds.
+
+Cold import treats every manifest and PK/VK leaf as untrusted data. It compares
+source/static/IR/manifest/build/parameter metadata first, regenerates all source
+VKs, and compares opaque exported bytes exactly. Cold proving also regenerates
+the selected full pair and compares PK before using regenerated material.
+Imported PK is never decoded. Lazy SDK VK wrappers in an outer state parse are
+ordinary data; no attacker VK is initialized before map correspondence. The SDK
+50,000-byte inner VK bound remains in addition to caller bounds. A canonical key
+reproducibility mismatch refuses; same-build reproducibility is a native result
+still owed. Self-consistent source/IR/VK hashes cannot construct a capability.
+
+Cold public import never opens, stats, checksums or requires optional PK/proving
+leaves, even when the producing combined manifest lists them. It reads public
+SRS for VK regeneration and uses the ledger's embedded verifier parameters for
+final crypto. It requires no PK, prover cache or proving service. The standard
+verifier degree14 concerns public-input support; it does not imply circuit k<=14.
+Actual compatibility remains unrun.
+
+`W` has strict profile `moriarty-native-call-work-limits/1` and mandatory nonzero
+`max_degree`, `max_actions`, `max_srs_bytes`, `max_prover_key_bytes`,
+`max_verifier_key_bytes`, `max_input_bytes`, `max_leaf_bytes`,
+`max_artifact_bytes`, `max_operations` and `max_public_inputs`. No numeric defaults
+or maintainer receipts are public prerequisites. Counts/conversions/sums are
+checked. `max_actions` bounds the complete source action set and imported intent
+shape; `max_operations` bounds the source Impact layout (one group per native Op)
+and actual raw/processed operation counts. `max_public_inputs` bounds the complete
+source field layout and actual operation field widths. Imported Noop widths are
+counted without allocating a public-input vector. Source/descriptor/request and
+reused library capabilities respect the currently supplied input/action bounds.
+Ordinary 1MiB/16MiB envelopes remain unchanged; installed binary/artifact envelopes
+use explicit separate bounds.
+
+Artifact marker and leaf reads admit the remaining aggregate byte budget before
+opening or parsing. A leaf snapshot is bounded by its declared length as well as
+the caller limits; zero-byte leaves require an empty opened regular file. Public
+imports continue to ignore optional PK metadata and files. New SRS degrees use the
+smaller of the remaining parameter aggregate budget and the per-SRS cap before
+reading, hashing or initializing parameters. Equal-degree snapshots are reused
+without another read or aggregate charge.
+
+The ledger-owned offline reader uses only the existing SDK04c9c5d pinned table
+for degrees0..19, an explicit directory/exact degree, nonblocking open and opened
+regular-file validation, immutable bounded bytes, pinned SHA256, degree header,
+unchecked decoder and exact EOF. The caller bound also retains the existing
+128MiB hard inner cap. Equal-degree actions share immutable snapshots. There is
+no ambient cache, network provider, larger-degree substitution or backend fallback.
+`IrSource::k` may scan9..25 internally and keygen/keygen_vk repeat k. Degree
+limits refuse discovered degrees; byte/count limits establish no physical
+memory/time/thread fit. Native process budgets and every repetition require
+separate current admission.
+
+Keyset exports use ordinal action leaves and a separate selected PK.
+`public-keyset.json` is the last completion marker; all leaves use create-new
+publication and preserve collisions/symlinks. Proven exports preserve original
+inspection leaves, `final-intent.bin`, `verification.json` and
+`final-readback.json`, with `proven-call.json` last. The private
+`ProvenInstalledCall` owns complete final state/balances/duties/ordered effects/
+events/gas readback and final-intent-derived output IDs, and records actual Real
+verification. Cold verification compares context, every inspection leaf and the
+complete final readback before reporting success. The original `readback.json`
+remains an explicitly provisional preparation record. Partial publication never
+reports native success. The verifier is read-only and prints a scoped result.
+
+Ordinary tests cover exact two-action MeteredRemittance/ToggleCounter literals,
+full A1/A2/B1/B2/freeze/reset state/effects, request-free seed admission, typed and
+whole-frame refusal, cold metadata/unused-IR checks, optional PK omission,
+caller bounds, FIFO inputs, privacy and publication. They mint no fake derived
+capability or successful proof. The [focused Quint model](../experiments/moriarty-language/formal/quint/language/README.md)
+checks necessary ownership/map/import-purpose conditions under explicit external
+derivation and crypto premises. It proves no native constraint/crypto claim.
+
+Actual exported/reopened positives, repeated same-key calls, complete native
+readback, PK-free cold verification, deterministic PK/VK exports, hostile witness
+and weak-key/unused-action/PK/SRS/proof/PI mutation controls remain unrun. Pinned
+setup trust, correct source compiler/key derivation and embedded-verifier
+compatibility remain named premises. Source completion is not native feasibility,
+financial acceptance, authenticated history or release qualification.

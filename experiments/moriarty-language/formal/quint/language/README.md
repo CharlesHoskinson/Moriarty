@@ -351,3 +351,72 @@ quint typecheck ledger_call_relation_test.qnt
 quint test ledger_call_relation_test.qnt --main ledger_call_relation_test --backend typescript
 quint run ledger_call_relation.qnt --main ledger_call_relation --backend typescript --invariant relation_projection_invariants --witnesses positiveClaimWitness zeroClaimWitness presentDutyWitness absentDutyWitness longEventWitness refusedWitness --seed 1012 --max-samples 100 --max-steps 10 --verbosity 1
 ```
+
+## Installed local call consumer QA
+
+`installed_call_consumer.qnt` and `_test.qnt` model one local caller with
+separate keygen, cold proving and cold public verification purposes. Metadata
+preflight precedes external degree discovery and source derivation; exact opaque
+key comparison precedes complete installed-map admission. Every source action,
+including unused freeze/reset, must have the derived current VK and exact IR.
+Keygen admits the complete keyless seed before native work without evaluating a
+selected request. Cold command preflight parses/reads inputs and checks source
+metadata; full actual predecessor/frame/map admission occurs after rederivation
+and opaque export comparison. Malformed cold state can therefore incur native
+discovery/derivation cost before full frame refusal.
+The snapshot replaces only operations and recomputes acyclic commitments.
+Cold public import ignores optional PK leaves. Preparation retains the actual
+selected stored operation; cold proving expands its raw SDK owner once.
+Full final intent/state/effects/events/gas/PI comparison precedes consumption of
+an external ProofMarker/Real verification result. Verification reports its
+local result without publishing files. Keygen/proving publication writes the
+completion marker last; collisions and partial writes cannot complete.
+
+The 51 deterministic `Test$` cases include six independent complete literal
+statements: Metered A1/A2 have eight ordered effects and balances84/19/3 and
+92/11/3; Toggle B1/B2 have four ordered effects and count32/256; freeze/reset
+exercise the other stored operations. Tests also distinguish selected-only and
+candidate-hash-only checks from complete source-derived policy. These literals
+are separate from the model's expected-statement functions. Asset and typed
+value identities are compared fully; no literal is a native cryptographic result.
+
+Observed QA: Quint0.32.0 typecheck and all51 tests passed. The TypeScript run
+sampled100 traces at10 steps with requested seed1012 and found no `safety`
+counterexample. Completion was reached in47 traces, refusal in53, keygen in17,
+cold proving in11 and PK-free cold verification in19. Lazy-init, unused-action,
+purpose and weak-key refusals were reached in6,6,14 and6 traces. Three negated
+reachability controls deliberately violated their predicates and yielded concrete
+accepted/refused/PK-free verifier ITF traces. Initial syntax/test-framing failures
+and an initial run with zero refusal coverage remain with all logs and traces in
+`.moriarty-dev/runtime/installed-call-20261012/quint-qa/`.
+
+| Model transition | Concrete source contract |
+|---|---|
+| Request-free preflight | `local_deployment::admit_local_seed`, `layout::admit_frame` with Keyless, `relation::compile_bindings` |
+| External discovery/derivation | `local_deployment::derive_all`, `proving::derive_public_artifact`/`derive_artifact_material`, `parameters::PinnedCallParameters` |
+| Opaque import equality/purpose | `call_artifacts::snapshot_public_keyset`/`snapshot_proving_keyset`, `local_deployment::preflight`/`compare_public`/`reopen_local_proving_deployment` |
+| Complete map and frame | `build_local_installed_snapshot`, `layout::admit_frame` with Installed and `PublicLocalDeployment::admit_operation` |
+| Stored operation/raw owner | `prepare_installed_native_call`, `PreparedInstalledCall`, `prove_installed_call` |
+| Complete final comparison/external result | `verify_installed_call`, `verify_proven_call`, `validate_final_intent`, ProofMarker Real verifier |
+| Marker-last publication | `export_local_deployment`/`export_proven_call` and CLI `call_io` publication |
+
+This is bounded consumer-boundary QA, not exhaustive verification or a refinement
+proof. Source expression evaluation, concrete serialization/ordinal ordering,
+file-system races, measured byte/resource work and complete native frame decoding
+are separate Rust checks. Frame/key/hash/PI/gas/output-ID symbols abbreviate
+external expectations; structural commitment tuples do not implement hashes.
+Compiler/SDK/VM/codec soundness, pinned SRS/setup, deterministic key derivation,
+native degree/fit, actual crypto and embedded verifier compatibility remain
+external premises. Caller `max_degree` can refuse a discovered result; it cannot
+contain SDK `optimal_k` scans9..=25 or repeated keygen/keygen_vk `k()` work.
+Authenticated state, signatures, history, funding, nonce consumption, fees,
+application, settlement and recursion remain open. No native/SRS/keygen/proof/
+cryptoverification/MockProver/ignored test/network action was run by this QA.
+Update the model and corresponding source checks when this contract changes;
+later source changes need refreshed alignment and current independent audits.
+
+```sh
+quint typecheck installed_call_consumer_test.qnt
+quint test installed_call_consumer_test.qnt --main installed_call_consumer_test --backend typescript --match 'Test$' --seed 1012
+quint run installed_call_consumer.qnt --main installed_call_consumer --backend typescript --invariant safety --witnesses preflightWitness discoveryWitness regenerationWitness comparisonWitness installedWitness preparedWitness finalWitness externalResultWitness leavesWitness acceptedWitness refusedWitness keygenWitness coldProveWitness pkFreeVerifierWitness lazyInitRefusalWitness unusedActionRefusalWitness purposeRefusalWitness weakKeyRefusalWitness --seed 1012 --max-samples 100 --max-steps 10 --verbosity 1
+```

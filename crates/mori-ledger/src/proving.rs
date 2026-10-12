@@ -81,7 +81,7 @@ fn encode_key<T: Serializable + Tagged>(value: &T, cap: usize) -> Result<Vec<u8>
     Ok(writer.bytes)
 }
 // Declared source identity, not a certificate for the complete Rust build or SRS.
-fn source_closure() -> String {
+pub(crate) fn source_closure() -> String {
     codec::hash(
         concat!(
             include_str!("proving.rs"),
@@ -92,6 +92,16 @@ fn source_closure() -> String {
             include_str!("custody.rs"),
             include_str!("codec.rs"),
             include_str!("lib.rs"),
+            include_str!("parameters.rs"),
+            include_str!("local_deployment.rs"),
+            include_str!("call_artifacts.rs"),
+            include_str!("../../mori/Cargo.toml"),
+            include_str!("../../mori/src/cli.rs"),
+            include_str!("../../mori/src/commands/mod.rs"),
+            include_str!("../../mori/src/commands/call_io.rs"),
+            include_str!("../../mori/src/commands/keygen_call.rs"),
+            include_str!("../../mori/src/commands/prove_call.rs"),
+            include_str!("../../mori/src/commands/verify_call.rs"),
             include_str!("../Cargo.toml"),
             include_str!("../../../Cargo.toml"),
             include_str!("../../../Cargo.lock"),
@@ -164,7 +174,7 @@ impl PublicDerivedCallKey {
             Some(Sp::new(IrBuf(self.snapshot.ir.clone()))),
         ))
     }
-    fn admit(&self, artifact: &relation::Artifact) -> Result<()> {
+    pub(crate) fn admit(&self, artifact: &relation::Artifact) -> Result<()> {
         if self.snapshot.ir != artifact.ir_bytes()?
             || self.snapshot.manifest != artifact.manifest_bytes()?
             || self.snapshot.closure != source_closure()
@@ -173,7 +183,7 @@ impl PublicDerivedCallKey {
         }
         Ok(())
     }
-    fn admit_operation(&self, operation: &ContractOperation) -> Result<()> {
+    pub(crate) fn admit_operation(&self, operation: &ContractOperation) -> Result<()> {
         if operation.v2.is_some()
             || operation.v3.as_ref().map(codec::encode).transpose()?
                 != Some(self.snapshot.vk.clone())
@@ -206,6 +216,9 @@ pub struct DerivedCallMaterial {
     public: PublicDerivedCallKey,
 }
 impl DerivedCallMaterial {
+    pub(crate) fn prover_key_bytes(&self) -> &[u8] {
+        &self.keys.material.prover_key
+    }
     pub fn public_key(&self) -> PublicDerivedCallKey {
         self.public.clone()
     }
@@ -238,6 +251,15 @@ pub async fn generate_call_keys(
     if degree > limits.max_degree || degree != parameter_degree {
         return Err(refusal("exact-degree-unavailable"));
     }
+    derive_artifact_material(artifact, action, params, degree, limits).await
+}
+pub(crate) async fn derive_artifact_material(
+    artifact: relation::Artifact,
+    action: &str,
+    params: ParamsProver,
+    degree: u8,
+    limits: KeyGenerationLimits,
+) -> Result<DerivedCallMaterial> {
     let params = OfflineCallParams { degree, params };
     let (pk, vk) = artifact
         .ir
@@ -246,6 +268,8 @@ pub async fn generate_call_keys(
         .map_err(|_| refusal("sdk-keygen"))?;
     let pk = encode_key(&pk, limits.max_prover_key_bytes)?;
     let vk = encode_key(&vk, limits.max_verifier_key_bytes)?;
+    // The SDK lazy wrapper enforces its fixed 50,000 inner VK byte cap.
+    let _: midnight_transient_crypto::proofs::VerifierKey = codec::decode_artifact(&vk)?;
     let ir = artifact.ir_bytes()?;
     let public = PublicDerivedCallKey {
         snapshot: Arc::new(PublicKeySnapshot {
@@ -268,6 +292,27 @@ pub async fn generate_call_keys(
         keys,
         params,
         public,
+    })
+}
+pub(crate) async fn derive_public_artifact(
+    artifact: &relation::Artifact,
+    params: &crate::parameters::PinnedCallParameters,
+    cap: usize,
+) -> Result<PublicDerivedCallKey> {
+    let vk = artifact
+        .ir
+        .keygen_vk(params)
+        .await
+        .map_err(|_| refusal("sdk-keygen-vk"))?;
+    let vk = encode_key(&vk, cap)?;
+    let _: midnight_transient_crypto::proofs::VerifierKey = codec::decode_artifact(&vk)?;
+    Ok(PublicDerivedCallKey {
+        snapshot: Arc::new(PublicKeySnapshot {
+            ir: artifact.ir_bytes()?,
+            manifest: artifact.manifest_bytes()?,
+            vk,
+            closure: source_closure(),
+        }),
     })
 }
 #[derive(Clone)]
@@ -424,7 +469,10 @@ fn validate_final_intent(
         .relation
         .as_ref()
         .ok_or(refusal("missing-checked-projection"))?;
-    if codec::native_hex(&actual.context.state)? != readback.charged_successor_hex
+    if codec::hex(&crate::call_artifacts::encode_bounded(
+        &actual.context.state,
+        native.output_bytes,
+    )?) != readback.charged_successor_hex
         || codec::native_hex(&actual.gas_cost)? != projection.processed_measured_gas_hex
         || codec::native_hex(&transcript.gas)? != projection.processed_declared_gas_hex
         || !transcript.gas.within_bounds(&native.gas_cap)
@@ -460,7 +508,10 @@ fn validate_final_intent(
         public_inputs: pi_hex,
         final_intent_hash_hex: codec::native_hex(&intent_hash)?,
         prospective_outputs_hex: outputs,
-        charged_successor_hex: codec::native_hex(&actual.context.state)?,
+        charged_successor_hex: codec::hex(&crate::call_artifacts::encode_bounded(
+            &actual.context.state,
+            native.output_bytes,
+        )?),
         measured_gas_hex: codec::native_hex(&actual.gas_cost)?,
     })
 }
@@ -767,5 +818,81 @@ mod tests {
         let mut changed = inspected;
         changed.actions = vec![ContractAction::Call(Sp::new(second_expansion))].into();
         assert!(validate_final_envelope(&prepared, &changed).is_err());
+    }
+}
+
+/// Actual installed consumer; operation comes from the admitted owner, never a
+/// proof/key bundle argument. SDK Intent::prove receives its raw intent once.
+pub async fn prove_installed_call(
+    prepared: crate::prepare::PreparedInstalledCall,
+    derived: crate::local_deployment::DerivedLocalDeployment,
+    rng: StdRng,
+) -> Result<ProvenInstalledCall> {
+    if prepared.public.identity() != derived.public.identity()
+        || prepared.prepared.artifact().manifest.action != derived.action
+    {
+        return Err(refusal("installed-proving-policy"));
+    }
+    let context = prepared.proof_context();
+    let inspection = prepared.bundle().leaves.clone();
+    let readback = prepared.bundle().readback.clone();
+    let mut result = prove_prepared_call(
+        prepared.prepared,
+        derived.selected,
+        &prepared.operation,
+        rng,
+    )
+    .await?;
+    result.verification.scope = "local-unsigned-source-derived-installed-call-unqualified";
+    let final_readback = crate::prepare::final_installed_readback(&readback, result.verification());
+    Ok(ProvenInstalledCall {
+        native: result,
+        context,
+        inspection,
+        final_readback,
+    })
+}
+pub fn verify_installed_call(
+    prepared: &crate::prepare::PreparedInstalledCall,
+    candidate: &ProvenIntent,
+) -> Result<CallVerification> {
+    let mut result = verify_proven_call(
+        &prepared.prepared,
+        prepared
+            .public
+            .key(&prepared.prepared.artifact().manifest.action)?,
+        &prepared.operation,
+        candidate,
+    )?;
+    result.scope = "local-unsigned-source-derived-installed-call-unqualified";
+    Ok(result)
+}
+
+/// A genuine native installed result owns its final semantic readback and the
+/// separately preserved inspection archive. There is no imported constructor.
+/// ```compile_fail
+/// let _: mori_ledger::proving::ProvenInstalledCall = serde_json::from_str("{}").unwrap();
+/// ```
+pub struct ProvenInstalledCall {
+    native: ProvenNativeCall,
+    context: crate::call_artifacts::ProofContext,
+    inspection: std::collections::BTreeMap<String, Vec<u8>>,
+    final_readback: crate::prepare::Readback,
+}
+impl ProvenInstalledCall {
+    pub fn intent(&self) -> &ProvenIntent {
+        self.native.intent()
+    }
+    pub fn verification(&self) -> &CallVerification {
+        self.native.verification()
+    }
+    pub fn readback(&self) -> &crate::prepare::Readback {
+        &self.final_readback
+    }
+    pub(crate) fn context(&self) -> &crate::call_artifacts::ProofContext {
+        &self.context
+    }
+    pub(crate) fn inspection(&self) -> &std::collections::BTreeMap<String, Vec<u8>> {
+        &self.inspection
     }
 }
