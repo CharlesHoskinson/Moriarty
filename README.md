@@ -11,6 +11,11 @@ Moriarty is experimental. Developers can author and simulate supported source pr
 - [Requirements: Moriarty Programming Language Requirements (MPLRs), proposed ZKIRv4 and recursion](https://charleshoskinson.github.io/Moriarty/docs/requirements.html): the language requirements, native backend obligations, recursion refinements and consolidated delivery direction.
 - [Current formal syntax and semantics](https://charleshoskinson.github.io/Moriarty/docs/language.html): versioned source profiles, grammar, static judgments and operational rules.
 
+The [local ledger call examples](examples/core/ledger-call/README.md) exercise
+`mori prepare-call`: source-derived real VM execution, guaranteed transcripts,
+and unsigned native public offers. Their balances are prospective; native
+proof, deployment, funding, application, and settlement remain open.
+
 ## Authoring beta
 
 The [beta documentation](https://charleshoskinson.github.io/Moriarty/documentation.html) is organized by
