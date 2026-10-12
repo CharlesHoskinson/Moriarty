@@ -299,6 +299,7 @@ pub(crate) async fn derive_all(
         let public = proving::derive_public_artifact(
             &artifact,
             snapshot,
+            degree,
             NativeWorkLimits::cap(limits.max_verifier_key_bytes.min(limits.max_leaf_bytes))?,
         )
         .await?;

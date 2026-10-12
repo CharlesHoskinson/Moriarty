@@ -5,7 +5,7 @@
 //! exact supplied operation do not authenticate installation or settlement.
 //! No imported manifest/hash can construct the private derived key capability.
 use crate::{
-    Error, Result, codec,
+    Error, KeyExportDiagnostic, KeyExportFailureReason, KeyExportKind, Result, codec,
     prepare::{PreparedNativeCall, RawIntent},
     profile::Deployment,
     relation,
@@ -51,15 +51,40 @@ pub struct KeyGenerationLimits {
 struct BoundedWriter {
     bytes: Vec<u8>,
     cap: usize,
+    first_failure: Option<FailedKeyWrite>,
+}
+struct FailedKeyWrite {
+    reason: KeyExportFailureReason,
+    accepted_bytes: usize,
+    failed_write_bytes: usize,
+    attempted_minimum: Option<usize>,
+}
+fn check_key_write(
+    accepted: usize,
+    chunk: usize,
+    cap: usize,
+) -> std::result::Result<usize, KeyExportFailureReason> {
+    let total = accepted
+        .checked_add(chunk)
+        .ok_or(KeyExportFailureReason::ByteCountOverflow)?;
+    if total > cap {
+        Err(KeyExportFailureReason::ByteCapExceeded)
+    } else {
+        Ok(total)
+    }
 }
 impl Write for BoundedWriter {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        if self
-            .bytes
-            .len()
-            .checked_add(bytes.len())
-            .is_none_or(|n| n > self.cap)
-        {
+        if self.first_failure.is_some() {
+            return Err(io::Error::other("generated key export already refused"));
+        }
+        if let Err(reason) = check_key_write(self.bytes.len(), bytes.len(), self.cap) {
+            self.first_failure.get_or_insert_with(|| FailedKeyWrite {
+                reason,
+                accepted_bytes: self.bytes.len(),
+                failed_write_bytes: bytes.len(),
+                attempted_minimum: self.bytes.len().checked_add(bytes.len()),
+            });
             return Err(io::Error::other(
                 "generated key exceeds caller resource limit",
             ));
@@ -71,13 +96,54 @@ impl Write for BoundedWriter {
         Ok(())
     }
 }
-fn encode_key<T: Serializable + Tagged>(value: &T, cap: usize) -> Result<Vec<u8>> {
+fn encode_key<T: Serializable + Tagged>(
+    value: &T,
+    action: &str,
+    key_kind: KeyExportKind,
+    degree: u8,
+    cap: usize,
+) -> Result<Vec<u8>> {
     let mut writer = BoundedWriter {
         bytes: Vec::new(),
         cap,
+        first_failure: None,
     };
-    midnight_serialize::tagged_serialize(value, &mut writer)
-        .map_err(|_| refusal("generated-key-size-or-encode"))?;
+    // One existing tagged serialization pass. Writer evidence survives a
+    // wrapped/replaced error or a serializer which ignores a refused write.
+    let serialized = midnight_serialize::tagged_serialize(value, &mut writer);
+    let failure = writer.first_failure.map(|failure| {
+        (
+            failure.reason,
+            failure.accepted_bytes,
+            Some(failure.failed_write_bytes),
+            failure.attempted_minimum,
+        )
+    });
+    if let Some((reason, accepted_bytes, failed_write_bytes, attempted_minimum)) =
+        failure.or_else(|| {
+            serialized.err().map(|_| {
+                (
+                    KeyExportFailureReason::Serialization,
+                    writer.bytes.len(),
+                    None,
+                    None,
+                )
+            })
+        })
+    {
+        return Err(
+            refusal("generated-key-size-or-encode").with_key_export(KeyExportDiagnostic {
+                action: action.into(),
+                key_kind,
+                discovered_degree: degree,
+                byte_cap: cap,
+                accepted_bytes,
+                failed_write_bytes,
+                attempted_minimum,
+                reason,
+            }),
+        );
+    }
     Ok(writer.bytes)
 }
 // Declared source identity, not a certificate for the complete Rust build or SRS.
@@ -285,8 +351,20 @@ pub(crate) async fn derive_artifact_material(
         .keygen(&params)
         .await
         .map_err(|_| refusal("sdk-keygen"))?;
-    let pk = encode_key(&pk, limits.max_prover_key_bytes)?;
-    let vk = encode_key(&vk, limits.max_verifier_key_bytes)?;
+    let pk = encode_key(
+        &pk,
+        action,
+        KeyExportKind::Prover,
+        degree,
+        limits.max_prover_key_bytes,
+    )?;
+    let vk = encode_key(
+        &vk,
+        action,
+        KeyExportKind::Verifier,
+        degree,
+        limits.max_verifier_key_bytes,
+    )?;
     // The SDK lazy wrapper enforces its fixed 50,000 inner VK byte cap.
     let _: midnight_transient_crypto::proofs::VerifierKey = codec::decode_artifact(&vk)?;
     let ir = artifact.ir_bytes()?;
@@ -316,6 +394,7 @@ pub(crate) async fn derive_artifact_material(
 pub(crate) async fn derive_public_artifact(
     artifact: &relation::Artifact,
     params: &crate::parameters::PinnedCallParameters,
+    degree: u8,
     cap: usize,
 ) -> Result<PublicDerivedCallKey> {
     let vk = artifact
@@ -323,7 +402,13 @@ pub(crate) async fn derive_public_artifact(
         .keygen_vk(params)
         .await
         .map_err(|_| refusal("sdk-keygen-vk"))?;
-    let vk = encode_key(&vk, cap)?;
+    let vk = encode_key(
+        &vk,
+        &artifact.manifest.action,
+        KeyExportKind::Verifier,
+        degree,
+        cap,
+    )?;
     let _: midnight_transient_crypto::proofs::VerifierKey = codec::decode_artifact(&vk)?;
     Ok(PublicDerivedCallKey {
         snapshot: Arc::new(PublicKeySnapshot {
@@ -718,16 +803,240 @@ mod tests {
         }
     }
     #[test]
+    fn key_export_ignored_writer_failure_cannot_accept_truncated_encoding() {
+        struct IgnoresFailure;
+        impl Tagged for IgnoresFailure {
+            fn tag() -> std::borrow::Cow<'static, str> {
+                "diagnostic-fixture".into()
+            }
+            fn tag_unique_factor() -> String {
+                "diagnostic-fixture".into()
+            }
+        }
+        impl Serializable for IgnoresFailure {
+            fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+                let _ = writer.write_all(&[0; 4]);
+                Ok(())
+            }
+            fn serialized_size(&self) -> usize {
+                panic!("key export must not add a size pass")
+            }
+        }
+        let header_len = b"midnight:diagnostic-fixture:".len();
+        assert!(
+            encode_key(
+                &IgnoresFailure,
+                "settle",
+                KeyExportKind::Prover,
+                0,
+                header_len
+            )
+            .is_err()
+        );
+    }
+    #[test]
     fn bounded_generated_serialization_refuses_before_appending_over_limit() {
         let mut writer = BoundedWriter {
             bytes: vec![],
             cap: 3,
+            first_failure: None,
         };
         writer.write_all(&[1, 2]).unwrap();
         assert!(writer.write_all(&[3, 4]).is_err());
         assert_eq!(writer.bytes, vec![1, 2]);
-        writer.write_all(&[3]).unwrap();
+        assert!(writer.write_all(&[3]).is_err());
+        assert_eq!(writer.bytes, vec![1, 2]);
+    }
+    const FIXTURE_HEADER: &[u8] = b"midnight:diagnostic-fixture:";
+    #[derive(Clone, Copy)]
+    enum EncodingBehavior {
+        Success,
+        FailBefore,
+        FailAfterPrefix,
+        Misleading,
+        Wrapped,
+        Ignored,
+    }
+    struct EncodingFixture {
+        behavior: EncodingBehavior,
+        calls: std::cell::Cell<usize>,
+    }
+    impl Tagged for EncodingFixture {
+        fn tag() -> std::borrow::Cow<'static, str> {
+            "diagnostic-fixture".into()
+        }
+        fn tag_unique_factor() -> String {
+            "diagnostic-fixture".into()
+        }
+    }
+    impl Serializable for EncodingFixture {
+        fn serialize(&self, writer: &mut impl Write) -> io::Result<()> {
+            self.calls.set(self.calls.get() + 1);
+            match self.behavior {
+                EncodingBehavior::FailBefore => Err(io::Error::other("sensitive fixture message")),
+                EncodingBehavior::Misleading => Err(io::Error::other(
+                    "generated key exceeds caller resource limit",
+                )),
+                EncodingBehavior::FailAfterPrefix => {
+                    writer.write_all(&[1, 2])?;
+                    Err(io::Error::other("sensitive fixture message"))
+                }
+                EncodingBehavior::Wrapped | EncodingBehavior::Ignored => {
+                    writer.write_all(&[1, 2])?;
+                    let rejected = writer.write_all(&[3, 4]);
+                    assert!(rejected.is_err());
+                    assert!(writer.write_all(&[5]).is_err());
+                    if matches!(self.behavior, EncodingBehavior::Wrapped) {
+                        Err(io::Error::other("replacement serializer error"))
+                    } else {
+                        Ok(())
+                    }
+                }
+                EncodingBehavior::Success => writer.write_all(&[1, 2]),
+            }
+        }
+        fn serialized_size(&self) -> usize {
+            panic!("key export must not add a size pass")
+        }
+    }
+    fn encoding_fixture(behavior: EncodingBehavior) -> EncodingFixture {
+        EncodingFixture {
+            behavior,
+            calls: std::cell::Cell::new(0),
+        }
+    }
+    #[test]
+    fn key_export_writer_boundaries_record_first_refusal_without_append() {
+        let mut writer = BoundedWriter {
+            bytes: vec![],
+            cap: 3,
+            first_failure: None,
+        };
+        assert_eq!(writer.write(&[]).unwrap(), 0);
+        writer.write_all(&[1, 2, 3]).unwrap();
+        assert!(writer.write_all(&[4]).is_err());
+        let failure = writer.first_failure.as_ref().unwrap();
+        assert_eq!(failure.reason, KeyExportFailureReason::ByteCapExceeded);
+        assert_eq!(
+            (
+                failure.accepted_bytes,
+                failure.failed_write_bytes,
+                failure.attempted_minimum
+            ),
+            (3, 1, Some(4))
+        );
+        assert!(writer.write(&[]).is_err());
         assert_eq!(writer.bytes, vec![1, 2, 3]);
+        let mut zero = BoundedWriter {
+            bytes: vec![],
+            cap: 0,
+            first_failure: None,
+        };
+        assert_eq!(zero.write(&[]).unwrap(), 0);
+        assert!(zero.write_all(&[1]).is_err());
+        assert_eq!(zero.bytes, Vec::<u8>::new());
+        assert_eq!(zero.first_failure.unwrap().attempted_minimum, Some(1));
+    }
+    #[test]
+    fn key_export_checked_count_overflow_has_no_wrapped_minimum() {
+        assert_eq!(
+            check_key_write(usize::MAX - 1, 2, usize::MAX),
+            Err(KeyExportFailureReason::ByteCountOverflow)
+        );
+        assert_eq!((usize::MAX - 1).checked_add(2), None);
+        assert_eq!(
+            check_key_write(2, 2, 3),
+            Err(KeyExportFailureReason::ByteCapExceeded)
+        );
+        assert_eq!(check_key_write(2, 1, 3), Ok(3));
+    }
+    #[test]
+    fn key_export_serializer_failures_have_exact_prefix_count_and_no_raw_message() {
+        for (behavior, suffix) in [
+            (EncodingBehavior::FailBefore, 0),
+            (EncodingBehavior::FailAfterPrefix, 2),
+            (EncodingBehavior::Misleading, 0),
+        ] {
+            let fixture = encoding_fixture(behavior);
+            let error = encode_key(
+                &fixture,
+                "settle",
+                KeyExportKind::Verifier,
+                0,
+                FIXTURE_HEADER.len() + 4,
+            )
+            .unwrap_err();
+            let diagnostic = error.key_export().unwrap();
+            assert_eq!(diagnostic.reason, KeyExportFailureReason::Serialization);
+            assert_eq!(diagnostic.accepted_bytes, FIXTURE_HEADER.len() + suffix);
+            assert_eq!(diagnostic.failed_write_bytes, None);
+            assert_eq!(diagnostic.attempted_minimum, None);
+            assert_eq!(fixture.calls.get(), 1);
+            assert_eq!(
+                error.to_string(),
+                "mori::ledger::native-proving: generated-key-size-or-encode"
+            );
+            assert!(!format!("{error:?}").contains("sensitive fixture message"));
+        }
+    }
+    #[test]
+    fn key_export_writer_failure_takes_precedence_over_wrapped_or_ignored_serializer() {
+        for behavior in [EncodingBehavior::Wrapped, EncodingBehavior::Ignored] {
+            for kind in [KeyExportKind::Prover, KeyExportKind::Verifier] {
+                let fixture = encoding_fixture(behavior);
+                let cap = FIXTURE_HEADER.len() + 3;
+                let error = encode_key(&fixture, "actual-action", kind, 19, cap).unwrap_err();
+                assert_eq!(
+                    error.key_export(),
+                    Some(&KeyExportDiagnostic {
+                        action: "actual-action".into(),
+                        key_kind: kind,
+                        discovered_degree: 19,
+                        byte_cap: cap,
+                        accepted_bytes: FIXTURE_HEADER.len() + 2,
+                        failed_write_bytes: Some(2),
+                        attempted_minimum: Some(FIXTURE_HEADER.len() + 4),
+                        reason: KeyExportFailureReason::ByteCapExceeded,
+                    })
+                );
+                assert_eq!(fixture.calls.get(), 1);
+            }
+        }
+    }
+    #[test]
+    fn key_export_success_is_exact_tagged_one_pass_and_header_cap_is_counted() {
+        let fixture = encoding_fixture(EncodingBehavior::Success);
+        let mut expected = FIXTURE_HEADER.to_vec();
+        expected.extend_from_slice(&[1, 2]);
+        assert_eq!(
+            encode_key(&fixture, "settle", KeyExportKind::Prover, 0, expected.len()).unwrap(),
+            expected
+        );
+        assert_eq!(fixture.calls.get(), 1);
+        let error = encode_key(
+            &fixture,
+            "settle",
+            KeyExportKind::Verifier,
+            0,
+            expected.len() - 1,
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.key_export().unwrap().reason,
+            KeyExportFailureReason::ByteCapExceeded
+        );
+        assert_eq!(
+            error.key_export().unwrap().attempted_minimum,
+            Some(expected.len())
+        );
+        let fixture = encoding_fixture(EncodingBehavior::Success);
+        let error = encode_key(&fixture, "settle", KeyExportKind::Verifier, 0, 0).unwrap_err();
+        assert_eq!(fixture.calls.get(), 0);
+        assert_eq!(error.key_export().unwrap().accepted_bytes, 0);
+        assert_eq!(
+            error.key_export().unwrap().reason,
+            KeyExportFailureReason::ByteCapExceeded
+        );
     }
     #[test]
     fn rng_forks_consume_distinct_cryptographic_streams() {
