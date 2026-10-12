@@ -27,7 +27,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &args.seed_deployment,
         limits.max_input_bytes,
     )?)
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let seed_bytes = call_io::binary(
         &args.seed_state,
         limits
@@ -49,7 +49,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &seed_bytes,
         &parameters,
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let derived =
         futures::executor::block_on(mori_ledger::local_deployment::derive_local_deployment(
             &seed,
@@ -57,13 +57,13 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
             &args.params_dir,
             &limits,
         ))
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     let snapshot =
         mori_ledger::local_deployment::build_local_installed_snapshot(seed, &derived, &limits)
-            .map_err(core_io::operation)?;
+            .map_err(core_io::ledger_operation)?;
     let output =
         mori_ledger::local_deployment::export_local_deployment(&snapshot, &derived, &limits)
-            .map_err(core_io::operation)?;
+            .map_err(core_io::ledger_operation)?;
     call_io::publish(&args.out, &output)?;
     Ok(call_io::status(shell, "Derived", &args.action, &args.out))
 }

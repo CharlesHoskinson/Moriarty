@@ -138,6 +138,17 @@ limits refuse discovered degrees; byte/count limits establish no physical
 memory/time/thread fit. Native process budgets and every repetition require
 separate current admission.
 
+Local deployment degree refusals retain `local-deployment:exact-degree-unavailable`
+and the legacy ledger error Display. API callers can inspect
+`Error::degree_refusal()` for the current map artifact's action, discovered degree,
+caller ceiling, pinned support and primary reason: caller ceiling exceeded,
+unsupported pinned degree, or cached degree mismatch (with the cached degree).
+Caller ceiling takes precedence when both ceiling and pin checks fail. Other
+errors have no invented discovered degree. Native command stderr renders this
+context even under `--quiet`, quoting and escaping the action identity once.
+These diagnostics use existing metadata without additional discovery or reads;
+they establish no native feasibility and authorize no retry or increased limit.
+
 Keyset exports use ordinal action leaves and a separate selected PK.
 `public-keyset.json` is the last completion marker; all leaves use create-new
 publication and preserve collisions/symlinks. Proven exports preserve original

@@ -110,9 +110,11 @@ fn real_keygen_command_refuses_installed_seed_and_unknown_action_before_native_w
     assert!(String::from_utf8_lossy(&result.stderr).contains("unproven-operation"));
     assert!(!root.join("out").exists());
     write_fixture(&root, &support::payment());
-    let result = keygen(&root, "unknown").output().unwrap();
+    let result = keygen(&root, "unknown").arg("--quiet").output().unwrap();
     assert!(!result.status.success());
     assert!(String::from_utf8_lossy(&result.stderr).contains("selected-action"));
+    assert!(result.stdout.is_empty());
+    assert!(!root.join("out/public-keyset.json").exists());
     assert!(!root.join("out").exists());
     std::fs::remove_dir_all(root).unwrap();
 }
