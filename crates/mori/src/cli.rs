@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, expand, format, init, inspect, intent, lsp, mcp, prove, replay, simulate, test,
-    verify, verify_intent,
+    check, compile, expand, format, init, inspect, intent, lsp, mcp, prepare_call, prove, replay,
+    simulate, test, verify, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -109,6 +109,8 @@ pub enum Command {
     Compile(compile::Args),
     /// Prove a public local action using pinned offline parameters
     Prove(prove::Args),
+    /// Prepare an unsigned, unproven local native call and public offer
+    PrepareCall(prepare_call::Args),
     /// Verify a native proof against the expected source, target and scenario
     Verify(verify::Args),
     /// Format source files in place
