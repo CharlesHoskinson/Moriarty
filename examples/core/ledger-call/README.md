@@ -74,9 +74,16 @@ the command never silently substitutes defaults or chooses coins.
 
 The checked path publishes the source-static IR/manifest, activity/skip layout,
 raw call/preimage, processed transcript/call/preimage and full processed native
-public vector. `processed-call.bin` is inspection-only; SDK `Transaction::prove`
+public vector. `processed-call.bin` is inspection-only; SDK `Intent::prove`
 needs the raw call because it inserts Noops itself. Both remain unproven and
 require final-intent reconstruction. Funding/global prefix balances, intention
 authority, authenticated predecessor/deployed key and history/PCD correspondence
 remain open. See [the native guide](../../../docs/NATIVE-CORE.md) for the exact
 ordinary-check scope and event branch admission.
+
+The installed local `keygen-call`, `prove-call` and cold `verify-call` consumers
+are implemented and compiled separately. They use a strict new installed profile,
+complete source-derived action maps, pinned offline parameters and explicit caller
+bounds. Their native positive/negative runs remain unperformed; these keyless
+examples keep the legacy preparation contract. See [the call proving guide](../../../docs/NATIVE-CALL-PROVING.md)
+for the exact API/command path, private provenance and outstanding native gates.

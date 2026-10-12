@@ -7,17 +7,7 @@ use mori_core::{AssetId, Balance, Effect, Liability, Scenario, Snapshot, UInt, V
 use mori_ledger::{codec, prepare::prepare_native_call};
 
 type RawIntent = Intent<(), ProofPreimageMarker, PedersenRandomness, InMemoryDB>;
-const METERED: &str = r#"language "moriarty/1"; agreement MeteredRemittance {
- asset QA = {network:"local", issuer:"next-native-qa", reference:"QA", scale:0};
- state running: UInt = 0; state enabled: Bool = true;
- action settle(amount: UInt) {
- requires enabled and amount >= 3 and amount <= 20;
- let before = running; next running = running + amount; requires running >= before;
- transfer(QA,"alice","bob",amount); transfer(QA,"alice","bob",amount);
- fee(QA,"alice","treasury",2); liability("charge",QA,"alice","bob",amount);
- discharge("charge",3); emit "total"(running); emit "enabled"(enabled);
- ensures running == before + amount;
- }}"#;
+const METERED: &str = include_str!("fixtures/MeteredRemittance.mori");
 fn metered(running: u128, amount: u128, charge: Option<u128>) -> support::Fixture {
     let p = mori_core::parse(METERED).unwrap();
     let asset = p.assets[0].identity.clone();
@@ -471,4 +461,249 @@ fn typed_zero_transfers_fees_and_duties_keep_zero_semantics() {
             .code,
         "mori::core::liability"
     );
+}
+
+#[test]
+fn contrasting_two_action_counter_and_unused_actions_have_complete_literal_effects() {
+    let source = include_str!("fixtures/ToggleCounter.mori");
+    let mut identities = Vec::new();
+    for (before, after) in [(31, 32), (255, 256)] {
+        let f = support::fixture(
+            source,
+            "step",
+            Scenario {
+                state: [("count".into(), Value::UInt(UInt(before)))]
+                    .into_iter()
+                    .collect(),
+                inputs: [("delta".into(), Value::UInt(UInt(1)))]
+                    .into_iter()
+                    .collect(),
+                ..Default::default()
+            },
+        );
+        let prepared = prepare_native_call(
+            &f.source,
+            &f.program,
+            &f.deployment,
+            &f.predecessor,
+            &f.parameters,
+            &f.request,
+        )
+        .unwrap();
+        assert_eq!(
+            prepared.bundle().readback.execution.effects,
+            vec![
+                Effect::State {
+                    name: "count".into(),
+                    before: Value::UInt(UInt(before)),
+                    after: Value::UInt(UInt(after))
+                },
+                Effect::State {
+                    name: "active".into(),
+                    before: Value::Bool(true),
+                    after: Value::Bool(false)
+                },
+                Effect::Emit {
+                    name: "count".into(),
+                    value: Value::UInt(UInt(after))
+                },
+                Effect::Emit {
+                    name: "active".into(),
+                    value: Value::Bool(false)
+                },
+            ]
+        );
+        assert_eq!(
+            prepared.bundle().readback.execution.post.state,
+            [
+                ("count".into(), Value::UInt(UInt(after))),
+                ("active".into(), Value::Bool(false))
+            ]
+            .into_iter()
+            .collect()
+        );
+        assert!(
+            prepared
+                .bundle()
+                .readback
+                .execution
+                .post
+                .liabilities
+                .is_empty()
+        );
+        assert!(prepared.bundle().readback.prospective_balances.is_empty());
+        let offer: midnight_ledger::structure::UnshieldedOffer<(), InMemoryDB> =
+            codec::decode_artifact(&prepared.bundle().leaves["offer.bin"]).unwrap();
+        assert!(offer.inputs.is_empty() && offer.outputs.is_empty());
+        identities.push((
+            prepared.artifact().ir_bytes().unwrap(),
+            prepared.artifact().manifest_bytes().unwrap(),
+        ));
+        let state: mori_ledger::layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+        let address = codec::from_hex(&f.deployment.address_hex).unwrap();
+        assert_eq!(state.index(address).unwrap().operations.size(), 2);
+    }
+    assert_eq!(identities[0], identities[1]);
+    let f = support::fixture(
+        source,
+        "reset",
+        Scenario {
+            state: [
+                ("count".into(), Value::UInt(UInt(256))),
+                ("active".into(), Value::Bool(false)),
+            ]
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        },
+    );
+    let b = prepare_native_call(
+        &f.source,
+        &f.program,
+        &f.deployment,
+        &f.predecessor,
+        &f.parameters,
+        &f.request,
+    )
+    .unwrap();
+    assert_eq!(
+        b.bundle().readback.execution.effects,
+        vec![
+            Effect::State {
+                name: "count".into(),
+                before: Value::UInt(UInt(256)),
+                after: Value::UInt(UInt(0))
+            },
+            Effect::State {
+                name: "active".into(),
+                before: Value::Bool(false),
+                after: Value::Bool(true)
+            },
+            Effect::Emit {
+                name: "count".into(),
+                value: Value::UInt(UInt(0))
+            },
+        ]
+    );
+    let mut f = metered(4, 7, Some(9));
+    f.request.action = "freeze".into();
+    f.request.inputs.clear();
+    let b = prepare_native_call(
+        &f.source,
+        &f.program,
+        &f.deployment,
+        &f.predecessor,
+        &f.parameters,
+        &f.request,
+    )
+    .unwrap();
+    assert_eq!(
+        b.bundle().readback.execution.effects,
+        vec![
+            Effect::State {
+                name: "enabled".into(),
+                before: Value::Bool(true),
+                after: Value::Bool(false)
+            },
+            Effect::Emit {
+                name: "enabled".into(),
+                value: Value::Bool(false)
+            },
+        ]
+    );
+    let asset = AssetId {
+        network: "local".into(),
+        issuer: "next-native-qa".into(),
+        reference: "QA".into(),
+        scale: 0,
+    };
+    let balances = vec![("alice", 100), ("bob", 5), ("treasury", 1)]
+        .into_iter()
+        .map(|(account, n)| Balance {
+            account: account.into(),
+            asset: asset.clone(),
+            amount: UInt(n),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        b.bundle().readback.execution.post,
+        Snapshot {
+            state: [
+                ("running".into(), Value::UInt(UInt(4))),
+                ("enabled".into(), Value::Bool(false))
+            ]
+            .into_iter()
+            .collect(),
+            balances: balances.clone(),
+            liabilities: vec![Liability {
+                name: "charge".into(),
+                asset,
+                debtor: "alice".into(),
+                creditor: "bob".into(),
+                amount: UInt(9)
+            }],
+        }
+    );
+    assert_eq!(b.bundle().readback.prospective_balances, balances);
+    assert_eq!(
+        b.bundle().readback.preserved_frame.commitments["complete_ledger"],
+        f.deployment.predecessor_hash
+    );
+}
+#[test]
+fn literal_two_action_seed_rejects_bad_requests_without_tentative_native_results() {
+    for (source, action, state, inputs) in [
+        (
+            METERED,
+            "settle",
+            vec![],
+            vec![("amount", Value::UInt(UInt(2)))],
+        ),
+        (
+            include_str!("fixtures/ToggleCounter.mori"),
+            "step",
+            vec![("active", Value::Bool(false))],
+            vec![("delta", Value::UInt(UInt(1)))],
+        ),
+        (
+            include_str!("fixtures/ToggleCounter.mori"),
+            "step",
+            vec![("count", Value::UInt(UInt(u128::MAX)))],
+            vec![("delta", Value::UInt(UInt(1)))],
+        ),
+    ] {
+        let f = support::fixture(
+            source,
+            action,
+            Scenario {
+                state: state.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+                inputs: inputs.into_iter().map(|(k, v)| (k.into(), v)).collect(),
+                ..Default::default()
+            },
+        );
+        assert!(
+            mori_ledger::local_deployment::admit_local_seed(
+                &f.source,
+                &f.program,
+                &f.deployment,
+                &f.predecessor,
+                &f.parameters
+            )
+            .is_ok()
+        );
+        assert_eq!(
+            prepare_native_call(
+                &f.source,
+                &f.program,
+                &f.deployment,
+                &f.predecessor,
+                &f.parameters,
+                &f.request
+            )
+            .err()
+            .unwrap()
+            .code,
+            "core-refusal"
+        );
+    }
 }

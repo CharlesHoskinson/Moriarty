@@ -185,7 +185,7 @@ pub(crate) struct PinnedCallParameters {
 
 - [ ] Copy the exact 20-entry SDK04c9c5d pinned table and immutable-reader recipe from existing backend parameters.rs into the narrow ledger module. Do not depend on mori-backend. Adopted implementation retains the existing 128MiB hard inner cap in addition to an explicit caller max_snapshot_bytes; no new default is invented.
 - [ ] Reader order: supported degree/table and limits -> explicit path -> O_NONBLOCK open -> opened FD is regular -> bounded immutable snapshot -> expected SHA -> u32 degree header -> ParamsProver::read -> EOF. Store decoded immutable params and identity; exact-degree ParamsProverProvider refuses any other degree. Equal-degree actions share an immutable Arc snapshot.
-- [ ] Add source-only safe tests for unsupported degree/missing path/nonregular FIFO or directory, declared-size/over-limit temp file rejection, and bound arithmetic. Refusals must occur before SHA/decode; never open/read old SRS files or initialize params in tests.
+- [ ] Add source-only safe tests for unsupported degree/missing path/nonregular FIFO or directory, declared-size/over-limit temp file rejection, and bound arithmetic. Caps/nonregular refusals occur before hashing; authored tiny dummy files may exercise pinned-digest refusal before the decoder. never open/read old SRS files or initialize params in tests.
 - [ ] Typecheck reader/provider. Record SHA/header/EOF/pinned-positive behavior as native unrun, rather than circumventing hashes with a test constructor.
 
 ## Task 4: Actual complete native derivation and cold comparison
@@ -316,3 +316,18 @@ mori verify-call SOURCE --deployment D2 --predecessor S2 --parameters L --reques
 ## Draft self-review
 
 Coverage: static/profile and keyless seed Tasks1–2; pinned parameters/work bounds Tasks2–3; all-action/cold source-key correspondence Task4; operations-only snapshot/actual stored operation/raw SDK/Real verification Task5; strict artifact/canonical/read-once/publication Task6; actual CLI Task7; independent literal complete effects/Quint/docs Task8; native unrun acceptance and full roadmap retained in handoff. Type names and ownership are explicit above; code snippets are interface/helper definitions, not a claim to have implemented them. This plan contains no executable native tests or fabricated positive material. Root adopted binding conditions also require public import to ignore any combined-manifest optional PK entries entirely, lazy outer-state VK wrappers to remain data before comparison, and the SDK 50,000-byte VK inner cap to remain enforced.
+
+
+## Implementation reconciliation
+
+Root-adopted work now uses public opaque `ProvenInstalledCall` for installed
+success, preserving actual final readback and inspection/context inside its
+private owner. `export_proven_call` accepts that genuine owner, not arbitrary
+caller context/inspection maps. Cold import checks every inspection leaf and
+both verification/final-readback bytes. `max_operations` covers conservative
+one-Group-per-Op source layout plus actual raw/processed counts; bounded imported
+field_size sums protect PI work without untrusted Noop vector allocation.
+Library source/static/descriptor/request/original-seed/current-import inputs and
+source action counts respect current explicit limits even when capabilities
+were created under larger limits. Parameters and formal model ownership remain
+with the root-assigned workers. Native acceptance is entirely unrun.

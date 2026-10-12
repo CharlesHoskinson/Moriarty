@@ -14,7 +14,11 @@ Moriarty is experimental. Developers can author and simulate supported source pr
 The [local ledger call examples](examples/core/ledger-call/README.md) exercise
 `mori prepare-call`: source-derived real VM execution, guaranteed transcripts,
 and unsigned native public offers. Their balances are prospective; native
-proof, deployment, funding, application, and settlement remain open.
+proof, deployment, funding, application, and settlement remain open. The
+[installed local call consumers](docs/NATIVE-CALL-PROVING.md#installed-local-command-consumers)
+now compile through `keygen-call`, `prove-call` and PK-free cold `verify-call`.
+Their native execution remains unrun; source/API delivery does not close those
+proof or settlement gates.
 
 ## Authoring beta
 
