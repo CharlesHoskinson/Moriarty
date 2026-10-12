@@ -86,6 +86,21 @@ pub fn claim_update(
     Ok(ops)
 }
 
+pub fn map_size(slot: u8, size: usize) -> Vec<NativeOp> {
+    vec![
+        Op::Dup { n: 0 },
+        Op::Idx {
+            cached: false,
+            push_path: false,
+            path: vec![key(slot.into())].into(),
+        },
+        Op::Size,
+        Op::Popeq {
+            cached: false,
+            result: (size as u64).into(),
+        },
+    ]
+}
 pub fn read_cell(slot: u8, k: AlignedValue, expected: AlignedValue) -> Vec<NativeOp> {
     vec![
         Op::Dup { n: 0 },
@@ -553,4 +568,109 @@ fn pinned_roles(pre: &AdmittedPredecessor) -> Vec<crate::profile::RoleBinding> {
             address_hex: crate::codec::native_hex(&r.address).expect("public native encoding"),
         })
         .collect()
+}
+
+/// Read-only signed observations use the same storage ABI and actual native
+/// openings as the compiler. They change gas, never semantic effects.
+pub(crate) fn lower_signed_ops(
+    p: &Program,
+    pre: &AdmittedPredecessor,
+    e: &Execution,
+    s: &crate::signed::SignedStaticBindings,
+) -> Result<LoweredOps> {
+    fn endpoint(
+        out: &mut LoweredOps,
+        p: &Program,
+        s: &crate::signed::SignedStaticBindings,
+        root: &StateValue<InMemoryDB>,
+    ) -> Result<()> {
+        let maps = layout::root_maps(root)?;
+        add(
+            out,
+            map_size(0, p.states.len()),
+            None,
+            "signed-state-cardinality",
+            None,
+        );
+        for state in &p.states {
+            let cell = maps[0]
+                .get(&layout::name_key("state", &state.name))
+                .ok_or(Error::new("signed-call", "missing-state"))?;
+            let StateValue::Cell(value) = &*cell else {
+                return Err(Error::new("signed-call", "state-type"));
+            };
+            add(
+                out,
+                read_cell(0, layout::name_key("state", &state.name), (**value).clone()),
+                None,
+                "signed-state-opening",
+                None,
+            );
+        }
+        add(
+            out,
+            map_size(1, maps[1].size()),
+            None,
+            "signed-duty-cardinality",
+            None,
+        );
+        for d in &s.duties {
+            let k = layout::name_key("duty", &d.name);
+            let value = maps[1].get(&k);
+            add(
+                out,
+                membership(1, k.clone(), value.is_some()),
+                None,
+                "signed-duty-membership",
+                None,
+            );
+            if let Some(value) = value {
+                let StateValue::Cell(value) = &*value else {
+                    return Err(Error::new("signed-call", "duty-type"));
+                };
+                add(
+                    out,
+                    read_cell(1, k, (**value).clone()),
+                    None,
+                    "signed-duty-opening",
+                    None,
+                );
+            }
+        }
+        Ok(())
+    }
+    let mut out = lower_ops(p, pre, e)?;
+    let mut initial = LoweredOps {
+        program: vec![],
+        bindings: vec![],
+        claim_bindings: vec![],
+        expected_root: out.expected_root.clone(),
+        expected_effects: Default::default(),
+        events: vec![],
+    };
+    endpoint(&mut initial, p, s, pre.contract.data.get_ref())?;
+    let inserted = initial.program.len();
+    for b in &mut out.bindings {
+        if b.op >= 3 {
+            b.op += inserted as u32;
+        }
+    }
+    for c in &mut out.claim_bindings {
+        for b in std::iter::once(&mut c.membership_result)
+            .chain(c.previous_result.iter_mut())
+            .chain(c.previous_lookup_key.iter_mut())
+            .chain(std::iter::once(&mut c.new_value))
+            .chain(c.key_values.iter_mut())
+        {
+            b.op += inserted as u32;
+        }
+    }
+    for b in &mut initial.bindings {
+        b.op += 3;
+    }
+    out.program.splice(3..3, initial.program);
+    out.bindings.splice(3..3, initial.bindings);
+    let root = out.expected_root.clone();
+    endpoint(&mut out, p, s, &root)?;
+    Ok(out)
 }

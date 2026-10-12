@@ -85,6 +85,20 @@ pub(crate) fn source_closure() -> String {
     codec::hash(
         concat!(
             include_str!("proving.rs"),
+            include_str!("relation/mod.rs"),
+            include_str!("relation/compiler.rs"),
+            include_str!("relation/arithmetic.rs"),
+            include_str!("relation/event.rs"),
+            include_str!("relation/process.rs"),
+            include_str!("signed/mod.rs"),
+            include_str!("signed/schnorr.rs"),
+            include_str!("signed/constraints.rs"),
+            include_str!("signed/context.rs"),
+            include_str!("signed/deployment.rs"),
+            include_str!("signed/preparation.rs"),
+            include_str!("../third-party/jubjub-fens/NOTICE.md"),
+            include_str!("../third-party/jubjub-fens/LICENSE-MIT"),
+            include_str!("../third-party/jubjub-fens/LICENSE-APACHE"),
             include_str!("prepare.rs"),
             include_str!("ops.rs"),
             include_str!("layout.rs"),
@@ -99,6 +113,11 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori/src/cli.rs"),
             include_str!("../../mori/src/commands/mod.rs"),
             include_str!("../../mori/src/commands/call_io.rs"),
+            include_str!("../../mori/src/commands/signed_call_io.rs"),
+            include_str!("../../mori/src/commands/keygen_signed_call.rs"),
+            include_str!("../../mori/src/commands/prepare_signed_call.rs"),
+            include_str!("../../mori/src/commands/prove_signed_call.rs"),
+            include_str!("../../mori/src/commands/verify_signed_call.rs"),
             include_str!("../../mori/src/commands/keygen_call.rs"),
             include_str!("../../mori/src/commands/prove_call.rs"),
             include_str!("../../mori/src/commands/verify_call.rs"),
@@ -828,6 +847,16 @@ pub async fn prove_installed_call(
     derived: crate::local_deployment::DerivedLocalDeployment,
     rng: StdRng,
 ) -> Result<ProvenInstalledCall> {
+    if prepared.context.signed.is_some() {
+        return Err(refusal("unsigned-profile"));
+    }
+    prove_installed_call_inner(prepared, derived, rng).await
+}
+pub(crate) async fn prove_installed_call_inner(
+    prepared: crate::prepare::PreparedInstalledCall,
+    derived: crate::local_deployment::DerivedLocalDeployment,
+    rng: StdRng,
+) -> Result<ProvenInstalledCall> {
     if prepared.public.identity() != derived.public.identity()
         || prepared.prepared.artifact().manifest.action != derived.action
     {
@@ -843,7 +872,11 @@ pub async fn prove_installed_call(
         rng,
     )
     .await?;
-    result.verification.scope = "local-unsigned-source-derived-installed-call-unqualified";
+    result.verification.scope = if context.signed.is_some() {
+        crate::signed::RESULT_SCOPE
+    } else {
+        "local-unsigned-source-derived-installed-call-unqualified"
+    };
     let final_readback = crate::prepare::final_installed_readback(&readback, result.verification());
     Ok(ProvenInstalledCall {
         native: result,
@@ -856,6 +889,15 @@ pub fn verify_installed_call(
     prepared: &crate::prepare::PreparedInstalledCall,
     candidate: &ProvenIntent,
 ) -> Result<CallVerification> {
+    if prepared.context.signed.is_some() {
+        return Err(refusal("unsigned-profile"));
+    }
+    verify_installed_call_inner(prepared, candidate)
+}
+pub(crate) fn verify_installed_call_inner(
+    prepared: &crate::prepare::PreparedInstalledCall,
+    candidate: &ProvenIntent,
+) -> Result<CallVerification> {
     let mut result = verify_proven_call(
         &prepared.prepared,
         prepared
@@ -864,7 +906,11 @@ pub fn verify_installed_call(
         &prepared.operation,
         candidate,
     )?;
-    result.scope = "local-unsigned-source-derived-installed-call-unqualified";
+    result.scope = if prepared.context.signed.is_some() {
+        crate::signed::RESULT_SCOPE
+    } else {
+        "local-unsigned-source-derived-installed-call-unqualified"
+    };
     Ok(result)
 }
 

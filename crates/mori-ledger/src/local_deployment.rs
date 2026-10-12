@@ -12,8 +12,8 @@ pub struct AdmittedSeed {
     pub(crate) descriptor: Deployment,
     pub(crate) source: String,
     pub(crate) program: Program,
-    predecessor_bytes: usize,
-    parameter_bytes: usize,
+    pub(crate) predecessor_bytes: usize,
+    pub(crate) parameter_bytes: usize,
 }
 impl AdmittedSeed {
     pub fn action_names(&self) -> Vec<&str> {
@@ -73,13 +73,14 @@ pub fn admit_local_seed(
 /// let _: mori_ledger::local_deployment::PublicLocalDeployment = serde_json::from_str("{}").unwrap();
 /// ```
 pub struct PublicLocalDeployment {
-    snapshot: Arc<PublicDeploymentSnapshot>,
+    pub(crate) snapshot: Arc<PublicDeploymentSnapshot>,
 }
-struct PublicDeploymentSnapshot {
-    bindings: StaticBindings,
-    keys: BTreeMap<String, PublicDerivedCallKey>,
-    manifest: PublicKeysetManifest,
-    source: String,
+pub(crate) struct PublicDeploymentSnapshot {
+    pub(crate) bindings: StaticBindings,
+    pub(crate) keys: BTreeMap<String, PublicDerivedCallKey>,
+    pub(crate) manifest: PublicKeysetManifest,
+    pub(crate) source: String,
+    pub(crate) signer_policy: Option<crate::signed::FixedSignerPolicy>,
 }
 impl PublicLocalDeployment {
     pub(crate) fn admit_operation(&self, name: &[u8], operation: &ContractOperation) -> Result<()> {
@@ -123,9 +124,9 @@ impl DerivedLocalDeployment {
     }
 }
 pub struct LocalInstalledSnapshot {
-    descriptor: InstalledDeployment,
-    predecessor: Vec<u8>,
-    parameters: Vec<u8>,
+    pub(crate) descriptor: InstalledDeployment,
+    pub(crate) predecessor: Vec<u8>,
+    pub(crate) parameters: Vec<u8>,
 }
 impl LocalInstalledSnapshot {
     pub fn descriptor(&self) -> &InstalledDeployment {
@@ -168,12 +169,24 @@ fn check_degree(action: &str, degree: u8, ceiling: u8, cached: Option<u8>) -> Re
     }
     Ok(())
 }
-fn compile_all(
+pub(crate) fn compile_all(
     source: &str,
     p: &Program,
     bindings: &StaticBindings,
     limits: &NativeWorkLimits,
 ) -> Result<Vec<relation::Artifact>> {
+    compile_all_policy(source, p, bindings, limits, None)
+}
+pub(crate) fn compile_all_policy(
+    source: &str,
+    p: &Program,
+    bindings: &StaticBindings,
+    limits: &NativeWorkLimits,
+    policy: Option<&crate::signed::FixedSignerPolicy>,
+) -> Result<Vec<relation::Artifact>> {
+    let signed = policy
+        .map(|policy| crate::signed::SignedStaticBindings::from_source(source, p, bindings, policy))
+        .transpose()?;
     limits.validate()?;
     if source.len() > NativeWorkLimits::cap(limits.max_input_bytes)? {
         return Err(refuse("source-input-work-limit"));
@@ -189,7 +202,11 @@ fn compile_all(
         if a.name.is_empty() || !seen.insert(&a.name) {
             return Err(refuse("action-set"));
         }
-        let artifact = relation::compile_bindings(source, p, bindings, &a.name)?;
+        let artifact = if let Some(signed) = &signed {
+            crate::signed::compile_signed(signed, &a.name)?
+        } else {
+            relation::compile_bindings(source, p, bindings, &a.name)?
+        };
         let pi = artifact.manifest.groups.iter().try_fold(2usize, |n, g| {
             n.checked_add(g.field_count)
                 .ok_or(refuse("public-input-work-limit"))
@@ -241,7 +258,7 @@ fn load_new_parameters(
     )?;
     Ok(snapshot)
 }
-async fn derive_all(
+pub(crate) async fn derive_all(
     source: &str,
     p: &Program,
     bindings: &StaticBindings,
@@ -253,6 +270,10 @@ async fn derive_all(
     if selected.is_some_and(|name| !p.actions.iter().any(|a| a.name == name)) {
         return Err(refuse("selected-action"));
     }
+    let signer_policy = artifacts
+        .first()
+        .and_then(|a| a.manifest.signed.as_ref())
+        .map(|s| s.signer_policy.clone());
     let mut params = BTreeMap::new();
     let mut keys = BTreeMap::new();
     let mut actions = Vec::new();
@@ -333,7 +354,13 @@ async fn derive_all(
         keys.insert(name, public);
     }
     let mut manifest = PublicKeysetManifest {
-        profile: "moriarty-native-call-public-keyset/1".into(),
+        profile: if signer_policy.is_some() {
+            crate::signed::KEYSET
+        } else {
+            "moriarty-native-call-public-keyset/1"
+        }
+        .into(),
+        signer_policy: signer_policy.clone(),
         bindings: bindings.clone(),
         build: proving::source_closure(),
         actions,
@@ -348,6 +375,7 @@ async fn derive_all(
                 keys,
                 manifest,
                 source: source.into(),
+                signer_policy,
             }),
         },
         material,
@@ -513,7 +541,8 @@ impl PublicLocalDeployment {
         d: &InstalledDeployment,
         limits: &NativeWorkLimits,
     ) -> Result<Vec<relation::Artifact>> {
-        if d.bindings != self.snapshot.bindings
+        if self.snapshot.signer_policy.is_some()
+            || d.bindings != self.snapshot.bindings
             || d.keyset_identity != self.identity()
             || source != self.snapshot.source
             || p.actions.len() != self.snapshot.keys.len()
@@ -528,6 +557,16 @@ impl PublicLocalDeployment {
     }
 }
 pub fn build_local_installed_snapshot(
+    seed: AdmittedSeed,
+    derived: &DerivedLocalDeployment,
+    limits: &NativeWorkLimits,
+) -> Result<LocalInstalledSnapshot> {
+    if derived.public.snapshot.signer_policy.is_some() {
+        return Err(refuse("unsigned-policy"));
+    }
+    build_snapshot(seed, derived, limits)
+}
+pub(crate) fn build_snapshot(
     seed: AdmittedSeed,
     derived: &DerivedLocalDeployment,
     limits: &NativeWorkLimits,
@@ -662,7 +701,12 @@ pub fn export_local_deployment(
         }
     }
     let proving = ProvingKeysetManifest {
-        profile: "moriarty-native-call-proving-keyset/1".into(),
+        profile: if derived.public.snapshot.signer_policy.is_some() {
+            crate::signed::KEYSET
+        } else {
+            "moriarty-native-call-proving-keyset/1"
+        }
+        .into(),
         public_identity: derived.public.identity().into(),
         action: derived.action.clone(),
         prover_key: call_artifacts::leaf(derived.selected.prover_key_bytes()),
@@ -878,6 +922,7 @@ mod ordinary_tests {
             })
             .collect();
         let mut manifest = PublicKeysetManifest {
+            signer_policy: None,
             profile: "moriarty-native-call-public-keyset/1".into(),
             bindings: bindings.clone(),
             build: proving::source_closure(),

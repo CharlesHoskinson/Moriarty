@@ -18,18 +18,23 @@ pub mod init;
 pub mod inspect;
 pub mod intent;
 pub mod keygen_call;
+pub mod keygen_signed_call;
 pub mod lsp;
 pub mod mcp;
 pub mod prepare_call;
+pub mod prepare_signed_call;
 mod proof_io;
 pub mod prove;
 pub mod prove_call;
+pub mod prove_signed_call;
 pub mod replay;
+mod signed_call_io;
 pub mod simulate;
 pub mod test;
 pub mod verify;
 pub mod verify_call;
 pub mod verify_intent;
+pub mod verify_signed_call;
 
 pub type Result<T> = std::result::Result<T, Report>;
 
@@ -38,6 +43,10 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
+        Command::KeygenSignedCall(args) => keygen_signed_call::run(args, shell),
+        Command::PrepareSignedCall(args) => prepare_signed_call::run(args, shell),
+        Command::ProveSignedCall(args) => prove_signed_call::run(args, shell),
+        Command::VerifySignedCall(args) => verify_signed_call::run(args, shell),
         Command::KeygenCall(args) => keygen_call::run(args, shell),
         Command::ProveCall(args) => prove_call::run(args, shell),
         Command::VerifyCall(args) => verify_call::run(args, shell),
