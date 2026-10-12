@@ -17,6 +17,7 @@ pub mod inspect;
 pub mod intent;
 pub mod lsp;
 pub mod mcp;
+pub mod prepare_call;
 mod proof_io;
 pub mod prove;
 pub mod replay;
@@ -32,6 +33,7 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
+        Command::PrepareCall(args) => prepare_call::run(args, shell),
         Command::Prove(args) => prove::run(args, shell),
         Command::Verify(args) => verify::run(args, shell),
         Command::Format(args) => format::run(args, shell),

@@ -1,5 +1,35 @@
 # Moriarty language Quint QA
 
+## Unsigned ledger preparation custody QA
+
+`ledger_call_custody.qnt` is a plain finite, single-actor model of semantic
+Transfer/Fee groups, exact native output multiplicity, separate payer change,
+all mapped balances, retained inputs and present-zero duties. Its nineteen
+deterministic tests cover payment70, fee-first43, repeated recipients, self
+payments, equal outputs, zero/empty offers, above-u64 amounts and hostile custody
+mutations. A 100-sample, 10-step TypeScript run at seed1011 found no
+`preparation_invariants` violation; payment and collection were witnessed in
+58 and72 traces respectively. This is bounded QA, not exhaustive verification.
+
+Numeric owner/token identities abstract distinct native mappings and native
+ordering. Request-derived nextValue/events/frozen and duty updates are premises;
+the model does not evaluate source expressions or execute VM instructions.
+Native tagged bytes, FAB alignment, hashing, VM correctness, supplied state
+trust, signatures, proofs, funding and source-to-VM correspondence are external
+premises. Rust and actual process tests separately execute the pinned VM and
+native offer/transcript APIs. Existing signed models do not establish custody
+for this unsigned preparation profile.
+
+```sh
+quint typecheck ledger_call_custody_test.qnt
+quint test ledger_call_custody_test.qnt --main ledger_call_custody_test --backend typescript
+quint run ledger_call_custody.qnt --main ledger_call_custody --backend typescript --invariant preparation_invariants --witnesses paymentWitness collectionWitness --seed 1011 --max-samples 100 --max-steps 10 --verbosity 1
+```
+
+The TypeScript evaluator supports the actual UInt128/i128 constants; the local
+Rust evaluator rejected the wider-than-i64 literals. No Quint verify, Apalache,
+native proving, key generation, SRS, or MockProver job was used for this slice.
+
 Experiment observation, 2026-10-10: Quint 0.32.0 typechecks all three models;
 59 deterministic tests pass; 10,000 sampled traces per model at 12 steps found
 no violation of the named `safety` predicates. This is bounded sampled QA,
