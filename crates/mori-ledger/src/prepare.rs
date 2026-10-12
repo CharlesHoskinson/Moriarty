@@ -123,8 +123,8 @@ pub type RawIntent = Intent<(), ProofPreimageMarker, PedersenRandomness, InMemor
 /// Raw owner returned by the actual checked prepare path. Inspection projections
 /// remain separate; SDK Intent::prove inserts Noops itself.
 pub struct PreparedNativeCall {
-    bundle: PreparedBundle,
-    artifact: crate::relation::Artifact,
+    pub(crate) bundle: PreparedBundle,
+    pub(crate) artifact: crate::relation::Artifact,
 }
 impl PreparedNativeCall {
     pub fn bundle(&self) -> &PreparedBundle {
@@ -411,6 +411,37 @@ fn prepare_admitted(
     output_bytes: u64,
     aggregate_bytes: u64,
 ) -> Result<PreparedBundle> {
+    prepare_admitted_signed(
+        p,
+        d,
+        f,
+        pre,
+        params,
+        request,
+        relation,
+        profile,
+        descriptor_hash,
+        output_bytes,
+        aggregate_bytes,
+        None,
+        None,
+    )
+}
+pub(crate) fn prepare_admitted_signed(
+    p: &Program,
+    d: &StaticBindings,
+    f: &FrameBindings,
+    pre: layout::AdmittedPredecessor,
+    params: LedgerParameters,
+    request: &CallRequest,
+    relation: Option<&crate::relation::Artifact>,
+    profile: &'static str,
+    descriptor_hash: &str,
+    output_bytes: u64,
+    aggregate_bytes: u64,
+    signed: Option<&crate::signed::SignedStaticBindings>,
+    full_input: Option<AlignedValue>,
+) -> Result<PreparedBundle> {
     let encoder = OutputCodec(output_bytes);
     let abi = layout::admit_bindings(p, d)?;
     let execution = mori_core::simulate(p, &request.action, &pre.scenario)
@@ -424,7 +455,11 @@ fn prepare_admitted(
         )
         .map_err(|_| failure("semantic", "economic-bounds"))?;
     }
-    let lowered = ops::lower_ops(p, &pre, &execution)?;
+    let lowered = if let Some(signed) = signed {
+        ops::lower_signed_ops(p, &pre, &execution, signed)?
+    } else {
+        ops::lower_ops(p, &pre, &execution)?
+    };
     let mut context = QueryContext::new(pre.contract.data.clone(), pre.address);
     context.call_context = pre.context.clone();
     let direct = context
@@ -455,7 +490,7 @@ fn prepare_admitted(
         .iter()
         .map(|i| layout::value(&request.inputs[&i.name]))
         .collect::<Vec<_>>();
-    let input = AlignedValue::concat(inputs.iter());
+    let input = full_input.unwrap_or_else(|| AlignedValue::concat(inputs.iter()));
     let output = AlignedValue::from(());
     let comm_rand: Fr = codec::from_hex(&request.communication_randomness_hex)?;
     let binding_rand: PedersenRandomness = codec::from_hex(&request.binding_randomness_hex)?;
@@ -803,7 +838,7 @@ pub struct PreparedInstalledCall {
     pub(crate) prepared: PreparedNativeCall,
     pub(crate) operation: midnight_onchain_state::state::ContractOperation,
     pub(crate) public: crate::local_deployment::PublicLocalDeployment,
-    context: crate::call_artifacts::ProofContext,
+    pub(crate) context: crate::call_artifacts::ProofContext,
 }
 impl PreparedInstalledCall {
     pub fn bundle(&self) -> &PreparedBundle {
@@ -876,6 +911,7 @@ pub fn prepare_installed_native_call(
     )?;
     admit_preparation_work(&bundle, limits)?;
     let context = crate::call_artifacts::ProofContext {
+        signed: None,
         source_hash: d.bindings.source_hash.clone(),
         keyset_identity: d.keyset_identity.clone(),
         deployment_hash: codec::object_hash(d)?,
@@ -892,7 +928,10 @@ pub fn prepare_installed_native_call(
     })
 }
 
-fn admit_preparation_work(bundle: &PreparedBundle, limits: &NativeWorkLimits) -> Result<()> {
+pub(crate) fn admit_preparation_work(
+    bundle: &PreparedBundle,
+    limits: &NativeWorkLimits,
+) -> Result<()> {
     crate::call_artifacts::admit_intent_work(&bundle.native.intent, limits)?;
     let mut processed = bundle.native.intent.clone();
     let mut call = processed
@@ -968,7 +1007,14 @@ pub(crate) fn final_installed_readback(
         final_readback.declared_gas_hex = projection.processed_declared_gas_hex.clone();
     }
     final_readback.requires_reconstruction_after_final_intent = false;
-    final_readback.evidence.qualification = INSTALLED_QUALIFICATION;
+    final_readback.evidence.qualification = if verified.scope == crate::signed::RESULT_SCOPE {
+        crate::signed::QUALIFICATION
+    } else {
+        INSTALLED_QUALIFICATION
+    };
+    if verified.scope == crate::signed::RESULT_SCOPE {
+        final_readback.evidence.signature_verification = "strict-host-fens-fixed-compiled-policy";
+    }
     final_readback.evidence.proof_verification = "ledger-real";
     final_readback
 }

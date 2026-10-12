@@ -1,6 +1,6 @@
 //! Source-static native-call constraints. Ordinary checking is not a proof.
-mod arithmetic;
-mod compiler;
+pub(crate) mod arithmetic;
+pub(crate) mod compiler;
 mod event;
 mod process;
 use crate::{
@@ -32,6 +32,9 @@ pub struct Manifest {
     pub action: String,
     pub abi: layout::LedgerAbi,
     pub ir_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub signed: Option<crate::signed::SignedManifest>,
+    #[serde(default)]
     pub input_count: usize,
     pub groups: Vec<Group>,
     pub qualification: String,
@@ -63,7 +66,17 @@ impl Artifact {
         codec::encode(&self.ir)
     }
     pub fn manifest_bytes(&self) -> Result<Vec<u8>> {
-        let b = serde_json::to_vec_pretty(&self.manifest).map_err(|_| refusal("manifest-json"))?;
+        let b = if self.manifest.signed.is_some() {
+            let mut value =
+                serde_json::to_value(&self.manifest).map_err(|_| refusal("manifest-json"))?;
+            value
+                .as_object_mut()
+                .ok_or(refusal("manifest-json"))?
+                .remove("input_count");
+            serde_json::to_vec_pretty(&value).map_err(|_| refusal("manifest-json"))?
+        } else {
+            serde_json::to_vec_pretty(&self.manifest).map_err(|_| refusal("manifest-json"))?
+        };
         if b.len() > codec::OUTPUT_BYTES {
             return Err(refusal("artifact-size"));
         }
@@ -98,6 +111,7 @@ pub(crate) fn compile_bindings(
         abi,
         ir_hash,
         input_count,
+        signed: None,
         groups,
         qualification: "ordinary-ir-unproven".into(),
         compiler_hash: codec::hash(
@@ -133,7 +147,24 @@ pub(crate) fn compile_bindings(
     Ok(a)
 }
 pub fn check(a: &Artifact, p: &ProofPreimage) -> Result<Vec<Option<usize>>> {
-    if p.inputs.len() != a.manifest.input_count
+    let width = a
+        .manifest
+        .signed
+        .as_ref()
+        .map_or(a.manifest.input_count, |m| m.flattened_field_count);
+    if !a.ir.do_communications_commitment
+        || !a.ir.outputs.is_empty()
+        || a.ir
+            .instructions
+            .iter()
+            .filter(|i| matches!(i, midnight_zkir_v3::Instruction::Output { .. }))
+            .count()
+            != 1
+        || a.ir
+            .instructions
+            .iter()
+            .any(|i| matches!(i, midnight_zkir_v3::Instruction::PrivateInput { .. }))
+        || p.inputs.len() != width
         || !p.private_transcript.is_empty()
         || p.key_location.0.as_ref() != a.manifest.action
         || p.public_transcript_inputs.len() > codec::OUTPUT_BYTES / 32

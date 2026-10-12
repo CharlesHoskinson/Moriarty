@@ -73,6 +73,17 @@ impl<'de> Visitor<'de> for Seed<'_> {
         Ok(Value::Object(out))
     }
 }
+/// Strict recursive JSON value decoding for versioned DTO dynamic fields.
+/// Duplicate decoded keys and the existing depth/node bounds apply even when
+/// a consumer invokes serde directly instead of the bounded text entry point.
+pub fn deserialize_strict<'de, D: serde::Deserializer<'de>>(decoder: D) -> Result<Value, D::Error> {
+    let nodes = Cell::new(0);
+    Seed {
+        depth: 0,
+        nodes: &nodes,
+    }
+    .deserialize(decoder)
+}
 pub fn parse(text: &str) -> Result<Value, Error> {
     use serde::de::DeserializeSeed;
     if text.len() > MAX_BYTES {
