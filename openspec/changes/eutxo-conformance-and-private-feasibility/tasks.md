@@ -163,4 +163,3 @@ All tasks are specified-only and unchecked. Commands below require future implem
 - [ ] Write `experiments/moriarty-eutxo/artifacts/conformance/amendments.json` with inputs, full outcomes, and reached failure layers.
 - [ ] Run `node --test experiments/moriarty-eutxo/tests/conformance/amendments.test.mjs`.
 - [ ] Require exit zero and exact positive and negative outcomes from both named scenarios.
-

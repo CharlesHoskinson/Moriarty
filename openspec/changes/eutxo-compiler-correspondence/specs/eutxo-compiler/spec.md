@@ -175,4 +175,3 @@ IF source transport, parser, profile routing, Core lowering, representation, UPL
 #### Scenario: Negative Prevent compatibility release substitution
 - **WHEN** a public Cardano compatibility test passes
 - **THEN** Midnight financial settlement, mandatory PCD, private handoff, and Complete remain open
-
