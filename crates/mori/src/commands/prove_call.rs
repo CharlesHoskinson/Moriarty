@@ -19,7 +19,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &args.input.action,
         &i.limits,
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let derived = futures::executor::block_on(
         mori_ledger::local_deployment::reopen_local_proving_deployment(
             &i.source,
@@ -31,7 +31,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
             &i.limits,
         ),
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let prepared = mori_ledger::prepare::prepare_installed_native_call(
         &i.source,
         &i.program,
@@ -42,15 +42,15 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &derived.public_deployment(),
         &i.limits,
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let proven = futures::executor::block_on(mori_ledger::proving::prove_installed_call(
         prepared,
         derived,
         rand::rngs::StdRng::from_entropy(),
     ))
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let output = mori_ledger::call_artifacts::export_proven_call(&proven, &i.limits)
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     call_io::publish(&args.out, &output)?;
     Ok(call_io::status(
         shell,
