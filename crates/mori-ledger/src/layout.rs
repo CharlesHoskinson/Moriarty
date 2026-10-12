@@ -130,12 +130,19 @@ pub fn admit_source(p: &Program, d: &Deployment) -> Result<LedgerAbi> {
         return Err(identity("toolchain-or-limits"));
     }
     if d.profile != PROFILE
-        || d.abi != ABI
         || d.qualification != "local-unproven"
         || d.phase_policy != "guaranteed-only"
-        || d.network.is_empty()
-        || d.anchor != "local-unqualified"
     {
+        return Err(identity("local-profile"));
+    }
+    admit_bindings(p, &StaticBindings::legacy(d))
+}
+pub(crate) fn admit_bindings(p: &Program, d: &StaticBindings) -> Result<LedgerAbi> {
+    mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
+    if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
+        return Err(identity("toolchain-or-limits"));
+    }
+    if d.abi != ABI || d.network.is_empty() || d.anchor != "local-unqualified" {
         return Err(identity("local-profile"));
     }
     let mut roles = BTreeSet::new();
@@ -293,6 +300,25 @@ pub fn decode_value(v: &StateValue<InMemoryDB>, ty: Type) -> Result<Value> {
     }
     Ok(decoded)
 }
+#[derive(Clone, Copy)]
+pub(crate) enum OperationPolicy<'a> {
+    Keyless,
+    Installed {
+        public: &'a crate::local_deployment::PublicLocalDeployment,
+        limits: &'a NativeWorkLimits,
+    },
+}
+pub(crate) struct AdmittedFrame {
+    pub ledger: NativeState,
+    pub contract: ContractState<InMemoryDB>,
+    pub address: ContractAddress,
+    pub scenario: Scenario,
+    pub roles: BTreeMap<String, NativeRole>,
+    pub assets: BTreeMap<AssetId, UnshieldedTokenType>,
+    pub duties: BTreeMap<String, DutyBinding>,
+    pub all_utxos: Vec<(Utxo, UtxoMeta)>,
+    pub gas_hex: String,
+}
 pub fn decode_predecessor(
     p: &Program,
     abi: &LedgerAbi,
@@ -303,9 +329,32 @@ pub fn decode_predecessor(
     if request.segment != 1 || request.economic_bounds != d.economic_bounds {
         return Err(identity("request-scope"));
     }
+    let binding = StaticBindings::legacy(d);
+    let frame = admit_frame(
+        p,
+        abi,
+        &binding,
+        &FrameBindings::legacy(d),
+        state,
+        OperationPolicy::Keyless,
+    )?;
+    attach_request(frame, &binding, request)
+}
+pub(crate) fn admit_frame(
+    p: &Program,
+    abi: &LedgerAbi,
+    d: &StaticBindings,
+    f: &FrameBindings,
+    state: NativeState,
+    policy: OperationPolicy<'_>,
+) -> Result<AdmittedFrame> {
+    let policy_cap = match policy {
+        OperationPolicy::Keyless => codec::OUTPUT_BYTES as u64,
+        OperationPolicy::Installed { limits, .. } => limits.max_input_bytes,
+    };
     let address: ContractAddress = codec::from_hex(&d.address_hex)?;
-    if codec::native_hash(&state)? != d.predecessor_hash
-        || codec::native_hex(&state.state_hash())? != d.native_state_hash
+    if scope_hash(&state, policy_cap)? != f.predecessor_hash
+        || codec::native_hex(&state.state_hash())? != f.native_state_hash
         || state.network_id != d.network
     {
         return Err(identity("predecessor"));
@@ -314,9 +363,9 @@ pub fn decode_predecessor(
         .check_night_balance_invariant()
         .map_err(|_| Error::new("native-invariant", "night-supply"))?;
     let contract = state.index(address).ok_or(identity("contract-absent"))?;
-    if codec::native_hash(&contract.operations)? != d.operations_hash
-        || codec::native_hash(&contract.maintenance_authority)? != d.maintenance_hash
-        || codec::native_hash(&contract.balance)? != d.balance_hash
+    if scope_hash(&contract.operations, policy_cap)? != f.operations_hash
+        || scope_hash(&contract.maintenance_authority, policy_cap)? != f.maintenance_hash
+        || scope_hash(&contract.balance, policy_cap)? != f.balance_hash
     {
         return Err(identity("contract-frame"));
     }
@@ -327,8 +376,13 @@ pub fn decode_predecessor(
         .collect();
     let mut actual = BTreeSet::new();
     for e in contract.operations.iter() {
-        if e.1.v2.is_some() || e.1.v3.is_some() || e.1.ir.is_some() {
-            return Err(identity("unproven-operation"));
+        match policy {
+            OperationPolicy::Keyless => {
+                if e.1.v2.is_some() || e.1.v3.is_some() || e.1.ir.is_some() {
+                    return Err(identity("unproven-operation"));
+                }
+            }
+            OperationPolicy::Installed { public, .. } => public.admit_operation(&e.0.0, &e.1)?,
         }
         actual.insert(e.0.0.clone());
     }
@@ -365,7 +419,7 @@ pub fn decode_predecessor(
         return Err(identity("state-membership"));
     }
     let mut scenario = Scenario {
-        inputs: request.inputs.clone(),
+        inputs: Default::default(),
         ..Default::default()
     };
     for s in &p.states {
@@ -428,14 +482,48 @@ pub fn decode_predecessor(
             });
         }
     }
+    Ok(AdmittedFrame {
+        ledger: state,
+        contract,
+        address,
+        scenario,
+        roles,
+        assets,
+        duties,
+        all_utxos,
+        gas_hex: f.gas_hex.clone(),
+    })
+}
+pub(crate) fn frame_gas(frame: &AdmittedFrame) -> Result<RunningCost> {
+    let gas: RunningCost = codec::from_hex(&frame.gas_hex)?;
+    let params = &frame.ledger.parameters;
+    if gas.read_time > params.limits.block_limits.read_time
+        || gas.compute_time > params.limits.block_limits.compute_time
+        || gas.bytes_written > params.limits.block_limits.bytes_churned
+        || gas.bytes_deleted > params.limits.block_limits.bytes_churned
+    {
+        return Err(identity("gas-cap"));
+    }
+    Ok(gas)
+}
+pub(crate) fn attach_request(
+    mut frame: AdmittedFrame,
+    d: &StaticBindings,
+    request: &CallRequest,
+) -> Result<AdmittedPredecessor> {
+    if request.segment != 1 || request.economic_bounds != d.economic_bounds {
+        return Err(identity("request-scope"));
+    }
+    frame.scenario.inputs = request.inputs.clone();
     let mut selected = Vec::new();
     let mut outpoints = BTreeSet::new();
     for hex in &request.selected_spends {
         let spend: UtxoSpend = codec::from_hex(hex)?;
-        if spend.owner != roles[&d.payer].key
-            || !assets.values().any(|tt| *tt == spend.type_)
+        if spend.owner != frame.roles[&d.payer].key
+            || !frame.assets.values().any(|tt| *tt == spend.type_)
             || !outpoints.insert((spend.intent_hash, spend.output_no))
-            || !all_utxos
+            || !frame
+                .all_utxos
                 .iter()
                 .any(|(u, _)| u == &Utxo::from(spend.clone()))
         {
@@ -446,7 +534,7 @@ pub fn decode_predecessor(
     selected.sort();
     let block: BlockContext = codec::from_hex(&request.block_context_hex)?;
     let context = CallContext {
-        own_address: address,
+        own_address: frame.address,
         tblock: block.tblock,
         tblock_err: block.tblock_err,
         parent_block_hash: block.parent_block_hash,
@@ -454,33 +542,78 @@ pub fn decode_predecessor(
             None
         } else {
             Some(midnight_coin_structure::coin::PublicAddress::User(
-                roles[&d.payer].address,
+                frame.roles[&d.payer].address,
             ))
         },
-        balance: contract.balance.clone(),
+        balance: frame.contract.balance.clone(),
         com_indices: Default::default(),
         last_block_time: block.last_block_time,
     };
-    let gas: RunningCost = codec::from_hex(&d.gas_hex)?;
-    let params = &state.parameters;
-    if gas.read_time > params.limits.block_limits.read_time
-        || gas.compute_time > params.limits.block_limits.compute_time
-        || gas.bytes_written > params.limits.block_limits.bytes_churned
-        || gas.bytes_deleted > params.limits.block_limits.bytes_churned
-    {
-        return Err(identity("gas-cap"));
-    }
+    let gas = frame_gas(&frame)?;
     Ok(AdmittedPredecessor {
-        ledger: state,
-        contract,
-        address,
+        ledger: frame.ledger,
+        contract: frame.contract,
+        address: frame.address,
         context,
-        scenario,
-        roles,
-        assets,
-        duties,
-        all_utxos,
+        scenario: frame.scenario,
+        roles: frame.roles,
+        assets: frame.assets,
+        duties: frame.duties,
+        all_utxos: frame.all_utxos,
         selected,
         gas,
+    })
+}
+
+fn scope_hash<T: midnight_serialize::Serializable + midnight_serialize::Tagged>(
+    value: &T,
+    cap: u64,
+) -> Result<String> {
+    Ok(codec::hash(&crate::call_artifacts::encode_bounded(
+        value, cap,
+    )?))
+}
+
+/// Validated immutable source/program/ABI view. No serialized binding or caller
+/// artifact can construct this private compiler input without full validation.
+pub(crate) struct ValidatedStaticBindings<'a> {
+    program: &'a Program,
+    bindings: &'a StaticBindings,
+    abi: LedgerAbi,
+}
+impl ValidatedStaticBindings<'_> {
+    pub(crate) fn program(&self) -> &Program {
+        self.program
+    }
+    pub(crate) fn bindings(&self) -> &StaticBindings {
+        self.bindings
+    }
+    pub(crate) fn abi(&self) -> &LedgerAbi {
+        &self.abi
+    }
+}
+pub(crate) fn validate_static<'a>(
+    source: &str,
+    p: &'a Program,
+    d: &'a StaticBindings,
+) -> Result<ValidatedStaticBindings<'a>> {
+    if source.len() > codec::INPUT_BYTES
+        || codec::hash(source.as_bytes()) != d.source_hash
+        || mori_core::parse(source).map_err(|_| Error::new("native-relation", "source-parse"))?
+            != *p
+    {
+        return Err(Error::new("native-relation", "source-identity"));
+    }
+    let abi = admit_bindings(p, d)?;
+    if abi.program_hash != d.program_hash
+        || abi.templates_hash != d.templates_hash
+        || codec::object_hash(&abi)? != d.abi_hash
+    {
+        return Err(Error::new("native-relation", "static-abi-identity"));
+    }
+    Ok(ValidatedStaticBindings {
+        program: p,
+        bindings: d,
+        abi,
     })
 }

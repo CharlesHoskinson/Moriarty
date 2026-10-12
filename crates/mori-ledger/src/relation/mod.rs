@@ -3,7 +3,10 @@ mod arithmetic;
 mod compiler;
 mod event;
 mod process;
-use crate::{Error, Result, codec, layout, profile::Deployment};
+use crate::{
+    Error, Result, codec, layout,
+    profile::{Deployment, StaticBindings},
+};
 use midnight_transient_crypto::proofs::ProofPreimage;
 use midnight_zkir_v3::IrSource;
 use mori_core::Program;
@@ -74,14 +77,18 @@ pub fn compile(source: &str, p: &Program, d: &Deployment, action: &str) -> Resul
     {
         return Err(refusal("source-identity"));
     }
-    let abi = layout::admit_source(p, d)?;
-    if abi.program_hash != d.program_hash
-        || abi.templates_hash != d.templates_hash
-        || codec::object_hash(&abi)? != d.abi_hash
-    {
-        return Err(refusal("static-abi-identity"));
-    }
-    let (ir, groups, input_count) = compiler::compile(p, d, action)?;
+    layout::admit_source(p, d)?;
+    compile_bindings(source, p, &StaticBindings::legacy(d), action)
+}
+pub(crate) fn compile_bindings(
+    source: &str,
+    p: &Program,
+    d: &StaticBindings,
+    action: &str,
+) -> Result<Artifact> {
+    let validated = layout::validate_static(source, p, d)?;
+    let abi = validated.abi().clone();
+    let (ir, groups, input_count) = compiler::compile(&validated, action)?;
     let ir_hash = codec::hash(&codec::encode(&ir)?);
     let manifest = Manifest {
         format: FORMAT.into(),

@@ -7,6 +7,7 @@ use mori_diagnostics::Report;
 use crate::cli::Command;
 use crate::shell::Shell;
 
+mod call_io;
 pub mod check;
 pub mod compile;
 pub mod compile_call;
@@ -16,15 +17,18 @@ pub mod format;
 pub mod init;
 pub mod inspect;
 pub mod intent;
+pub mod keygen_call;
 pub mod lsp;
 pub mod mcp;
 pub mod prepare_call;
 mod proof_io;
 pub mod prove;
+pub mod prove_call;
 pub mod replay;
 pub mod simulate;
 pub mod test;
 pub mod verify;
+pub mod verify_call;
 pub mod verify_intent;
 
 pub type Result<T> = std::result::Result<T, Report>;
@@ -34,6 +38,9 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
+        Command::KeygenCall(args) => keygen_call::run(args, shell),
+        Command::ProveCall(args) => prove_call::run(args, shell),
+        Command::VerifyCall(args) => verify_call::run(args, shell),
         Command::CompileCall(args) => compile_call::run(args, shell),
         Command::PrepareCall(args) => prepare_call::run(args, shell),
         Command::Prove(args) => prove::run(args, shell),

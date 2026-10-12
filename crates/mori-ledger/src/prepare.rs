@@ -34,7 +34,7 @@ pub struct Evidence {
     pub settlement: &'static str,
     pub deployed_qualification: &'static str,
 }
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Readback {
     pub execution: Execution,
     pub prospective_balances: Vec<Balance>,
@@ -56,58 +56,61 @@ pub struct Readback {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relation: Option<crate::relation::CheckedReadback>,
 }
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct PreservedFrame {
     pub scope: &'static str,
     pub commitments: BTreeMap<String, String>,
 }
-fn preserved_frame(pre: &layout::AdmittedPredecessor) -> Result<PreservedFrame> {
+fn preserved_frame(
+    pre: &layout::AdmittedPredecessor,
+    output: &OutputCodec,
+) -> Result<PreservedFrame> {
     let s = &pre.ledger;
     Ok(PreservedFrame {
         scope: "unchanged-supplied-ledger-not-an-applied-successor",
         commitments: [
-            ("complete_ledger", codec::native_hash(s)?),
-            ("network", codec::native_hash(&s.network_id)?),
-            ("parameters", codec::native_hash(&*s.parameters)?),
-            ("locked_pool", codec::native_hash(&s.locked_pool)?),
-            ("reserve_pool", codec::native_hash(&s.reserve_pool)?),
+            ("complete_ledger", output.native_hash(s)?),
+            ("network", output.native_hash(&s.network_id)?),
+            ("parameters", output.native_hash(&*s.parameters)?),
+            ("locked_pool", output.native_hash(&s.locked_pool)?),
+            ("reserve_pool", output.native_hash(&s.reserve_pool)?),
             (
                 "block_reward_pool",
-                codec::native_hash(&s.block_reward_pool)?,
+                output.native_hash(&s.block_reward_pool)?,
             ),
-            ("bridge_receiving", codec::native_hash(&s.bridge_receiving)?),
+            ("bridge_receiving", output.native_hash(&s.bridge_receiving)?),
             (
                 "unclaimed_block_rewards",
-                codec::native_hash(&s.unclaimed_block_rewards)?,
+                output.native_hash(&s.unclaimed_block_rewards)?,
             ),
-            ("treasury", codec::native_hash(&s.treasury)?),
-            ("zswap", codec::native_hash(&*s.zswap)?),
-            ("contract_map", codec::native_hash(&s.contract)?),
-            ("utxo_state", codec::native_hash(&*s.utxo)?),
+            ("treasury", output.native_hash(&s.treasury)?),
+            ("zswap", output.native_hash(&*s.zswap)?),
+            ("contract_map", output.native_hash(&s.contract)?),
+            ("utxo_state", output.native_hash(&*s.utxo)?),
             (
                 "replay_protection",
-                codec::native_hash(&*s.replay_protection)?,
+                output.native_hash(&*s.replay_protection)?,
             ),
-            ("dust", codec::native_hash(&*s.dust)?),
+            ("dust", output.native_hash(&*s.dust)?),
             (
                 "contract_operations",
-                codec::native_hash(&pre.contract.operations)?,
+                output.native_hash(&pre.contract.operations)?,
             ),
             (
                 "contract_maintenance",
-                codec::native_hash(&pre.contract.maintenance_authority)?,
+                output.native_hash(&pre.contract.maintenance_authority)?,
             ),
             (
                 "contract_balance",
-                codec::native_hash(&pre.contract.balance)?,
+                output.native_hash(&pre.contract.balance)?,
             ),
             (
                 "contract_charged_predecessor",
-                codec::native_hash(&pre.contract.data)?,
+                output.native_hash(&pre.contract.data)?,
             ),
             (
                 "contract_extensions",
-                codec::native_hash(&layout::root_maps(pre.contract.data.get_ref())?[2])?,
+                output.native_hash(&layout::root_maps(pre.contract.data.get_ref())?[2])?,
             ),
         ]
         .into_iter()
@@ -147,6 +150,7 @@ pub(crate) struct NativePreparation {
     pub gas_cap: midnight_base_crypto::cost_model::RunningCost,
     pub segment: u16,
     pub processed_transcript: Option<Transcript<InMemoryDB>>,
+    pub output_bytes: u64,
 }
 pub struct PreparedBundle {
     pub(crate) native: NativePreparation,
@@ -174,13 +178,6 @@ struct CallPublic {
 }
 fn failure(layer: &'static str, code: &'static str) -> Error {
     Error::new(layer, code)
-}
-fn json_bytes<T: Serialize>(v: &T) -> Result<Vec<u8>> {
-    let bytes = serde_json::to_vec_pretty(v).map_err(|_| failure("input", "public-json"))?;
-    if bytes.len() > codec::OUTPUT_BYTES {
-        return Err(failure("input", "artifact-size"));
-    }
-    Ok(bytes)
 }
 pub fn validate_balance(
     balance: &BTreeMap<(midnight_coin_structure::coin::TokenType, u16), i128>,
@@ -352,6 +349,70 @@ fn prepare_call_inner(
         return Err(failure("identity", "selected-action"));
     }
     let pre = layout::decode_predecessor(p, &abi, d, state, request)?;
+    prepare_admitted(
+        p,
+        &StaticBindings::legacy(d),
+        &FrameBindings::legacy(d),
+        pre,
+        params,
+        request,
+        relation,
+        PROFILE,
+        &codec::object_hash(d)?,
+        codec::OUTPUT_BYTES as u64,
+        codec::OUTPUT_BYTES as u64,
+    )
+}
+struct OutputCodec(u64);
+impl OutputCodec {
+    fn encode<T: midnight_serialize::Serializable + midnight_serialize::Tagged>(
+        &self,
+        value: &T,
+    ) -> Result<Vec<u8>> {
+        if self.0 == codec::OUTPUT_BYTES as u64 {
+            return codec::encode(value);
+        }
+        crate::call_artifacts::encode_bounded(value, self.0)
+    }
+    fn native_hex<T: midnight_serialize::Serializable + midnight_serialize::Tagged>(
+        &self,
+        value: &T,
+    ) -> Result<String> {
+        Ok(codec::hex(&self.encode(value)?))
+    }
+    fn native_hash<T: midnight_serialize::Serializable + midnight_serialize::Tagged>(
+        &self,
+        value: &T,
+    ) -> Result<String> {
+        Ok(codec::hash(&self.encode(value)?))
+    }
+    fn json_bytes(&self, value: &impl Serialize) -> Result<Vec<u8>> {
+        if self.0 == codec::OUTPUT_BYTES as u64 {
+            let bytes =
+                serde_json::to_vec_pretty(value).map_err(|_| failure("input", "public-json"))?;
+            if bytes.len() > codec::OUTPUT_BYTES {
+                return Err(failure("input", "artifact-size"));
+            }
+            return Ok(bytes);
+        }
+        crate::call_artifacts::json_bytes(value, self.0)
+    }
+}
+fn prepare_admitted(
+    p: &Program,
+    d: &StaticBindings,
+    f: &FrameBindings,
+    pre: layout::AdmittedPredecessor,
+    params: LedgerParameters,
+    request: &CallRequest,
+    relation: Option<&crate::relation::Artifact>,
+    profile: &'static str,
+    descriptor_hash: &str,
+    output_bytes: u64,
+    aggregate_bytes: u64,
+) -> Result<PreparedBundle> {
+    let encoder = OutputCodec(output_bytes);
+    let abi = layout::admit_bindings(p, d)?;
     let execution = mori_core::simulate(p, &request.action, &pre.scenario)
         .map_err(|_| failure("semantic", "core-refusal"))?;
     if let Some(bounds) = &d.economic_bounds {
@@ -431,8 +492,9 @@ fn prepare_call_inner(
         return Err(failure("full-readback", "repeated-complete-result"));
     }
     validate_transcript(&transcript, &transcript, &lowered, &repeated, &pre.gas)?;
-    let transcript_bytes = codec::encode(&transcript)?;
-    let decoded: Transcript<InMemoryDB> = codec::decode_artifact(&transcript_bytes)?;
+    let transcript_bytes = encoder.encode(&transcript)?;
+    let decoded: Transcript<InMemoryDB> =
+        crate::call_artifacts::decode_bounded(&transcript_bytes, output_bytes)?;
     if decoded != transcript {
         return Err(failure("full-readback", "decoded-transcript"));
     }
@@ -540,14 +602,17 @@ fn prepare_call_inner(
         }
         processed_call.proof = ProofPreimageVersioned::V2(std::sync::Arc::new(bound.clone()));
         processed_expectation = Some(processed_transcript.clone());
-        relation_leaves.insert("raw-intent.bin".into(), codec::encode(&intent)?);
-        relation_leaves.insert("raw-call.bin".into(), codec::encode(&call)?);
-        relation_leaves.insert("raw-preimage.bin".into(), codec::encode(&**preimage)?);
-        relation_leaves.insert("processed-preimage.bin".into(), codec::encode(&bound)?);
-        relation_leaves.insert("processed-call.bin".into(), codec::encode(&processed_call)?);
+        relation_leaves.insert("raw-intent.bin".into(), encoder.encode(&intent)?);
+        relation_leaves.insert("raw-call.bin".into(), encoder.encode(&call)?);
+        relation_leaves.insert("raw-preimage.bin".into(), encoder.encode(&**preimage)?);
+        relation_leaves.insert("processed-preimage.bin".into(), encoder.encode(&bound)?);
+        relation_leaves.insert(
+            "processed-call.bin".into(),
+            encoder.encode(&processed_call)?,
+        );
         relation_leaves.insert(
             "processed-transcript.bin".into(),
-            codec::encode(&processed_transcript)?,
+            encoder.encode(&processed_transcript)?,
         );
         relation_leaves.insert("relation-manifest.json".into(), artifact.manifest_bytes()?);
         relation_leaves.insert("relation.zkir.bin".into(), artifact.ir_bytes()?);
@@ -560,10 +625,10 @@ fn prepare_call_inner(
             processed_op_count: processed.program.len(),
             noop_count: processed.noop_count,
             inactive_fields: processed.inactive_fields,
-            noop_cost_hex: codec::native_hex(&processed.noop_cost)?,
-            processed_measured_gas_hex: codec::native_hex(&actual.gas_cost)?,
-            processed_declared_gas_hex: codec::native_hex(&processed_transcript.gas)?,
-            parent_binding_commitment_hex: codec::native_hex(&parent)?,
+            noop_cost_hex: encoder.native_hex(&processed.noop_cost)?,
+            processed_measured_gas_hex: encoder.native_hex(&actual.gas_cost)?,
+            processed_declared_gas_hex: encoder.native_hex(&processed_transcript.gas)?,
+            parent_binding_commitment_hex: encoder.native_hex(&parent)?,
             public_inputs: pi.iter().map(|f| codec::hex(&f.as_le_bytes())).collect(),
         })
     } else {
@@ -601,12 +666,12 @@ fn prepare_call_inner(
     let public = CallPublic {
         address_hex: d.address_hex.clone(),
         entry_point: request.action.clone(),
-        operation_hex: codec::native_hex(&*operation)?,
-        input_hex: codec::native_hex(&input)?,
-        output_hex: codec::native_hex(&output)?,
+        operation_hex: encoder.native_hex(&*operation)?,
+        input_hex: encoder.native_hex(&input)?,
+        output_hex: encoder.native_hex(&output)?,
         communication_randomness_hex: request.communication_randomness_hex.clone(),
         binding_randomness_hex: request.binding_randomness_hex.clone(),
-        communication_commitment_hex: codec::native_hex(&commitment)?,
+        communication_commitment_hex: encoder.native_hex(&commitment)?,
         key_location: request.action.clone(),
         guaranteed_transcript_hash: codec::hash(&transcript_bytes),
         private_transcript_outputs: vec![],
@@ -623,13 +688,13 @@ fn prepare_call_inner(
             .iter()
             .map(|f| codec::hex(&f.as_le_bytes()))
             .collect(),
-        binding_input_hex: codec::native_hex(&preimage.binding_input)?,
+        binding_input_hex: encoder.native_hex(&preimage.binding_input)?,
     };
-    let frame = preserved_frame(&pre)?;
-    if frame.commitments["complete_ledger"] != d.predecessor_hash
-        || frame.commitments["contract_operations"] != d.operations_hash
-        || frame.commitments["contract_maintenance"] != d.maintenance_hash
-        || frame.commitments["contract_balance"] != d.balance_hash
+    let frame = preserved_frame(&pre, &encoder)?;
+    if frame.commitments["complete_ledger"] != f.predecessor_hash
+        || frame.commitments["contract_operations"] != f.operations_hash
+        || frame.commitments["contract_maintenance"] != f.maintenance_hash
+        || frame.commitments["contract_balance"] != f.balance_hash
     {
         return Err(failure("full-readback", "preserved-native-frame"));
     }
@@ -638,17 +703,17 @@ fn prepare_call_inner(
         preserved_frame: frame,
         execution,
         prospective_balances: offer.balances,
-        effects_hex: codec::native_hex(&direct.context.effects)?,
+        effects_hex: encoder.native_hex(&direct.context.effects)?,
         effects: direct.context.effects.clone(),
-        charged_successor_hex: codec::native_hex(&direct.context.state)?,
-        semantic_successor_hex: codec::native_hex(&*direct.context.state.get())?,
+        charged_successor_hex: encoder.native_hex(&direct.context.state)?,
+        semantic_successor_hex: encoder.native_hex(&*direct.context.state.get())?,
         native_events_hex: direct
             .events
             .iter()
             .map(codec::native_hex)
             .collect::<Result<_>>()?,
-        measured_gas_hex: codec::native_hex(&direct.gas_cost)?,
-        declared_gas_hex: codec::native_hex(&transcript.gas)?,
+        measured_gas_hex: encoder.native_hex(&direct.gas_cost)?,
+        declared_gas_hex: encoder.native_hex(&transcript.gas)?,
         retained_utxos_hex: offer
             .retained
             .iter()
@@ -684,18 +749,18 @@ fn prepare_call_inner(
     let mut leaves: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     leaves.append(&mut relation_leaves);
     if let Some(r) = &readback.relation {
-        leaves.insert("relation-check.json".into(), json_bytes(r)?);
+        leaves.insert("relation-check.json".into(), encoder.json_bytes(r)?);
     }
-    leaves.insert("abi.json".into(),json_bytes(&serde_json::json!({"layout":abi,"op_bindings":lowered.bindings,"claim_bindings":lowered.claim_bindings}))?);
-    leaves.insert("ops.bin".into(), codec::encode(&lowered.program)?);
+    leaves.insert("abi.json".into(),encoder.json_bytes(&serde_json::json!({"layout":abi,"op_bindings":lowered.bindings,"claim_bindings":lowered.claim_bindings}))?);
+    leaves.insert("ops.bin".into(), encoder.encode(&lowered.program)?);
     leaves.insert("guaranteed-transcript.bin".into(), transcript_bytes);
     leaves.insert(
         "successor-data.bin".into(),
-        codec::encode(&direct.context.state)?,
+        encoder.encode(&direct.context.state)?,
     );
-    leaves.insert("offer.bin".into(), codec::encode(&offer.offer)?);
-    leaves.insert("call.json".into(), json_bytes(&public)?);
-    leaves.insert("readback.json".into(), json_bytes(&readback)?);
+    leaves.insert("offer.bin".into(), encoder.encode(&offer.offer)?);
+    leaves.insert("call.json".into(), encoder.json_bytes(&public)?);
+    leaves.insert("readback.json".into(), encoder.json_bytes(&readback)?);
     let descriptions: BTreeMap<_, _> = leaves
         .iter()
         .map(|(k, v)| {
@@ -705,12 +770,13 @@ fn prepare_call_inner(
             )
         })
         .collect();
-    let marker = json_bytes(
-        &serde_json::json!({"profile":PROFILE,"abi":ABI,"source_hash":d.source_hash,"program_hash":d.program_hash,"native_state_hash":d.native_state_hash,"predecessor_hash":d.predecessor_hash,"parameters_hash":d.parameters_hash,"deployment_hash":codec::object_hash(d)?,"request_hash":codec::object_hash(request)?,"native_call_hash":codec::native_hash(call)?,"leaves":descriptions,"evidence":readback.evidence}),
+    let marker = encoder.json_bytes(
+        &serde_json::json!({"profile":profile,"abi":ABI,"source_hash":d.source_hash,"program_hash":d.program_hash,"native_state_hash":f.native_state_hash,"predecessor_hash":f.predecessor_hash,"parameters_hash":f.parameters_hash,"deployment_hash":descriptor_hash,"request_hash":codec::object_hash(request)?,"native_call_hash":codec::native_hash(call)?,"leaves":descriptions,"evidence":readback.evidence}),
     )?;
-    if leaves.values().map(Vec::len).sum::<usize>() + marker.len() > codec::OUTPUT_BYTES {
-        return Err(failure("input", "artifact-size"));
-    }
+    let cap = NativeWorkLimits::cap(aggregate_bytes)?;
+    leaves.values().try_fold(marker.len(), |n, bytes| {
+        crate::call_artifacts::add_total(n, bytes.len(), cap)
+    })?;
     Ok(PreparedBundle {
         native: NativePreparation {
             intent,
@@ -720,9 +786,189 @@ fn prepare_call_inner(
             gas_cap: pre.gas,
             segment: request.segment,
             processed_transcript: processed_expectation,
+            output_bytes,
         },
         readback,
         leaves,
         marker,
     })
+}
+
+/// Installed owner retains the actual selected operation extracted only after
+/// complete source-derived operation policy admission.
+/// ```compile_fail
+/// let owner = mori_ledger::prepare::PreparedInstalledCall { prepared: Default::default(), operation: Default::default(), public: Default::default(), context: Default::default() };
+/// ```
+pub struct PreparedInstalledCall {
+    pub(crate) prepared: PreparedNativeCall,
+    pub(crate) operation: midnight_onchain_state::state::ContractOperation,
+    pub(crate) public: crate::local_deployment::PublicLocalDeployment,
+    context: crate::call_artifacts::ProofContext,
+}
+impl PreparedInstalledCall {
+    pub fn bundle(&self) -> &PreparedBundle {
+        self.prepared.bundle()
+    }
+    pub fn proof_context(&self) -> crate::call_artifacts::ProofContext {
+        self.context.clone()
+    }
+}
+pub fn prepare_installed_native_call(
+    source: &str,
+    p: &Program,
+    d: &InstalledDeployment,
+    predecessor: &[u8],
+    parameters: &[u8],
+    request: &CallRequest,
+    public: &crate::local_deployment::PublicLocalDeployment,
+    limits: &NativeWorkLimits,
+) -> Result<PreparedInstalledCall> {
+    limits.validate()?;
+    d.validate_profile()?;
+    if source.len() > NativeWorkLimits::cap(limits.max_input_bytes)? {
+        return Err(failure("input", "source-input-work-limit"));
+    }
+    crate::call_artifacts::check_json_input(d, limits.max_input_bytes)?;
+    crate::call_artifacts::check_json_input(request, limits.max_input_bytes)?;
+    if p.actions.len() > NativeWorkLimits::cap(limits.max_actions)? {
+        return Err(failure("input", "action-work-limit"));
+    }
+    let artifact = public
+        .admit_source(source, p, d, limits)?
+        .into_iter()
+        .find(|a| a.manifest.action == request.action)
+        .ok_or(failure("identity", "selected-action"))?;
+    let state: layout::NativeState =
+        crate::call_artifacts::decode_bounded(predecessor, limits.max_input_bytes)?;
+    let params: LedgerParameters =
+        crate::call_artifacts::decode_bounded(parameters, limits.max_input_bytes)?;
+    if codec::hash(parameters) != d.frame.parameters_hash || *state.parameters != params {
+        return Err(failure("identity", "parameters"));
+    }
+    let abi = layout::admit_bindings(p, &d.bindings)?;
+    let frame = layout::admit_frame(
+        p,
+        &abi,
+        &d.bindings,
+        &d.frame,
+        state,
+        layout::OperationPolicy::Installed { public, limits },
+    )?;
+    let pre = layout::attach_request(frame, &d.bindings, request)?;
+    let operation = (*pre
+        .contract
+        .operations
+        .get(&request.action.as_bytes().into())
+        .ok_or(failure("identity", "operation"))?)
+    .clone();
+    let bundle = prepare_admitted(
+        p,
+        &d.bindings,
+        &d.frame,
+        pre,
+        params,
+        request,
+        Some(&artifact),
+        INSTALLED_PROFILE,
+        &codec::object_hash(d)?,
+        limits.max_leaf_bytes,
+        limits.max_artifact_bytes,
+    )?;
+    admit_preparation_work(&bundle, limits)?;
+    let context = crate::call_artifacts::ProofContext {
+        source_hash: d.bindings.source_hash.clone(),
+        keyset_identity: d.keyset_identity.clone(),
+        deployment_hash: codec::object_hash(d)?,
+        predecessor_hash: codec::hash(predecessor),
+        parameters_hash: codec::hash(parameters),
+        request_hash: codec::object_hash(request)?,
+        action: request.action.clone(),
+    };
+    Ok(PreparedInstalledCall {
+        prepared: PreparedNativeCall { bundle, artifact },
+        operation,
+        public: public.clone(),
+        context,
+    })
+}
+
+fn admit_preparation_work(bundle: &PreparedBundle, limits: &NativeWorkLimits) -> Result<()> {
+    crate::call_artifacts::admit_intent_work(&bundle.native.intent, limits)?;
+    let mut processed = bundle.native.intent.clone();
+    let mut call = processed
+        .calls()
+        .next()
+        .ok_or(failure("identity", "operation"))?
+        .clone();
+    call.guaranteed_transcript = Some(Sp::new(
+        bundle
+            .native
+            .processed_transcript
+            .clone()
+            .ok_or(failure("native-relation", "processed-transcript"))?,
+    ));
+    processed.actions = vec![midnight_ledger::structure::ContractAction::Call(Sp::new(
+        call,
+    ))]
+    .into();
+    crate::call_artifacts::admit_intent_work(&processed, limits)
+}
+#[cfg(test)]
+#[path = "../tests/support/mod.rs"]
+mod installed_test_support;
+#[cfg(test)]
+mod installed_work_tests {
+    use super::*;
+    #[test]
+    fn actual_raw_processed_operations_and_sdk_pi_have_exact_ordinary_boundaries() {
+        let f = super::installed_test_support::payment();
+        let prepared = prepare_native_call(
+            &f.source,
+            &f.program,
+            &f.deployment,
+            &f.predecessor,
+            &f.parameters,
+            &f.request,
+        )
+        .unwrap();
+        let b = prepared.bundle();
+        let readback = b.readback.relation.as_ref().unwrap();
+        let max_ops = readback.raw_op_count.max(readback.processed_op_count) as u64;
+        let mut limits = NativeWorkLimits {
+            profile: "moriarty-native-call-work-limits/1".into(),
+            max_degree: 19,
+            max_actions: 1,
+            max_srs_bytes: 1,
+            max_prover_key_bytes: 1,
+            max_verifier_key_bytes: 1,
+            max_input_bytes: 1,
+            max_leaf_bytes: 1,
+            max_artifact_bytes: 1,
+            max_operations: max_ops,
+            max_public_inputs: readback.public_inputs.len() as u64,
+        };
+        admit_preparation_work(b, &limits).unwrap();
+        limits.max_operations = max_ops - 1;
+        assert!(admit_preparation_work(b, &limits).is_err());
+        limits.max_operations = max_ops;
+        limits.max_public_inputs -= 1;
+        assert!(admit_preparation_work(b, &limits).is_err());
+    }
+}
+
+pub(crate) fn final_installed_readback(
+    prepared: &Readback,
+    verified: &crate::proving::CallVerification,
+) -> Readback {
+    let mut final_readback = prepared.clone();
+    final_readback.prospective_outputs_hex = verified.prospective_outputs_hex.clone();
+    final_readback.charged_successor_hex = verified.charged_successor_hex.clone();
+    final_readback.measured_gas_hex = verified.measured_gas_hex.clone();
+    if let Some(projection) = &prepared.relation {
+        final_readback.declared_gas_hex = projection.processed_declared_gas_hex.clone();
+    }
+    final_readback.requires_reconstruction_after_final_intent = false;
+    final_readback.evidence.qualification = INSTALLED_QUALIFICATION;
+    final_readback.evidence.proof_verification = "ledger-real";
+    final_readback
 }

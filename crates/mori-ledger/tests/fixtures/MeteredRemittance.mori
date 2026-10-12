@@ -1,0 +1,25 @@
+language "moriarty/1";
+agreement MeteredRemittance {
+  asset QA = {network:"local", issuer:"next-native-qa", reference:"QA", scale:0};
+  state running: UInt = 0;
+  state enabled: Bool = true;
+  action settle(amount: UInt) {
+    requires enabled and amount >= 3 and amount <= 20;
+    let before = running;
+    next running = running + amount;
+    requires running >= before;
+    transfer(QA,"alice","bob",amount);
+    transfer(QA,"alice","bob",amount);
+    fee(QA,"alice","treasury",2);
+    liability("charge",QA,"alice","bob",amount);
+    discharge("charge",3);
+    emit "total"(running);
+    emit "enabled"(enabled);
+    ensures running == before + amount;
+  }
+  action freeze() {
+    next enabled = false;
+    emit "enabled"(enabled);
+    ensures enabled == false;
+  }
+}
