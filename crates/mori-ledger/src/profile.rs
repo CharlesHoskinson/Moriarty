@@ -145,3 +145,150 @@ impl CallRequest {
         codec::json(s)
     }
 }
+
+pub const INSTALLED_PROFILE: &str = "moriarty-ledger-installed-local/1";
+pub const INSTALLED_QUALIFICATION: &str = "local-source-derived-installed-unqualified";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StaticBindings {
+    pub abi: String,
+    pub source_hash: String,
+    pub program_hash: String,
+    pub abi_hash: String,
+    pub templates_hash: String,
+    pub toolchain: Toolchain,
+    pub limits: Limits,
+    pub network: String,
+    pub anchor: String,
+    pub address_hex: String,
+    pub payer: String,
+    pub assets: Vec<AssetBinding>,
+    pub roles: Vec<RoleBinding>,
+    pub duties: Vec<DutyBinding>,
+    pub economic_bounds: Option<Bounds>,
+}
+impl StaticBindings {
+    pub(crate) fn legacy(d: &Deployment) -> Self {
+        Self {
+            abi: d.abi.clone(),
+            source_hash: d.source_hash.clone(),
+            program_hash: d.program_hash.clone(),
+            abi_hash: d.abi_hash.clone(),
+            templates_hash: d.templates_hash.clone(),
+            toolchain: d.toolchain.clone(),
+            limits: d.limits.clone(),
+            network: d.network.clone(),
+            anchor: d.anchor.clone(),
+            address_hex: d.address_hex.clone(),
+            payer: d.payer.clone(),
+            assets: d.assets.clone(),
+            roles: d.roles.clone(),
+            duties: d.duties.clone(),
+            economic_bounds: d.economic_bounds.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FrameBindings {
+    pub predecessor_hash: String,
+    pub native_state_hash: String,
+    pub parameters_hash: String,
+    pub gas_hex: String,
+    pub operations_hash: String,
+    pub maintenance_hash: String,
+    pub balance_hash: String,
+}
+impl FrameBindings {
+    pub(crate) fn legacy(d: &Deployment) -> Self {
+        Self {
+            predecessor_hash: d.predecessor_hash.clone(),
+            native_state_hash: d.native_state_hash.clone(),
+            parameters_hash: d.parameters_hash.clone(),
+            gas_hex: d.gas_hex.clone(),
+            operations_hash: d.operations_hash.clone(),
+            maintenance_hash: d.maintenance_hash.clone(),
+            balance_hash: d.balance_hash.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct InstalledDeployment {
+    pub profile: String,
+    pub qualification: String,
+    pub phase_policy: String,
+    pub bindings: StaticBindings,
+    pub frame: FrameBindings,
+    pub keyset_identity: String,
+}
+impl InstalledDeployment {
+    pub fn from_json(s: &str) -> Result<Self> {
+        codec::json(s)
+    }
+    pub(crate) fn validate_profile(&self) -> Result<()> {
+        if self.profile != INSTALLED_PROFILE
+            || self.qualification != INSTALLED_QUALIFICATION
+            || self.phase_policy != "guaranteed-only"
+            || self.bindings.anchor != "local-unqualified"
+            || self.bindings.abi != ABI
+            || self.bindings.network.is_empty()
+        {
+            return Err(crate::Error::new("identity", "installed-local-profile"));
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NativeWorkLimits {
+    pub profile: String,
+    pub max_degree: u8,
+    pub max_actions: u64,
+    pub max_srs_bytes: u64,
+    pub max_prover_key_bytes: u64,
+    pub max_verifier_key_bytes: u64,
+    pub max_input_bytes: u64,
+    pub max_leaf_bytes: u64,
+    pub max_artifact_bytes: u64,
+    pub max_operations: u64,
+    pub max_public_inputs: u64,
+}
+impl NativeWorkLimits {
+    pub fn from_json(s: &str) -> Result<Self> {
+        let value: Self = codec::json(s)?;
+        value.validate()?;
+        Ok(value)
+    }
+    pub fn validate(&self) -> Result<()> {
+        if self.profile != "moriarty-native-call-work-limits/1" || self.max_degree == 0 {
+            return Err(crate::Error::new("input", "native-work-limits"));
+        }
+        for n in [
+            self.max_actions,
+            self.max_srs_bytes,
+            self.max_prover_key_bytes,
+            self.max_verifier_key_bytes,
+            self.max_input_bytes,
+            self.max_leaf_bytes,
+            self.max_artifact_bytes,
+            self.max_operations,
+            self.max_public_inputs,
+        ] {
+            Self::cap(n)?;
+        }
+        if self.max_srs_bytes > 128 * 1024 * 1024 {
+            return Err(crate::Error::new("input", "native-work-limits"));
+        }
+        Ok(())
+    }
+    pub(crate) fn cap(value: u64) -> Result<usize> {
+        usize::try_from(value)
+            .ok()
+            .filter(|n| *n > 0 && n.checked_add(1).is_some())
+            .ok_or(crate::Error::new("input", "native-work-limits"))
+    }
+}

@@ -3,7 +3,7 @@ use super::{
     arithmetic::{Builder, imm},
     refusal,
 };
-use crate::{Result, codec, layout, ops, profile::Deployment};
+use crate::{Result, codec, layout, ops, profile::StaticBindings};
 use midnight_base_crypto::fab::AlignedValue;
 use midnight_coin_structure::coin::{PublicAddress, TokenType, UnshieldedTokenType, UserAddress};
 use midnight_onchain_runtime::context::ClaimedUnshieldedSpendsKey;
@@ -26,7 +26,7 @@ struct Wire {
 }
 struct Compiler<'a> {
     p: &'a Program,
-    d: &'a Deployment,
+    d: &'a StaticBindings,
     action: &'a str,
     b: Builder,
     env: BTreeMap<String, Wire>,
@@ -342,7 +342,12 @@ impl Compiler<'_> {
         Ok(())
     }
 }
-pub fn compile(p: &Program, d: &Deployment, action: &str) -> Result<(IrSource, Vec<Group>, usize)> {
+pub fn compile(
+    validated: &layout::ValidatedStaticBindings<'_>,
+    action: &str,
+) -> Result<(IrSource, Vec<Group>, usize)> {
+    let p = validated.program();
+    let d = validated.bindings();
     let a: &Action = p
         .actions
         .iter()
