@@ -1,0 +1,198 @@
+# General local ledger call preparation
+
+Status: S2, specified-only, awaiting fresh independent Sol HIGH and Grok 4.6 HIGH design votes. This documentation freeze authorizes no implementation, proof, funding or network run. Base commit `d6485f0c0c7495a5b9cf6811b5fb6ed2297bae5a`, tree `f44db2747986c60c74b0cd84213b3d951aa4692c`.
+
+## Outcome and controlling scope
+
+A developer can run `mori prepare-call FILE --action ACTION --deployment PUBLIC.json --predecessor STATE.bin --parameters PARAMS.bin --request REQUEST.json --out NEW_DIR`. The command lowers the checked general `moriarty/1` source, executes actual pinned ledger VM operations, prepares the actual native call transcripts and a native unsigned unshielded offer, and publishes complete public readback. The result is **local, unproven, unsigned, unapplied and unsubmitted**. It is a concrete precursor to M2/M3 and U2, never their closure.
+
+The [October 10 design](2026-10-10-fenrir-integration-design.md), [product contract](../../MORIARTY-PRODUCT-CONTRACT.md), [roadmap](../../../ROADMAP.md), [footguns](../../FOOTGUNS.md), and October 10/11 user routing govern. Work changes Moriarty only. Fenrir is an external target; there is no Fenrir node, Anchor, fraud game or application-contract implementation. Public developers need objective supported-language/input rules, never project review receipts or a campaign to use the command. Project review and resources govern this development session separately.
+
+Independent expected outcomes come from `/home/charl/Moriarty/.moriarty-dev/runtime/check-compile-20261011/next-ledger-target-gap-diagnosis.md`, SHA256 `ad9de29c14679c69bdba3cc01bd7a773fbd1b0e5b3da57221db4f766f04869fd`. Its two financial positives and nineteen hostile categories are mandatory scoped controls below. This spec selects one engineering slice without reducing full U0–U7/M1–M17 acceptance.
+
+The author inspected tracked MinoCrab through `git show HEAD:path` at `9f4d6a62abeb882fc2987d43cd6e0ba0cfb279cd` and Project Fenrir at `ec8da3be532f29e5e92ff7b1804b7dff0bc89b15`, plus retained pinned public SDK source. No dirty or untracked external deployment/contracts source supplies an interface or dependency. No external checkout is changed. No fetch, install, build, test, VM execution, SRS, keygen, proof, MockProver, network, account, funding or transaction job ran during this design. Experiments in this document are specified-only.
+
+## Approaches and selection
+
+1. **Moriarty-owned direct pinned native caller, selected.** Keep Core validation/evaluation; introduce a small `mori-ledger` crate for typed native layout, actual `Op` lowering, native unsigned offers, VM/transcript execution and full comparison. This avoids consuming mutable unpublished MinoCrab workspace paths. It produces a usable vertical preparation caller, with explicit absent proof correspondence.
+2. **Portable frozen MinoCrab helper import.** Its real op encodings and kernel patterns are useful reference material. Its internal ledger tier is unstable, and publisher `call_prototype` is Signet log-only with `operation(None)`. Wholesale adoption adds unrelated publishing/signature conventions. A later reviewed immutable licensed import may reduce circuit-wire work; it is unnecessary for this bounded caller.
+3. **Target descriptor or local scalar-proof wrapper.** Cheap but cannot execute financial VM effects or form actual native transcripts. Rejected: today's scalar `Impact` public slots and local ProofPreimage are not ledger op encodings.
+
+Selected custody boundary: **one public user payer, native unshielded tokens, one contract call, one guaranteed financial phase**, with no mint/burn, contract-funded payment, shielded/private flow, sponsorship or asynchronous call. Multiple assets and recipients are admitted within existing Core bounds; every debit in every source action must use the same payer role. Native offer construction and recipient claims are integral, not storage-only balance changes. Wider custody requires its own specified relation and caller.
+
+## Exact available dependency and API facts
+
+Source fact: all following Git dependencies come from `https://github.com/midnightntwrk/midnight-ledger`, exact revision `04c9c5d9bcebb8d4427d8589fb54d58a55599c14`. The retained public checkout is `/home/charl/.cargo/git/checkouts/midnight-ledger-b2f9c59d942dfdca/04c9c5d`, whose HEAD is that full revision. Version labels are not substitutes for this pin.
+
+| Dependency | Package version at the pin | Use |
+|---|---|---|
+| `midnight-ledger` alias, package `midnight-ledger-v9` | `1.0.0` | LedgerState/parameters, offer/call/intent types, partitioning and invariant |
+| `midnight-onchain-runtime` | `4.0.0` | QueryContext, CallContext, Effects, communication commitment |
+| `midnight-onchain-vm` | `4.0.0` | Op/Key/result modes/native event types |
+| `midnight-onchain-state` | `4.0.0` | ContractState, ChargedState, StateValue, ContractOperation |
+| `midnight-base-crypto` | `1.1.0` | FAB AlignedValue/AlignmentAtom, hash/time/cost types |
+| `midnight-transient-crypto` | `3.0.0` | Fr/FieldRepr/ProofPreimage, public communication framing |
+| `midnight-coin-structure` | `3.0.0` | Native token/address/recipient conversion |
+| `midnight-storage` | `2.0.1` | InMemoryDB/Sp/native persistent containers |
+| `midnight-serialize` | `1.2.0` | Tagged strict native serialization |
+| Existing `midnight-zkir-v3` | `3.0.0-rc.2` | Existing local compiler remains unchanged; future ledger relation |
+
+Keep Rust `1.99.0` from tracked `rust-toolchain.toml`, existing lockfile crypto versions (including `midnight-curves =0.3.1`) and native default proof-verifying features. Do not enable `mock-verify`, `test-utilities`, `unstable`, ledger10 or alternate proof verification. A development input builder uses public constructors, not weakened transaction acceptance. New dependency edges may be added after design clearance; design did not resolve/build dependencies and makes no build-feasibility claim. Missing offline packages are an exact dependency blocker, not permission to fetch or increase limits.
+
+Authoritative locators at that revision:
+
+| Symbol/location | Consequence |
+|---|---|
+| `onchain-vm/src/ops.rs:156,461`, `Op<M,D>`, `FieldRepr::field_repr` | Construct native ops first; derive their scalar encodings through this implementation, never numeric opcode tables |
+| `base-crypto/src/fab/{alignments,conversions,encoding}.rs`; `coin-structure/src/coin.rs:292–321`; runtime `context.rs:514–568` | Native typed conversions/alignment encode UInt128, Bool, token, recipient and combined claim key. Token variant constants elsewhere differ from actual conversion tags; use `AlignedValue::from(native_type)` and strict roundtrip |
+| `onchain-runtime/src/context.rs:843,906,923,990` | QueryContext::new defaults context; replace all CallContext fields explicitly. query returns complete context/effects/events/gas and checks strong state/final stack. run_transcript enforces actual gas/read outputs |
+| `onchain-state/src/state.rs:751,764,892` | Decode whole ContractState/data/balance/operations/maintenance. ContractOperation::new(None,None) means no verifier, not a proof-capable operation |
+| `ledger/src/construct.rs:706,1009` | PreTranscript carries supplied QueryContext, actual verify-mode ops and communication commitment. partition_transcripts reexecutes full runs, chooses guaranteed/fallible phases and gas using supplied parameters |
+| `ledger/src/construct.rs:494,518,599` | Actual ContractCallPrototype and Intent::add_call::<ProofPreimage> carry the transcripts/input/output. ContractCallExt builds public transcript inputs from Op::field_repr and outputs only from Popeq; native ProofPreimageVersioned::V2 is its serialization variant, not Moriarty v3 relation approval |
+| `ledger/src/structure.rs:773,854,3194–3245`; `construct.rs:331` | Native UnshieldedOffer, ErasedIntent::intent_hash(segment), Utxo/UtxoSpend/UtxoOutput and intent assembly define spend/output identity and ordering |
+| `ledger/src/verify.rs:483–529,736–781,1655–1715` | Immediate unsigned offer shape checks enforce sorting/duplicates/nonzero outputs; returned signature-verification closure is separate. Recipient claims must match exact `(token,recipient,amount)` output multiset in the same phase; native test is subset, not complete equality |
+| `ledger/src/semantics.rs:529,1463–1495,1905–1940` | check_night_balance_invariant is actual supply check. unshielded_inputs/outputs credit/debit CONTRACT balance; user offer outputs get actual parent intent hash and sorted output index only at native application |
+| `serialize/src/deserializable.rs:29,85–130` | tagged_deserialize enforces exact tags and EOF; additionally require canonical reserialization equality to reject lossy/noncanonical/duplicate encodings |
+| MinoCrab tracked `minocrab-ledger/src/kernel.rs`, `ops.rs`, `impact.rs`; native runtime `vendored/program_fragments.rs` | State/map/log and effects stack patterns are concrete references. Native vendored fragments lack the general unshielded spend accumulator helper; use native Op values for the inspected nine-slot effects pattern, not copied wire encodings |
+| MinoCrab tracked publisher `call.rs:556–595` | Existing call_prototype always executes log_ops; its output `()` and op(None) do not implement arbitrary financial preparation |
+
+Project Fenrir's tracked copied Cargo file depends on absent sibling MinoCrab paths. Tracked settlement.rs:591–595 has a ledger10 conditional refusal, not proof verification. Neither supplies an authoritative custody caller, Fenrir network qualification or a replacement proof API. Those remain external blockers.
+
+## Separate versioned artifact; old proof bytes preserved
+
+New preparation profile: `moriarty-ledger-call-preparation/1`; native ABI: `moriarty-ledger-public-abi/1`; prospective proof relation name: `moriarty-ledger-call-relation/1` with status **not implemented**. The profile pins source `moriarty/1` and Core `moriarty-core/1`, exact SDK/serializer/toolchain, operation templates, layout and phase policy.
+
+Do not add fields to existing `mori_backend::Target`, Claim, signatures, relation hashes, artifact/proof formats or their canonical serialization. Existing v3 local artifacts/signatures and the original 4,208-byte payment proof remain their original relation. Existing compile/prove/verify commands must retain their bytes and behavior. Neither a legacy proof nor its verifier key is admitted as a proof for a new ledger call.
+
+This preparation computes values on the host and checks them through actual VM read/write/claim/log execution. **It does not constrain source evaluation inside ZKIR, prove source-to-VM correspondence, or bind a deployed verifier to those semantics.** Future ledger relation work must bind every dynamic Push value, Popeq expected read, claim asset/recipient/amount, duty metadata/presence/value, event payload/order, native input/output alignment, predecessor/context/parameter/phase identities and field offsets to constrained Core expression/transition/authorization wires. Constant op headers must match native field_repr; dynamic offsets need exact wire metadata and hostile-witness controls. The current scalar slot relation cannot be spliced in without this new relation/VK/signing profile and fresh resource/result authority.
+
+## Source-wide admission and typed state
+
+Run public `mori_core::parse` and `mori_core::validate`, then inspect **all declarations, expressions and actions**, not just the selected action. Admit current UInt/Bool literals/names, checked Add/Sub/Mul, comparisons, Bool And/Or/Not and all current Let/Requires/Ensures/Next/Emit/Transfer/Fee/Liability/Discharge forms. Arithmetic is checked UInt128; multiplication is Core host arithmetic for preparation, not a nonexistent VM multiply opcode. Unsupported grammar/semantics reject before execution. Program names/hashes never select fixture-specific ops or values.
+
+Extract all source asset identities and role strings from all Transfer/Fee/Liability statements, plus trusted duty bindings needed by Discharge and inherited duties. Admit one declared debit payer across every action; recipients must differ from that payer. Different source roles cannot map to the same native user key/address. Repeated uses of one recipient role, including Transfer and Fee to that role, are supported and aggregated for custody. Self-transfer, role alias collision, contract recipient/payer, a second payer, mint/burn, private state/inputs, cross-contract calls and charged/fallible financial policy reject as unsupported. Unused/unselected declarations must satisfy the same profile. A source state named like another category remains separated by typed key namespace.
+
+Native root layout is Array `[states_map, duties_map, extensions_map]`. States use exactly declared names, each key domain-separated SHA256 of length-framed UTF8 name; values are FAB Cell(UInt128 or Bool) using native conversions. Duties use name keys in a distinct hash domain, and Cell concatenation `(asset_digest32, debtor_role_digest32, creditor_role_digest32, amount_u128)`. Metadata maps name/role/asset digests back to complete trusted identities; reject collisions, missing metadata, duplicate names, malformed Bool, wrong alignments and unknown duty identities. The extensions map is opaque, public, preserved unchanged. Root shape is fixed; undeclared state cells reject. Preserving all declared untouched fields and all extension bytes is mandatory.
+
+Asset digest is SHA256 over domain-separated length-framed canonical complete `(network,issuer,reference,scale)`; role digest similarly covers exact role label plus native public key/address identity. `states_map` is initialized only by a separately supplied public predecessor, never source defaults at call time. Source initializers describe layout/genesis intent; they cannot overwrite an actual supplied successor.
+
+Duties present in native predecessor are decoded in full, including zero amounts. Absence and present-zero differ. Liability creates/updates the named typed entry according to Core semantics; Discharge writes its reduced amount, retaining the entry at zero. Reserve/zero/unmentioned entries survive. No duty removal opcode is emitted. Complete metadata equality and membership are checked, not totals only. Bound inherited duties/roles/assets and their traversal by existing Core trace/declaration capacity; no implicit open-world identity creation.
+
+Native user balances are derived by checked summing **all** predecessor UTXOs for each trusted role and complete mapped token identity. No storage balance cell is added. Preserve every unselected UTXO and metadata, unknown account, other asset, native contract balance, ledger pool, zswap, DUST, replay and other-contract component. The command never treats Scenario balances or an expected final projection as ledger authority.
+
+## Trusted public inputs
+
+One qualification mode is implemented: `local-unproven`. All descriptors are strict typed JSON with duplicate/unknown-field rejection; binary files use exact tagged types and EOF/canonical-byte checks. JSON and each binary input are limited to existing 1,048,576-byte input admission; traversal and operations respect existing MAX_TRACE_CELLS 65,536, MAX_EXPRESSIONS 8,192, MAX_STATEMENTS 1,024, MAX_DECLARATIONS 256 and existing target ceilings 100,000 operations/16,777,216 output bytes. Limits are admission bounds, not measured resource qualification or permission to run a proof.
+
+The separately trusted deployment descriptor contains:
+
+- profile/ABI/source/Core identities and exact source/Core/ABI hashes; all source action entry points and complete operation-set hash;
+- exact Git dependency tuple, serializer/crypto/ZKIR and Rust pins; operation-template digest; the above fixed limits;
+- qualification `local-unproven`, exact local native network string, Anchor label `local-unqualified`, chosen ContractAddress and full expected predecessor SHA256 plus native state_hash;
+- full LedgerParameters file SHA256 and serialization tag; parameters must also equal the predecessor's actual parameters;
+- all full AssetId→UnshieldedTokenType mappings, with integral atomic-unit conversion exactly one-to-one and no scale truncation/substitution; complete source asset set plus inherited duty assets;
+- role label→tagged native signature-verifying-key bytes and derived UserAddress, payer label, all recipients/spectators/inherited-duty roles; exact expected public operation/maintenance/balance hashes;
+- unsigned economic bounds `(owner, beneficiary, AssetLimit[])` for admission when supplied: recompute existing gross, fee, net and duty predicates. These are constraints, not an owner signature;
+- exact tagged RunningCost ceiling bytes and digest, bound to actual parameter block compute/read duration ceilings;
+- explicit phase policy `guaranteed-only`, absence of deployed verifier/source-to-VK evidence, no external root-of-trust claim.
+
+The full supplied native LedgerState<InMemoryDB> must contain the contract at the chosen address and exactly all declared action entry points. Every operation must be exactly `ContractOperation::new(None,None)` in this local profile; any v2/v3 key/IR-bearing operation or incomplete/extra action set rejects. This avoids manufacturing a VK or relabeling the old scalar circuit. The descriptor establishes exact locally trusted public state/ABI identity, not authentic deployment. A genuinely deployed-VK profile must be separately implemented and qualified after the new relation exists.
+
+REQUEST contains action inputs (exact names/types), selected public UtxoSpend bytes, segment `1`, TTL, public request nonce (canonical UInt128), explicit time/block hash/time error/last-block-time, explicit communication randomness and binding randomness, and optional economic bounds only if exactly matched by trusted descriptor. Public all-zero randomness is permitted solely for deterministic unproven local construction; a future production prover/submitter must create fresh secret blinding through its separately reviewed interface. No wallet, secret key, signature, private transcript, SRS or proof bytes are input fields. REQUEST supplies no post-state, candidate totals, status, expected outputs, gas or acceptance flag.
+
+CallContext must set own_address, tblock, tblock_err, parent_block_hash, caller, balance, com_indices and last_block_time. Contract balance comes from decoded contract; caller is derived from the unique selected input owner as native ContractCall::context does; block fields are explicitly trusted local inputs; com_indices is explicitly empty for this unshielded profile. All disagreements reject. QueryContext::new's defaults cannot stand in for these fields.
+
+Selected spend identities must match actual predecessor UTXOs by full `(value,owner-derived-address,type,intent_hash,output_no)`, retain metadata, have the trusted payer key, use only admitted assets and be distinct. UInt128 sums are checked. Selection is explicit, no hidden coin search/funding. Missing/insufficient spend refuses before publishing a successful artifact. Whole predecessor passes `check_night_balance_invariant()` before offer/transcript work. For non-NIGHT test assets, a locally supplied genesis with those UTXOs is local trust only, not issuance/funding evidence.
+
+Request nonce binds the preparation identity; it is **not** a native nullifier or consumed authority. Repeated preparations can reuse an input because nothing has been applied. TTL/time are explicit preparation data, not authenticated clock history. No account ownership is inferred from role labels, JubJub local intent keys or a source declaration.
+
+## Actual lowering and VM execution
+
+1. Strictly admit source/deployment/parameters/predecessor/request; verify hashes and full native state identities; run native supply invariant. Decode a full Core Scenario from native state/duties/UTXOs plus selected action inputs.
+2. Run the existing Core transition to compute checked ordered semantic effects and admission economics. Failed requires, arithmetic or late ensures publish no success artifact. This is a host semantic refusal, not an adversarial proof rejection.
+3. Build native Ops from the actual declarations and each ordered effect. Read every source-referenced state/duty value through Dup/Idx/Popeq with exact FAB opening values; check duty membership separately. Next uses native nested Idx-with-path, Push(storage=true), Ins to update the states map. Liability/Discharge similarly write duties. Op::Popeq read mismatches are actual VM refusal. Emit pushes native MIP-0002 Array `[Cell(u32 version=1),Cell(u8 LogEventType::Misc),Cell(payload)]`, then Op::Log. Payload is length-framed event namespace/name, selected action identity and typed UInt/Bool value, bound to the public ABI; exact event identity/order is checked.
+4. Transfer/Fee emit actual native effects-map accumulator operations at slot 8, key `ClaimedUnshieldedSpendsKey::from_inner(TokenType::Unshielded(tt),PublicAddress::User(recipient))`, UInt128 amount. Use native FAB conversion for that key. Start Swap(0) to reach effects, Idx(slot8,push_path=true), member/branch/add-or-zero, Ins, Swap(0), preserving runtime `[context,effects,strong-state]` stack. Accumulate at each statement in source order. The finite template is the pinned inspected `kernel_effect_add` pattern; complete real query/field_repr/roundtrip controls must verify it. Other eight native Effects components must stay empty. No mint, contract inc-input/output or pretend balance debit is emitted.
+5. Execute `QueryContext::query::<ResultModeVerify>(ops, Some(explicit_bound), &parameters.cost_model.runtime_cost_model)`. Record complete native ChargedState/effects/events/gas. Full state/duty/extension comparison is against independently recomputed Core expectations; native events/claim keys/amounts are compared separately. No host-built post-state substitutes for actual query output.
+6. Construct native input AlignedValue by concatenating source action inputs in declaration order, with native UInt/Bool conversions; output is native `()`. Commitment is runtime `communication_commitment(input,output,explicit_rand)`. Supply `PreTranscript { context, program: ops, comm_comm: Some(commitment) }` to real `partition_transcripts`, using exact supplied parameters. Do not copy Signet log_ops.
+7. The profile emits **no Ckpt**. Accept only partition `(Some(guaranteed), None)`; any whole-fallible partition, partition failure or excess cost refuses as `unsupported-phase`/`native-partition` without a success artifact. No fee/authority/residual-duty failure policy is invented. Run `run_transcript` from the exact initial context; compare complete successor/effects/events to direct query, plus transcript gas bound. Source semantic order is preserved even though sorted offers use another order.
+8. Construct actual `ContractCallPrototype` using supplied address/entry point, locally supplied operation(None,None), guaranteed transcript, no fallible transcript, no private outputs, actual input/output, explicit communication randomness and KeyLocation(entry point). Construct the native unproven Intent using the public offer, prototype, segment1, explicit TTL/binding randomness, empty DUST and no updates/deploys, and `Intent::add_call::<ProofPreimage>`. Read the resulting public ProofPreimage; enforce empty private transcript, exact actual-op field_repr inputs and Popeq-only outputs. This is an actual native preimage, no proof or key resolver success.
+
+RunningCost admission: the trusted descriptor supplies exact tagged RunningCost ceiling bytes, recorded with a digest. Its compute/read durations must not exceed actual `parameters.limits.block_limits` compute/read durations; bytes_written and bytes_deleted must each be no greater than the native block bytes_churned bound, and additionally check measured net written bytes against block bytes_written. Record all four RunningCost components without mapping a SyntheticCost dimension to the wrong unit. Check direct `gas_cost.within_bounds`, partition result gas and repeat run_transcript. These are separate native duration/cost types: decode/compare through their real methods, never invent a write-time field or assume TransactionLimits is RunningCost. Native partition admission still uses exact min_time_to_dismiss/time_to_dismiss_per_byte and its overhead calculation. Do not guess gas from op count or fees from application Fee. Preserve raw gas measurements and parameter identity. partition_transcripts includes native heuristics/overheads; its estimate is not measured transaction proof size, native fee consumption, M5 cost qualification or proof feasibility.
+
+## Native offer and custody comparison
+
+For each token/recipient aggregate checked Transfer+Fee amounts over source-order effects. Each required aggregate gets **one exact UtxoOutput**. Never merge it with payer change. Recipients cannot be the payer; this restriction resolves claim-vs-change ambiguity honestly. Repeated Transfer/Fee to the same recipient combine natively while their ordered semantic identities remain separate. Selected input sum per asset must cover aggregate payouts; positive change becomes one payer output, zero change means no output. Selected assets with no payout reject as unnecessary spends. Zero-valued Transfer/Fee on the selected execution rejects as `unsupported-zero-payout`; persistent zero duties remain valid.
+
+Construct actual `UnshieldedOffer<(),InMemoryDB>` from native typed inputs/outputs with empty signatures; sort native inputs/outputs by their authoritative Ord, never source role order. Keep an independent map from semantic effect index to native claim and sorted output index. No signature verification through unit SignatureKind or native Mock APIs counts as acceptance.
+
+Use the real offer `well_formed(segment=1,parent_erased_intent)` immediate shape checks; **do not execute its returned signature-verification closure** and label signature checking not performed. Independently compare every input/output against required custody, grouping and exact change; enforce per-asset input=output, uniqueness/nonzero and complete output equality. Native claim verification is a subset test, so native absence of rejection alone cannot authorize extra outputs. Both exact output multiset and full native claim accumulator must agree. Preserve output-array multiplicity: duplicate INPUTS are forbidden; duplicate equal-valued native outputs are not generally forbidden by the native shape checker. This profile derives one aggregate per recipient plus separate payer change, rather than silently deduplicating outputs.
+
+Construct the actual StandardTransaction from the unproven intent through native `Transaction::from_intents` and call `balance(None)`. Require every returned per-token/segment delta to be zero. This is native financial shape preflight with no protocol fees or DUST contribution. Native balance converts each UInt128 value to i128 and performs checked intermediate arithmetic; refuse conversion or intermediate overflow even when host final sums are equal. Core UInt128 range remains unchanged: legal Core values at/above 2^127 can be unsupported by native preparation. Preserve this as a native-balance refusal, not source numeric invalidity or funded transaction acceptance. Never call full transaction well_formed with unit signatures/proofs as authority evidence.
+
+Use actual assembled `erase_proofs().erase_signatures().intent_hash(1)` to assign prospective new Utxo identities `(value,owner,type,intent_hash,output_no)` in native sorted output order. This hash is provisional: adding real DUST/binding/proof framing/changed TTL may change the final intent. Emit the actual unsigned native offer bytes and these provisional identities; never insert them into the supplied predecessor or label them consumed/live. Include a clear `requires_reconstruction_after_final_intent` flag. Any future call consumer must recompute identities from its final parent intent and actual native apply.
+
+For full prospective account projection, subtract only selected input UTXOs and add proposed native outputs; preserve all unselected UTXO identities and metadata. This is a checked **prospective** projection, not VM-observed balance movement. VM-observed contract state/duties/events/claims and unapplied offer/user balances are distinct artifact fields. Contract custody balance remains identical. A full LedgerState successor is not emitted as an applied result; native apply's DUST/time/UTXO metadata/replay effects have not run.
+
+## Public artifact and safe CLI consumer
+
+`mori-ledger` returns an owned preparation bundle; the actual CLI caller exercises it. No unused helper qualifies. Validate and fully serialize everything before creating NEW_DIR; refuse existing destinations. Reuse `proof_io::publish_new` no-clobber semantics for each leaf. Never delete raced user content or unrelated additions; preserve completed owned leaves on failure. Publish `preparation.json` last as the completion marker.
+
+Fixed public leaves:
+
+- `abi.json`: owned typed source-wide state/duty/event/asset/role/action layout, supported set, constant/dynamic op binding map;
+- `ops.bin`: canonical tagged actual verify-mode native ops in order, with op index/source statement/expression mapping in `abi.json`;
+- `guaranteed-transcript.bin`: actual tagged native Transcript with effects/program/gas/version; no fallible file;
+- `successor-data.bin`: actual tagged VM ChargedState, with whole original contract maintenance/operations/balance hashes separately retained;
+- `offer.bin`: actual tagged native unsigned UnshieldedOffer, zero signatures;
+- `call.json`: owned public prototype fields and native ProofPreimage projection, actual FAB/field values and complete identity links, empty private transcript;
+- `readback.json`: complete actual typed VM state/duties/extensions/events/effects/gas and full prospective offer/balances/preserved UTXOs, visibly separated;
+- `preparation.json`: all leaf SHA256s/lengths, exact source/Core/profile/ABI/op/predecessor/native-state/parameters/deployment/request/call hashes, full qualification and every evidence flag.
+
+Public bundle must set proof/signature verification, ledger apply, consumption, fees paid, deployment/target qualification and settlement evidence to `not-performed`; there is no configurable nativeverified/settled boolean. Unproved relation compatibility is `unestablished`. Only allowlisted known public fields serialize. Reject unknown/private/wallet/secret-key/proof/witness/SRS fields; admitted public native verification keys remain in the explicitly typed role/spend schema; never capture raw input bytes on errors. Public communication/binding randomness are explicit local construction values. Enforce existing aggregate artifact cap before publication. Display errors with escaped identities using current CLI display helpers; paths/source strings cannot inject terminal controls.
+
+## Specified independent positives and hostile controls
+
+Tests use this same public caller and pinned real VM/partition execution. Public local predecessor builders may construct native state/UTXOs but may not call them minted, funded or authentic. The test source contents and expected arithmetic are independently authored; no fixture/source-name branch is allowed in production.
+
+| Case | Complete reference result | Actual VM / unsigned offer obligations |
+|---|---|---|
+| payment70, alice100/bob10/treasury0, paid0, payment50/reserve5/zero0 | alice28/bob80/treasury2; paid70; payment30/reserve5/zero0 present; ordered Transfer70, Fee2, Duty50→30, State0→70, Emit70; gross72/fee2/net68/duties35 | Source yields typed paid/duty writes + Emit70 + recipient claims Bob70/Treasury2. Spend bound Alice100; native exact outputs Bob70/Treasury2/Alice28; Bob10 untouched. Contract balance unchanged. Projection is prospective |
+| CounterflowCollection43, alice100/carol7/spectator9/treasury1, collected0, addon0/payment12/reserve5/zero0, frozen=true | alice57/carol47/spectator9/treasury4; collected40; addon4/payment5/reserve5/zero0 present; frozen=true; ordered Fee3, Transfer40, addon0→4, payment12→5, State0→40, Emit40, Ensures; gross43/fee3/net37/duties14 | Treasury3/Carol40 claims; exact outputs Treasury3/Carol40/Alice57; existing Carol7/Treasury1/Spectator9 untouched. Native sorting may differ from source order; both retained |
+
+Additional positives: contrasting source with same layout/different arithmetic and action names follows identical lowering; same explicit randomness/inputs produces identical bytes; present-zero survives; full extensions and unknown UTXOs survive; repeated same-recipient Transfer/Fee produces one exact aggregate output; genuine prior VM state is used by a second state-only local call after separately supplying a newly trusted local predecessor. This last control is VM continuation only, no funding/ledger history proof. Default native LedgerState passes supply invariant.
+
+| # | Hostile requirement and honest failure layer |
+|---|---|
+| 1 | Any SDK/VM/crypto/serializer/toolchain/op-ABI/source-version mismatch: descriptor admission refusal before VM |
+| 2 | Wrong network/Anchor/address/entry point/source/action/ABI or self-consistent replacement descriptor: separately trusted expected identity fails |
+| 3 | Missing/extra operation, keyed/IR operation, old scalar VK or purported deployed qualification: local profile refuses; future actual VK qualification remains open |
+| 4 | Parameter digest/bytes differ or defaults substitute: identity refusal; exact params equal native predecessor and control native partition cost |
+| 5 | Changed predecessor root/data or candidate post substituted as pre: exact trusted digest/native-state refusal; Scenario never overrides pre |
+| 6 | Original excess-NIGHT style native state: actual check_night_balance_invariant refuses; no new funding/proof job |
+| 7 | Same alias different full AssetId/color/scale or duplicate mappings: identity/atomic-unit refusal |
+| 8 | Role/key/address/payer substitution, alias collision, second payer/self-transfer: trusted mapping/source-wide profile refusal |
+| 9 | Transfer/Fee storage-only update or no actual recipient claim/output: real query full-effect/offer comparator refuses |
+| 10 | Missing/reordered/extra write/event/claim, malformed alignment or field repr: VM/readback/actual preimage mismatch. Dynamic witness soundness remains future proof obligation |
+| 11 | Wrong recipient/value, duplicate spend, noncanonical order, zero output, missing/wrong change, imbalance, repeated-recipient unaggregated outputs: native immediate shape or exact complete custody comparator refusal |
+| 12 | Payment69 reported70, omitted/double fee, refund hiding gross, violated independently supplied caps: recompute complete ordered effects/economics; no candidate totals rescue |
+| 13 | Duty removal/metadata substitution, present-zero erased, spectator/frozen altered: full membership/state/projection refusal |
+| 14 | Unknown extension/account/other-native-component changed: complete frame refuses unexplained delta; whole predecessor unchanged |
+| 15 | UInt128 overflow/underflow/sum overflow, requires/late ensures: host semantic or VM refusal, no financial success publication |
+| 16 | Added Ckpt, all-fallible/partial policy, changed transcript gas/effects: guaranteed-only admission, partition or run_transcript refuses; no global native rollback claim |
+| 17 | Signature attachment/private proof fields: this unsigned new profile refuses unknown fields. Existing v3 invalid/alternative-valid attachment controls keep their original Claim semantics; no native signature/proof evidence is inferred |
+| 18 | Nonce/pre/time change and concurrent prepares: preparation identities bind explicit inputs; repeated prepare never claims reservation/consumption. Actual duplicate native apply rejection stays untested/open |
+| 19 | Truncated/oversized/wrong-tag/trailing/noncanonical bytes, duplicate/unknown JSON or embedded private fields: bounded strict refusal and no completion marker; raced file/symlink/directory preserved |
+
+Tests must additionally split one native recipient aggregate into outputs, add unclaimed output, merge payer change into a claimed payout, mutate selected spend intent_hash/output_no/owner/value/type, replace parameters/call context, change unrelated UTXO metadata, and corrupt each publication leaf. These challenge native and independent complete comparison, not names of expected errors. A mutation accepted by native subset semantics must still fail Moriarty's complete custody expectation where economically different.
+
+## Acceptance boundary, unresolved work and retained failures
+
+Delivery passes only after actual public CLI positives execute real pinned VM/partition, native unsigned offer/call/preimage construction and complete independent controls; exact final source/results get fresh Sol HIGH and Grok HIGH audits. Tests are not proof, source-to-ledger formal correspondence, native signature verification or settlement. Public artifact usefulness is inspectable actual call/offer/transcript bytes plus typed state/custody requirements for the next relation/prover consumer.
+
+Next relation work needs exact constrained source→op wires/communication/binding semantics, separate keys/VK resolution and revised owner authorization; real apply needs legitimately funded predecessor, signatures, proof, DUST, native Real well_formedness, independent verifier and complete native readback. Fenrir domain/Anchor/root-of-trust/complete external circuits and observed interface revisions are unavailable for qualification. Recursion/private/history/MC/SP/U/M exits remain open. Do not fetch a network state, implement Fenrir or silently relabel local-unqualified as deployed.
+
+The `9a8777c4d035fc7f38ae286bcf5f8656668efd9f` sorted application remains failed `InvariantViolation(NightBalance(24001000000000000))`, not repaired by this spec or a cloned-state test. Its original 6,336-byte proof/2,275-byte statement/10,499-byte transaction, unchanged state and never-run independent verifier retain that scope. Original signed-native k13 allocation remains consumed; no resume, wider bounds or new proof resource authority follows. Preserve all prior worktrees/receipts.
+
+A new plain finite Quint custody model is part of QA: independent semantic effects, grouped native claims, sorted offer outputs/change and preserved predecessor membership; two positive witnesses plus recipient/claim/change/grouping/conservation mutations. Cryptography, serialized-byte correctness, actual VM behavior, signatures and native proof verification are named abstract premises, never inferred from the model. Use quint-llm-kit modeling/reference skills after design approval; typecheck/test/run the model, no Apalache or new model checking resource campaign. This model complements actual native caller tests and does not certify funding, proof or settlement.
+
+The next implementation is bounded by this spec and the [plan](../plans/2026-10-11-ledger-call-preparation.md). Design votes precede source/test changes. Root's existing autonomous majority authority replaces repeated user confirmation; this is documentation for those exact independent votes, not author self-approval.
