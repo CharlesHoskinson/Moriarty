@@ -1039,6 +1039,51 @@ mod tests {
         );
     }
     #[test]
+    fn key_export_v2_effective_pk_cap_reaches_the_same_one_pass_writer() {
+        let mut limits = crate::profile::NativeWorkLimits {
+            profile: "moriarty-native-call-work-limits/1".into(),
+            max_degree: 19,
+            max_actions: 1,
+            max_srs_bytes: 1,
+            max_prover_key_bytes: (FIXTURE_HEADER.len() + 2) as u64,
+            max_verifier_key_bytes: 1,
+            max_input_bytes: 1,
+            max_leaf_bytes: (FIXTURE_HEADER.len() + 1) as u64,
+            max_artifact_bytes: 128,
+            max_operations: 1,
+            max_public_inputs: 1,
+        };
+        let fixture = encoding_fixture(EncodingBehavior::Success);
+        let error = encode_key(
+            &fixture,
+            "selected",
+            KeyExportKind::Prover,
+            0,
+            limits.prover_key_cap().unwrap(),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.key_export().unwrap().byte_cap,
+            FIXTURE_HEADER.len() + 1
+        );
+        assert_eq!(
+            error.key_export().unwrap().reason,
+            KeyExportFailureReason::ByteCapExceeded
+        );
+        limits.profile = "moriarty-native-call-work-limits/2".into();
+        assert!(
+            encode_key(
+                &fixture,
+                "selected",
+                KeyExportKind::Prover,
+                0,
+                limits.prover_key_cap().unwrap()
+            )
+            .is_ok()
+        );
+        assert_eq!(fixture.calls.get(), 2); // One payload call per existing adapter invocation.
+    }
+    #[test]
     fn rng_forks_consume_distinct_cryptographic_streams() {
         let mut parent = StdRng::seed_from_u64(17);
         let mut first = fork_rng(&mut parent);

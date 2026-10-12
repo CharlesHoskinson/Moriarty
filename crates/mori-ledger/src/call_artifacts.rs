@@ -65,7 +65,42 @@ pub struct ImportedProvingKeyset {
     pub(crate) public: ImportedPublicKeyset,
     pub(crate) action: String,
     pub(crate) pk: Vec<u8>,
-    pub(crate) snapshot_total: usize,
+    pub(crate) counts: KeysetByteCounts,
+}
+/// Acquired/exported transport bytes only; SRS has its existing separate budget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct KeysetByteCounts {
+    pub(crate) public: usize,
+    pub(crate) prover: usize,
+    pub(crate) physical: usize,
+}
+pub(crate) fn keyset_counts(
+    public: usize,
+    prover: usize,
+    limits: &NativeWorkLimits,
+) -> Result<KeysetByteCounts> {
+    limits.validate()?;
+    if prover > limits.prover_key_cap()? {
+        return Err(refusal("leaf-size"));
+    }
+    let public_cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
+    let physical = public
+        .checked_add(prover)
+        .ok_or(refusal("aggregate-size"))?;
+    let physical_cap = match limits.version()? {
+        WorkLimitsVersion::V1 => public_cap,
+        WorkLimitsVersion::V2 => public_cap
+            .checked_add(limits.prover_key_cap()?)
+            .ok_or(refusal("aggregate-size"))?,
+    };
+    if public > public_cap || physical > physical_cap {
+        return Err(refusal("aggregate-size"));
+    }
+    Ok(KeysetByteCounts {
+        public,
+        prover,
+        physical,
+    })
 }
 pub fn public_identity(m: &PublicKeysetManifest) -> Result<String> {
     if let Some(policy) = &m.signer_policy {
@@ -310,24 +345,31 @@ pub(crate) fn snapshot_proving_profile(
     {
         return Err(refusal("proving-leaf-identity"));
     }
-    let mut total = add_total(
+    let public_total = add_total(
         public.snapshot_total,
         bytes.len(),
         NativeWorkLimits::cap(limits.max_artifact_bytes)?,
     )?;
+    // Admit both declared domains and checked physical addition before PK open.
+    let pk_length = usize::try_from(marker.prover_key.bytes).map_err(|_| refusal("leaf-size"))?;
+    let counts = keyset_counts(public_total, pk_length, limits)?;
+    // Retain exact length/hash acquisition. The PK-only counter has its own
+    // cap in v2; legacy counts above still enforce its shared aggregate.
+    let mut pk_total = 0;
+    let pk_cap = limits.prover_key_cap()?;
     let pk = read_leaf(
         directory,
         "selected.pk.bin",
         &marker.prover_key,
-        limits.max_prover_key_bytes.min(limits.max_leaf_bytes),
-        &mut total,
-        NativeWorkLimits::cap(limits.max_artifact_bytes)?,
+        u64::try_from(pk_cap).map_err(|_| refusal("leaf-size"))?,
+        &mut pk_total,
+        pk_cap,
     )?;
     Ok(ImportedProvingKeyset {
         public,
         action: action.into(),
         pk,
-        snapshot_total: total,
+        counts,
     })
 }
 struct BoundedWriter {
@@ -407,6 +449,370 @@ impl ArtifactLeaves {
             total = add_total(total, bytes.len(), cap)?;
         }
         Ok(())
+    }
+    // This private context is constructed only by the genuine keyset factory
+    // entry below; generic ArtifactLeaves never classifies by a PK-like name.
+    fn check_keyset(
+        &self,
+        selected: SelectedProverKeyLength,
+        limits: &NativeWorkLimits,
+    ) -> Result<KeysetByteCounts> {
+        if self.marker_name != "public-keyset.json" {
+            return Err(refusal("keyset-context"));
+        }
+        let pk = self
+            .leaves
+            .get("selected.pk.bin")
+            .ok_or(refusal("keyset-context"))?;
+        if pk.len() != selected.0 {
+            return Err(refusal("keyset-context"));
+        }
+        // v1 uses the exact original public-only flat checker.
+        if limits.version()? == WorkLimitsVersion::V1 {
+            self.check(limits)?;
+        }
+        limits.validate()?;
+        let cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
+        let mut public = add_total(0, self.marker.len(), cap)?;
+        for (name, bytes) in &self.leaves {
+            if name == self.marker_name || !valid_leaf(name) {
+                return Err(refusal("leaf-name"));
+            }
+            if name == "selected.pk.bin" {
+                continue;
+            }
+            if bytes.len() > NativeWorkLimits::cap(limits.max_leaf_bytes)? {
+                return Err(refusal("leaf-size"));
+            }
+            public = add_total(public, bytes.len(), cap)?;
+        }
+        keyset_counts(public, pk.len(), limits)
+    }
+}
+struct SelectedProverKeyLength(usize);
+pub(crate) fn check_keyset_export(
+    output: &ArtifactLeaves,
+    selected: &crate::proving::DerivedCallMaterial,
+    limits: &NativeWorkLimits,
+) -> Result<KeysetByteCounts> {
+    output.check_keyset(
+        SelectedProverKeyLength(selected.prover_key_bytes().len()),
+        limits,
+    )
+}
+
+/// Existing export input checks, separate from public/prover transport counts.
+pub(crate) fn check_export_input_lengths(
+    source: usize,
+    predecessor: usize,
+    parameters: usize,
+    limits: &NativeWorkLimits,
+) -> Result<()> {
+    let cap = NativeWorkLimits::cap(limits.max_input_bytes)?;
+    if predecessor > cap
+        || parameters > cap
+        || (limits.version()? == WorkLimitsVersion::V2 && source > cap)
+    {
+        return Err(Error::new("local-deployment", "export-work-limit"));
+    }
+    Ok(())
+}
+/// Descriptor inputs keep their existing one-pass bounded JSON writer.
+pub(crate) fn deployment_json_bytes<T: Serialize>(
+    descriptor: &T,
+    limits: &NativeWorkLimits,
+) -> Result<Vec<u8>> {
+    let mut cap = limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64);
+    if limits.version()? == WorkLimitsVersion::V2 {
+        cap = cap.min(limits.max_input_bytes);
+    }
+    json_bytes(descriptor, cap)
+}
+
+#[cfg(test)]
+mod prover_key_domain_tests {
+    use super::*;
+    fn limits() -> NativeWorkLimits {
+        NativeWorkLimits {
+            profile: "moriarty-native-call-work-limits/2".into(),
+            max_degree: 19,
+            max_actions: 4,
+            max_srs_bytes: 1024,
+            max_prover_key_bytes: 32 * 1024 * 1024,
+            max_verifier_key_bytes: 65536,
+            max_input_bytes: 1048576,
+            max_leaf_bytes: 16777216,
+            max_artifact_bytes: 16777216,
+            max_operations: 10000,
+            max_public_inputs: 10000,
+        }
+    }
+    #[test]
+    fn real_boundaries_and_physical_addition_use_counts_without_allocation() {
+        let mut l = limits();
+        let public = 16 * 1024 * 1024;
+        let prover = 32 * 1024 * 1024;
+        assert_eq!(
+            keyset_counts(public, prover, &l).unwrap(),
+            KeysetByteCounts {
+                public,
+                prover,
+                physical: public + prover
+            }
+        );
+        assert_eq!(
+            keyset_counts(public + 1, prover, &l).unwrap_err().code,
+            "aggregate-size"
+        );
+        assert_eq!(
+            keyset_counts(public, prover + 1, &l).unwrap_err().code,
+            "leaf-size"
+        );
+        assert_eq!(
+            keyset_counts(usize::MAX, 1, &l).unwrap_err().code,
+            "aggregate-size"
+        );
+        l.max_prover_key_bytes = 64 * 1024 * 1024;
+        assert_eq!(
+            keyset_counts(public, 64 * 1024 * 1024, &l)
+                .unwrap()
+                .physical,
+            80 * 1024 * 1024
+        );
+        l.max_artifact_bytes = 3;
+        l.max_prover_key_bytes = 4;
+        l.max_leaf_bytes = 2;
+        assert_eq!(keyset_counts(3, 4, &l).unwrap().physical, 7);
+        l.profile = "moriarty-native-call-work-limits/1".into();
+        assert!(keyset_counts(3, 4, &l).is_err());
+    }
+    #[test]
+    fn hard_v2_ceilings_preserve_exact_unsigned_and_signed_v1_admission() {
+        let original = limits();
+        assert!(original.validate().is_ok());
+        for field in [
+            "max_prover_key_bytes",
+            "max_leaf_bytes",
+            "max_artifact_bytes",
+            "max_input_bytes",
+            "max_verifier_key_bytes",
+        ] {
+            let mut json = serde_json::to_value(&original).unwrap();
+            let max = match field {
+                "max_prover_key_bytes" => 67108864,
+                "max_input_bytes" => 1048576,
+                "max_verifier_key_bytes" => 65536,
+                _ => 16777216,
+            };
+            json[field] = serde_json::json!(max);
+            assert!(NativeWorkLimits::from_json(&json.to_string()).is_ok());
+            json[field] = serde_json::json!(max + 1);
+            assert!(NativeWorkLimits::from_json(&json.to_string()).is_err());
+            json["profile"] = serde_json::json!("moriarty-native-call-work-limits/1");
+            let legacy = NativeWorkLimits::from_json(&json.to_string()).unwrap();
+            if matches!(
+                field,
+                "max_leaf_bytes" | "max_artifact_bytes" | "max_input_bytes"
+            ) {
+                assert_eq!(
+                    crate::signed::validate_work_limits(&legacy)
+                        .unwrap_err()
+                        .code,
+                    "ordinary-envelope"
+                );
+            } else {
+                assert!(crate::signed::validate_work_limits(&legacy).is_ok());
+            }
+        }
+        let mut bad = original;
+        bad.profile = "moriarty-native-call-work-limits/02".into();
+        assert!(bad.validate().is_err());
+    }
+    #[test]
+    fn only_validated_keyset_context_gets_singleton_pk_domain_and_counts_markers() {
+        let mut l = limits();
+        l.max_leaf_bytes = 3;
+        l.max_artifact_bytes = 7;
+        l.max_prover_key_bytes = 8;
+        let mut output = ArtifactLeaves {
+            leaves: [
+                ("selected.pk.bin".into(), vec![0; 8]),
+                ("source.mori".into(), vec![0; 2]),
+                ("proving-keyset.json".into(), vec![0; 3]),
+            ]
+            .into(),
+            marker_name: "public-keyset.json",
+            marker: vec![0; 2],
+        };
+        let mut generic = l.clone();
+        generic.max_artifact_bytes = 15;
+        assert_eq!(output.check(&generic).unwrap_err().code, "leaf-size");
+        generic.max_leaf_bytes = 8;
+        generic.max_artifact_bytes = 7;
+        assert_eq!(output.check(&generic).unwrap_err().code, "aggregate-size");
+        let counts = output.check_keyset(SelectedProverKeyLength(8), &l).unwrap();
+        assert_eq!(
+            counts,
+            KeysetByteCounts {
+                public: 7,
+                prover: 8,
+                physical: 15
+            }
+        );
+        l.max_artifact_bytes = 6;
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(8), &l)
+                .unwrap_err()
+                .code,
+            "aggregate-size"
+        );
+        l.max_artifact_bytes = 7;
+        output
+            .leaves
+            .get_mut("proving-keyset.json")
+            .unwrap()
+            .push(0);
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(8), &l)
+                .unwrap_err()
+                .code,
+            "leaf-size"
+        );
+        output.leaves.get_mut("proving-keyset.json").unwrap().pop();
+        for name in [
+            "renamed.pk.bin",
+            "action-000000.pk.bin",
+            "../selected.pk.bin",
+            "selected.pk.bin/extra",
+        ] {
+            output.leaves.insert(name.into(), vec![0; 8]);
+            assert!(output.check_keyset(SelectedProverKeyLength(8), &l).is_err());
+            output.leaves.remove(name);
+        }
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(7), &l)
+                .unwrap_err()
+                .code,
+            "keyset-context"
+        );
+        output.marker_name = "proven-call.json";
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(8), &l)
+                .unwrap_err()
+                .code,
+            "keyset-context"
+        );
+    }
+    #[test]
+    fn signed_descriptor_replacement_and_lowered_reopen_caps_recheck_domains() {
+        let mut l = limits();
+        l.max_leaf_bytes = 4;
+        l.max_artifact_bytes = 6;
+        l.max_prover_key_bytes = 8;
+        let mut output = ArtifactLeaves {
+            leaves: [
+                ("selected.pk.bin".into(), vec![0; 8]),
+                ("deployment.json".into(), vec![0; 4]),
+            ]
+            .into(),
+            marker_name: "public-keyset.json",
+            marker: vec![0; 2],
+        };
+        assert!(output.check_keyset(SelectedProverKeyLength(8), &l).is_ok());
+        output.leaves.get_mut("deployment.json").unwrap().push(0);
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(8), &l)
+                .unwrap_err()
+                .code,
+            "leaf-size"
+        );
+        output.leaves.get_mut("deployment.json").unwrap().pop();
+        output.marker.push(0);
+        assert_eq!(
+            output
+                .check_keyset(SelectedProverKeyLength(8), &l)
+                .unwrap_err()
+                .code,
+            "aggregate-size"
+        );
+        assert!(keyset_counts(6, 8, &l).is_ok());
+        l.max_prover_key_bytes = 7;
+        assert!(keyset_counts(6, 8, &l).is_err());
+        l.max_prover_key_bytes = 8;
+        l.max_artifact_bytes = 5;
+        assert!(keyset_counts(6, 8, &l).is_err());
+    }
+    #[test]
+    fn strict_v2_fields_refuse_invalid_values_without_any_acquisition() {
+        let good = serde_json::to_value(limits()).unwrap();
+        for field in [
+            "max_actions",
+            "max_srs_bytes",
+            "max_prover_key_bytes",
+            "max_verifier_key_bytes",
+            "max_input_bytes",
+            "max_leaf_bytes",
+            "max_artifact_bytes",
+            "max_operations",
+            "max_public_inputs",
+        ] {
+            for invalid in [
+                serde_json::json!(0),
+                serde_json::json!(-1),
+                serde_json::json!(1.5),
+                serde_json::json!(u64::MAX),
+            ] {
+                let mut value = good.clone();
+                value[field] = invalid;
+                assert!(
+                    NativeWorkLimits::from_json(&value.to_string()).is_err(),
+                    "{field}"
+                );
+            }
+            let mut value = good.clone();
+            value.as_object_mut().unwrap().remove(field);
+            assert!(
+                NativeWorkLimits::from_json(&value.to_string()).is_err(),
+                "{field}"
+            );
+        }
+        let text = good.to_string();
+        assert!(NativeWorkLimits::from_json(&text.replacen('{', "{\"unexpected\":1,", 1)).is_err());
+        assert!(
+            NativeWorkLimits::from_json(&text.replacen('{', "{\"max_degree\":19,", 1)).is_err()
+        );
+    }
+    #[test]
+    fn lowered_v2_source_predecessor_and_parameter_inputs_refuse_before_output() {
+        let mut l = limits();
+        l.max_input_bytes = 4;
+        assert!(check_export_input_lengths(4, 4, 4, &l).is_ok());
+        assert!(check_export_input_lengths(5, 1, 1, &l).is_err());
+        assert!(check_export_input_lengths(1, 5, 1, &l).is_err());
+        assert!(check_export_input_lengths(1, 1, 5, &l).is_err());
+        l.profile = "moriarty-native-call-work-limits/1".into();
+        assert!(check_export_input_lengths(5, 1, 1, &l).is_ok());
+    }
+    #[test]
+    fn lowered_v2_unsigned_and_signed_descriptor_inputs_use_current_caller_cap() {
+        for descriptor in [
+            serde_json::json!({"deployment":"opaque"}),
+            serde_json::json!({"deployment":"opaque", "signer_policy":"public"}),
+        ] {
+            let encoded = serde_json::to_vec_pretty(&descriptor).unwrap();
+            let mut l = limits();
+            l.max_input_bytes = encoded.len() as u64;
+            assert_eq!(deployment_json_bytes(&descriptor, &l).unwrap(), encoded);
+            l.max_input_bytes -= 1;
+            assert!(deployment_json_bytes(&descriptor, &l).is_err());
+            l.profile = "moriarty-native-call-work-limits/1".into();
+            assert_eq!(deployment_json_bytes(&descriptor, &l).unwrap(), encoded);
+        }
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
