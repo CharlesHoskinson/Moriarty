@@ -281,6 +281,30 @@ fn exact_custody_rejects_split_change_merged_self_and_lost_multiplicity() {
     assert_eq!(outputs[0], outputs[1]);
     o.outputs = vec![outputs[0].clone()].into();
     assert!(custody::validate_offer(&pre, &e, &o).is_err());
+
+    // Literal separate change is mandatory, even when native claim-subset
+    // membership alone would accept the payment output.
+    let f = support::cash("transfer(QA,\"alice\",\"bob\",20);", 100);
+    let pre = admitted(&f);
+    let e = mori_core::simulate(&f.program, "run", &pre.scenario).unwrap();
+    let good = custody::prepare_offer(&pre, &e).unwrap().offer;
+    assert_eq!(
+        good.outputs.iter().map(|o| o.value).collect::<Vec<_>>(),
+        vec![20, 80]
+    );
+    let mut missing = good.clone();
+    missing.outputs = Vec::from(&good.outputs)
+        .into_iter()
+        .filter(|o| o.value != 80)
+        .collect::<Vec<_>>()
+        .into();
+    assert!(custody::validate_offer(&pre, &e, &missing).is_err());
+    let mut extra = good.clone();
+    let mut outs = Vec::from(&good.outputs);
+    outs.push(outs.iter().find(|o| o.value == 80).unwrap().clone());
+    outs.sort();
+    extra.outputs = outs.into();
+    assert!(custody::validate_offer(&pre, &e, &extra).is_err());
 }
 
 #[test]

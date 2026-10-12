@@ -61,6 +61,79 @@ impl Drop for PublicFiles {
 }
 
 #[test]
+fn actual_cli_compiles_and_consumes_the_source_static_native_relation() {
+    for f in [support::payment(), support::collection()] {
+        let files = PublicFiles::new(&f);
+        let relation = files.root.join("relation");
+        let result = Command::new(env!("CARGO_BIN_EXE_mori"))
+            .args(["--color", "never", "compile-call"])
+            .arg(files.root.join("source.mori"))
+            .arg("--action")
+            .arg(&files.action)
+            .arg("--deployment")
+            .arg(files.root.join("deployment.json"))
+            .arg("--out")
+            .arg(&relation)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let out = files.root.join("checked");
+        let result = files
+            .command(&out)
+            .arg("--relation")
+            .arg(&relation)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let r: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out.join("readback.json")).unwrap()).unwrap();
+        assert_eq!(
+            r["evidence"]["qualification"],
+            "local-relation-checked-unproven"
+        );
+        assert_eq!(r["evidence"]["proof_verification"], "not-performed");
+        assert!(out.join("processed-preimage.bin").exists());
+        let raw: mori_ledger::prepare::RawIntent = mori_ledger::codec::decode_artifact(
+            &std::fs::read(out.join("raw-intent.bin")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(raw.calls().count(), 1);
+        assert_eq!(
+            mori_ledger::codec::encode(raw.calls().next().unwrap()).unwrap(),
+            std::fs::read(out.join("raw-call.bin")).unwrap()
+        );
+        let marker: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out.join("preparation.json")).unwrap()).unwrap();
+        assert_eq!(
+            marker["leaves"]["raw-intent.bin"]["sha256"],
+            mori_ledger::codec::hash(&std::fs::read(out.join("raw-intent.bin")).unwrap())
+        );
+        assert!(out.join("preparation.json").exists());
+        let artifact = relation.join("manifest.json");
+        let before = std::fs::read(&artifact).unwrap();
+        std::fs::write(&artifact, b"untrusted altered manifest").unwrap();
+        let refused = files.root.join("refused");
+        let result = files
+            .command(&refused)
+            .arg("--relation")
+            .arg(&relation)
+            .output()
+            .unwrap();
+        assert!(!result.status.success());
+        assert!(!refused.join("preparation.json").exists());
+        std::fs::write(&artifact, before).unwrap();
+    }
+}
+
+#[test]
 fn preparation_command_is_a_public_cli_consumer() {
     let out = Command::new(env!("CARGO_BIN_EXE_mori"))
         .args(["--color", "never", "prepare-call", "--help"])
