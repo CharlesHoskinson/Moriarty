@@ -141,6 +141,33 @@ impl LocalInstalledSnapshot {
 fn refuse(code: &'static str) -> Error {
     Error::new("local-deployment", code)
 }
+// Metadata only: the native caller supplies its one discovered k result and,
+// after acquisition/cache lookup, the snapshot's already-known degree.
+fn check_degree(action: &str, degree: u8, ceiling: u8, cached: Option<u8>) -> Result<()> {
+    use crate::{DegreeRefusalDiagnostic, DegreeRefusalReason};
+    let pinned_supported = crate::parameters::expected_digest(degree).is_some();
+    let reason = if degree > ceiling {
+        Some(DegreeRefusalReason::CallerCeilingExceeded)
+    } else if !pinned_supported {
+        Some(DegreeRefusalReason::UnsupportedPinnedDegree)
+    } else {
+        cached
+            .filter(|cached| *cached != degree)
+            .map(|cached_degree| DegreeRefusalReason::CachedDegreeMismatch { cached_degree })
+    };
+    if let Some(reason) = reason {
+        return Err(refuse("exact-degree-unavailable").with_degree_refusal(
+            DegreeRefusalDiagnostic {
+                action: action.into(),
+                discovered_degree: degree,
+                caller_ceiling: ceiling,
+                pinned_supported,
+                reason,
+            },
+        ));
+    }
+    Ok(())
+}
 fn compile_all(
     source: &str,
     p: &Program,
@@ -236,17 +263,18 @@ async fn derive_all(
         // Native model selection can scan 9..25. This discovered-degree bound
         // does not contain those scans; keygen_vk/keygen each repeat SDK k work.
         let degree = artifact.ir.k();
-        if degree > limits.max_degree || crate::parameters::expected_digest(degree).is_none() {
-            return Err(refuse("exact-degree-unavailable"));
-        }
+        check_degree(&artifact.manifest.action, degree, limits.max_degree, None)?;
         if !params.contains_key(&degree) {
             let snapshot = load_new_parameters(params_dir, degree, limits, &mut parameter_total)?;
             params.insert(degree, snapshot);
         }
         let snapshot = &params[&degree];
-        if snapshot.degree() != degree {
-            return Err(refuse("exact-degree-unavailable"));
-        }
+        check_degree(
+            &artifact.manifest.action,
+            degree,
+            limits.max_degree,
+            Some(snapshot.degree()),
+        )?;
         let public = proving::derive_public_artifact(
             &artifact,
             snapshot,
@@ -669,6 +697,83 @@ mod ordinary_support;
 #[cfg(test)]
 mod ordinary_tests {
     use super::*;
+    use crate::{DegreeRefusalDiagnostic, DegreeRefusalReason};
+
+    #[test]
+    fn degree_guard_preserves_reasons_precedence_and_current_map_action() {
+        for (action, degree, ceiling, cached, supported, reason) in [
+            (
+                "freeze",
+                14,
+                13,
+                None,
+                true,
+                DegreeRefusalReason::CallerCeilingExceeded,
+            ),
+            (
+                "unused-map-action",
+                20,
+                25,
+                None,
+                false,
+                DegreeRefusalReason::UnsupportedPinnedDegree,
+            ),
+            (
+                "both-fail",
+                20,
+                13,
+                Some(12),
+                false,
+                DegreeRefusalReason::CallerCeilingExceeded,
+            ),
+            (
+                "freeze",
+                13,
+                13,
+                Some(12),
+                true,
+                DegreeRefusalReason::CachedDegreeMismatch { cached_degree: 12 },
+            ),
+            (
+                "zero",
+                0,
+                0,
+                Some(1),
+                true,
+                DegreeRefusalReason::CachedDegreeMismatch { cached_degree: 1 },
+            ),
+        ] {
+            let error = check_degree(action, degree, ceiling, cached).unwrap_err();
+            assert_eq!(error.layer, "local-deployment");
+            assert_eq!(error.code, "exact-degree-unavailable");
+            assert_eq!(
+                error.degree_refusal(),
+                Some(&DegreeRefusalDiagnostic {
+                    action: action.into(),
+                    discovered_degree: degree,
+                    caller_ceiling: ceiling,
+                    pinned_supported: supported,
+                    reason,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn degree_guard_boundaries_only_admit_metadata() {
+        for (degree, ceiling, cached) in [
+            (0, 0, None),
+            (0, 0, Some(0)),
+            (13, 13, None),
+            (13, 13, Some(13)),
+            (19, 25, Some(19)),
+        ] {
+            assert!(check_degree("freeze", degree, ceiling, cached).is_ok());
+        }
+        assert!(check_degree("freeze", 14, 13, None).is_err());
+        assert!(check_degree("freeze", 20, 25, None).is_err());
+        assert_eq!(refuse("selected-action").degree_refusal(), None);
+    }
     fn limits() -> NativeWorkLimits {
         NativeWorkLimits {
             profile: "moriarty-native-call-work-limits/1".into(),
