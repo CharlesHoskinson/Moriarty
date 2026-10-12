@@ -501,7 +501,7 @@ fn all_trusted_target_and_authority_fields_are_independent_roots() {
         edit(&mut changed.target);
         assert!(changed.replay(&r).is_err());
     }
-    let authority_edits: [fn(&mut ExpectedAuthority); 13] = [
+    let authority_edits: [fn(&mut ExpectedAuthority); 15] = [
         |a| a.network = "other".into(),
         |a| a.anchor = "other".into(),
         |a| a.program_address = "other".into(),
@@ -515,6 +515,8 @@ fn all_trusted_target_and_authority_fields_are_independent_roots() {
         |a| a.nonce = UInt(2),
         |a| a.limits[0].gross_cap = UInt(73),
         |a| a.limits[0].fee_cap = UInt(3),
+        |a| a.limits[0].net_floor = UInt(71),
+        |a| a.limits[0].liability_cap = UInt(1),
         |a| a.not_before = UInt(11),
         |a| a.not_after = UInt(19),
     ];
