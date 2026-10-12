@@ -199,4 +199,3 @@ WHEN a new source or backend feature is proposed, THEN the designer SHALL docume
 #### Scenario: EU-CON-018 negative
 - **WHEN** a caller boolean or unreviewed policy hash-cycle change silently modifies reviewed T1 scope
 - **THEN** adoption is refused pending scoped design review and exact-candidate checks
-
