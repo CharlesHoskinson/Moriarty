@@ -278,7 +278,8 @@ pub(crate) async fn derive_all(
     let mut keys = BTreeMap::new();
     let mut actions = Vec::new();
     let mut material = None;
-    let mut total = source.len();
+    let mut public_total = source.len();
+    let mut prover_total = 0;
     let mut parameter_total = 0;
     for (ordinal, artifact) in artifacts.into_iter().enumerate() {
         // Native model selection can scan 9..25. This discovered-degree bound
@@ -312,9 +313,7 @@ pub(crate) async fn derive_all(
                 degree,
                 KeyGenerationLimits {
                     max_degree: limits.max_degree,
-                    max_prover_key_bytes: NativeWorkLimits::cap(
-                        limits.max_prover_key_bytes.min(limits.max_leaf_bytes),
-                    )?,
+                    max_prover_key_bytes: limits.prover_key_cap()?,
                     max_verifier_key_bytes: NativeWorkLimits::cap(
                         limits.max_verifier_key_bytes.min(limits.max_leaf_bytes),
                     )?,
@@ -324,11 +323,8 @@ pub(crate) async fn derive_all(
             if derived.public_key().verifier_key_bytes() != public.verifier_key_bytes() {
                 return Err(refuse("selected-vk-reproducibility"));
             }
-            total = call_artifacts::add_total(
-                total,
-                derived.prover_key_bytes().len(),
-                NativeWorkLimits::cap(limits.max_artifact_bytes)?,
-            )?;
+            prover_total = derived.prover_key_bytes().len();
+            call_artifacts::keyset_counts(public_total, prover_total, limits)?;
             material = Some(derived);
         }
         for bytes in [
@@ -336,11 +332,12 @@ pub(crate) async fn derive_all(
             public.source_manifest_bytes(),
             public.verifier_key_bytes(),
         ] {
-            total = call_artifacts::add_total(
-                total,
+            public_total = call_artifacts::add_total(
+                public_total,
                 bytes.len(),
                 NativeWorkLimits::cap(limits.max_artifact_bytes)?,
             )?;
+            call_artifacts::keyset_counts(public_total, prover_total, limits)?;
         }
         actions.push(ActionKeyMetadata {
             name: name.clone(),
@@ -492,9 +489,8 @@ pub async fn reopen_local_proving_deployment(
     limits: &NativeWorkLimits,
 ) -> Result<DerivedLocalDeployment> {
     limits.validate()?;
-    if imported.pk.len()
-        > NativeWorkLimits::cap(limits.max_prover_key_bytes.min(limits.max_leaf_bytes))?
-        || imported.snapshot_total > NativeWorkLimits::cap(limits.max_artifact_bytes)?
+    if imported.pk.len() > limits.prover_key_cap()?
+        || call_artifacts::keyset_counts(imported.counts.public, imported.pk.len(), limits).is_err()
     {
         return Err(refuse("import-work-limit"));
     }
@@ -661,14 +657,29 @@ pub fn export_local_deployment(
             .keys
             .values()
             .any(|k| k.verifier_key_bytes().len() as u64 > limits.max_verifier_key_bytes)
-        || snapshot.predecessor.len() > NativeWorkLimits::cap(limits.max_input_bytes)?
-        || snapshot.parameters.len() > NativeWorkLimits::cap(limits.max_input_bytes)?
+        || call_artifacts::check_export_input_lengths(
+            derived.public.snapshot.source.len(),
+            snapshot.predecessor.len(),
+            snapshot.parameters.len(),
+            limits,
+        )
+        .is_err()
     {
         return Err(refuse("export-work-limit"));
     }
     if snapshot.descriptor.keyset_identity != derived.public.identity() {
         return Err(refuse("snapshot-keyset"));
     }
+    // V2 checks descriptor input bytes before cloning any export leaves/PK.
+    // V1 keeps its original serialization position and cap.
+    let descriptor = if limits.version()? == WorkLimitsVersion::V2 {
+        Some(call_artifacts::deployment_json_bytes(
+            &snapshot.descriptor,
+            limits,
+        )?)
+    } else {
+        None
+    };
     let mut leaves = BTreeMap::from([
         (
             "source.mori".into(),
@@ -676,10 +687,10 @@ pub fn export_local_deployment(
         ),
         (
             "deployment.json".into(),
-            call_artifacts::json_bytes(
-                &snapshot.descriptor,
-                limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
-            )?,
+            match descriptor {
+                Some(bytes) => bytes,
+                None => call_artifacts::deployment_json_bytes(&snapshot.descriptor, limits)?,
+            },
         ),
         ("predecessor.bin".into(), snapshot.predecessor.clone()),
         ("parameters.bin".into(), snapshot.parameters.clone()),
@@ -732,7 +743,7 @@ pub fn export_local_deployment(
             limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
         )?,
     };
-    output.check(limits)?;
+    call_artifacts::check_keyset_export(&output, &derived.selected, limits)?;
     Ok(output)
 }
 
