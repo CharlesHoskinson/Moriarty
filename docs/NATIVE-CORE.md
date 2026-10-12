@@ -363,3 +363,45 @@ The retained [selected payment result](../deliverables/native-owner-intent-2026-
 establishes one genuine local integrated signed native case; broader native/U1
 and ledger qualification remain open. Reference replay adds no native allocation
 or proof-verification claim.
+
+## Source-static native call relation (ordinary checks)
+
+`mori compile-call SOURCE --action ACTION --deployment DEPLOYMENT --out DIR`
+compiles current typed Core statements to pinned SDK ZKIRv3. The artifact binds
+source/action, typed input communication framing, checked UInt128 arithmetic,
+mutable state prefixes, captured lets, requires/ensures, native duty identities
+and amounts, recipient claim totals, and exact typed event encoding/hash.
+IR and the complete manifest depend on source and static native mappings; they
+can be reused across requests, predecessor states and duty-presence openings.
+
+`mori prepare-call ... --relation DIR` recompiles that trusted source/static
+binding and compares both artifact leaves before ordinary SDK checking. It checks
+one activity record per native Op, complete raw consumption and skipped widths,
+then inserts and merges Noops, runs the actual native processed transcript, and
+compares full ChargedState, effects, events, adjusted measured/declared gas and
+native public inputs. The result is `local-relation-checked-unproven`. A changed
+binding input or matched communication randomness/commitment is a different
+public instance; ordinary checking does not authenticate either context.
+
+`raw-call.bin` and `raw-preimage.bin` preserve the original active transcript.
+`processed-call.bin` embeds the rebound `processed-preimage.bin` and is for
+inspection only. SDK `Transaction::prove` consumes a raw call and performs its own
+Noop insertion. This slice does not provide a production proof provider, keys,
+proof verification or deployment. Final intent/binding/DUST/TTL changes still
+require reconstruction; these artifacts convey no permission to submit a call.
+
+Event admission uses the SDK's `serialize_to_node_list_bounded(MAX_LOG_EMITTED)`
+on each source-static scalar serialization branch. Storage encoding overhead is
+included. A branch the native VM would drop is constrained inactive; valid shorter
+values remain admitted under the same artifact. If even the minimum encoding
+fails, compilation refuses. The 37-record/263-public-field UInt event golden is
+for the short-name, single-event fixture with all 17 branches admitted. Event
+names/actions near the native bound can have fewer admitted branches. Bool has
+one source-valid scalar branch.
+
+Full account prefix balances, custody/funding ownership, authenticated native
+predecessors and deployed keys, economic intention authority, final history/PCD,
+and ledger settlement remain separate open predicates. Existing host admission
+checks these local examples' source effects and economic bounds; those checks do
+not become circuit authority. Ordinary checks and the bounded Quint projection
+model establish no cryptographic proof or general compiler correspondence theorem.
