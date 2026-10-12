@@ -193,6 +193,27 @@ fn compile_all(
     }
     Ok(artifacts)
 }
+// One new-degree acquisition, shared by the native consumer and ordinary early
+// refusal tests. The caller's degree cache bypasses this for an existing snapshot.
+fn load_new_parameters(
+    params_dir: &Path,
+    degree: u8,
+    limits: &NativeWorkLimits,
+    parameter_total: &mut usize,
+) -> Result<PinnedCallParameters> {
+    let snapshot_cap = call_artifacts::remaining_read_cap(
+        *parameter_total,
+        limits.max_srs_bytes,
+        NativeWorkLimits::cap(limits.max_artifact_bytes)?,
+    )?;
+    let snapshot = PinnedCallParameters::load(params_dir, degree, snapshot_cap)?;
+    *parameter_total = call_artifacts::add_total(
+        *parameter_total,
+        usize::try_from(snapshot.snapshot_bytes()).map_err(|_| refuse("parameter-size"))?,
+        NativeWorkLimits::cap(limits.max_artifact_bytes)?,
+    )?;
+    Ok(snapshot)
+}
 async fn derive_all(
     source: &str,
     p: &Program,
@@ -219,12 +240,7 @@ async fn derive_all(
             return Err(refuse("exact-degree-unavailable"));
         }
         if !params.contains_key(&degree) {
-            let snapshot = PinnedCallParameters::load(params_dir, degree, limits.max_srs_bytes)?;
-            parameter_total = call_artifacts::add_total(
-                parameter_total,
-                usize::try_from(snapshot.snapshot_bytes()).map_err(|_| refuse("parameter-size"))?,
-                NativeWorkLimits::cap(limits.max_artifact_bytes)?,
-            )?;
+            let snapshot = load_new_parameters(params_dir, degree, limits, &mut parameter_total)?;
             params.insert(degree, snapshot);
         }
         let snapshot = &params[&degree];
@@ -667,6 +683,41 @@ mod ordinary_tests {
             max_operations: 10000,
             max_public_inputs: 10000,
         }
+    }
+    #[test]
+    fn exhausted_parameter_aggregate_refuses_before_open() {
+        let mut limits = limits();
+        limits.max_artifact_bytes = 4;
+        let mut charged = 4;
+        assert_eq!(
+            load_new_parameters(
+                Path::new("/missing-mori-parameter-budget-test"),
+                9,
+                &limits,
+                &mut charged
+            )
+            .err()
+            .unwrap()
+            .code,
+            "aggregate-size"
+        );
+        assert_eq!(charged, 4);
+    }
+    #[test]
+    fn next_unique_degree_uses_remaining_parameter_budget_before_hash() {
+        let root =
+            std::env::temp_dir().join(format!("mori-next-parameter-budget-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(root.join("bls_midnight_2p10"), [0, 0]).unwrap();
+        let mut limits = limits();
+        limits.max_artifact_bytes = 4;
+        let mut charged = 3;
+        let err = load_new_parameters(&root, 10, &limits, &mut charged)
+            .err()
+            .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+        assert_eq!(err.code, "parameter-size");
+        assert_eq!(charged, 3);
     }
     #[test]
     fn valid_source_cannot_bypass_smaller_explicit_library_input_limit() {
