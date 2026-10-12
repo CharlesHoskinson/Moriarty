@@ -9,24 +9,35 @@ The supplied examples contain public local test predecessors, public verifier
 keys, explicit native parameters, and descriptors trusted only for these local
 examples. Their non-NIGHT token balances are fixture data. They establish no
 funding, payer signature, native proof, deployment, application, fee payment, or
-settlement. The source-to-VM proof relation remains unimplemented.
+settlement. Source-static native relation compilation and ordinary SDK checking
+are available; native proof production and deployed-key integration remain open.
 
 From the repository root, with the pinned toolchain and dependencies available:
 
 ```sh
+cargo run --locked --offline -p mori -- compile-call \
+  examples/core/ledger-call/payment/source.mori --action settle \
+  --deployment examples/core/ledger-call/payment/deployment.json --out payment-relation
+
 cargo run --locked --offline -p mori -- prepare-call \
   examples/core/ledger-call/payment/source.mori --action settle \
   --deployment examples/core/ledger-call/payment/deployment.json \
   --predecessor examples/core/ledger-call/payment/predecessor.bin \
   --parameters examples/core/ledger-call/payment/parameters.bin \
-  --request examples/core/ledger-call/payment/request.json --out payment-prepared
+  --request examples/core/ledger-call/payment/request.json \
+  --relation payment-relation --out payment-prepared
+
+cargo run --locked --offline -p mori -- compile-call \
+  examples/core/ledger-call/collection/source.mori --action collect \
+  --deployment examples/core/ledger-call/collection/deployment.json --out collection-relation
 
 cargo run --locked --offline -p mori -- prepare-call \
   examples/core/ledger-call/collection/source.mori --action collect \
   --deployment examples/core/ledger-call/collection/deployment.json \
   --predecessor examples/core/ledger-call/collection/predecessor.bin \
   --parameters examples/core/ledger-call/collection/parameters.bin \
-  --request examples/core/ledger-call/collection/request.json --out collection-prepared
+  --request examples/core/ledger-call/collection/request.json \
+  --relation collection-relation --out collection-prepared
 ```
 
 Each output directory must be new and its parent must exist. Publication writes
@@ -60,3 +71,12 @@ process integration test checks actual published bytes against the public API
 and independent financial/native ABI expectations. Changing source, trusted
 state, mappings, or templates requires rebuilding the corresponding descriptor;
 the command never silently substitutes defaults or chooses coins.
+
+The checked path publishes the source-static IR/manifest, activity/skip layout,
+raw call/preimage, processed transcript/call/preimage and full processed native
+public vector. `processed-call.bin` is inspection-only; SDK `Transaction::prove`
+needs the raw call because it inserts Noops itself. Both remain unproven and
+require final-intent reconstruction. Funding/global prefix balances, intention
+authority, authenticated predecessor/deployed key and history/PCD correspondence
+remain open. See [the native guide](../../../docs/NATIVE-CORE.md) for the exact
+ordinary-check scope and event branch admission.

@@ -430,13 +430,18 @@ pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Resul
                             "claim-prefix-member-old-new",
                             expression,
                         );
-                        let tail = |index: usize| {
-                            let b = &out.bindings[start + index];
-                            FieldBinding {
+                        let tail = |index: usize| -> Result<FieldBinding> {
+                            let b = out
+                                .bindings
+                                .get(start + index)
+                                .ok_or(Error::new("full-readback", "claim-binding-index"))?;
+                            Ok(FieldBinding {
                                 op: b.op,
-                                offset: b.dynamic_field_offset.expect("claim scalar tail"),
+                                offset: b
+                                    .dynamic_field_offset
+                                    .ok_or(Error::new("full-readback", "claim-scalar-tail"))?,
                                 count: b.dynamic_field_count,
-                            }
+                            })
                         };
                         let extra = if previous.is_some() { 3 } else { 0 };
                         out.claim_bindings.push(ClaimBinding {
@@ -455,32 +460,26 @@ pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Resul
                             expected_membership: previous.is_some(),
                             previous_aggregate: previous.map(mori_core::UInt),
                             next_aggregate: mori_core::UInt(next),
-                            membership_result: tail(5),
-                            previous_result: previous.map(|_| tail(8)),
+                            membership_result: tail(5)?,
+                            previous_result: if previous.is_some() {
+                                Some(tail(8)?)
+                            } else {
+                                None
+                            },
                             previous_lookup_key: previous.map(|_| FieldBinding {
                                 op: (start + 7) as u32,
                                 offset: out.program[start + 7].field_size()
                                     - AlignedValue::from(claim.clone()).value_only_field_size(),
                                 count: AlignedValue::from(claim.clone()).value_only_field_size(),
                             }),
-                            new_value: tail(7 + extra),
-                            key_values: vec![tail(3), tail(6 + extra)],
+                            new_value: tail(7 + extra)?,
+                            key_values: vec![tail(3)?, tail(6 + extra)?],
                         });
                         totals.insert(claim.into_inner(), next);
                     }
                 }
                 Effect::Emit { name, value } => {
-                    let encoded = crate::codec::encode(&layout::value(value))?;
-                    let parts = [name.as_bytes(), e.action.as_bytes(), encoded.as_slice()];
-                    let domain = format!("{}:event", crate::profile::ABI);
-                    let mut bytes = Vec::new();
-                    bytes.extend((domain.len() as u32).to_le_bytes());
-                    bytes.extend(domain.as_bytes());
-                    bytes.extend((parts.len() as u32).to_le_bytes());
-                    for part in parts {
-                        bytes.extend((part.len() as u32).to_le_bytes());
-                        bytes.extend(part);
-                    }
+                    let bytes = event_payload(name, &e.action, value)?;
                     let payload = cell(AlignedValue::from(bytes));
                     if Sp::new(payload.clone())
                         .serialize_to_node_list_bounded(midnight_onchain_vm::vm::MAX_LOG_EMITTED)
@@ -527,6 +526,23 @@ pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Resul
         return Err(Error::new("source-profile", "operation-limit"));
     }
     Ok(out)
+}
+
+/// Canonical public event payload, shared by the actual producer and source
+/// compiler's static serialization templates. Values retain SDK normalization.
+pub fn event_payload(name: &str, action: &str, value: &mori_core::Value) -> Result<Vec<u8>> {
+    let encoded = crate::codec::encode(&layout::value(value))?;
+    let parts = [name.as_bytes(), action.as_bytes(), encoded.as_slice()];
+    let domain = format!("{}:event", crate::profile::ABI);
+    let mut bytes = Vec::new();
+    bytes.extend((domain.len() as u32).to_le_bytes());
+    bytes.extend(domain.as_bytes());
+    bytes.extend((parts.len() as u32).to_le_bytes());
+    for part in parts {
+        bytes.extend((part.len() as u32).to_le_bytes());
+        bytes.extend(part);
+    }
+    Ok(bytes)
 }
 fn pinned_roles(pre: &AdmittedPredecessor) -> Vec<crate::profile::RoleBinding> {
     pre.roles

@@ -9,6 +9,7 @@ use crate::shell::Shell;
 
 pub mod check;
 pub mod compile;
+pub mod compile_call;
 mod core_io;
 pub mod expand;
 pub mod format;
@@ -33,6 +34,7 @@ pub fn run(command: Command, shell: &mut Shell) -> Result<ExitCode> {
         Command::Init(args) => init::run(args, shell),
         Command::Check(args) => check::run(args, shell),
         Command::Compile(args) => compile::run(args, shell),
+        Command::CompileCall(args) => compile_call::run(args, shell),
         Command::PrepareCall(args) => prepare_call::run(args, shell),
         Command::Prove(args) => prove::run(args, shell),
         Command::Verify(args) => verify::run(args, shell),

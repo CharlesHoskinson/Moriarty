@@ -1,0 +1,529 @@
+{
+  "format": "moriarty-native-call-relation/1",
+  "source_hash": "a446c4dc826c1706354dea6b1125cfb30019e0f16a90085ead9be9b1c8d5eb2d",
+  "program_hash": "85cee7db89bb23240cd9551fef3eacac64022dddc0dddf99e8e803ea04c67c68",
+  "action": "settle",
+  "abi": {
+    "profile": "moriarty-ledger-public-abi/1",
+    "language": "moriarty/1",
+    "semantics": "moriarty-core/1",
+    "program_hash": "85cee7db89bb23240cd9551fef3eacac64022dddc0dddf99e8e803ea04c67c68",
+    "states": [
+      {
+        "name": "paid",
+        "ty": "UInt",
+        "key_hex": "6d69646e696768743a6661622d616c69676e65642d76616c75655b76315d3a6001f0f316e7b9fb9479b794e51c824dadf00366732b50801cee71135b2947dd47dc2001"
+      }
+    ],
+    "actions": [
+      {
+        "name": "originate",
+        "inputs": [],
+        "statements": [
+          {
+            "kind": "Liability",
+            "name": "payment",
+            "asset": "QA",
+            "debtor": "alice",
+            "creditor": "bob",
+            "amount": 0
+          },
+          {
+            "kind": "Liability",
+            "name": "reserve",
+            "asset": "QA",
+            "debtor": "alice",
+            "creditor": "auditor",
+            "amount": 1
+          },
+          {
+            "kind": "Liability",
+            "name": "zero",
+            "asset": "QA",
+            "debtor": "alice",
+            "creditor": "auditor",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "name": "settle",
+        "inputs": [
+          {
+            "name": "amount",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Requires",
+            "predicate": 5
+          },
+          {
+            "kind": "Transfer",
+            "asset": "QA",
+            "from": "alice",
+            "to": "bob",
+            "amount": 6
+          },
+          {
+            "kind": "Fee",
+            "asset": "QA",
+            "from": "alice",
+            "to": "treasury",
+            "amount": 7
+          },
+          {
+            "kind": "Discharge",
+            "name": "payment",
+            "amount": 8
+          },
+          {
+            "kind": "Next",
+            "state": "paid",
+            "value": 11
+          },
+          {
+            "kind": "Emit",
+            "name": "paid",
+            "value": 12
+          }
+        ]
+      },
+      {
+        "name": "observe",
+        "inputs": [],
+        "statements": [
+          {
+            "kind": "Emit",
+            "name": "paid",
+            "value": 13
+          }
+        ]
+      }
+    ],
+    "assets": [
+      {
+        "identity": {
+          "network": "local",
+          "issuer": "signed-native-qa",
+          "reference": "QA",
+          "scale": 0
+        },
+        "token_hex": "6d69646e696768743a756e736869656c6465642d746f6b656e2d747970655b76315d3aad9d2fc822151d2beac852c6b6ca146c5bea7b2fb8c60de4ebca13af8c4386e4"
+      }
+    ],
+    "roles": [
+      {
+        "role": "alice",
+        "public_key_hex": "6d69646e696768743a7369676e61747572652d766572696679696e672d6b65795b76325d3a002b3bf2bf5950f32e742f0c678c235acfb444bc0a6c7ec8c3ef0e787259bcc726",
+        "address_hex": "6d69646e696768743a757365722d616464726573735b76315d3ad0f66402006241364e277c1e419f5be320eaa76c44a0e85d3a485326aa6697a5"
+      },
+      {
+        "role": "auditor",
+        "public_key_hex": "6d69646e696768743a7369676e61747572652d766572696679696e672d6b65795b76325d3a010279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        "address_hex": "6d69646e696768743a757365722d616464726573735b76315d3ad0debc2c802eaaa525e05fe11dd877339e0a76f374e02f12a3f8eda05b9be43a"
+      },
+      {
+        "role": "bob",
+        "public_key_hex": "6d69646e696768743a7369676e61747572652d766572696679696e672d6b65795b76325d3a0102c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+        "address_hex": "6d69646e696768743a757365722d616464726573735b76315d3a0c0bd845f00fe188600e37802786845a0fe5fb5cda2849adc5a6c8ddf86ac576"
+      },
+      {
+        "role": "treasury",
+        "public_key_hex": "6d69646e696768743a7369676e61747572652d766572696679696e672d6b65795b76325d3a0102f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+        "address_hex": "6d69646e696768743a757365722d616464726573735b76315d3a7bf646319dc3c85d6684792d8b4544878808a6cc7c54af17b9a97e54c4a06081"
+      }
+    ],
+    "duties": [
+      {
+        "name": "payment",
+        "asset": {
+          "network": "local",
+          "issuer": "signed-native-qa",
+          "reference": "QA",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "bob"
+      },
+      {
+        "name": "reserve",
+        "asset": {
+          "network": "local",
+          "issuer": "signed-native-qa",
+          "reference": "QA",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "auditor"
+      },
+      {
+        "name": "zero",
+        "asset": {
+          "network": "local",
+          "issuer": "signed-native-qa",
+          "reference": "QA",
+          "scale": 0
+        },
+        "debtor": "alice",
+        "creditor": "auditor"
+      }
+    ],
+    "templates_hash": "708c3c2405bc3f2a6457500366c776964422db0a4847d6ab6d82a24d85db3f97"
+  },
+  "ir_hash": "e5a8e87bbe06576e959217c97c05e5e00bb676731169d85b535e1054a267f2fb",
+  "input_count": 1,
+  "groups": [
+    {
+      "field_count": 1,
+      "origin": "abi-root"
+    },
+    {
+      "field_count": 1,
+      "origin": "abi-root"
+    },
+    {
+      "field_count": 4,
+      "origin": "abi-root"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 19,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 18,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 19,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 5,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 19,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 18,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 4,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 19,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 5,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-claim"
+    },
+    {
+      "field_count": 1,
+      "origin": "duty-membership"
+    },
+    {
+      "field_count": 4,
+      "origin": "duty-membership"
+    },
+    {
+      "field_count": 6,
+      "origin": "duty-membership"
+    },
+    {
+      "field_count": 1,
+      "origin": "duty-membership"
+    },
+    {
+      "field_count": 4,
+      "origin": "duty-membership"
+    },
+    {
+      "field_count": 1,
+      "origin": "duty-old-read"
+    },
+    {
+      "field_count": 8,
+      "origin": "duty-old-read"
+    },
+    {
+      "field_count": 13,
+      "origin": "duty-old-read"
+    },
+    {
+      "field_count": 4,
+      "origin": "duty-write"
+    },
+    {
+      "field_count": 6,
+      "origin": "duty-write"
+    },
+    {
+      "field_count": 14,
+      "origin": "duty-write"
+    },
+    {
+      "field_count": 1,
+      "origin": "duty-write"
+    },
+    {
+      "field_count": 1,
+      "origin": "state-read"
+    },
+    {
+      "field_count": 8,
+      "origin": "state-read"
+    },
+    {
+      "field_count": 4,
+      "origin": "state-opening"
+    },
+    {
+      "field_count": 4,
+      "origin": "state-write"
+    },
+    {
+      "field_count": 6,
+      "origin": "state-write"
+    },
+    {
+      "field_count": 5,
+      "origin": "state-write"
+    },
+    {
+      "field_count": 1,
+      "origin": "state-write"
+    },
+    {
+      "field_count": 1,
+      "origin": "state-read"
+    },
+    {
+      "field_count": 8,
+      "origin": "state-read"
+    },
+    {
+      "field_count": 4,
+      "origin": "state-opening"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    },
+    {
+      "field_count": 14,
+      "origin": "source-event-push"
+    },
+    {
+      "field_count": 1,
+      "origin": "source-event-log"
+    }
+  ],
+  "qualification": "ordinary-ir-unproven",
+  "compiler_hash": "47d129c65d2215e127035a5a1e9b0ebe6a36789cef4ba2c88d8bed9464064610",
+  "open_predicates": [
+    "authenticated predecessor and deployed key",
+    "payer/account/funding ownership",
+    "global prefix balances and custody correspondence",
+    "economic intention authority",
+    "final intent/history/PCD",
+    "cryptographic proof and ledger settlement"
+  ]
+}

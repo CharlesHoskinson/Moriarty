@@ -317,3 +317,37 @@ adds an actual CLI consumer without changing this model or certifying its
 cryptographic premises. Update this
 model against the approved semantic contract when that contract changes, and
 rerun the matching Rust/CLI controls before extending its correspondence claims.
+
+## Native call relation projection QA
+
+`ledger_call_relation.qnt` and `_test.qnt` model one local checker, with atomic
+accepted/refused inspection. Source-derived zero/first/repeated claims, optional
+duty old reads, exclusive UInt event branches and selected-zero narrow ranges
+feed per-Op activity. The checker requires exact raw widths and complete skip
+vectors, then preserves field count while merging adjacent Noops. Handcrafted
+malformed vectors cover missing/extra/reordered Ops, wrong widths, zero/wrong
+inactive skips and missing/extra activity. Bool0/1 vs2, UInt128 aggregate overflow
+and independent single/two-event Noop/PI counts have deterministic controls.
+
+Source map: arithmetic/event guards correspond to
+`crates/mori-ledger/src/relation/{arithmetic,event}.rs`; optional duty/claim guards
+to `compiler.rs`; full consumption/Noop merge to `process.rs` and `prepare.rs`.
+Native widths are premises: header/event literals use pinned SDK widths, while
+claim/duty records use abstract width1. Duty amount models only a bounded,
+selected optional opening; it does not model accrual/discharge arithmetic or
+duty history. All17 UInt branches are assumed native-emittable for this short-name
+fixture. FAB bytes, bounded node-list event admission, cryptography, funding,
+context authentication, deployed keys, global balances and history are excluded.
+
+Observed local QA: typecheck passed,15 deterministic tests passed, and100 traces
+at10 steps, seed1012, TypeScript BigInt had no projection invariant violation.
+Witnesses: positive claims65, zero claims74, present duties62, absent duties63,
+long events20, actual refusals100. These are sampled observations, not exhaustive
+verification or a native proof. Update the model and matching Rust controls when
+these source guards or the processing protocol change.
+
+```sh
+quint typecheck ledger_call_relation_test.qnt
+quint test ledger_call_relation_test.qnt --main ledger_call_relation_test --backend typescript
+quint run ledger_call_relation.qnt --main ledger_call_relation --backend typescript --invariant relation_projection_invariants --witnesses positiveClaimWitness zeroClaimWitness presentDutyWitness absentDutyWitness longEventWitness refusedWitness --seed 1012 --max-samples 100 --max-steps 10 --verbosity 1
+```

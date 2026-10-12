@@ -1,0 +1,7 @@
+language "moriarty/1";
+ agreement CounterflowCollection43 {
+ asset QA = { network: "local", issuer: "counterflow-qa", reference: "QA", scale: 0 };
+ state collected: UInt = 0; state frozen: Bool = true;
+ action seed() { liability("addon", QA, "alice", "carol", 0); liability("payment", QA, "alice", "carol", 12); liability("reserve", QA, "alice", "auditor", 5); liability("zero", QA, "alice", "auditor", 0); }
+ action collect(amount: UInt) { fee(QA,"alice","treasury",3); transfer(QA,"alice","carol",amount); liability("addon",QA,"alice","carol",4); discharge("payment",7); next collected = collected + amount; emit "collected"(collected); ensures collected == 40; }
+ }

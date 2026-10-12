@@ -18,6 +18,9 @@ pub struct Args {
     pub parameters: PathBuf,
     #[arg(long)]
     pub request: PathBuf,
+    /// Source-static native relation directory produced by compile-call
+    #[arg(long)]
+    pub relation: Option<PathBuf>,
     #[arg(long)]
     pub out: PathBuf,
 }
@@ -53,14 +56,37 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let predecessor = binary(&args.predecessor)?;
     let parameters = binary(&args.parameters)?;
-    let bundle = mori_ledger::prepare::prepare_call(
-        &source,
-        &program,
-        &deployment,
-        &predecessor,
-        &parameters,
-        &request,
-    )
+    let bundle = if let Some(path) = &args.relation {
+        let ir = super::compile_call::artifact_bytes(&path.join("relation.zkir.bin"))?;
+        let manifest = super::compile_call::artifact_bytes(&path.join("manifest.json"))?;
+        let artifact = mori_ledger::relation::admit(
+            &source,
+            &program,
+            &deployment,
+            &request.action,
+            &ir,
+            &manifest,
+        )
+        .map_err(core_io::operation)?;
+        mori_ledger::prepare::prepare_call_checked(
+            &source,
+            &program,
+            &deployment,
+            &predecessor,
+            &parameters,
+            &request,
+            &artifact,
+        )
+    } else {
+        mori_ledger::prepare::prepare_call(
+            &source,
+            &program,
+            &deployment,
+            &predecessor,
+            &parameters,
+            &request,
+        )
+    }
     .map_err(core_io::operation)?;
     std::fs::create_dir(&args.out).map_err(|source| CliError::Write {
         path: args.out.clone(),
@@ -70,9 +96,14 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     shell.status(
         "Prepared",
         format!(
-            "local unsigned, unproven call {} into {}",
+            "{} call {} into {}",
+            if args.relation.is_some() {
+                "local relation checked, unsigned, unproven"
+            } else {
+                "local unsigned, unproven"
+            },
             core_io::review_identity(&args.action),
-            args.out.display()
+            core_io::review_identity(&args.out.to_string_lossy())
         ),
     );
     Ok(ExitCode::SUCCESS)
