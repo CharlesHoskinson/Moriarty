@@ -170,13 +170,26 @@ pub fn export_signed_local_deployment(
     l: &NativeWorkLimits,
 ) -> Result<ArtifactLeaves> {
     validate_work_limits(l)?;
+    // Check the Signed input replacement before the inner factory copies its
+    // source/PK leaves. Generated output JSON and marker caps are unchanged.
+    let replacement = if l.version()? == crate::profile::WorkLimitsVersion::V2 {
+        call_artifacts::check_export_input_lengths(
+            d.inner.public.snapshot.source.len(),
+            s.inner.predecessor_bytes().len(),
+            s.inner.parameter_bytes().len(),
+            l,
+        )?;
+        Some(call_artifacts::deployment_json_bytes(&s.descriptor, l)?)
+    } else {
+        None
+    };
     let mut out = local_deployment::export_local_deployment(&s.inner, &d.inner, l)?;
     out.leaves.insert(
         "deployment.json".into(),
-        call_artifacts::json_bytes(
-            &s.descriptor,
-            l.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
-        )?,
+        match replacement {
+            Some(bytes) => bytes,
+            None => call_artifacts::deployment_json_bytes(&s.descriptor, l)?,
+        },
     );
     let mut manifest = d.inner.public.snapshot.manifest.clone();
     manifest.leaves = out
@@ -186,7 +199,7 @@ pub fn export_signed_local_deployment(
         .collect();
     out.marker =
         call_artifacts::json_bytes(&manifest, l.max_leaf_bytes.min(codec::INPUT_BYTES as u64))?;
-    out.check(l)?;
+    call_artifacts::check_keyset_export(&out, &d.inner.selected, l)?;
     Ok(out)
 }
 pub fn snapshot_signed_public_keyset(
@@ -288,11 +301,26 @@ pub async fn reopen_signed_local_proving_deployment(
     params_dir: &Path,
     l: &NativeWorkLimits,
 ) -> Result<SignedDerivedLocalDeployment> {
-    if i.action != action
-        || i.pk.len() > NativeWorkLimits::cap(l.max_prover_key_bytes.min(l.max_leaf_bytes))?
-        || i.snapshot_total > NativeWorkLimits::cap(l.max_artifact_bytes)?
-    {
-        return Err(refuse("import-work-limit"));
+    match l.version()? {
+        crate::profile::WorkLimitsVersion::V1 => {
+            // Preserve legacy short-circuit refusal priority. Unrelated limits
+            // are validated later by the original source preflight.
+            if i.action != action
+                || i.pk.len() > NativeWorkLimits::cap(l.max_prover_key_bytes.min(l.max_leaf_bytes))?
+                || i.counts.physical > NativeWorkLimits::cap(l.max_artifact_bytes)?
+            {
+                return Err(refuse("import-work-limit"));
+            }
+        }
+        crate::profile::WorkLimitsVersion::V2 => {
+            validate_work_limits(l)?;
+            if i.action != action
+                || i.pk.len() > l.prover_key_cap()?
+                || call_artifacts::keyset_counts(i.counts.public, i.pk.len(), l).is_err()
+            {
+                return Err(refuse("import-work-limit"));
+            }
+        }
     }
     let (s, artifacts) = preflight(source, p, d, policy, &i.public, l)?;
     let (public, selected) = local_deployment::derive_all(

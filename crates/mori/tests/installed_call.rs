@@ -116,6 +116,15 @@ fn real_keygen_command_refuses_installed_seed_and_unknown_action_before_native_w
     assert!(result.stdout.is_empty());
     assert!(!root.join("out/public-keyset.json").exists());
     assert!(!root.join("out").exists());
+    let path = root.join("limits.json");
+    let mut limits: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    limits["profile"] = serde_json::json!("moriarty-native-call-work-limits/2");
+    std::fs::write(&path, serde_json::to_vec(&limits).unwrap()).unwrap();
+    let result = keygen(&root, "unknown").arg("--quiet").output().unwrap();
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("selected-action"));
+    assert!(!root.join("out").exists());
     std::fs::remove_dir_all(root).unwrap();
 }
 #[test]

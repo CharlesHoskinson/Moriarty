@@ -264,7 +264,8 @@ impl NativeWorkLimits {
         Ok(value)
     }
     pub fn validate(&self) -> Result<()> {
-        if self.profile != "moriarty-native-call-work-limits/1" || self.max_degree == 0 {
+        let version = self.version()?;
+        if self.max_degree == 0 {
             return Err(crate::Error::new("input", "native-work-limits"));
         }
         for n in [
@@ -283,7 +284,30 @@ impl NativeWorkLimits {
         if self.max_srs_bytes > 128 * 1024 * 1024 {
             return Err(crate::Error::new("input", "native-work-limits"));
         }
+        if version == WorkLimitsVersion::V2
+            && (self.max_prover_key_bytes > 64 * 1024 * 1024
+                || self.max_leaf_bytes > codec::OUTPUT_BYTES as u64
+                || self.max_artifact_bytes > codec::OUTPUT_BYTES as u64
+                || self.max_input_bytes > codec::INPUT_BYTES as u64
+                || self.max_verifier_key_bytes > 65_536)
+        {
+            return Err(crate::Error::new("input", "native-work-limits"));
+        }
         Ok(())
+    }
+    pub(crate) fn version(&self) -> Result<WorkLimitsVersion> {
+        match self.profile.as_str() {
+            "moriarty-native-call-work-limits/1" => Ok(WorkLimitsVersion::V1),
+            "moriarty-native-call-work-limits/2" => Ok(WorkLimitsVersion::V2),
+            _ => Err(crate::Error::new("input", "native-work-limits")),
+        }
+    }
+    /// Only v2 keyset transport separates PK from the public leaf cap.
+    pub(crate) fn prover_key_cap(&self) -> Result<usize> {
+        Self::cap(match self.version()? {
+            WorkLimitsVersion::V1 => self.max_prover_key_bytes.min(self.max_leaf_bytes),
+            WorkLimitsVersion::V2 => self.max_prover_key_bytes,
+        })
     }
     pub(crate) fn cap(value: u64) -> Result<usize> {
         usize::try_from(value)
@@ -291,4 +315,9 @@ impl NativeWorkLimits {
             .filter(|n| *n > 0 && n.checked_add(1).is_some())
             .ok_or(crate::Error::new("input", "native-work-limits"))
     }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WorkLimitsVersion {
+    V1,
+    V2,
 }
