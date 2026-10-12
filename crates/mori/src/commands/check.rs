@@ -4,7 +4,6 @@ use std::time::Instant;
 
 use mori_diagnostics::{MoriDiagnostic, NamedSource};
 
-use crate::error::CliError;
 use crate::json::CheckReport;
 use crate::shell::Shell;
 
@@ -21,10 +20,7 @@ pub struct Args {
 /// Checks syntax, names, values, types, declarations, calls and intents.
 pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let name = args.file.display().to_string();
-    let source = std::fs::read_to_string(&args.file).map_err(|source| CliError::Read {
-        path: args.file.clone(),
-        source,
-    })?;
+    let source = super::core_io::read_source(&args.file)?;
 
     if !args.json {
         shell.status("Checking", &name);
@@ -117,7 +113,10 @@ fn finish(
     if !json {
         let count = diagnostics.len();
         for diagnostic in diagnostics {
-            shell.report(&diagnostic.with_source_code(NamedSource::new(name, source.to_owned())));
+            shell.report(&diagnostic.with_source_code(NamedSource::new(
+                crate::display::text(name),
+                source.to_owned(),
+            )));
         }
         let plural = if count == 1 { "" } else { "s" };
         shell.error(format!(

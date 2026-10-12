@@ -14,7 +14,18 @@ cargo run -p mori --locked -- compile examples/core/batch-clear/batch.mori \
   --target toolchains/ledger-9.json --out build-batch
 ```
 
+`check` reads at most 1 MiB plus one refusal byte through the shared bounded
+reader; both Core and beta retain their 65,536-byte source grammar limit.
+Human diagnostic filenames use the existing escaped display policy, including
+non-ASCII characters. Filesystem paths, raw source hashes and decoded JSON
+filename identities remain exact.
+
 Compilation does not need a scenario. The output directory must be new.
+Circuit files become visible individually with complete bytes and refuse
+existing or raced leaf paths. `artifact.json` is published last, after every
+circuit succeeds. An I/O failure can leave the reserved directory and earlier
+complete circuits; retry with a new destination. Publication assumes stable
+output directories and path ancestors.
 Each action produces a genuine upstream-readable `.zkir` circuit; the
 manifest contains the canonical program identity, target, public ABI,
 ordered effect and touched balance frames, instruction count and artifact
