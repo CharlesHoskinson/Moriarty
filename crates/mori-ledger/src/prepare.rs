@@ -115,7 +115,41 @@ fn preserved_frame(pre: &layout::AdmittedPredecessor) -> Result<PreservedFrame> 
         .collect(),
     })
 }
+pub type RawIntent = Intent<(), ProofPreimageMarker, PedersenRandomness, InMemoryDB>;
+
+/// Raw owner returned by the actual checked prepare path. Inspection projections
+/// remain separate; SDK Intent::prove inserts Noops itself.
+pub struct PreparedNativeCall {
+    bundle: PreparedBundle,
+    artifact: crate::relation::Artifact,
+}
+impl PreparedNativeCall {
+    pub fn bundle(&self) -> &PreparedBundle {
+        &self.bundle
+    }
+    pub fn raw_intent(&self) -> &RawIntent {
+        &self.bundle.native.intent
+    }
+    pub fn artifact(&self) -> &crate::relation::Artifact {
+        &self.artifact
+    }
+    /// Consume the owner for ordinary publication; this cannot construct a new
+    /// typed proving owner from subsequently edited public bundle fields.
+    pub fn into_bundle(self) -> PreparedBundle {
+        self.bundle
+    }
+}
+pub(crate) struct NativePreparation {
+    pub intent: RawIntent,
+    pub context: QueryContext<InMemoryDB>,
+    pub lowered: ops::LoweredOps,
+    pub params: LedgerParameters,
+    pub gas_cap: midnight_base_crypto::cost_model::RunningCost,
+    pub segment: u16,
+    pub processed_transcript: Option<Transcript<InMemoryDB>>,
+}
 pub struct PreparedBundle {
+    pub(crate) native: NativePreparation,
     pub readback: Readback,
     pub leaves: BTreeMap<String, Vec<u8>>,
     pub marker: Vec<u8>,
@@ -218,6 +252,60 @@ pub fn prepare_call(
         None,
     )
 }
+/// Source-recompile and ordinary-check the actual native raw owner. This remains
+/// a local unsigned keyless preparation and retains legacy installed-key refusal.
+pub fn prepare_native_call(
+    source: &str,
+    p: &Program,
+    d: &Deployment,
+    predecessor_bytes: &[u8],
+    parameter_bytes: &[u8],
+    request: &CallRequest,
+) -> Result<PreparedNativeCall> {
+    let artifact = crate::relation::compile(source, p, d, &request.action)?;
+    prepare_native_call_checked(
+        source,
+        p,
+        d,
+        predecessor_bytes,
+        parameter_bytes,
+        request,
+        &artifact,
+    )
+}
+/// Recompile and admit an externally supplied source artifact before owning the
+/// actual raw intent. No mutable caller-built Artifact selects the trusted IR.
+pub fn prepare_native_call_checked(
+    source: &str,
+    p: &Program,
+    d: &Deployment,
+    predecessor_bytes: &[u8],
+    parameter_bytes: &[u8],
+    request: &CallRequest,
+    artifact: &crate::relation::Artifact,
+) -> Result<PreparedNativeCall> {
+    let expected = crate::relation::admit(
+        source,
+        p,
+        d,
+        &request.action,
+        &artifact.ir_bytes()?,
+        &artifact.manifest_bytes()?,
+    )?;
+    let bundle = prepare_call_inner(
+        source,
+        p,
+        d,
+        predecessor_bytes,
+        parameter_bytes,
+        request,
+        Some(&expected),
+    )?;
+    Ok(PreparedNativeCall {
+        bundle,
+        artifact: expected,
+    })
+}
 /// Checked ordinary native relation preparation; no key/proof/signature/apply.
 pub fn prepare_call_checked(
     source: &str,
@@ -228,23 +316,16 @@ pub fn prepare_call_checked(
     request: &CallRequest,
     artifact: &crate::relation::Artifact,
 ) -> Result<PreparedBundle> {
-    let expected = crate::relation::admit(
-        source,
-        p,
-        d,
-        &request.action,
-        &artifact.ir_bytes()?,
-        &artifact.manifest_bytes()?,
-    )?;
-    prepare_call_inner(
+    prepare_native_call_checked(
         source,
         p,
         d,
         predecessor_bytes,
         parameter_bytes,
         request,
-        Some(&expected),
+        artifact,
     )
+    .map(PreparedNativeCall::into_bundle)
 }
 fn prepare_call_inner(
     source: &str,
@@ -414,6 +495,7 @@ fn prepare_call_inner(
         return Err(failure("full-readback", "native-preimage"));
     }
     let mut relation_leaves = BTreeMap::new();
+    let mut processed_expectation = None;
     let relation_readback = if let Some(artifact) = relation {
         let activity = crate::relation::check(artifact, preimage)?;
         let processed = crate::relation::process(
@@ -457,6 +539,8 @@ fn prepare_call_inner(
             return Err(failure("native-relation", "processed-binding-check"));
         }
         processed_call.proof = ProofPreimageVersioned::V2(std::sync::Arc::new(bound.clone()));
+        processed_expectation = Some(processed_transcript.clone());
+        relation_leaves.insert("raw-intent.bin".into(), codec::encode(&intent)?);
         relation_leaves.insert("raw-call.bin".into(), codec::encode(&call)?);
         relation_leaves.insert("raw-preimage.bin".into(), codec::encode(&**preimage)?);
         relation_leaves.insert("processed-preimage.bin".into(), codec::encode(&bound)?);
@@ -469,7 +553,7 @@ fn prepare_call_inner(
         relation_leaves.insert("relation.zkir.bin".into(), artifact.ir_bytes()?);
         Some(crate::relation::CheckedReadback {
             scope: "ordinary-sdk-ir-checked-projection-unproven-provisional-binding",
-            processed_call_use: "inspection-only; SDK Transaction::prove consumes the raw call and inserts Noops itself",
+            processed_call_use: "inspection-only; SDK Intent::prove consumes the raw call and inserts Noops itself",
             ir_hash: artifact.manifest.ir_hash.clone(),
             activity,
             raw_op_count: lowered.program.len(),
@@ -628,6 +712,15 @@ fn prepare_call_inner(
         return Err(failure("input", "artifact-size"));
     }
     Ok(PreparedBundle {
+        native: NativePreparation {
+            intent,
+            context,
+            lowered,
+            params,
+            gas_cap: pre.gas,
+            segment: request.segment,
+            processed_transcript: processed_expectation,
+        },
         readback,
         leaves,
         marker,

@@ -1,11 +1,16 @@
-//! Source-derived, unsigned, unproven local ledger preparation.
-//! No native signature/proof verification, funding, ledger apply or network I/O.
+//! Source-derived local native call preparation and explicit proving APIs.
+//! Preparation stays unsigned/unproven; native APIs require separately admitted
+//! resources. No funding, signatures, ledger apply or network I/O.
+#[cfg(test)]
+extern crate self as mori_ledger;
+
 pub mod codec;
 pub mod custody;
 pub mod layout;
 pub mod ops;
 pub mod prepare;
 pub mod profile;
+pub mod proving;
 pub mod relation;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

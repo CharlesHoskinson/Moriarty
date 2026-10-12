@@ -101,6 +101,21 @@ fn actual_cli_compiles_and_consumes_the_source_static_native_relation() {
         );
         assert_eq!(r["evidence"]["proof_verification"], "not-performed");
         assert!(out.join("processed-preimage.bin").exists());
+        let raw: mori_ledger::prepare::RawIntent = mori_ledger::codec::decode_artifact(
+            &std::fs::read(out.join("raw-intent.bin")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(raw.calls().count(), 1);
+        assert_eq!(
+            mori_ledger::codec::encode(raw.calls().next().unwrap()).unwrap(),
+            std::fs::read(out.join("raw-call.bin")).unwrap()
+        );
+        let marker: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(out.join("preparation.json")).unwrap()).unwrap();
+        assert_eq!(
+            marker["leaves"]["raw-intent.bin"]["sha256"],
+            mori_ledger::codec::hash(&std::fs::read(out.join("raw-intent.bin")).unwrap())
+        );
         assert!(out.join("preparation.json").exists());
         let artifact = relation.join("manifest.json");
         let before = std::fs::read(&artifact).unwrap();

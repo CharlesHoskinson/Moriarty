@@ -68,7 +68,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
             &manifest,
         )
         .map_err(core_io::operation)?;
-        mori_ledger::prepare::prepare_call_checked(
+        mori_ledger::prepare::prepare_native_call_checked(
             &source,
             &program,
             &deployment,
@@ -77,6 +77,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
             &request,
             &artifact,
         )
+        .map(mori_ledger::prepare::PreparedNativeCall::into_bundle)
     } else {
         mori_ledger::prepare::prepare_call(
             &source,
