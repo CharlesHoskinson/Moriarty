@@ -66,6 +66,13 @@ commit `04c9c5d9bcebb8d4427d8589fb54d58a55599c14`.
   FAB serialization. Zero encodes as atom byte `0x40`; nonzero values below 32
   encode inline; larger values encode `0x40 | byte_length` followed by normalized
   little-endian bytes. This differs from value-only field representation.
+* `base-crypto/src/fab/alignments.rs:90–97`,
+  `transient-crypto/src/fab.rs:486–498,596–604`,
+  `transient-crypto/src/repr.rs:164–184`, `transient-crypto/src/hash.rs:75–88`:
+  `Vec<u8>` has Compress alignment. Its public value is one transient commitment
+  field, not byte chunks. The commitment hashes payload length first, followed
+  by raw payload byte chunks in SDK reverse chunk order. Public Compress
+  alignment is native field `-1`. `onchain-vm/src/ops.rs:99` fixes Misc at 10.
 * Current producer: `crates/mori-ledger/src/prepare.rs:218–410` and
   `ops.rs:264–510`. `layout.rs:127–245` admits public source-wide bindings;
   `layout.rs:315–337` deliberately refuses operations containing installed IR
@@ -123,13 +130,26 @@ value-only `PublicInput`, constrains its type/identity/expected prefix where
 applicable, and publishes it with its complete native Op fields. Every unused
 or additional transcript field is rejected by the SDK preprocessor.
 
+Guards are constrained Bool operands. `PublicInput` guards control only
+preprocessing consumption; `Impact` guards select/zero only public fields.
+Neither guards `ConstrainEq`, `ConstrainBits`, decomposition or other
+instructions. For every optional opening use `selected = select(g, raw, 0)`
+before branch-local computation. Compare static identity pieces to
+`select(g, expected_static_piece, 0)`, and reopened known values to
+`select(g, expected_prefix_value, 0)`. An absent selected duty amount is zero.
+All branch-specific range/decomposition/packing uses selected-zero operands
+before narrower constraints; no inactive branch can reject a valid alternative.
+
 * State reads use the existing sorted source-reference order at each statement
   prefix. State-before reads required by writes retain the same producer order.
   Repeated reads after updates equal the constrained updated operand. Initial
   state openings remain dynamic and typed.
 * Duty membership is a native boolean opening. An existing-duty read is
   guarded by that membership and checks all static asset/debtor/creditor fields
-  plus the amount. An absent amount is zero. Discharge asserts presence; updates
+  plus the amount through the selected equalities above. The old-read guard is
+  exactly that constrained native membership, never a host presence flag.
+  Repeated duty membership/amount reads equal the constrained prior write.
+  An absent amount is zero. Discharge asserts presence; updates
   make later presence true and retain constrained amount. Zero amount does not
   erase a duty or collapse absence into presence.
 * Transfer/fee amounts are computed from source and grouped by the pinned
@@ -138,16 +158,73 @@ or additional transcript field is rejected by the SDK preprocessor.
   and checked sum determines the new claim value. Membership and all duplicated
   claim keys are constrained. Self recipients and repeated fee/transfer claims
   use the same rules. Zero effects remain source effects but emit no claim Ops.
-* Typed event framing retains exact ABI domain, event name, action name, tagged
-  encoded typed value, array wrapper/version/type and `Log` position. UInt
-  uses source-stable constrained serialization branches: value below 32
-  (including zero with selected atom byte), then normalized byte lengths 1–16.
-  Bool uses its constrained 0/1 encoding. For each branch, fixed bytes and the
-  variable value bytes are packed into exact 31-byte native FAB chunks. Split
-  operands at chunk boundaries and bound each piece before shifting, so packing
-  does not wrap the field. Every branch produces its own guarded `Push` and
-  `Log` Impact; exactly one branch is active. No event witness is accepted as
-  an unconstrained host hash or precomputed flag.
+  Explicit rules for effect amount `a` and this exact key's prefix total `t` are
+  `positive = not(a == 0)` and `prior = not(t == 0)`. The initial total is zero.
+  The six membership-prefix Ops and four update-suffix Ops use `positive`;
+  the optional three old-value-read Ops use `positive and prior`. Membership
+  result equals `prior`, every duplicated key equals the static native key,
+  old amount equals `t` under its guard, and new value equals checked `t+a`.
+  The unchanged-zero, first-positive and subsequent-positive cases are thus
+  computed inside one source-static skeleton without Execution-derived flags.
+* Typed events use the exact procedure below. Every serialization branch emits
+  one guarded `Push` and one guarded `Log` Impact. Their public field widths
+  match the actual native Ops; chunks are internal hash inputs. No event hash
+  witness or host-computed validity flag supplies the statement.
+
+### Exact event encoding and in-circuit compression
+
+Let `v` be the constrained source UInt/Bool and `g` a serialization branch
+guard. UInt branches are mutually exclusive and exhaustive: `v<32`; long
+one-byte `32<=v<256`; long lengths 2–15 with
+`2^(8*(n-1))<=v<2^(8*n)`; and length16 `v>=2^120`. Assert sum of guards is one.
+Bool's globally constrained 0/1 value uses the small branch. Each branch first
+selects `branch_v=select(g,v,0)` before narrower ranges/splitting.
+
+1. Inner encoding is ASCII `midnight:fab-aligned-value[v1]:`, then canonical
+   ValueAtom bytes, then the serialized Alignment byte. For the small branch,
+   atom byte is `select(branch_v==0,0x40,branch_v)`; this includes Bool false
+   as `0x40` and true as `0x01`. Long branch `n` has header `0x40|n` and exactly
+   `n` little-endian value bytes, with a nonzero top byte for the active branch.
+   Alignment tail is `0x10` for UInt Bytes16 and `0x01` for Bool Bytes1.
+2. Payload bytes are little-endian u32 domain length, ASCII
+   `moriarty-ledger-public-abi/1:event`, little-endian u32 part count 3, then
+   `(u32 length,event name)`, `(u32 length,selected action name)` and
+   `(u32 length,inner encoding)` in that order. Names/action are static source
+   constants. Each branch's inner/payload lengths are static. The final Alignment
+   byte is nonzero, so normalizing the outer byte ValueAtom preserves every
+   payload byte and its full length.
+3. Build native fields for these raw payload bytes exactly as SDK `[u8]`
+   `FieldRepr`: divide from the start into 31-byte chunks plus an optional final
+   short chunk; interpret each as little-endian Fr; publish the optional final
+   short chunk first, then full chunks from last to first. Split selected value
+   operands at chunk boundaries, constrain each piece before shifting into
+   disjoint byte regions, and bound every assembled full chunk to248 bits.
+   This is the internal compression preimage, not the public Push vector.
+4. Emit ZKIRv3 `TransientHash` on `[Fr(payload_length), payload_byte_fields...]`.
+   Its output `h` must equal SDK
+   `transient_commit(payload_bytes,Fr(payload_bytes.len()))`. All input bytes,
+   lengths, serialization branches and chunk ordering are source-constrained.
+   The hash is computed in-circuit; it is never loaded from a host witness.
+5. `Push { storage:false }` publishes the fixed 14-field native vector
+   `[0x10,51, 1,1,4,1, 1,1,1,10, 1,1,-1,h]`: array tag51 for three cells;
+   version cell Bytes4/value1; Misc cell Bytes1/value10; payload cell singleton
+   Compress alignment `-1` and value `h`. The following Log publishes `[0x09]`.
+   One guarded Impact corresponds to each Op. Inactive groups produce exactly
+   14 and1 zero public fields and corresponding Noop widths. Compare these
+   literal headers/widths and the source-derived hash against an independently
+   observed actual native event Push; retain an altered-byte/hash control.
+
+Experiment observation, existing producer only: a real `mori prepare-call` on
+the public payment example (paid UInt70, action settle) completed with exit0
+and emitted exactly the 14-field Push above, with hash
+`7986794384292991789763090960733750308349426844296658692525651031662027908404`,
+followed by one-field Log `[9]`. The exact native Compress constant was
+`52435875175126190479447740508185965837690552500527637822603658699938581184512`.
+Public capture is `/tmp/moriarty-native-compress-golden-20261012-a`, with
+`design-event-golden.json` digest
+`e9ddbc9a586fc1b2fd82806fe008c32641532befa0fbd5483cd01367733ed81f`.
+The capture establishes this existing native field vector, not source compiler
+correspondence, a circuit result, cryptographic proof or ledger acceptance.
 
 Artifact limits are finite and fail closed with explicit diagnostics. Source
 work bounds and native guaranteed partition/event limits continue to apply;
@@ -176,13 +253,26 @@ The consumer also reproduces the SDK's deterministic skipped-op expansion and
 Noop merge/gas accounting using returned activity records, and reruns the native
 VM on that processed transcript. It compares complete state/effects/events and
 gas and checks that each active record corresponds to exactly one raw Op.
-The processed call's public statement is read through SDK `public_inputs` using
+Processed expected measured gas equals raw measured gas plus the pinned SDK
+Noop delta; it is not required to equal raw gas. Check this measured delta,
+adjusted declared gas and final caps separately. The processed call's public
+statement is read through SDK `public_inputs` using
 the constructed parent binding commitment, so binding/gas/operation-count
 changes are visible. Preserve raw preimage, activity records, expanded
 transcript, provisional parent commitment and independently reconstructible
 statement in separate public leaves. The binding remains provisional because a
 subsequent final intent/offer/fee change requires reconstruction; zero is never
 advertised as the immutable final proof input.
+
+Since SDK ordinary `check` returns only activity, reconstruct its expected full
+public projection from the checked raw fields, exact source-static per-Op widths
+and skips: actual binding and commitment, then next raw Op fields for each
+active record and width zeroes for each inactive record. Validate complete
+consumption and compare the whole projection to processed-call `public_inputs`.
+This is a checked projection, not cryptographic verification or an exported
+SDK preprocessor instance. Binding-input-only changes and matched changed
+communication randomness/commitment can be valid alternate instances; a
+one-sided communication mismatch must reject.
 
 Evidence becomes `local-relation-checked-unproven`, with an explicit ordinary
 SDK IR check label. No proving, proof verification, installed verifier key,
@@ -225,6 +315,13 @@ tagged serialization, `compile-call`, the opted-in `prepare-call` consumer,
 processed-transcript/public-statement readback and focused independent positive
 and hostile fixtures covering all current statements. It excludes installed
 keys, proving providers, recursive histories and account/ledger authentication.
+Required focused Quint QA extends the existing finite single-actor language
+models with per-Op activity consumption/skip widths/Noop counts, source-derived
+claim/duty branches and exactly-one event encoding branch/selected-zero safety.
+Typecheck, deterministic tests and bounded TypeScript BigInt sampling retain
+independent boundary literals and actual command logs. The model does not
+establish byte/circuit crypto or ledger correspondence; no exhaustive
+verification or native proof result is inferred.
 
 Use `RUSTUP_TOOLCHAIN=1.99.0` and shared target directory
 `/home/charl/Moriarty/.worktrees/readiness-20261010/target` for locked offline Rust
