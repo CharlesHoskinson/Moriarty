@@ -92,9 +92,21 @@ fn signed_keygen_actual_consumer_refuses_invalid_policy_before_native_work() {
         command.arg(flag).arg(root.join(name));
     }
     command.args(["--action", "settle"]);
-    let result = command.output().unwrap();
-    assert!(!result.status.success());
-    assert!(String::from_utf8_lossy(&result.stderr).contains("strict-fens-refusal"));
+    for profile in [
+        "moriarty-native-call-work-limits/1",
+        "moriarty-native-call-work-limits/2",
+    ] {
+        let mut current = limits.clone();
+        current.profile = profile.into();
+        std::fs::write(
+            root.join("limits.json"),
+            serde_json::to_vec(&current).unwrap(),
+        )
+        .unwrap();
+        let result = command.output().unwrap();
+        assert!(!result.status.success());
+        assert!(String::from_utf8_lossy(&result.stderr).contains("strict-fens-refusal"));
+    }
     assert!(!root.join("out").exists());
     assert!(!root.join("no-srs").exists());
     std::fs::remove_dir_all(root).unwrap();
