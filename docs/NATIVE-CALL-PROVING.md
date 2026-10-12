@@ -119,6 +119,14 @@ reused library capabilities respect the currently supplied input/action bounds.
 Ordinary 1MiB/16MiB envelopes remain unchanged; installed binary/artifact envelopes
 use explicit separate bounds.
 
+Artifact marker and leaf reads admit the remaining aggregate byte budget before
+opening or parsing. A leaf snapshot is bounded by its declared length as well as
+the caller limits; zero-byte leaves require an empty opened regular file. Public
+imports continue to ignore optional PK metadata and files. New SRS degrees use the
+smaller of the remaining parameter aggregate budget and the per-SRS cap before
+reading, hashing or initializing parameters. Equal-degree snapshots are reused
+without another read or aggregate charge.
+
 The ledger-owned offline reader uses only the existing SDK04c9c5d pinned table
 for degrees0..19, an explicit directory/exact degree, nonblocking open and opened
 regular-file validation, immutable bounded bytes, pinned SHA256, degree header,

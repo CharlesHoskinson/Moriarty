@@ -77,8 +77,27 @@ pub(crate) fn add_total(total: usize, next: usize, cap: usize) -> Result<usize> 
         .filter(|n| *n <= cap)
         .ok_or(refusal("aggregate-size"))
 }
+// Positive acquisitions must admit their remaining aggregate budget before
+// opening a file. Reused in the new-degree SRS path before decoder/init work.
+pub(crate) fn remaining_read_cap(total: usize, per_file: u64, aggregate: usize) -> Result<u64> {
+    let per_file = NativeWorkLimits::cap(per_file)?;
+    let remaining = aggregate
+        .checked_sub(total)
+        .filter(|n| *n > 0)
+        .ok_or(refusal("aggregate-size"))?;
+    u64::try_from(per_file.min(remaining)).map_err(|_| refusal("aggregate-size"))
+}
 pub fn read_bounded_file(path: &Path, cap: u64) -> Result<Vec<u8>> {
-    let cap = NativeWorkLimits::cap(cap)?;
+    read_file_snapshot(path, NativeWorkLimits::cap(cap)?)
+}
+// An admitted empty leaf has a zero byte cap. This does not permit zero caller
+// limits: the public reader and marker/work-limit admission still reject them.
+fn read_file_snapshot(path: &Path, cap: usize) -> Result<Vec<u8>> {
+    let sentinel = cap
+        .checked_add(1)
+        .and_then(|n| u64::try_from(n).ok())
+        .ok_or(refusal("size"))?;
+    let cap_u64 = u64::try_from(cap).map_err(|_| refusal("size"))?;
     #[cfg(unix)]
     let file = {
         use std::os::unix::fs::OpenOptionsExt;
@@ -91,11 +110,11 @@ pub fn read_bounded_file(path: &Path, cap: u64) -> Result<Vec<u8>> {
     let file = std::fs::File::open(path);
     let file = file.map_err(|_| refusal("open"))?;
     let metadata = file.metadata().map_err(|_| refusal("metadata"))?;
-    if !metadata.is_file() || metadata.len() > cap as u64 {
+    if !metadata.is_file() || metadata.len() > cap_u64 {
         return Err(refusal("file-kind-or-size"));
     }
     let mut bytes = Vec::new();
-    file.take((cap + 1) as u64)
+    file.take(sentinel)
         .read_to_end(&mut bytes)
         .map_err(|_| refusal("read"))?;
     if bytes.len() > cap {
@@ -116,7 +135,11 @@ fn read_leaf(
     }
     let length = usize::try_from(leaf.bytes).map_err(|_| refusal("leaf-size"))?;
     let next = add_total(*total, length, aggregate)?;
-    let bytes = read_bounded_file(&directory.join(name), cap)?;
+    // The declared length is already admitted against both caps. Snapshot under
+    // that exact length, so lying metadata cannot consume the larger per-leaf
+    // budget before identity refusal. Opened-FD size checks precede any read;
+    // the one-byte sentinel detects growth beyond this admitted snapshot.
+    let bytes = read_file_snapshot(&directory.join(name), length)?;
     if bytes.len() != length || codec::hash(&bytes) != leaf.sha256 {
         return Err(refusal("leaf-identity"));
     }
@@ -128,7 +151,12 @@ pub fn snapshot_public_keyset(
     limits: &NativeWorkLimits,
 ) -> Result<ImportedPublicKeyset> {
     limits.validate()?;
-    let cap = limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64);
+    let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
+    let cap = remaining_read_cap(
+        0,
+        limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
+        aggregate,
+    )?;
     let marker = read_bounded_file(&directory.join("public-keyset.json"), cap)?;
     let manifest: PublicKeysetManifest =
         codec::json(std::str::from_utf8(&marker).map_err(|_| refusal("manifest-utf8"))?)?;
@@ -139,7 +167,6 @@ pub fn snapshot_public_keyset(
     {
         return Err(refusal("public-manifest"));
     }
-    let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let mut total = add_total(0, marker.len(), aggregate)?;
     let mut required = BTreeSet::from(["source.mori".to_owned()]);
     let mut names = BTreeSet::new();
@@ -223,10 +250,13 @@ pub fn snapshot_proving_keyset(
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvingKeyset> {
     let public = snapshot_public_keyset(directory, limits)?;
-    let bytes = read_bounded_file(
-        &directory.join("proving-keyset.json"),
+    let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
+    let marker_cap = remaining_read_cap(
+        public.snapshot_total,
         limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
+        aggregate,
     )?;
+    let bytes = read_bounded_file(&directory.join("proving-keyset.json"), marker_cap)?;
     let marker: ProvingKeysetManifest =
         codec::json(std::str::from_utf8(&bytes).map_err(|_| refusal("manifest-utf8"))?)?;
     if marker.profile != "moriarty-native-call-proving-keyset/1"
@@ -414,10 +444,10 @@ pub fn snapshot_proven_call(
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvenCall> {
     limits.validate()?;
-    let marker = read_bounded_file(
-        &directory.join("proven-call.json"),
-        limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64),
-    )?;
+    let cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
+    let marker_cap =
+        remaining_read_cap(0, limits.max_leaf_bytes.min(codec::INPUT_BYTES as u64), cap)?;
+    let marker = read_bounded_file(&directory.join("proven-call.json"), marker_cap)?;
     let m: ProvenManifest =
         codec::json(std::str::from_utf8(&marker).map_err(|_| refusal("manifest-utf8"))?)?;
     if m.profile != "moriarty-native-call-proven/1"
@@ -427,7 +457,6 @@ pub fn snapshot_proven_call(
     {
         return Err(refusal("proven-manifest"));
     }
-    let cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let mut total = add_total(0, marker.len(), cap)?;
     let mut leaves = BTreeMap::new();
     for (name, desc) in &m.leaves {
@@ -565,4 +594,46 @@ fn valid_leaf(name: &str) -> bool {
         && name
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+}
+
+#[cfg(test)]
+mod aggregate_read_tests {
+    use super::*;
+    #[test]
+    fn lying_leaf_length_bounds_actual_file_before_read_and_hash() {
+        let root = std::env::temp_dir().join(format!("mori-leaf-budget-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(root.join("leaf.bin"), b"ab").unwrap();
+        let leaf = Leaf {
+            bytes: 1,
+            sha256: codec::hash(b"a"),
+        };
+        let mut total = 0;
+        let err = read_leaf(&root, "leaf.bin", &leaf, 64, &mut total, 1).unwrap_err();
+        std::fs::remove_dir_all(root).unwrap();
+        assert_eq!(err.code, "file-kind-or-size");
+        assert_eq!(total, 0);
+    }
+    #[test]
+    fn zero_byte_leaf_is_exact_even_with_exhausted_aggregate() {
+        let root =
+            std::env::temp_dir().join(format!("mori-empty-leaf-budget-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        std::fs::write(root.join("leaf.bin"), b"").unwrap();
+        let leaf = Leaf {
+            bytes: 0,
+            sha256: codec::hash(b""),
+        };
+        let mut total = 1;
+        assert!(
+            read_leaf(&root, "leaf.bin", &leaf, 64, &mut total, 1)
+                .unwrap()
+                .is_empty()
+        );
+        std::fs::write(root.join("leaf.bin"), b"x").unwrap();
+        let err = read_leaf(&root, "leaf.bin", &leaf, 64, &mut total, 1).unwrap_err();
+        std::fs::remove_dir_all(root).unwrap();
+        assert_eq!(err.code, "file-kind-or-size");
+        assert_eq!(total, 1);
+    }
 }

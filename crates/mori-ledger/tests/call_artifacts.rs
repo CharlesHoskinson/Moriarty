@@ -1,7 +1,8 @@
 mod support;
 use mori_ledger::{
     call_artifacts::{
-        ActionKeyMetadata, Leaf, PublicKeysetManifest, public_identity, snapshot_public_keyset,
+        ActionKeyMetadata, Leaf, ProvingKeysetManifest, PublicKeysetManifest, public_identity,
+        snapshot_proven_call, snapshot_proving_keyset, snapshot_public_keyset,
     },
     codec,
     profile::{NativeWorkLimits, StaticBindings},
@@ -26,8 +27,7 @@ fn limits() -> NativeWorkLimits {
         max_public_inputs: 10000,
     }
 }
-#[test]
-fn public_snapshot_never_reads_optional_pk_even_when_combined_marker_declares_it() {
+fn public_fixture() -> std::path::PathBuf {
     let root = std::env::temp_dir().join(format!(
         "mori-public-reader-{}-{}",
         std::process::id(),
@@ -109,12 +109,19 @@ fn public_snapshot_never_reads_optional_pk_even_when_combined_marker_declares_it
         serde_json::to_vec_pretty(&marker).unwrap(),
     )
     .unwrap();
-    let public = snapshot_public_keyset(&root, &limits()).unwrap();
+    root
+}
+#[test]
+fn public_snapshot_never_reads_optional_pk_even_when_combined_marker_declares_it() {
+    let root = public_fixture();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = public_bytes(&root);
+    let public = snapshot_public_keyset(&root, &bounds).unwrap();
     assert_eq!(public.action_count(), 1);
     #[cfg(unix)]
     {
         std::os::unix::fs::symlink(root.join("missing"), root.join("selected.pk.bin")).unwrap();
-        assert!(snapshot_public_keyset(&root, &limits()).is_ok());
+        assert!(snapshot_public_keyset(&root, &bounds).is_ok());
     }
     std::fs::remove_dir_all(&root).unwrap();
 }
@@ -127,4 +134,102 @@ fn mandatory_native_limits_reject_zero_unknown_and_duplicate_fields() {
     assert!(NativeWorkLimits::from_json(&serde_json::to_string(&zero).unwrap()).is_err());
     assert!(NativeWorkLimits::from_json(&good.replace("{", "{\"max_degree\":9,")).is_err());
     assert!(NativeWorkLimits::from_json(&good.replace("{", "{\"expected_vk\":\"hash\",")).is_err());
+}
+
+fn public_bytes(root: &std::path::Path) -> u64 {
+    [
+        "public-keyset.json",
+        "source.mori",
+        "action-000000.zkir.bin",
+        "action-000000.manifest.json",
+        "action-000000.vk.bin",
+    ]
+    .into_iter()
+    .map(|n| std::fs::metadata(root.join(n)).unwrap().len())
+    .sum()
+}
+#[test]
+fn initial_public_marker_is_bounded_before_json_parse() {
+    let root = public_fixture();
+    std::fs::write(root.join("public-keyset.json"), b"bad-json").unwrap();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = 1;
+    let err = snapshot_public_keyset(&root, &bounds).err().unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(err.code, "file-kind-or-size");
+}
+#[test]
+fn initial_proven_marker_is_bounded_before_json_parse() {
+    let root = public_fixture();
+    std::fs::write(root.join("proven-call.json"), b"bad-json").unwrap();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = 1;
+    let err = snapshot_proven_call(&root, &bounds).err().unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(err.code, "file-kind-or-size");
+}
+#[test]
+fn secondary_proving_marker_uses_remaining_aggregate_before_json_parse() {
+    let root = public_fixture();
+    std::fs::write(root.join("proving-keyset.json"), b"bad-json").unwrap();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = public_bytes(&root) + 1;
+    let err = snapshot_proving_keyset(&root, "settle", &bounds)
+        .err()
+        .unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(err.code, "file-kind-or-size");
+}
+#[test]
+fn exhausted_secondary_marker_aggregate_refuses_before_open() {
+    let root = public_fixture();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = public_bytes(&root);
+    let err = snapshot_proving_keyset(&root, "settle", &bounds)
+        .err()
+        .unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(err.code, "aggregate-size");
+}
+#[test]
+fn proving_marker_and_selected_pk_have_exact_cumulative_budget() {
+    let root = public_fixture();
+    let pk = b"untrusted-opaque-pk";
+    let pk_leaf = Leaf {
+        bytes: pk.len() as u64,
+        sha256: codec::hash(pk),
+    };
+    let mut public: PublicKeysetManifest =
+        serde_json::from_slice(&std::fs::read(root.join("public-keyset.json")).unwrap()).unwrap();
+    let proving = ProvingKeysetManifest {
+        profile: "moriarty-native-call-proving-keyset/1".into(),
+        public_identity: public.identity.clone(),
+        action: "settle".into(),
+        prover_key: pk_leaf.clone(),
+    };
+    let proving_bytes = serde_json::to_vec_pretty(&proving).unwrap();
+    public.leaves.insert("selected.pk.bin".into(), pk_leaf);
+    public.leaves.insert(
+        "proving-keyset.json".into(),
+        Leaf {
+            bytes: proving_bytes.len() as u64,
+            sha256: codec::hash(&proving_bytes),
+        },
+    );
+    std::fs::write(
+        root.join("public-keyset.json"),
+        serde_json::to_vec_pretty(&public).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(root.join("proving-keyset.json"), &proving_bytes).unwrap();
+    std::fs::write(root.join("selected.pk.bin"), pk).unwrap();
+    let mut bounds = limits();
+    bounds.max_artifact_bytes = public_bytes(&root) + proving_bytes.len() as u64 + pk.len() as u64;
+    assert!(snapshot_proving_keyset(&root, "settle", &bounds).is_ok());
+    bounds.max_artifact_bytes -= 1;
+    let err = snapshot_proving_keyset(&root, "settle", &bounds)
+        .err()
+        .unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert_eq!(err.code, "aggregate-size");
 }
