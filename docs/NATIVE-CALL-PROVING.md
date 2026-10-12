@@ -175,3 +175,89 @@ and weak-key/unused-action/PK/SRS/proof/PI mutation controls remain unrun. Pinne
 setup trust, correct source compiler/key derivation and embedded-verifier
 compatibility remain named premises. Source completion is not native feasibility,
 financial acceptance, authenticated history or release qualification.
+
+## Signed local installed source consumer
+
+The separate signed mode adds four existing-Mori executable consumers:
+
+```text
+mori keygen-signed-call SOURCE --signer-policy POLICY --seed-deployment D --seed-state S --parameters L --action A --params-dir P --work-limits W --out K
+mori prepare-signed-call SOURCE --signer-policy POLICY --deployment D2 --predecessor S2 --parameters L --request Q --action A --public-keyset K --params-dir P --work-limits W --out PACKAGE
+mori prove-signed-call SOURCE --signer-policy POLICY --deployment D2 --predecessor S2 --parameters L --request Q --action A --signed-attachment ATT --keyset K --params-dir P --work-limits W --out PROVEN
+mori verify-signed-call SOURCE --signer-policy POLICY --deployment D2 --predecessor S2 --parameters L --request Q --action A --signed-attachment ATT --public-keyset K --proof PROVEN --params-dir P --work-limits W
+```
+
+The source plus independently supplied immutable policy fixes the JubJub key.
+The `.mori` grammar remains `moriarty/1`; no key declaration is added to it.
+The policy is exactly `{profile, owner, beneficiary, public_key_hex}`, profile
+`moriarty-ledger-fixed-jubjub-policy/1`, with a strict 64-byte lowercase affine
+JubJub key. Every action requires its signature, including state-only reset and
+freeze. Native ECDSA payer/spend keys are separate authorities. Signature
+possession does not sign a public offer, fund it or authenticate an account.
+
+The signed request profile is `moriarty-ledger-signed-call-request/1`. It has the
+existing request fields except `economic_bounds`, plus mandatory `not_before`,
+`not_after`, `at` and a complete, strictly ordered full-AssetId limit list.
+It refuses omitted, extra, duplicate or reordered limits. UInt values are
+canonical decimal strings. The source-wide admitted bound is 16 assets and 16
+registry duties, with the owner the sole source payer and registry debtor.
+
+Preparation returns only `signing-package.json` and a completion marker. It
+contains canonical context, payload, semantic wires, message and the dedicated
+signature-free readback. An external signer independently reviews/reconstructs
+those values and returns `{profile, payload, signature_hex}` with profile
+`moriarty-ledger-signed-call-attachment/1` and 96-byte lowercase `Rx|Ry|s`.
+Moriarty has no wallet/signing or secret-custody command in this slice. Edited
+packages are never proof owners. Context is compiled before IR; payload is
+reconstructed after unsigned native evaluation; signature, communications and
+proof are later values, so there is no self-hash cycle.
+
+The storage ABI remains `moriarty-ledger-public-abi/1` and keeps its original
+name/role/asset/duty recipes. The new combined ABI is separately labeled
+`moriarty-ledger-signed-abi/1`. Typed arguments are original N source arguments,
+PK and R typed points, native s, eight UInt128 fields and four caps per asset:
+`N+11+4A` arguments, `N+13+4A` flattened fields. The signed manifest publishes
+both counts and descriptors instead of an ambiguous `input_count`. The actual
+SDK call input and communications commitment include R/s, so a different valid
+attachment requires a new preparation and proof.
+
+The existing compiler records actual state/effect/claim operands, adds complete
+state-map cardinality and reads, and complete duty-map cardinality, membership
+and conditional metadata/amount reads at both endpoints. Closing caps include
+untouched duties such as freeze's charge9. The same shared wires feed MLC1,
+strict asserted FENS and checked gross/fee/net/closing-duty constraints. There
+is no auth Impact, private transcript, free message wire or standalone
+financial-claim fallback. Cold import regenerates every action from original
+source/policy and compares exact opaque keys. The public reader ignores all PK
+and prover leaves, even when optional marker descriptions list them.
+
+Ordinary controls run the actual native VM, partition, typed preimage,
+communications, integrated IR.check, inactive-Noop processing and complete
+readback. Public QA signing scalars are test fixtures only. Honest Metered
+A1/A2/freeze and Toggle31/255/reset preserve the independent literal semantics;
+newly valid tighter signatures reach the actual integrated cap assertions and
+fail there. Point/scalar, fixed-key, scalar-zero equation, native count/amount,
+transport and assertion-ablation controls identify their ordinary predicates.
+These results do not establish genuine native proof or cryptographic
+verification success.
+
+The signed observations exceed the SDK default 15ms guaranteed-partition
+budget in the current literal fixtures. An honest default-parameter refusal is
+retained. Positive ordinary signed fixtures explicitly supply separate local
+ledger parameters with `min_time_to_dismiss=1s` and repin their ledger and
+parameter hashes; production never alters parameters or falls back to a
+fallible phase. This is unqualified local QA, not default/Preview/Fenrir target
+budget evidence, M5 qualification or a change to NativeWorkLimits.
+
+Native derivation/proving/verification bodies are implemented but unexecuted
+for this source candidate. Future resource accounting must include SDK
+ProofPreimage::prove's own native proof verification with its separate lazy VK
+and cached parameter verifier, plus the later whole-call embedded ledger Real
+verification. Frozen unsigned keys/results are historical exact-build evidence;
+source-closure changes invalidate their reuse for this signed compilation.
+Fresh exact-source/result audits and separate native admission remain required.
+The result scope is
+`local-signed-call-proof-fixed-jubjub-policy-supplied-state-unqualified`.
+Authenticated head/deployment/account identity, replay consumption, rotation,
+trusted time, funding, settlement, recursive history and full U0–U7/M1–M17 remain
+open.
