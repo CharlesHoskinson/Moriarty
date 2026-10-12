@@ -16,7 +16,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     // producing keyset marker contains their optional descriptions.
     let imported =
         mori_ledger::call_artifacts::snapshot_public_keyset(&args.public_keyset, &i.limits)
-            .map_err(core_io::operation)?;
+            .map_err(core_io::ledger_operation)?;
     let public = futures::executor::block_on(
         mori_ledger::local_deployment::rederive_local_public_deployment(
             &i.source,
@@ -27,7 +27,7 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
             &i.limits,
         ),
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let expected = mori_ledger::prepare::prepare_installed_native_call(
         &i.source,
         &i.program,
@@ -38,22 +38,22 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
         &public,
         &i.limits,
     )
-    .map_err(core_io::operation)?;
+    .map_err(core_io::ledger_operation)?;
     let candidate = mori_ledger::call_artifacts::snapshot_proven_call(&args.proof, &i.limits)
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     candidate
         .admit_context(&expected.proof_context())
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     candidate
         .admit_inspection(&expected)
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     let verified = mori_ledger::proving::verify_installed_call(&expected, candidate.intent())
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     candidate
         .admit_readback(&expected, &verified, &i.limits)
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     let bytes = mori_ledger::call_artifacts::verification_bytes(&verified, &i.limits)
-        .map_err(core_io::operation)?;
+        .map_err(core_io::ledger_operation)?;
     std::io::stdout()
         .lock()
         .write_all(&bytes)
