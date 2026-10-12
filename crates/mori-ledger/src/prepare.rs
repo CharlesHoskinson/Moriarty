@@ -53,6 +53,8 @@ pub struct Readback {
     pub requires_reconstruction_after_final_intent: bool,
     pub evidence: Evidence,
     pub preserved_frame: PreservedFrame,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relation: Option<crate::relation::CheckedReadback>,
 }
 #[derive(Serialize)]
 pub struct PreservedFrame {
@@ -205,6 +207,53 @@ pub fn prepare_call(
     predecessor_bytes: &[u8],
     parameter_bytes: &[u8],
     request: &CallRequest,
+) -> Result<PreparedBundle> {
+    prepare_call_inner(
+        source,
+        p,
+        d,
+        predecessor_bytes,
+        parameter_bytes,
+        request,
+        None,
+    )
+}
+/// Checked ordinary native relation preparation; no key/proof/signature/apply.
+pub fn prepare_call_checked(
+    source: &str,
+    p: &Program,
+    d: &Deployment,
+    predecessor_bytes: &[u8],
+    parameter_bytes: &[u8],
+    request: &CallRequest,
+    artifact: &crate::relation::Artifact,
+) -> Result<PreparedBundle> {
+    let expected = crate::relation::admit(
+        source,
+        p,
+        d,
+        &request.action,
+        &artifact.ir_bytes()?,
+        &artifact.manifest_bytes()?,
+    )?;
+    prepare_call_inner(
+        source,
+        p,
+        d,
+        predecessor_bytes,
+        parameter_bytes,
+        request,
+        Some(&expected),
+    )
+}
+fn prepare_call_inner(
+    source: &str,
+    p: &Program,
+    d: &Deployment,
+    predecessor_bytes: &[u8],
+    parameter_bytes: &[u8],
+    request: &CallRequest,
+    relation: Option<&crate::relation::Artifact>,
 ) -> Result<PreparedBundle> {
     if source.len() > codec::INPUT_BYTES
         || codec::hash(source.as_bytes()) != d.source_hash
@@ -364,6 +413,78 @@ pub fn prepare_call(
     {
         return Err(failure("full-readback", "native-preimage"));
     }
+    let mut relation_leaves = BTreeMap::new();
+    let relation_readback = if let Some(artifact) = relation {
+        let activity = crate::relation::check(artifact, preimage)?;
+        let processed = crate::relation::process(
+            artifact,
+            &lowered.program,
+            &activity,
+            &params.cost_model.runtime_cost_model,
+        )?;
+        let mut processed_transcript = transcript.clone();
+        processed_transcript.program = processed.program.clone().into();
+        processed_transcript.gas.compute_time += processed.noop_cost;
+        let actual = context
+            .run_transcript(&processed_transcript, &params.cost_model.runtime_cost_model)
+            .map_err(|_| failure("native-relation", "processed-VM-refusal"))?;
+        validate_query(&lowered, &actual)?;
+        if actual.context.state != direct.context.state {
+            return Err(failure("native-relation", "processed-charged-state"));
+        }
+        let mut expected_gas = direct.gas_cost;
+        expected_gas.compute_time += processed.noop_cost;
+        if actual.gas_cost != expected_gas
+            || !processed_transcript.gas.within_bounds(&pre.gas)
+            || !actual.gas_cost.within_bounds(&processed_transcript.gas)
+            || processed_transcript.version.as_deref() != Some(&Transcript::<InMemoryDB>::VERSION)
+        {
+            return Err(failure("native-relation", "processed-gas-or-version"));
+        }
+        let mut processed_call = call.clone();
+        processed_call.guaranteed_transcript = Some(Sp::new(processed_transcript.clone()));
+        let parent: midnight_transient_crypto::commitment::Pedersen =
+            intent.binding_commitment.into();
+        let pi = processed_call.public_inputs(parent);
+        let mut expected_pi = vec![pi[0], commitment];
+        expected_pi.extend(processed.operation_fields);
+        if expected_pi != pi {
+            return Err(failure("native-relation", "processed-public-projection"));
+        }
+        let mut bound = (**preimage).clone();
+        bound.binding_input = pi[0];
+        if crate::relation::check(artifact, &bound)? != activity {
+            return Err(failure("native-relation", "processed-binding-check"));
+        }
+        processed_call.proof = ProofPreimageVersioned::V2(std::sync::Arc::new(bound.clone()));
+        relation_leaves.insert("raw-call.bin".into(), codec::encode(&call)?);
+        relation_leaves.insert("raw-preimage.bin".into(), codec::encode(&**preimage)?);
+        relation_leaves.insert("processed-preimage.bin".into(), codec::encode(&bound)?);
+        relation_leaves.insert("processed-call.bin".into(), codec::encode(&processed_call)?);
+        relation_leaves.insert(
+            "processed-transcript.bin".into(),
+            codec::encode(&processed_transcript)?,
+        );
+        relation_leaves.insert("relation-manifest.json".into(), artifact.manifest_bytes()?);
+        relation_leaves.insert("relation.zkir.bin".into(), artifact.ir_bytes()?);
+        Some(crate::relation::CheckedReadback {
+            scope: "ordinary-sdk-ir-checked-projection-unproven-provisional-binding",
+            processed_call_use: "inspection-only; SDK Transaction::prove consumes the raw call and inserts Noops itself",
+            ir_hash: artifact.manifest.ir_hash.clone(),
+            activity,
+            raw_op_count: lowered.program.len(),
+            processed_op_count: processed.program.len(),
+            noop_count: processed.noop_count,
+            inactive_fields: processed.inactive_fields,
+            noop_cost_hex: codec::native_hex(&processed.noop_cost)?,
+            processed_measured_gas_hex: codec::native_hex(&actual.gas_cost)?,
+            processed_declared_gas_hex: codec::native_hex(&processed_transcript.gas)?,
+            parent_binding_commitment_hex: codec::native_hex(&parent)?,
+            public_inputs: pi.iter().map(|f| codec::hex(&f.as_le_bytes())).collect(),
+        })
+    } else {
+        None
+    };
     let erased = intent.erase_proofs().erase_signatures();
     let _deferred = offer
         .offer
@@ -429,6 +550,7 @@ pub fn prepare_call(
         return Err(failure("full-readback", "preserved-native-frame"));
     }
     let readback = Readback {
+        relation: relation_readback,
         preserved_frame: frame,
         execution,
         prospective_balances: offer.balances,
@@ -456,8 +578,16 @@ pub fn prepare_call(
         change_indices: offer.change_indices,
         requires_reconstruction_after_final_intent: true,
         evidence: Evidence {
-            qualification: "local-unproven",
-            relation: "unestablished",
+            qualification: if relation.is_some() {
+                "local-relation-checked-unproven"
+            } else {
+                "local-unproven"
+            },
+            relation: if relation.is_some() {
+                "source-static-native-ordinary-ir-check"
+            } else {
+                "unestablished"
+            },
             proof_verification: "not-performed",
             signature_verification: "not-performed",
             ledger_apply: "not-performed",
@@ -468,6 +598,10 @@ pub fn prepare_call(
         },
     };
     let mut leaves: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    leaves.append(&mut relation_leaves);
+    if let Some(r) = &readback.relation {
+        leaves.insert("relation-check.json".into(), json_bytes(r)?);
+    }
     leaves.insert("abi.json".into(),json_bytes(&serde_json::json!({"layout":abi,"op_bindings":lowered.bindings,"claim_bindings":lowered.claim_bindings}))?);
     leaves.insert("ops.bin".into(), codec::encode(&lowered.program)?);
     leaves.insert("guaranteed-transcript.bin".into(), transcript_bytes);

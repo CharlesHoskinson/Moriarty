@@ -9,8 +9,8 @@ and Noop-processed public call artifacts. Use the existing CLI publication
 mechanism and keep proving/deployment/authentication outside this slice.
 
 **Execution:** Sole implementation author executes this sequence in the current
-isolated checkout; no additional implementation delegates. This plan is outside
-the candidate until the lead relays two substantive approving design votes.
+isolated checkout; no additional implementation delegates. Implementation clearance followed both fresh design02 approvals at commit
+654946a1885554c781bce8fbf31a9d2c4d7b1685. Native proof resources remain unavailable.
 
 ## Global constraints
 
@@ -52,20 +52,20 @@ likewise be valid; mismatched pairs must refuse.
 
 ## Task 1: Source-static arithmetic/state relation
 
-- [ ] Add a meaningful test compiling Bool/UInt state actions once, consuming
+- [x] Add a meaningful test compiling Bool/UInt state actions once, consuming
   actual native preimages for different requests/prestates and asserting equal
   full artifact bytes. Assert independent state results and mutable-next/captured
   let behavior. Run `cargo test --locked --offline -p mori-ledger --test relation`
   and retain expected missing-feature failure before implementation.
-- [ ] Add artifact/source validation and native typed input binding. Inputs use
+- [x] Add artifact/source validation and native typed input binding. Inputs use
   Native operands with UInt128/Bool range constraints; outputs are empty;
   communications enabled. Source names resolve per statement environment.
-- [ ] Implement the arithmetic equations below, native source-reference reads,
+- [x] Implement the arithmetic equations below, native source-reference reads,
   ABI guard and exact state write templates. Each Op has one Impact; each Popeq
   opening has typed constraints and reappears in full native Op fields.
-- [ ] Run positive/hostile state controls and assert direct low-level preimage
+- [x] Run positive/hostile state controls and assert direct low-level preimage
   mutations fail without relying on producer refusal.
-- [ ] Include independent literal modular-wrap counterfeit operands
+- [x] Include independent literal modular-wrap counterfeit operands
   `a=170141183460469231731687303715884105728`,
   `b=308190375243917312857644309053803048971`, forged result
   `r=58830589151200628854506063105544421375`. Both operands and r fit UInt128,
@@ -92,16 +92,16 @@ Compile both operands before Boolean operations, retaining source eagerness.
 
 ## Task 2: Complete duty and recipient claim relations
 
-- [ ] Add tests for absent/present/zero duties, discharge beyond outstanding,
+- [x] Add tests for absent/present/zero duties, discharge beyond outstanding,
   repeated source transfers/fees, self recipients, zero preceding positive
   effects and multiasset identities. Run expected feature-failure tests.
-- [ ] Compile native membership openings and optional old duty reads. Maintain
+- [x] Compile native membership openings and optional old duty reads. Maintain
   static duty identities and typed amount operands. Require presence for
   discharge; preserve zero residual duty presence after writes.
-- [ ] Compile claim totals by static native token/recipient key. Every positive
+- [x] Compile claim totals by static native token/recipient key. Every positive
   source effect uses a derived positive guard; optional previous lookup guard
   derives from the same key's prior positive aggregate. Check aggregate128.
-- [ ] Gate all optional opening equalities using selected expected operands:
+- [x] Gate all optional opening equalities using selected expected operands:
 
 ```text
 g is constrained Bool, raw is native PublicInput with preprocessing guard g.
@@ -113,24 +113,24 @@ Impact(g, full_native_fields) binds active raw openings to actual transcript.
 PublicInput(g) and Impact(g) never implicitly guard other constraints.
 ```
 
-- [ ] Replace claim-tail `.expect` with `Result` and explicit invariant diagnostic.
+- [x] Replace claim-tail `.expect` with `Result` and explicit invariant diagnostic.
   Retain existing literal output expectations and add missing/extra-change
   hostile controls alongside merged self/change/multiplicity regressions.
-- [ ] Mutate all correlated duty or claim copies consistently in actual
+- [x] Mutate all correlated duty or claim copies consistently in actual
   preimages; require arithmetic/identity rejection from the low-level checker.
 
 ## Task 3: Exact typed event serialization
 
-- [ ] Add an event-only source with input UInt and typed state Bool. Compile once
+- [x] Add an event-only source with input UInt and typed state Bool. Compile once
   and check 0,1,31,32,255,256,65535,65536,2^64,u128max and Bool0/1 against exact
   native framed event bytes. Negative checks mutate name/action/value/wrapper.
-- [ ] Derive constrained serialization guards from the globally128bounded
+- [x] Derive constrained serialization guards from the globally128bounded
   source value: small `<32`; long length1 `32<=v<256`; lengths2–15 matching
   `[2^(8*(n-1)),2^(8*n))`; length16 `v>=2^120`. Assert sum of guards=1.
-- [ ] For each branch select `branch_value=select(guard,source_value,0)` before
+- [x] For each branch select `branch_value=select(guard,source_value,0)` before
   narrower ranges, DivMod or reconstruction. Bool zero/small atom byte is
   `select(value==0,0x40,value)`; UInt small uses the same selected rule.
-- [ ] Obtain exact tagged static encoding and framed wrapper from SDK template;
+- [x] Obtain exact tagged static encoding and framed wrapper from SDK template;
   replace dynamic byte region with constrained native operands. Split variable
   bytes at31byte chunk boundaries, shift into disjoint byte regions, constrain
   packed chunks to248 bits and reverse native chunk order exactly as SDK raw
@@ -142,7 +142,7 @@ PublicInput(g) and Impact(g) never implicitly guard other constraints.
   Include tag `midnight:fab-aligned-value[v1]:`, normalized atom header/bytes,
   UInt16/Bool1 Alignment tail and all u32-LE outer lengths in the hash preimage.
   A false branch cannot fail because the source value exceeds its narrow range.
-- [ ] Emit one guarded Push Impact and one guarded Log Impact per branch.
+- [x] Emit one guarded Push Impact and one guarded Log Impact per branch.
   Check exact branch activity and output fields under the same artifact.
   The old producer's real CLI paid70/settle vector fixes hash literal
   `7986794384292991789763090960733750308349426844296658692525651031662027908404`
@@ -151,30 +151,30 @@ PublicInput(g) and Impact(g) never implicitly guard other constraints.
 
 ## Task 4: Actual prepare-call consumer and processed statement
 
-- [ ] Add failing consumer tests for `--relation` identities and positive
+- [x] Add failing consumer tests for `--relation` identities and positive
   processed transcript readback. Enforce no completed marker after any failure.
-- [ ] Add `compile-call` source/action/deployment command with marker-last output.
+- [x] Add `compile-call` source/action/deployment command with marker-last output.
   Add relation option to `prepare-call` and an API accepting trusted Artifact.
   Recompile trusted source/static deployment and compare IR/manifest bytes.
-- [ ] Run ordinary `ProofPreimage::check`. Validate one active activity record
+- [x] Run ordinary `ProofPreimage::check`. Validate one active activity record
   per raw Op and every inactive count against static layout. Fully consume both
   vectors; refuse missing/extra/reordered records before processing.
   Preflight exact input/private vector domains, bound public vectors and wrap
   SDK ordinary checking in a fail-closed panic boundary for SDK PublicInput
   truncated-slice paths. A malformed public preimage must return a structured
   refusal without publishing a readiness marker; no dependency source edit.
-- [ ] Insert field-count Noops and merge exactly as ledger/prove.rs257–335.
+- [x] Insert field-count Noops and merge exactly as ledger/prove.rs257–335.
   Add noop cost to declared compute gas; run actual SDK query/run_transcript on
   processed transcript; compare complete state/effects/events and processed
   expected measured gas (raw measured gas plus pinned SDK Noop delta). Adjusted
   measured gas differs legitimately from raw gas. Check exact delta, adjusted
   declared gas and all final gas caps separately. Preserve version admission.
-- [ ] Clone the native call with processed transcript, use public parent
+- [x] Clone the native call with processed transcript, use public parent
   Pedersen commitment `intent.binding_commitment.into()`, and read full native
   `public_inputs`. Replace zero binding placeholder in the check preimage with
   computed processed binding input and rerun ordinary check. Preserve raw active
   transcript inputs for checking; processed PI includes inactive zero groups.
-- [ ] Reconstruct expected full PI from the source-static per-Op layout, SDK-
+- [x] Reconstruct expected full PI from the source-static per-Op layout, SDK-
   checked raw preimage and returned activity: prefix actual binding/commitment;
   active group takes exactly the next native Op's fields at its expected width;
   inactive group inserts exactly that group's width zeroes. SDK check has
@@ -182,17 +182,17 @@ PublicInput(g) and Impact(g) never implicitly guard other constraints.
   reconstructed complete vector to processed-call SDK public_inputs. Label it
   a checked projection, not a cryptographic binding proof or independent SDK
   preprocessor PI export. Do not introduce a duplicate custom ZKIR interpreter.
-- [ ] Project manifest fields explicitly. Economic bounds remain separately
+- [x] Project manifest fields explicitly. Economic bounds remain separately
   checked by existing host admission and are identified as unenforced in this
   circuit; excluding them cannot turn host checks into in-circuit authority.
-- [ ] Emit raw preimage/operation statement, activity, processed transcript,
+- [x] Emit raw preimage/operation statement, activity, processed transcript,
   adjustedgas/parent commitment/full native PI and qualified readback leaves.
   Mark `local-relation-checked-unproven` only after all checks, then publish marker.
   Keep final-intent reconstruction mandatory and proofs/signatures/apply absent.
 
 ## Task 5: Freeze executable result and independent audits
 
-- [ ] Extend existing Quint QA with focused plain single-actor
+- [x] Extend existing Quint QA with focused plain single-actor
   `experiments/moriarty-language/formal/quint/language/ledger_call_relation.qnt`
   and `_test.qnt`. One cohesive state records raw operation widths, per-Op
   activity/skip widths, consumed raw operations, projected field/Noop counts,
@@ -200,13 +200,13 @@ PublicInput(g) and Impact(g) never implicitly guard other constraints.
   Separate pure guard/transform functions, thin actions, deterministic tests and
   positive witnesses. The model excludes bytes/FAB/circuit crypto/ledger trust
   correspondence; it asserts no native proof result.
-- [ ] Model source-derived zero/positive and prior-total claim branches, absent/
+- [x] Model source-derived zero/positive and prior-total claim branches, absent/
   present/zero duties and exact-one event serialization guards. Use independently
   specified event boundary literals 0,1,31,32,255,256,65535,65536,2^64,u128max;
   model selectedzero safety before narrower branch bounds. Reject missing/extra
   active raw Ops, wrong skip widths and incomplete consumption. Preserve Noop
   field count across adjacent Noop merge in the projection.
-- [ ] Add types first and run typecheck, then execute each incremental action
+- [x] Add types first and run typecheck, then execute each incremental action
   through `quint run`; use TypeScript BigInt backend throughout. Run final:
 
 ```sh
@@ -217,16 +217,25 @@ quint run experiments/moriarty-language/formal/quint/language/ledger_call_relati
 
   Preserve actual commands/terminal output/digests and witness counts. No
   `quint verify`, Apalache, native i64 backend or crypto result is inferred.
-- [ ] Run locked/offline mori-ledger test suite and only the relevant mori CLI
+- [x] Run locked/offline mori-ledger test suite and only the relevant mori CLI
   tests; build CLI and invoke real compile-call/prepare-call with independently
   supplied public examples. Preserve inputs, outputs, terminalstatus and commands.
-- [ ] Check same source/static bindings yield identical IR and manifest across
+- [x] Check same source/static bindings yield identical IR and manifest across
   request/prestate/presence/randomness changes, and altered static bindings refuse.
-- [ ] Verify all low-level correlated mutations, exact transcript consumption,
+- [x] Verify all low-level correlated mutations, exact transcript consumption,
   inactive alternatives, arithmetic boundaries and publication fault controls.
-- [ ] Write the scoped user-facing capability and limitations in existing native
+- [x] Write the scoped user-facing capability and limitations in existing native
   guide/examples. No broad theorem/native proof/settlement labels.
 - [ ] Commit exact complete candidate. Send HEAD/tree/full source manifest and
   actual ordinary results to lead for fresh Sol HIGH and Grok4.6 HIGH full
   exact-source and actual-result audits. Repair findings in approved scope;
   changed bytes require current audits. No consumed resource dispatch.
+
+Author ordinary results and final source scope are recorded in
+`deliverables/native-call-relation-2026-10-12/RESULT.md`. The final checkbox includes
+the still-required fresh exact-source/actual-result audits; their acceptance is
+owned by the lead, not inferred from these tests. Event-size admission uses the
+SDK bounded node-list predicate per static branch, preserving valid shorter
+instances and constraining unsupported branches inactive. Processed call output
+is inspection-only and embeds the corresponding bound preimage; raw calls are
+preserved for any separately authorized SDK proving integration.

@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use crate::commands::{
-    check, compile, expand, format, init, inspect, intent, lsp, mcp, prepare_call, prove, replay,
-    simulate, test, verify, verify_intent,
+    check, compile, compile_call, expand, format, init, inspect, intent, lsp, mcp, prepare_call,
+    prove, replay, simulate, test, verify, verify_intent,
 };
 use crate::shell::Verbosity;
 use crate::styles;
@@ -107,6 +107,8 @@ pub enum Command {
     Check(check::Args),
     /// Compile a bounded Moriarty program into ledger-9 ZKIRv3 circuits
     Compile(compile::Args),
+    /// Compile a source-static ordinary native contract-call relation
+    CompileCall(compile_call::Args),
     /// Prove a public local action using pinned offline parameters
     Prove(prove::Args),
     /// Prepare an unsigned, unproven local native call and public offer

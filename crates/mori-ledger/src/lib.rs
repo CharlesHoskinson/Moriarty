@@ -6,6 +6,7 @@ pub mod layout;
 pub mod ops;
 pub mod prepare;
 pub mod profile;
+pub mod relation;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("mori::ledger::{layer}: {code}")]
