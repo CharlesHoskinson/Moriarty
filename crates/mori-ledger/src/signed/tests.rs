@@ -77,6 +77,49 @@ fn signed_parameters(mut f: support::Fixture) -> support::Fixture {
     support::repin(&mut f, &ledger);
     f
 }
+#[test]
+fn nonce_v2_new_signed_install_refuses_legacy_seed() {
+    let source = include_str!("../../tests/fixtures/ToggleCounter.mori");
+    let f = signed_parameters(support::fixture(source, "step", Scenario::default()));
+    let error = admit_signed_local_seed(
+        &f.source,
+        &f.program,
+        &f.deployment,
+        &f.predecessor,
+        &f.parameters,
+        &policy("alice"),
+    )
+    .err()
+    .expect("new signed installation must reject legacy seed");
+    assert_eq!(error.code, "legacy-signed-seed");
+}
+#[test]
+fn nonce_v2_descriptor_discriminator_rejects_mixed_fields() {
+    let source = include_str!("../../tests/fixtures/ToggleCounter.mori");
+    let f = support::fixture(source, "step", Scenario::default());
+    let d = SignedInstalledDeployment {
+        profile: "moriarty-ledger-installed-signed-local/2".into(),
+        qualification: QUALIFICATION.into(),
+        phase_policy: "guaranteed-only".into(),
+        storage_abi: "moriarty-ledger-signed-public-abi/2".into(),
+        signed_abi: "moriarty-ledger-signed-abi/2".into(),
+        bindings: StaticBindings::legacy(&f.deployment),
+        frame: FrameBindings::legacy(&f.deployment),
+        keyset_identity: String::new(),
+        signer_policy: policy("alice"),
+    };
+    SignedInstalledDeployment::from_json(&serde_json::to_string(&d).unwrap()).unwrap();
+    for field in ["profile", "storage_abi", "signed_abi"] {
+        let mut mixed = serde_json::to_value(&d).unwrap();
+        mixed[field] = match field {
+            "profile" => PROFILE,
+            "storage_abi" => ABI,
+            _ => SIGNED_ABI,
+        }
+        .into();
+        assert!(SignedInstalledDeployment::from_json(&mixed.to_string()).is_err());
+    }
+}
 fn metered(running: u128, amount: u128, charge: Option<u128>) -> support::Fixture {
     let source = include_str!("../../tests/fixtures/MeteredRemittance.mori");
     let p = mori_core::parse(source).unwrap();
@@ -117,35 +160,45 @@ struct Ordinary {
     attachment: SignedCallAttachment,
 }
 fn ordinary(f: &support::Fixture, q: SignedCallRequest, policy: FixedSignerPolicy) -> Ordinary {
+    ordinary_version(f, q, policy, SignedVersion::LegacyV1)
+}
+fn ordinary_version(
+    f: &support::Fixture,
+    q: SignedCallRequest,
+    policy: FixedSignerPolicy,
+    version: SignedVersion,
+) -> Ordinary {
     let s = SignedStaticBindings::from_source(
         &f.source,
         &f.program,
         &StaticBindings::legacy(&f.deployment),
         &policy,
+        version,
     )
     .unwrap();
     q.admit(&s, &q.action).unwrap();
     let a = compile_signed(&s, &q.action).unwrap();
     let d = SignedInstalledDeployment {
-        profile: PROFILE.into(),
+        profile: version.profile().into(),
         qualification: QUALIFICATION.into(),
         phase_policy: "guaranteed-only".into(),
-        storage_abi: ABI.into(),
-        signed_abi: SIGNED_ABI.into(),
+        storage_abi: version.storage_abi().into(),
+        signed_abi: version.signed_abi().into(),
         bindings: s.bindings.clone(),
         frame: FrameBindings::legacy(&f.deployment),
         keyset_identity: String::new(),
         signer_policy: policy,
     };
     // Real keyless seed admission, source evaluation and native query/partition.
-    let pre = layout::decode_predecessor(
-        &f.program,
+    let frame = layout::admit_signed_frame(
+        &s,
         &a.manifest.abi,
-        &f.deployment,
+        &d.frame,
         codec::decode_native(&f.predecessor).unwrap(),
-        &q.native(),
+        layout::OperationPolicy::Keyless,
     )
     .unwrap();
+    let pre = layout::attach_request(frame, &s.bindings, &q.native()).unwrap();
     let b = prepare::prepare_admitted_signed(
         &f.program,
         &s.bindings,
@@ -185,13 +238,14 @@ fn ordinary(f: &support::Fixture, q: SignedCallRequest, policy: FixedSignerPolic
     }
 }
 fn raw(f: &support::Fixture, o: &Ordinary) -> Result<prepare::PreparedBundle> {
-    let pre = layout::decode_predecessor(
-        &f.program,
+    let frame = layout::admit_signed_frame(
+        &o.s,
         &o.a.manifest.abi,
-        &f.deployment,
+        &o.d.frame,
         codec::decode_native(&f.predecessor)?,
-        &o.q.native(),
+        layout::OperationPolicy::Keyless,
     )?;
+    let pre = layout::attach_request(frame, &o.s.bindings, &o.q.native())?;
     let input = preparation::typed_input(&o.s, &o.q, &o.package, &o.attachment)?;
     // Bypass only the public host cap check. This is actual integrated IR.check
     // and actual native VM/processed/communications preparation, never keygen.
@@ -388,10 +442,16 @@ fn strict_schema_source_policy_and_typed_layout_controls() {
         limits: o.q.limits.clone(),
     });
     assert_eq!(
-        SignedStaticBindings::from_source(&f.source, &f.program, &bounds, &o.s.policy)
-            .err()
-            .unwrap()
-            .code,
+        SignedStaticBindings::from_source(
+            &f.source,
+            &f.program,
+            &bounds,
+            &o.s.policy,
+            SignedVersion::LegacyV1
+        )
+        .err()
+        .unwrap()
+        .code,
         "economic-bounds-forbidden"
     );
     let b = raw(&f, &o).unwrap();
@@ -731,6 +791,7 @@ fn original_sdk_default_parameters_retain_honest_signed_partition_refusal() {
         &f.program,
         &StaticBindings::legacy(&f.deployment),
         &policy("alice"),
+        SignedVersion::LegacyV1,
     )
     .unwrap();
     let a = compile_signed(&s, "step").unwrap();
@@ -787,7 +848,10 @@ fn fixed_owner_must_match_native_payer_even_for_state_only_source() {
     d.abi_hash = codec::object_hash(&abi).unwrap();
     let mut p = policy("bob");
     p.owner = "bob".into();
-    assert!(SignedStaticBindings::from_source(&f.source, &f.program, &d, &p).is_err());
+    assert!(
+        SignedStaticBindings::from_source(&f.source, &f.program, &d, &p, SignedVersion::LegacyV1)
+            .is_err()
+    );
 }
 #[test]
 fn direct_request_decoding_rejects_duplicate_source_input_names() {
@@ -809,6 +873,7 @@ fn general_source_admission_bounds_unused_actions_and_ordered_limits() {
         &f.program,
         &StaticBindings::legacy(&f.deployment),
         &policy("bob"),
+        SignedVersion::LegacyV1,
     )
     .unwrap();
     let mut q = request(&f, [16, 2, 12, 4]);
@@ -840,10 +905,16 @@ fn general_source_admission_bounds_unused_actions_and_ordered_limits() {
         })
         .collect();
     assert_eq!(
-        SignedStaticBindings::from_source(&f.source, &f.program, &d, &s.policy)
-            .err()
-            .unwrap()
-            .code,
+        SignedStaticBindings::from_source(
+            &f.source,
+            &f.program,
+            &d,
+            &s.policy,
+            SignedVersion::LegacyV1
+        )
+        .err()
+        .unwrap()
+        .code,
         "scope-limit"
     );
     let source = f.source.replace(
@@ -855,7 +926,7 @@ fn general_source_admission_bounds_unused_actions_and_ordered_limits() {
     d.source_hash = codec::hash(source.as_bytes());
     d.program_hash = codec::object_hash(&p).unwrap();
     assert_eq!(
-        SignedStaticBindings::from_source(&source, &p, &d, &s.policy)
+        SignedStaticBindings::from_source(&source, &p, &d, &s.policy, SignedVersion::LegacyV1)
             .err()
             .unwrap()
             .code,
@@ -878,7 +949,7 @@ fn general_source_admission_bounds_unused_actions_and_ordered_limits() {
     let abi = layout::admit_bindings(&p, &d).unwrap();
     d.abi_hash = codec::object_hash(&abi).unwrap();
     assert_eq!(
-        SignedStaticBindings::from_source(&source, &p, &d, &s.policy)
+        SignedStaticBindings::from_source(&source, &p, &d, &s.policy, SignedVersion::LegacyV1)
             .err()
             .unwrap()
             .code,
@@ -890,8 +961,14 @@ fn general_source_admission_bounds_unused_actions_and_ordered_limits() {
     assert_eq!(b.manifest.signed.as_ref().unwrap().signer_policy, s.policy);
     let mut another = s.policy.clone();
     another.public_key_hex = key(13);
-    let another =
-        SignedStaticBindings::from_source(&f.source, &f.program, &s.bindings, &another).unwrap();
+    let another = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &s.bindings,
+        &another,
+        SignedVersion::LegacyV1,
+    )
+    .unwrap();
     assert_ne!(
         compile_signed(&another, "freeze").unwrap().manifest.ir_hash,
         b.manifest.ir_hash
@@ -1129,7 +1206,7 @@ fn complete_signed_source_map_preflight_refuses_unused_key_mutation_and_downgrad
         &f.program,
         &o.s.bindings,
         &limits,
-        Some(&o.s.policy),
+        Some((&o.s.policy, o.s.version)),
     )
     .unwrap();
     let action_bytes = artifacts
@@ -1210,15 +1287,25 @@ fn signed_public_artifact_reader_never_accesses_optional_prover_leaves() {
     std::fs::create_dir(&root).unwrap();
     let f = metered(4, 7, None);
     let bindings = StaticBindings::legacy(&f.deployment);
+    let signer = policy("bob");
+    let statics = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &bindings,
+        &signer,
+        SignedVersion::LegacyV1,
+    )
+    .unwrap();
+    let schema = compile_signed(&statics, "settle")
+        .unwrap()
+        .manifest_bytes()
+        .unwrap();
     // Only untrusted publication/import bytes. No fake derived-key owner.
     let mut leaves = BTreeMap::new();
     for (name, bytes) in [
         ("source.mori", f.source.as_bytes()),
         ("action-000000.zkir.bin", b"untrusted-ir".as_slice()),
-        (
-            "action-000000.manifest.json",
-            b"untrusted-manifest".as_slice(),
-        ),
+        ("action-000000.manifest.json", schema.as_slice()),
         ("action-000000.vk.bin", b"untrusted-vk".as_slice()),
     ] {
         std::fs::write(root.join(name), bytes).unwrap();
@@ -1228,7 +1315,7 @@ fn signed_public_artifact_reader_never_accesses_optional_prover_leaves() {
         name: "settle".into(),
         ordinal: 0,
         ir_hash: codec::hash(b"untrusted-ir"),
-        manifest_hash: codec::hash(b"untrusted-manifest"),
+        manifest_hash: codec::hash(&schema),
         vk_hash: codec::hash(b"untrusted-vk"),
         degree: 9,
         srs_digest: "untrusted-metadata".into(),
@@ -1278,13 +1365,15 @@ fn signed_public_artifact_reader_never_accesses_optional_prover_leaves() {
         max_public_inputs: 10000,
     };
     assert_eq!(
-        snapshot_signed_public_keyset(&root, &limits)
+        snapshot_signed_public_keyset(&root, &limits, SignedVersion::LegacyV1)
             .unwrap()
             .action_count(),
         1
     );
     assert!(crate::call_artifacts::snapshot_public_keyset(&root, &limits).is_err());
-    assert!(snapshot_signed_proving_keyset(&root, "settle", &limits).is_err());
+    assert!(
+        snapshot_signed_proving_keyset(&root, "settle", &limits, SignedVersion::LegacyV1).is_err()
+    );
     std::fs::remove_dir_all(root).unwrap();
 }
 #[test]
@@ -1335,4 +1424,1014 @@ fn typed_wire_projection_serializes_canonical_scalar_without_redundant_type_obje
     };
     assert_eq!(serde_json::to_value(&field).unwrap()["value"], true);
     assert!(serde_json::from_str::<WireProjection>(r#"{"position":0,"descriptor":"input.amount","type":"UInt","value":{"type":"UInt","value":"7"}}"#).is_err());
+}
+
+fn consuming_fixture(mut f: support::Fixture, policy: &FixedSignerPolicy) -> support::Fixture {
+    use midnight_onchain_state::state::{ChargedState, StateValue};
+    let s = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &StaticBindings::legacy(&f.deployment),
+        policy,
+        SignedVersion::ConsumingV2,
+    )
+    .unwrap();
+    let mut ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    let address = codec::from_hex(&f.deployment.address_hex).unwrap();
+    let mut contract = ledger.index(address).unwrap();
+    let StateValue::Array(root) = &*contract.data.get() else {
+        panic!()
+    };
+    let authorization = layout::NativeMap::default().insert(
+        nonce::domain_key(),
+        crate::ops::cell(
+            midnight_base_crypto::hash::HashOutput(nonce::nonce_domain(&s).unwrap()).into(),
+        ),
+    );
+    contract.data = ChargedState::new(StateValue::Array(
+        vec![
+            root.get(0).unwrap().clone(),
+            root.get(1).unwrap().clone(),
+            root.get(2).unwrap().clone(),
+            StateValue::Map(authorization),
+        ]
+        .into(),
+    ));
+    ledger.contract = ledger.contract.insert(address, contract);
+    support::repin(&mut f, &ledger);
+    f.deployment.profile = CONSUMING_SEED.into();
+    f
+}
+#[test]
+fn nonce_v2_empty_actions_consume_shared_nonce() {
+    let source = "language \"moriarty/1\"; agreement NonceOnly { state active: Bool = true; action first() { ensures active; } action second() { ensures active; } }";
+    let policy = policy("alice");
+    let f = consuming_fixture(
+        signed_parameters(support::fixture(source, "first", Scenario::default())),
+        &policy,
+    );
+    admit_signed_local_seed(
+        &f.source,
+        &f.program,
+        &f.deployment,
+        &f.predecessor,
+        &f.parameters,
+        &policy,
+    )
+    .unwrap();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    let b = raw(&f, &o).unwrap();
+    assert_eq!(o.package.payload.storage_abi, CONSUMING_STORAGE_ABI);
+    let root: midnight_onchain_state::state::StateValue<midnight_storage::db::InMemoryDB> =
+        codec::decode_native(&codec::unhex(&b.readback.semantic_successor_hex).unwrap()).unwrap();
+    let map = nonce::authority_map(&o.s, &root).unwrap();
+    assert_eq!(map.size(), 2);
+    assert_eq!(
+        layout::cell(&map.get(&o.q.nonce.0.into()).unwrap()).unwrap(),
+        true.into()
+    );
+    assert_eq!(b.readback.execution.effects.len(), 0);
+}
+
+fn nonce_limits() -> NativeWorkLimits {
+    NativeWorkLimits {
+        profile: "moriarty-native-call-work-limits/1".into(),
+        max_degree: 19,
+        max_actions: 4,
+        max_srs_bytes: 128 * 1024 * 1024,
+        max_prover_key_bytes: 1,
+        max_verifier_key_bytes: 1024,
+        max_input_bytes: 1048576,
+        max_leaf_bytes: 16777216,
+        max_artifact_bytes: 16777216,
+        max_operations: 10000,
+        max_public_inputs: 10000,
+    }
+}
+fn nonce_only() -> (support::Fixture, FixedSignerPolicy) {
+    let source = "language \"moriarty/1\"; agreement NonceOnly { state active: Bool = true; action first() { ensures active; } action second() { ensures active; } }";
+    let policy = policy("alice");
+    (
+        consuming_fixture(
+            signed_parameters(support::fixture(source, "first", Scenario::default())),
+            &policy,
+        ),
+        policy,
+    )
+}
+fn queried_supplied_fixture(
+    f: &support::Fixture,
+    o: &Ordinary,
+    b: &prepare::PreparedBundle,
+) -> support::Fixture {
+    let mut successor = f.clone();
+    let mut ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    let address = codec::from_hex(&f.deployment.address_hex).unwrap();
+    let mut contract = ledger.index(address).unwrap();
+    contract.data =
+        codec::decode_native(&codec::unhex(&b.readback.charged_successor_hex).unwrap()).unwrap();
+    ledger.contract = ledger.contract.insert(address, contract);
+    successor.predecessor = codec::encode(&ledger).unwrap();
+    let d = deployment::derive_signed_supplied_frame_core(
+        &o.s,
+        &o.d,
+        &successor.predecessor,
+        &successor.parameters,
+        &nonce_limits(),
+        layout::OperationPolicy::Keyless,
+    )
+    .unwrap();
+    successor.deployment.predecessor_hash = d.frame.predecessor_hash;
+    successor.deployment.native_state_hash = d.frame.native_state_hash;
+    successor
+}
+#[test]
+fn nonce_v2_unordered_seven_then_zero_uses_production_path() {
+    let (f, policy) = nonce_only();
+    let mut q = request(&f, [0; 4]);
+    q.nonce = UInt(7);
+    let a = ordinary_version(&f, q, policy.clone(), SignedVersion::ConsumingV2);
+    let result = raw(&f, &a).unwrap();
+    let s = queried_supplied_fixture(&f, &a, &result);
+    let mut q = request(&s, [0; 4]);
+    q.nonce = UInt(0);
+    q.action = "second".into();
+    let b = ordinary_version(&s, q, policy, SignedVersion::ConsumingV2);
+    let result = raw(&s, &b).unwrap();
+    assert_eq!(
+        result.readback.authority.as_ref().unwrap().pre_nonce_count,
+        UInt(2)
+    );
+    assert_eq!(
+        result.readback.authority.as_ref().unwrap().post_nonce_count,
+        UInt(3)
+    );
+    let root = codec::from_hex(&result.readback.semantic_successor_hex).unwrap();
+    let map = nonce::authority_map(&b.s, &root).unwrap();
+    assert!(map.get(&7u128.into()).is_some() && map.get(&0u128.into()).is_some());
+    assert_eq!(
+        result.readback.execution.pre,
+        result.readback.execution.post
+    );
+}
+#[test]
+fn nonce_v2_same_predecessor_two_packages_serialize_current_root() {
+    use midnight_onchain_runtime::context::QueryContext;
+    let (f, policy) = nonce_only();
+    let mut q = request(&f, [0; 4]);
+    q.nonce = UInt(7);
+    let a = ordinary_version(&f, q, policy.clone(), SignedVersion::ConsumingV2);
+    let a_result = raw(&f, &a).unwrap();
+    let mut q = request(&f, [0; 4]);
+    q.nonce = UInt(0);
+    q.action = "second".into();
+    let b = ordinary_version(&f, q.clone(), policy.clone(), SignedVersion::ConsumingV2);
+    let b_result = raw(&f, &b).unwrap();
+    let s = queried_supplied_fixture(&f, &a, &a_result);
+    let fresh = ordinary_version(&s, q, policy, SignedVersion::ConsumingV2);
+    assert_eq!(
+        preparation::check_attachment_payload(
+            &fresh.s,
+            &fresh.package,
+            &b.attachment,
+            &nonce_limits()
+        )
+        .unwrap_err()
+        .code,
+        "attachment-payload"
+    );
+    let ledger: layout::NativeState = codec::decode_native(&s.predecessor).unwrap();
+    let address = codec::from_hex(&s.deployment.address_hex).unwrap();
+    let contract = ledger.index(address).unwrap();
+    let mut context = QueryContext::new(contract.data, address);
+    // Empty source actions isolate the authorization pre-Size opening as the
+    // first differing native observation; call context is retained unchanged.
+    context.call_context = b_result.native.context.call_context.clone();
+    let call = b_result.native.intent.calls().next().unwrap();
+    assert!(
+        context
+            .run_transcript(
+                call.guaranteed_transcript.as_deref().unwrap(),
+                &ledger.parameters.cost_model.runtime_cost_model
+            )
+            .is_err()
+    );
+    raw(&s, &fresh).unwrap();
+}
+#[test]
+fn nonce_v2_authority_observation_is_mandatory() {
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    let frame = layout::admit_signed_frame(
+        &o.s,
+        &o.a.manifest.abi,
+        &o.d.frame,
+        codec::decode_native(&f.predecessor).unwrap(),
+        layout::OperationPolicy::Keyless,
+    )
+    .unwrap();
+    let pre = layout::attach_request(frame, &o.s.bindings, &o.q.native()).unwrap();
+    let execution = mori_core::simulate(&f.program, &o.q.action, &pre.scenario).unwrap();
+    assert_eq!(
+        crate::ops::lower_signed_ops(&f.program, &pre, &execution, &o.s, None)
+            .err()
+            .unwrap()
+            .code,
+        "authority-observation"
+    );
+    assert_eq!(
+        context::projection(&o.s, &execution, &o.q, &o.q.action, None)
+            .unwrap_err()
+            .code,
+        "authority-readback"
+    );
+}
+
+#[test]
+fn nonce_v2_each_dynamic_key_is_constrained() {
+    use midnight_onchain_vm::ops::Op;
+    use midnight_transient_crypto::repr::FieldRepr;
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    let b = raw(&f, &o).unwrap();
+    for origin in [
+        "signed-authority-pre-member",
+        "signed-authority-write",
+        "signed-authority-post-member",
+    ] {
+        let index = b
+            .native
+            .lowered
+            .bindings
+            .iter()
+            .find(|binding| {
+                binding.origin == origin
+                    && matches!(
+                        b.native.lowered.program[binding.op as usize],
+                        Op::Push { storage: false, .. }
+                    )
+            })
+            .unwrap()
+            .op as usize;
+        let prefix: usize = b.native.lowered.program[..index]
+            .iter()
+            .map(FieldRepr::field_size)
+            .sum();
+        let mut altered = preimage(&b);
+        altered.public_transcript_inputs
+            [prefix + b.native.lowered.program[index].field_size() - 1] = altered
+            .public_transcript_inputs[prefix + b.native.lowered.program[index].field_size() - 1]
+            + Fr::from(1);
+        recommit(&mut altered);
+        assert_eq!(
+            relation::check(&o.a, &altered).unwrap_err().code,
+            "unsatisfied",
+            "{origin}"
+        );
+        let mut instructions = (*o.a.ir.instructions).clone();
+        let impact = instructions
+            .iter_mut()
+            .filter(|i| matches!(i, midnight_zkir_v3::Instruction::Impact { .. }))
+            .nth(index)
+            .unwrap();
+        let midnight_zkir_v3::Instruction::Impact { inputs, .. } = impact else {
+            panic!()
+        };
+        let last = inputs.len() - 1;
+        inputs[last] = crate::relation::arithmetic::field(
+            altered.public_transcript_inputs
+                [prefix + b.native.lowered.program[index].field_size() - 1],
+        );
+        relation::check(&changed_artifact(&o.a, instructions), &altered).unwrap();
+    }
+    for origin in [
+        "signed-authority-domain",
+        "signed-authority-pre-count",
+        "signed-authority-pre-member",
+        "signed-authority-post-count",
+        "signed-authority-post-member",
+    ] {
+        let index = b
+            .native
+            .lowered
+            .bindings
+            .iter()
+            .find(|binding| {
+                binding.origin == origin
+                    && matches!(
+                        b.native.lowered.program[binding.op as usize],
+                        Op::Popeq { .. }
+                    )
+            })
+            .unwrap()
+            .op as usize;
+        let prefix: usize = b.native.lowered.program[..index]
+            .iter()
+            .map(FieldRepr::field_size)
+            .sum();
+        let output_prefix: usize = b.native.lowered.program[..index]
+            .iter()
+            .filter_map(|op| {
+                if let Op::Popeq { result, .. } = op {
+                    let mut fields = vec![];
+                    result.value_only_field_repr(&mut fields);
+                    Some(fields.len())
+                } else {
+                    None
+                }
+            })
+            .sum();
+        let mut altered = preimage(&b);
+        altered.public_transcript_inputs
+            [prefix + b.native.lowered.program[index].field_size() - 1] = altered
+            .public_transcript_inputs[prefix + b.native.lowered.program[index].field_size() - 1]
+            + Fr::from(1);
+        let Op::Popeq { result, .. } = &b.native.lowered.program[index] else {
+            panic!()
+        };
+        let mut fields = vec![];
+        result.value_only_field_repr(&mut fields);
+        altered.public_transcript_outputs[output_prefix + fields.len() - 1] =
+            altered.public_transcript_outputs[output_prefix + fields.len() - 1] + Fr::from(1);
+        recommit(&mut altered);
+        assert_eq!(
+            relation::check(&o.a, &altered).unwrap_err().code,
+            "unsatisfied",
+            "{origin}"
+        );
+    }
+}
+#[test]
+fn nonce_v2_frame_preserves_installed_policy_commitments() {
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    let b = raw(&f, &o).unwrap();
+    let s = queried_supplied_fixture(&f, &o, &b);
+    let mut altered = o.d.clone();
+    altered.frame.operations_hash = "00".repeat(32);
+    assert_eq!(
+        deployment::derive_signed_supplied_frame_core(
+            &o.s,
+            &altered,
+            &s.predecessor,
+            &s.parameters,
+            &nonce_limits(),
+            layout::OperationPolicy::Keyless
+        )
+        .unwrap_err()
+        .code,
+        "contract-frame"
+    );
+    for d in [&o.d, &altered] {
+        assert_eq!(d.bindings, o.s.bindings);
+    }
+    let mut legacy = o.d.clone();
+    legacy.profile = PROFILE.into();
+    legacy.storage_abi = ABI.into();
+    legacy.signed_abi = SIGNED_ABI.into();
+    assert_eq!(
+        deployment::derive_signed_supplied_frame_core(
+            &o.s,
+            &legacy,
+            &s.predecessor,
+            &s.parameters,
+            &nonce_limits(),
+            layout::OperationPolicy::Keyless
+        )
+        .unwrap_err()
+        .code,
+        "supplied-frame-policy"
+    );
+}
+
+fn edited_contract(
+    f: &support::Fixture,
+    edit: impl FnOnce(
+        &mut midnight_onchain_state::state::ContractState<midnight_storage::db::InMemoryDB>,
+    ),
+) -> support::Fixture {
+    let mut changed = f.clone();
+    let mut ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    let address = codec::from_hex(&f.deployment.address_hex).unwrap();
+    let mut contract = ledger.index(address).unwrap();
+    edit(&mut contract);
+    ledger.contract = ledger.contract.insert(address, contract);
+    changed.deployment.profile = crate::profile::PROFILE.into();
+    support::repin(&mut changed, &ledger);
+    changed.deployment.profile = f.deployment.profile.clone();
+    changed
+}
+fn prepare_nonce_fixture(
+    f: &support::Fixture,
+    s: &SignedStaticBindings,
+    q: &SignedCallRequest,
+) -> Result<prepare::PreparedBundle> {
+    let abi = layout::admit_bindings(&f.program, &s.bindings)?;
+    let frame = layout::admit_signed_frame(
+        s,
+        &abi,
+        &FrameBindings::legacy(&f.deployment),
+        codec::decode_native(&f.predecessor)?,
+        layout::OperationPolicy::Keyless,
+    )?;
+    let pre = layout::attach_request(frame, &s.bindings, &q.native())?;
+    prepare::prepare_admitted_signed(
+        &f.program,
+        &s.bindings,
+        &FrameBindings::legacy(&f.deployment),
+        pre,
+        codec::decode_native(&f.parameters)?,
+        &q.native(),
+        None,
+        s.version.profile(),
+        &codec::object_hash(&f.deployment)?,
+        codec::OUTPUT_BYTES as u64,
+        codec::OUTPUT_BYTES as u64,
+        Some(s),
+        None,
+    )
+}
+#[test]
+fn nonce_v2_authority_rejects_bad_sentinel_marker_and_root() {
+    use midnight_onchain_state::state::StateValue;
+    let (f, policy) = nonce_only();
+    let s = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &StaticBindings::legacy(&f.deployment),
+        &policy,
+        SignedVersion::ConsumingV2,
+    )
+    .unwrap();
+    let ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    let root = ledger
+        .index(codec::from_hex(&f.deployment.address_hex).unwrap())
+        .unwrap()
+        .data
+        .get();
+    let StateValue::Array(a) = &*root else {
+        panic!()
+    };
+    let maps = nonce::authority_map(&s, &root).unwrap();
+    assert_eq!(
+        nonce::admit_authority(
+            &s,
+            &StateValue::Array(
+                vec![
+                    a.get(0).unwrap().clone(),
+                    a.get(1).unwrap().clone(),
+                    a.get(2).unwrap().clone()
+                ]
+                .into()
+            ),
+            UInt(7)
+        )
+        .err()
+        .unwrap()
+        .code,
+        "signed-storage-root"
+    );
+    assert!(layout::root_maps(&root).is_err());
+    for (map, expected) in [
+        (layout::NativeMap::default(), "authority-capacity"),
+        (
+            maps.insert(
+                nonce::domain_key(),
+                crate::ops::cell(midnight_base_crypto::hash::HashOutput([0; 32]).into()),
+            ),
+            "authority-domain",
+        ),
+        (
+            maps.insert(9u128.into(), crate::ops::cell(false.into())),
+            "authority-map",
+        ),
+        (
+            maps.insert(
+                midnight_base_crypto::hash::HashOutput([3; 32]).into(),
+                crate::ops::cell(true.into()),
+            ),
+            "authority-map",
+        ),
+    ] {
+        let altered = StateValue::Array(a.insert(3, StateValue::Map(map)).unwrap());
+        assert_eq!(
+            nonce::admit_authority(&s, &altered, UInt(7))
+                .err()
+                .unwrap()
+                .code,
+            expected
+        );
+    }
+    let used = StateValue::Array(
+        a.insert(
+            3,
+            StateValue::Map(maps.insert(7u128.into(), crate::ops::cell(true.into()))),
+        )
+        .unwrap(),
+    );
+    assert_eq!(
+        nonce::admit_authority(&s, &used, UInt(7))
+            .err()
+            .unwrap()
+            .code,
+        "nonce-used"
+    );
+    assert_eq!(
+        crate::local_deployment::admit_local_seed(
+            &f.source,
+            &f.program,
+            &f.deployment,
+            &f.predecessor,
+            &f.parameters
+        )
+        .err()
+        .unwrap()
+        .code,
+        "local-profile"
+    );
+}
+#[test]
+fn nonce_v2_seed_requires_all_keyless_actions() {
+    let (f, policy) = nonce_only();
+    let changed = edited_contract(&f, |contract| {
+        contract.operations = contract.operations.insert(
+            b"unknown".as_slice().into(),
+            midnight_onchain_state::state::ContractOperation::new(None, None),
+        );
+    });
+    assert_eq!(
+        admit_signed_local_seed(
+            &changed.source,
+            &changed.program,
+            &changed.deployment,
+            &changed.predecessor,
+            &changed.parameters,
+            &policy
+        )
+        .err()
+        .unwrap()
+        .code,
+        "operation-set"
+    );
+}
+#[test]
+fn nonce_v2_capacity_and_successor_byte_guards_use_actual_preparation() {
+    use midnight_onchain_state::state::StateValue;
+    let (f, policy) = nonce_only();
+    let s = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &StaticBindings::legacy(&f.deployment),
+        &policy,
+        SignedVersion::ConsumingV2,
+    )
+    .unwrap();
+    let filled = edited_contract(&f, |contract| {
+        let StateValue::Array(root) = &*contract.data.get() else {
+            panic!()
+        };
+        let mut map = nonce::authority_map(&s, &StateValue::Array(root.clone()))
+            .unwrap()
+            .clone();
+        for n in 0..12151u128 {
+            map = map.insert(n.into(), crate::ops::cell(true.into()));
+        }
+        contract.data = midnight_onchain_state::state::ChargedState::new(StateValue::Array(
+            root.insert(3, StateValue::Map(map)).unwrap(),
+        ));
+    });
+    let mut q = request(&filled, [0; 4]);
+    q.nonce = UInt(u128::MAX);
+    let b = prepare_nonce_fixture(&filled, &s, &q).unwrap();
+    assert_eq!(
+        b.readback.authority.as_ref().unwrap().post_nonce_count,
+        UInt(12153)
+    );
+    let full = edited_contract(&filled, |contract| {
+        contract.data =
+            codec::decode_native(&codec::unhex(&b.readback.charged_successor_hex).unwrap())
+                .unwrap();
+    });
+    q.nonce = UInt(u128::MAX - 1);
+    assert_eq!(
+        prepare_nonce_fixture(&full, &s, &q).err().unwrap().code,
+        "authority-capacity"
+    );
+    // Actual queried successors exercise both serialized production guard objects.
+    let small = prepare_nonce_fixture(&f, &s, &request(&f, [0; 4])).unwrap();
+    let charged: midnight_onchain_state::state::ChargedState<midnight_storage::db::InMemoryDB> =
+        codec::decode_native(&codec::unhex(&small.readback.charged_successor_hex).unwrap())
+            .unwrap();
+    let ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    let charged_size = codec::encode(&charged).unwrap().len() as u64;
+    assert_eq!(
+        nonce::check_successor_input(&s, &ledger, &charged, charged_size - 1)
+            .unwrap_err()
+            .code,
+        "successor-input-size"
+    );
+    // Charged serialization fits at its exact boundary; the complete ledger
+    // envelope still refuses under that same cap.
+    assert_eq!(
+        nonce::check_successor_input(&s, &ledger, &charged, charged_size)
+            .unwrap_err()
+            .code,
+        "successor-input-size"
+    );
+    nonce::check_successor_input(&s, &ledger, &charged, codec::INPUT_BYTES as u64).unwrap();
+}
+#[test]
+fn nonce_v2_financial_effects_and_extensions_are_complete() {
+    let f = consuming_fixture(metered(4, 7, None), &policy("bob"));
+    let o = ordinary_version(
+        &f,
+        request(&f, [16, 2, 12, 4]),
+        policy("bob"),
+        SignedVersion::ConsumingV2,
+    );
+    let b = raw(&f, &o).unwrap();
+    assert_eq!(b.readback.execution.effects.len(), 8);
+    assert_eq!(
+        b.readback.execution.post.state["running"],
+        Value::UInt(UInt(11))
+    );
+    assert_eq!(b.readback.execution.post.liabilities[0].amount, UInt(4));
+    assert_eq!(
+        b.readback.authority.as_ref().unwrap().post_nonce_count,
+        UInt(2)
+    );
+    assert_eq!(
+        b.readback.preserved_frame.commitments["contract_extensions"],
+        codec::native_hash(&layout::NativeMap::default()).unwrap()
+    );
+    assert_eq!(b.readback.evidence.ledger_apply, "not-performed");
+    assert_eq!(
+        b.readback.evidence.consumption,
+        "queried-supplied-state-nonce-consumed-unqualified"
+    );
+}
+#[test]
+fn nonce_v2_default_partition_remains_refused() {
+    let mut f = metered(4, 7, None);
+    let mut ledger: layout::NativeState = codec::decode_native(&f.predecessor).unwrap();
+    ledger.parameters = layout::NativeState::new("local").parameters;
+    support::repin(&mut f, &ledger);
+    let policy = policy("bob");
+    let f = consuming_fixture(f, &policy);
+    let s = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &StaticBindings::legacy(&f.deployment),
+        &policy,
+        SignedVersion::ConsumingV2,
+    )
+    .unwrap();
+    assert_eq!(
+        prepare_nonce_fixture(&f, &s, &request(&f, [16, 2, 12, 4]))
+            .err()
+            .unwrap()
+            .code,
+        "all-fallible"
+    );
+}
+#[test]
+fn nonce_v2_full_frame_mutations_refuse() {
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    for which in 0..3 {
+        let changed = edited_contract(&f, |contract| match which {
+            0 => {
+                contract.operations = contract.operations.insert(
+                    b"unknown".as_slice().into(),
+                    midnight_onchain_state::state::ContractOperation::new(None, None),
+                )
+            }
+            1 => contract.maintenance_authority.counter += 1,
+            _ => {
+                contract.balance = contract.balance.insert(
+                    midnight_coin_structure::coin::TokenType::Unshielded(
+                        midnight_coin_structure::coin::UnshieldedTokenType(
+                            midnight_base_crypto::hash::HashOutput([8; 32]),
+                        ),
+                    ),
+                    1,
+                )
+            }
+        });
+        assert_eq!(
+            deployment::derive_signed_supplied_frame_core(
+                &o.s,
+                &o.d,
+                &changed.predecessor,
+                &changed.parameters,
+                &nonce_limits(),
+                layout::OperationPolicy::Keyless
+            )
+            .unwrap_err()
+            .code,
+            "contract-frame",
+            "{which}"
+        );
+    }
+}
+#[test]
+fn nonce_v2_cross_address_host_and_ir_refuse() {
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(
+        &f,
+        request(&f, [0; 4]),
+        policy.clone(),
+        SignedVersion::ConsumingV2,
+    );
+    let b = raw(&f, &o).unwrap();
+    let mut binding = o.s.bindings.clone();
+    binding.address_hex = codec::native_hex(&midnight_coin_structure::contract::ContractAddress(
+        midnight_base_crypto::hash::HashOutput([9; 32]),
+    ))
+    .unwrap();
+    let alternate = SignedStaticBindings::from_source(
+        &f.source,
+        &f.program,
+        &binding,
+        &policy,
+        SignedVersion::ConsumingV2,
+    )
+    .unwrap();
+    assert_eq!(
+        nonce::nonce_domain(&o.s).unwrap(),
+        nonce::nonce_domain(&alternate).unwrap()
+    );
+    let a = compile_signed(&alternate, &o.q.action).unwrap();
+    assert_ne!(
+        o.a.manifest.signed.as_ref().unwrap().context_sha256,
+        a.manifest.signed.as_ref().unwrap().context_sha256
+    );
+    assert_ne!(o.a.ir_bytes().unwrap(), a.ir_bytes().unwrap());
+    let mut original = preimage(&b);
+    recommit(&mut original);
+    assert_eq!(
+        relation::check(&a, &original).unwrap_err().code,
+        "unsatisfied"
+    );
+    let mut foreign = o.package.clone();
+    foreign.payload.address_hex = binding.address_hex;
+    assert_eq!(
+        preparation::check_attachment_payload(&alternate, &foreign, &o.attachment, &nonce_limits())
+            .unwrap_err()
+            .code,
+        "attachment-payload"
+    );
+}
+
+#[test]
+fn nonce_v2_false_predicate_with_authority_write_refuses() {
+    use midnight_onchain_vm::ops::Op;
+    use midnight_transient_crypto::repr::FieldRepr;
+    let (f, policy) = nonce_only();
+    let o = ordinary_version(&f, request(&f, [0; 4]), policy, SignedVersion::ConsumingV2);
+    let b = raw(&f, &o).unwrap();
+    assert!(
+        b.native
+            .lowered
+            .bindings
+            .iter()
+            .any(|b| b.origin == "signed-authority-write")
+    );
+    let false_state = edited_contract(&f, |contract| {
+        let midnight_onchain_state::state::StateValue::Array(root) = &*contract.data.get() else {
+            panic!()
+        };
+        let map = layout::map(root.get(0).unwrap()).unwrap().insert(
+            layout::name_key("state", "active"),
+            crate::ops::cell(false.into()),
+        );
+        contract.data = midnight_onchain_state::state::ChargedState::new(
+            midnight_onchain_state::state::StateValue::Array(
+                root.insert(0, midnight_onchain_state::state::StateValue::Map(map))
+                    .unwrap(),
+            ),
+        );
+    });
+    // The actual original source `ensures active` refuses before querying.
+    assert_eq!(
+        prepare_nonce_fixture(&false_state, &o.s, &o.q)
+            .err()
+            .unwrap()
+            .code,
+        "core-refusal"
+    );
+    let mut altered = preimage(&b);
+    let mut program = b.native.lowered.program.clone();
+    let mut source_operand = None;
+    for binding in &b.native.lowered.bindings {
+        let index = binding.op as usize;
+        if !["signed-state-opening", "source-expression-prefix-state"]
+            .contains(&binding.origin.as_str())
+            || !matches!(program[index], Op::Popeq { .. })
+        {
+            continue;
+        }
+        let input_prefix: usize = program[..index].iter().map(FieldRepr::field_size).sum();
+        let output_prefix: usize = program[..index]
+            .iter()
+            .filter_map(|op| {
+                if let Op::Popeq { result, .. } = op {
+                    let mut fields = vec![];
+                    result.value_only_field_repr(&mut fields);
+                    Some(fields.len())
+                } else {
+                    None
+                }
+            })
+            .sum();
+        altered.public_transcript_inputs[input_prefix + program[index].field_size() - 1] =
+            Fr::from(0);
+        altered.public_transcript_outputs[output_prefix] = Fr::from(0);
+        program[index] = Op::Popeq {
+            cached: false,
+            result: false.into(),
+        };
+        if binding.origin == "source-expression-prefix-state" {
+            let impact =
+                o.a.ir
+                    .instructions
+                    .iter()
+                    .filter(|i| matches!(i, midnight_zkir_v3::Instruction::Impact { .. }))
+                    .nth(index)
+                    .unwrap();
+            let midnight_zkir_v3::Instruction::Impact { inputs, .. } = impact else {
+                panic!()
+            };
+            source_operand = inputs.last().cloned();
+        }
+    }
+    assert!(
+        b.native
+            .context
+            .query(
+                &program,
+                Some(b.native.gas_cap),
+                &b.native.params.cost_model.runtime_cost_model
+            )
+            .is_err()
+    );
+    // Re-sign matching false semantic wires with the public QA scalar. Nonce
+    // groups and typed nonce remain honest; only original source truth differs.
+    let mut package = o.package.clone();
+    for wire in &mut package.payload.wire_projection {
+        if wire.descriptor == "pre.state.active" || wire.descriptor == "post.state.active" {
+            wire.value = Value::Bool(false);
+        }
+    }
+    package.payload.wire_projection_sha256 =
+        codec::object_hash(&package.payload.wire_projection).unwrap();
+    package.payload_sha256 = codec::object_hash(&package.payload).unwrap();
+    package.message_hex = schnorr::native_hex(message(&package.payload).unwrap());
+    let attachment = SignedCallAttachment {
+        profile: ATTACHMENT.into(),
+        payload: package.payload.clone(),
+        signature_hex: sign(message(&package.payload).unwrap(), 7, 11),
+    };
+    let input = preparation::typed_input(&o.s, &o.q, &package, &attachment).unwrap();
+    altered.inputs.clear();
+    input.value_only_field_repr(&mut altered.inputs);
+    recommit(&mut altered);
+    assert_eq!(
+        relation::check(&o.a, &altered).unwrap_err().code,
+        "unsatisfied"
+    );
+    // Diagnostic only: remove the one actual source assertion. The correlated
+    // counterfeit passes this weaker relation, isolating the source predicate.
+    let mut instructions = (*o.a.ir.instructions).clone();
+    let mut changed = 0;
+    for instruction in &mut instructions {
+        if let midnight_zkir_v3::Instruction::Assert { cond } = instruction {
+            if Some(cond.clone()) == source_operand {
+                *cond = crate::relation::arithmetic::imm(1);
+                changed += 1;
+            }
+        }
+    }
+    assert_eq!(changed, 1);
+    relation::check(&changed_artifact(&o.a, instructions), &altered).unwrap();
+}
+
+#[test]
+fn nonce_v2_whole_successor_and_sentinel_drift_refuse() {
+    use midnight_onchain_state::state::StateValue;
+    use midnight_onchain_vm::ops::{Key, Op};
+    let (f, policy) = nonce_only();
+    let mut q = request(&f, [0; 4]);
+    q.nonce = UInt(7);
+    let a = ordinary_version(&f, q, policy.clone(), SignedVersion::ConsumingV2);
+    let result = raw(&f, &a).unwrap();
+    let s = queried_supplied_fixture(&f, &a, &result);
+    let mut q = request(&s, [0; 4]);
+    q.nonce = UInt(0);
+    let b = ordinary_version(&s, q, policy, SignedVersion::ConsumingV2);
+    let result = raw(&s, &b).unwrap();
+    let observation =
+        nonce::admit_authority(&b.s, &result.native.context.state.get(), UInt(0)).unwrap();
+    let root: StateValue<midnight_storage::db::InMemoryDB> =
+        codec::from_hex(&result.readback.semantic_successor_hex).unwrap();
+    nonce::NonceAuthorityReadback::checked(&b.s, &observation, &root).unwrap();
+    let StateValue::Array(array) = &root else {
+        panic!()
+    };
+    let map = nonce::authority_map(&b.s, &root).unwrap();
+    for (map, expected) in [
+        (map.remove(&0u128.into()), "authority-successor"),
+        (
+            map.insert(9u128.into(), crate::ops::cell(true.into())),
+            "authority-successor",
+        ),
+        (map.remove(&7u128.into()), "authority-successor"),
+        (
+            map.remove(&nonce::domain_key()).insert(
+                midnight_base_crypto::hash::HashOutput([3; 32]).into(),
+                crate::ops::cell(
+                    midnight_base_crypto::hash::HashOutput(nonce::nonce_domain(&b.s).unwrap())
+                        .into(),
+                ),
+            ),
+            "authority-domain",
+        ),
+    ] {
+        let altered = StateValue::Array(array.insert(3, StateValue::Map(map)).unwrap());
+        assert_eq!(
+            nonce::NonceAuthorityReadback::checked(&b.s, &observation, &altered)
+                .unwrap_err()
+                .code,
+            expected
+        );
+    }
+    let program = &result.native.lowered.program;
+    let bindings = &result.native.lowered.bindings;
+    let without_write = program
+        .iter()
+        .zip(bindings)
+        .filter(|(_, binding)| binding.origin != "signed-authority-write")
+        .map(|(op, _)| op.clone())
+        .collect::<Vec<_>>();
+    assert!(
+        result
+            .native
+            .context
+            .query(
+                &without_write,
+                Some(result.native.gas_cap),
+                &result.native.params.cost_model.runtime_cost_model
+            )
+            .is_err()
+    );
+    let post_count = bindings
+        .iter()
+        .find(|binding| binding.origin == "signed-authority-post-count")
+        .unwrap()
+        .op as usize;
+    let mut extra = program.clone();
+    extra.splice(
+        post_count..post_count,
+        crate::ops::write_cell(3, 9u128.into(), true.into()),
+    );
+    assert!(
+        result
+            .native
+            .context
+            .query(
+                &extra,
+                Some(result.native.gas_cap),
+                &result.native.params.cost_model.runtime_cost_model
+            )
+            .is_err()
+    );
+    let domain_index = bindings
+        .iter()
+        .find(|binding| {
+            binding.origin == "signed-authority-domain"
+                && matches!(program[binding.op as usize], Op::Idx { .. })
+        })
+        .unwrap()
+        .op as usize;
+    let mut drift = program.clone();
+    drift[domain_index] = Op::Idx {
+        cached: false,
+        push_path: false,
+        path: vec![
+            Key::Value(3u8.into()),
+            Key::Value(midnight_base_crypto::hash::HashOutput([3; 32]).into()),
+        ]
+        .into(),
+    };
+    assert!(
+        result
+            .native
+            .context
+            .query(
+                &drift,
+                Some(result.native.gas_cap),
+                &result.native.params.cost_model.runtime_cost_model
+            )
+            .is_err()
+    );
 }
