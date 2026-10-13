@@ -209,7 +209,7 @@ fn add(
 ) {
     for op in ops {
         let fields = op.field_vec();
-        let count = if origin == "abi-root-array3" {
+        let count = if origin == "abi-root-array3" || origin == "signed-abi-root" {
             0
         } else {
             match &op {
@@ -277,6 +277,14 @@ fn update_root(
     Ok(())
 }
 pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Result<LoweredOps> {
+    lower_ops_inner(p, pre, e, None)
+}
+fn lower_ops_inner(
+    p: &Program,
+    pre: &AdmittedPredecessor,
+    e: &Execution,
+    signed: Option<&crate::signed::SignedStaticBindings>,
+) -> Result<LoweredOps> {
     let mut out = LoweredOps {
         program: vec![],
         bindings: vec![],
@@ -285,7 +293,25 @@ pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Resul
         expected_effects: Default::default(),
         events: vec![],
     };
-    add(&mut out, abi_guard(), None, "abi-root-array3", None);
+    let consuming = signed.is_some_and(|s| s.version == crate::signed::SignedVersion::ConsumingV2);
+    let mut guard = abi_guard();
+    if consuming {
+        guard[2] = Op::Popeq {
+            cached: false,
+            result: 4u64.into(),
+        };
+    }
+    add(
+        &mut out,
+        guard,
+        None,
+        if consuming {
+            "signed-abi-root"
+        } else {
+            "abi-root-array3"
+        },
+        None,
+    );
     // Read each source reference at its statement prefix. The complete frame
     // comparator also checks untouched cells; redundant opening reads add no
     // source obligation and consume the native guaranteed partition budget.
@@ -389,7 +415,12 @@ pub fn lower_ops(p: &Program, pre: &AdmittedPredecessor, e: &Execution) -> Resul
                         return Err(Error::new("identity", "duty-binding"));
                     }
                     let k = layout::name_key("duty", name);
-                    let present = layout::root_maps(&out.expected_root)?[1].get(&k).is_some();
+                    let maps = if let Some(s) = signed {
+                        crate::signed::nonce::root_maps(s, &out.expected_root)?
+                    } else {
+                        layout::root_maps(&out.expected_root)?
+                    };
+                    let present = maps[1].get(&k).is_some();
                     add(
                         &mut out,
                         membership(1, k.clone(), present),
@@ -577,14 +608,21 @@ pub(crate) fn lower_signed_ops(
     pre: &AdmittedPredecessor,
     e: &Execution,
     s: &crate::signed::SignedStaticBindings,
+    authority: Option<&crate::signed::nonce::NonceObservation>,
 ) -> Result<LoweredOps> {
+    if (s.version == crate::signed::SignedVersion::ConsumingV2) != authority.is_some() {
+        return Err(Error::new("signed-call", "authority-observation"));
+    }
+    if let Some(a) = authority {
+        a.check_predecessor(s, pre.contract.data.get_ref())?;
+    }
     fn endpoint(
         out: &mut LoweredOps,
         p: &Program,
         s: &crate::signed::SignedStaticBindings,
         root: &StateValue<InMemoryDB>,
     ) -> Result<()> {
-        let maps = layout::root_maps(root)?;
+        let maps = crate::signed::nonce::root_maps(s, root)?;
         add(
             out,
             map_size(0, p.states.len()),
@@ -639,7 +677,7 @@ pub(crate) fn lower_signed_ops(
         }
         Ok(())
     }
-    let mut out = lower_ops(p, pre, e)?;
+    let mut out = lower_ops_inner(p, pre, e, Some(s))?;
     let mut initial = LoweredOps {
         program: vec![],
         bindings: vec![],
@@ -648,6 +686,34 @@ pub(crate) fn lower_signed_ops(
         expected_effects: Default::default(),
         events: vec![],
     };
+    if let Some(a) = authority {
+        add(
+            &mut initial,
+            read_cell(
+                3,
+                crate::signed::nonce::domain_key(),
+                midnight_base_crypto::hash::HashOutput(crate::signed::nonce::nonce_domain(s)?)
+                    .into(),
+            ),
+            None,
+            "signed-authority-domain",
+            None,
+        );
+        add(
+            &mut initial,
+            map_size(3, a.pre_count()),
+            None,
+            "signed-authority-pre-count",
+            None,
+        );
+        add(
+            &mut initial,
+            membership(3, a.nonce().0.into(), false),
+            None,
+            "signed-authority-pre-member",
+            None,
+        );
+    }
     endpoint(&mut initial, p, s, pre.contract.data.get_ref())?;
     let inserted = initial.program.len();
     for b in &mut out.bindings {
@@ -672,5 +738,29 @@ pub(crate) fn lower_signed_ops(
     out.bindings.splice(3..3, initial.bindings);
     let root = out.expected_root.clone();
     endpoint(&mut out, p, s, &root)?;
+    if let Some(a) = authority {
+        add(
+            &mut out,
+            write_cell(3, a.nonce().0.into(), true.into()),
+            None,
+            "signed-authority-write",
+            None,
+        );
+        update_root(&mut out.expected_root, 3, a.nonce().0.into(), true.into())?;
+        add(
+            &mut out,
+            map_size(3, a.post_count()),
+            None,
+            "signed-authority-post-count",
+            None,
+        );
+        add(
+            &mut out,
+            membership(3, a.nonce().0.into(), true),
+            None,
+            "signed-authority-post-member",
+            None,
+        );
+    }
     Ok(out)
 }

@@ -182,10 +182,15 @@ pub(crate) fn compile_all_policy(
     p: &Program,
     bindings: &StaticBindings,
     limits: &NativeWorkLimits,
-    policy: Option<&crate::signed::FixedSignerPolicy>,
+    policy: Option<(
+        &crate::signed::FixedSignerPolicy,
+        crate::signed::SignedVersion,
+    )>,
 ) -> Result<Vec<relation::Artifact>> {
     let signed = policy
-        .map(|policy| crate::signed::SignedStaticBindings::from_source(source, p, bindings, policy))
+        .map(|(policy, version)| {
+            crate::signed::SignedStaticBindings::from_source(source, p, bindings, policy, version)
+        })
         .transpose()?;
     limits.validate()?;
     if source.len() > NativeWorkLimits::cap(limits.max_input_bytes)? {

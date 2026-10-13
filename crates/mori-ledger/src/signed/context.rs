@@ -148,11 +148,11 @@ pub fn compile_signed(s: &SignedStaticBindings, action: &str) -> Result<Artifact
         .ok_or(refuse("action"))?;
     let templates=template.instructions.iter().filter_map(|i|if let midnight_zkir_v3::Instruction::Impact{guard,inputs}=i {Some(serde_json::json!({"guard":guard,"fields":inputs}))}else{None}).zip(&groups).map(|(v,g)|serde_json::json!({"origin":g.origin,"field_count":g.field_count,"template":v})).collect::<Vec<_>>();
     let d = &s.bindings;
-    let context = serde_json::json!([
+    let mut context = serde_json::json!([
         CONTEXT,
-        PROFILE,
-        RELATION,
-        SIGNED_ABI,
+        s.version.profile(),
+        s.version.relation(),
+        s.version.signed_abi(),
         d.source_hash,
         d.program_hash,
         mori_core::LANGUAGE,
@@ -174,6 +174,15 @@ pub fn compile_signed(s: &SignedStaticBindings, action: &str) -> Result<Artifact
         wires,
         templates
     ]);
+    if s.version == SignedVersion::ConsumingV2 {
+        context
+            .as_array_mut()
+            .ok_or(refuse("context"))?
+            .push(serde_json::json!([
+                s.version.storage_abi(),
+                codec::hex(&nonce::nonce_domain(s)?)
+            ]));
+    }
     let context_sha256 = codec::object_hash(&context)?;
     let (ir, actual_groups, actual_n, actual_wires) = crate::relation::compiler::compile_signed(
         &validated,
@@ -185,7 +194,7 @@ pub fn compile_signed(s: &SignedStaticBindings, action: &str) -> Result<Artifact
         return Err(refuse("static-layout-drift"));
     }
     let manifest = Manifest {
-        format: RELATION.into(),
+        format: s.version.relation().into(),
         source_hash: d.source_hash.clone(),
         program_hash: d.program_hash.clone(),
         action: action.into(),
@@ -196,8 +205,8 @@ pub fn compile_signed(s: &SignedStaticBindings, action: &str) -> Result<Artifact
         qualification: QUALIFICATION.into(),
         compiler_hash: crate::proving::source_closure(),
         signed: Some(SignedManifest {
-            storage_abi: ABI.into(),
-            signed_abi: SIGNED_ABI.into(),
+            storage_abi: s.version.storage_abi().into(),
+            signed_abi: s.version.signed_abi().into(),
             context,
             context_sha256,
             signer_policy: s.policy.clone(),
@@ -333,6 +342,7 @@ pub(crate) fn projection(
     e: &Execution,
     request: &SignedCallRequest,
     action: &str,
+    authority: Option<&nonce::NonceAuthorityReadback>,
 ) -> Result<Vec<WireProjection>> {
     let mut out = vec![];
     let mut push = |descriptor: String, value: Value| {
@@ -368,6 +378,19 @@ pub(crate) fn projection(
             format!("pre.duty.{}.amount", d.name),
             Value::UInt(l.map_or(UInt(0), |l| l.amount)),
         );
+    }
+    if s.version == SignedVersion::ConsumingV2 {
+        let a = authority.ok_or(refuse("authority-readback"))?;
+        push(
+            "pre.authority.nonce_count".into(),
+            Value::UInt(a.pre_nonce_count),
+        );
+        push(
+            "pre.authority.nonce.present".into(),
+            Value::Bool(a.pre_nonce_present),
+        );
+    } else if authority.is_some() {
+        return Err(refuse("authority-readback"));
     }
     for step in &e.steps {
         for effect in &step.effects {
@@ -463,6 +486,16 @@ pub(crate) fn projection(
         push(
             format!("post.duty.{}.amount", d.name),
             Value::UInt(l.map_or(UInt(0), |l| l.amount)),
+        );
+    }
+    if let Some(a) = authority {
+        push(
+            "post.authority.nonce_count".into(),
+            Value::UInt(a.post_nonce_count),
+        );
+        push(
+            "post.authority.nonce.present".into(),
+            Value::Bool(a.post_nonce_present),
         );
     }
     Ok(out)

@@ -157,6 +157,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("relation/event.rs"),
             include_str!("relation/process.rs"),
             include_str!("signed/mod.rs"),
+            include_str!("signed/nonce.rs"),
             include_str!("signed/schnorr.rs"),
             include_str!("signed/constraints.rs"),
             include_str!("signed/context.rs"),

@@ -25,12 +25,21 @@ impl SignedInstalledDeployment {
         d.validate()?;
         Ok(d)
     }
+    pub fn version(&self) -> Result<SignedVersion> {
+        for v in [SignedVersion::LegacyV1, SignedVersion::ConsumingV2] {
+            if self.profile == v.profile()
+                && self.storage_abi == v.storage_abi()
+                && self.signed_abi == v.signed_abi()
+            {
+                return Ok(v);
+            }
+        }
+        Err(refuse("signed-version"))
+    }
     pub(crate) fn validate(&self) -> Result<()> {
-        if self.profile != PROFILE
-            || self.qualification != QUALIFICATION
+        self.version()?;
+        if self.qualification != QUALIFICATION
             || self.phase_policy != "guaranteed-only"
-            || self.storage_abi != ABI
-            || self.signed_abi != SIGNED_ABI
             || self.bindings.economic_bounds.is_some()
             || self.bindings.abi != ABI
             || self.bindings.anchor != "local-unqualified"
@@ -44,6 +53,96 @@ pub struct SignedAdmittedSeed {
     pub(crate) seed: AdmittedSeed,
     pub(crate) static_bindings: SignedStaticBindings,
 }
+
+/// Derive a descriptor for an independently supplied current snapshot. This
+/// does not prove ancestry, freshness, or ledger application of earlier calls.
+pub fn derive_signed_supplied_frame(
+    source: &str,
+    program: &Program,
+    descriptor: &SignedInstalledDeployment,
+    policy: &FixedSignerPolicy,
+    predecessor: &[u8],
+    parameters: &[u8],
+    public: &SignedPublicLocalDeployment,
+    limits: &NativeWorkLimits,
+) -> Result<SignedInstalledDeployment> {
+    let s = SignedStaticBindings::from_source(
+        source,
+        program,
+        &descriptor.bindings,
+        policy,
+        descriptor.version()?,
+    )?;
+    if s.version != public.static_bindings.version
+        || s.source != public.static_bindings.source
+        || s.bindings != public.static_bindings.bindings
+        || s.policy != public.static_bindings.policy
+        || descriptor.keyset_identity != public.inner.identity()
+        || descriptor.signer_policy != *policy
+    {
+        return Err(refuse("supplied-frame-policy"));
+    }
+    let artifacts = local_deployment::compile_all_policy(
+        source,
+        program,
+        &descriptor.bindings,
+        limits,
+        Some((policy, s.version)),
+    )?;
+    for artifact in &artifacts {
+        public
+            .inner
+            .key(&artifact.manifest.action)?
+            .admit(artifact)?;
+    }
+    derive_signed_supplied_frame_core(
+        &s,
+        descriptor,
+        predecessor,
+        parameters,
+        limits,
+        layout::OperationPolicy::Installed {
+            public: &public.inner,
+            limits,
+        },
+    )
+}
+
+pub(crate) fn derive_signed_supplied_frame_core(
+    s: &SignedStaticBindings,
+    descriptor: &SignedInstalledDeployment,
+    predecessor: &[u8],
+    parameters: &[u8],
+    limits: &NativeWorkLimits,
+    operations: layout::OperationPolicy<'_>,
+) -> Result<SignedInstalledDeployment> {
+    validate_work_limits(limits)?;
+    descriptor.validate()?;
+    if descriptor.version()? != SignedVersion::ConsumingV2
+        || s.version != SignedVersion::ConsumingV2
+        || s.bindings != descriptor.bindings
+        || s.policy != descriptor.signer_policy
+    {
+        return Err(refuse("supplied-frame-policy"));
+    }
+    call_artifacts::check_json_input(descriptor, limits.max_input_bytes)?;
+    let state: layout::NativeState =
+        call_artifacts::decode_bounded(predecessor, limits.max_input_bytes)?;
+    let params: midnight_ledger::structure::LedgerParameters =
+        call_artifacts::decode_bounded(parameters, limits.max_input_bytes)?;
+    if codec::hash(parameters) != descriptor.frame.parameters_hash || *state.parameters != params {
+        return Err(refuse("parameters"));
+    }
+    let mut derived = descriptor.clone();
+    derived.frame.predecessor_hash = codec::hash(predecessor);
+    derived.frame.native_state_hash = codec::native_hex(&state.state_hash())?;
+    let abi = layout::admit_bindings(&s.program, &s.bindings)?;
+    let frame = layout::admit_signed_frame(s, &abi, &derived.frame, state, operations)?;
+    layout::frame_gas(&frame)?;
+    // Every other frame commitment and the complete operation map were checked
+    // by admission against the independently bound installed/keyless policy.
+    Ok(derived)
+}
 pub fn admit_signed_local_seed(
     source: &str,
     p: &Program,
@@ -52,10 +151,50 @@ pub fn admit_signed_local_seed(
     parameters: &[u8],
     policy: &FixedSignerPolicy,
 ) -> Result<SignedAdmittedSeed> {
-    // Existing storage/seed admission is first; a signed profile cannot relabel
-    // an unsigned installed capability or accept an economic_bounds seed.
-    let seed = local_deployment::admit_local_seed(source, p, d, predecessor, parameters)?;
-    let static_bindings = SignedStaticBindings::from_source(source, p, &seed.bindings, policy)?;
+    if d.profile == crate::profile::PROFILE {
+        return Err(refuse("legacy-signed-seed"));
+    }
+    if d.profile != CONSUMING_SEED
+        || d.qualification != "local-unproven"
+        || d.phase_policy != "guaranteed-only"
+    {
+        return Err(refuse("signed-version"));
+    }
+    let bindings = StaticBindings::legacy(d);
+    let static_bindings = SignedStaticBindings::from_source(
+        source,
+        p,
+        &bindings,
+        policy,
+        SignedVersion::ConsumingV2,
+    )?;
+    let state: layout::NativeState = codec::decode_native(predecessor)?;
+    let params: midnight_ledger::structure::LedgerParameters = codec::decode_native(parameters)?;
+    if codec::hash(parameters) != d.parameters_hash || *state.parameters != params {
+        return Err(refuse("parameters"));
+    }
+    let abi = layout::admit_bindings(p, &bindings)?;
+    let frame = layout::admit_signed_frame(
+        &static_bindings,
+        &abi,
+        &FrameBindings::legacy(d),
+        state,
+        layout::OperationPolicy::Keyless,
+    )?;
+    layout::frame_gas(&frame)?;
+    if nonce::authority_map(&static_bindings, frame.contract.data.get_ref())?.size() != 1 {
+        return Err(refuse("signed-seed-authority"));
+    }
+    let seed = AdmittedSeed {
+        frame,
+        bindings,
+        descriptor: d.clone(),
+        source: source.into(),
+        program: p.clone(),
+        predecessor_bytes: predecessor.len(),
+        parameter_bytes: parameters.len(),
+    };
+
     Ok(SignedAdmittedSeed {
         seed,
         static_bindings,
@@ -120,7 +259,7 @@ pub async fn derive_signed_local_deployment(
         &s.program,
         &s.bindings,
         limits,
-        Some(&s.policy),
+        Some((&s.policy, s.version)),
     )?;
     let (public, selected) = local_deployment::derive_all(
         &s.source,
@@ -146,17 +285,20 @@ pub fn build_signed_local_installed_snapshot(
     derived: &SignedDerivedLocalDeployment,
     limits: &NativeWorkLimits,
 ) -> Result<SignedLocalInstalledSnapshot> {
-    if seed.static_bindings.policy != derived.static_bindings.policy {
+    if seed.static_bindings.policy != derived.static_bindings.policy
+        || seed.static_bindings.version != SignedVersion::ConsumingV2
+        || seed.static_bindings.version != derived.static_bindings.version
+    {
         return Err(refuse("seed-policy"));
     }
     let inner = local_deployment::build_snapshot(seed.seed, &derived.inner, limits)?;
     let d = inner.descriptor();
     let descriptor = SignedInstalledDeployment {
-        profile: PROFILE.into(),
+        profile: derived.static_bindings.version.profile().into(),
         qualification: QUALIFICATION.into(),
         phase_policy: d.phase_policy.clone(),
-        storage_abi: ABI.into(),
-        signed_abi: SIGNED_ABI.into(),
+        storage_abi: derived.static_bindings.version.storage_abi().into(),
+        signed_abi: derived.static_bindings.version.signed_abi().into(),
         bindings: d.bindings.clone(),
         frame: d.frame.clone(),
         keyset_identity: d.keyset_identity.clone(),
@@ -205,17 +347,19 @@ pub fn export_signed_local_deployment(
 pub fn snapshot_signed_public_keyset(
     path: &Path,
     l: &NativeWorkLimits,
+    version: SignedVersion,
 ) -> Result<ImportedPublicKeyset> {
     validate_work_limits(l)?;
-    call_artifacts::snapshot_public_profile(path, l, true)
+    call_artifacts::snapshot_public_profile(path, l, Some(version))
 }
 pub fn snapshot_signed_proving_keyset(
     path: &Path,
     action: &str,
     l: &NativeWorkLimits,
+    version: SignedVersion,
 ) -> Result<ImportedProvingKeyset> {
     validate_work_limits(l)?;
-    call_artifacts::snapshot_proving_profile(path, action, l, true)
+    call_artifacts::snapshot_proving_profile(path, action, l, Some(version))
 }
 pub(super) fn preflight(
     source: &str,
@@ -228,7 +372,7 @@ pub(super) fn preflight(
     d.validate()?;
     validate_work_limits(l)?;
     call_artifacts::check_json_input(d, l.max_input_bytes)?;
-    let s = SignedStaticBindings::from_source(source, p, &d.bindings, policy)?;
+    let s = SignedStaticBindings::from_source(source, p, &d.bindings, policy, d.version()?)?;
     if *policy != d.signer_policy
         || i.manifest.signer_policy.as_ref() != Some(policy)
         || i.manifest.bindings != d.bindings
@@ -239,7 +383,13 @@ pub(super) fn preflight(
     {
         return Err(refuse("source-static-build-policy"));
     }
-    let artifacts = local_deployment::compile_all_policy(source, p, &d.bindings, l, Some(policy))?;
+    let artifacts = local_deployment::compile_all_policy(
+        source,
+        p,
+        &d.bindings,
+        l,
+        Some((policy, d.version()?)),
+    )?;
     if artifacts.len() != i.manifest.actions.len() || i.action_bytes.len() != artifacts.len() {
         return Err(refuse("action-set"));
     }
