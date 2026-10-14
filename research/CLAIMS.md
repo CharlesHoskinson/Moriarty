@@ -1,0 +1,28 @@
+# Working evidence assessment
+
+Claims below distinguish repository observation, source fact and inference. They are a research dossier, not canonical accepted Moriarty project claims. Worker reports retain precise locators, qualification and source-independence notes.
+
+| ID | Claim | Type / assessment | Evidence / practical limit |
+|---|---|---|---|
+| U01 | Moriarty contains bounded typed financial semantics, restricted Compact lowering and specialized custody wrappers. | Repository observation / supported | LOCAL-ARCHITECTURE.md; exact local file hashes in MORIARTY-EVIDENCE.json. Profile coverage differs. |
+| U02 | Retained bounded loan/swap Preview examples include native effects and historical-state audits. | Repository observation / supported historical scope | Pinned local RESULT.md records. No fresh public-network revalidation in this task; mandatory acceptance stays open. |
+| U03 | September11 planning selects ledger-anchored state history, with recursion for bounded off-ledger certificates. | Repository observation / supported planning scope | openspec/PCD-INTEGRATION-2026-09-11.md and amended design. Specified-only, second Charter review pending. Older README/wiki mechanisms are stale. |
+| U04 | Native state-thread tokens can constrain initialized state-machine traces and support invariant transfer under ledger assumptions. | Source fact / supported paper scope | 01-foundations/REPORT.md F6, Native Custom Tokens §§3–4. Current formal repository includes postulates/incomplete terms; historical theorem artifact not reproduced. |
+| U05 | Reference inputs read existing outputs without consuming their value or executing their spending authorization. | Source fact / supported standard scope | 02-standards/REPORT.md CIP31. Read does not implement a head transition or nonce consumption. |
+| U06 | Cardano implements inline datums, reference scripts and collateral return; exact era/language rules matter. | Source fact / supported documentation/implementation scope | Pinned CIP31–33/40, CDDL and ledger spec. Not tested against a live node in this research. |
+| U07 | CIP editorial Proposed status is not sufficient to infer absence of an implemented builtin. | Source/implementation observation / supported | 02-standards PV11 tables and official hard-fork timeline versus CIP109/133 status. Master/released-node/runtime reconciliation remains required. |
+| U08 | A whole-input gross policy must count spent UTXOs even when change returns most value. | Repository observation / supported scoped policy | Corrected Moriarty swap report and initial native UTXO audit. Local effect checker alone does not establish adapter projection. |
+| U09 | Spending a head stops exact-head replay but cannot alone stop outcome-intent reuse on a later or different head. | Compatibility inference / provisional | Amended Moriarty nonce rules plus explicit UTXO consumption semantics. Instance-wide/multihead authority discipline needs a design and tests. |
+| U10 | Native conservation does not establish correct residual debt, liability bounds, fee-adjusted outcomes or payment attribution. | Semantic inference / supported distinction | Existing typed obligation/intent code and ledger accounting rules; target correspondence unimplemented. |
+| U11 | Cardano eUTXO is a credible target for a bounded public Moriarty state machine. | Compatibility inference / provisional | Foundation and standards evidence; no compiler/backend experiment performed. |
+| U12 | Public Cardano validation would preserve Moriarty's full privacy contract automatically. | Unsupported | Public datums/redeemers/outputs do not provide private execution. Requires separate proof/commitment/handoff design and measured verifier. |
+| U13 | BLS12-381 primitives establish feasibility of the complete Moriarty private relation. | Unsupported | Builtins and verifier examples are leads only. Proof system/transcript/key/public-input binding, total budget and setup assumptions remain to be tested. |
+| U14 | UTXO determinism means shared state updates execute in parallel or guarantee inclusion. | Unsupported | Foundation paper separates deterministic script evaluation from head availability/current tick. Shared heads conflict; scaling/liveness need evidence. |
+| U15 | A validator address or matching datum authenticates a unique initialized agreement. | Unsupported | Anyone can create an output at a script address; authenticated token/policy/genesis and successor constraints are necessary. |
+| U16 | A cloned repository is wholly reviewed or its theorem/audit applies to current bytes. | Unsupported | Only named files inspected; snapshot pins, historical audit scope and explicit postulates remain recorded. |
+| U17 | Existing on-chain slim-Nova example establishes complete PCD verification. | Unsupported | 08-private-proofs: commitment openings explicitly left off-chain; static candidate unexecuted. |
+| U18 | PR738 merge/ledger10 alpha proves certificate deployment on Preview. | Unsupported | 10-docs-midnight: merge/release verified, actual network deployment/acceptance not queried. |
+| U19 | Current ledger security/compatibility versions can be inferred from an older SDK matrix. | Unsupported | Detailed ledger8.1.3/node1.0.400 notes differ from stale overview/matrix; host ledger and runtime identities differ. |
+| U20 | All12 reference catalogue repositories are downloaded. | Acquisition observation / supported | 06-reference-apps initial3 receipts plus reference-app-snapshots9; only initial3 substantively inspected. |
+
+All ten lanes provide evidence in their own REPORT.md files. ASSESSMENT.md reconciles those results. All experiments in EXPERIMENTS.md remain specified-only.
