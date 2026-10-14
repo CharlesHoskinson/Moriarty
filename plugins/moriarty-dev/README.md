@@ -2,6 +2,14 @@
 
 Repository-scoped development plugin that enforces stop rules, prevents orchestration displacement, and directs execution toward concrete, demonstrable financial capabilities for Moriarty on Midnight.
 
+## Execution focus
+
+The [develop skill](skills/develop/SKILL.md) adds the September 11 delivery recommendations: one acceptance predicate in progress, one short reconciliation in existing records, implementation through the actual caller, independent failure cases before authoring, and concurrent fresh audits of the complete candidate. The current target is uncertified I2/MC02 integration; it is not full SP05 or mandatory PCD acceptance. A separately bounded F0 verifier-compatibility decision may proceed with independent capacity and resource authority. Existing K failures call for a single-case reproduction before broad retries, with full final conformance retained.
+
+The [execution reference](skills/develop/references/execution-focus.md) provides financial coverage checks, context and review practice, six manual metrics, and native/K investigation boundaries. These are agent workflow instructions, not new runtime enforcement or proof of increased speed. No scheduler, admission exception, or new evidence register is introduced. New profiles, broad finance expansion, backend migration and deferred productization/mandatory CI work remain outside this focus interval.
+
+For this plugin update the user selected Astra authoring and fresh Grok 4.6 high plus Astra medium audits. The earlier general product routing remains Grok authoring with fresh Opus/Astra reviews unless later user steering changes it. The CLI's receipt validation does not itself enforce either complete reviewer roster.
+
 ## Guarantees
 
 1. **Stop Rule Enforcement**:
