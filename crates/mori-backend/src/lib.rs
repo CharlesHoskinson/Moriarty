@@ -656,6 +656,7 @@ impl Builder {
         program: &Program,
         id: ExprId,
         env: &BTreeMap<String, Wire>,
+        liabilities: &BTreeMap<String, (Wire, Wire)>,
     ) -> Result<Wire, Error> {
         let mut todo = vec![(id, false)];
         let mut values = BTreeMap::<ExprId, Wire>::new();
@@ -684,6 +685,16 @@ impl Builder {
                 }
             }
             let wire = match expression {
+                Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {
+                    let (presence, amount) = liabilities.get(name).ok_or_else(|| {
+                        error("unsupported", format!("Unknown liability read {name:?}."))
+                    })?;
+                    if matches!(expression, Expr::LiabilityPresent { .. }) {
+                        presence.clone()
+                    } else {
+                        amount.clone()
+                    }
+                }
                 Expr::Literal { value } => match value {
                     Value::UInt(n) => Wire {
                         operand: immediate(n.0),
@@ -873,18 +884,18 @@ fn lower_action(
         };
         match statement {
             Statement::Let { name, value } => {
-                let value = builder.expression(program, *value, &env)?;
+                let value = builder.expression(program, *value, &env, &liabilities)?;
                 env.insert(name.clone(), value);
             }
             Statement::Requires { predicate } | Statement::Ensures { predicate } => {
-                let predicate = builder.expression(program, *predicate, &env)?;
+                let predicate = builder.expression(program, *predicate, &env, &liabilities)?;
                 builder.instructions.push(Instruction::Assert {
                     cond: predicate.operand,
                 });
             }
             Statement::Next { state, value } => {
                 let before = env[state].clone();
-                let value = builder.expression(program, *value, &env)?;
+                let value = builder.expression(program, *value, &env, &liabilities)?;
                 effect.kind = "state".into();
                 effect.name = Some(state.clone());
                 for (field, wire) in [("before", before), ("after", value.clone())] {
@@ -901,7 +912,7 @@ fn lower_action(
                 env.insert(state.clone(), value);
             }
             Statement::Emit { name, value } => {
-                let wire = builder.expression(program, *value, &env)?;
+                let wire = builder.expression(program, *value, &env, &liabilities)?;
                 effect.kind = "emit".into();
                 effect.name = Some(name.clone());
                 effect.public_positions.push(builder.bindings.len() as u32);
@@ -926,7 +937,9 @@ fn lower_action(
                 to,
                 amount,
             } => {
-                let amount = builder.expression(program, *amount, &env)?.operand;
+                let amount = builder
+                    .expression(program, *amount, &env, &liabilities)?
+                    .operand;
                 let from_key = (asset.clone(), from.clone());
                 let to_key = (asset.clone(), to.clone());
                 let debited = builder.arithmetic(
@@ -973,7 +986,7 @@ fn lower_action(
                 );
             }
             Statement::Liability { name, amount, .. } | Statement::Discharge { name, amount } => {
-                let delta = builder.expression(program, *amount, &env)?;
+                let delta = builder.expression(program, *amount, &env, &liabilities)?;
                 builder.range(delta.operand.clone(), Type::UInt);
                 let (before_presence, before_amount) = liabilities[name].clone();
                 let discharge = matches!(statement, Statement::Discharge { .. });

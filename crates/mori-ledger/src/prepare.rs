@@ -36,6 +36,8 @@ pub struct Evidence {
 }
 #[derive(Clone, Serialize)]
 pub struct Readback {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority: Option<crate::signed::nonce::NonceAuthorityReadback>,
     pub execution: Execution,
     pub prospective_balances: Vec<Balance>,
     pub effects_hex: String,
@@ -63,6 +65,7 @@ pub struct PreservedFrame {
 }
 fn preserved_frame(
     pre: &layout::AdmittedPredecessor,
+    signed: Option<&crate::signed::SignedStaticBindings>,
     output: &OutputCodec,
 ) -> Result<PreservedFrame> {
     let s = &pre.ledger;
@@ -110,7 +113,13 @@ fn preserved_frame(
             ),
             (
                 "contract_extensions",
-                output.native_hash(&layout::root_maps(pre.contract.data.get_ref())?[2])?,
+                output.native_hash(
+                    &if let Some(s) = signed {
+                        crate::signed::nonce::root_maps(s, pre.contract.data.get_ref())?
+                    } else {
+                        layout::root_maps(pre.contract.data.get_ref())?
+                    }[2],
+                )?,
             ),
         ]
         .into_iter()
@@ -455,8 +464,20 @@ pub(crate) fn prepare_admitted_signed(
         )
         .map_err(|_| failure("semantic", "economic-bounds"))?;
     }
+    let authority = signed
+        .filter(|s| s.version == crate::signed::SignedVersion::ConsumingV2)
+        .map(|s| {
+            crate::signed::nonce::admit_authority(s, pre.contract.data.get_ref(), request.nonce)
+        })
+        .transpose()?;
+    if authority
+        .as_ref()
+        .is_some_and(|a| a.nonce() != request.nonce)
+    {
+        return Err(failure("signed-call", "authority-observation"));
+    }
     let lowered = if let Some(signed) = signed {
-        ops::lower_signed_ops(p, &pre, &execution, signed)?
+        ops::lower_signed_ops(p, &pre, &execution, signed, authority.as_ref())?
     } else {
         ops::lower_ops(p, &pre, &execution)?
     };
@@ -470,6 +491,14 @@ pub(crate) fn prepare_admitted_signed(
         )
         .map_err(|_| failure("native-VM", "query-refusal"))?;
     validate_query(&lowered, &direct)?;
+    if let Some(s) = signed.filter(|s| s.version == crate::signed::SignedVersion::ConsumingV2) {
+        crate::signed::nonce::check_successor_input(
+            s,
+            &pre.ledger,
+            &direct.context.state,
+            codec::INPUT_BYTES as u64,
+        )?;
+    }
     if direct
         .gas_cost
         .bytes_written
@@ -725,7 +754,7 @@ pub(crate) fn prepare_admitted_signed(
             .collect(),
         binding_input_hex: encoder.native_hex(&preimage.binding_input)?,
     };
-    let frame = preserved_frame(&pre, &encoder)?;
+    let frame = preserved_frame(&pre, signed, &encoder)?;
     if frame.commitments["complete_ledger"] != f.predecessor_hash
         || frame.commitments["contract_operations"] != f.operations_hash
         || frame.commitments["contract_maintenance"] != f.maintenance_hash
@@ -733,7 +762,18 @@ pub(crate) fn prepare_admitted_signed(
     {
         return Err(failure("full-readback", "preserved-native-frame"));
     }
+    let authority_readback = authority
+        .as_ref()
+        .map(|a| {
+            crate::signed::nonce::NonceAuthorityReadback::checked(
+                signed.ok_or(failure("signed-call", "signed-version"))?,
+                a,
+                &direct.context.state.get(),
+            )
+        })
+        .transpose()?;
     let readback = Readback {
+        authority: authority_readback,
         relation: relation_readback,
         preserved_frame: frame,
         execution,
@@ -775,7 +815,11 @@ pub(crate) fn prepare_admitted_signed(
             proof_verification: "not-performed",
             signature_verification: "not-performed",
             ledger_apply: "not-performed",
-            consumption: "not-performed",
+            consumption: if authority.is_some() {
+                "queried-supplied-state-nonce-consumed-unqualified"
+            } else {
+                "not-performed"
+            },
             fees_paid: "not-performed",
             settlement: "not-performed",
             deployed_qualification: "not-performed",

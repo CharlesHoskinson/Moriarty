@@ -58,7 +58,9 @@ Do not create a new approval system, dashboard or harness for these rules.
    Do not exceed an existing limit or waive a failed gate to avoid review.
    A genuine limit stops that run, but does not automatically stop independent eligible work.
 
-7. **Own integration and limit unfinished work.** Keep one primary capability in focus.
+7. **Own integration and limit unfinished work.** Keep the integrated capability in focus.
+   The [October 13 workflow](PARALLEL-DEVELOPMENT.md) permits six disjoint source tasks within that capability.
+   This supersedes the one-source-item restriction for that scope. Native admission and every stop rule remain.
    Delegate independent work only when it has a clear boundary and available review capacity.
    Do not create another dependent candidate while its recurring prerequisite defect lacks a reproducer and changed approach.
    Preserve all sprint requirements and dependency gates.

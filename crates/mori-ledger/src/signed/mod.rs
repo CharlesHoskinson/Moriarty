@@ -3,6 +3,7 @@
 pub(crate) mod constraints;
 mod context;
 mod deployment;
+pub(crate) mod nonce;
 mod preparation;
 pub mod schnorr;
 use crate::{Error, Result, codec, layout, profile::*};
@@ -16,6 +17,42 @@ pub const PROFILE: &str = "moriarty-ledger-installed-signed-local/1";
 pub const QUALIFICATION: &str = "local-source-derived-installed-signed-unqualified";
 pub const RELATION: &str = "moriarty-native-call-signed-relation/1";
 pub const SIGNED_ABI: &str = "moriarty-ledger-signed-abi/1";
+pub const CONSUMING_PROFILE: &str = "moriarty-ledger-installed-signed-local/2";
+pub const CONSUMING_RELATION: &str = "moriarty-native-call-signed-relation/2";
+pub const CONSUMING_SIGNED_ABI: &str = "moriarty-ledger-signed-abi/2";
+pub const CONSUMING_STORAGE_ABI: &str = "moriarty-ledger-signed-public-abi/2";
+pub const CONSUMING_SEED: &str = "moriarty-ledger-signed-call-seed/2";
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignedVersion {
+    LegacyV1,
+    ConsumingV2,
+}
+impl SignedVersion {
+    pub fn profile(self) -> &'static str {
+        match self {
+            Self::LegacyV1 => PROFILE,
+            Self::ConsumingV2 => CONSUMING_PROFILE,
+        }
+    }
+    pub fn relation(self) -> &'static str {
+        match self {
+            Self::LegacyV1 => RELATION,
+            Self::ConsumingV2 => CONSUMING_RELATION,
+        }
+    }
+    pub fn storage_abi(self) -> &'static str {
+        match self {
+            Self::LegacyV1 => ABI,
+            Self::ConsumingV2 => CONSUMING_STORAGE_ABI,
+        }
+    }
+    pub fn signed_abi(self) -> &'static str {
+        match self {
+            Self::LegacyV1 => SIGNED_ABI,
+            Self::ConsumingV2 => CONSUMING_SIGNED_ABI,
+        }
+    }
+}
 pub const POLICY: &str = "moriarty-ledger-fixed-jubjub-policy/1";
 pub const REQUEST: &str = "moriarty-ledger-signed-call-request/1";
 pub const PACKAGE: &str = "moriarty-ledger-call-signing-package/1";
@@ -154,6 +191,7 @@ impl SignedCallAttachment {
 }
 #[derive(Clone)]
 pub struct SignedStaticBindings {
+    pub(crate) version: SignedVersion,
     pub(crate) source: String,
     pub(crate) program: Program,
     pub(crate) bindings: StaticBindings,
@@ -167,6 +205,7 @@ impl SignedStaticBindings {
         program: &Program,
         bindings: &StaticBindings,
         policy: &FixedSignerPolicy,
+        version: SignedVersion,
     ) -> Result<Self> {
         policy.validate()?;
         if bindings.economic_bounds.is_some() {
@@ -269,6 +308,7 @@ impl SignedStaticBindings {
             }
         }
         Ok(Self {
+            version,
             source: source.into(),
             program: program.clone(),
             bindings: bindings.clone(),

@@ -54,6 +54,93 @@ impl Compiler<'_> {
             ));
         }
     }
+    fn authority_observation(
+        &mut self,
+        post: bool,
+        nonce: Operand,
+        pre: Option<Operand>,
+    ) -> Result<Operand> {
+        let count = self.b.open(imm(1));
+        self.b.range(count.clone(), Type::UInt);
+        let cap =
+            self.b.expression(
+                count.clone(),
+                imm(crate::signed::nonce::AUTHORIZATION_MAP_CAPACITY as u128
+                    - if post { 0 } else { 1 }),
+                BinaryOp::Le,
+            );
+        self.b.assert(cap);
+        let nonempty = self.b.expression(imm(0), count.clone(), BinaryOp::Lt);
+        self.b.assert(nonempty);
+        if let Some(pre) = pre {
+            let expected = self.b.expression(pre, imm(1), BinaryOp::Add);
+            self.b.equal(count.clone(), expected);
+        }
+        for (i, op) in ops::map_size(3, 0).into_iter().enumerate() {
+            let r = if i == 3 {
+                vec![(op.field_size() - 1, count.clone())]
+            } else {
+                vec![]
+            };
+            self.b.op(
+                op,
+                imm(1),
+                &r,
+                if post {
+                    "signed-authority-post-count"
+                } else {
+                    "signed-authority-pre-count"
+                },
+            )?;
+        }
+        let member = self.b.open(imm(1));
+        self.b.range(member.clone(), Type::Bool);
+        self.b.equal(member.clone(), imm(u128::from(post)));
+        let template = ops::membership(3, 0u128.into(), post);
+        let last = template.len() - 1;
+        for (i, op) in template.into_iter().enumerate() {
+            let r = if i == 2 {
+                vec![(op.field_size() - 1, nonce.clone())]
+            } else if i == last {
+                vec![(op.field_size() - 1, member.clone())]
+            } else {
+                vec![]
+            };
+            self.b.op(
+                op,
+                imm(1),
+                &r,
+                if post {
+                    "signed-authority-post-member"
+                } else {
+                    "signed-authority-pre-member"
+                },
+            )?;
+        }
+        if post {
+            self.record(
+                "post.authority.nonce_count".into(),
+                Type::UInt,
+                count.clone(),
+            );
+            self.record("post.authority.nonce.present".into(), Type::Bool, member);
+        }
+        Ok(count)
+    }
+    fn authority_write(&mut self, nonce: Operand) -> Result<()> {
+        for (i, op) in ops::write_cell(3, 0u128.into(), true.into())
+            .into_iter()
+            .enumerate()
+        {
+            let r = if i == 1 {
+                vec![(op.field_size() - 1, nonce.clone())]
+            } else {
+                vec![]
+            };
+            self.b.op(op, imm(1), &r, "signed-authority-write")?;
+        }
+        Ok(())
+    }
     fn observations(&mut self, post: bool) -> Result<()> {
         let phase = if post { "post" } else { "pre" };
         let state_count = self.b.open(imm(1));
@@ -161,6 +248,10 @@ impl Compiler<'_> {
             };
             self.b.op(op, member.clone(), &r, "duty-old-read")?;
         }
+        // Retain every observation as the current ordered snapshot. Repeated
+        // leaves must agree until a source duty write replaces this pair.
+        self.duties
+            .insert(name.to_owned(), (member.clone(), before.clone()));
         Ok((member, before))
     }
     fn duty(&mut self, name: &str, value: Operand, discharge: bool) -> Result<()> {
@@ -358,6 +449,20 @@ impl Compiler<'_> {
             .ok_or(refusal("expression-index"))?
             .clone()
         {
+            Expr::LiabilityPresent { name } => {
+                let (member, _) = self.observe_duty(&name)?;
+                Wire {
+                    val: member,
+                    ty: Type::Bool,
+                }
+            }
+            Expr::LiabilityAmount { name } => {
+                let (_, amount) = self.observe_duty(&name)?;
+                Wire {
+                    val: amount,
+                    ty: Type::UInt,
+                }
+            }
             Expr::Literal { value } => Wire {
                 val: imm(match value {
                     Value::UInt(n) => n.0,
@@ -550,15 +655,58 @@ fn compile_inner(
     if let Some(s) = signed {
         crate::signed::constraints::arguments(&mut inputs, a.inputs.len(), s.assets.len())?;
     }
-    for op in ops::abi_guard() {
+    let consuming = signed.is_some_and(|s| s.version == crate::signed::SignedVersion::ConsumingV2);
+    let mut guard = ops::abi_guard();
+    if consuming {
+        guard[2] = midnight_onchain_vm::ops::Op::Popeq {
+            cached: false,
+            result: 4u64.into(),
+        };
+    }
+    for op in guard {
         if matches!(op, midnight_onchain_vm::ops::Op::Popeq { .. }) {
             let v = c.b.open(imm(1));
-            c.b.equal(v, imm(3));
+            c.b.equal(v, imm(if consuming { 4 } else { 3 }));
         }
-        c.b.op(op, imm(1), &[], "abi-root")?;
+        c.b.op(
+            op,
+            imm(1),
+            &[],
+            if consuming {
+                "signed-abi-root"
+            } else {
+                "abi-root"
+            },
+        )?;
     }
+    let nonce = Operand::Variable(Identifier(format!("%input.{}", a.inputs.len() + 5)));
+    let authority_count = if consuming {
+        let s = signed.ok_or(refusal("signed-layout"))?;
+        let domain: AlignedValue =
+            midnight_base_crypto::hash::HashOutput(crate::signed::nonce::nonce_domain(s)?).into();
+        let mut fields = vec![];
+        domain.value_only_field_repr(&mut fields);
+        for expected in fields {
+            let actual = c.b.open(imm(1));
+            c.b.equal(actual, super::arithmetic::field(expected));
+        }
+        for op in ops::read_cell(3, crate::signed::nonce::domain_key(), domain) {
+            c.b.op(op, imm(1), &[], "signed-authority-domain")?;
+        }
+        Some(c.authority_observation(false, nonce.clone(), None)?)
+    } else {
+        None
+    };
     if signed.is_some() {
         c.observations(false)?;
+        if let Some(count) = &authority_count {
+            c.record(
+                "pre.authority.nonce_count".into(),
+                Type::UInt,
+                count.clone(),
+            );
+            c.record("pre.authority.nonce.present".into(), Type::Bool, imm(0));
+        }
     }
     for (i, statement) in a.statements.iter().enumerate() {
         c.statement_index = i;
@@ -566,6 +714,10 @@ fn compile_inner(
     }
     if let Some(signed) = signed {
         c.observations(true)?;
+        if let Some(count) = authority_count {
+            c.authority_write(nonce.clone())?;
+            c.authority_observation(true, nonce, Some(count))?;
+        }
         if let Some(context) = context {
             crate::signed::constraints::append(
                 &mut c.b,

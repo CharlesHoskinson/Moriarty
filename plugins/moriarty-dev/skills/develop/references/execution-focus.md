@@ -2,13 +2,24 @@
 
 Use the relevant section for a current task; this is workflow guidance, not a new scheduler, gate or evidence schema. The September 11 delivery, overhead and native investigations motivate the experiment. Their observations describe retained evidence, not newly executed checks or demonstrated speedup. Refresh current records before relying on them. Repository paths below are relative to the active checkout, not the installed plugin cache.
 
+## Current parallel source scope — October 13
+
+Use [parallel development](../../../../../docs/PARALLEL-DEVELOPMENT.md) for the current six-task source wave.
+The user supersedes the single active source item and earlier model routing for this scope.
+Each task owns disjoint paths and a callable local predicate. One integrator owns shared interfaces.
+Every final candidate requires fresh non-author Sol and Grok full-candidate reviews at high effort.
+Compact author context never replaces complete source or actual-result review input.
+Existing frozen signed-call native work retains its Opus 5.5 and Muse conditions.
+Native resources, accounting, stop rules and financial acceptance remain unchanged.
+The historical I2 investigation below remains evidence and guidance for its original scope.
+
 ## One bounded delivery interval
 
-Keep one delivery implementation item active through actual-result review. Name the exact predicate it will close, its current blocker, the callable product path and the existing acceptance record before starting. Idle reviewers prepare independent expected results and fault cases for that item. One capped F0 decision can proceed in parallel only without competing for the bottleneck or exceeding existing authority. Do not hop across the roadmap to make activity look like acceptance.
+Keep each scoped source task active through its result review under the current parallel ownership plan. Name the exact predicate it will close, its current blocker, the callable product path and the existing acceptance record before starting. Idle reviewers prepare independent expected results and fault cases for that item. One capped F0 decision can proceed in parallel only without competing for the bottleneck or exceeding existing authority. Do not hop across the roadmap to make activity look like acceptance.
 
 The near-term target is I2/MC02 complete-effect local/Preview loan and swap integration. Its recorded prerequisites are `atomic-accept` and `rp01-mc02`; verify their applicable admission history. Full SP05 also requires SP01. I2 remains explicitly uncertified until MC05: neither local tests nor actual uncertified settlement establish mandatory proof-carrying transactions. Keep contract properties, intent refinement, transition validity, history compliance and residual duties mandatory. Refunds do not erase gross debit limits; fees count against net goals.
 
-Do not select new frontend profiles, broad ACTUS/DeFi constructors, speculative alternate backends, whole-roadmap task hopping, repeated prompt redesign, a new evidence framework or deferred productization/mandatory CI work during this interval. This does not narrow the original acceptance scope. Later user instructions may change priorities.
+Use the current manifest for authorized source preparation. Avoid unsupported frontend profiles, speculative backends, task hopping, repeated prompt redesign and new evidence infrastructure. This does not narrow the original acceptance scope. Later user instructions may change priorities.
 
 ## Reconcile I2 once, then implement the missing path
 
@@ -61,7 +72,7 @@ Record these manually for the next two delivery items; no telemetry framework or
 
 Use these observations to compare accepted predicates per active hour, waiting for review/admission, rework and resource attempts per predicate. Baseline against the preceding two days' retained receipts where available; distinguish worker time from end-to-end time. The studied collector slice recorded 1,717.693 worker seconds across five author attempts, including one 900.027-second timeout; one later executor attempt was user-stopped, not a failed implementation. Concurrent final reviews already overlapped. Provider fresh/cached/output token counts are not unique tokens, dollar costs or proof that context caused defects.
 
-Prospective success: no second delivery implementation before the first reaches result review, a callable product outcome with fewer avoidable repair round trips, and at least one newly accepted I2 predicate or concrete falsifying blocker per bounded interval. A smaller prompt, additional green tests or another approved packet is insufficient. This limited baseline supports descriptive comparison, not a model ranking, global overhead estimate or promised speed multiplier.
+Prospective success: independently reviewable callable outcomes from disjoint source tasks, fewer avoidable repair round trips, and explicit accepted predicates or concrete blockers. Parallel preparation does not close acceptance dependencies. A smaller prompt, additional green tests or another approved packet is insufficient. This limited baseline supports descriptive comparison, not a model ranking, global overhead estimate or promised speed multiplier.
 
 ## Native F0 before large proving
 

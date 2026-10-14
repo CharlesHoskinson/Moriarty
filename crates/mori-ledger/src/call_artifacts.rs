@@ -191,13 +191,14 @@ pub fn snapshot_public_keyset(
     directory: &Path,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedPublicKeyset> {
-    snapshot_public_profile(directory, limits, false)
+    snapshot_public_profile(directory, limits, None)
 }
 pub(crate) fn snapshot_public_profile(
     directory: &Path,
     limits: &NativeWorkLimits,
-    signed: bool,
+    signed_version: Option<crate::signed::SignedVersion>,
 ) -> Result<ImportedPublicKeyset> {
+    let signed = signed_version.is_some();
     limits.validate()?;
     let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let cap = remaining_read_cap(
@@ -291,6 +292,19 @@ pub(crate) fn snapshot_public_profile(
             leaves.next().unwrap(),
         ));
     }
+    if let Some(version) = signed_version {
+        for (_, bytes, _) in &action_bytes {
+            let model: crate::relation::Manifest =
+                codec::json(std::str::from_utf8(bytes).map_err(|_| refusal("manifest-utf8"))?)?;
+            let abi = model.signed.as_ref().ok_or(refusal("signed-version"))?;
+            if model.format != version.relation()
+                || abi.storage_abi != version.storage_abi()
+                || abi.signed_abi != version.signed_abi()
+            {
+                return Err(refusal("signed-version"));
+            }
+        }
+    }
     Ok(ImportedPublicKeyset {
         manifest,
         source,
@@ -303,15 +317,16 @@ pub fn snapshot_proving_keyset(
     action: &str,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvingKeyset> {
-    snapshot_proving_profile(directory, action, limits, false)
+    snapshot_proving_profile(directory, action, limits, None)
 }
 pub(crate) fn snapshot_proving_profile(
     directory: &Path,
     action: &str,
     limits: &NativeWorkLimits,
-    signed: bool,
+    signed_version: Option<crate::signed::SignedVersion>,
 ) -> Result<ImportedProvingKeyset> {
-    let public = snapshot_public_profile(directory, limits, signed)?;
+    let signed = signed_version.is_some();
+    let public = snapshot_public_profile(directory, limits, signed_version)?;
     let aggregate = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let marker_cap = remaining_read_cap(
         public.snapshot_total,
@@ -883,13 +898,14 @@ pub fn snapshot_proven_call(
     directory: &Path,
     limits: &NativeWorkLimits,
 ) -> Result<ImportedProvenCall> {
-    snapshot_proven_profile(directory, limits, false)
+    snapshot_proven_profile(directory, limits, None)
 }
 pub(crate) fn snapshot_proven_profile(
     directory: &Path,
     limits: &NativeWorkLimits,
-    signed: bool,
+    signed_version: Option<crate::signed::SignedVersion>,
 ) -> Result<ImportedProvenCall> {
+    let signed = signed_version.is_some();
     limits.validate()?;
     let cap = NativeWorkLimits::cap(limits.max_artifact_bytes)?;
     let marker_cap =
@@ -927,6 +943,21 @@ pub(crate) fn snapshot_proven_profile(
                 cap,
             )?,
         );
+    }
+    if let Some(version) = signed_version {
+        let bytes = leaves
+            .get("signing-package.json")
+            .ok_or(refusal("signed-version"))?;
+        let package = crate::signed::CallSigningPackage::from_json(
+            std::str::from_utf8(bytes).map_err(|_| refusal("manifest-utf8"))?,
+        )?;
+        if package.payload.installed_profile != version.profile()
+            || package.payload.storage_abi != version.storage_abi()
+            || package.payload.signed_abi != version.signed_abi()
+            || package.payload.relation != version.relation()
+        {
+            return Err(refusal("signed-version"));
+        }
     }
     let intent = decode_bounded(&leaves["final-intent.bin"], limits.max_leaf_bytes)?;
     admit_intent_work(&intent, limits)?;
