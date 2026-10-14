@@ -368,3 +368,42 @@ pub fn verify_and_simulate(
     )?;
     Ok(execution)
 }
+
+/// Authenticates before metered local execution, then checks complete effects.
+/// The caller's unsigned cap is outside the unchanged owner signing message.
+/// Preparation, signature and effect checks are outside this logical cost profile.
+/// Late authority refusal retains consumed work and exposes no execution.
+pub fn verify_and_simulate_metered(
+    program: &Program,
+    source_hash: &str,
+    action: &str,
+    scenario: &Scenario,
+    authority: &Authorization,
+    signed: &SignedIntent,
+    at: UInt,
+    cap: UInt,
+) -> Result<crate::MeteredExecution, crate::MeteredExecutionError> {
+    let before_execution = |error| crate::MeteredExecutionError {
+        error,
+        cost: crate::CostReport {
+            profile: crate::LOGICAL_COST_PROFILE.into(),
+            cap,
+            used: UInt(0),
+        },
+    };
+    let expected = prepare_intent(program, source_hash, action, scenario, authority)
+        .map_err(before_execution)?;
+    verify_intent(&expected.intent, signed, at).map_err(before_execution)?;
+    let metered = crate::simulate_metered(program, action, scenario, cap)?;
+    check_effects(
+        &authority.signer,
+        &authority.limits,
+        &metered.execution.effects,
+        &metered.execution.post.liabilities,
+    )
+    .map_err(|error| crate::MeteredExecutionError {
+        error,
+        cost: metered.cost.clone(),
+    })?;
+    Ok(metered)
+}
