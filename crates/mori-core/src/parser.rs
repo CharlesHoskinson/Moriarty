@@ -256,7 +256,17 @@ impl Parser {
             self.push(Expr::Literal { value })?
         } else {
             let name = self.word()?;
-            self.push(Expr::Name { name })?
+            if matches!(name.as_str(), "liability_present" | "liability_amount") && self.eat("(") {
+                let duty = self.string()?;
+                self.expect(")")?;
+                self.push(if name == "liability_present" {
+                    Expr::LiabilityPresent { name: duty }
+                } else {
+                    Expr::LiabilityAmount { name: duty }
+                })?
+            } else {
+                self.push(Expr::Name { name })?
+            }
         };
         loop {
             // A decoded string spelling an operator is still a string token.

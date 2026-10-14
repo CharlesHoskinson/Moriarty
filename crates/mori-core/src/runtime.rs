@@ -1,3 +1,4 @@
+use crate::policy::{CostPlane, Meter};
 use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -80,6 +81,8 @@ fn type_cached(
         return Ok(ty);
     }
     let result = match node {
+        Expr::LiabilityPresent { .. } => Ok(Type::Bool),
+        Expr::LiabilityAmount { .. } => Ok(Type::UInt),
         Expr::Literal { value } => Ok(value.ty()),
         Expr::Name { name } => env
             .get(name)
@@ -309,8 +312,60 @@ pub fn validate(program: &Program) -> Result<(), Error> {
             }
         }
     }
+    validate_liability_reads(program)?;
     Ok(())
 }
+// New reads require a source-fixed identity. Legacy Core external duties and
+// discharge-only programs keep their existing validation rules.
+fn validate_liability_reads(p: &Program) -> Result<(), Error> {
+    let mut reads = BTreeMap::new();
+    for expr in &p.expressions {
+        if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expr {
+            if name.is_empty() || name.len() > 1024 {
+                return Err(failure(
+                    "liability",
+                    "Liability read name must contain 1..1024 bytes.",
+                ));
+            }
+            reads.insert(name.as_str(), None);
+        }
+    }
+    for stmt in p.actions.iter().flat_map(|a| &a.statements) {
+        if let Statement::Liability {
+            name,
+            asset,
+            debtor,
+            creditor,
+            ..
+        } = stmt
+        {
+            if let Some(found) = reads.get_mut(name.as_str()) {
+                let identity = (
+                    validate_asset(p, asset)?,
+                    debtor.as_str(),
+                    creditor.as_str(),
+                );
+                if found.is_some_and(|previous| previous != identity) {
+                    return Err(failure(
+                        "liability",
+                        format!("Conflicting source liability identity for {name:?}."),
+                    ));
+                }
+                *found = Some(identity);
+            }
+        }
+    }
+    for (name, identity) in reads {
+        if identity.is_none() {
+            return Err(failure(
+                "liability",
+                format!("Liability read {name:?} has no source-derived identity."),
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
     if expr_type(p, id, env, 0)? != Type::UInt {
         Err(failure(
@@ -329,32 +384,68 @@ fn validate_asset<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> 
         .ok_or_else(|| failure("asset", format!("Unknown asset {name:?}.")))
 }
 
-fn evaluate(p: &Program, id: ExprId, env: &BTreeMap<String, Value>) -> Result<Value, Error> {
-    eval_cached(p, id, env, &mut vec![None; p.expressions.len()])
+fn evaluate(
+    p: &Program,
+    id: ExprId,
+    env: &BTreeMap<String, Value>,
+    snapshot: &Snapshot,
+    meter: &mut Option<&mut Meter>,
+) -> Result<Value, Error> {
+    eval_cached(
+        p,
+        id,
+        env,
+        snapshot,
+        &mut vec![None; p.expressions.len()],
+        meter,
+    )
+}
+fn charge_logical(meter: &mut Option<&mut Meter>) -> Result<(), Error> {
+    if let Some(meter) = meter.as_deref_mut() {
+        meter.charge(CostPlane::Logical, UInt(1))?;
+    }
+    Ok(())
 }
 fn eval_cached(
     p: &Program,
     id: ExprId,
     env: &BTreeMap<String, Value>,
+    snapshot: &Snapshot,
     cache: &mut [Option<Value>],
+    meter: &mut Option<&mut Meter>,
 ) -> Result<Value, Error> {
     let i = usize::from(id);
     if let Some(value) = &cache[i] {
         return Ok(value.clone());
     }
+    // Charge the attempted node before its children or operation. Cache hits
+    // above remain free, and evaluate creates a new cache for each statement.
+    charge_logical(meter)?;
     let result = match &p.expressions[i] {
+        Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {
+            let row = snapshot
+                .liabilities
+                .binary_search_by(|l| l.name.as_str().cmp(name.as_str()))
+                .ok()
+                .map(|index| &snapshot.liabilities[index]);
+            if matches!(&p.expressions[i], Expr::LiabilityPresent { .. }) {
+                Value::Bool(row.is_some())
+            } else {
+                Value::UInt(row.map_or(UInt(0), |l| l.amount))
+            }
+        }
         Expr::Literal { value } => value.clone(),
         Expr::Name { name } => env
             .get(name)
             .cloned()
             .ok_or_else(|| failure("name", format!("Unknown name {name:?}.")))?,
-        Expr::Not { value } => match eval_cached(p, *value, env, cache)? {
+        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache, meter)? {
             Value::Bool(b) => Value::Bool(!b),
             _ => return Err(failure("type", "not expects Bool.")),
         },
         Expr::Binary { op, lhs, rhs } => {
-            let a = eval_cached(p, *lhs, env, cache)?;
-            let b = eval_cached(p, *rhs, env, cache)?;
+            let a = eval_cached(p, *lhs, env, snapshot, cache, meter)?;
+            let b = eval_cached(p, *rhs, env, snapshot, cache, meter)?;
             match (op, a, b) {
                 (BinaryOp::Add, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {
                     Value::UInt(UInt(a.checked_add(b).ok_or_else(|| {
@@ -386,11 +477,48 @@ fn eval_cached(
     cache[i] = Some(result.clone());
     Ok(result)
 }
-fn amount(p: &Program, id: ExprId, env: &BTreeMap<String, Value>) -> Result<UInt, Error> {
-    match evaluate(p, id, env)? {
+fn amount(
+    p: &Program,
+    id: ExprId,
+    env: &BTreeMap<String, Value>,
+    snapshot: &Snapshot,
+    meter: &mut Option<&mut Meter>,
+) -> Result<UInt, Error> {
+    match evaluate(p, id, env, snapshot, meter)? {
         Value::UInt(v) => Ok(v),
         _ => Err(failure("type", "Expected UInt amount.")),
     }
+}
+// Core also supports incoming duties without a source declaration. Only names
+// declared by Liability statements have a source-fixed identity; do not impose
+// the backend's closed, sixteen-entry compiler profile on general Core input.
+fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &str)>, Error> {
+    let mut identities = BTreeMap::new();
+    for stmt in p.actions.iter().flat_map(|action| &action.statements) {
+        if let Statement::Liability {
+            name,
+            asset,
+            debtor,
+            creditor,
+            ..
+        } = stmt
+        {
+            let identity = (
+                validate_asset(p, asset)?,
+                debtor.as_str(),
+                creditor.as_str(),
+            );
+            if let Some(existing) = identities.insert(name.as_str(), identity) {
+                if existing != identity {
+                    return Err(failure(
+                        "liability",
+                        format!("Conflicting source liability identity for {name:?}."),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(identities)
 }
 fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, Error> {
     if s.balances.len() > 4096 || s.liabilities.len() > 1024 {
@@ -493,6 +621,7 @@ fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, 
         }
     }
     balances.sort_by(|a, b| (&a.asset, &a.account).cmp(&(&b.asset, &b.account)));
+    let identities = liability_identities(p)?;
     let mut liabilities = s.liabilities.clone();
     let mut names = BTreeSet::new();
     for l in &liabilities {
@@ -514,6 +643,14 @@ fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, 
                 "liability",
                 "Invalid or duplicate liability identity.",
             ));
+        }
+        if let Some(identity) = identities.get(l.name.as_str()) {
+            if *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str()) {
+                return Err(failure(
+                    "liability",
+                    format!("Existing liability identity differs for {:?}.", l.name),
+                ));
+            }
         }
     }
     liabilities.sort_by(|a, b| a.name.cmp(&b.name));
@@ -558,6 +695,14 @@ fn move_funds(
 }
 /// Executes one finite action on a clone. A refusal exposes no committed effects.
 pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<Execution, Error> {
+    simulate_with_meter(program, action, scenario, None)
+}
+pub(crate) fn simulate_with_meter(
+    program: &Program,
+    action: &str,
+    scenario: &Scenario,
+    mut meter: Option<&mut Meter>,
+) -> Result<Execution, Error> {
     validate(program)?;
     let selected = program
         .actions
@@ -573,14 +718,15 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
     for (i, stmt) in selected.statements.iter().enumerate() {
         let mut effects = vec![];
         let result = (|| -> Result<Option<Value>, Error> {
+            charge_logical(&mut meter)?;
             match stmt {
                 Statement::Let { name, value } => {
-                    let v = evaluate(program, *value, &env)?;
+                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
                     env.insert(name.clone(), v.clone());
                     Ok(Some(v))
                 }
                 Statement::Requires { predicate } | Statement::Ensures { predicate } => {
-                    let v = evaluate(program, *predicate, &env)?;
+                    let v = evaluate(program, *predicate, &env, &current, &mut meter)?;
                     if v != Value::Bool(true) {
                         return Err(failure(
                             if matches!(stmt, Statement::Requires { .. }) {
@@ -594,7 +740,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(v))
                 }
                 Statement::Next { state, value } => {
-                    let after = evaluate(program, *value, &env)?;
+                    let after = evaluate(program, *value, &env, &current, &mut meter)?;
                     let before = current.state[state].clone();
                     current.state.insert(state.clone(), after.clone());
                     env.insert(state.clone(), after.clone());
@@ -606,7 +752,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(after))
                 }
                 Statement::Emit { name, value } => {
-                    let v = evaluate(program, *value, &env)?;
+                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
                     effects.push(Effect::Emit {
                         name: name.clone(),
                         value: v.clone(),
@@ -625,7 +771,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     to,
                     amount: expr,
                 } => {
-                    let amount = amount(program, *expr, &env)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let id = validate_asset(program, asset)?.clone();
                     move_funds(&mut current, &id, from, to, amount)?;
                     effects.push(if matches!(stmt, Statement::Fee { .. }) {
@@ -652,7 +798,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     creditor,
                     amount: expr,
                 } => {
-                    let amount = amount(program, *expr, &env)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let id = validate_asset(program, asset)?.clone();
                     let found = current.liabilities.iter().position(|l| l.name == *name);
                     let before = if let Some(index) = found {
@@ -696,7 +842,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(Value::UInt(amount)))
                 }
                 Statement::Discharge { name, amount: expr } => {
-                    let amount = amount(program, *expr, &env)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let l = current
                         .liabilities
                         .iter_mut()

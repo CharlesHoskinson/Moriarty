@@ -21,6 +21,7 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         &args.keyset,
         &args.input.action,
         &i.limits,
+        i.deployment.version().map_err(core_io::ledger_operation)?,
     )
     .map_err(core_io::ledger_operation)?;
     let derived =
@@ -35,16 +36,18 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
             &i.limits,
         ))
         .map_err(core_io::ledger_operation)?;
+    let public = derived.public_deployment();
+    let deployment = super::signed_call_io::descriptor(&args.input, &i, &public)?;
     let statement = mori_ledger::signed::prepare_installed_call_signing_statement(
         &i.source,
         &i.program,
-        &i.deployment,
+        &deployment,
         &i.policy,
         &i.predecessor,
         &i.parameters,
         &i.request,
         &args.input.action,
-        &derived.public_deployment(),
+        &public,
         &i.limits,
     )
     .map_err(core_io::ledger_operation)?;

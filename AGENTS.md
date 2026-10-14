@@ -35,6 +35,20 @@ silently bypass it or start an installation/infrastructure loop.
 Actual host interception remains unverified until observed; loading the skill
 does not establish hook trust or product acceptance.
 
+## Current parallel source workflow — October 13
+
+The user selects three `gpt-6.1-sol` and three `grok-4.7` authors at high effort.
+Use [the current workflow](docs/PARALLEL-DEVELOPMENT.md) and
+[its task manifest](openspec/parallel-language-workflow.json).
+This instruction supersedes the single active source delivery restriction and older routing for this scope.
+Prepare disjoint source tasks concurrently. Give shared interfaces to one integrator.
+Require fresh non-author Sol and Grok reviews of each exact full final candidate.
+Rotate reviewer seats on changed candidates. Record requested and returned identities separately.
+Luna supplies an advisory graph, not product certification.
+Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
+Preserve native admission, resource limits, repeated-defect stops and all objective acceptance requirements.
+This workflow creates no public developer permission requirement.
+
 ## Prevent orchestration displacement
 
 Before recovery or dispatch, apply [the orchestration stop rules](docs/FOOTGUNS.md#orchestration-stop-rules).
@@ -81,9 +95,9 @@ resource and acceptance gates. Merge status is not product acceptance.
 - Preserve contract properties, intent refinement, transition validity and history
   compliance as mandatory acceptance obligations. Refunds cannot erase gross debit
   limits; fees count against net goals. Residual duties survive partial progress.
-- Use Grok 4.6 at high effort (record its returned model identity) and a fresh `gpt-6-astra` for independent
-  reviews. Preserve actual reviewer identity and scope; unavailable auditors cannot
-  approve work or trigger a silent substitution. Apply Humanizer to maintained prose.
+- Follow the current scoped review routing above. Preserve actual reviewer identity and scope.
+  Unavailable auditors cannot approve work or trigger a silent substitution.
+  Historical receipts keep their original identities. Apply Humanizer to maintained prose.
 - Old A4/A5, Candidate A, S01/S02 and K execution plans are superseded. Their recovery
   location is [docs/ARCHIVE.md](docs/ARCHIVE.md). Do not resume old loops or count their
   test results as acceptance of the current language.
@@ -94,7 +108,9 @@ resource and acceptance gates. Merge status is not product acceptance.
   formal workflow does not apply here. Check live runtime before claiming a loop
   is armed, and never falsely complete an old goal to create another.
 
-## Current implementation and review routing
+## Historical implementation and review routing
+
+The October 13 workflow above controls new parallel source work. The records below retain their earlier scopes.
 
 The [October 10 user update](raw/assignments/moriarty-sol-review-routing-2026-10-10.md)
 selects a fresh independent `gpt-6.1-sol` review at **high effort**, alongside
@@ -107,7 +123,7 @@ The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-ro
 
 ## Autonomous sprint decisions
 
-The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use the current GPT-6 and Grok 4.6 reviewer routing for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
+The [twelve-sprint AFK instruction](raw/assignments/moriarty-twelve-sprint-afk-execution-2026-09-07.md) authorizes continued execution without user questions. Use the current scoped reviewer routing for consequential design/resource choices. Two agreeing substantive votes decide; preserve dissent and actual identities. Missing or failed providers do not vote. This user-selected majority rule supersedes Council skill unanimity for those decisions. It does not replace required tests, proofs, financial coverage or independent result audits. Record bounded resource amendments and continue independent eligible tasks when a dependency blocks.
 
 ## Research vault
 
@@ -169,4 +185,4 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
 python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
 ```
-Use the guarded CLI when host coverage is unverified. Current code routing is GPT-6 implementation with separate GPT-6 Astra and Grok 4.6 audits, per [the latest instruction](raw/assignments/moriarty-grok-review-routing-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.
+Use the guarded CLI when host coverage is unverified. Current source routing follows [parallel development](docs/PARALLEL-DEVELOPMENT.md). Earlier routing remains recorded in [the September instruction](raw/assignments/moriarty-grok-review-routing-2026-09-09.md). Installation does not establish actual hook interception or the product repair pilot.

@@ -71,10 +71,9 @@ fn decode_predecessor(
         return Err(refuse("parameters"));
     }
     let abi = layout::admit_bindings(&s.program, &d.bindings)?;
-    let frame = layout::admit_frame(
-        &s.program,
+    let frame = layout::admit_signed_frame(
+        s,
         &abi,
-        &d.bindings,
         &d.frame,
         state,
         layout::OperationPolicy::Installed { public, limits: l },
@@ -100,9 +99,10 @@ pub fn prepare_installed_call_signing_statement(
     d.validate()?;
     call_artifacts::check_json_input(d, l.max_input_bytes)?;
     call_artifacts::check_json_input(request, l.max_input_bytes.min(SIGNED_JSON_BYTES as u64))?;
-    let s = SignedStaticBindings::from_source(source, p, &d.bindings, policy)?;
+    let s = SignedStaticBindings::from_source(source, p, &d.bindings, policy, d.version()?)?;
     request.admit(&s, action)?;
     if *policy != d.signer_policy
+        || s.version != public.static_bindings.version
         || s.source != public.static_bindings.source
         || s.bindings != public.static_bindings.bindings
         || *policy != public.static_bindings.policy
@@ -110,8 +110,13 @@ pub fn prepare_installed_call_signing_statement(
     {
         return Err(refuse("derived-source-policy"));
     }
-    let artifacts =
-        crate::local_deployment::compile_all_policy(source, p, &d.bindings, l, Some(policy))?;
+    let artifacts = crate::local_deployment::compile_all_policy(
+        source,
+        p,
+        &d.bindings,
+        l,
+        Some((policy, d.version()?)),
+    )?;
     for a in &artifacts {
         public.inner.key(&a.manifest.action)?.admit(a)?;
     }
@@ -129,13 +134,14 @@ pub fn prepare_installed_call_signing_statement(
         params,
         &request.native(),
         None,
-        PROFILE,
+        s.version.profile(),
         &codec::object_hash(d)?,
         l.max_leaf_bytes,
         l.max_artifact_bytes,
         Some(&s),
         None,
     )?;
+    check_supplied_successor(&s, predecessor, &bundle, l)?;
     let package = build_package(&s, d, predecessor, parameters, request, &artifact, &bundle)?;
     call_artifacts::check_json_input(
         &package.payload,
@@ -154,6 +160,23 @@ pub fn prepare_installed_call_signing_statement(
         limits: l.clone(),
     })
 }
+fn check_supplied_successor(
+    s: &SignedStaticBindings,
+    predecessor: &[u8],
+    bundle: &PreparedBundle,
+    l: &NativeWorkLimits,
+) -> Result<()> {
+    if s.version == SignedVersion::ConsumingV2 {
+        let ledger: layout::NativeState =
+            call_artifacts::decode_bounded(predecessor, l.max_input_bytes)?;
+        let successor = call_artifacts::decode_bounded(
+            &codec::unhex(&bundle.readback.charged_successor_hex)?,
+            l.max_leaf_bytes,
+        )?;
+        nonce::check_successor_input(s, &ledger, &successor, l.max_input_bytes)?;
+    }
+    Ok(())
+}
 pub(crate) fn build_package(
     s: &SignedStaticBindings,
     d: &SignedInstalledDeployment,
@@ -168,7 +191,13 @@ pub(crate) fn build_package(
         .signed
         .as_ref()
         .ok_or(refuse("signed-relation"))?;
-    let projection = super::context::projection(s, &b.readback.execution, q, &q.action)?;
+    let projection = super::context::projection(
+        s,
+        &b.readback.execution,
+        q,
+        &q.action,
+        b.readback.authority.as_ref(),
+    )?;
     if projection
         .iter()
         .map(|v| WireDescriptor {
@@ -193,12 +222,12 @@ pub(crate) fn build_package(
     let bindings = &s.bindings;
     let payload = OwnerPayload {
         profile: PAYLOAD.into(),
-        installed_profile: PROFILE.into(),
+        installed_profile: s.version.profile().into(),
         qualification: QUALIFICATION.into(),
-        relation: RELATION.into(),
+        relation: s.version.relation().into(),
         ir_sha256: a.manifest.ir_hash.clone(),
-        storage_abi: ABI.into(),
-        signed_abi: SIGNED_ABI.into(),
+        storage_abi: s.version.storage_abi().into(),
+        signed_abi: s.version.signed_abi().into(),
         context_sha256: m.context_sha256.clone(),
         source_sha256: bindings.source_hash.clone(),
         program_sha256: bindings.program_hash.clone(),
@@ -303,22 +332,30 @@ pub fn attach_signed_installed_call(
     statement: PreparedCallSigningStatement,
     attachment: &SignedCallAttachment,
 ) -> Result<PreparedSignedInstalledCall> {
-    if attachment.profile != ATTACHMENT || attachment.payload != statement.package.payload {
-        return Err(refuse("attachment-payload"));
-    }
-    call_artifacts::check_json_input(
+    check_attachment_payload(
+        &statement.static_bindings,
+        &statement.package,
         attachment,
-        statement
-            .limits
-            .max_input_bytes
-            .min(SIGNED_JSON_BYTES as u64),
-    )?;
-    schnorr::verify_attachment(
-        &statement.static_bindings.policy.public_key_hex,
-        &attachment.signature_hex,
-        message(&statement.package.payload)?,
+        &statement.limits,
     )?;
     attach_inner(statement, attachment)
+}
+pub(crate) fn check_attachment_payload(
+    s: &SignedStaticBindings,
+    package: &CallSigningPackage,
+    attachment: &SignedCallAttachment,
+    l: &NativeWorkLimits,
+) -> Result<()> {
+    if attachment.profile != ATTACHMENT || attachment.payload != package.payload {
+        return Err(refuse("attachment-payload"));
+    }
+    call_artifacts::check_json_input(attachment, l.max_input_bytes.min(SIGNED_JSON_BYTES as u64))?;
+    schnorr::verify_attachment(
+        &s.policy.public_key_hex,
+        &attachment.signature_hex,
+        message(&package.payload)?,
+    )?;
+    Ok(())
 }
 fn attach_inner(
     statement: PreparedCallSigningStatement,
@@ -352,13 +389,14 @@ fn attach_inner(
         params,
         &q.native(),
         Some(&statement.artifact),
-        PROFILE,
+        s.version.profile(),
         &codec::object_hash(d)?,
         l.max_leaf_bytes,
         l.max_artifact_bytes,
         Some(s),
         Some(input),
     )?;
+    check_supplied_successor(s, &statement.predecessor, &bundle, l)?;
     let rebuilt = build_package(
         s,
         d,
@@ -494,10 +532,11 @@ pub struct ImportedSignedProvenCall {
 pub fn snapshot_signed_proven_call(
     path: &std::path::Path,
     l: &NativeWorkLimits,
+    version: SignedVersion,
 ) -> Result<ImportedSignedProvenCall> {
     validate_work_limits(l)?;
     Ok(ImportedSignedProvenCall {
-        inner: call_artifacts::snapshot_proven_profile(path, l, true)?,
+        inner: call_artifacts::snapshot_proven_profile(path, l, Some(version))?,
     })
 }
 impl ImportedSignedProvenCall {
@@ -517,10 +556,16 @@ pub fn export_call_signing_package(
     statement: &PreparedCallSigningStatement,
 ) -> Result<call_artifacts::ArtifactLeaves> {
     let l = &statement.limits;
-    let leaves: BTreeMap<String, Vec<u8>> = BTreeMap::from([(
-        "signing-package.json".into(),
-        call_artifacts::json_bytes(&statement.package, l.max_leaf_bytes)?,
-    )]);
+    let leaves: BTreeMap<String, Vec<u8>> = BTreeMap::from([
+        (
+            "signing-package.json".into(),
+            call_artifacts::json_bytes(&statement.package, l.max_leaf_bytes)?,
+        ),
+        (
+            "deployment.json".into(),
+            call_artifacts::deployment_json_bytes(&statement.descriptor, l)?,
+        ),
+    ]);
     let marker = call_artifacts::json_bytes(
         &serde_json::json!({"profile":PACKAGE,"qualification":QUALIFICATION,"leaves":leaves.iter().map(|(n,b)|(n.clone(),call_artifacts::leaf(b))).collect::<BTreeMap<_,_>>()}),
         l.max_leaf_bytes,

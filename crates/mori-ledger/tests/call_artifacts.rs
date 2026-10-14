@@ -253,6 +253,30 @@ fn proving_fixture_profile(signed: bool) -> (std::path::PathBuf, u64, u64) {
             profile: mori_ledger::signed::POLICY.into(), owner: "alice".into(), beneficiary: "bob".into(),
             public_key_hex: "0677506737143823730512c5525e0b30acb75906fa7d53f494ba689b78620133d4cdab997110c2f1e02bb16ebef816c9d0a6025386825581a688b9bfa326360a".into(),
         });
+        if signed {
+            let f = support::payment();
+            let statics = mori_ledger::signed::SignedStaticBindings::from_source(
+                &f.source,
+                &f.program,
+                &public.bindings,
+                public.signer_policy.as_ref().unwrap(),
+                mori_ledger::signed::SignedVersion::LegacyV1,
+            )
+            .unwrap();
+            let schema = mori_ledger::signed::compile_signed(&statics, "settle")
+                .unwrap()
+                .manifest_bytes()
+                .unwrap();
+            std::fs::write(root.join("action-000000.manifest.json"), &schema).unwrap();
+            public.leaves.insert(
+                "action-000000.manifest.json".into(),
+                Leaf {
+                    bytes: schema.len() as u64,
+                    sha256: codec::hash(&schema),
+                },
+            );
+            public.actions[0].manifest_hash = codec::hash(&schema);
+        }
         public.identity = public_identity(&public).unwrap();
     }
     let proving = ProvingKeysetManifest {
@@ -292,7 +316,12 @@ fn snapshot_profile(
     signed: bool,
 ) -> mori_ledger::Result<mori_ledger::call_artifacts::ImportedProvingKeyset> {
     if signed {
-        mori_ledger::signed::snapshot_signed_proving_keyset(root, "settle", bounds)
+        mori_ledger::signed::snapshot_signed_proving_keyset(
+            root,
+            "settle",
+            bounds,
+            mori_ledger::signed::SignedVersion::LegacyV1,
+        )
     } else {
         snapshot_proving_keyset(root, "settle", bounds)
     }
@@ -418,7 +447,11 @@ fn v2_cold_public_reader_ignores_unacquired_optional_pk_and_proving_files() {
         let bounds = v2_bounds(public_bytes(&root), 1);
         let cold = || {
             if signed {
-                mori_ledger::signed::snapshot_signed_public_keyset(&root, &bounds)
+                mori_ledger::signed::snapshot_signed_public_keyset(
+                    &root,
+                    &bounds,
+                    mori_ledger::signed::SignedVersion::LegacyV1,
+                )
             } else {
                 snapshot_public_keyset(&root, &bounds)
             }

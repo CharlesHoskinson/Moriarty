@@ -1,0 +1,23 @@
+language "moriarty/1";
+agreement DeliveryAccounting {
+  asset Goods = { network: "local", issuer: "delivery-issuer", reference: "goods", scale: 0 };
+  asset Cash = { network: "local", issuer: "cash-issuer", reference: "cash", scale: 2 };
+  state delivered: UInt = 0;
+  state active: Bool = true;
+  action promise(quantity: UInt) {
+    requires active and quantity > 0;
+    liability("remaining-delivery", Goods, "sender", "recipient", quantity);
+  }
+  action deliver(quantity: UInt, price: UInt) {
+    requires active and quantity > 0;
+    let charge = quantity * price;
+    transfer(Goods, "sender", "recipient", quantity);
+    transfer(Cash, "sender", "recipient", charge);
+    fee(Cash, "sender", "treasury", 1);
+    discharge("remaining-delivery", quantity);
+    next delivered = delivered + quantity;
+    ensures delivered >= quantity;
+    emit "delivered"(delivered);
+  }
+  action close() { next active = false; }
+}

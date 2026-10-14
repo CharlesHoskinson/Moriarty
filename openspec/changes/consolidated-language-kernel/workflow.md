@@ -2,7 +2,8 @@
 
 This workflow governs maintainer work only. Public developer tools never read Pel, reviewer or campaign records as validity inputs.
 
-Select one missing U0–U7 acceptance predicate. Freeze a five-part task with objective, exact owned files, interfaces, constraints and verification. Include positive/hostile expected results from an independent reviewer. Bind the base and candidate bytes, semantic/target profile, requirements, existing executable paths and argv, tool versions, input hashes, output artifacts, timeout/memory/CPU/submission/debit ceilings and current cumulative charges. Missing command or target interface means specified-only or interface-blocked, not ready.
+The [October 13 parallel workflow](../../../docs/PARALLEL-DEVELOPMENT.md) and [six-task manifest](../../parallel-language-workflow.json) control current source preparation.
+Use one scoped executable predicate per disjoint source task. Preserve the full U0–U7 acceptance dependencies. Freeze a five-part task with objective, exact owned files, interfaces, constraints and verification. Include positive/hostile expected results from an independent reviewer. Bind the base and candidate bytes, semantic/target profile, requirements, existing executable paths and argv, tool versions, input hashes, output artifacts, timeout/memory/CPU/submission/debit ceilings and current cumulative charges. Missing command or target interface means specified-only or interface-blocked, not ready.
 
 Reconcile existing internal accounting before its dependent action. Use the repository development plugin for registered dispatch. Verify the actual caller path; retain failed observations. Request non-author review of the complete frozen result, preserve dissent and correct within the authorized bound. A successful local test or reviewer vote does not establish native proof or Preview financial acceptance. Do not build new orchestration infrastructure.
 

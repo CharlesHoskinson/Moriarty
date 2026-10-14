@@ -16,9 +16,11 @@ The September 19 [product contract](../../../../docs/MORIARTY-PRODUCT-CONTRACT.m
 
 1. **User Steering**: User requests, intent, or interruptions always take precedence over automatic action selection.
 2. **Product Routing**:
-   - The September 11 plugin-update request selects **GPT-6 Astra authoring**, with separate fresh **Grok 4.6 high** and **GPT-6 Astra medium** audits. This task-specific choice supersedes older defaults for this update; it does not change subsequent product routing.
-   - The September 10 general product instruction selects **Grok 4.6 authoring** with fresh **Claude Opus and GPT-6 Astra medium** reviews. Apply any later user instruction to its stated scope; stale recovered routing must not override it.
-   - Use explicit model identities (`grok-4.6`, `gpt-6-astra`, `claude-opus-5` where applicable), record requested effort and returned identity, and preserve historical verdicts. Both selected auditors review the full exact candidate independently and concurrently. Missing auditors do not approve or trigger silent substitution.
+   - The October 13 parallel source workflow selects three **GPT-6.1 Sol high** and three **Grok 4.7 high** authors.
+   - Follow [parallel development](../../../../docs/PARALLEL-DEVELOPMENT.md) and its manifest for exact owned paths and reviewer rotation.
+   - Every final candidate needs fresh non-author `gpt-6.1-sol` and `grok-4.7` audits at high effort. Review the full exact candidate.
+   - Record requested and returned identities separately. Missing auditors do not approve or trigger substitution.
+   - Existing frozen signed-call native gates retain Opus 5.5 and Muse audits. Historical verdicts retain their original scope.
    - Consequential design decisions retain majority rule (two substantive agreeing votes). Routine repairs within approved scope proceed without repeated design votes.
 3. **Guarded Dispatch**: Launch registered campaign actions through the plugin CLI `run`, which validates authority, candidate commitments, debit identity and stop rules in an atomic reservation. Routine authorized file inspection and source edits do not need a new runner, campaign or design vote.
 4. **Host Interception and Fallback**: Direct CLI execution (`cli.py run`) is the verified fallback procedure whenever host hook trust is unverified, degraded, or wrapper-only.
@@ -55,9 +57,9 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
 ```
 If an implementation attempt is blocked by repeated failures (two cycles of the same defect class), the policy enforces reproduction (`reproduce`) before any retry.
 
-Name one missing acceptance predicate and keep **one delivery implementation item in progress** through result review. Idle capacity helps with its independent expected results, fault cases or blockers. Allow one bounded native F0 feasibility decision alongside it only with independent capacity and existing resource authority; this is not a second broad proving campaign. Do not add a scheduler or orchestration framework.
+Name one scoped executable predicate per source task. Prepare the six disjoint tasks in the [current workflow](../../../../docs/PARALLEL-DEVELOPMENT.md) concurrently. One integrator owns shared interfaces and serial composition. This supersedes the single-source-item limit. Native F0 and other expensive work retain their separate admission and physical limits. Do not add a scheduler or orchestration framework.
 
-For the current financial bottleneck, target **I2/MC02 complete-effect loan/swap integration**. I2 remains uncertified until MC05 and does not require native PCD; full SP05 still depends on SP01. Reconcile existing MC02 evidence once, then change or execute the actual missing caller path. Defer new profiles, broad ACTUS/DeFi expansion, backend migrations, productization and mandatory new CI work unless the user changes scope.
+The current parallel source tasks prepare U0/U1/U2/U3/U6 through existing product consumers. Preserve the earlier **I2/MC02 complete-effect loan/swap integration** obligations. I2 remains uncertified until MC05 and does not require native PCD; full SP05 still depends on SP01. Reconcile existing MC02 evidence once, then change or execute the actual missing caller path. The current user authorizes the manifest's bounded source preparation. Full ACTUS/DeFi, new backends and release acceptance remain separate obligations.
 
 Read [execution focus](references/execution-focus.md) when selecting I2 work, preparing author/review context, investigating native feasibility or K failures, or measuring this workflow. It contains the exact financial gap checks, lifecycle failure matrix, F0 discriminator and reviewer pressure scenarios.
 
