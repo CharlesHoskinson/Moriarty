@@ -392,6 +392,37 @@ fn amount(p: &Program, id: ExprId, env: &BTreeMap<String, Value>) -> Result<UInt
         _ => Err(failure("type", "Expected UInt amount.")),
     }
 }
+// Core also supports incoming duties without a source declaration. Only names
+// declared by Liability statements have a source-fixed identity; do not impose
+// the backend's closed, sixteen-entry compiler profile on general Core input.
+fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &str)>, Error> {
+    let mut identities = BTreeMap::new();
+    for stmt in p.actions.iter().flat_map(|action| &action.statements) {
+        if let Statement::Liability {
+            name,
+            asset,
+            debtor,
+            creditor,
+            ..
+        } = stmt
+        {
+            let identity = (
+                validate_asset(p, asset)?,
+                debtor.as_str(),
+                creditor.as_str(),
+            );
+            if let Some(existing) = identities.insert(name.as_str(), identity) {
+                if existing != identity {
+                    return Err(failure(
+                        "liability",
+                        format!("Conflicting source liability identity for {name:?}."),
+                    ));
+                }
+            }
+        }
+    }
+    Ok(identities)
+}
 fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, Error> {
     if s.balances.len() > 4096 || s.liabilities.len() > 1024 {
         return Err(failure(
@@ -493,6 +524,7 @@ fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, 
         }
     }
     balances.sort_by(|a, b| (&a.asset, &a.account).cmp(&(&b.asset, &b.account)));
+    let identities = liability_identities(p)?;
     let mut liabilities = s.liabilities.clone();
     let mut names = BTreeSet::new();
     for l in &liabilities {
@@ -514,6 +546,14 @@ fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, 
                 "liability",
                 "Invalid or duplicate liability identity.",
             ));
+        }
+        if let Some(identity) = identities.get(l.name.as_str()) {
+            if *identity != (&l.asset, l.debtor.as_str(), l.creditor.as_str()) {
+                return Err(failure(
+                    "liability",
+                    format!("Existing liability identity differs for {:?}.", l.name),
+                ));
+            }
         }
     }
     liabilities.sort_by(|a, b| a.name.cmp(&b.name));

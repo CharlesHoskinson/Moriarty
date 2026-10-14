@@ -1,0 +1,115 @@
+// Local finite escrow. Inputs are supplied observations, not authenticated
+// documents, recipient identities, clock readings or recovery authority.
+// phase: 0 unfunded, 1 funded, 2 partial, 3 completed, 4 recovered.
+// PAY is in atomic payment units; price is PAY atomic units per GOODS unit.
+language "moriarty/1";
+agreement EscrowRecovery {
+  asset PAY = { network: "local", issuer: "escrow-payment", reference: "PAY", scale: 0 };
+  asset GOODS = { network: "local", issuer: "escrow-goods", reference: "GOODS", scale: 0 };
+  state phase: UInt = 0;
+  state terminal: Bool = false;
+  state quantity: UInt = 0;
+  state delivered: UInt = 0;
+  state remaining: UInt = 0;
+  state price: UInt = 0;
+  state fundedAt: UInt = 0;
+  state deadline: UInt = 0;
+  state grossPayment: UInt = 0;
+  state paid: UInt = 0;
+  state refunded: UInt = 0;
+  state feePaid: UInt = 0;
+
+  action fund(units: UInt, unitPrice: UInt, now: UInt, expires: UInt, grossCap: UInt, fundingObserved: Bool) {
+    requires phase == 0 and not terminal;
+    requires quantity == 0 and delivered == 0 and remaining == 0;
+    requires price == 0 and fundedAt == 0 and deadline == 0;
+    requires grossPayment == 0 and paid == 0 and refunded == 0 and feePaid == 0;
+    requires fundingObserved and units > 1 and units <= 1000 and unitPrice > 0;
+    requires expires > now;
+    let principal = units * unitPrice;
+    let gross = principal + 1;
+    requires gross <= grossCap;
+    transfer(PAY, "buyer", "escrow", principal);
+    fee(PAY, "buyer", "treasury", 1);
+    transfer(GOODS, "seller", "escrow", units);
+    liability("delivery", GOODS, "seller", "buyer", units);
+    liability("refund", PAY, "escrow", "buyer", principal);
+    next phase = 1;
+    next quantity = units;
+    next remaining = units;
+    next price = unitPrice;
+    next fundedAt = now;
+    next deadline = expires;
+    next grossPayment = gross;
+    next feePaid = 1;
+    ensures delivered + remaining == quantity;
+    ensures paid + refunded + remaining * price + feePaid == grossPayment;
+    emit "funded"(remaining);
+  }
+
+  action partial(units: UInt, now: UInt, successDocument: Bool, recipient: UInt) {
+    requires (phase == 1 or phase == 2) and not terminal;
+    requires successDocument and recipient == 1 and now >= fundedAt and now <= deadline;
+    requires units > 0 and units < remaining;
+    requires quantity > 1 and price > 0 and delivered + remaining == quantity;
+    requires refunded == 0 and paid == delivered * price and feePaid == 1;
+    requires paid + remaining * price + feePaid == grossPayment;
+    let payment = units * price;
+    transfer(GOODS, "escrow", "buyer", units);
+    transfer(PAY, "escrow", "seller", payment);
+    discharge("delivery", units);
+    discharge("refund", payment);
+    next delivered = delivered + units;
+    next remaining = remaining - units;
+    next paid = paid + payment;
+    next phase = 2;
+    ensures remaining > 0 and delivered + remaining == quantity;
+    ensures paid + remaining * price + feePaid == grossPayment;
+    emit "remaining_delivery"(remaining);
+  }
+
+  action complete(now: UInt, successDocument: Bool, recipient: UInt) {
+    requires (phase == 1 or phase == 2) and not terminal;
+    requires successDocument and recipient == 1 and now >= fundedAt and now <= deadline;
+    requires remaining > 0 and quantity > 1 and price > 0;
+    requires delivered + remaining == quantity and refunded == 0;
+    requires paid == delivered * price and feePaid == 1;
+    requires paid + remaining * price + feePaid == grossPayment;
+    let units = remaining;
+    let payment = units * price;
+    transfer(GOODS, "escrow", "buyer", units);
+    transfer(PAY, "escrow", "seller", payment);
+    discharge("delivery", units);
+    discharge("refund", payment);
+    next delivered = quantity;
+    next remaining = 0;
+    next paid = paid + payment;
+    next phase = 3;
+    next terminal = true;
+    ensures delivered == quantity and remaining == 0;
+    ensures paid + feePaid == grossPayment;
+    emit "completed"(delivered);
+  }
+
+  action recover(now: UInt, unusedDocument: Bool, recipient: UInt) {
+    requires (phase == 1 or phase == 2) and not terminal;
+    requires unusedDocument and recipient == 1 and now > deadline;
+    requires remaining > 0 and quantity > 1 and price > 0;
+    requires delivered + remaining == quantity and refunded == 0;
+    requires paid == delivered * price and feePaid == 1;
+    requires paid + remaining * price + feePaid == grossPayment;
+    let refund = remaining * price;
+    // A zero discharge checks that the unfulfilled delivery duty still exists.
+    // Returning custody does not certify delivery or extinguish that duty.
+    discharge("delivery", 0);
+    transfer(PAY, "escrow", "buyer", refund);
+    transfer(GOODS, "escrow", "seller", remaining);
+    discharge("refund", refund);
+    next refunded = refund;
+    next phase = 4;
+    next terminal = true;
+    ensures delivered + remaining == quantity;
+    ensures paid + refunded + feePaid == grossPayment;
+    emit "unfulfilled_delivery"(remaining);
+  }
+}
