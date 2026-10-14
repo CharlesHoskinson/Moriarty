@@ -26,8 +26,17 @@ pub struct Args {
     #[arg(long, value_name = "FILE")]
     pub target: Option<PathBuf>,
 
+    /// Cap local statement and uncached expression attempts (other costs unmeasured)
+    #[arg(long, value_name = "CANONICAL_U128", value_parser = logical_cap, conflicts_with_all = ["profile", "target"])]
+    pub logical_cap: Option<mori_core::UInt>,
+
     #[command(flatten)]
     pub output: SigningOutputArgs,
+}
+
+fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
+    serde_json::from_value(serde_json::Value::String(value.into()))
+        .map_err(|_| "expected canonical unsigned decimal string in u128 range".into())
 }
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
@@ -49,6 +58,45 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     let scenario = super::core_io::read_json(&args.input.scenario)?;
     let authority = super::core_io::read_json(&args.authority)?;
     let signed = super::core_io::read_json(&args.signature)?;
+    if let Some(cap) = args.logical_cap {
+        return match mori_core::intent::verify_and_simulate_metered(
+            &program,
+            &mori_core::intent::hash_bytes(source.as_bytes()),
+            &args.input.action,
+            &scenario,
+            &authority,
+            &signed,
+            mori_core::UInt(args.at),
+            cap,
+        ) {
+            Ok(metered) => {
+                if args.output.review {
+                    println!(
+                        "Signature and local authority constraints verified at logical time {}.",
+                        args.at
+                    );
+                    println!(
+                        "Complete local reference effects follow; ledger acceptance requires its own verification."
+                    );
+                }
+                super::core_io::print(&serde_json::json!({
+                    "status": "accepted", "signature_valid": true,
+                    "qualification": "local-signature-and-reference-execution",
+                    "execution": metered.execution, "profile": metered.cost.profile,
+                    "logical": {"cap": metered.cost.cap, "used": metered.cost.used}
+                }))?;
+                Ok(ExitCode::SUCCESS)
+            }
+            Err(refused) => {
+                super::core_io::print(&serde_json::json!({
+                    "status": "rejected", "error": refused.error,
+                    "profile": refused.cost.profile,
+                    "logical": {"cap": refused.cost.cap, "used": refused.cost.used}
+                }))?;
+                Ok(ExitCode::FAILURE)
+            }
+        };
+    }
     match mori_core::intent::verify_and_simulate(
         &program,
         &mori_core::intent::hash_bytes(source.as_bytes()),

@@ -468,3 +468,45 @@ audit applicability. This delivery opens, regenerates and qualifies no keys,
 parameters or SRS. M1/M2/U2, native soundness, full semantic correspondence,
 64 KiB transaction/k19 qualification, funding/state/history authentication, PCD
 and financial ledger settlement remain open.
+
+
+## Metered local owner-intent verification
+
+`mori verify-intent FILE --action NAME --scenario FILE --authority FILE
+--signature FILE --at TIME --logical-cap CANONICAL_U128` applies the existing
+`moriarty-reference-logical-cost/1` meter to the Core
+`moriarty-owner-intent/2` reference consumer. The optional cap is an unsigned,
+locally trusted operational limit. It does not enter the canonical owner intent,
+its signing frame or Execution. Calls without the flag retain their existing
+output and API behavior.
+
+The consumer prepares the caller's exact intent, checks its signature and
+inclusive validity interval, executes once under the cap, then checks complete
+ordered effects and closing liabilities. Preparation and authentication refusal
+report used `0`. Runtime refusal retains attempted statement/expression work.
+A late gross, fee, net or residual-duty refusal retains all consumed work and
+returns no execution, effects or post-state. Refunds do not reduce gross debits
+or consumed work. Metered success retains `signature_valid: true` and
+`local-signature-and-reference-execution`, and adds the logical profile and
+`logical: {cap, used}`. Rejection reports the error and cost without successful
+execution. Human review reports verification only after acceptance.
+
+Caps must be canonical unsigned decimal u128 strings. Combining the cap with
+`--profile` or `--target` refuses before input file reads. This option supplies
+no native/Jubjub profile, relation-check fallback or native execution authority.
+The profile measures statement attempts and first expression evaluations in each
+statement only. Parsing, signature verification, authority checks, serialization,
+DUST, service and external costs remain outside this measurement.
+
+Fixed public BIP340 and low-S ECDSA fixtures exercise independently derived
+Counter work `16`, Payment work `4` and TwoAssetDuty work `18`, including fees,
+refunds and a closing duty of `5` after partial discharge. Test fixtures retain
+public canonical messages, public keys and signatures; tests perform reference
+verification only. Key-to-account authority, nonce consumption, authenticated
+funding/history, native proof validity, PCD and financial Preview settlement
+remain open.
+
+The additive Core/CLI source changes alter the existing native source-closure
+identity. Historical native signing contexts, IR, key identities and audit
+applicability require their own current exact-source qualification. This local
+delivery reads, regenerates and qualifies no native keys, parameters or SRS.
