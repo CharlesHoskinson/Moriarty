@@ -69,6 +69,13 @@ fn invoke(mut c: Command) -> Output {
     }
     o
 }
+fn status_text(o: &Output) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&o.stdout),
+        String::from_utf8_lossy(&o.stderr)
+    )
+}
 fn success(o: Output) -> Value {
     assert!(
         o.status.success(),
@@ -444,7 +451,7 @@ fn static_command(
             if policy.is_some() {
                 "signed-v2"
             } else {
-                "unsigned"
+                "unsigned-mapped-roles"
             },
             "--work-limits",
         ])
@@ -468,12 +475,30 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs() 
         let out = t.path("out");
         let o = invoke(static_command(source, &binding, &limits, &out, false, None));
         assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
-        assert!(String::from_utf8_lossy(&o.stdout).contains("source-static-unproven-uninstalled"));
+        assert!(
+            status_text(&o)
+                .contains("source-static-mapped-roles-unproven-uninstalled-unauthenticated")
+        );
         let marker = read(out.join("static-compile.json"));
+        assert_eq!(
+            marker["profile"],
+            "moriarty-mapped-role-source-static-bundle/1"
+        );
+        assert_eq!(
+            marker["qualification"],
+            "source-static-mapped-roles-unproven-uninstalled-unauthenticated"
+        );
+        assert_eq!(
+            marker["authorization"],
+            json!({"mode":"unsigned-mapped-roles"})
+        );
         assert_eq!(marker["actions"].as_array().unwrap().len(), count);
         let o = invoke(static_command(source, &binding, &limits, &out, true, None));
         assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
-        assert!(String::from_utf8_lossy(&o.stdout).contains("source-static-recompile-admitted"));
+        assert!(status_text(&o).contains("source-static-recompile-admitted"));
+        assert!(status_text(&o).contains(
+            "; qualification source-static-mapped-roles-unproven-uninstalled-unauthenticated"
+        ));
         assert_eq!(std::fs::read_dir(&out).unwrap().count(), 2 * count + 2);
         let names = marker["actions"]
             .as_array()
@@ -493,6 +518,50 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs() 
         let mut max_public = 0usize;
         for i in 0..count {
             let m = read(out.join(format!("action-{i:06}.manifest.json")));
+            assert_eq!(m["format"], "moriarty-mapped-role-source-static-relation/1");
+            assert_eq!(
+                m["qualification"],
+                "source-static-mapped-debits-unauthenticated"
+            );
+            assert_eq!(m["compiler_hash"], marker["build"]);
+            assert!(m.get("signed").is_none());
+            let p = program(source);
+            let action = &p.actions[i];
+            let debit_roles = action
+                .statements
+                .iter()
+                .filter_map(|s| match s {
+                    mori_core::Statement::Transfer { from, .. }
+                    | mori_core::Statement::Fee { from, .. } => Some(from.as_str()),
+                    _ => None,
+                })
+                .collect::<BTreeSet<_>>();
+            let binding_json = read(&binding);
+            let mut debit_rows = binding_json["roles"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|r| debit_roles.contains(r["role"].as_str().unwrap()))
+                .cloned()
+                .collect::<Vec<_>>();
+            debit_rows.sort_by(|a, b| a["role"].as_str().unwrap().cmp(b["role"].as_str().unwrap()));
+            assert_eq!(
+                m["debit_sources"],
+                json!(debit_rows),
+                "debit inventory {}",
+                action.name
+            );
+            assert_eq!(
+                m["open_predicates"],
+                json!([
+                    "debit-source custody and funding ownership",
+                    "role and beneficiary authorization",
+                    "authenticated predecessor and deployment",
+                    "economic intention authority",
+                    "final intent/history/PCD",
+                    "native proof and ledger settlement"
+                ])
+            );
             let groups = m["groups"].as_array().unwrap();
             max_groups = max_groups.max(groups.len());
             max_public = max_public.max(
@@ -611,6 +680,33 @@ fn public_source_static_all_actions_and_separate_process_reopen_both_programs() 
 #[test]
 fn signed_whole_program_rejects_real_mixed_payers_and_stale_inputs_publish_nothing() {
     let t = Temp::new();
+    for (source, bindings) in [
+        ("fee-pool.mori", "static-bindings.json"),
+        ("contrasting.mori", "contrasting.static-bindings.json"),
+    ] {
+        let out = t.path(source);
+        let mut c = command();
+        c.arg("compile-call")
+            .arg(example().join(source))
+            .args([
+                "--all-actions",
+                "--authorization",
+                "unsigned",
+                "--static-bindings",
+            ])
+            .arg(example().join(bindings))
+            .arg("--work-limits")
+            .arg(example().join("work-limits.json"))
+            .arg("--out")
+            .arg(&out);
+        let o = invoke(c);
+        assert!(!o.status.success());
+        assert!(
+            String::from_utf8_lossy(&o.stderr)
+                .contains("mori::ledger::source-profile: one-public-payer")
+        );
+        assert!(!out.exists());
+    }
     let mut b = read(example().join("static-bindings.json"));
     b["payer"] = json!("fee-pool");
     t.write("bindings.json", &b);

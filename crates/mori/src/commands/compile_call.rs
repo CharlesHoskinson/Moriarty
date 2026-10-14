@@ -95,10 +95,10 @@ fn validate_shape(args: &Args) -> super::Result<()> {
             ));
         }
         match (args.authorization.as_deref(), args.signer_policy.is_some()) {
-            (Some("unsigned"), false) | (Some("signed-v2"), true) => {}
+            (Some("unsigned" | "unsigned-mapped-roles"), false) | (Some("signed-v2"), true) => {}
             _ => {
                 return Err(bad(
-                    "authorization must be unsigned without --signer-policy or signed-v2 with --signer-policy; no default or downgrade",
+                    "authorization must be unsigned or unsigned-mapped-roles without --signer-policy, or signed-v2 with --signer-policy; no default or downgrade",
                 ));
             }
         }
@@ -179,7 +179,14 @@ fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
                 .ok_or_else(|| core_io::operation("authorization size"))?,
         )
     } else {
-        (StaticAuthorization::Unsigned, "unsigned".len())
+        match args.authorization.as_deref() {
+            Some("unsigned") => (StaticAuthorization::Unsigned, "unsigned".len()),
+            Some("unsigned-mapped-roles") => (
+                StaticAuthorization::UnsignedMappedRoles,
+                "unsigned-mapped-roles".len(),
+            ),
+            _ => return Err(core_io::operation("explicit static authorization required")),
+        }
     };
     static_compile::check_input_budget(
         source.len(),
@@ -205,9 +212,14 @@ fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
         shell.status(
             "Inspected",
             format!(
-                "source-static-recompile-admitted {} actions; identity {}",
+                "source-static-recompile-admitted {} actions; identity {}{}",
                 admitted.action_names().len(),
-                admitted.identity()
+                admitted.identity(),
+                if matches!(authorization, StaticAuthorization::UnsignedMappedRoles) {
+                    format!("; qualification {}", authorization.qualification())
+                } else {
+                    String::new()
+                }
             ),
         );
     } else {
@@ -223,7 +235,8 @@ fn run_static(args: &Args, shell: &mut Shell) -> super::Result<ExitCode> {
         shell.status(
             "Compiled",
             format!(
-                "source-static-unproven-uninstalled {} actions into {}; identity {}",
+                "{} {} actions into {}; identity {}",
+                authorization.qualification(),
                 bundle.action_names().len(),
                 core_io::review_identity(&out.to_string_lossy()),
                 bundle.identity()

@@ -138,6 +138,15 @@ pub fn admit_source(p: &Program, d: &Deployment) -> Result<LedgerAbi> {
     admit_bindings(p, &StaticBindings::legacy(d))
 }
 pub(crate) fn admit_bindings(p: &Program, d: &StaticBindings) -> Result<LedgerAbi> {
+    admit_bindings_inner(p, d, DebitRule::SinglePayer)
+}
+// The relaxed rule is private and can only produce the distinct source-static view.
+#[derive(Clone, Copy)]
+enum DebitRule {
+    SinglePayer,
+    MappedRoles,
+}
+fn admit_bindings_inner(p: &Program, d: &StaticBindings, debits: DebitRule) -> Result<LedgerAbi> {
     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
     if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
         return Err(identity("toolchain-or-limits"));
@@ -194,11 +203,24 @@ pub(crate) fn admit_bindings(p: &Program, d: &StaticBindings) -> Result<LedgerAb
                 | Statement::Fee {
                     asset, from, to, ..
                 } => {
-                    if from != &d.payer
-                        || !roles.contains(to)
-                        || !p.assets.iter().any(|a| &a.name == asset)
-                    {
-                        return Err(layout_error("one-public-payer"));
+                    match debits {
+                        DebitRule::SinglePayer => {
+                            if from != &d.payer
+                                || !roles.contains(to)
+                                || !p.assets.iter().any(|a| &a.name == asset)
+                            {
+                                return Err(layout_error("one-public-payer"));
+                            }
+                        }
+                        DebitRule::MappedRoles => {
+                            // Core validation and declared-asset mapping ran above.
+                            if !roles.contains(from) {
+                                return Err(layout_error("source-debit-role"));
+                            }
+                            if !roles.contains(to) {
+                                return Err(layout_error("source-recipient-role"));
+                            }
+                        }
                     }
                 }
                 Statement::Liability {
@@ -637,6 +659,56 @@ pub(crate) fn validate_static<'a>(
         return Err(Error::new("native-relation", "static-abi-identity"));
     }
     Ok(ValidatedStaticBindings {
+        program: p,
+        bindings: d,
+        abi,
+    })
+}
+
+/// Source/program/ABI identity with mapped debit roles, without native custody.
+/// No native validated view can be constructed from this capability.
+/// ```compile_fail
+/// let view = mori_ledger::layout::ValidatedSourceStaticBindings {
+///     program: todo!(), bindings: todo!(), abi: todo!(),
+/// };
+/// let _: mori_ledger::layout::ValidatedStaticBindings = view.into();
+/// ```
+pub(crate) struct ValidatedSourceStaticBindings<'a> {
+    program: &'a Program,
+    bindings: &'a StaticBindings,
+    abi: LedgerAbi,
+}
+impl ValidatedSourceStaticBindings<'_> {
+    pub(crate) fn program(&self) -> &Program {
+        self.program
+    }
+    pub(crate) fn bindings(&self) -> &StaticBindings {
+        self.bindings
+    }
+    pub(crate) fn abi(&self) -> &LedgerAbi {
+        &self.abi
+    }
+}
+pub(crate) fn validate_source_static_roles<'a>(
+    source: &str,
+    p: &'a Program,
+    d: &'a StaticBindings,
+) -> Result<ValidatedSourceStaticBindings<'a>> {
+    if source.len() > codec::INPUT_BYTES
+        || codec::hash(source.as_bytes()) != d.source_hash
+        || mori_core::parse(source).map_err(|_| Error::new("native-relation", "source-parse"))?
+            != *p
+    {
+        return Err(Error::new("native-relation", "source-identity"));
+    }
+    let abi = admit_bindings_inner(p, d, DebitRule::MappedRoles)?;
+    if abi.program_hash != d.program_hash
+        || abi.templates_hash != d.templates_hash
+        || codec::object_hash(&abi)? != d.abi_hash
+    {
+        return Err(Error::new("native-relation", "static-abi-identity"));
+    }
+    Ok(ValidatedSourceStaticBindings {
         program: p,
         bindings: d,
         abi,
