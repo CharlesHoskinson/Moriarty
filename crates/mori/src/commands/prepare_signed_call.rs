@@ -15,9 +15,12 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
     let i = args.input.read()?;
     // This reader never accesses PK/prover-cache leaves, including when the
     // producing keyset marker contains their optional descriptions.
-    let imported =
-        mori_ledger::signed::snapshot_signed_public_keyset(&args.public_keyset, &i.limits)
-            .map_err(core_io::ledger_operation)?;
+    let imported = mori_ledger::signed::snapshot_signed_public_keyset(
+        &args.public_keyset,
+        &i.limits,
+        i.deployment.version().map_err(core_io::ledger_operation)?,
+    )
+    .map_err(core_io::ledger_operation)?;
     let public = futures::executor::block_on(
         mori_ledger::signed::rederive_signed_local_public_deployment(
             &i.source,
@@ -30,10 +33,11 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         ),
     )
     .map_err(core_io::ledger_operation)?;
+    let deployment = super::signed_call_io::descriptor(&args.input, &i, &public)?;
     let statement = mori_ledger::signed::prepare_installed_call_signing_statement(
         &i.source,
         &i.program,
-        &i.deployment,
+        &deployment,
         &i.policy,
         &i.predecessor,
         &i.parameters,

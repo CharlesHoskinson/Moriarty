@@ -202,7 +202,8 @@ It refuses omitted, extra, duplicate or reordered limits. UInt values are
 canonical decimal strings. The source-wide admitted bound is 16 assets and 16
 registry duties, with the owner the sole source payer and registry debtor.
 
-Preparation returns only `signing-package.json` and a completion marker. It
+Preparation returns `signing-package.json`, the exact reconstructed
+`deployment.json`, and a completion marker. The signing package
 contains canonical context, payload, semantic wires, message and the dedicated
 signature-free readback. An external signer independently reviews/reconstructs
 those values and returns `{profile, payload, signature_hex}` with profile
@@ -212,9 +213,59 @@ packages are never proof owners. Context is compiled before IR; payload is
 reconstructed after unsigned native evaluation; signature, communications and
 proof are later values, so there is no self-hash cycle.
 
-The storage ABI remains `moriarty-ledger-public-abi/1` and keeps its original
-name/role/asset/duty recipes. The new combined ABI is separately labeled
-`moriarty-ledger-signed-abi/1`. Typed arguments are original N source arguments,
+New signed installations require seed profile
+`moriarty-ledger-signed-call-seed/2`, static ABI
+`moriarty-ledger-public-abi/1`, qualification `local-unproven`, and
+`guaranteed-only`. Every declared action must be present and keyless. The signed
+storage root is exactly `[states, duties, extensions, authorization]`; the
+original three maps keep their recipes. Authorization initially contains only
+the immutable domain sentinel. Its domain binds source, program, language,
+semantics, network, anchor and fixed signer policy. The deployment address is
+excluded from this stored domain because deployment hashes initial data; it
+remains bound by the compiled context, IR and signing payload.
+
+Installed consuming descriptors use `moriarty-ledger-installed-signed-local/2`,
+storage ABI `moriarty-ledger-signed-public-abi/2`, signed ABI
+`moriarty-ledger-signed-abi/2` and relation
+`moriarty-native-call-signed-relation/2`. `StaticBindings.abi` and the published
+state/duty schema remain `moriarty-ledger-public-abi/1`. A complete explicit
+profile/storage/signed-ABI pair selects the mode; mixed fields refuse. Unsigned
+and legacy signed version1 roots remain three maps. Request, package, payload,
+attachment and keyset outer profiles remain `/1`; embedded identities and
+independent source reconstruction distinguish the signed versions. Current keygen
+has no legacy mint path. Legacy regression/parsing paths are non-consuming;
+changed compiler/build identities require corresponding current artifacts, and
+operational availability of historical keys is not claimed.
+
+Consuming calls accept any unused UInt128 nonce, including 7 before 0. The native
+transcript checks the domain, prior total map size and absent nonce, inserts
+exactly `nonce -> true`, and checks the successor size/membership. The same four
+authority observations enter the shared signing/constraint wires. All prior
+markers, extensions and the full admitted frame are preserved. Authorization
+has at most 12,153 total entries including the sentinel, hence 12,152 consumed
+nonces. There is no eviction or reset; exhaustion refuses. This is a finite
+state cap, not a universal serialization maximum. Both actual charged
+successor and complete prospective supplied snapshot must fit the current
+input budget, at most 1MiB; other state/key overhead may bind earlier. Existing
+actual gas, phase, leaf and aggregate limits still apply. Payload, request and
+attachment JSON are capped at 64KiB; the full package uses the caller's leaf cap,
+up to 16MiB.
+
+For a repeated call, explicitly add `--derive-supplied-frame` to each
+`prepare-signed-call`, `prove-signed-call`, and `verify-signed-call` reconstruction.
+It is false by default and available only for consuming version2. After the complete
+original-source
+public keymap is reconstructed, the constructor updates only predecessor and
+native-state commitments for the independently supplied snapshot. It preserves
+static bindings, keyset, policy, full operation map, maintenance, balance,
+parameters and gas commitments, and runs full frame admission. Preparation
+exports the exact derived descriptor; producer and cold verifier independently
+derive and bind that same descriptor. Strict mode retains exact predecessor
+pins. A queried successor here is a supplied contract-data snapshot, not a
+financially applied ledger; the option establishes neither freshness, ancestry,
+authenticated current head nor acceptance/history consumption.
+
+Typed arguments are original N source arguments,
 PK and R typed points, native s, eight UInt128 fields and four caps per asset:
 `N+11+4A` arguments, `N+13+4A` flattened fields. The signed manifest publishes
 both counts and descriptors instead of an ambiguous `input_count`. The actual
@@ -258,6 +309,6 @@ source-closure changes invalidate their reuse for this signed compilation.
 Fresh exact-source/result audits and separate native admission remain required.
 The result scope is
 `local-signed-call-proof-fixed-jubjub-policy-supplied-state-unqualified`.
-Authenticated head/deployment/account identity, replay consumption, rotation,
+Authenticated head/deployment/account identity, accepted-history replay consumption, rotation,
 trusted time, funding, settlement, recursive history and full U0–U7/M1–M17 remain
 open.
