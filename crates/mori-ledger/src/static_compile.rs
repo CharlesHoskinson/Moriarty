@@ -17,6 +17,9 @@ use std::{
 
 pub const PROFILE: &str = "moriarty-native-call-static-bundle/1";
 pub const QUALIFICATION: &str = "source-static-unproven-uninstalled";
+pub const MAPPED_ROLE_PROFILE: &str = "moriarty-mapped-role-source-static-bundle/1";
+pub const MAPPED_ROLE_QUALIFICATION: &str =
+    "source-static-mapped-roles-unproven-uninstalled-unauthenticated";
 pub const MARKER: &str = "static-compile.json";
 fn refuse(code: &'static str) -> Error {
     Error::new("static-compile", code)
@@ -46,6 +49,8 @@ pub fn parse_static_bindings(text: &str) -> Result<StaticBindings> {
 pub enum StaticAuthorization {
     #[serde(rename = "unsigned")]
     Unsigned,
+    #[serde(rename = "unsigned-mapped-roles")]
+    UnsignedMappedRoles,
     #[serde(rename = "signed-v2")]
     SignedV2 { signer_policy: FixedSignerPolicy },
 }
@@ -61,15 +66,42 @@ impl<'de> Deserialize<'de> for StaticAuthorization {
         }
         match object.get("mode").and_then(|m| m.as_str()) {
             Some("unsigned") if object.len() == 1 => Ok(Self::Unsigned),
+            Some("unsigned-mapped-roles") if object.len() == 1 => Ok(Self::UnsignedMappedRoles),
             Some("signed-v2") if object.len() == 2 && object.contains_key("signer_policy") => {
                 let signer_policy = serde_json::from_value(object["signer_policy"].clone())
                     .map_err(D::Error::custom)?;
                 Ok(Self::SignedV2 { signer_policy })
             }
             _ => Err(D::Error::custom(
-                "explicit unsigned or consuming signed-v2 authorization",
+                "explicit unsigned, unsigned-mapped-roles or consuming signed-v2 authorization",
             )),
         }
+    }
+}
+impl StaticAuthorization {
+    /// Qualification describes only the caller-selected static export mode.
+    pub fn qualification(&self) -> &'static str {
+        match self {
+            Self::UnsignedMappedRoles => MAPPED_ROLE_QUALIFICATION,
+            Self::Unsigned | Self::SignedV2 { .. } => QUALIFICATION,
+        }
+    }
+    fn profile(&self) -> &'static str {
+        match self {
+            Self::UnsignedMappedRoles => MAPPED_ROLE_PROFILE,
+            Self::Unsigned | Self::SignedV2 { .. } => PROFILE,
+        }
+    }
+    fn validate_source(&self, source: &str, p: &Program, bindings: &StaticBindings) -> Result<()> {
+        match self {
+            Self::UnsignedMappedRoles => {
+                crate::layout::validate_source_static_roles(source, p, bindings)?;
+            }
+            Self::Unsigned | Self::SignedV2 { .. } => {
+                crate::layout::validate_static(source, p, bindings)?;
+            }
+        }
+        Ok(())
     }
 }
 pub fn parse_authorization(text: &str) -> Result<StaticAuthorization> {
@@ -215,6 +247,30 @@ fn digest(text: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
+/// Static export has no conversion into native relation, seed or proving capabilities.
+/// Its public type cannot be fabricated from caller-controlled output bytes.
+/// ```compile_fail,E0451
+/// fn fabricate(output: mori_ledger::call_artifacts::ArtifactLeaves) {
+///     let _ = mori_ledger::static_compile::StaticBundle {
+///         output, marker: todo!(), total: 0,
+///     };
+/// }
+/// ```
+/// ```compile_fail
+/// fn promote(bundle: mori_ledger::static_compile::StaticBundle) {
+///     let _: mori_ledger::relation::Artifact = bundle.into();
+/// }
+/// ```
+/// ```compile_fail
+/// fn promote(bundle: mori_ledger::static_compile::StaticBundle) {
+///     let _: mori_ledger::local_deployment::AdmittedSeed = bundle.into();
+/// }
+/// ```
+/// ```compile_fail
+/// fn promote(bundle: mori_ledger::static_compile::StaticBundle) {
+///     let _: mori_ledger::local_deployment::DerivedLocalDeployment = bundle.into();
+/// }
+/// ```
 pub struct StaticBundle {
     output: ArtifactLeaves,
     marker: Marker,
@@ -256,6 +312,54 @@ impl AdmittedStaticBundle {
         self.bundle.leaves()
     }
 }
+// Serialized data only; this is not a native relation capability.
+struct ActionBytes {
+    name: String,
+    compiler_hash: String,
+    ir: Vec<u8>,
+    manifest: Vec<u8>,
+}
+fn compile_mapped_roles(
+    source: &str,
+    p: &Program,
+    bindings: &StaticBindings,
+    limits: &NativeWorkLimits,
+) -> Result<Vec<ActionBytes>> {
+    let validated = crate::layout::validate_source_static_roles(source, p, bindings)?;
+    let mut seen = BTreeSet::new();
+    let mut artifacts = Vec::new();
+    let mut total = 0;
+    for action in &p.actions {
+        if action.name.is_empty() || !seen.insert(&action.name) {
+            return Err(refuse("action-set"));
+        }
+        let artifact = crate::relation::compile_source_static_roles(&validated, &action.name)?;
+        let m = artifact.manifest();
+        let public_inputs = m.groups.iter().try_fold(2usize, |n, g| {
+            n.checked_add(g.field_count)
+                .ok_or(refuse("public-input-work-limit"))
+        })?;
+        if m.groups.len() > NativeWorkLimits::cap(limits.max_operations)?
+            || public_inputs > NativeWorkLimits::cap(limits.max_public_inputs)?
+        {
+            return Err(refuse("relation-work-limit"));
+        }
+        let ir = artifact.ir_bytes()?;
+        let manifest = artifact.manifest_bytes()?;
+        if ir.len() > leaf_cap(limits)? || manifest.len() > leaf_cap(limits)? {
+            return Err(refuse("relation-leaf-limit"));
+        }
+        total = add(total, ir.len(), aggregate_cap(limits)?)?;
+        total = add(total, manifest.len(), aggregate_cap(limits)?)?;
+        artifacts.push(ActionBytes {
+            name: m.action.clone(),
+            compiler_hash: m.compiler_hash.clone(),
+            ir,
+            manifest,
+        });
+    }
+    Ok(artifacts)
+}
 pub fn compile(
     source: &str,
     program: &Program,
@@ -270,29 +374,45 @@ pub fn compile(
         return Err(refuse("action-work-limit"));
     }
     mori_core::validate(program).map_err(|_| refuse("core-validation"))?;
-    let policy = match authorization {
-        StaticAuthorization::Unsigned => None,
-        StaticAuthorization::SignedV2 { signer_policy } => {
-            Some((signer_policy, SignedVersion::ConsumingV2))
+    let artifacts = match authorization {
+        StaticAuthorization::UnsignedMappedRoles => {
+            compile_mapped_roles(source, program, bindings, limits)?
+        }
+        StaticAuthorization::Unsigned | StaticAuthorization::SignedV2 { .. } => {
+            let policy = match authorization {
+                StaticAuthorization::SignedV2 { signer_policy } => {
+                    Some((signer_policy, SignedVersion::ConsumingV2))
+                }
+                _ => None,
+            };
+            crate::local_deployment::compile_all_policy(source, program, bindings, limits, policy)?
+                .into_iter()
+                .map(|a| {
+                    Ok(ActionBytes {
+                        ir: a.ir_bytes()?,
+                        manifest: a.manifest_bytes()?,
+                        name: a.manifest.action,
+                        compiler_hash: a.manifest.compiler_hash,
+                    })
+                })
+                .collect::<Result<Vec<_>>>()?
         }
     };
-    let artifacts =
-        crate::local_deployment::compile_all_policy(source, program, bindings, limits, policy)?;
     let mut leaves = BTreeMap::from([("source.mori".into(), source.as_bytes().to_vec())]);
     let mut rows = Vec::new();
     for (i, artifact) in artifacts.into_iter().enumerate() {
-        let ir = artifact.ir_bytes()?;
-        let manifest = artifact.manifest_bytes()?;
+        let ir = artifact.ir;
+        let manifest = artifact.manifest;
         let ir_leaf = ordinal(i, "ir.bin");
         let manifest_leaf = ordinal(i, "manifest.json");
         rows.push(ActionRow {
-            name: artifact.manifest.action,
+            name: artifact.name,
             ordinal: i,
             ir_leaf: ir_leaf.clone(),
             manifest_leaf: manifest_leaf.clone(),
             ir_hash: codec::hash(&ir),
             manifest_hash: codec::hash(&manifest),
-            compiler_hash: artifact.manifest.compiler_hash,
+            compiler_hash: artifact.compiler_hash,
         });
         leaves.insert(ir_leaf, ir);
         leaves.insert(manifest_leaf, manifest);
@@ -302,8 +422,8 @@ pub fn compile(
         .map(|(n, b)| Ok((n.clone(), leaf(b)?)))
         .collect::<Result<BTreeMap<_, _>>>()?;
     let mut marker = Marker {
-        profile: PROFILE.into(),
-        qualification: QUALIFICATION.into(),
+        profile: authorization.profile().into(),
+        qualification: authorization.qualification().into(),
         authorization: authorization.clone(),
         bindings: bindings.clone(),
         source_hash: bindings.source_hash.clone(),
@@ -384,7 +504,7 @@ pub fn reopen(
 ) -> Result<AdmittedStaticBundle> {
     // Validate independent trusted inputs before any imported provenance or leaf reads.
     check_input_budget(source.len(), bindings, authorization, limits, 0, 0, 0)?;
-    crate::layout::validate_static(source, program, bindings)?;
+    authorization.validate_source(source, program, bindings)?;
     let directory_metadata =
         std::fs::symlink_metadata(directory).map_err(|_| refuse("directory-metadata"))?;
     if !directory_metadata.is_dir() || directory_metadata.file_type().is_symlink() {
@@ -396,8 +516,8 @@ pub fn reopen(
     )?;
     let marker: Marker =
         strict(std::str::from_utf8(&marker_bytes).map_err(|_| refuse("marker-utf8"))?)?;
-    if marker.profile != PROFILE
-        || marker.qualification != QUALIFICATION
+    if marker.profile != authorization.profile()
+        || marker.qualification != authorization.qualification()
         || marker.bindings != *bindings
         || marker.authorization != *authorization
         || marker.source_hash != bindings.source_hash
@@ -509,6 +629,27 @@ pub fn reopen(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_all_action_policy_refuses_mapped_debits_before_emission() {
+        let source = include_str!("../../../examples/core/fee-pool/fee-pool.mori");
+        let program = mori_core::parse(source).unwrap();
+        let bindings = parse_static_bindings(include_str!(
+            "../../../examples/core/fee-pool/static-bindings.json"
+        ))
+        .unwrap();
+        let limits = parse_work_limits(include_str!(
+            "../../../examples/core/fee-pool/work-limits.json"
+        ))
+        .unwrap();
+        let error =
+            crate::local_deployment::compile_all_policy(source, &program, &bindings, &limits, None)
+                .err()
+                .unwrap();
+        assert_eq!(
+            (error.layer, error.code),
+            ("source-profile", "one-public-payer")
+        );
+    }
     #[test]
     fn checked_aggregate_refuses_overflow() {
         assert!(add(usize::MAX, 1, usize::MAX).is_err());
