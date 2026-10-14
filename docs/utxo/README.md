@@ -10,6 +10,7 @@ This branch contains the UTXO research, requirements, experiments, and implement
 - [Current source manifest](publication/source-manifest.json)
 - [Source adoption receipt](publication/source-adoption.json)
 - [UNIT fixture provenance](publication/UNIT-FIXTURE-PROVENANCE.json)
+- [First Cardano sprint: OpenSpec/EARS and approved expected outcomes](../../openspec/changes/cardano-first-contract/proposal.md)
 - [Current implementation results and remaining gaps](../../evidence/utxo/current-implementation-417/REPORT.md)
 - [Research publication and source inventory](../../research/utxo/PUBLICATION.md)
 - [Five experiment designs](../../evidence/utxo/designs/README.md)
