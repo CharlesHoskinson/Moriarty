@@ -20,6 +20,15 @@ now compile through `keygen-call`, `prove-call` and PK-free cold `verify-call`.
 Their native execution remains unrun; source/API delivery does not close those
 proof or settlement gates.
 
+## Mid-roadmap audit review
+
+The [October 14 review and audit plan](docs/audits/2026-10-14/README.md)
+separates delivered local/static language capabilities from the unchanged full
+roadmap exits. It includes the repository graph, ten independent proposals,
+and an Opus-owned source security review. This is audit discovery and planning;
+the complete end-to-end runtime audit remains open. Rust Core and the separate
+Node beta/Source-6 preparation surface retain their own profile qualifications.
+
 ## Authoring beta
 
 The [beta documentation](https://charleshoskinson.github.io/Moriarty/documentation.html) is organized by
