@@ -10,6 +10,10 @@ This branch contains the UTXO research, requirements, experiments, and implement
 - [Current source manifest](publication/source-manifest.json)
 - [Source adoption receipt](publication/source-adoption.json)
 - [UNIT fixture provenance](publication/UNIT-FIXTURE-PROVENANCE.json)
+- [Current implementation results and remaining gaps](../../evidence/utxo/current-implementation-417/REPORT.md)
+- [Research publication and source inventory](../../research/utxo/PUBLICATION.md)
+- [Five experiment designs](../../evidence/utxo/designs/README.md)
+- [Muse Wonder model documentation](../../evidence/utxo/model-docs/USAGE.md)
 
 ## Acceptance status
 
@@ -25,7 +29,9 @@ The requirements cover twenty public pattern families. All families remain in th
 
 ## Publication contents
 
-The research and historical evidence archive is being added in a separate commit. Its manifest will preserve original paths and content hashes.
+Readable research indexes, public reviews, experiment designs, and model documentation are published with per-file hashes in [the readable publication manifest](../../evidence/utxo/READABLE-PUBLICATION.json).
+
+The full research and historical evidence archive is being filtered and verified for a separate commit. Its manifest will preserve original paths and content hashes.
 
 Private keys, credentials, private model reasoning, dependency caches, and downloaded runtime binaries do not belong in the publication. Original evidence remains on the local host.
 
