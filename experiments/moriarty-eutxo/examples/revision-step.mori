@@ -1,0 +1,38 @@
+agreement RevisionHead profile "moriarty-bounded-atomic/1" {
+  lifetime 8;
+  horizon 2000000000;
+  unit Cash;
+  const payer: Text = text("payer");
+  const payee: Text = text("payee");
+  state count: UInt128 = uint(0);
+  observation now: UInt128;
+  settlement cash_binding asset text("CASH") quantum amount(1, Cash);
+  status episode closed_when count == uint(7);
+  status agreement no_remaining_notional;
+  policy step_amount targets effect(step, 0, amount) {
+    unit Cash;
+    derivation "exact argument transfer";
+    rounding none;
+    remainder "none";
+    comparison "exact integer amount";
+    proof "revision_head_transfer_v1";
+  }
+  effect Transfer {
+    asset: Text;
+    from: Text;
+    to: Text;
+    amount: Amount;
+  }
+  action step(actor: Text, payout: Amount<Cash>) {
+    guard obs.now < uint(2000000000), "horizon expired";
+    guard arg.actor == const.payer, "payer authority required";
+    guard arg.payout > amount(0, Cash), "payout must be positive";
+    guard remaining > uint(1), "lifetime exhausted";
+    guard remaining > uint(0) or floor_div(uint(1), uint(0)) > uint(0), "or short-circuit";
+    guard not (uint(0) > remaining and floor_div(uint(1), uint(0)) > uint(0)), "and short-circuit";
+    let exact = floor_div(arg.payout, uint(1));
+    guard exact == arg.payout, "identity quotient";
+    set count = state.count + uint(1);
+    emit Transfer { asset: text("CASH"), from: const.payer, to: const.payee, amount: arg.payout };
+  }
+}
