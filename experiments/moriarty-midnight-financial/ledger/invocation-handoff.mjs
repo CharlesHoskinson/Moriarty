@@ -53,29 +53,41 @@ export function canonicalizeInvocationPayload(payload){validatePayload(payload);
 // this model chooses payloadSha256 wherever the digest accompanies the payload.
 export function invocationPayloadSha256(payload){return hash(canonicalizeInvocationPayload(payload));}
 
-function validateServerOptions(options){exact(options,['server','timeoutMs','expectedNonce','expectedAuthoritySha256','expectedBootId','expectedUid','invocationPayloadSha256','ancestry','readBootId','getPeerUid','getPeerPid','confirmCurrentState','buildResponse','recordDenialEvent'],'HANDOFF_SERVER_FIELDS');check(options.server&&options.server.listening===true&&typeof options.server.on==='function','HANDOFF_SERVER_FIELDS');check(positiveInteger(options.timeoutMs)&&Buffer.isBuffer(options.expectedNonce)&&options.expectedNonce.length===HANDOFF_NONCE_BYTES&&digest(options.expectedAuthoritySha256)&&uuid(options.expectedBootId)&&nonnegativeInteger(options.expectedUid)&&digest(options.invocationPayloadSha256),'HANDOFF_SERVER_FIELDS');exact(options.ancestry,['launcherPid','launcherStartTicks','readProcStat','maxDepth'],'HANDOFF_SERVER_FIELDS');check(positiveInteger(options.ancestry.launcherPid)&&nonnegativeBigInt(options.ancestry.launcherStartTicks)&&typeof options.ancestry.readProcStat==='function'&&positiveInteger(options.ancestry.maxDepth),'HANDOFF_SERVER_FIELDS');for(const key of ['readBootId','getPeerUid','getPeerPid','confirmCurrentState','buildResponse','recordDenialEvent'])check(typeof options[key]==='function','HANDOFF_SERVER_FIELDS');}
+const SERVER_FIELDS=['server','timeoutMs','expectedNonce','expectedAuthoritySha256','expectedBootId','expectedUid','invocationPayloadSha256','ancestry','readBootId','getPeerUid','getPeerPid','confirmCurrentState','buildResponse','recordDenialEvent'];
+function validateServerOptions(options){const actual=fields(options,'HANDOFF_SERVER_FIELDS');check(SERVER_FIELDS.every(key=>actual.includes(key))&&actual.every(key=>SERVER_FIELDS.includes(key)||key==='signal'||key==='persistence'),'HANDOFF_SERVER_FIELDS');if(options.persistence!==undefined){exact(options.persistence,['begin','settle'],'HANDOFF_SERVER_PERSISTENCE');check(typeof options.persistence.begin==='function'&&typeof options.persistence.settle==='function','HANDOFF_SERVER_PERSISTENCE');}if(options.signal!==undefined)check(options.signal!==null&&typeof options.signal==='object'&&typeof options.signal.aborted==='boolean'&&typeof options.signal.addEventListener==='function'&&typeof options.signal.removeEventListener==='function','HANDOFF_SERVER_SIGNAL');check(options.server&&options.server.listening===true&&typeof options.server.on==='function','HANDOFF_SERVER_FIELDS');check(positiveInteger(options.timeoutMs)&&Buffer.isBuffer(options.expectedNonce)&&options.expectedNonce.length===HANDOFF_NONCE_BYTES&&digest(options.expectedAuthoritySha256)&&uuid(options.expectedBootId)&&nonnegativeInteger(options.expectedUid)&&digest(options.invocationPayloadSha256),'HANDOFF_SERVER_FIELDS');exact(options.ancestry,['launcherPid','launcherStartTicks','readProcStat','maxDepth'],'HANDOFF_SERVER_FIELDS');check(positiveInteger(options.ancestry.launcherPid)&&nonnegativeBigInt(options.ancestry.launcherStartTicks)&&typeof options.ancestry.readProcStat==='function'&&positiveInteger(options.ancestry.maxDepth),'HANDOFF_SERVER_FIELDS');for(const key of ['readBootId','getPeerUid','getPeerPid','confirmCurrentState','buildResponse','recordDenialEvent'])check(typeof options[key]==='function','HANDOFF_SERVER_FIELDS');}
 const denial=code=>Object.freeze({status:'HANDSHAKE_DENIED',code});
 const denialEvent=(invocationPayloadSha256,code)=>Object.freeze({schema:HANDOFF_DENIAL_EVENT_SCHEMA,invocationPayloadSha256,code});
 const jsonLine=value=>JSON.stringify(value,(_key,item)=>typeof item==='bigint'?String(item):item)+'\n';
 function writeSocketSafely(socket,line,done=()=>{}){socket.on('error',()=>{});const finish=()=>{try{done();}catch{}};try{socket.write(line,finish);}catch{finish();}}
-function denySocket(socket,code){if(socket&&!socket.destroyed)writeSocketSafely(socket,jsonLine({denied:code}),()=>{socket.end();const graceTimer=setTimeout(()=>{if(!socket.destroyed)socket.destroy();},HANDOFF_DENIAL_CLOSE_GRACE_MS);socket.once('close',()=>clearTimeout(graceTimer));});}
+function denySocket(socket,code,done=()=>{}){if(!socket||socket.destroyed){done();return;}writeSocketSafely(socket,jsonLine({denied:code}),()=>{socket.end();const graceTimer=setTimeout(()=>{if(!socket.destroyed)socket.destroy();},HANDOFF_DENIAL_CLOSE_GRACE_MS);socket.once('close',()=>clearTimeout(graceTimer));done();});}
 /** One-line JSON carries nonce/authority to the parent and payload/digest back.
  * recordDenialEvent must complete its durable append before resolving; rejection
  * fails closed without sending denial bytes. BigInt payload fields become decimal
  * JSON strings because JSON has no BigInt.
  * Call this only after the durable invocation event append has already succeeded;
  * a failed append must mean this function is never called, yielding no handshake.
+ * An optional AbortSignal disposes the protocol: it settles the guard, clears the
+ * setup and replay timers, detaches the connection listener, destroys the active
+ * socket and starts no new denial record or response. A record already in flight
+ * is left outstanding; it is never awaited or reported as complete.
+ * Optional persistence bookkeeping {begin, settle} is called around every denial
+ * record plus its denial write and around the response write, so a caller can
+ * report protocol work still outstanding at its own return. Nothing here claims
+ * an outstanding write was cancelled or completed.
  */
 export async function runHandoffServer(options){
  validateServerOptions(options);
  return new Promise((resolveResult,rejectResult)=>{
-  let settled=false,consumed=false,active=null;
-  const recordAndDeny=async(socket,code)=>{await options.recordDenialEvent(denialEvent(options.invocationPayloadSha256,code));if(socket)denySocket(socket,code);};
+  let settled=false,consumed=false,active=null,aborted=false;const replayTimers=new Set(),replaySockets=new Set();
+  const begin=()=>{options.persistence?.begin();},settle=()=>{options.persistence?.settle();};
+  const recordAndDeny=async(socket,code)=>{if(aborted){if(socket&&!socket.destroyed)socket.destroy();return;}begin();try{await options.recordDenialEvent(denialEvent(options.invocationPayloadSha256,code));}catch(error){settle();throw error;}if(aborted){settle();return;}denySocket(socket,code,settle);};
+  const detach=()=>{options.server.off('connection',connection);for(const replayTimer of replayTimers)clearTimeout(replayTimer);replayTimers.clear();options.signal?.removeEventListener('abort',abort);};
+  const abort=()=>{if(aborted)return;aborted=true;const wasSettled=settled;settled=true;clearTimeout(timer);detach();const socket=active;active=null;if(socket&&!socket.destroyed)socket.destroy();for(const replaySocket of replaySockets)if(!replaySocket.destroyed)replaySocket.destroy();replaySockets.clear();if(!wasSettled)resolveResult(Object.freeze({status:'HANDSHAKE_ABORTED',code:'HANDOFF_ABORTED'}));};
   const finish=(value,socket=null)=>{if(settled)return;settled=true;clearTimeout(timer);if(value.status==='HANDSHAKE_DENIED'){options.server.off('connection',connection);void recordAndDeny(socket,value.code).then(()=>resolveResult(value),error=>{socket?.destroy();rejectResult(error);});return;}resolveResult(value);};
   const timer=setTimeout(()=>{const socket=active;finish(denial('HANDOFF_SETUP_TIMEOUT'));socket?.destroy();},options.timeoutMs);
-  const refuseReplay=socket=>{let observed=false;const replay=()=>{if(observed)return;observed=true;clearTimeout(replayTimer);socket.removeListener('data',replay);socket.removeListener('end',replay);socket.removeListener('close',replay);void recordAndDeny(socket,'HANDOFF_REPLAY_DENIED').catch(()=>socket.destroy());};const replayTimer=setTimeout(replay,options.timeoutMs);socket.once('data',replay);socket.once('end',replay);socket.once('close',replay);};
+  const refuseReplay=socket=>{let observed=false;const replay=()=>{if(observed||aborted)return;observed=true;clearTimeout(replayTimer);replayTimers.delete(replayTimer);socket.removeListener('data',replay);socket.removeListener('end',replay);socket.removeListener('close',replay);void recordAndDeny(socket,'HANDOFF_REPLAY_DENIED').catch(()=>socket.destroy());};const replayTimer=setTimeout(replay,options.timeoutMs);replayTimers.add(replayTimer);replaySockets.add(socket);socket.once('close',()=>replaySockets.delete(socket));socket.once('data',replay);socket.once('end',replay);socket.once('close',replay);};
   const connection=socket=>{
-   if(consumed||active){refuseReplay(socket);return;}active=socket;let input='',lineReceived=false;
+   if(aborted){if(!socket.destroyed)socket.destroy();return;}if(consumed||active){refuseReplay(socket);return;}active=socket;let input='',lineReceived=false;
    const eof=()=>{if(!settled&&!input.includes('\n'))finish(denial(classifyEofBeforeSetup().code));};socket.once('end',eof);socket.once('close',eof);
    socket.on('data',chunk=>{
     if(settled||lineReceived)return;input+=chunk.toString('utf8');if(input.length>65536){finish(denial('HANDOFF_HANDSHAKE_MALFORMED'),socket);return;}const newline=input.indexOf('\n');if(newline<0)return;lineReceived=true;socket.removeListener('end',eof);socket.removeListener('close',eof);
@@ -83,15 +95,21 @@ export async function runHandoffServer(options){
      let child;try{check(newline===input.length-1,'HANDOFF_HANDSHAKE_MALFORMED');child=JSON.parse(input.slice(0,newline));exact(child,['nonce','authoritySha256'],'HANDOFF_HANDSHAKE_MALFORMED');check(typeof child.nonce==='string'&&HEX.test(child.nonce)&&typeof child.authoritySha256==='string','HANDOFF_HANDSHAKE_MALFORMED');}catch{finish(denial('HANDOFF_HANDSHAKE_MALFORMED'),socket);return;}
      const receivedNonce=Buffer.from(child.nonce,'hex');if(!constantTimeEqual(receivedNonce,options.expectedNonce)){finish(denial('HANDOFF_NONCE_MISMATCH'),socket);return;}if(child.authoritySha256!==options.expectedAuthoritySha256){finish(denial('HANDOFF_AUTHORITY_MISMATCH'),socket);return;}
      let peerUid,peerPid,ancestryResult;try{const actualBootId=await options.readBootId();if(settled)return;if(!verifyBootId({expected:options.expectedBootId,actual:actualBootId})){finish(denial('HANDOFF_BOOT_ID_MISMATCH'),socket);return;}peerUid=await options.getPeerUid(socket);if(settled)return;if(!verifyPeerUid({expectedUid:options.expectedUid,actualUid:peerUid})){finish(denial('HANDOFF_PEER_UID_MISMATCH'),socket);return;}peerPid=await options.getPeerPid(socket);if(settled)return;ancestryResult=verifyAncestry({peerPid,...options.ancestry});await options.confirmCurrentState();if(settled)return;}catch(error){finish(denial(typeof error?.message==='string'?error.message:'HANDOFF_SERVER_ERROR'),socket);return;}
-     let response;try{response=await options.buildResponse();exact(response,['payload','payloadSha256'],'HANDOFF_RESPONSE_FIELDS');check(digest(response.payloadSha256)&&response.payloadSha256===options.invocationPayloadSha256,'HANDOFF_RESPONSE_FIELDS');}catch(error){finish(denial(typeof error?.message==='string'?error.message:'HANDOFF_SERVER_ERROR'),socket);return;}
+     let response;try{response=await options.buildResponse();}catch(error){if(settled)return;finish(denial(typeof error?.message==='string'?error.message:'HANDOFF_SERVER_ERROR'),socket);return;}
+     // A timeout or abort that settled during the response build owns the socket
+     // now; a late response must never be written to it.
+     if(settled){if(!socket.destroyed)socket.destroy();return;}
+     try{exact(response,['payload','payloadSha256'],'HANDOFF_RESPONSE_FIELDS');check(digest(response.payloadSha256)&&response.payloadSha256===options.invocationPayloadSha256,'HANDOFF_RESPONSE_FIELDS');}catch(error){finish(denial(typeof error?.message==='string'?error.message:'HANDOFF_SERVER_ERROR'),socket);return;}
      consumed=true;settled=true;clearTimeout(timer);
      // The durable append and one-shot consumption commit before this response;
      // a peer-abandoned write must not retroactively turn success into denial.
-     writeSocketSafely(socket,jsonLine(response));
+     begin();writeSocketSafely(socket,jsonLine(response),settle);
      resolveResult(Object.freeze({status:'HANDSHAKE_OK',socket,peerPid,peerUid,ancestryDepth:ancestryResult.depth}));
     })();
    });
   };
+  if(options.signal?.aborted){abort();return;}
+  options.signal?.addEventListener('abort',abort,{once:true});
   options.server.on('connection',connection);
  });
 }
