@@ -197,6 +197,7 @@ pub(crate) fn source_closure() -> String {
             include_str!("../../mori-core/src/ir.rs"),
             include_str!("../../mori-core/src/runtime.rs"),
             include_str!("../../mori-core/src/logical_cost.rs"),
+            include_str!("../../mori-core/src/source_sponsor.rs"),
             include_str!("../../mori-core/src/json.rs"),
             include_str!("../../mori-core/src/intent.rs"),
             include_str!("../../mori-core/src/policy.rs"),
