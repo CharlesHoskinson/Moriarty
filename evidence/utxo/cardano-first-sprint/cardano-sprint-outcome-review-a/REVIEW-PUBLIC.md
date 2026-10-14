@@ -1,0 +1,29 @@
+## Verdict: CHANGES_REQUIRED
+
+Top finding: the expected outcomes are directionally sound, but several pass/fail criteria are not yet objectively testable or are not bound to the audited production context. This review does not approve source, native admission, or ledger execution.
+
+Reviewer identity for this session: Meta Muse Code CLI, requested model `muse-wonder-1.0`, returned contributor identity `muse-wonder-1.0-contributor`. This is one independent session; the second required session must record its own returned identity. GPT-6.1 authored the plan.
+
+### Specific defects requiring correction
+
+1. **CS01/CS08/CS09 — audited object and audit binding are ambiguous.** CS08 approves an “exact-current” frozen candidate before any node/genesis action, but the genuine calibrated sibling is only created after bootstrap and parity capture. The spec must state explicitly that the audits approve the emitter/substitution algorithm and frozen inputs, while the runtime sibling is a derived artifact verified by hash/equality — or require a further audit of the sibling. `bindProductionContext` also has no field for the frozen candidate hash or the two audit artifact hashes, so a production context is not provably tied to the candidate that was approved. Add a context field and a negative test: capture/context built against a different candidate or missing/mismatched audit hash is refused before compile/body production.
+
+2. **CS02/CS04 — “current” and “stale” have no objective freshness rule.** The plan records `queriedAtTip`, but neither SPEC nor PLAN defines maximum tip drift, protocol/era revalidation at signing/submission, or context expiry. The CS04 “protocol is stale” refusal is therefore untestable. Define the rule, for example re-query and equality of tip/protocol/era/genesis immediately before signing, or a named maximum slot distance, and add tests for tip advancement, protocol change, and context reuse across instances/networks.
+
+3. **CS03 — Cash mint intermediate output is under-specified.** CS03 requires settlement before head opening, but does not normatively state the mint output’s recipient, asset bundle, minimum-ADA treatment, change output, or required seed-owner signer, despite the inherited design fixing the destination as the seed owner’s enterprise payment key. Add those as expected outcomes and tests for wrong mint recipient, missing seed-owner witness, and a settled mint output that is not the exact queried output later spent into the head. Also require fee/collateral/role outrefs to be distinct except for the intended Cash-output → head-input chain.
+
+4. **CS04 — final-body receipt omits security-critical bindings.** The proposed receipt binds body/protocol/script hashes, costs, minima, fee, and witnesses, but does not explicitly record validity interval, script-data hash, collateral outrefs, or collateral-return/change identity. Time validity is central to CS01/CS05, so a terminal test cannot independently show the measured body used the admitted interval. Add those fields to `measureProductionBody`/`assertProductionBody` and a negative that mutates only the validity interval or collateral after costing.
+
+5. **CS05 — required negatives are stated but not carried into plan tests.** The requirement refuses missing/null/noncanonical/negative/out-of-UInt128 amounts and zero-default obligation quantities, but PLAN Task 3 names only “amount-null.” Add explicit scenarios for negative, fractional/noncanonical, `UInt128` overflow, missing obligation quantity, and Word64/UInt128 confusion. Also add calibrated-boundary terminal tests at `partition−1`, `partition`, and `refundInclusive+1` for release/refund/cancel, not only the zero-clock unrepresentable windows.
+
+6. **CS06 — finality is not defined.** “Named chain confirmation evidence” has no confirmation depth, block/tip relationship, or rollback rule, and local devnet and Preview cannot be judged by the same unstated criterion. Define the required evidence for each network, such as inclusion block hash/slot plus a named number of subsequent blocks or tip advance, and a test where the transaction is visible but not yet final and must remain unconfirmed.
+
+7. **CS07 — loser attribution is insufficient.** Retaining a `BadInputsUTxO` receipt does not prove the loser failed because the shared head was consumed; the failure could concern fee or collateral inputs. Require the loser receipt to be tied to the shared head outref and to the winner’s confirmed consumption of that same outref. Also require both race bodies to be measured against the same checked context with overlapping validity intervals before either submission. Add a control where the loser fails for a collateral/fee reason and the race must not be counted as observed.
+
+8. **CS10 — Preview authority and fee ceiling are unresolved.** CS10 says to record the “existing resource authority and fee ceiling,” but neither the authority artifact nor a numeric ceiling is identified in the supplied spec/plan. That leaves the Preview spending limit untestable. Name the authority record and ceiling, or state a concrete pre-execution blocking record that must contain them before any Preview spend. Missing endpoint/resource must remain an execution blocker, not an implicit approval.
+
+### Exit assessment
+
+Local CS09 and Preview CS10 otherwise retain the correct separation: separate funded instances for release/refund/cancel, another instance for the race, gross balance reconciliation, owned-run cleanup, and independent actual-result review after execution. UNIT results correctly remain `ledgerExecution:false` and cannot grant production authority. The wider 20-family/private-PCD/general-obligation programme correctly remains open.
+
+After the corrections above are written into CS01–CS10 and the corresponding PLAN test tasks, the expected-outcome package can be re-reviewed.
