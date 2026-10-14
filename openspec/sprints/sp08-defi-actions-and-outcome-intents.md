@@ -102,6 +102,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP08.3/.4: preserve request controller/quantity, unfilled entitlements and cumulative gross authority. A supported cancellation route must name its revision and policy. Derive signed display from the same schema; a preview is neither permission nor guaranteed exit.
 - [ ] Pin ERC-4626/7540/7575 behavior and the old/current ERC-7683 distinction. ERC-7887 ambiguity remains unresolved source evidence; ERC-8330 NAV does not establish liquidity, and ERC-7943 transfer checks do not prove legal rights. Implemented traits require behavioral tests, not selector presence.
 
+## Current task interpretation — 2026-10-14
+
+PR49 delivered a finite FeePool source component: 23 actions and 162 captured local/reference/static financial cases. Local policy, sponsor/recovery holds and metering are also precursors. These observations retain their source trees and supplied premises; they do not establish full M11/Capacity Exchange, U3/U5/U6 or target settlement. Preserve all 72 original rows, DA01–24, supplements, three held-outs, eight intent cases and eight regression classes. Reconcile row-level coverage rather than infer it from fixture counts. No SP08 task is newly complete.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 All required DeFi semantic rows and action targets implemented, with intent/request rejection evidence. Real acceptance remains assigned to SP09-SP11.

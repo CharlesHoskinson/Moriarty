@@ -206,3 +206,26 @@ The [original L rows](../../../docs/superpowers/specs/2026-09-11-defi-kernel-mul
 and complete U/MC/SP/G, ZR/MNR/MPLR/UNI/MOR/AEO, ACTUS/DeFi and composition
 requirements are preserved. The discovery ID index is not the atomic predicate
 denominator and cannot supply a V1 percentage.
+
+## PR50 reconciliation clauses
+
+The [October 14 reconciliation](reconciliation-2026-10-14.md) applies to inherited
+status and workflow prose. Earlier `specified-only` labels retain the full
+acceptance meaning; they do not erase implemented local children. Earlier
+profile/tool observations retain their source trees. All security clauses and
+their original scenarios remain unchanged for Opus review.
+
+| Added clause | Existing U owner | Existing scope / retained lineage | Closing artifact; acceptance open |
+|---|---|---|---|
+| UNI-018 | U0, U2, U7 | MC01/MC04/MC08; SP02/SP12; M1/M10 | Profile, executable, consumer and construct-admission matrix |
+| UNI-019 | U0, U2 | MC01/MC04; M1/M6 | Separate lowering statements, common domain and mapped observations |
+| UNI-020 | U0, U2, U6 | MC01/MC07; SP03/SP07/SP08/SP11 | Independently frozen complete financial/work expectations and numeric scope |
+| UNI-021 | U0–U7 | All U/M/MC/SP/G, including M11 and U6 | Predicate/tree/profile/consumer/target evidence records; no inferred parent closure |
+| UNI-022 | U0, U2, U7 | M1–M17; MC02/MC04/MC08 | Target-separated requirement/evidence crosswalk with unknown external fields |
+| UNI-023 | U4, U6, U7 | MC06/MC07/MC08; SP07/SP08/SP10/SP11/SP12; G01–G24 | Frozen membership and separate evidence columns, preserving all denominators |
+| UNI-024 | U2, U7 | MC08; SP02/SP12; M10 | Actual executable/profile developer journey and current scoped routing |
+
+[current-requirement-crosswalk.json](../../current-requirement-crosswalk.json)
+indexes all current requirement headings and preserves explicit aliases for
+historical renamed headings. It indexes complete clauses by reference, not atomic
+predicate counts. Original task text/status and all linked source predicates remain.

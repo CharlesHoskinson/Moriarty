@@ -1,5 +1,8 @@
 # Signed intent to settlement iteration
 
+**Security currentness (2026-10-14, Opus).** This page describes the stage as of October 1. [DELIVERY.md](DELIVERY.md) records both required audits approving the scoped local candidate `fd9725e0`, so the "pending" and "armed" wording below is historical. The /1 protocol uses secp256k1 BIP340/ECDSA with a locally stipulated registry. It is not the ledger signed-v2 JubJub path, and it is not M7 or M8 evidence. See [security currentness](../SECURITY-CURRENTNESS-2026-10-14.md).
+
+
 Active autonomous iteration, based on main2905cb6d. User requested three exact
 Sonnet5.5 high workers and three GPT6.1 Sol workers, plus independent result
 reviews, while continuing work during AFK time.

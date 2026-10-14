@@ -1,110 +1,74 @@
-# Execution focus reference
+# Current scope and evidence reference
 
-Use the relevant section for a current task; this is workflow guidance, not a new scheduler, gate or evidence schema. The September 11 delivery, overhead and native investigations motivate the experiment. Their observations describe retained evidence, not newly executed checks or demonstrated speedup. Refresh current records before relying on them. Repository paths below are relative to the active checkout, not the installed plugin cache.
+This is guidance for the active Moriarty checkout, including when the skill was loaded from an installed cache. Read checkout files by resolving the code paths below against the active checkout root. Repository documents are outside the installed plugin package; relative Markdown links are reserved for package files. This reference creates no new campaign, scheduler, authority or acceptance schema.
 
-## Current parallel source scope — October 13
+## Read current requirements before choosing work
 
-Use [parallel development](../../../../../docs/PARALLEL-DEVELOPMENT.md) for the current six-task source wave.
-The user supersedes the single active source item and earlier model routing for this scope.
-Each task owns disjoint paths and a callable local predicate. One integrator owns shared interfaces.
-Every final candidate requires fresh non-author Sol and Grok full-candidate reviews at high effort.
-Compact author context never replaces complete source or actual-result review input.
-Existing frozen signed-call native work retains its Opus 5.5 and Muse conditions.
-Native resources, accounting, stop rules and financial acceptance remain unchanged.
-The historical I2 investigation below remains evidence and guidance for its original scope.
+Read `AGENTS.md`, then the user's current request and these current checkout documents:
 
-## One bounded delivery interval
+- `ROADMAP.md`: the single U0–U7 sequence, delivered child capabilities and unchanged exits.
+- `docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md` and `docs/audits/2026-10-14/AUDIT-PLAN.md`: profile reconciliation, complete effects, independent expectations and remaining coverage.
+- `openspec/changes/consolidated-language-kernel/proposal.md`, `openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md` and `openspec/changes/consolidated-language-kernel/traceability.md`: EARS scenarios, complete U/M/MC/SP/G obligations and retained requirement families.
+- `wiki/index.md` and `wiki/workflow.md`: existing evidence, contradictions, provenance and canonical transaction procedure.
+- `wiki-llm/README.md` and `wiki-llm/RECONCILIATION-2026-10-14.md`: current research navigation, profile/consumer distinctions and dated evidence qualification.
+- `openspec/current-requirement-crosswalk.json` and `openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md`: current requirement dispositions and reconciliation against the retained exits.
+- `wiki-llm/SECURITY-CURRENTNESS-2026-10-14.md` and `openspec/changes/consolidated-language-kernel/security-reconciliation-2026-10-14.md`: Opus-authored security addenda; consult as source references and route their interpretation or changes to Opus.
+- `docs/PARALLEL-DEVELOPMENT.md` and `openspec/parallel-language-workflow.json`: existing disjoint task ownership and shared-interface integration. Refresh task status; this historical task list is not automatic dispatch authority.
 
-Keep each scoped source task active through its result review under the current parallel ownership plan. Name the exact predicate it will close, its current blocker, the callable product path and the existing acceptance record before starting. Idle reviewers prepare independent expected results and fault cases for that item. One capped F0 decision can proceed in parallel only without competing for the bottleneck or exceeding existing authority. Do not hop across the roadmap to make activity look like acceptance.
+Current nonsecurity authoring is `gpt-6.1-sol`; independent non-author audit is `muse-wonder-1.0`, both at high effort. Apply later explicit user steering within its scope. Preserve frozen contracts and historical audit identities; the October 13 Sol/Grok pair and September task rosters remain evidence for their original candidates. They do not mandate extra obsolete seats for new work. Consequential decisions retain the existing two agreeing substantive votes.
 
-The near-term target is I2/MC02 complete-effect local/Preview loan and swap integration. Its recorded prerequisites are `atomic-accept` and `rp01-mc02`; verify their applicable admission history. Full SP05 also requires SP01. I2 remains explicitly uncertified until MC05: neither local tests nor actual uncertified settlement establish mandatory proof-carrying transactions. Keep contract properties, intent refinement, transition validity, history compliance and residual duties mandatory. Refunds do not erase gross debit limits; fees count against net goals.
+Follow the requested task before an old I2/MC02 or F0 recovery queue. Preserve I2's uncertified scope until MC05 and SP05's SP01 dependency; do not reset failures, debits, ceilings or unresolved evidence. Existing `status`/`next`/`report` reflect registered historical campaigns. Reconcile them honestly without rewriting them to resemble the consolidated roadmap.
 
-Use the current manifest for authorized source preparation. Avoid unsupported frontend profiles, speculative backends, task hopping, repeated prompt redesign and new evidence infrastructure. This does not narrow the original acceptance scope. Later user instructions may change priorities.
+## Next demonstrable language capability
 
-## Reconcile I2 once, then implement the missing path
+For roadmap execution without a more specific request, prioritize U0 profile/consumer/semantic/target reconciliation, the required U1 slice and one useful U2 compiler/consumer correspondence slice with independent financial/work expectations. Directly actionable tooling/reporting defects and bounded library preparation can proceed under existing scope. U3 lifecycle remains the next discriminator. Dependencies govern acceptance, not a blanket ban on independent preparation; full U6 is not required before every bounded U4 task.
 
-Use the existing `openspec/changes/mc02-preview-financial-operation/tasks.md`, its `specs/mc02-preview-financial-operation/spec.md`, `openspec/sprints/execution/SP05.md`, and original completion records. In one short session, associate every required positive and negative predicate with reviewed evidence and classify it as accepted/current, missing, or blocked with a precise reason. Resolve unknown coverage before a new live attempt; do not invent acceptance to eliminate an unknown label. Amend existing current records through normal review, leaving immutable receipts intact. No new register.
+Keep one callable predicate per source task and one integrator for shared IR, ABI and result interfaces. Trace the existing public path before editing or declaring success. A new helper must be consumed by that path. Do not create a scheduler, second milestone system, application-specific compiler or broad proving campaign to execute this guidance.
 
-The September 11 inspection found these specific gaps and retained results; they are a starting map, not an exhaustive acceptance audit:
+## Profiles and consumers
 
-| Predicate | Evidence and required disposition |
-| --- | --- |
-| Actual local loan/swap effects | Under `deliverables/sp05-financial-integration-2026-09-09/`, inspect `local-continuation-02/reviewed-result.json` and `local-swap-continuation-01/reviewed-result.json`. Bind current fixture, token, roles and custody lineage. The swap excludes independent counterparty funding/signatures: resolve applicability against the contract or retain the gap; do not infer a pass. Preserve inner-incomplete flags. |
-| Rejection and unchanged state | Inspect `local-stale-loan-01/reviewed-result.json` under that same directory and original MC02 criteria. Account for adverse paths, failed-state mutation, every comparator rejection, roles, funding and actual fees. One rejection does not prove every negative class. |
-| Actual Preview swap | `preview-swap-exit-01/scoped-result-approval-01.json` retains the accepted financial slice, raw zero exit and independent outer containment. Reuse only if scope, bytes and lineage still apply; do not rerun solely for newer evidence. |
-| Actual Preview loan exit | `preview-loan-exit-01/actual-result-review-gpt6-01.json` retains financial success but does not establish raw command exit zero before the unit unloaded. Success output cannot reconstruct a missing exit. |
-| Callable new loan path | `deliverables/sp05-loan-exit-retention-grok-2026-09-10/candidate/cli.py` deliberately refuses `collect-once`. Integrate the reviewed collector into the actual bounded executor, writer and exit selector. A helper-only approval is insufficient. User-stopped executor06 output is partial and not installed. |
-| Current live admission | Inspect `deliverables/sp05-loan-executor-grok-2026-09-11/root-prerequisite-inspection01.json` if present. Bind current source/runtime closure hashes, fresh bounded resource amendment and source/resource votes, exact wallet/resource observations, historical charges and attempt ceilings, and applicable candidate admission. A stale or absent record grants nothing. |
-| Aggregate result | Require actual new invocation raw exit zero retained before stop, independent outer containment, financial/native-byte decode and finality checks, both current actual-result audits and original MC02 manifest provenance. Recompute the original register only after every required criterion is covered. Source votes are not runtime approval. |
+| Profile or consumer | What must remain explicit |
+|---|---|
+| Rust Core | `moriarty/1` source and `moriarty-core/1` semantics; parser/checker/evaluator and supported public compiler path |
+| Node beta | Separate Source/6 bridge to experimental TypeScript Core/5; local `PreparedUnqualified` is not Rust compilation or target qualification |
+| `mori-backend` and `mori-ledger` | Different statements and admitted subsets; compare only through an explicit common-subset adapter and justified refusal boundaries |
+| Public executables and tools | Resolve which `mori` executable is used; Rust LSP/MCP remain reported stubs until implemented and demonstrated |
+| Static call export/reopen | Deterministic public serialization/reopen is scoped static evidence; mapped-role mode remains unauthenticated, unproven and uninstalled |
 
-Historical fee reservations are neither actual paid fees nor free remaining budget; partial totals are not comprehensive global totals. Preserve wallet identities, keys, contract state, debit accounting, attempt limits and public transaction notification/delivery rules. Resolve guarded operational-history/admission failures for dependent execution; continue authorized source work independently. No new transaction is authorized by this guidance.
+A successful check or reference test in one profile does not establish compilation in another. Map admitted grammar, numeric scope, evaluation order, positional versus trailing postconditions, present-zero versus absent duties, field representation and each actual consumer. Do not choose or unify lowerings merely because both emit ZKIR.
 
-Stop reconciliation after the one gap list. Next change or execute the identified product path. If another financial/role/adverse predicate is missing, resolve it before promising the loan run closes I2. Admit a live run only if it addresses a necessary open predicate and all existing gates pass. If the path cannot be identified in the session, report the exact unresolved criterion and select a bounded independently eligible obligation; do not issue another broad packet or orchestration rewrite.
+## Evidence and complete outcomes
 
-## Callable failure matrix before expensive execution
+Report implementation, evidence and acceptance on separate axes using the audit plan's existing records. Distinguish source-inspected, historical-local, current-local, native-local and target-observed evidence. A captured-local result is a captured result for its exact tree, not a fresh execution. Use no whole-language percentage while mandatory atomic predicates are unflattened; 69 top-level IDs are a discovery index, not a denominator.
 
-An independent reviewer defines expected outcomes before authoring. Use existing offline transport/fault-injection tests on the complete executor → collector → writer → exit-selection path, with the actual consumer included. Cover:
+For each claim retain source/tree, profile, input/output identities, actual command and exit, oracle, target, evidence digest, scope and first blocked boundary. No inferred downstream pass. Retain source approval separately from actual-result and live admission review. New candidate bytes need a fresh full-candidate audit; receipt ingestion alone does not verify the selected roster or prove behavior.
 
-- Running → exited polling, malformed startup/process identity, mismatched invocation and preexisting stop evidence.
-- Terminal persistence/fsync failure, nonzero command exit, stop nonzero/exception or timeout, deadline crossing, and containment ordering.
-- Successful stop followed by receipt-fsync failure: retain the real stop outcome separately from the save failure. Identify cleanup responsibility on every path; never stop a still-running process merely to obtain success evidence.
+The U2 audit needs two positive contrasting new programs through the same claimed pipeline plus rule-level admitted-grammar and field coverage. A mixed-payer native refusal is an additional static/refusal result, not the second positive program. The audit plan's installment invoice and conditional reserve allocation are proposed specimens, not executed evidence. Do not silently replace unsupported source constructs with host logic or hand-written ZKIR.
 
-Run callable tests and independent fault injections before candidate freeze. Return all observed failures together. Offline controls must pass before a separately admitted actual loan allocation; they do not replace real service behavior, native decoding, finality or actual-result audits. Inspect retained actual bytes independently. Do not automatically retry an unexplained repeat failure; the two-cycle reproduction/change-of-approach rule still applies.
+Freeze independently derived complete financial/work outcomes before execution. Expected values must not import the evaluator/compiler under audit. Wrapper equality and shared-evaluator replay provide internal agreement, not an independent oracle. Include ordered effects, affected and preserved state, gross debit, fees, net receipts, reserve dust, opening/accrued/discharged/closing liabilities and residual duties. Separate logical work schedules from circuit cost, DUST, service fees and recovery reservations. Use explicit K/Quint profile/field adapters, premise inventories, original traces and meaningful replay; sampled models are not native correspondence.
 
-## Context, author continuity and fresh review
+Keep ACTUS all 277 fixtures/fields, 18 executable types, 32 taxonomy dispositions and DS01–07. Keep DeFi all 72 rows, DA01–24, supplements, three held-outs, eight intent cases and eight regression classes. Check retained frozen membership before scoring. Preserve sequential, disjoint parallel, shared-state interleaving, atomic synchronization and asynchronous messaging composition. The complete U0–U7, M1–M17 and MC/SP/G exits remain open until their actual predicates pass; child evidence does not waive parent requirements.
 
-Follow the selected author and reviewer identities in the main skill and latest user steering. Supply sufficient current requirements, complete affected source and caller, exact fixtures, current failure and immutable safety/resource boundaries. Summarize and link history on disk; include older output when causally relevant. Reducing duplicate context must not remove constraints or turn a full review into a diff review.
+Preview observations qualify only Preview. Fenrir network ID, Anchor, committee/registry identities and target tuple remain unknown where unestablished. The user says Fenrir has no versioning system yet: invent no version/configuration and infer no deployed identity from a source descriptor. Unknown external facts block dependent qualification, not independent language work.
 
-Keep the same author through a repair; start fresh at the next independent capability boundary with an explicit handoff. Where an existing author CLI offers verifiably scoped workspace writes and a fixed offline test command, it may edit and test directly within that verified scope. Do not assume a sandbox label excludes secret, network or service access. If verifying those protections would become an infrastructure project, use the proven tool-free relay with exact small patches and compact machine-readable failures. Do not build a harness to save a relay.
+## Opus-owned execution boundary
 
-Freeze the complete candidate, then run both selected fresh non-author audits concurrently. Give each the full current candidate and applicable contract with access to relevant evidence. Preserve returned identities, effort, terminal status, dissent and limitations. Neither author self-review, old approval, diff-only review nor unavailable provider counts. Repaired bytes need both current audits; source and actual-result approval retain their separate scopes. Receipt ingestion alone does not enforce the required reviewer roster.
+Read checkout `docs/audits/2026-10-14/SECURITY-ROUTING.md` and `docs/audits/2026-10-14/SECURITY-REVIEW.md`; these record Opus ownership of security analysis, hostile tests, recommendations and judgments. Route all security work to Opus 5.5. Nonsecurity authors preserve and report that boundary without supplying substitute security conclusions.
 
-## Six measurements in existing session records
+As recorded by those documents, current native authority is zero. No SDK relation/circuit checks, model/degree/k queries, VM/transcript execution, key generation, proving, native verification, deploy/ledger actions or private-key/PK/SRS/cache actions are authorized by this guidance. Signed `verify-intent --profile`, `simulate --trace --target` and the replay generator may invoke blocked SDK operations; names such as check, static or test do not establish an ordinary path. Inspect actual side effects before any ordinary command; broad native suites remain blocked. Source-static public IR work has its existing bounded scope only.
 
-Record these manually for the next two delivery items; no telemetry framework or new register:
+Keep native gates, resource limits, historical counters, receipt authentication and public-transaction delivery controls intact. Route any proposed changes or security test design to Opus. Missing evidence is an acceptance blocker, not permission to launch a retry. No new campaign, budget reset or native probe is created here.
 
-1. Time to first executable candidate (start and first callable-candidate timestamps).
-2. Author calls (include repair cycles, admitted attempts and waiting-for-admission notes).
-3. First local test result (include defects found before versus after any live run).
-4. Blocking defects escaping to audit (record rework cycles).
-5. Reviewer wall time (review-ready, individual concurrent start/end and approval timestamps).
-6. Named acceptance predicate actually closed (or precise falsifying blocker, actual-result acceptance timestamp and active hours).
+## Pressure checks before reporting
 
-Use these observations to compare accepted predicates per active hour, waiting for review/admission, rework and resource attempts per predicate. Baseline against the preceding two days' retained receipts where available; distinguish worker time from end-to-end time. The studied collector slice recorded 1,717.693 worker seconds across five author attempts, including one 900.027-second timeout; one later executor attempt was user-stopped, not a failed implementation. Concurrent final reviews already overlapped. Provider fresh/cached/output token counts are not unique tokens, dollar costs or proof that context caused defects.
+| Situation | Required response |
+|---|---|
+| Plugin default or hook offers old SP01/I2 work during a requested documentation repair | Perform the current authorized repair; retain old status as operational history and do not dispatch it |
+| Earlier records require paired Astra/Grok or Sol/Grok audits | Apply latest scoped nonsecurity Muse routing; preserve original rosters for historical/frozen contracts |
+| Green static FeePool results or an old proof suggest U2 or U6 is done | Report the exact child capability and historical tree; retain general grammar, native/target and complete family gaps |
+| Node beta check passes, so Rust compile is assumed to pass | Resolve executable, source/semantics profile and real compiler consumer separately |
+| A successful refusal is offered as the second U2 walkthrough | Keep it as refusal evidence; require two positive programs and generality coverage |
+| Unknown Fenrir configuration or zero native authority blocks a stage | Mark that stage blocked; continue eligible nonsecurity source/tooling work |
+| Repeated administration replaces product work | After two process cycles or thirty minutes, return to executable diagnosis or eligible implementation under existing limits |
 
-Prospective success: independently reviewable callable outcomes from disjoint source tasks, fewer avoidable repair round trips, and explicit accepted predicates or concrete blockers. Parallel preparation does not close acceptance dependencies. A smaller prompt, additional green tests or another approved packet is insufficient. This limited baseline supports descriptive comparison, not a model ranking, global overhead estimate or promised speed multiplier.
-
-## Native F0 before large proving
-
-Keep R3 circuit size and complete ledger-verifier compatibility separate. Recorded `NotEnoughRowsAvailable { current_k: 17 }` is failure of one encoding, not proof that recursion is impossible; memory headroom and 54 checked public limbs do not establish a recursive proof. A smaller correctly constrained state commitment or larger k might address rows but does not establish compatibility. Larger k changes SRS/resource needs; preserve reviewed encoding/resource decisions and F1 prerequisites.
-
-Use the existing F0 record in `openspec/moriarty-completion-program.json` and `openspec/REPORT-RECONCILIATION-2026-09-07.md`. F0 was specified-only with no stage prerequisites, which is not campaign admission. Timebox read-only source/interface investigation to at most 30 minutes under existing user authorization; it needs no new campaign or prior design vote. Consequential GO/resource decisions and actionful probes still require their applicable existing votes, explicit resource allocation/amendment and admission. Produce one short source-symbol decision, not another survey:
-
-1. Pin the actual outer ledger stack, transcript, VK, public-instance types, SRS/export ownership and deployment provenance; identify local-only assumptions explicitly.
-2. Trace the native instance through canonical VK, application decider, transcript, proof **and carried accumulator**, strict EOF and final pairing to the actual ledger verifier. Identify the constrained finalizer symbol or mark it missing. Native Poseidon IVC and the inspected ordinary Blake2b/`DummyRelation` ledger interface cannot be assumed interchangeable. Inspect at most a targeted candidate hook/API; a current source pin is not Preview deployment identity.
-3. Cost dominant final pairing and wrapper from exact circuit primitives. If fit is unknown, specify one bounded discriminating component probe with inputs, limits and failure meaning before authoring. Native verification or accumulator preparation is not an outer constrained finalizer; a hash-only commitment cannot replace full semantics/preimage constraints.
-4. GO requires an independently reviewable complete source route, export ownership, credible fit/probe and exact outer-stack identity under the existing decision rules. At the deadline, missing essential interface or unresolved fit means STOP/no-go for dependent proving; record the precise API/product blocker. A separately authorized bounded discriminator can resolve uncertainty without manufacturing GO. Keep F2/F3 stopped and independent I2 work eligible.
-
-After prerequisites and admission, the concrete discriminator is SP04 P3 constrained final pairing in the selected ledger stack. Planned ownership is `experiments/moriarty-ledger-adapter/probes/`; the inspection found it absent, so do not advertise an executable probe command. Reuse the independent non-loan recipe in reconciliation (`circuits/src/verifier/verifier_gadget.rs::test_verify_proof`, inner_k10 Poseidon-preimage proof) with its nontrivial accumulator and exact SRS. Use the same outer circuit/SRS for native-valid nonidentity accumulator acceptance and directly assigned `rhs + G` mutation rejection; the native reference must independently reject the mutation. Check transcript/carry agreement and export roundtrip. Failure to synthesize within limits falsifies that proposed fit; mutation acceptance falsifies soundness. Native-only checks, identity/zero accumulators, mocked flags and synthetic proofs cannot pass this test. P1/P2 and complete F1 remain required: P3 alone is not SP04 or PCD acceptance.
-
-## K diagnosis without replaying the passed prefix
-
-For the recorded metadata-depth-5947 LLVM crash after 105 matched cases, first use one admitted single-case reproduction from the frozen compiled artifact with process stack/exit diagnostics. A stack-limit cause is still a hypothesis. After two failures of the same class, reproduce and change approach before broad correction; do not recompile and replay all passed cases just to rediscover the same crash. Diagnosis may reuse the artifact; changed implementation must retain full final conformance. Do not truncate the admissible metadata profile to pass, or present differential tests as mechanized determinism, progress, preservation, termination or correspondence proofs.
-
-## Reviewer pressure scenarios
-
-Apply this compact checklist independently to the candidate workflow. Recorded failures above are the baseline; this checklist is not a new enforcement or testing framework.
-
-| Pressure | Required response |
-| --- | --- |
-| Loan financial output looks successful; declare SP05 complete | Require missing raw exit and aggregate MC02 predicates; preserve I2 uncertified scope and SP01 dependency. |
-| Accepted swap is old; rerun it to refresh the dashboard | Check scope/bytes/lineage, reuse applicable evidence and preserve resource history. |
-| Collector tests pass but its CLI refuses live collection | Include and fault-test the actual executor/caller before source approval; admit live execution separately. |
-| Stop succeeds but receipt persistence fails | Retain actual stop outcome and save failure independently; preserve cleanup/containment evidence. |
-| Speed pressure suggests dropping an auditor or replaying all history | Keep both fresh full-candidate concurrent audits; provide sufficient current context with history on disk. |
-| Plugin task requests Astra/Grok+Astra while recovered product routing says Grok/Opus+Astra | Apply the task-specific override only to this update and preserve general routing/history. |
-| Native k17 failed; try a larger financial proof or assume ordinary ledger compatibility | Resolve complete F0 verifier route and limits first; no synthetic proof or component-only full acceptance. |
-| K repeats one crash; rerun the entire prefix or narrow the language | Reproduce the single case with diagnostics, change approach, retain full final conformance. |
-| Admission is unresolved; start another campaign or stop all useful work | Block dependent dispatch, preserve accounting and continue independently authorized source diagnosis. |
-| A new profile, backend migration or mandatory CI project might improve future throughput | Keep those deferred priorities out of this interval; finish the current predicate or bounded feasibility answer unless user steering changes scope. |
-| Installed skill describes these rules; claim host enforcement or measured speedup | Report guidance separately from tested CLI controls, unverified hook coverage and unmeasured productivity. |
+Existing loan/swap, F0 and K investigations remain historical scoped evidence in their original records and `openspec/REPORT-RECONCILIATION-2026-09-07.md`. Do not rerun passed prefixes, accepted historical slices or financial/native work just to refresh a dashboard. Reproduction and changed approach remain necessary after repeated defects. This guidance update supplies no new product, runtime, target or security acceptance.

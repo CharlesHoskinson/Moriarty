@@ -1,13 +1,14 @@
 # Parallel Moriarty source development
 
 The October 14 user update selects `gpt-6.1-sol` high implementation and fresh
-independent `muse-wonder-1.0` high audits for new language roadmap work.
+independent `muse-wonder-1.0` high audits for new nonsecurity language roadmap work.
+The later security instruction assigns all security work to Opus 5.5.
 This replaces the author/reviewer routing in the initial October 13 wave below;
 its records, task contracts, resource limits and acceptance requirements remain.
 See [the routing assignment](../raw/assignments/moriarty-sol-muse-routing-2026-10-14.md).
 Review the full exact candidate and applicable actual results before merging.
 
-The October 13 user instruction selects three `gpt-6.1-sol` authors and three `grok-4.7` authors, all at high effort.
+The retained October 13 initial instruction selected three `gpt-6.1-sol` authors and three `grok-4.7` authors, all at high effort.
 This instruction supersedes the single active source delivery restriction for this workflow.
 It preserves every U0–U7, M1–M17, MC and SP acceptance requirement.
 This procedure governs maintainer work. It does not authorize public Moriarty programs.
@@ -103,7 +104,8 @@ python3 "$MORIARTY_CLEAN/scripts/build_task_context.py" --repo "$MORIARTY_WORKER
 
 Load the installed develop skill or its checked-in `SKILL.md` before selecting work.
 Read the compact context and the complete affected source before editing.
-Ask an independent reviewer to define expected results and hostile cases.
+Ask a non-author to define independent financial/work expectations.
+Route security analysis and hostile security cases to Opus.
 Use a fresh author session in that worktree with the manifest's exact model and high effort.
 Keep the same author through repairs of that capability.
 Record requested and returned model identities separately.
@@ -257,7 +259,19 @@ Freeze the complete integrated tree for fresh independent audits after compositi
 
 ## Fresh reviews
 
-Every final candidate requires fresh non-author Sol and Grok reviews at high effort.
+For new nonsecurity work, use a fresh non-author `muse-wonder-1.0` high audit.
+Use `gpt-6.1-sol` high implementation and assign all security work to Opus 5.5.
+Review the exact full candidate, requirements, independent expectations and actual results.
+A changed candidate needs a fresh applicable review.
+Missing reviewers cannot approve; original frozen rosters remain attached to their contracts.
+Component approval does not approve a later composition or execution result.
+
+The following initial roster is historical, not current routing:
+
+<details>
+<summary>October 13 initial review seats (superseded for new work)</summary>
+
+Every final candidate in that initial plan required fresh Sol and Grok reviews.
 Round 1 uses these reviewer seats:
 
 | Author lane | Fresh Sol reviewer seat | Fresh Grok reviewer seat |
@@ -296,6 +310,12 @@ Source approval does not approve an execution result.
 Component verdicts do not approve a later merged candidate.
 Keep consequential design/resource majority decisions separate from routine repairs and result audits.
 
+</details>
+
+Current reviewers still need the complete frozen candidate and applicable results.
+Preserve actual identity, scope, dissent and terminal status.
+The historical seat names above do not reinstate their superseded models.
+
 Use the existing ingestion command only when candidate, authority and scope match its registered action:
 
 ```bash
@@ -304,14 +324,14 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . review --recei
 
 The current loan review action has stale inputs and a design-only scope.
 Keep unmatched source/result receipts beside their candidate instead of forcing them through that action.
-The plugin does not enforce this full reviewer roster.
+The plugin does not enforce the currently selected reviewer roster.
 Its identity substring check can reject same-model session identities.
 Report such a refusal. Do not omit the author or invent model identities to bypass it.
 
 ## Native work remains separately admitted
 
 Existing frozen signed-call native work retains its Opus 5.5 and Muse audit conditions.
-Future Sol/Grok source review does not replace those conditions.
+A later source-review roster does not replace those frozen conditions.
 Degree discovery, SRS initialization, key generation, proving, Real verification, ledger apply and Preview need exact current admission.
 Preserve physical resource limits, accounting, debit ceilings, stop rules and public transaction notifications.
 Six author slots grant no native concurrency or budget.

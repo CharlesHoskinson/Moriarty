@@ -1,12 +1,18 @@
 # MC08: Completion evidence and developer acceptance
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc08-release-evidence-and-developer-flow/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+Rust simulate/test/intent/reference-replay consumers and a separate beta authoring/editor/MCP package exist. Rust LSP/MCP remain explicit stubs. A compile-capable independent developer release and every G01–G24 obligation remain open.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

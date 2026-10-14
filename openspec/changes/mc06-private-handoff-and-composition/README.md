@@ -1,12 +1,18 @@
 # MC06: Private witness handoff and bounded split/join
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc06-private-handoff-and-composition/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+Local lifecycle/duty and recovery precursors do not establish native private handoff or the five retained composition operators. Full acceptance remains open under U4; security assessment belongs to Opus.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

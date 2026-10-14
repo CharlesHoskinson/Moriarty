@@ -76,6 +76,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP11.2: each required behavior has distinct semantic, profile-proof, local-acceptance and Preview-acceptance evidence columns. A reviewed proved reduction may map multiple rows to a qualified domain; samples alone never establish that reduction.
 - [ ] SP11.3: requalify every expanded domain and required network condition under matching relevant versions. Preserve all failures and the existing 349-episode/resource history; derive actual episode needs before separately reviewed changes to any resource envelope.
 
+## Current task interpretation — 2026-10-14
+
+Current finite source/reference/static results are child evidence only. Keep semantic, local, native, Preview and Fenrir columns separate and validate every frozen family member before scoring. Freeze independently derived complete financial/work outcomes without importing the evaluator/compiler under review. Preserve all original counts and expanded-domain requalification. The 69-ID discovery index is not an atomic denominator or a completion percentage. Full SP11 remains open.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 No missing required behavior, field, proof obligation or acceptance link. MC07 and changed earlier packages have current candidate-specific audits.

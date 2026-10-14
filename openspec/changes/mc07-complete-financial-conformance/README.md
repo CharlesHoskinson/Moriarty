@@ -1,12 +1,18 @@
 # MC07: Complete ACTUS and DeFi conformance
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc07-complete-financial-conformance/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+PR49 delivered a finite FeePool source component with 23 actions and 162 captured local/reference/static financial cases. This neither closes M11/Capacity Exchange nor reduces ACTUS 277/18/32 or DeFi 72/DA01–24 and supplementary obligations.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-Use the current atomic implementation, financial corpus, language design dossier and RP01-RP03 decisions as inputs. The output is the twelve-sprint schedule in `openspec/sprints/README.md` and its machine crosswalk.
+Use the retained atomic implementation, financial corpus, language design dossier and RP01-RP03 decisions as inputs. The twelve-sprint decomposition in `openspec/sprints/README.md` and its machine crosswalk resolve through the single U0–U7 roadmap. The [October 14 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) records current delivered children, profiles and evidence limits; this package does not select a second schedule.
 
 ## Decisions
 

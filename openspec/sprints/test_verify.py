@@ -86,6 +86,25 @@ class RetentionTests(unittest.TestCase):
         self.save('coverage.json', data)
         self.rejects('Requirement crosswalk differs')
 
+    def test_dropped_current_requirement(self):
+        path = self.root / 'openspec/current-requirement-crosswalk.json'
+        data = json.loads(path.read_text())
+        data['requirements'].pop()
+        path.write_text(json.dumps(data))
+        self.rejects('Current requirement crosswalk differs')
+
+    def test_changed_current_clause(self):
+        path = self.root / 'openspec/changes/consolidated-language-kernel/specs/consolidated-language-kernel/spec.md'
+        path.write_text(path.read_text().replace('A beta or Source/6 program', 'A different program'))
+        self.rejects('Current requirement clause differs')
+
+    def test_changed_historical_snapshot(self):
+        data = json.loads((self.root / 'openspec/current-requirement-crosswalk.json').read_text())
+        snapshot = data['historicalSourceSnapshots']['docs/FOOTGUNS.md']['snapshot']
+        path = self.root / snapshot
+        path.write_text(path.read_text() + '\nchanged historical source\n')
+        self.rejects('Stale report source: docs/FOOTGUNS.md')
+
 
 if __name__ == '__main__':
     unittest.main()
