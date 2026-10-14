@@ -10,11 +10,19 @@ pub struct Args {
     /// Generate a complete public replay sidecar against a trusted Target
     #[arg(long)]
     pub trace: bool,
+    /// Cap local statement and uncached expression attempts (other costs unmeasured)
+    #[arg(long, value_name = "CANONICAL_U128", value_parser = logical_cap, conflicts_with = "trace")]
+    pub logical_cap: Option<mori_core::UInt>,
     /// Trusted Target JSON (required with --trace)
     #[arg(long, value_name = "FILE")]
     pub target: Option<std::path::PathBuf>,
     #[command(flatten)]
     pub authorization: super::replay::AuthorizationArgs,
+}
+
+fn logical_cap(value: &str) -> Result<mori_core::UInt, String> {
+    serde_json::from_value(serde_json::Value::String(value.into()))
+        .map_err(|_| "expected canonical unsigned decimal string in u128 range".into())
 }
 
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
@@ -53,6 +61,26 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     }
     let (_, program) = super::core_io::program(&args.input.file)?;
     let scenario = super::core_io::read_json(&args.input.scenario)?;
+    if let Some(cap) = args.logical_cap {
+        return match mori_core::simulate_metered(&program, &args.input.action, &scenario, cap) {
+            Ok(metered) => {
+                super::core_io::print(&serde_json::json!({
+                    "status": "accepted", "qualification": "local-reference-execution",
+                    "execution": metered.execution, "profile": metered.cost.profile,
+                    "logical": {"cap": metered.cost.cap, "used": metered.cost.used}
+                }))?;
+                Ok(ExitCode::SUCCESS)
+            }
+            Err(refused) => {
+                super::core_io::print(&serde_json::json!({
+                    "status": "rejected", "error": refused.error,
+                    "profile": refused.cost.profile,
+                    "logical": {"cap": refused.cost.cap, "used": refused.cost.used}
+                }))?;
+                Ok(ExitCode::FAILURE)
+            }
+        };
+    }
     match mori_core::simulate(&program, &args.input.action, &scenario) {
         Ok(execution) => {
             super::core_io::print(
