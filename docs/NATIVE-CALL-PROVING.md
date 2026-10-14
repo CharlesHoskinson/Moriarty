@@ -312,3 +312,49 @@ The result scope is
 Authenticated head/deployment/account identity, accepted-history replay consumption, rotation,
 trusted time, funding, settlement, recursive history and full U0–U7/M1–M17 remain
 open.
+
+## Key-free all-action source-static bundles
+
+The [static compile examples](../examples/core/static-compile/README.md) expose
+all-action export and a real source-only inspect consumer through `compile-call`.
+Use explicit `--all-actions --static-bindings FILE --authorization unsigned` or
+`--authorization signed-v2 --signer-policy FILE`, plus `--work-limits FILE` and
+exactly one of `--out NEW_DIR` / `--inspect-static BUNDLE_DIR`. There are no
+frame/request/parameter/keyset options in this mode. Legacy selected-action
+compile-call and portable JSON `mori compile` remain separate consumers.
+
+The `moriarty-native-call-static-bundle/1` marker binds public inputs, current
+source closure, source/action order and exact source/IR/manifest lengths and
+hashes. It has no degree, VK/PK/SRS identity, measured cost or proof. Raw new-profile
+JSON rejects explicit null, unknown/duplicate fields and trailing data; only
+absent `economic_bounds` is omitted when publishing None. Identity hashes that
+same omission-normalized object without the identity field. Existing native
+leaf serializers are preserved, including the signed relation manifest's
+historical `local-source-derived-installed-signed-unqualified` string. The
+bundle remains `source-static-unproven-uninstalled`; this string installs no key.
+
+Reopening independently recompiles caller inputs and compares full exact bytes.
+It never adopts marker source, mode or policy as authority. Fixed ordinal names,
+exact bounded directory entries and Unix O_NOFOLLOW/O_NONBLOCK regular-file
+handles refuse symlinks, FIFOs, directories and extra native material. Unsupported
+safe hosts refuse. Stable ancestors remain an assumption; whole-directory
+atomicity, crash durability and arbitrary concurrent filesystem containment are
+not claimed. Exclusive publication writes the completion marker last; a late
+failure can leave partial output and cannot publish this exporter's marker.
+
+Work limits /2 are explicit. Input caps include source, max(raw/typed) bindings,
+authorization/policy and limits text, with checked aggregate accounting. Output
+caps include raw source, both leaves of every action and actual final marker;
+the marker also fits the strict 1 MiB input ceiling. Typed API /1 additionally
+obeys hard codec ceilings. The example's four degree/SRS/key caps of `1` are
+schema fillers, ignored by static compilation after validation; they are not
+keygen authorization. No SDK query/VM, constraint/degree check, key derivation,
+proof, verification, ledger apply or network call belongs to this path.
+
+`proving::source_closure` now includes static_compile.rs and compile_call.rs.
+These source edits stale historical exact signing contexts, IR, key identities
+and audit applicability. No keys, parameters or SRS are opened, regenerated or
+qualified by this delivery. Frozen native resource/reviewer gates remain.
+M1/M2/U2, full semantic/native correspondence, 64 KiB transactions, k19 feasibility,
+authenticated funding/custody/predecessor/time/history, replay consumption, PCD
+and financial settlement remain open.
