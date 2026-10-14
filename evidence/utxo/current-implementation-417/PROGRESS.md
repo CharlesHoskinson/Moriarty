@@ -1,0 +1,1 @@
+Source383 stable; dependencies9606 unchanged by current rehash. Final custody/compiler36/36, consumer/new controls16/16, capture/time/race24/24 and quantity68/68 pass. These are scoped actual results, not full suite or production/native acceptance. R1 body-policy-script-budget-minADA bindings remain incomplete and explicitly refused. No native actions.
