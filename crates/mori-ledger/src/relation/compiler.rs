@@ -593,7 +593,14 @@ pub fn compile(
     validated: &layout::ValidatedStaticBindings<'_>,
     action: &str,
 ) -> Result<(IrSource, Vec<Group>, usize)> {
-    compile_inner(validated, action, None, None).map(|(ir, g, n, _)| (ir, g, n))
+    compile_inner(
+        validated.program(),
+        validated.bindings(),
+        action,
+        None,
+        None,
+    )
+    .map(|(ir, g, n, _)| (ir, g, n))
 }
 pub(crate) fn compile_signed(
     validated: &layout::ValidatedStaticBindings<'_>,
@@ -606,10 +613,31 @@ pub(crate) fn compile_signed(
     usize,
     Vec<crate::signed::WireDescriptor>,
 )> {
-    compile_inner(validated, action, Some(signed), context)
+    compile_inner(
+        validated.program(),
+        validated.bindings(),
+        action,
+        Some(signed),
+        context,
+    )
 }
+pub(crate) fn compile_source_static_roles(
+    validated: &layout::ValidatedSourceStaticBindings<'_>,
+    action: &str,
+) -> Result<(IrSource, Vec<Group>, usize)> {
+    compile_inner(
+        validated.program(),
+        validated.bindings(),
+        action,
+        None,
+        None,
+    )
+    .map(|(ir, groups, inputs, _)| (ir, groups, inputs))
+}
+// Only the typed entry points above call this shared emitter. It grants no admission.
 fn compile_inner(
-    validated: &layout::ValidatedStaticBindings<'_>,
+    p: &Program,
+    d: &StaticBindings,
     action: &str,
     signed: Option<&crate::signed::SignedStaticBindings>,
     context: Option<[u128; 2]>,
@@ -619,8 +647,6 @@ fn compile_inner(
     usize,
     Vec<crate::signed::WireDescriptor>,
 )> {
-    let p = validated.program();
-    let d = validated.bindings();
     let a: &Action = p
         .actions
         .iter()
