@@ -1,0 +1,127 @@
+{
+  "candidateSha256": "2995c0991ac24d8a8dd08f2271f9087e1f7ac94c9a025e7aa400e8dc68faa318",
+  "sourceVerdict": "REQUEST_CHANGES",
+  "designVotes": {
+    "C1": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": "CurrentMovement correctly binds actual computed endpoints, resource and net quantity. CurrentRelease supplies concrete reservation, liability and authenticated valuation premises. However, MovementPolicyInput cannot receive CurrentMovement.fee, and IssuancePolicyInput.supply has no legal binding for the computed current supply. These are omissions inside the proposed binding layer."
+    },
+    "C2": {
+      "vote": "APPROVE_SCOPED",
+      "reasons": "The proportional entitlement is explicitly derived from holder shares, vault supply, account, underlying and conversion rule. It does not fabricate a fixed cash Duty. ExternalClaimId separates immutable external references from local liabilities. Imported inventory and unborn-only Genesis have coherent stated conservation and preservation requirements. This approves those representation choices, not complete operation acceptance."
+    },
+    "C3": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": "Preflow vault quotation fixes the demonstrated pricing cycle, and internal release/payout permits the funded margin50 plus input20 minus output60 transition. However, internal payout receipts remain available for later settlement allocation after already discharging their original obligation. The internal-flow design needs explicit once-only settlement consumption."
+    },
+    "C4": {
+      "vote": "REQUEST_CHANGES",
+      "reasons": "WholeCondition Carry preserves zero-current future duties, and the owner table distinguishes current beneficiary roles from historical stake payer and reward eligibility. DutyTemplate also removes the creation-hash cycle. Setting Position Closed before the residual map correctly enables terminal dispositions. However, PositionClose can change funding/P&L metrics without deriving the corresponding final Duties before that map; terminal assignment can therefore preserve the wrong residual."
+    },
+    "C5": {
+      "vote": "APPROVE_SCOPED",
+      "reasons": "The transitive source-type exclusion separates final accounting from business Post and Ensure. WorkCheckpoint denotes immutable before-action resources. The committed action classification selects one account throughout execution, and the fixed maximum-width epilogue removes the accounting fixed point while preserving actual Boolean /1 node charges. No budget reset follows. Implementation, complete composition and correspondence remain open."
+    }
+  },
+  "requiredCorrections": [
+    {
+      "id": "FIN04-F1",
+      "severity": "high",
+      "title": "Internal settlement receipts can discharge another obligation",
+      "locations": [
+        "deliverables/sp01-financial-operation-contract-2026-09-10/record-generation-04.md:110",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/record-generation-04.md:307",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-consumers.md:63",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-consumers.md:207",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/field-generation-04.json:163"
+      ],
+      "finding": "Every created receipt starts with allocated=0, and available allocation capacity subtracts only recorded allocations. Internal margin payout directly discharges its Duty but records no corresponding receipt consumption. DebtRepay accepts an earlier Ordinary receipt with matching parties and resource; it does not exclude an already obligation-settling internal payout.",
+      "witness": "Custodian owns50, entirely reserved for Holder's margin50, and independently owes Holder nominal debt50 with 1:1 cash settlement. PositionClose releases and pays50, discharging the margin Duty and creating an Ordinary Custodian-to-Holder receipt50 with allocated0. A subsequent DebtRepay allocates that receipt50 and discharges the separate debt50. Holder receives50 while two independent obligations totaling100 disappear. Receipt allocation remains50<=50, supply is conserved, and each Duty separately satisfies original=discharged+remaining.",
+      "requiredChange": "Give internally settled payouts explicit consumption records bound to their actual discharged obligations, and exclude those consumed quantities from later allocations. Specify the internal allocation ordering and purpose rather than relying on the prior-operation allocation helper. Audit request/message settlements and vault consideration legs for the same omission; retain valid explicitly linked compositions."
+    },
+    {
+      "id": "FIN04-F2",
+      "severity": "high",
+      "title": "The computed fee flag never reaches MovementPolicy",
+      "locations": [
+        "deliverables/sp01-financial-operation-contract-2026-09-10/CORRECTION-04.md:13",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:486",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:2139",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:4996",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/record-generation-04.md:47",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/rule-binding-and-admission.md:29"
+      ],
+      "finding": "CurrentMovement contains fee, and the schema refinement says policy sees it, but the closed MovementPolicyInput contains only from, frozen, now, policyInputs, quantity, resource and to. The body reads only its admitted input fields. Frozen and policyInputs have independently prescribed sources and cannot carry an invented fee discriminator.",
+      "witness": "Exchange returns output50 and outputFee25, with payee equal to outputFeeRecipient. Its net-output and fee legs both move25 from Pool to the same Holder in the same asset. With identical authenticated facts and restrictions, the same Exchange rule-family entry receives identical inputs for both legs. It cannot implement a policy permitting the ordinary25 while rejecting a fee above20, even when the independent cumulative fee cap is100.",
+      "requiredChange": "Add the actual fee classification to the closed policy input and force its binding to CurrentMovement.fee, or provide an equally explicit typed event discriminator. Check coincident recipient/resource/quantity cases, not only examples where endpoints happen to distinguish fees."
+    },
+    {
+      "id": "FIN04-F3",
+      "severity": "high",
+      "title": "Current asset supply cannot be constructed through the closed selector grammar",
+      "locations": [
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:1696",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:4142",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-schema.json:5170",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/record-generation-04.md:101",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/rule-binding-and-admission.md:56"
+      ],
+      "finding": "IssuancePolicyInput.supply is UInt128 bound to current asset supply. Supply stores imported, issued and burned separately. Their checked aggregate has no generated context field. Selectors cannot perform arithmetic or aggregation, and the rule body cannot read the omitted components from state.",
+      "witness": "For imported100, issued20 and burned10, with balances40 and70, the required input is110. Neither a Supply field nor either balance provides110. A constant110 fails after the next mint5, when the required input becomes115. Binding issued20 instead changes the meaning of a supply-cap policy; with cap112 and mint5 it would test25 instead of115.",
+      "requiredChange": "Define a concrete typed binding site for checked current represented supply, or bind the exact Supply components through an appropriate closed signature and compute the total in the rule. Include consecutive mint/burn states with nonzero imported, issued and burned components."
+    },
+    {
+      "id": "FIN04-F4",
+      "severity": "high",
+      "title": "PositionClose does not reconcile its final funding/P&L calculation with residual Duties",
+      "locations": [
+        "deliverables/sp01-financial-operation-contract-2026-09-10/financial-consumers.md:298",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/record-generation-04.md:307",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/OWNER-ASSIGNMENT-04.md:100",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/field-generation-04.json:3418",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/field-generation-04.json:4074",
+        "deliverables/sp01-financial-operation-contract-2026-09-10/field-generation-04.json:7488"
+      ],
+      "finding": "PositionClosed applies the computed close deltas to metrics. PositionMarkDuty is specified for PositionAdjust and omitted from PositionClose's update roles. The close contract neither requires zero funding/P&L deltas nor supplies another final-mark Duty construction. It then makes the existing Duty authoritative for terminal payment or assignment.",
+      "witness": "An Active position has P&L+7 and a matching unpaid Duty7. An admitted closing calculation returns pnlDelta+5 while satisfying the required zero final margin, liquidity and notional. The closed metric becomes12, but the residual map sees Duty7. Carrying or paying7 completes the stated residual partition while omitting the additional5 calculated at closure. A sign-changing close similarly lacks the required party reversal.",
+      "requiredChange": "Reconcile final funding/P&L amounts and parties before setting Closed and processing the residual map. Alternatively, explicitly require zero funding/P&L close deltas and an earlier PositionAdjust for final marking. Preserve the subsequent distinction between closed historical metrics and later assigned or paid residual Duties."
+    }
+  ],
+  "checksPerformed": [
+    {
+      "check": "Startup",
+      "result": "Loaded the checked-in moriarty-dev develop skill and read orchestration stop rules. Ran only the requested status command; no campaign action."
+    },
+    {
+      "check": "Candidate integrity",
+      "result": "Independently recomputed the requested manifest SHA256 and verified all295 unique file pins and recorded byte lengths. Final recheck still matched."
+    },
+    {
+      "check": "Active source and retained findings",
+      "result": "Inspected correction04 README precedence, complete consumer/generation/owner/rule/work definitions, all38 operation bindings, all206 records,31 enums,8 variant families,35 rule pairs,47 construction roles and40 update roles. Read both retained original03 reviews as evidence and checked their findings against current definitions."
+    },
+    {
+      "check": "Preservation",
+      "result": "Pure48 signatures and reference-vault-rule.json are byte-identical to original03. Confirmed56 body nodes and6372 canonical body bytes. Rerun preservation checks verified137 original03 pins,101 protected expression pins and9 selected Boolean dependency pins. Unchanged pure decisions were not reopened."
+    },
+    {
+      "check": "Existing offline checks",
+      "result": "Ran check-field-generation-04.py, check-financial-schema.py, check-closure-derivations.py, independent-request-cases-01.py and independent-vault-arithmetic-01.py with bytecode writing disabled. All passed their stated limited scopes:1163 field occurrences,12 field controls,19 discriminators,6 schema controls,13 request cases and20 vault cases. Recomputed schema size41113 canonical bytes and3467 JSON nodes."
+    },
+    {
+      "check": "Independent structural and arithmetic challenges",
+      "result": "Independently traversed all214 record/variant graph nodes and confirmed acyclicity, the16-field DutyTemplate, and kernel-type exclusion from FinancialState, OperationContext, all38 Args and all35 rule pairs. Checked payout double-discharge arithmetic, indistinguishable fee inputs, aggregate supply binding and the missing closing-mark update."
+    },
+    {
+      "check": "Corrected relations retained",
+      "result": "Traced negative accrual to subtracting q from interest/remaining and adding q to discharged; rebase to the required prior-period endpoint; preflow vault rounding and internal fee legs; exact reservation release and seizure-ticket restrictions; request residual32 after fill40/claim20/cancel60; zero-current WholeCondition Carry; owner/provenance rewrites; and the fixed final accounting epilogue. These checks do not establish a running financial interpreter."
+    }
+  ],
+  "limitations": [
+    "Guarded status failed with sqlite3.OperationalError: unable to open database file. Continued the authorized read-only source review as requested.",
+    "The counterexamples are source-relation and offline arithmetic findings, not executions of a complete Moriarty reducer. Passing inventory checks does not refute them.",
+    "No files were edited. No financial, network, compiler, K, native, installation, service, wallet or transaction operation was performed.",
+    "This review does not accept full authority/signing, mode/composition, product rule bodies, proof correspondence, Midnight execution or RP01.",
+    "Next necessary boundary: make the bounded source repairs above, then integrate the corrected ABI with exact authority and mode/work judgments and implement a complete combined history with actual inputs, intermediate states, internal receipt consumption, residual Duties, effects and work debits. Include invalid siblings for these findings before claiming generic execution acceptance."
+  ]
+}
