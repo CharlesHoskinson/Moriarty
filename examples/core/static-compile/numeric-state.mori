@@ -1,0 +1,19 @@
+language "moriarty/1";
+agreement StaticNumericDraft {
+  state zulu: UInt = 0;
+  state alpha: Bool = true;
+  action advance(amount: UInt, allow: Bool) {
+    requires allow;
+    let before = zulu;
+    next zulu = zulu + amount;
+    next alpha = not alpha;
+    ensures zulu == before + amount;
+    emit "flag"(alpha);
+  }
+  action reset() {
+    next zulu = 0;
+    next alpha = true;
+    ensures alpha;
+    emit "flag"(alpha);
+  }
+}
