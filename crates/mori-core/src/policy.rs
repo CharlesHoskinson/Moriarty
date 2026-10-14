@@ -1,5 +1,8 @@
 //! Deterministic cost accounting and scoped local authority.
 //! Authentication of grants and settlement observations belongs to the caller.
+//! Sponsored preparation calls the source evaluator. It commits reservation
+//! accounting only after that evaluation succeeds. A caller premise is not a
+//! receipt, a funding proof, or a ledger observation.
 use crate::{Error, UInt};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -212,6 +215,314 @@ impl FeeCapability {
             .insert(id.into(), Reservation::Settled(actual));
         Ok(())
     }
+    pub fn reservation(&self, id: &str) -> Option<SponsorReservation> {
+        self.reservations.get(id).map(|held| match held {
+            Reservation::Reserved(amount) => SponsorReservation::Reserved(*amount),
+            Reservation::Unknown(amount) => SponsorReservation::Unknown(*amount),
+            Reservation::Settled(amount) => SponsorReservation::Settled(*amount),
+            Reservation::Released => SponsorReservation::Released,
+        })
+    }
+    /// Record a timeout. This does not prove that a spend occurred or did not occur.
+    pub fn note_timeout(&mut self, id: &str) -> Result<(), Error> {
+        self.mark_unknown(id)
+    }
+    /// Settle only when the caller sets `authenticated`.
+    /// This function does not authenticate the observation.
+    pub fn settle_authenticated(
+        &mut self,
+        id: &str,
+        actual: UInt,
+        authenticated: bool,
+    ) -> Result<(), Error> {
+        if !authenticated {
+            return Err(Error::new(
+                "sponsor",
+                "authenticated settlement observation required",
+            ));
+        }
+        self.settle(id, actual)
+    }
+    /// Return an unknown hold only when the caller sets `authenticated`.
+    /// This function does not authenticate the unused observation.
+    pub fn release_authenticated_unused(
+        &mut self,
+        id: &str,
+        authenticated: bool,
+    ) -> Result<(), Error> {
+        if !authenticated {
+            return Err(Error::new(
+                "sponsor",
+                "authenticated unused observation required",
+            ));
+        }
+        match self.reservations.get_mut(id) {
+            Some(held @ Reservation::Unknown(_)) => {
+                *held = Reservation::Released;
+                Ok(())
+            }
+            _ => Err(Error::new(
+                "sponsor",
+                "authenticated unused release requires an unknown reservation",
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SponsorReservation {
+    Reserved(UInt),
+    Unknown(UInt),
+    Settled(UInt),
+    Released,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct WorkBudget {
+    meter: Meter,
+    recovery_reserved: Cost,
+    recovery_used: Cost,
+}
+impl WorkBudget {
+    pub fn new(caps: Cost) -> Self {
+        Self {
+            meter: Meter::new(caps),
+            recovery_reserved: Cost::default(),
+            recovery_used: Cost::default(),
+        }
+    }
+    pub fn ordinary_used(&self) -> Cost {
+        self.meter.used()
+    }
+    pub fn recovery_reserved(&self) -> Cost {
+        self.recovery_reserved
+    }
+    pub fn recovery_used(&self) -> Cost {
+        self.recovery_used
+    }
+    pub fn reserve_recovery(&mut self, plane: CostPlane, amount: UInt) -> Result<(), Error> {
+        if amount.0 == 0 {
+            return Err(Error::new("meter", "recovery reservation must be positive"));
+        }
+        let reserved = plane_amount(&self.recovery_reserved, plane).0;
+        let ordinary = plane_amount(&self.meter.used(), plane).0;
+        let cap = plane_amount(&self.meter.caps, plane).0;
+        let next = reserved
+            .checked_add(amount.0)
+            .ok_or_else(|| Error::new("meter", "cost counter overflow"))?;
+        let occupied = next
+            .checked_add(ordinary)
+            .ok_or_else(|| Error::new("meter", "cost counter overflow"))?;
+        if occupied > cap {
+            return Err(Error::new(
+                "meter",
+                "recovery reservation exceeds remaining capacity",
+            ));
+        }
+        set_plane(&mut self.recovery_reserved, plane, UInt(next));
+        Ok(())
+    }
+    pub fn charge_ordinary(&mut self, plane: CostPlane, amount: UInt) -> Result<(), Error> {
+        if amount.0 == 0 {
+            return Ok(());
+        }
+        let used = plane_amount(&self.meter.used(), plane).0;
+        let reserved = plane_amount(&self.recovery_reserved, plane).0;
+        let cap = plane_amount(&self.meter.caps, plane).0;
+        let next = used
+            .checked_add(amount.0)
+            .ok_or_else(|| Error::new("meter", "cost counter overflow"))?;
+        let occupied = next
+            .checked_add(reserved)
+            .ok_or_else(|| Error::new("meter", "cost counter overflow"))?;
+        if next > cap {
+            return Err(Error::new("meter", "cost plane cap exceeded"));
+        }
+        if occupied > cap {
+            return Err(Error::new(
+                "meter",
+                "ordinary work would consume reserved recovery",
+            ));
+        }
+        self.meter.charge(plane, amount)
+    }
+    pub fn charge_recovery(&mut self, plane: CostPlane, amount: UInt) -> Result<(), Error> {
+        if amount.0 == 0 {
+            return Ok(());
+        }
+        let used = plane_amount(&self.recovery_used, plane).0;
+        let reserved = plane_amount(&self.recovery_reserved, plane).0;
+        let next = used
+            .checked_add(amount.0)
+            .ok_or_else(|| Error::new("meter", "cost counter overflow"))?;
+        if next > reserved {
+            return Err(Error::new(
+                "meter",
+                "recovery charge exceeds reserved slice",
+            ));
+        }
+        set_plane(&mut self.recovery_used, plane, UInt(next));
+        Ok(())
+    }
+}
+
+fn plane_amount(cost: &Cost, plane: CostPlane) -> UInt {
+    match plane {
+        CostPlane::Logical => cost.logical,
+        CostPlane::Dust => cost.dust,
+        CostPlane::Service => cost.service,
+        CostPlane::External => cost.external,
+    }
+}
+fn set_plane(cost: &mut Cost, plane: CostPlane, amount: UInt) {
+    match plane {
+        CostPlane::Logical => cost.logical = amount,
+        CostPlane::Dust => cost.dust = amount,
+        CostPlane::Service => cost.service = amount,
+        CostPlane::External => cost.external = amount,
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SponsorScope {
+    pub grant: String,
+    pub network: String,
+    pub anchor: String,
+    pub program: String,
+    pub action: String,
+    pub beneficiary: String,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LocalObservation {
+    Hold,
+    Timeout,
+    Settle { actual: UInt, authenticated: bool },
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SponsoredExecution {
+    pub execution: crate::Execution,
+}
+#[derive(Debug, Clone)]
+pub struct SponsoredRequest<'a> {
+    pub candidate: &'a str,
+    pub scope: &'a SponsorScope,
+    pub dust: UInt,
+    pub ordinary: Cost,
+    pub program: &'a crate::Program,
+    pub action: &'a str,
+    pub scenario: &'a crate::Scenario,
+    pub observation: LocalObservation,
+}
+
+/// Prepare one local sponsored execution.
+/// Scope, capacity, recovery, and observation refusals leave both inputs unchanged.
+/// Evaluator failure also leaves both inputs unchanged.
+pub fn prepare_sponsored_execution(
+    grant: &mut FeeCapability,
+    budget: &mut WorkBudget,
+    request: SponsoredRequest<'_>,
+) -> Result<SponsoredExecution, Error> {
+    let grant_before = grant.clone();
+    let budget_before = budget.clone();
+    let prepared = commit_sponsored_execution(grant, budget, request);
+    if prepared.is_err() {
+        *grant = grant_before;
+        *budget = budget_before;
+    }
+    prepared
+}
+
+fn commit_sponsored_execution(
+    grant: &mut FeeCapability,
+    budget: &mut WorkBudget,
+    request: SponsoredRequest<'_>,
+) -> Result<SponsoredExecution, Error> {
+    sponsor_scope_matches(
+        grant,
+        request.scope,
+        request.program,
+        request.action,
+        request.candidate,
+    )?;
+    if request.dust.0 == 0 {
+        return Err(Error::new("sponsor", "dust reservation must be positive"));
+    }
+    if let LocalObservation::Settle {
+        actual,
+        authenticated,
+    } = request.observation
+    {
+        if !authenticated {
+            return Err(Error::new(
+                "sponsor",
+                "authenticated settlement observation required",
+            ));
+        }
+        if actual.0 > request.dust.0 {
+            return Err(Error::new(
+                "sponsor",
+                "settled DUST exceeds reserved authority",
+            ));
+        }
+    }
+    let execution = crate::simulate(request.program, request.action, request.scenario)?;
+    grant.reserve(
+        request.candidate,
+        &request.scope.network,
+        &request.scope.anchor,
+        &request.scope.program,
+        &request.scope.action,
+        &request.scope.beneficiary,
+        request.dust,
+    )?;
+    charge_ordinary_cost(budget, request.ordinary)?;
+    match request.observation {
+        LocalObservation::Hold => {}
+        LocalObservation::Timeout => grant.note_timeout(request.candidate)?,
+        LocalObservation::Settle {
+            actual,
+            authenticated,
+        } => grant.settle_authenticated(request.candidate, actual, authenticated)?,
+    }
+    Ok(SponsoredExecution { execution })
+}
+
+fn sponsor_scope_matches(
+    grant: &FeeCapability,
+    scope: &SponsorScope,
+    program: &crate::Program,
+    action: &str,
+    candidate: &str,
+) -> Result<(), Error> {
+    let aligned = !scope.grant.is_empty()
+        && !scope.network.is_empty()
+        && !scope.anchor.is_empty()
+        && !scope.program.is_empty()
+        && !scope.action.is_empty()
+        && !scope.beneficiary.is_empty()
+        && !candidate.is_empty()
+        && scope.grant == grant.id
+        && scope.network == grant.network
+        && scope.anchor == grant.anchor
+        && scope.program == grant.program
+        && scope.action == grant.action
+        && scope.beneficiary == grant.beneficiary
+        && program.name == grant.program
+        && action == grant.action;
+    if aligned {
+        Ok(())
+    } else {
+        Err(Error::new("sponsor", "fee capability scope mismatch"))
+    }
+}
+
+fn charge_ordinary_cost(budget: &mut WorkBudget, cost: Cost) -> Result<(), Error> {
+    budget.charge_ordinary(CostPlane::Logical, cost.logical)?;
+    budget.charge_ordinary(CostPlane::Dust, cost.dust)?;
+    budget.charge_ordinary(CostPlane::Service, cost.service)?;
+    budget.charge_ordinary(CostPlane::External, cost.external)?;
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]

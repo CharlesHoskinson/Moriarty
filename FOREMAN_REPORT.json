@@ -1,0 +1,297 @@
+{
+  "schema": "moriarty.g2-author-foreman-report/1",
+  "lane": "G2",
+  "role": "author",
+  "selfReviewIsApproval": false,
+  "milestoneClosureClaimed": false,
+  "nativeCertificationClaimed": false,
+  "thisResumeReranTests": false,
+  "authorRequested": {
+    "model": "grok-4.7",
+    "effort": "high"
+  },
+  "authorReturned": {
+    "diagnosisModelUsageKey": "grok-4.7-build",
+    "equivalenceToRequestedModel": "not-established-by-usage-key",
+    "sessionId": "01a139e0-dc72-7053-ae78-c60bb882e193",
+    "vendorStopReason": "cancelled",
+    "vendorStopText": "Error: max turns reached"
+  },
+  "baseCommit": "97e77ea86d3832c642ebade4678f195b4e178775",
+  "headCommit": "97e77ea86d3832c642ebade4678f195b4e178775",
+  "commitCreated": false,
+  "pushPerformed": false,
+  "objective": "A real source execution can be prepared under explicit local cost and sponsorship caps while ordinary logical work cannot consume the reserved recovery slice; unknown outcomes retain exposure, concurrent candidate preparation cannot reserve beyond the same cap, and refusal preserves all counters.",
+  "scope": "independent-local-source-preparation-only",
+  "milestonesNamed": [
+    "U3.preparation",
+    "U5.preparation",
+    "M4",
+    "M11.preparation",
+    "M16"
+  ],
+  "milestoneStatus": "preparation-only-not-closed",
+  "acceptanceDependencies": ["U2", "U3", "U5"],
+  "acceptanceDependencyStatus": "open",
+  "diagnosis": {
+    "path": "/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/G2-headless-ready-terminal-diagnosis.json",
+    "schema": "moriarty-g2-headless-ready-terminal-diagnosis/1",
+    "observedAt": "2026-10-14T10:37:43.381379+00:00",
+    "queueId": 2147,
+    "queueResult": "Failed",
+    "conclusion": "Vendor stopped at max-turn cap. Fixed Cargo gate passed all 12 tests. Required report files are absent, so the runner emitted round_incomplete with gate_rc=0 and report_fresh=false. This is not a test failure.",
+    "runner": [
+      {
+        "seq": 132,
+        "ts": "2026-10-14T10:27:21Z",
+        "state": "verifying",
+        "attempt": 2
+      },
+      {
+        "seq": 133,
+        "ts": "2026-10-14T10:27:38Z",
+        "type": "waiting_child",
+        "gate_rc": 0,
+        "report_fresh": false
+      },
+      {
+        "seq": 134,
+        "ts": "2026-10-14T10:27:39Z",
+        "type": "alert",
+        "kind": "round_incomplete",
+        "gate_rc": 0,
+        "report_fresh": false
+      }
+    ],
+    "candidateSha256": "1fb55987f2b638f391d4e6dc7174739d2d0295bf6517bff1a6b9bf4625c5c389",
+    "reportsPresentAtDiagnosis": {
+      "FOREMAN_REPORT.md": false,
+      "FOREMAN_REPORT.json": false
+    },
+    "auditCount": 0
+  },
+  "writeSet": [
+    "crates/mori-core/src/policy.rs",
+    "crates/mori-core/tests/sponsored_execution.rs",
+    "crates/mori-core/tests/recovery_budget.rs"
+  ],
+  "ownedDiff": {
+    "gitStatus": [
+      " M crates/mori-core/src/policy.rs",
+      "?? crates/mori-core/tests/sponsored_execution.rs",
+      "?? crates/mori-core/tests/recovery_budget.rs"
+    ],
+    "policyDiffStat": "crates/mori-core/src/policy.rs | 311 +++++++++++++++++++++++++++++++++++++++++",
+    "policyInsertions": 311,
+    "policyDeletions": 0,
+    "policyDiffBytes": 11369,
+    "policyDiffSha256": "a037c4103608a59e2e31adc938180b48b373f61722304420e04d62493076924f",
+    "federationPolicyAndAuthorizeChanged": false
+  },
+  "ownedSha256": {
+    "crates/mori-core/src/policy.rs": {
+      "bytes": 19080,
+      "sha256": "6f295a31781ce65a4bae14578abed5d431c3fdcb79208cda9fdfadbe27347b2d"
+    },
+    "crates/mori-core/tests/recovery_budget.rs": {
+      "bytes": 7764,
+      "sha256": "b8237a97a4decb0ca68da3542c98b77357bcfdbb9a7e6d621a68b93713ccdbb7"
+    },
+    "crates/mori-core/tests/sponsored_execution.rs": {
+      "bytes": 20676,
+      "sha256": "1cb191104effa1ab97eb4acc11deec5172ee75c15deea2593137924b9ec2a78e"
+    }
+  },
+  "ownedHashesMatchDiagnosis": true,
+  "candidateSha256": {
+    "value": "1fb55987f2b638f391d4e6dc7174739d2d0295bf6517bff1a6b9bf4625c5c389",
+    "algorithm": "SHA-256 of compact JSON with sorted keys. Object keys are baseCommit and ownedPaths. Each ownedPaths element has bytes, path, and sha256. Path order is policy.rs, recovery_budget.rs, sponsored_execution.rs.",
+    "reproducedByThisResume": true
+  },
+  "behavior": {
+    "entryPoint": "mori_core::policy::prepare_sponsored_execution",
+    "evaluator": "crate::simulate",
+    "atomicRollback": "Error restores the pre-call FeeCapability and WorkBudget clones.",
+    "sponsorExposure": "Hold keeps Reserved. Timeout moves the hold to Unknown and retains the reserved amount. release_unused refuses an Unknown hold.",
+    "scopeRefusal": "Empty or mismatched grant, network, anchor, program, action, beneficiary, candidate, program.name, or action leaves both counters unchanged.",
+    "settlement": "Authenticated settle debits actual once. actual above the reservation refuses with unchanged state. A second settle refuses.",
+    "authenticatedPremise": "authenticated is a caller-supplied boolean. It does not establish funding, a receipt, or actual settlement.",
+    "costPlanes": "Logical, dust, service, and external ordinary charges are independent.",
+    "recoverySlice": "charge_ordinary refuses work that would enter recovery_reserved. charge_recovery cannot use ordinary spare capacity.",
+    "declaredCosts": "Ordinary amounts are caller-declared local inputs, not measured native fees."
+  },
+  "interfaceNeeds": [
+    {
+      "owner": "root-integrator",
+      "need": "No shared-file edit is required for this local predicate.",
+      "pathsLeftUnchanged": [
+        "crates/mori-core/src/lib.rs",
+        "Cargo.toml",
+        "Cargo.lock",
+        "crates/mori/src/cli.rs",
+        "crates/mori/src/commands/mod.rs"
+      ]
+    },
+    {
+      "owner": "root-integrator",
+      "need": "A later mori command can call mori_core::policy::prepare_sponsored_execution. CLI dispatch remains outside this write set.",
+      "publicEntryPoint": "mori_core::policy::prepare_sponsored_execution"
+    },
+    {
+      "owner": "root-integrator",
+      "need": "Keep FederationPolicy bytes and the authorize API unchanged.",
+      "status": "unchanged-in-this-diff"
+    },
+    {
+      "owner": "later-native-admission",
+      "need": "The native signed caller does not consume this local policy.",
+      "status": "acceptance-blocker"
+    }
+  ],
+  "outerGate": {
+    "source": "diagnosis.publicGateOutput",
+    "executedByThisResume": false,
+    "qualification": "ordinary-source/reference/relation-check-only-no-native-certification",
+    "clean": "Removed 20 files, 322.7MiB total",
+    "tests": [
+      {
+        "test": "sponsored_execution",
+        "binary": "sponsored_execution-bd14dd5cadbd6286",
+        "compileSeconds": 12.01,
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "finishedSeconds": 0.01,
+        "names": [
+          "evaluator_failure_restores_sponsor_and_budget_atomically",
+          "interleaved_candidates_stop_at_the_same_cap_boundary",
+          "ordinary_prepare_cannot_consume_the_recovery_slice",
+          "scope_and_overflow_refusals_keep_every_counter",
+          "settlement_below_reservation_debits_actual_once",
+          "source_success_matches_evaluator_and_keeps_recovery_slice",
+          "timeout_cannot_release_without_authenticated_unused_premise"
+        ]
+      },
+      {
+        "test": "recovery_budget",
+        "binary": "recovery_budget-c0032cfac4384922",
+        "compileSeconds": 1.91,
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "finishedSeconds": 0.02,
+        "names": [
+          "cost_planes_remain_independent",
+          "cumulative_plane_accounting_stays_inside_each_cap",
+          "ordinary_logical_work_cannot_consume_reserved_recovery",
+          "overflow_and_empty_recovery_reservation_keep_budget",
+          "recovery_charge_cannot_use_ordinary_spare_capacity"
+        ]
+      }
+    ]
+  },
+  "priorAuthorCommands": {
+    "executedByThisResume": false,
+    "lock": "flock -x /tmp/moriarty-language-wave1-build.lock",
+    "environmentRecorded": {
+      "CARGO_TARGET_DIR": "/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/cargo-target",
+      "CARGO_BUILD_JOBS": "2",
+      "RUST_TEST_THREADS": "1",
+      "RUSTUP_TOOLCHAIN": "not-recorded-in-author-commands"
+    },
+    "attempts": [
+      {
+        "id": 1,
+        "log": "/tmp/g2-verify/cargo.txt",
+        "commands": [
+          "cargo clean --offline --locked -p mori -p mori-core -p mori-backend -p mori-ledger",
+          "cargo test --offline --locked -p mori-core --test sponsored_execution -- --test-threads=1",
+          "cargo test --offline --locked -p mori-core --test recovery_budget -- --test-threads=1"
+        ],
+        "sponsoredExit": 101,
+        "recoveryExit": 0,
+        "failure": "8 E0618 errors. Local bindings grant and budget shadowed helper functions. Retained tail lines include 483, 587, 588, 615, and 616.",
+        "recoveryResult": "5 passed, 0 failed. Author-session result during the failed sibling compile. Not the outer gate."
+      },
+      {
+        "id": 2,
+        "log": "/tmp/g2-verify/final.txt",
+        "repair": "Renamed helpers to new_grant and new_budget.",
+        "cleanExit": 0,
+        "sponsoredExit": 101,
+        "recoveryExit": 0,
+        "failure": "E0618 at crates/mori-core/tests/sponsored_execution.rs:184. Local Scenario binding shadowed fn scenario.",
+        "recoveryResult": "5 passed, 0 failed. Not the outer gate.",
+        "quint": {
+          "binary": "/home/charl/.npm-global/bin/quint",
+          "version": "0.32.0",
+          "exits": {
+            "acceptanceTypecheck": 0,
+            "acceptanceTest": 0,
+            "lifecycleTypecheck": 0,
+            "lifecycleTest": 0
+          },
+          "acceptancePassing": 30,
+          "lifecyclePassing": 11,
+          "hostWarning": "Node warned that NO_COLOR is ignored because FORCE_COLOR is set. Exit codes stayed 0.",
+          "qualification": "bounded-deterministic-model-QA-not-source-refinement-or-native-acceptance",
+          "includedInOuterGateOutput": false
+        }
+      },
+      {
+        "id": 3,
+        "log": "/tmp/g2-verify/final2.txt",
+        "repair": "Renamed scenario to scenario_with.",
+        "clean": "Removed 14 files, 35.8MiB total",
+        "cleanExit": 0,
+        "sponsored": {
+          "binary": "sponsored_execution-8cf611e3e40d347b",
+          "compileSeconds": 10.25,
+          "passed": 7,
+          "failed": 0,
+          "finishedSeconds": 0.03,
+          "exit": 0
+        },
+        "recovery": {
+          "binary": "recovery_budget-66db5bb2df31ea68",
+          "compileSeconds": 1.4,
+          "passed": 5,
+          "failed": 0,
+          "finishedSeconds": 0.02,
+          "exit": 0
+        },
+        "quint": {
+          "acceptanceTypecheckExit": 0,
+          "acceptanceTest": "30 passing (301ms)",
+          "lifecycleTypecheckExit": 0,
+          "lifecycleTest": "11 passing (277ms)",
+          "hostWarning": "Same NO_COLOR and FORCE_COLOR warning. Exit codes stayed 0.",
+          "qualification": "bounded-deterministic-model-QA-not-source-refinement-or-native-acceptance"
+        },
+        "relationToOuterGate": "Author-session binaries differ from the later outer-gate binaries. Source hashes match the diagnosis snapshot."
+      }
+    ]
+  },
+  "currentFailures": [],
+  "incompleteAtDiagnosis": "FOREMAN_REPORT.md and FOREMAN_REPORT.json were absent. This resume writes them. The runner has not accepted these report bytes.",
+  "remainingGaps": [
+    "Authenticated funding and durable real allowance storage are absent.",
+    "Native DUST and actual settlement observations are absent.",
+    "The same signed scoped financial and recovery policy is not connected through the native caller.",
+    "U2, U3, and U5 acceptance artifacts are absent.",
+    "Declared ordinary costs are not measured native fees.",
+    "release_unused still releases a never-submitted Reserved hold. The Quint lifecycle recover path is a different model transition. No refinement is claimed.",
+    "Fresh non-author gpt-6.1-sol and grok-4.7 full-candidate reviews have not run. Round-1 seats are S2 and G3."
+  ],
+  "acceptanceBlockers": [
+    "authenticated funding and durable real allowance storage",
+    "native DUST/actual settlement observations",
+    "same signed scoped financial/recovery policy through native caller"
+  ],
+  "reviews": {
+    "required": "fresh non-author Sol and Grok full-candidate audits at high effort",
+    "round1Seats": ["S2", "G3"],
+    "completed": false,
+    "authorSelfReviewIsApproval": false
+  }
+}
