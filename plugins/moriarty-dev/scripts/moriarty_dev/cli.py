@@ -10,10 +10,10 @@ import time
 
 from moriarty_dev.compatibility import inspect_compatibility, observed_coverage
 from moriarty_dev.policy import assess
-from moriarty_dev.runner import load_runner, execute
+from moriarty_dev.runner import load_runner, execute, LaunchRefused
 from moriarty_dev.notifications import observe_delivery, notification_line
 from moriarty_dev.store import has_other_primary
-from moriarty_dev.records import load_snapshot, read_actions
+from moriarty_dev.records import load_snapshot, read_actions, LIVE_PROFILE
 from moriarty_dev.store import (
     get_db_path,
     init_db,
@@ -370,6 +370,27 @@ def _load_admitted_runner(repo: Path, action: dict) -> tuple[dict, str]:
     return load_runner(repo, action)
 
 
+def _loan_disposition(receipt: dict) -> dict:
+    """Map a validated loan-process-result to CLI exit, reservation status and event.
+
+    Child exit and stdout are data. Only the durable result read by the runner
+    with its identity checks decides: success -> 0/finished; known failure with
+    complete containment -> 4/failed; refused before start -> 4/failed with a
+    distinct event; everything else stays unresolved with an active reservation.
+    """
+    loan = receipt["runnerReceipt"]["loanResult"]
+    disposition = loan["disposition"]
+    if disposition == "success":
+        return {"exit": 0, "store": "finished", "event": "loan_process_success", "success": True}
+    if disposition == "failed":
+        return {"exit": 4, "store": "failed", "event": "loan_process_failed", "success": False}
+    if disposition == "refused":
+        return {"exit": 4, "store": "failed", "event": "refused_before_start", "success": False}
+    if disposition == "failed_unresolved":
+        return {"exit": 4, "store": None, "event": "loan_failure_with_unresolved_ownership", "success": False}
+    return {"exit": 4, "store": None, "event": "runner_unresolved", "success": False}
+
+
 def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: bool):
     t0 = time.time()
     try:
@@ -383,6 +404,16 @@ def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: 
         sys.stderr.write(f"Unknown action: {action_id}\n")
         sys.exit(3)
     action = matching[0]
+    if action.get("evidenceProfile") == LIVE_PROFILE:
+        canonical = get_db_path(repo)
+        if Path(db_path).resolve() != Path(canonical).resolve():
+            msg = f"Policy denied action '{action_id}': HISTORY_UNRESOLVED. Next: None"
+            if as_json:
+                print(json.dumps({"error": msg, "reasonCode": "HISTORY_UNRESOLVED"}))
+            else:
+                sys.stderr.write(msg + "\n")
+            sys.exit(2)
+        history_reader = make_history_reader(canonical)
 
     snap = load_snapshot(str(repo), action_id, history_reader=history_reader)
     decision = assess(snap, action)
@@ -416,7 +447,7 @@ def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: 
 
     # Immediately revalidate snapshot and policy after reservation
     post_snap = load_snapshot(str(repo), action_id, history_reader=history_reader)
-    post_snap["primaryActive"] = has_other_primary(db_path, res_id)
+    post_snap["primaryActive"] = has_other_primary(db_path, res_id, action)
     post_dec = assess(post_snap, action)
     if not post_dec["allow"]:
         finish(db_path, res_id, {"error": f"Policy denied after reservation: {post_dec['reasonCode']}"}, status="failed")
@@ -447,13 +478,46 @@ def cmd_run(repo: Path, db_path: Path, history_reader, action_id: str, as_json: 
 
     receipt = None
     try:
-        receipt = execute(repo, runner, runner_digest, res_id)
+        try:
+            receipt = execute(repo, runner, runner_digest, res_id)
+        except LaunchRefused as exc:
+            # No child was started; the reservation closes as failed and the
+            # existing debit stays consumed. This is not a policy denial.
+            finish(db_path, res_id, {"error": f"Launch refused before invocation: {exc}"}, status="failed")
+            sys.stderr.write(f"Launch refused before invocation: {exc}\n")
+            sys.exit(2)
         observed = receipt["runnerReceipt"]
         # Check current command/input and durable debit again before claiming
         # completion. Changed evidence or supervisor loss stays unresolved.
         _, terminal_digest = _load_admitted_runner(repo, action)
         if terminal_digest != runner_digest or observed["completionAmbiguous"]:
             raise StoreError("Runner completion is ambiguous; reservation and charge remain claimed")
+        if "loanResult" in observed:
+            mapping = _loan_disposition(receipt)
+            loan = observed["loanResult"]
+            event_payload = {"reservationId": res_id, "chargeId": runner["chargeId"], "exitCode": receipt["exitCode"],
+                             "disposition": loan["disposition"], "status": loan["status"],
+                             "failureCode": loan["failureCode"], "resultPath": loan["resultPath"],
+                             "resultSha256": loan["resultSha256"], "invocationSha256": loan["invocationSha256"],
+                             "invocationEventId": loan["invocationEventId"],
+                             "outstandingOwners": loan["outstandingOwners"], "problem": loan["problem"],
+                             "ownershipReleased": loan.get("ownershipReleased"),
+                             "releaseProblem": loan.get("releaseProblem")}
+            record_event(db_path, str(repo), action["requirement"], action["capability"],
+                         action["candidate"], action_id, mapping["event"], event_payload)
+            if mapping["store"] is not None:
+                finish(db_path, res_id, receipt, status=mapping["store"])
+            result = {"success": mapping["success"], "action": action_id, "exitCode": receipt["exitCode"],
+                      "chargeId": runner["chargeId"], "reservationId": res_id, "disposition": loan["disposition"],
+                      "status": loan["status"], "failureCode": loan["failureCode"],
+                      "resultPath": loan["resultPath"], "resultSha256": loan["resultSha256"],
+                      "invocationSha256": loan["invocationSha256"], "reservationStatus": mapping["store"] or "active",
+                      "ownershipReleased": loan.get("ownershipReleased"), "problem": loan.get("problem")}
+            if as_json:
+                print(json.dumps(result))
+            elif not mapping["success"]:
+                sys.stderr.write(f"Loan invocation disposition: {loan['disposition']}\n")
+            sys.exit(mapping["exit"])
         verified = bool(observed["behavioralAssertions"])
         success = not observed["outputLimitExceeded"] and (
             verified if action["kind"] == "reproduce" else receipt["exitCode"] == 0

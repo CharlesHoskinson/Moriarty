@@ -97,6 +97,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 
 from moriarty_dev.policy import assess
 
@@ -161,6 +162,39 @@ ACCOUNTING_SCHEMA = "moriarty.supervised-accounting/1"
 CAMPAIGN_COMPLETE = frozenset(("complete",))
 ACCEPTANCE_COMPLETE = frozenset(("complete-design-subset-only",))
 DESIGN_SCOPE = "RP01-MC02 specified design consistency only"
+# Item 1.2 exact live-path labels (afk-live-bindings). Exact equality only.
+LIVE_BINDING_STATUS = "admitted-i2-source-only"
+LIVE_SCOPE = "I2 live executor source correctness only"
+LIVE_ACCEPTANCE_STATUS = "complete-i2-source-only"
+LIVE_STAGE = "i2"
+LIVE_OWNER = "MC02"
+LIVE_PROFILE = "finalized-financial-settlement"
+LIVE_DIGEST_ALGO = "SHA256 compact sorted-key JSON of ownedFiles mapping"
+BRIDGE_SCHEMA = "moriarty.sp01-prerequisite-disposition/1"
+BRIDGE_PATH = "openspec/sprints/sp01-financial-contract-and-execution-admission.md"
+BRIDGE_ORIGINAL_PATH = "plugins/moriarty-dev/tests/fixtures/sp01-financial-contract-and-execution-admission.md"
+BRIDGE_ORIGINAL_SHA256 = "fdb586d9bf05f2fbf7e9c2294be49854528db20e575faf9aaa1144b033908172"
+BRIDGE_SCOPE = "SP01 RP01-MC02 non-substantive prerequisite disposition only"
+BRIDGE_KEYS = (
+    "schema", "path", "originalPath", "originalSha256", "currentSha256", "diffPath", "diffSha256",
+    "opusDisposition", "astraDisposition",
+)
+# Fresh independent reviewer identities by vendor. The historical pair
+# (claude-opus-5, gpt-6-astra) and the current user routing (Fable 5.1 with
+# GPT-6 high checking) are admitted; two receipts must come from distinct
+# vendors. Historical identities are never relabelled.
+REVIEWER_VENDORS = {
+    "claude-opus-5": "anthropic",
+    "claude-fable-5-1": "anthropic",
+    "gpt-6-astra": "openai",
+    "gpt-6": "openai",
+    "gpt-6-high": "openai",
+}
+LIVE_PROJECTION_SCHEMA = "moriarty.mc02-successor-projection/1"
+LIVE_ENVELOPE_KEYS = (
+    "owner", "projectionSha256", "amendmentSha256", "remainingReservedSeconds", "workerDispatches",
+    "workerDispatchLimit",
+)
 STAGE_ADMISSION_SCHEMA = "openspec/report-stage-admission.schema.json"
 PROGRAM_VERSION = 1
 SPRINTS_VERSION = 1
@@ -341,6 +375,7 @@ ACCOUNTING_KEYS = (
     "gross_tnight_debit",
     "master_limit_seconds",
     "master_worker_dispatch_limit",
+    "mc02ApplicationMarker",
     "native_campaigns",
     "package",
     "package_limit_seconds",
@@ -912,7 +947,7 @@ def _find_gate(sprints, requirement):
     return None
 
 
-def _entry_eligible(sprints, program, campaigns, root, requirement, missing):
+def _entry_eligible(sprints, program, campaigns, root, requirement, missing, substitutions=None):
     gate = _find_gate(sprints, requirement)
     if gate is None:
         missing.append("entryGate-unresolved:" + requirement)
@@ -929,13 +964,13 @@ def _entry_eligible(sprints, program, campaigns, root, requirement, missing):
     done = set()
     for required in requires:
         if not _stage_complete(
-            required, stages, campaigns, root, missing, visiting, done
+            required, stages, campaigns, root, missing, visiting, done, substitutions
         ):
             return False
     return True
 
 
-def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done):
+def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done, substitutions=None):
     if stage_id in done:
         return True
     if stage_id in visiting:
@@ -955,7 +990,7 @@ def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done):
         if type(value) is not str or value == "":
             missing.append("required-stage-evidence-missing:" + stage_id + ":" + field)
             return False
-    if not _prerequisite_campaign(stage, campaigns, root, missing):
+    if not _prerequisite_campaign(stage, campaigns, root, missing, substitutions):
         return False
     requires = stage.get("requires")
     if type(requires) is not list:
@@ -964,7 +999,7 @@ def _stage_complete(stage_id, stages, campaigns, root, missing, visiting, done):
     visiting.add(stage_id)
     for req in requires:
         if not _stage_complete(
-            req, stages, campaigns, root, missing, visiting, done
+            req, stages, campaigns, root, missing, visiting, done, substitutions
         ):
             visiting.discard(stage_id)
             return False
@@ -977,6 +1012,135 @@ def _status_in(status, allowed):
     return type(status) is str and status in allowed
 
 
+def _is_live_record(record):
+    return type(record) is dict and record.get("status") == LIVE_BINDING_STATUS
+
+
+def _live_record_shape_ok(record, campaign_id, missing):
+    """Exact live labels on the campaign record itself."""
+    if record.get("scope") != LIVE_SCOPE:
+        missing.append("live-scope-unsupported:" + campaign_id)
+        return False
+    if record.get("stage") != LIVE_STAGE:
+        missing.append("live-stage-unsupported:" + campaign_id)
+        return False
+    if LIVE_OWNER not in _owners_of(record.get("owner")):
+        missing.append("live-owner-unsupported:" + campaign_id)
+        return False
+    for key in ("review", "sourceReview", "acceptance", "reconciliation", "candidateManifest"):
+        if type(record.get(key)) is not str or record.get(key) == "":
+            missing.append("live-field-unresolved:" + key)
+            return False
+    return True
+
+
+def _live_bridge(root, record, missing):
+    """Digest-bound single-path SP01 prerequisite bridge; returns substitutions or None."""
+    import difflib
+    rel = record.get("reconciliation")
+    if type(rel) is not str or rel == "":
+        missing.append("reconciliation-unresolved")
+        return None
+    path = _contained_file(root, rel, missing, "reconciliation")
+    if path is None:
+        return None
+    bridge = _load_json_path(path, missing, rel)
+    if type(bridge) is not dict or set(bridge) != set(BRIDGE_KEYS):
+        missing.append("reconciliation-fields-unsupported")
+        return None
+    if bridge["schema"] != BRIDGE_SCHEMA or bridge["path"] != BRIDGE_PATH \
+            or bridge["originalPath"] != BRIDGE_ORIGINAL_PATH or bridge["originalSha256"] != BRIDGE_ORIGINAL_SHA256:
+        missing.append("reconciliation-identity-unsupported")
+        return None
+    original_path = _contained_file(root, BRIDGE_ORIGINAL_PATH, missing, "reconciliation-original")
+    current_path = _contained_file(root, BRIDGE_PATH, missing, "reconciliation-current")
+    if original_path is None or current_path is None:
+        return None
+    original = _read_bytes(original_path, missing, BRIDGE_ORIGINAL_PATH)
+    current = _read_bytes(current_path, missing, BRIDGE_PATH)
+    if original is None or current is None:
+        return None
+    if hashlib.sha256(original).hexdigest() != BRIDGE_ORIGINAL_SHA256:
+        missing.append("reconciliation-original-stale")
+        return None
+    if hashlib.sha256(current).hexdigest() != bridge["currentSha256"]:
+        missing.append("reconciliation-current-stale")
+        return None
+    try:
+        diff = "".join(difflib.unified_diff(
+            original.decode("utf-8").splitlines(keepends=True), current.decode("utf-8").splitlines(keepends=True),
+            fromfile=BRIDGE_ORIGINAL_PATH, tofile=BRIDGE_PATH, n=3, lineterm="\n")).encode("utf-8")
+    except UnicodeDecodeError:
+        missing.append("reconciliation-encoding")
+        return None
+    diff_path = _contained_file(root, bridge["diffPath"], missing, "reconciliation-diff")
+    if diff_path is None:
+        return None
+    diff_bytes = _read_bytes(diff_path, missing, bridge["diffPath"])
+    if diff_bytes is None or diff_bytes != diff or hashlib.sha256(diff_bytes).hexdigest() != bridge["diffSha256"]:
+        missing.append("reconciliation-diff-stale")
+        return None
+    expected_candidate = hashlib.sha256(json.dumps(
+        {"originalSha256": bridge["originalSha256"], "currentSha256": bridge["currentSha256"],
+         "diffSha256": bridge["diffSha256"]}, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    vendors = []
+    for key in ("opusDisposition", "astraDisposition"):
+        ref = bridge[key]
+        if type(ref) is not dict or set(ref) != set(REFERENCE_KEYS):
+            missing.append("reconciliation-disposition-unresolved:" + key)
+            return None
+        loaded = _reference_json(root, ref, missing, "reconciliation-disposition")
+        if loaded is None:
+            return None
+        receipt = loaded[2]
+        vendor = _fresh_receipt_vendor(receipt, expected_candidate, BRIDGE_SCOPE, missing, key)
+        if vendor is None:
+            return None
+        vendors.append(vendor)
+    if len(set(vendors)) != 2:
+        missing.append("reconciliation-dispositions-not-independent")
+        return None
+    return {BRIDGE_PATH: original}
+
+
+def _fresh_receipt_vendor(receipt, candidate_sha, scope, missing, label):
+    """Exact review-field receipt from a fresh non-author reviewer; returns its vendor."""
+    if type(receipt) is not dict:
+        missing.append("review-not-object:" + label)
+        return None
+    extra = [key for key in receipt if key not in REVIEW_KEYS]
+    if extra:
+        missing.append("unknown-review-field:" + extra[0])
+        return None
+    for field in REVIEW_REQUIRED:
+        value = receipt.get(field)
+        if type(value) is not str or value == "":
+            missing.append("review-field-unresolved:" + field)
+            return None
+    if receipt.get("verdict") != REVIEW_VERDICT_PASS:
+        missing.append("review-verdict-unresolved:" + label)
+        return None
+    if receipt.get("scope") != scope:
+        missing.append("review-scope-unsupported:" + label)
+        return None
+    if receipt.get("candidateSha256", "").lower() != candidate_sha.lower() or receipt.get("candidateSha256") != receipt.get("candidateSha256", "").lower():
+        missing.append("review-candidateSha256-conflict:" + label)
+        return None
+    findings = receipt.get("findings")
+    if type(findings) is not list:
+        missing.append("review-findings-unresolved:" + label)
+        return None
+    model = receipt.get("agent")
+    if model not in REVIEWER_VENDORS:
+        missing.append("review-identity-unsupported:" + str(model))
+        return None
+    lowered = receipt["reviewer"].lower()
+    if lowered.startswith("author") or "author-" in lowered:
+        missing.append("review-reviewer-not-independent:" + receipt["reviewer"])
+        return None
+    return REVIEWER_VENDORS[model]
+
+
 def _campaign_is_complete(status):
     return _status_in(status, CAMPAIGN_COMPLETE)
 
@@ -985,7 +1149,7 @@ def _acceptance_is_complete(status):
     return _status_in(status, ACCEPTANCE_COMPLETE)
 
 
-def _prerequisite_campaign(stage, campaigns, root, missing):
+def _prerequisite_campaign(stage, campaigns, root, missing, substitutions=None):
     stage_id = stage["id"]
     campaign_id = stage.get("campaignRecordId")
     if type(campaign_id) is not str or campaign_id == "":
@@ -1032,12 +1196,15 @@ def _prerequisite_campaign(stage, campaigns, root, missing):
     if type(stage_owners) is not list or not rec_owners.intersection(set(stage_owners)):
         missing.append("required-stage-owner-mismatch:" + stage_id)
         return False
+    # The bridge substitutes original bytes for the single SP01 path only while
+    # checking the rp01-mc02 prerequisite; all other inputs use current bytes.
+    bridge = substitutions if stage_id == "rp01-mc02" else None
     binding_ok, _binding = _verify_binding(
-        root, campaign_id, record, missing, expected_stage=stage_id
+        root, campaign_id, record, missing, expected_stage=stage_id, substitutions=bridge
     )
     if not binding_ok:
         return False
-    return _verify_candidate(root, campaign_id, record, missing)
+    return _verify_candidate(root, campaign_id, record, missing, substitutions=bridge)
 
 
 def _resolve_command(root, action, missing):
@@ -1120,6 +1287,12 @@ def _action_flags(
     campaign_ok,
     missing,
 ):
+    substitutions = None
+    if campaign_ok and action["admissionRef"].startswith("campaign:"):
+        table = campaigns.get("campaigns") if type(campaigns) is dict else None
+        record = table.get(action["admissionRef"][len("campaign:"):]) if type(table) is dict else None
+        if _is_live_record(record):
+            substitutions = _live_bridge(root, record, missing)
     entry_eligible = False
     if program_ok and sprints_ok:
         entry_eligible = _entry_eligible(
@@ -1129,6 +1302,7 @@ def _action_flags(
             root,
             action["requirement"],
             missing,
+            substitutions,
         )
     command_ok = _resolve_command(root, action, missing)
     admitted, candidate_current, resource_admitted = _resolve_admission(
@@ -1300,6 +1474,8 @@ def _evidence_applicable(profile, status):
         return False
     if _campaign_is_complete(status):
         return rank <= EVIDENCE_PROFILES.index("syntax")
+    if status == LIVE_BINDING_STATUS:
+        return profile == LIVE_PROFILE
     if status.startswith("admitted-"):
         return rank <= EVIDENCE_PROFILES.index("local-runtime")
     return False
@@ -1342,7 +1518,7 @@ def _status_allows(status, kind):
     return False
 
 
-def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
+def _verify_binding(root, campaign_id, record, missing, expected_stage=None, substitutions=None):
     binding_rel = record.get("binding")
     expected = record.get("bindingSha256")
     if binding_rel is None and expected is None:
@@ -1383,7 +1559,22 @@ def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
         if key != "resources" and type(payload[key]) is not str:
             missing.append("binding-field-type:" + key)
             return False, None
-    if payload.get("status") != "admitted-design-subset-only":
+    live = _is_live_record(record)
+    if live:
+        if payload.get("status") != LIVE_BINDING_STATUS:
+            missing.append("binding-status-unsupported:" + str(payload.get("status")))
+            return False, None
+        if not _live_record_shape_ok(record, campaign_id, missing):
+            return False, None
+        if payload.get("scope") != LIVE_SCOPE or payload.get("stage") != LIVE_STAGE:
+            missing.append("binding-live-labels-unsupported:" + campaign_id)
+            return False, None
+        inputs = payload.get("inputs")
+        if type(inputs) is not dict or any(record[key] not in inputs for key in
+                                           ("review", "sourceReview", "acceptance", "reconciliation")):
+            missing.append("binding-live-inputs-unbound:" + campaign_id)
+            return False, None
+    elif payload.get("status") != "admitted-design-subset-only":
         missing.append("binding-status-unsupported:" + str(payload.get("status")))
         return False, None
     if _contained_file(root, payload["authority"], missing, "binding-authority") is None:
@@ -1396,7 +1587,7 @@ def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
     if seconds is not None and type(seconds) is not int:
         missing.append("binding-allocation-invalid:" + campaign_id)
         return False, None
-    if not _verify_path_map(root, payload.get("inputs"), missing, "binding-input"):
+    if not _verify_path_map(root, payload.get("inputs"), missing, "binding-input", substitutions):
         return False, None
     owned = payload.get("ownedFiles")
     if owned is None:
@@ -1409,7 +1600,7 @@ def _verify_binding(root, campaign_id, record, missing, expected_stage=None):
             if _contained_file(root, item, missing, "binding-owned") is None:
                 return False, None
     elif type(owned) is dict:
-        if not _verify_path_map(root, owned, missing, "binding-owned"):
+        if not _verify_path_map(root, owned, missing, "binding-owned", substitutions):
             return False, None
     else:
         missing.append("binding-ownedFiles-unresolved:" + campaign_id)
@@ -1487,7 +1678,8 @@ def _optional_object(data):
     return None
 
 
-def _verify_path_map(root, mapping, missing, kind):
+def _verify_path_map(root, mapping, missing, kind, substitutions=None):
+    """Hash-bound path map; substitutions supply original bytes for one bridged path."""
     if mapping is None:
         return True
     if type(mapping) is not dict:
@@ -1500,7 +1692,10 @@ def _verify_path_map(root, mapping, missing, kind):
         path = _contained_file(root, rel, missing, kind)
         if path is None:
             return False
-        data = _read_bytes(path, missing, rel)
+        if substitutions and rel in substitutions:
+            data = substitutions[rel]
+        else:
+            data = _read_bytes(path, missing, rel)
         if data is None:
             return False
         if hashlib.sha256(data).hexdigest() != digest.lower():
@@ -1509,7 +1704,7 @@ def _verify_path_map(root, mapping, missing, kind):
     return True
 
 
-def _verify_candidate(root, campaign_id, record, missing):
+def _verify_candidate(root, campaign_id, record, missing, substitutions=None):
     manifest_rel = record.get("candidateManifest")
     if type(manifest_rel) is not str or manifest_rel == "":
         missing.append("candidateManifest-unresolved:" + campaign_id)
@@ -1541,7 +1736,12 @@ def _verify_candidate(root, campaign_id, record, missing):
     if type(candidate_sha) is not str or candidate_sha == "":
         missing.append("candidateSha256-unresolved:" + campaign_id)
         return False
-    if type(algo) is not str or "SHA256" not in algo:
+    live = _is_live_record(record)
+    if live:
+        if algo != LIVE_DIGEST_ALGO:
+            missing.append("digestAlgorithm-unsupported:" + campaign_id)
+            return False
+    elif type(algo) is not str or "SHA256" not in algo:
         missing.append("digestAlgorithm-unsupported:" + campaign_id)
         return False
     compact = json.dumps(owned, separators=(",", ":"), sort_keys=True)
@@ -1560,7 +1760,17 @@ def _verify_candidate(root, campaign_id, record, missing):
         missing.append("candidate-inputs-unresolved:" + campaign_id)
         return False
     review_rel = record.get("review")
-    if type(review_rel) is str and review_rel != "":
+    if live:
+        vendors = []
+        for key in ("review", "sourceReview"):
+            vendor = _apply_review(root, record.get(key), record, candidate_sha, campaign_id, missing, live=True)
+            if not vendor:
+                return False
+            vendors.append(vendor)
+        if len(set(vendors)) != 2:
+            missing.append("review-vendors-not-independent:" + campaign_id)
+            return False
+    elif type(review_rel) is str and review_rel != "":
         if not _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing):
             return False
     elif _campaign_is_complete(record.get("status")):
@@ -1570,7 +1780,8 @@ def _verify_candidate(root, campaign_id, record, missing):
     acc_rel = record.get("acceptance")
     if type(acc_rel) is str and acc_rel != "":
         published_skip = _apply_acceptance(
-            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=record.get("review")
+            root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing,
+            expected_review=record.get("review"), live=live
         )
         if published_skip is False:
             return False
@@ -1586,9 +1797,9 @@ def _verify_candidate(root, campaign_id, record, missing):
         for rel, digest in owned.items()
         if rel != published_skip
     }
-    if not _verify_path_map(root, freeze_bytes, missing, "candidate-source"):
+    if not _verify_path_map(root, freeze_bytes, missing, "candidate-source", substitutions):
         return False
-    return _verify_path_map(root, inputs, missing, "candidate-input")
+    return _verify_path_map(root, inputs, missing, "candidate-input", substitutions)
 
 
 def _freeze_archive_rel(manifest_rel, published_rel):
@@ -1890,7 +2101,7 @@ def _closure_allowed(original, current):
     return current == expected
 
 
-def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None):
+def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id, missing, expected_review=None, live=False):
     acc_path = _contained_file(root, acc_rel, missing, "acceptance")
     if acc_path is None:
         return False
@@ -1908,7 +2119,11 @@ def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id
             missing.append("acceptance-field-unresolved:" + field)
             return False
     status = acceptance.get("status")
-    if not _acceptance_is_complete(status):
+    if live:
+        if status != LIVE_ACCEPTANCE_STATUS:
+            missing.append("acceptance-status-unsupported:" + str(status))
+            return False
+    elif not _acceptance_is_complete(status):
         missing.append("acceptance-status-unsupported:" + str(status))
         return False
     acc_hash = acceptance.get("candidateHash")
@@ -1984,7 +2199,10 @@ def _apply_acceptance(root, acc_rel, man_path, candidate_sha, owned, campaign_id
     return published_path
 
 
-def _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing):
+def _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing, live=False):
+    if type(review_rel) is not str or review_rel == "":
+        missing.append("review-unresolved:" + campaign_id)
+        return False
     rev_path = _contained_file(root, review_rel, missing, "review")
     if rev_path is None:
         return False
@@ -1992,6 +2210,11 @@ def _apply_review(root, review_rel, record, candidate_sha, campaign_id, missing)
     if type(review) is not dict:
         missing.append("review-not-object:" + campaign_id)
         return False
+    if live:
+        if record.get("stage") != LIVE_STAGE or record.get("scope") != LIVE_SCOPE:
+            missing.append("review-scope-unsupported:" + campaign_id)
+            return False
+        return _fresh_receipt_vendor(review, candidate_sha, LIVE_SCOPE, missing, campaign_id)
     extra = [key for key in review if key not in REVIEW_KEYS]
     for key in extra:
         missing.append("unknown-review-field:" + key)
@@ -2114,7 +2337,8 @@ def _verify_resource(root, campaign_id, record, program, binding_obj, action, mi
         missing.append("resource-live-state-unavailable:" + campaign_id)
         return False
     remaining = _remaining_from_current(
-        root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing
+        root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing,
+        amendment=payload, amendment_sha256=hashlib.sha256(_read_bytes(path, [], relative) or b"").hexdigest()
     )
     if remaining is None:
         return False
@@ -2164,7 +2388,8 @@ def _load_amendment_file(root, relative, campaign_id, missing):
 
 
 def _remaining_from_current(
-    root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing
+    root, spec, record, binding_obj, action, alloc, historical, campaign_id, missing,
+    amendment=None, amendment_sha256=None
 ):
     if type(spec) is not dict:
         missing.append("resource-live-state-unavailable:" + campaign_id)
@@ -2220,7 +2445,7 @@ def _remaining_from_current(
     if type(package) is not str or package == "":
         missing.append("resource-scope-mismatch:" + campaign_id)
         return None
-    if rec_owners and package not in rec_owners:
+    if rec_owners and package not in rec_owners and not _is_live_record(record):
         missing.append("resource-scope-mismatch:" + campaign_id)
         return None
     charges = _seconds_list(payload.get("charges"), missing, campaign_id)
@@ -2230,6 +2455,11 @@ def _remaining_from_current(
         return None
     master_used = planning + overhead + charges + reserved + external
     package_used = planning + overhead + charges
+    if _is_live_record(record):
+        return _remaining_authenticated_mc02(
+            root, payload, record, binding_obj, action, alloc, campaign_id, missing, amendment, amendment_sha256,
+            master_limit - master_used, package,
+        )
     pass_binding = _optional_pass_record(
         root, spec.get("passBinding"), PASS_BINDING_OPTIONAL, missing, "pass-binding"
     )
@@ -2322,6 +2552,117 @@ def _remaining_from_current(
     # The existing debit already contributes to master_used/package_used.
     remaining = min(remainders) - (0 if prepaid else cost)
     return remaining
+
+
+def _remaining_authenticated_mc02(root, payload, record, binding_obj, action, alloc, campaign_id, missing,
+                                 amendment, amendment_sha256, master_slack, package):
+    """Authenticated MC02 envelope on the preserved MC01 ledger (live path only).
+
+    The contained current accounting projection carries the envelope and its
+    MC02 rows. S and n are recomputed from rows; legacy MC01 package/worker
+    checks are replaced by S/G and n/N while the full master summation stays.
+    """
+    if type(amendment) is not dict or type(amendment.get("resources")) is not dict:
+        missing.append("resource-package-projection-unresolved:" + campaign_id)
+        return None
+    ref = amendment["resources"].get("projection")
+    loaded = _reference_json(root, ref, missing, "projection")
+    if loaded is None:
+        missing.append("resource-package-projection-unresolved:" + campaign_id)
+        return None
+    projection = loaded[2]
+    required = ("schema", "ledgerOwner", "selectedOwner", "envelopeId", "grantSeconds", "grantDispatches",
+                "campaignId", "actionId")
+    if projection.get("schema") != LIVE_PROJECTION_SCHEMA or any(key not in projection for key in required):
+        missing.append("resource-package-projection-unresolved:" + campaign_id)
+        return None
+    if projection["ledgerOwner"] != "MC01" or package != "MC01":
+        missing.append("resource-ledger-owner-mismatch:" + campaign_id)
+        return None
+    if projection["selectedOwner"] != LIVE_OWNER or LIVE_OWNER not in _owners_of(record.get("owner")):
+        missing.append("resource-scope-mismatch:" + campaign_id)
+        return None
+    if projection["campaignId"] != campaign_id or projection["actionId"] != action["id"]:
+        missing.append("resource-projection-scope-mismatch:" + campaign_id)
+        return None
+    grant = projection["grantSeconds"]
+    dispatch_limit = projection["grantDispatches"]
+    if type(grant) is not int or grant <= 0 or type(dispatch_limit) is not int or dispatch_limit <= 0:
+        missing.append("resource-package-projection-unresolved:" + campaign_id)
+        return None
+    if alloc != grant:
+        missing.append("resource-allocation-invalid:" + campaign_id)
+        return None
+    envelopes = payload.get("successorEnvelopes")
+    envelope = envelopes.get(projection["envelopeId"]) if type(envelopes) is dict else None
+    if type(envelope) is not dict or set(envelope) != set(LIVE_ENVELOPE_KEYS):
+        missing.append("resource-envelope-unresolved:" + str(projection["envelopeId"]))
+        return None
+    if envelope["owner"] != LIVE_OWNER or envelope["projectionSha256"] != ref["sha256"] \
+            or envelope["amendmentSha256"] != amendment_sha256:
+        missing.append("resource-envelope-provenance:" + campaign_id)
+        return None
+    from moriarty_dev import accounting
+    rows = [row for row in payload.get("externalPackageCharges") or []
+            if type(row) is dict and row.get("package") == LIVE_OWNER and row.get("envelope") == projection["envelopeId"]]
+    spent = 0
+    ids = []
+    for row in rows:
+        if not _exact_keys(row, accounting.DEBIT_KEYS, missing, "debit"):
+            missing.append("resource-envelope-row-invalid:" + campaign_id)
+            return None
+        seconds = row.get("seconds")
+        if type(seconds) is not int or type(seconds) is bool or seconds <= 0:
+            missing.append("resource-envelope-row-invalid:" + campaign_id)
+            return None
+        if not _hex64(row.get("counterpartSha256")):
+            missing.append("resource-debit-counterpart-unresolved:" + campaign_id)
+            return None
+        ids.append(row["id"])
+        spent += seconds
+    if len(ids) != len(set(ids)):
+        missing.append("resource-duplicate-debit:" + campaign_id)
+        return None
+    marker = payload.get("mc02ApplicationMarker")
+    if type(marker) is not dict or marker.get("schema") != accounting.APPLICATION_MARKER_SCHEMA \
+            or marker.get("amendmentSha256") != amendment_sha256:
+        missing.append("resource-application-marker-unresolved:" + campaign_id)
+        return None
+    preflight = [row for row in rows if row.get("purpose") == "financial-preflight"]
+    if len(preflight) != 1 or preflight[0].get("seconds") != accounting.OBSERVER_PREFLIGHT_SECONDS:
+        missing.append("resource-preflight-debit-unresolved:" + campaign_id)
+        return None
+    count = len(rows)
+    if envelope["remainingReservedSeconds"] != grant - spent or envelope["workerDispatches"] != count \
+            or envelope["workerDispatchLimit"] != dispatch_limit:
+        missing.append("resource-envelope-counters-unresolved:" + campaign_id)
+        return None
+    if spent > grant or count > dispatch_limit:
+        missing.append("resource-exhausted:" + campaign_id)
+        return None
+    cost = _action_cost(action, binding_obj, None, campaign_id, missing)
+    if cost is None:
+        return None
+    runners = binding_obj.get("runners", {}) if type(binding_obj) is dict else {}
+    prepaid = False
+    if type(runners) is dict and action["id"] in runners:
+        try:
+            from moriarty_dev.runner import load_runner
+            plan, _ = load_runner(root, action)
+            own = [row for row in rows if row.get("id") == plan["chargeId"]]
+            if len(own) != 1 or not cost <= plan["chargedSeconds"] <= grant or own[0]["seconds"] != plan["chargedSeconds"]:
+                raise ValueError("debit does not match the admitted action bound")
+            prepaid = True
+        except Exception as exc:
+            missing.append("resource-runner-debit-unresolved:" + str(exc))
+            return None
+    if action["kind"] in IMPLEMENT_KINDS and not prepaid and count + 1 > dispatch_limit:
+        missing.append("resource-dispatch-exhausted:" + campaign_id)
+        return None
+    # Own prepaid equality: the committed own charge is inside S and is not
+    # subtracted again; every other caller sees only G - S.
+    remaining = grant - spent - (0 if prepaid else cost)
+    return min(remaining, master_slack)
 
 
 def _nonneg_number(value, required):
@@ -2702,3 +3043,68 @@ def _structural_block(missing):
         "candidateManifest-schema-",
     )
     return any(item.startswith(markers) for item in missing)
+
+
+# Shared closed-record validators for the loan executor and accounting context.
+REFERENCE_KEYS = ("path", "sha256")
+HEX64 = re.compile(r"[0-9a-f]{64}")
+
+
+def _hex64(value):
+    return type(value) is str and HEX64.fullmatch(value) is not None
+
+
+def _exact_keys(value, keys, missing, kind):
+    """Closed object check: exactly the given keys, no more, no fewer."""
+    if type(value) is not dict:
+        missing.append(kind + "-not-object")
+        return False
+    expected = set(keys)
+    present = set(value)
+    ok = True
+    for key in sorted(present - expected):
+        missing.append("unknown-" + kind + "-field:" + str(key))
+        ok = False
+    for key in sorted(expected - present):
+        missing.append(kind + "-field-missing:" + key)
+        ok = False
+    return ok
+
+
+def _reference(root, value, missing, kind, allow_absolute=False):
+    """Exact {path,sha256} reference to an immutable file; returns (path, bytes)."""
+    if not _exact_keys(value, REFERENCE_KEYS, missing, kind):
+        return None
+    if not _hex64(value["sha256"]):
+        missing.append(kind + "-sha256-invalid")
+        return None
+    relative = value["path"]
+    if allow_absolute and type(relative) is str and relative.startswith("/"):
+        path = Path(relative)
+        if path.is_symlink() or not path.is_file():
+            missing.append(kind + "-missing:" + relative)
+            return None
+    else:
+        path = _contained_file(root, relative, missing, kind)
+        if path is None:
+            return None
+    data = _read_bytes(path, missing, kind)
+    if data is None:
+        return None
+    if hashlib.sha256(data).hexdigest() != value["sha256"]:
+        missing.append(kind + "-stale:" + str(relative))
+        return None
+    return path, data
+
+
+def _reference_json(root, value, missing, kind, allow_absolute=False):
+    """Authenticated reference whose bytes parse as a JSON object."""
+    loaded = _reference(root, value, missing, kind, allow_absolute)
+    if loaded is None:
+        return None
+    path, data = loaded
+    payload = _parse_json(data, missing, kind)
+    if type(payload) is not dict:
+        missing.append(kind + "-not-object")
+        return None
+    return path, data, payload

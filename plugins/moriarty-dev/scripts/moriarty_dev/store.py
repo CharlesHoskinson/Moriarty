@@ -434,7 +434,16 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
     try:
         conn.execute("BEGIN IMMEDIATE")
         action_kind = action.get("kind", "")
-        if action_kind in ("implement", "repair"):
+        live = action.get("evidenceProfile") == "finalized-financial-settlement"
+        if live:
+            active = conn.execute(
+                "SELECT id FROM reservations WHERE status = 'active' LIMIT 1"
+            ).fetchone()
+            if active:
+                raise ReservationConflictError(
+                    f"Unresolved primary reservation already exists: {active[0]}"
+                )
+        elif action_kind in ("implement", "repair"):
             active = conn.execute(
                 "SELECT id FROM reservations WHERE status = 'active' "
                 "AND action_kind IN ('implement', 'repair') LIMIT 1"
@@ -498,8 +507,14 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
         conn.close()
 
 
-def has_other_primary(db_path: Path, reservation_id: str) -> bool:
+def has_other_primary(db_path: Path, reservation_id: str, action: dict | None = None) -> bool:
+    live = action is not None and action.get("evidenceProfile") == "finalized-financial-settlement"
     with closing(sqlite3.connect(db_path)) as conn:
+        if live:
+            return conn.execute(
+                "SELECT 1 FROM reservations WHERE status='active' AND id != ? LIMIT 1",
+                (reservation_id,),
+            ).fetchone() is not None
         return conn.execute(
             "SELECT 1 FROM reservations WHERE status='active' "
             "AND action_kind IN ('implement', 'repair') AND id != ? LIMIT 1",
@@ -628,7 +643,15 @@ def record_review(db_path: Path, repo: str, receipt_data: dict, action: dict | N
     now = _now_iso()
     try:
         with conn:
-            event_kind = "result_review" if verdict == "APPROVED" else "result_review_failure"
+            from moriarty_dev.records import LIVE_SCOPE
+            import re
+            lowered = scope.strip().lower() if type(scope) is str else ""
+            source_scope = scope.strip() == LIVE_SCOPE \
+                or re.search(r"(^|[\s/_-])(source|spec|resource)([\s/_-]|$)", lowered) is not None
+            if source_scope:
+                event_kind = "source_review" if verdict == "APPROVED" else "source_review_failure"
+            else:
+                event_kind = "result_review" if verdict == "APPROVED" else "result_review_failure"
             conn.execute(
                 """
                 INSERT INTO events (
@@ -900,3 +923,130 @@ def mark_delivered(db_path: Path, tx_id: str, acknowledgement: dict | None = Non
             raise
     finally:
         conn.close()
+
+
+# Loan executor invocation events and canonical store identity. These use the
+# existing events/reservations/runner_claims tables; no new ledger or service.
+INVOCATION_EVENT_KIND = "loan_invocation"
+IDENTITY_TABLE = "store_identity"
+
+
+def canonical_digest(payload: dict) -> str:
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def read_identity_token(db_path: Path) -> str | None:
+    """Persisted canonical store token, or None when never adopted.
+
+    Ordinary initialization does not create this table; a missing token is
+    unavailable authority, not permission to create one.
+    """
+    if not Path(db_path).is_file():
+        return None
+    with closing(sqlite3.connect(str(db_path), timeout=5.0)) as conn:
+        present = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (IDENTITY_TABLE,)
+        ).fetchone()
+        if not present:
+            return None
+        row = conn.execute(f"SELECT token FROM {IDENTITY_TABLE} WHERE id = 1").fetchone()
+        return row[0] if row else None
+
+
+def adopt_identity_token(db_path: Path, token: str):
+    """Explicit reviewed adoption of one canonical token; never called by status/run."""
+    if not isinstance(token, str) or not re.fullmatch(r"[A-Za-z0-9:_.-]{8,128}", token):
+        raise StoreError("Invalid store identity token")
+    conn = init_db(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            f"CREATE TABLE IF NOT EXISTS {IDENTITY_TABLE} (id INTEGER PRIMARY KEY CHECK (id = 1), token TEXT NOT NULL)"
+        )
+        existing = conn.execute(f"SELECT token FROM {IDENTITY_TABLE} WHERE id = 1").fetchone()
+        if existing and existing[0] != token:
+            raise StoreError("Store already carries a different identity token")
+        if not existing:
+            conn.execute(f"INSERT INTO {IDENTITY_TABLE} (id, token) VALUES (1, ?)", (token,))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def record_invocation(db_path: Path, repo: str, action: dict, payload: dict) -> tuple[int, str]:
+    """Durably append one loan invocation event; returns (event id, canonical digest)."""
+    digest = canonical_digest(payload)
+    conn = init_db(db_path)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute(
+            "SELECT id FROM events WHERE event_kind = ? AND json_extract(payload_json, '$.sha256') = ?",
+            (INVOCATION_EVENT_KIND, digest),
+        ).fetchone()
+        if existing:
+            raise StoreError("Invocation payload already recorded: " + digest)
+        cur = conn.execute(
+            """
+            INSERT INTO events (
+                repository, requirement, capability, candidate,
+                action_id, event_kind, observed_at, payload_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                repo,
+                action.get("requirement", ""),
+                action.get("capability", ""),
+                action.get("candidate", ""),
+                action.get("id", ""),
+                INVOCATION_EVENT_KIND,
+                _now_iso(),
+                json.dumps({"payload": payload, "sha256": digest}, sort_keys=True, separators=(",", ":")),
+            ),
+        )
+        conn.commit()
+        return int(cur.lastrowid), digest
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def find_invocation_event(db_path: Path, digest: str) -> dict | None:
+    """Read-only lookup of a recorded invocation payload by canonical digest."""
+    if not Path(db_path).is_file() or not isinstance(digest, str):
+        return None
+    with closing(sqlite3.connect(str(db_path), timeout=5.0)) as conn:
+        row = conn.execute(
+            "SELECT payload_json FROM events WHERE event_kind = ? AND json_extract(payload_json, '$.sha256') = ?",
+            (INVOCATION_EVENT_KIND, digest),
+        ).fetchall()
+    if len(row) != 1:
+        return None
+    try:
+        wrapper = json.loads(row[0][0])
+    except Exception:
+        return None
+    payload = wrapper.get("payload") if isinstance(wrapper, dict) else None
+    if type(payload) is not dict or canonical_digest(payload) != digest:
+        return None
+    return payload
+
+
+def claim_for_charge(db_path: Path, charge_id: str) -> dict | None:
+    """Existing unique SQLite runner claim for a charge joined with its reservation."""
+    if not Path(db_path).is_file():
+        return None
+    with closing(sqlite3.connect(str(db_path), timeout=5.0)) as conn:
+        row = conn.execute(
+            "SELECT c.reservation_id, r.status, r.action_id, r.candidate, r.pid, r.repository "
+            "FROM runner_claims c LEFT JOIN reservations r ON r.id = c.reservation_id WHERE c.charge_id = ?",
+            (charge_id,),
+        ).fetchone()
+    if not row:
+        return None
+    return {"reservationId": row[0], "status": row[1], "actionId": row[2],
+            "candidate": row[3], "pid": row[4], "repository": row[5]}

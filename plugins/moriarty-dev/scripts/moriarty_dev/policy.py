@@ -68,6 +68,7 @@ INT_SNAPSHOT_KEYS = ("sameDefectFailures", "adminCycles", "adminSeconds")
 HISTORY_EXEMPT_KINDS = frozenset(("report", "reproduce", "review", "verify"))
 PRIMARY_BLOCKED_KINDS = frozenset(("implement", "repair", "admin"))
 RETRY_BLOCKED_KINDS = frozenset(("implement", "admin"))
+LIVE_PROFILE = "finalized-financial-settlement"
 ADMIN_SECONDS_LIMIT = 1800
 ADMIN_CYCLE_LIMIT = 2
 FAILURE_RETRY_LIMIT = 2
@@ -83,9 +84,13 @@ def assess(snapshot, action):
     kind = action["kind"]
     missing = list(snapshot["missingEvidence"])
     next_id = snapshot["nextActionId"]
+    live = action.get("evidenceProfile") == LIVE_PROFILE
+    history_exempt = frozenset() if live else HISTORY_EXEMPT_KINDS
+    primary_blocked = KNOWN_KINDS if live else PRIMARY_BLOCKED_KINDS
+    retry_blocked = KNOWN_KINDS if live else RETRY_BLOCKED_KINDS
     if kind not in KNOWN_KINDS:
         return _decision(False, "UNKNOWN_KIND", next_id, missing)
-    if kind == "report":
+    if kind == "report" and not live:
         return _decision(True, "ALLOWED", next_id, missing)
     if snapshot["authorityCurrent"] is False:
         return _decision(False, "AUTHORITY_UNAVAILABLE", next_id, missing)
@@ -97,13 +102,13 @@ def assess(snapshot, action):
         return _decision(False, "RESOURCE_EXHAUSTED", next_id, missing)
     if _admission_gap(missing):
         return _decision(False, "ADMISSION_UNRESOLVED", next_id, missing)
-    if _history_gap(missing) and kind not in HISTORY_EXEMPT_KINDS:
+    if _history_gap(missing) and kind not in history_exempt:
         return _decision(False, "HISTORY_UNRESOLVED", next_id, missing)
-    if snapshot["primaryActive"] is True and kind in PRIMARY_BLOCKED_KINDS:
+    if snapshot["primaryActive"] is True and kind in primary_blocked:
         return _decision(False, "PRIMARY_ACTIVE", next_id, missing)
     same_failures = snapshot.get("sameDefectFailures")
     if same_failures is not None and same_failures >= FAILURE_RETRY_LIMIT:
-        if kind in RETRY_BLOCKED_KINDS:
+        if kind in retry_blocked:
             return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
         if kind == "repair":
             ready = (
