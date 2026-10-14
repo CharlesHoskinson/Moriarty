@@ -7,6 +7,7 @@ Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.
 The user's later instruction assigns **all security work to Opus 5.5**.
 That includes security analysis, requirements, tests, recommendations and judgments.
 Preserve historical rosters on frozen contracts; they do not select new work.
+Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
 Missing reviewers cannot approve. Changed candidates need fresh applicable audits.
 Consequential design/resource decisions retain two substantive agreeing votes.
 See the [implementation routing](raw/assignments/moriarty-sol-muse-routing-2026-10-14.md)
@@ -138,7 +139,7 @@ Astra in the required review pair for that work. Earlier Astra verdicts remain
 historical evidence. Apply this override to older routing statements below and
 in the development skill; preserve all acceptance gates and exact-candidate audits.
 
-The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews; historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
+The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews (superseded for security by the October 14 Opus assignment); historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
 
 ## Autonomous sprint decisions
 

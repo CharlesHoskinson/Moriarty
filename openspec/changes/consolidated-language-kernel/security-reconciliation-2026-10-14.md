@@ -1,13 +1,15 @@
 # Security reconciliation addendum — 2026-10-14
 
-**Status.** This is a specified-only addendum by the Opus security owner. It adds no implementation, evidence, approval or acceptance. It does not amend, renumber or replace any existing clause.
+**Status.** This is a specified-only addendum by the Opus security owner. It adds no implementation, evidence, approval or acceptance. It does not amend, renumber or replace any existing clause. No command, test, SDK call, native step or target action was executed for it, and no U, M, MC, SP or G exit closes because of it. The SEC observations it cites are source readings at `cb8280ef`, not executed results.
 
 **Baselines.**
 - Audit tree: `fc6353bf19b87a76410319c378efe529d52d23d9`. Its merged tree is the same as `11a7d19f`.
 - Source observations come from the [Opus security review](../../../docs/audits/2026-10-14/SECURITY-REVIEW.md) (SEC-01–SEC-21) at `cb8280ef`, tree `ce05a5c7…`.
 
+**Coverage.** The Opus currentness pass inspected all 64 OpenSpec handoff entries, and 34 authored wiki paths plus 8 exact-claim locations. That was not an exhaustive audit of all prose, fenced contracts, private material or raw captures.
+
 **Preserved unchanged.**
-- All original predicates, IDs and positive/hostile controls stay in force: U0–U7, M1–M17, MC01–MC08, SP01–SP12, G01–G24, L1–L8, ZR01–ZR16, MNR01–MNR08, MPLR-001–035, UNI-001–017, MOR-001–012 and AEO-001–004.
+- All original predicates, IDs and positive/hostile controls stay in force: U0–U7, M1–M17, MC01–MC08, SP01–SP12, G01–G24, L1–L8, ZR01–ZR16, MNR01–MNR08, MPLR-001–035, UNI-001–017, MOR-001–012 and AEO-001–004. The later nonsecurity UNI-018–024 clauses are outside this addendum, which neither modifies nor restates them; UNI-022 target separation is consistent with OSR-1014-06.
 - The ACTUS denominator (277 fixtures) and the DeFi denominator (72 rows) also stay unchanged.
 
 **Targets.**
@@ -39,12 +41,12 @@
 
 Two observations get no new requirement:
 - **SEC-10** (fee reduces beneficiary net) waits for a U0 beneficiary ruling.
-- **SEC-15** is a qualified capability, not a missing requirement.
+- **SEC-15** is a qualified capability, not a missing requirement. OSR-1014-02 cites it only for the qualification that the October 11 verification evidence is historical and backend-only.
 
 ## ADDED Requirements
 
 ### Requirement: OSR-1014-01 Authenticated evaluation time
-**Maps to:** M7, U2, MC05, MPLR-008, SP09.3. **Source:** SEC-01 (designed limitation (DL) plus a confirmed source gap (CSG)).
+**Maps to:** M7, U0 (time), U2, MC05, MPLR-008, SP09.3. **Source:** SEC-01 (designed limitation (DL) plus a confirmed source gap (CSG)).
 
 When an acceptance path claims to enforce a signed validity window:
 - the enforcing statement SHALL constrain the evaluation time to a value supplied or attested by the claimed target;
@@ -59,10 +61,10 @@ When an acceptance path claims to enforce a signed validity window:
 #### Scenario: TTL beyond window
 - **WHEN** signed-call admission receives `ttl > not_after`
 - **THEN** it SHALL refuse with a named code, or the specification SHALL state which bound controls.
-- Evidence: `current-local` safe-static (WS-B B2). Source reading indicates the request is accepted today; this has not been executed.
+- Evidence: `current-local` safe-static (WS-B B2). A source reading at `cb8280ef` indicates the request is accepted; this has not been executed.
 
 ### Requirement: OSR-1014-02 Declared pipeline per security claim
-**Maps to:** M1, M3, M7, M8, UNI-002, UNI-003, MOR-003, MC04 "Named compiler correspondence". **Source:** SEC-02, SEC-15, SEC-16.
+**Maps to:** M1, M2, M3, M7, M8, U2, U7, the G gates, UNI-002, UNI-003, MOR-003, MC04 "Named compiler correspondence". **Source:** SEC-02, SEC-16; SEC-15 only for the qualification that the October 11 evidence is historical and backend-only.
 
 When a security property of a signed or authorized call is claimed:
 - the claim SHALL name its stack and tree;
@@ -79,7 +81,7 @@ When a security property of a signed or authorized call is claimed:
 - **THEN** the record SHALL classify it as byte identity only.
 
 ### Requirement: OSR-1014-03 Envelope binding location
-**Maps to:** MPLR-022, MC05 "Bound exact-plan claims", M3, M7. **Source:** SEC-03 (DL; ledger-side impact is a hypothesis (HYP)).
+**Maps to:** MPLR-022, MC05 "Bound exact-plan claims", M3, M7, U2. **Source:** SEC-03 (DL; ledger-side impact is a hypothesis (HYP)).
 
 When TTL, selected spends, or request, parameter or state hashes are claimed to be bound to an authorization:
 - the claim SHALL say whether the binding is in-circuit, by host rebuild, or by the target ledger;
@@ -91,7 +93,7 @@ When TTL, selected spends, or request, parameter or state hashes are claimed to 
 - Evidence: `target-observed` (blocked-external).
 
 ### Requirement: OSR-1014-04 Key–account authority
-**Maps to:** M7, M8, M13, MPLR-008, UNI-012, MC05 "Authority covers liabilities". **Source:** SEC-04.
+**Maps to:** M7, M8, M13, M17, MPLR-008, UNI-012, MC05 "Authority covers liabilities". **Source:** SEC-04.
 
 When a signed policy authenticates with a compiled fixed key:
 - results SHALL NOT report account authority, rotation or revocation;
@@ -103,17 +105,17 @@ When a signed policy authenticates with a compiled fixed key:
 - Evidence: `source-inspected`, then `target-observed`.
 
 ### Requirement: OSR-1014-05 Uncovered effects disclosed
-**Maps to:** M10, U0, U2, UNI-016, MC08. **Source:** SEC-07.
+**Maps to:** M10, M13, U0, U2, UNI-016, MC08. **Source:** SEC-07.
 
 When a verification command reports a signature or acceptance result, it SHALL identify every effect whose payer or debtor is not covered by the checked authority. It SHALL NOT present those effects as authorized.
 
 #### Scenario: Third-party debit
 - **WHEN** Core `verify-intent` checks an intent that debits a non-signer
 - **THEN** the output SHALL mark that effect unauthorized, or the command SHALL refuse.
-- Evidence: `current-local` safe-static (WS-B B3). Today the source reports `accepted`; changing that output is deferred.
+- Evidence: `current-local` safe-static (WS-B B3). A source reading at `cb8280ef` indicates the output is `accepted`; this has not been executed, and changing that output is deferred.
 
 ### Requirement: OSR-1014-06 Target-sourced domain values
-**Maps to:** M2, M7, L3, MC05. **Source:** SEC-05.
+**Maps to:** M2, M7, M9, U0, L3, MC05. **Source:** SEC-05.
 
 When a signed domain, nonce domain or context hash is offered as M7 evidence:
 - network ID and Anchor SHALL come from the identified target;
@@ -145,8 +147,10 @@ When signed consumption reaches the declared nonce-map capacity:
 **Maps to:** M11, U2 custody, the UNI-002 hostile witness. **Source:** SEC-08, SEC-20.
 
 When an unsigned or `unsigned-mapped-roles` artifact reaches any consumer that admits, installs, derives keys or reports authorization:
-- the consumer SHALL recompile under the single-payer rule and refuse with `one-public-payer`;
+- the consumer SHALL recompile under the single-payer rule and SHALL refuse with `one-public-payer` any artifact with more than one public payer;
 - no such output SHALL be cited as authorization or custody evidence.
+
+This requirement does not refuse a legal single-payer unsigned artifact; such an artifact still carries no authority (SEC-20).
 
 #### Scenario: Mapped bytes fed to admission
 - **WHEN** mapped-role IR or manifest bytes reach `relation::admit` or the local-deployment preflight
@@ -156,7 +160,7 @@ When an unsigned or `unsigned-mapped-roles` artifact reaches any consumer that a
 #### Scenario: New consumer
 - **WHEN** a new constructor of `Artifact`, `AdmittedSeed`, `DerivedLocalDeployment` or `PublicDerivedCallKey` appears
 - **THEN** the consumer inventory (WS-A A1) SHALL be updated before any non-promotion claim.
-- Current state: closed for the two consumers inspected; completeness is a hypothesis.
+- Current state: closed by source reading at `cb8280ef` for the two consumers inspected; completeness is a hypothesis.
 
 ### Requirement: OSR-1014-09 Asset identity in signed caps
 **Maps to:** M9, L3, MOR-004, MC05. **Source:** SEC-09 (CSG).
@@ -168,7 +172,7 @@ When a signed cap names an asset:
 #### Scenario: Network mismatch
 - **WHEN** signed bindings declare an asset network that differs from the deployment network
 - **THEN** `from_source` SHALL refuse.
-- Evidence: `current-local` safe-static (WS-B B4). Source reading indicates this is accepted today.
+- Evidence: `current-local` safe-static (WS-B B4). A source reading at `cb8280ef` indicates this is accepted; this has not been executed.
 
 ### Requirement: OSR-1014-10 Liability-cap coupling and discharge
 **Maps to:** M13, L5, U3, MPLR-019, UNI-008. **Source:** SEC-11, SEC-12.
@@ -194,15 +198,16 @@ When a signed cap names an asset:
 #### Scenario: Unpinned parameters
 - **WHEN** caller-supplied parameters reach `generate_call_keys`
 - **THEN** it SHALL refuse them, or label the output unpinned.
-
-#### Scenario: Oversized transaction
-- **WHEN** an encoded transaction exceeds the 64 KB ceiling
-- **THEN** it SHALL be refused before submission.
-- Evidence: `current-local` (WS-B B1), `native-local`, `target-observed`.
+- Evidence: no current control exercises this path. WS-B B1 (`parameters::tests`) covers only the pinned loader's degree, byte and digest refusals. A refusal that happens before any SDK call could be `current-local`; key generation itself is `native-local` (blocked-SDK-native).
 - SRS trust rests on the SDK digest table, not on a ceremony audit.
 
+#### Scenario: Oversized transaction
+- **WHEN** an encoded transaction exceeds the encoded-transaction ceiling measured for the claimed target
+- **THEN** it SHALL be refused before submission.
+- Evidence: no current-local control exists. SEC-14 found no encoded-transaction ceiling; the existing 64 KiB bounds cover JSON, envelope and source only. The ceiling needs `native-local` measurement, then `target-observed` (blocked-external).
+
 ### Requirement: OSR-1014-12 In-circuit Schnorr audit statement
-**Maps to:** M8, U1. **Source:** SEC-17 (HYP), SEC-04.
+**Maps to:** M8, U1. **Source:** SEC-17 (HYP); SEC-04 only for the compiled-key premise (its authority predicates belong to OSR-1014-04).
 
 When M8 is claimed, the audit SHALL state and cite:
 - equivalence of the host and circuit challenge reductions;
@@ -222,7 +227,7 @@ When a hold is released as unused, the state machine SHALL require recorded non-
 #### Scenario: Release after submission
 - **WHEN** `release_unused` follows a submission without `mark_unknown`
 - **THEN** it SHALL refuse.
-- Evidence: `current-local` (WS-B B5). Current state: succeeds (DL).
+- Evidence: `current-local` (WS-B B5). A source reading at `cb8280ef` indicates the release succeeds (DL); this has not been executed. Double release after submission is a hypothesis (SEC-18 HYP), not an observed result.
 
 ### Requirement: OSR-1014-14 Advertised commands refuse
 **Maps to:** M10, U7, MC08. **Source:** SEC-19.
@@ -242,7 +247,7 @@ When signature or proof evidence is cited, it SHALL name its scheme, curve, hash
 #### Scenario: Different protocol
 - **WHEN** any of the following is offered as JubJub in-circuit M8 or signed-v2 evidence:
   - the secp256k1 BIP340/ECDSA results of signed-intent /1 or the September 30 harness;
-  - the k6 or k10 numerical proofs (unsafe test SRS, proofs 0.8);
+  - the k6 or k10 numerical proofs (ephemeral unsafe test SRS; the k10 proof's proofs 0.8/curves 0.3 stack is not established as compatible with the ledger proofs 0.7.3 verifier);
   - the R4/R5 fixed-fixture kernel;
 - **THEN** the citation SHALL be refused.
 - Evidence: `source-inspected`.
