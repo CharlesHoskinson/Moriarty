@@ -22,7 +22,7 @@ For this plugin update the user selected Astra authoring and fresh Grok 4.6 high
 3. **Review Validation and Ingestion**:
    - Strictly validates review receipts against registered candidate hash, campaign scope, and independent non-author reviewer identity before mutating operational state.
    - Rejects receipts for unrelated candidate or scope with exit code 3.
-   - Only authentic independent reviews (`verdict == "APPROVED"`) can clear active blockers; author `defect_resolved` entries cannot erase unresolved findings.
+   - Only authentic independent reviews (`verdict == "APPROVED"`) with explicit `resolvedFindings` IDs (legacy alias `resolved`) can clear those named blockers; missing or empty lists clear nothing and malformed lists are rejected; author `defect_resolved` entries cannot erase unresolved findings.
 4. **History Integrity and Admin Accounting**:
    - Corrupt or unverified empty operational history remains explicitly unknown (`None`), preventing crashes and preventing false assertion of clean operational zeros.
    - Admin intervals are union-merged, excluding `test`, `testing`, `afk`, and `idle` durations.
@@ -72,7 +72,13 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor --json
 
 Delivery and chain status are separate: a later confirmation requires another notification. Unavailable host records leave delivery pending. The adapter supports the locally inspected Codex session format; it proves local host emission, not human receipt or network finality. Local same-user tampering remains outside this plugin's security boundary.
 
+## Compatibility and upgrades
+
+See [the compatibility contract](COMPATIBILITY.md) for the support matrix, package-only tests, installation diagnostics and cache-retention upgrade procedure. Active sessions keep their versioned cache paths; preserve those packages through upgrades. `doctor --expected-plugin-root PATH --json` checks a known session reference without changing it.
+
 ## Host adapter
+
+Normal Stop returns `{}`. Permitted PreToolUse calls omit the permission decision; explicit denials remain intact. Malformed input receives bounded diagnostic JSON. Only supported CLI `run` invocations and exact registered raw argv are treated as dispatches, so searches and review commands may mention action IDs.
 
 The wire adapter uses `hook_event_name`, `tool_name` and `tool_input` (with legacy aliases), and emits `additionalContext` for session/post-tool reminders. Output stays valid JSON within 2 KiB. Stop hooks never request continuation. Hook failures produce a diagnostic; the CLI is the independent launch gate. File edits are not interpreted as shell dispatches.
 
