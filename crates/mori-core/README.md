@@ -127,6 +127,55 @@ and external costs are unmeasured. The cap is local and unsigned; it supplies no
 native DUST fee bound, authenticated sponsorship, signed lifetime budget or
 reserved recovery work. Native cost correspondence and all U0–U3 exits remain open.
 
+`LocalSourceSponsor::from_trusted_local_source(source, config)` creates a fresh,
+exclusive unsigned local allowance for a configured action. It validates source
+and binds its exact UTF-8 bytes through a five-field canonical commitment:
+`profile`, `language`, `semantics`, `logical_cost_profile` and `source_hash`.
+The profile is `moriarty-local-source-sponsor/1`; whitespace, comments and line
+endings change its identity. `scope()` exposes cloneable diagnostics. The owner
+has no Clone, serialization, restoration, reset or inner fee-capability API.
+Separately trusted bootstraps are independent local allowances.
+
+`prepare(SourceSponsoredRequest { candidate, scope, source, scenario,
+dust_reservation })` checks every scope field and raw source identity, and
+requires a nonempty candidate and positive DUST reservation. It stages that
+reservation before parsing and interpretation, so consumed identities and
+insufficient capacity refuse before scenario normalization. It parses source
+internally and calls the actual `simulate_metered` consumer under
+`min(logical_per_call, logical_total - logical_recovery_reserved - logical_used)`.
+No caller Program, cost report or per-call limit supplies executable authority.
+
+Success returns `SourceSponsoredExecution` with the unchanged complete execution,
+actual `CostReport`, candidate and scope; it commits a Reserved economic hold
+without increasing spent DUST. `SourceSponsoredError` preserves the original
+error and has no partial execution. Its `cost` is `None` for preflight or parser
+refusals, or `Some(report)` for metered refusals, including normalization at zero
+work. Actual reported work accumulates on both success and failure. Failed
+interpretation discards the economic hold and leaves its candidate reusable;
+retrying does not refund work. The borrowed scenario remains unchanged.
+
+`logical_used()`, `ordinary_remaining()`, `dust_available()` and `dust_spent()`
+provide read-only accounting. `mark_unknown` retains a pending hold;
+`release_unused` releases only an unsubmitted hold;
+`settle_from_trusted_local_observation` reconciles numeric DUST accounting from
+an observation the caller must authenticate. Successful candidate identities
+stay consumed after release or settlement. These lifecycle methods never reset
+logical usage, the per-call cap or the protected recovery slice. Zero remaining
+work still enters the zero-cap meter: a positive-work action refuses, while an
+empty action may succeed with a positive economic reservation.
+
+This consumer trusts local bootstrap and settlement observations. It establishes
+no authenticated funding, real DUST measurement or payment, signed or durable
+global lifetime allowance, recovery execution, time/allocation bound, native
+proof or ledger settlement. Hashing, parsing, validation, cloning and normalization
+remain outside the primitive cost count. The recovery slice only excludes work
+from ordinary calls; broader proof, financial and release gates remain open.
+
+Including this module in the ledger source closure changes verification-key
+source identity and makes historical exact-context/key snapshots stale.
+No keys, parameters or SRS were regenerated or qualified for this consumer.
+The source include supplies no native qualification.
+
 The language bounds source to 65,536 bytes, 8,192 tokens and expression nodes,
 256 declarations, 256 inputs per action, 1,024 statements per action and
 expression depth 64. Scenario bounds and a trace allocation budget limit

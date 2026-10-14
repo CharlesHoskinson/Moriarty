@@ -33,8 +33,10 @@ closed source-wide identity registry, with explicit presence and amount slots.
 `liability_present("name")` and `liability_amount("name")` alias the current
 registered presence and amount wires. They retain ordered statement semantics
 without adding public slots or changing effect descriptors. Missing rows use
-false/0. Present-zero rows use true/0. The existing ledger-call compiler explicitly
-refuses these reads. Authenticated ledger predecessor/duty correspondence remains open. There are no native escape hatches,
+false/0. Present-zero rows use true/0. The ledger-call source compiler lowers these
+reads through membership and full duty-cell openings with source-fixed identity
+and UInt128 amounts. Native execution of these consumers and authenticated ledger
+predecessor/duty correspondence remain open. There are no native escape hatches,
 unconstrained host verdicts, arbitrary recursion or floating point amounts.
 
 These circuits express bounded transition relations. An authenticated ledger
