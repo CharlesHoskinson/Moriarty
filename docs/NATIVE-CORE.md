@@ -405,3 +405,15 @@ and ledger settlement remain separate open predicates. Existing host admission
 checks these local examples' source effects and economic bounds; those checks do
 not become circuit authority. Ordinary checks and the bounded Quint projection
 model establish no cryptographic proof or general compiler correspondence theorem.
+
+
+The finite escrow example now reads its current liabilities before partial
+delivery, completion and recovery. It requires delivery equal remaining units
+and refund equal remaining units times price. Funding refuses existing duties,
+including present-zero tombstones. Postconditions compare residual duty amounts
+with the updated state. `liability_present("name")` returns Bool, and
+`liability_amount("name")` returns UInt atomic units. These literal-name reads
+require a source-fixed identity and inspect the current statement snapshot.
+The ordinary relation compiler reuses its existing duty frame. The ledger-call
+compiler refuses these reads until it implements their correspondence. Local
+simulation and public-preimage checks do not authenticate the incoming duties.

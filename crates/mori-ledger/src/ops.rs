@@ -353,6 +353,10 @@ fn lower_ops_inner(
                         pending.push(*rhs);
                     }
                     mori_core::Expr::Not { value } => pending.push(*value),
+                    mori_core::Expr::LiabilityPresent { .. }
+                    | mori_core::Expr::LiabilityAmount { .. } => {
+                        return Err(Error::new("source-profile", "unsupported-liability-read"));
+                    }
                     _ => {}
                 }
             }

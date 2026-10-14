@@ -332,6 +332,7 @@ fn liability_binding_and_partial_discharge_cannot_be_rewritten() {
         "mori::core::liability"
     );
     s.inputs.insert("amount".into(), uint(5));
+    s.liabilities[0].creditor = "alice".into();
     let run = simulate(&p, "finish", &s).unwrap();
     assert_eq!(run.post.liabilities[0].amount, UInt(0));
 }

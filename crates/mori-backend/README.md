@@ -30,7 +30,11 @@ receiving only `Program` cannot infer a byte-for-byte source hash.
 Cross-domain assets refuse compilation: every declared asset network must match
 the selected target. Registered liability creation/discharge lower under the
 closed source-wide identity registry, with explicit presence and amount slots.
-Authenticated ledger predecessor/duty correspondence remains open. There are no native escape hatches,
+`liability_present("name")` and `liability_amount("name")` alias the current
+registered presence and amount wires. They retain ordered statement semantics
+without adding public slots or changing effect descriptors. Missing rows use
+false/0. Present-zero rows use true/0. The existing ledger-call compiler explicitly
+refuses these reads. Authenticated ledger predecessor/duty correspondence remains open. There are no native escape hatches,
 unconstrained host verdicts, arbitrary recursion or floating point amounts.
 
 These circuits express bounded transition relations. An authenticated ledger
