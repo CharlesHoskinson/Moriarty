@@ -1,0 +1,102 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-tutorial-20261001",
+  "role": "implement",
+  "slug": "G1",
+  "branch": "foreman/moriarty-tutorial-20261001/implement/G1",
+  "worktree": "/home/charl/Moriarty/.worktrees/moriarty-beta-20260930-wt-moriarty-tutorial-20261001-implement-G1",
+  "base_sha": "df8b155143e90450168af04fbfd20f7620043620",
+  "status": "complete",
+  "summary": "Markets.tsx exports Markets with sections amm, lending and stablecoins. Snippets come from the shipped beta AMM, lending, stablecoin and AccrualFirst repayment sources. Changes are uncommitted.",
+  "findings": [
+    "AMM, lending originate/roll/liquidate, and stablecoin mint/redeem/emergency are SpecifiedOnly. Financial relations are Open. Local preparation is Unsupported.",
+    "repay_loan is LocalS0. The shipped lesson test returns PreparedUnqualified with qualification local-stipulation-only.",
+    "Canonical price orientation on the page is base-per-quote: Price<Base, Quote, Scale> counts base units per quote unit.",
+    "50500, 47500 and 7500 atoms apply lending.mori scale 2 to horizon display amounts 505, 475 and 75. That conversion is an inference, not a beta simulation.",
+    "Requested provider is Grok 4.7 xhigh for worker G1. The session states Grok 4.7. No separate host receipt attests effort xhigh."
+  ],
+  "evidence": [
+    {
+      "command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+      "cwd": "/home/charl/Moriarty/.worktrees/moriarty-beta-20260930-wt-moriarty-tutorial-20261001-implement-G1",
+      "exit": 0,
+      "result": "pendingTransactions empty. blockedAction is historical loan-swap implementation. Website task proceeded as authorized source work."
+    },
+    {
+      "limit": "packages/moriarty-beta/dist/cli.js is absent. npm ci and npm run build were not run. Checks below use node --experimental-strip-types src/cli.ts and are not the documented dist CLI."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts check examples/amm.mori",
+      "cwd": "packages/moriarty-beta",
+      "exit": 0,
+      "result": "AuthoringChecked AmmDemo. swap, mint_lp, redeem_lp: SpecifiedOnly (execution unsupported; financial relations open)."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts check examples/lending.mori",
+      "cwd": "packages/moriarty-beta",
+      "exit": 0,
+      "result": "AuthoringChecked LendingDemo. borrow, roll, liquidate: SpecifiedOnly (execution unsupported; financial relations open)."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts check examples/stablecoin.mori",
+      "cwd": "packages/moriarty-beta",
+      "exit": 0,
+      "result": "AuthoringChecked StablecoinDemo. mint, redeem, emergency: SpecifiedOnly (execution unsupported; financial relations open)."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts check examples/local/repay/repayment.mori",
+      "cwd": "packages/moriarty-beta",
+      "exit": 0,
+      "result": "AuthoringChecked LoanAgreement. repay_loan: LocalS0. Local preparation remains PreparedUnqualified."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts test examples/local/repay",
+      "cwd": "packages/moriarty-beta",
+      "exit": 0,
+      "result": "TestsPassed. qualification local-stipulation-only. Case interest first partial repayment passed, status PreparedUnqualified, mismatches empty."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts simulate examples/amm.mori --action swap --scenario <temp {}>",
+      "cwd": "packages/moriarty-beta",
+      "exit": 1,
+      "result": "Unsupported. BETA_PROFILE_UNSUPPORTED. publishedPost null. publishedEffects null. scenarioValidation NotAppliedUnsupported. sourceHash 6e1c3790202964bd4202be9fa67cd7f81beb559c25918055e023442ba9c0ef11."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts simulate examples/lending.mori --action liquidate --scenario <temp {}>",
+      "cwd": "packages/moriarty-beta",
+      "exit": 1,
+      "result": "Unsupported. BETA_PROFILE_UNSUPPORTED. publishedEffects null. scenarioValidation NotAppliedUnsupported. sourceHash 2a85e347e953120c070982dd844c65c7afbe2899ec198c242e0aceea09995bb3."
+    },
+    {
+      "command": "node --experimental-strip-types src/cli.ts simulate examples/stablecoin.mori --action redeem --scenario <temp {}>",
+      "cwd": "packages/moriarty-beta",
+      "exit": 1,
+      "result": "Unsupported. BETA_PROFILE_UNSUPPORTED. publishedEffects null. scenarioValidation NotAppliedUnsupported. sourceHash a9695866e7bdbc3474735c632cef207682d1c50a7be25694489ebe36a6ce7400."
+    }
+  ],
+  "ownedFiles": [
+    "site/src/tutorial/Markets.tsx",
+    "FOREMAN_REPORT.md",
+    "FOREMAN_REPORT.json"
+  ],
+  "unperformed": [
+    "site npm ci, tsc, vite build and browser tests. site/node_modules is absent.",
+    "Documented node dist/cli.js commands. dist/cli.js is absent and this worker did not build the package.",
+    "Other tutorial modules and deployment."
+  ],
+  "provider": {
+    "requested": "Grok 4.7 xhigh",
+    "worker": "G1",
+    "returnedIdentity": "Grok 4.7",
+    "identitySource": "session system prompt",
+    "effortAttestation": "unavailable"
+  },
+  "open_questions": [
+    "Root imports Markets into GuideApp in tutorial/main.tsx.",
+    "Root styles guide-section, guide-code, guide-status, guide-grid and guide-callout.",
+    "Root runs npm ci and npm run verify in the integrated site.",
+    "Root browser-tests navigation, section ids amm, lending and stablecoins, copy, and project-subpath refresh.",
+    "Root allows Vite to read packages/moriarty-beta when the dev server blocks paths outside site/.",
+    "Root builds packages/moriarty-beta before counting the documented dist/cli.js commands as executed."
+  ]
+}
