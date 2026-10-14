@@ -324,6 +324,7 @@ class ExecutionTestCase(unittest.TestCase):
             "author": "grok-4-6",
             "reviewer": "gpt-6-astra",
             "verdict": "APPROVED",
+            "resolvedFindings": ["DEFECT-1"],
         }))
         res = self.run_cli("review", str(receipt_file))
         self.assertEqual(res.returncode, 0, f"CLI review failed: {res.stderr}")
@@ -418,6 +419,7 @@ class ExecutionTestCase(unittest.TestCase):
             "author": "grok-4-6",
             "reviewer": "gpt-6-astra",
             "verdict": "APPROVED",
+            "resolvedFindings": ["DEFECT-BLOCKER-02"],
         }
         record_review(self.db_path, str(self.root), receipt)
 
