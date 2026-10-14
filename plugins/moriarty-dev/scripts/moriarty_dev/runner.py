@@ -135,6 +135,34 @@ def load_runner(root, action):
     return plan, digest
 
 
+def _kill_group(proc):
+    pid = proc.pid
+    if pid is None:
+        return
+    try:
+        os.killpg(pid, signal.SIGKILL)
+    except (ProcessLookupError, OSError):
+        return
+
+
+def _reap(proc, timeout):
+    try:
+        return proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def _cleanup_owner(proc):
+    pid = proc.pid
+    pgid = None
+    if pid is not None:
+        try:
+            pgid = os.getpgid(pid)
+        except (ProcessLookupError, OSError):
+            pgid = None
+    return {"pid": pid, "pgid": pgid}
+
+
 def execute(root, plan, digest, reservation_id):
     """Observe the actual process; retain bounded output while hashing all bytes."""
     command = [*plan["launcher"], "--timeout", str(plan["timeoutSeconds"]),
@@ -150,11 +178,14 @@ def execute(root, plan, digest, reservation_id):
         selector.register(pipe, selectors.EVENT_READ, name)
     limit = plan["outputLimitBytes"]
     ambiguous = False
+    abandoned = False
+    cleanup_owner = None
+    ret = None
     try:
         while selector.get_map() or proc.poll() is None:
             if time.monotonic() - started > plan["timeoutSeconds"] + plan["graceSeconds"] + 30:
                 ambiguous = True
-                os.killpg(proc.pid, signal.SIGKILL)
+                _kill_group(proc)
                 break
             for key, _ in selector.select(0.1):
                 chunk = os.read(key.fileobj.fileno(), 16384)
@@ -165,17 +196,27 @@ def execute(root, plan, digest, reservation_id):
                 hashes[name].update(chunk)
                 sizes[name] += len(chunk)
                 streams[name].extend(chunk[:max(0, limit - len(streams[name]))])
-        ret = proc.wait(timeout=5)
-        # A signal, launcher failure, or namespace signal encoding does not
-        # establish completion. Foreman's confirmed timeout uses exit 124.
-        ambiguous = ambiguous or ret < 0 or ret >= 125
+        ret = _reap(proc, 5)
+        if ret is None:
+            # First reap bound missed. Escalate, then apply a second wait bound.
+            ambiguous = True
+            _kill_group(proc)
+            ret = _reap(proc, 5)
+            if ret is None:
+                abandoned = True
+                cleanup_owner = _cleanup_owner(proc)
+        else:
+            # A signal, launcher failure, or namespace signal encoding does not
+            # establish completion. Foreman's confirmed timeout uses exit 124.
+            ambiguous = ambiguous or ret < 0 or ret >= 125
     finally:
         selector.close()
         proc.stdout.close()
         proc.stderr.close()
     overflow = any(size > limit for size in sizes.values())
     assertion = plan.get("assertion")
-    verified = bool(not ambiguous and not overflow and assertion and ret == assertion["exitCode"]
+    verified = bool(not ambiguous and not overflow and not abandoned and assertion
+                    and ret is not None and ret == assertion["exitCode"]
                     and hashes["stdout"].hexdigest() == assertion["stdoutSha256"])
     observed = {"actionId": plan["action"]["id"], "candidateHash": plan["action"]["candidate"],
                 "runnerDigest": digest, "chargeId": plan["chargeId"], "reservationId": reservation_id,
@@ -183,6 +224,7 @@ def execute(root, plan, digest, reservation_id):
                 "outputSha256": {name: h.hexdigest() for name, h in hashes.items()}, "outputBytes": sizes,
                 "completionAmbiguous": ambiguous, "outputLimitExceeded": overflow,
                 "behavioralAssertions": [{"assertionId": assertion["id"], "candidateHash": plan["action"]["candidate"],
-                                          "outcome": "defect-observed"}] if verified else []}
+                                          "outcome": "defect-observed"}] if verified else [],
+                "verified": verified, "abandoned": abandoned, "cleanupOwner": cleanup_owner}
     return {"exitCode": ret, "stdout": streams["stdout"].decode("utf-8", errors="replace"),
             "stderr": streams["stderr"].decode("utf-8", errors="replace"), "runnerReceipt": observed}

@@ -1,0 +1,63 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-orch-remediation-20260912",
+  "role": "implement",
+  "slug": "runner-round-ownership",
+  "branch": "foreman/moriarty-orch-remediation-20260912/implement/runner-round-ownership",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-orch-remediation-20260912-implement-runner-round-ownership",
+  "base_sha": "056e662254c38936758af9c6f72c019705a1ff09",
+  "status": "complete",
+  "summary": "execute() returns a receipt for unreapable and abandoned children instead of raising TimeoutExpired. Both new paths set completionAmbiguous true and verified false. Abandoned children record cleanupOwner pid and pgid.",
+  "findings": [
+    {
+      "id": "defect-1-unreapable-wait",
+      "severity": "fixed",
+      "summary": "proc.wait(timeout=5) TimeoutExpired no longer escapes execute(). The receipt is recorded. Unobserved exitCode is None.",
+      "test": "test_unreapable_wait_keeps_reservation_unresolved"
+    },
+    {
+      "id": "defect-2-second-bound",
+      "severity": "fixed",
+      "summary": "A missed first reap issues a second SIGKILL and a second 5-second wait. A still-unreaped child is recorded as abandoned with cleanupOwner.",
+      "test": "test_abandoned_child_keeps_reservation_unresolved"
+    }
+  ],
+  "newReceiptFields": {
+    "verified": "boolean. False on both new paths. True only when a behavioural assertion is observed.",
+    "abandoned": "boolean. True only when both reap bounds miss.",
+    "cleanupOwner": "object {pid, pgid} when abandoned, else None. Unobserved pgid is None, never 0."
+  },
+  "tests": {
+    "test_unreapable_wait_keeps_reservation_unresolved": "First wait times out. Second wait returns -9. Reservation stays active. Two SIGKILL calls. abandoned false. completionAmbiguous true. verified false.",
+    "test_abandoned_child_keeps_reservation_unresolved": "Both waits time out. Reservation stays active. abandoned true. exitCode null. cleanupOwner.pid 4242. completionAmbiguous true. verified false."
+  },
+  "digest": {
+    "statedPriorPin": "0b40d8c3e184f246294188d89107f70bb2b38789de2276fa374792b955b4acb3",
+    "priorPinPresentInWorktreeHooksBeforeChange": false,
+    "prechangeDigestThisTreeScripts": "afead559ef39309d470152e6bdee432f0222203e9a4c094e2daefe4036d891be",
+    "newPin": "b29c951c99f07cca677d986affc56c72bd5114bee12ffb16ca0930ab0b620641",
+    "recomputedMatchesWrittenPin": true,
+    "hookOccurrences": 4,
+    "hookLines": [10, 22, 34, 46],
+    "runtimeStore": "/home/charl/.local/share/moriarty-dev/runtimes/b29c951c99f07cca677d986affc56c72bd5114bee12ffb16ca0930ab0b620641/",
+    "runtimeStoreCreated": true,
+    "runtimeStoreDigestMatches": true
+  },
+  "evidence": [
+    {
+      "kind": "pytest",
+      "command": "cd plugins/moriarty-dev && python3 -m pytest tests/ -q",
+      "output": "............................................................ [ 29%]\n................................................... [ 55%]\n........................................................................ [ 91%]\n..................                                                       [100%]\n201 passed, 105 subtests passed in 13.73s",
+      "failures": 0
+    },
+    {
+      "kind": "digest-recompute",
+      "command": "python3 hashlib/json inventory over plugins/moriarty-dev/scripts/moriarty_dev *.py",
+      "output": "b29c951c99f07cca677d986affc56c72bd5114bee12ffb16ca0930ab0b620641"
+    }
+  ],
+  "open_questions": [
+    "This worktree collected 201 tests after adding two tests. The task stated 219 existing tests. This plugin tree has no test_upgrade.py and no bootstrap.py or deployment.py. Those files exist in the live 0b40d8c3 runtime store and were not copied into this worktree.",
+    "This worktree hooks.json did not contain the stated 0b40d8c3 pin before the change. The file called hook.py directly. The pinned-launcher registration was written so the new digest appears four times and the fallback store can resolve."
+  ]
+}

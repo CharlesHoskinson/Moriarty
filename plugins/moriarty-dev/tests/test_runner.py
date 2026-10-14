@@ -5,16 +5,60 @@ import os
 import shutil
 import signal
 import sqlite3
-from contextlib import closing
+from contextlib import closing, redirect_stderr, redirect_stdout
+from io import StringIO
 import subprocess
 import sys
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path[:0] = [str(Path(__file__).resolve().parent), str(Path(__file__).resolve().parents[1] / "scripts")]
 import test_execution as execution
 import test_records as tr
+from moriarty_dev import runner
+from moriarty_dev.cli import cmd_run
+from moriarty_dev.store import make_history_reader
+
+UNREAPABLE = object()
+
+
+class FakeChild:
+    """Deterministic subprocess stand-in: kill-resistant or unreapable on demand."""
+
+    def __init__(self, pid, wait_results):
+        self.pid = pid
+        self.returncode = None
+        self._results = list(wait_results)
+        self.stdout, self._stdout_write = _pipe()
+        self.stderr, self._stderr_write = _pipe()
+        self.wait_calls = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.wait_calls += 1
+        if not self._results:
+            raise subprocess.TimeoutExpired(["fake-child"], timeout)
+        outcome = self._results.pop(0)
+        if outcome is UNREAPABLE:
+            raise subprocess.TimeoutExpired(["fake-child"], timeout)
+        self.returncode = outcome
+        return outcome
+
+    def close_writes(self):
+        for fd in (self._stdout_write, self._stderr_write):
+            if fd is not None:
+                os.close(fd)
+        self._stdout_write = None
+        self._stderr_write = None
+
+
+def _pipe():
+    read_fd, write_fd = os.pipe()
+    return os.fdopen(read_fd, "rb"), write_fd
 
 
 def digest(path):
@@ -170,6 +214,79 @@ class BoundRunnerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 4)
         with closing(sqlite3.connect(self.db_path)) as conn, conn:
             self.assertEqual(conn.execute("SELECT status FROM reservations").fetchone()[0], "active")
+
+    def _run_injected_child(self, action, child):
+        kills = []
+
+        def killpg(pid, sig):
+            kills.append((pid, sig))
+
+        clock = [0.0]
+
+        def monotonic():
+            value = clock[0]
+            clock[0] += 100.0
+            return value
+
+        stdout, stderr = StringIO(), StringIO()
+        with patch.object(runner.subprocess, "Popen", return_value=child), \
+             patch.object(runner.os, "killpg", side_effect=killpg), \
+             patch.object(runner.time, "monotonic", side_effect=monotonic), \
+             redirect_stdout(stdout), redirect_stderr(stderr):
+            try:
+                cmd_run(self.root, self.db_path, make_history_reader(self.db_path), action["id"], True)
+            except SystemExit as exc:
+                code = exc.code
+            else:
+                self.fail("cmd_run returned without SystemExit")
+        child.close_writes()
+        return code, kills, stdout.getvalue(), stderr.getvalue()
+
+    def _unresolved_receipt(self):
+        with closing(sqlite3.connect(self.db_path)) as conn, conn:
+            status = conn.execute("SELECT status FROM reservations").fetchone()[0]
+            payload = json.loads(conn.execute(
+                "SELECT payload_json FROM events WHERE event_kind='runner_unresolved'").fetchone()[0])
+        self.assertEqual(status, "active")
+        self.assertIsNotNone(payload.get("receipt"), "execute must record a receipt, not raise")
+        return payload["receipt"]
+
+    def test_unreapable_wait_keeps_reservation_unresolved(self):
+        action = self.admit()
+        child = FakeChild(pid=4242, wait_results=[UNREAPABLE, -9])
+        self.addCleanup(child.close_writes)
+        code, kills, _out, err = self._run_injected_child(action, child)
+        self.assertEqual(code, 4, err)
+        packet = self._unresolved_receipt()
+        observed = packet["runnerReceipt"]
+        self.assertEqual(packet["exitCode"], -9)
+        self.assertTrue(observed["completionAmbiguous"])
+        self.assertIs(observed["verified"], False)
+        self.assertEqual(observed["behavioralAssertions"], [])
+        self.assertIs(observed["abandoned"], False)
+        self.assertIsNone(observed["cleanupOwner"])
+        self.assertEqual(observed["exitCode"], -9)
+        self.assertEqual(kills, [(4242, signal.SIGKILL), (4242, signal.SIGKILL)])
+        self.assertEqual(child.wait_calls, 2)
+
+    def test_abandoned_child_keeps_reservation_unresolved(self):
+        action = self.admit()
+        child = FakeChild(pid=4242, wait_results=[UNREAPABLE, UNREAPABLE])
+        self.addCleanup(child.close_writes)
+        code, kills, _out, err = self._run_injected_child(action, child)
+        self.assertEqual(code, 4, err)
+        packet = self._unresolved_receipt()
+        observed = packet["runnerReceipt"]
+        self.assertIsNone(packet["exitCode"])
+        self.assertTrue(observed["completionAmbiguous"])
+        self.assertIs(observed["verified"], False)
+        self.assertEqual(observed["behavioralAssertions"], [])
+        self.assertIs(observed["abandoned"], True)
+        self.assertIsNone(observed["exitCode"])
+        self.assertEqual(observed["cleanupOwner"]["pid"], 4242)
+        self.assertIsNone(observed["cleanupOwner"]["pgid"])
+        self.assertEqual(kills, [(4242, signal.SIGKILL), (4242, signal.SIGKILL)])
+        self.assertEqual(child.wait_calls, 2)
 
     def test_approved_behavioral_verifier_records_observed_defect(self):
         action = self.admit("print('defect observed')\nraise SystemExit(42)\n", "reproduce")
