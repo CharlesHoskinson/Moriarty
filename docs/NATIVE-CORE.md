@@ -14,6 +14,13 @@ cargo run -p mori --locked -- compile examples/core/batch-clear/batch.mori \
   --target toolchains/ledger-9.json --out build-batch
 ```
 
+`mori init NEW_DIR` creates a Core transfer starter. `--template repay`
+creates a repayment starter. Run the generated README commands to check,
+simulate and test the complete expected post-state and ordered effects.
+The destination must not exist, and its parent must exist. An I/O failure
+can leave an incomplete project. Choose a new destination before retrying.
+These starters use local example assets and reference execution.
+
 `check` reads at most 1 MiB plus one refusal byte through the shared bounded
 reader; both Core and beta retain their 65,536-byte source grammar limit.
 Human diagnostic filenames use the existing escaped display policy, including
