@@ -1,0 +1,390 @@
+{
+  "status": "normative-interface-for-source-component-not-full-M11-acceptance",
+  "prior_design": "design.md (unchanged)",
+  "language": "moriarty/1",
+  "agreement": "FeePoolU64Component",
+  "asset": {
+    "name": "FEES",
+    "network": "local",
+    "issuer": "fee-pool-source",
+    "reference": "SERVICE",
+    "scale": 0
+  },
+  "actors": {
+    "funder": "funding-source",
+    "custody": "fee-pool",
+    "operatorA": "operator-a",
+    "operatorB": "operator-b",
+    "da": "da-provider",
+    "watcher": "watcher",
+    "ordinary": "cost-provider",
+    "l2": "l2-treasury",
+    "midnight": "midnight-treasury"
+  },
+  "dimensions": {
+    "epochs": 1,
+    "operator_seats": 2,
+    "da_seats": 1,
+    "watcher_seats": 1,
+    "ordinary_receipts": 1,
+    "stipend_receipts": 1,
+    "watcher_spend_receipts": 1
+  },
+  "state": {
+    "UInt_initial_0": [
+      "epoch",
+      "epochClose",
+      "gross",
+      "metered",
+      "target",
+      "backstop",
+      "watcherHeld",
+      "stipendLimit",
+      "opWeight",
+      "daWeight",
+      "rewardSeatCount",
+      "allocatedCount",
+      "opTotal",
+      "daTotal",
+      "watcherTotal",
+      "opRemaining",
+      "daRemaining",
+      "opAWeight",
+      "opBWeight",
+      "daSeatWeight",
+      "watcherWeight",
+      "ordinaryAmount",
+      "stipendAmount",
+      "opAAmount",
+      "opBAmount",
+      "daAmount",
+      "l2Amount",
+      "midnightAmount",
+      "dustAmount",
+      "spendAmount",
+      "claimedTotal",
+      "carried"
+    ],
+    "Bool_initial_false": [
+      "recorded",
+      "settled",
+      "finished",
+      "opARegistered",
+      "opBRegistered",
+      "daRegistered",
+      "watcherRegistered",
+      "ordinaryRecorded",
+      "stipendRecorded",
+      "opAAllocated",
+      "opBAllocated",
+      "daAllocated",
+      "spendIssued",
+      "ordinaryClaimed",
+      "stipendClaimed",
+      "opAClaimed",
+      "opBClaimed",
+      "daClaimed",
+      "l2Claimed",
+      "midnightClaimed",
+      "dustClaimed",
+      "spendClaimed"
+    ]
+  },
+  "actions": [
+    {
+      "name": "intake",
+      "inputs": {
+        "epochId": "UInt",
+        "grossAmount": "UInt",
+        "closeObservedAt": "UInt",
+        "initialTarget": "UInt",
+        "watcherStipendLimit": "UInt"
+      }
+    },
+    {
+      "name": "registerOperatorA",
+      "inputs": {
+        "weight": "UInt",
+        "attested": "Bool",
+        "effectiveWeight": "UInt"
+      }
+    },
+    {
+      "name": "registerOperatorB",
+      "inputs": {
+        "weight": "UInt",
+        "attested": "Bool",
+        "effectiveWeight": "UInt"
+      }
+    },
+    {
+      "name": "registerDa",
+      "inputs": {
+        "weight": "UInt",
+        "attested": "Bool",
+        "effectiveWeight": "UInt"
+      }
+    },
+    {
+      "name": "registerWatcher",
+      "inputs": {
+        "weight": "UInt",
+        "attested": "Bool",
+        "effectiveWeight": "UInt"
+      }
+    },
+    {
+      "name": "submitOrdinary",
+      "inputs": {
+        "amount": "UInt"
+      }
+    },
+    {
+      "name": "submitStipend",
+      "inputs": {
+        "amount": "UInt"
+      }
+    },
+    {
+      "name": "settle",
+      "inputs": {
+        "opQ": "UInt",
+        "opR": "UInt",
+        "daQ": "UInt",
+        "daR": "UInt",
+        "watcherQ": "UInt",
+        "watcherR": "UInt",
+        "l2Q": "UInt",
+        "l2R": "UInt",
+        "refill": "UInt"
+      }
+    },
+    {
+      "name": "allocateOperatorA",
+      "inputs": {
+        "denominator": "UInt",
+        "quotient": "UInt",
+        "remainder": "UInt"
+      }
+    },
+    {
+      "name": "allocateOperatorB",
+      "inputs": {
+        "denominator": "UInt",
+        "quotient": "UInt",
+        "remainder": "UInt"
+      }
+    },
+    {
+      "name": "allocateDa",
+      "inputs": {
+        "denominator": "UInt",
+        "quotient": "UInt",
+        "remainder": "UInt"
+      }
+    },
+    {
+      "name": "finish",
+      "inputs": {
+        "refill": "UInt"
+      }
+    },
+    {
+      "name": "spendWatcher",
+      "inputs": {
+        "kind": "UInt",
+        "amount": "UInt"
+      }
+    },
+    {
+      "name": "setTarget",
+      "inputs": {
+        "newTarget": "UInt"
+      }
+    },
+    {
+      "name": "claimOrdinary",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimStipend",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimOperatorA",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimOperatorB",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimDa",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimL2",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimMidnight",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimDust",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    },
+    {
+      "name": "claimWatcherSpend",
+      "inputs": {
+        "observedAt": "UInt"
+      }
+    }
+  ],
+  "duties": [
+    {
+      "name": "cost_ordinary",
+      "creditor": "cost-provider",
+      "amount_state": "ordinaryAmount",
+      "created_flag": "ordinaryRecorded",
+      "claimed_flag": "ordinaryClaimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "cost_stipend",
+      "creditor": "watcher",
+      "amount_state": "stipendAmount",
+      "created_flag": "stipendRecorded",
+      "claimed_flag": "stipendClaimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "reward_operator_a",
+      "creditor": "operator-a",
+      "amount_state": "opAAmount",
+      "created_flag": "opAAllocated",
+      "claimed_flag": "opAClaimed",
+      "unlock": "epochClose + 2592000",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "reward_operator_b",
+      "creditor": "operator-b",
+      "amount_state": "opBAmount",
+      "created_flag": "opBAllocated",
+      "claimed_flag": "opBClaimed",
+      "unlock": "epochClose + 2592000",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "reward_da",
+      "creditor": "da-provider",
+      "amount_state": "daAmount",
+      "created_flag": "daAllocated",
+      "claimed_flag": "daClaimed",
+      "unlock": "epochClose + 2592000",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "treasury_l2",
+      "creditor": "l2-treasury",
+      "amount_state": "l2Amount",
+      "created_flag": "settled",
+      "claimed_flag": "l2Claimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "treasury_midnight",
+      "creditor": "midnight-treasury",
+      "amount_state": "midnightAmount",
+      "created_flag": "settled",
+      "claimed_flag": "midnightClaimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "treasury_dust",
+      "creditor": "l2-treasury",
+      "amount_state": "dustAmount",
+      "created_flag": "finished",
+      "claimed_flag": "dustClaimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    },
+    {
+      "name": "watcher_spend",
+      "creditor": "watcher",
+      "amount_state": "spendAmount",
+      "created_flag": "spendIssued",
+      "claimed_flag": "spendClaimed",
+      "unlock": "epochClose",
+      "debtor": "fee-pool",
+      "asset": "FEES"
+    }
+  ],
+  "counts": {
+    "states": 54,
+    "actions": 23,
+    "assets": 1,
+    "declarations": 78,
+    "native_liability_names": 9
+  },
+  "owned_paths": {
+    "source": [
+      "examples/core/fee-pool/fee-pool.mori",
+      "examples/core/fee-pool/contrasting.mori",
+      "examples/core/fee-pool/static-bindings.json",
+      "examples/core/fee-pool/contrasting.static-bindings.json",
+      "examples/core/fee-pool/work-limits.json",
+      "examples/core/fee-pool/README.md"
+    ],
+    "expected": [
+      "examples/core/fee-pool/mori-tests.json",
+      "examples/core/fee-pool/cases/"
+    ],
+    "caller_tests": [
+      "crates/mori/tests/fee_pool_component.rs"
+    ],
+    "quint": [
+      "specs/quint/fee_pool_component.qnt",
+      "specs/quint/fee_pool_component_test.qnt"
+    ]
+  },
+  "open": [
+    "fullM11",
+    "CapacityExchange",
+    "general registry",
+    "native importer authority",
+    "recipient secret authorization",
+    "authenticated ledger clock",
+    "withdrawal/native custody correspondence",
+    "k/bytes/native proof/ledger acceptance"
+  ]
+}

@@ -1,0 +1,459 @@
+{
+  "schema": "moriarty-fee-pool-arithmetic-expected/1",
+  "scope": "independent read-only source review and integer hand-oracle; no implementation or execution acceptance",
+  "checkout": "/home/charl/Moriarty/.worktrees/language-static-compile-20261014",
+  "checkout_head": "dc31345850b5800687b16b26bfa20f1d66d94211",
+  "reference_commit": "ec8da3be532f29e5e92ff7b1804b7dff0bc89b15",
+  "sources": [
+    {
+      "path": "research/fenrir-v2/fenrir-contracts/src/fee_pool.rs",
+      "sha256": "193863e898a79cf411b8b8cd78cd11b656920200b03a8af5cbdeb74aaf14f7ae"
+    },
+    {
+      "path": "research/fenrir-v2/quint-spec/fee_pool.qnt",
+      "sha256": "9dc8e8b16113ca8c583fea3996a4e8498cd6921198fb96b8be174d67ad2b080a"
+    }
+  ],
+  "reference_domain": {
+    "money_weight_counters_times": "U64",
+    "product": "U128",
+    "quint_MAXU": "9223372036854775807",
+    "quint_limitation": "Conservative evaluator range; not full native U64 oracle"
+  },
+  "maximums": {
+    "u64": "18446744073709551615",
+    "u128": "340282366920938463463374607431768211455",
+    "u64_square": "340282366920938463426481119284349108225",
+    "u64_square_plus_u64": "340282366920938463444927863358058659840"
+  },
+  "split_vectors": [
+    {
+      "surplus": "0",
+      "expected": {
+        "operator": "0",
+        "da": "0",
+        "watcher_held": "0",
+        "l2_before_backstop": "0",
+        "midnight": "0"
+      },
+      "remainders": [
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "1",
+      "expected": {
+        "operator": "0",
+        "da": "0",
+        "watcher_held": "0",
+        "l2_before_backstop": "0",
+        "midnight": "1"
+      },
+      "remainders": [
+        "55",
+        "10",
+        "5",
+        "15"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "7",
+      "expected": {
+        "operator": "3",
+        "da": "0",
+        "watcher_held": "0",
+        "l2_before_backstop": "1",
+        "midnight": "3"
+      },
+      "remainders": [
+        "85",
+        "70",
+        "35",
+        "5"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "99",
+      "expected": {
+        "operator": "54",
+        "da": "9",
+        "watcher_held": "4",
+        "l2_before_backstop": "14",
+        "midnight": "18"
+      },
+      "remainders": [
+        "45",
+        "90",
+        "95",
+        "85"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "101",
+      "expected": {
+        "operator": "55",
+        "da": "10",
+        "watcher_held": "5",
+        "l2_before_backstop": "15",
+        "midnight": "16"
+      },
+      "remainders": [
+        "55",
+        "10",
+        "5",
+        "15"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "18446744073709551615",
+      "expected": {
+        "operator": "10145709240540253388",
+        "da": "1844674407370955161",
+        "watcher_held": "922337203685477580",
+        "l2_before_backstop": "2767011611056432742",
+        "midnight": "2767011611056432744"
+      },
+      "remainders": [
+        "25",
+        "50",
+        "75",
+        "25"
+      ],
+      "domain": "reference"
+    },
+    {
+      "surplus": "340282366920938463463374607431768211455",
+      "expected": {
+        "operator": "187155301806516154904856034087472516300",
+        "da": "34028236692093846346337460743176821145",
+        "watcher_held": "17014118346046923173168730371588410572",
+        "l2_before_backstop": "51042355038140769519506191114765231718",
+        "midnight": "51042355038140769519506191114765231720"
+      },
+      "remainders": [
+        "25",
+        "50",
+        "75",
+        "25"
+      ],
+      "domain": "extended-u128-specified-only"
+    }
+  ],
+  "cases": [
+    {
+      "id": "valid_complete",
+      "given": "gross1100 costs100; OP weights1,2; DA weights1,1; backstop30 target100",
+      "expected": "surplus1000; OP550->183,366; DA100->50,50; watcher50; settle backstop+70 L2base80 Midnight150; finish L2dust1; sum1100",
+      "status": "specified-only"
+    },
+    {
+      "id": "design_vector",
+      "given": "gross111 costs10; OP weights1,2; DA zero activity; backstop0 target17",
+      "expected": "surplus101; OP55->18,36; DA10 unallocated; watcher5; Midnight16; L2base0 backstop15; finish residue11 adds2 backstop and L2dust9; total111",
+      "status": "specified-only"
+    },
+    {
+      "id": "floor99",
+      "given": "gross99 costs0 no seats backstop0 target17",
+      "expected": "splits54,9,4,14,18; finish residue63 adds3 to backstop, L2dust60; total99",
+      "status": "specified-only"
+    },
+    {
+      "id": "floor7",
+      "given": "gross7 costs0",
+      "expected": "OP3 DA0 watcher0 L2floor1 Midnight3; reject replacing residual by floor15%=1",
+      "status": "specified-only"
+    },
+    {
+      "id": "floor1",
+      "given": "gross1 costs0",
+      "expected": "all four floors0; Midnight1",
+      "status": "specified-only"
+    },
+    {
+      "id": "zero_gross",
+      "given": "gross0 no meters no seats",
+      "expected": "record and settle and finish succeed; five shares0; zero payout claim rejects",
+      "status": "specified-only"
+    },
+    {
+      "id": "zero_surplus",
+      "given": "gross100 costs100",
+      "expected": "surplus0 all shares0; reimbursement100 remains claimable after settlement",
+      "status": "specified-only"
+    },
+    {
+      "id": "meter_exceeds_gross",
+      "given": "gross100 priorMeter90 amount11",
+      "expected": "reject and preserve meter/payout/receipt/epoch/balances",
+      "status": "specified-only"
+    },
+    {
+      "id": "zero_meter",
+      "given": "amount0",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "meter_replay",
+      "given": "reuse receipt across same or different epoch or watcher spend",
+      "expected": "reject globally",
+      "status": "specified-only"
+    },
+    {
+      "id": "header_replay",
+      "given": "reuse header in another epoch",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "epoch_replay",
+      "given": "record existing epoch",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "settle_replay",
+      "given": "settle settled epoch",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "post_settle_meter",
+      "given": "new valid cost after settle",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "post_settle_seat",
+      "given": "new valid seat after settle",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "allocation_replay",
+      "given": "allocate same epoch role seat twice",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "finish_early",
+      "given": "two reward seats allocated1",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "zero_weight_seats",
+      "given": "registered OP/DA seats effective weight0",
+      "expected": "denominator1 numerator0 q0 r0; every registered reward seat must still allocate before finish; zero rewards cannot claim; whole OP+DA sweeps",
+      "status": "specified-only"
+    },
+    {
+      "id": "no_reward_seats",
+      "given": "seats0 allocated0",
+      "expected": "finish immediately after settle; OP+DA totals sweep; watcher reserve stays held",
+      "status": "specified-only"
+    },
+    {
+      "id": "watcher_not_reward",
+      "given": "roleWATCHER allocate_reward",
+      "expected": "reject even if seat exists",
+      "status": "specified-only"
+    },
+    {
+      "id": "nonattested",
+      "given": "operator inputweight86400 attestedfalse",
+      "expected": "effectiveweight0 and zero reward; recorded seat remains counted",
+      "status": "specified-only"
+    },
+    {
+      "id": "operator_cap",
+      "given": "operator weight86401 even if nonattested",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "da_max_weight",
+      "given": "DA weight18446744073709551615 with priorweight0",
+      "expected": "accept; priorweight1 plus max rejects U64 overflow",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_wrong_q",
+      "given": "n101 w55 d100 q56 r0",
+      "expected": "reject; correct q55 r55",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_wrong_r",
+      "given": "n101 w55 d100 q55 r54",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_noncanonical",
+      "given": "n101 w55 d100 q54 r155",
+      "expected": "reject r<d despite equal equation",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_d0",
+      "given": "any n,w q r d0",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_full_u128_product",
+      "given": "n=w=d=q=18446744073709551615 r0",
+      "expected": "accept exact product340282366920938463426481119284349108225",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_extreme_nondiv",
+      "given": "n=w=18446744073709551614 d18446744073709551615",
+      "expected": "q18446744073709551613 r1; accept",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_high_operand",
+      "given": "n18446744073709551616",
+      "expected": "reject exact-reference U64 range; full-u128 extension specified separately",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_high_q",
+      "given": "q18446744073709551616",
+      "expected": "reject before products",
+      "status": "specified-only"
+    },
+    {
+      "id": "quota_high_r",
+      "given": "r18446744073709551616",
+      "expected": "reject before products",
+      "status": "specified-only"
+    },
+    {
+      "id": "watcher_overflow",
+      "given": "watcherPool18446744073709551613; surplus100 watcher5",
+      "expected": "reject atomic; no settled marker/treasury credit",
+      "status": "specified-only"
+    },
+    {
+      "id": "target_lowered",
+      "given": "backstop20 target17 l2amount15",
+      "expected": "refill0 balance20 L2payout15; do not subtract target-balance",
+      "status": "specified-only"
+    },
+    {
+      "id": "target_zero",
+      "given": "backstop0 target0 l2amount15",
+      "expected": "refill0 L2payout15",
+      "status": "specified-only"
+    },
+    {
+      "id": "wrong_cost_recipient",
+      "given": "AUDIT or INSURANCE pays nonL2 recipient",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "stipend_identity",
+      "given": "watcher stipend to different recipient or zero-effective watcher",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "stipend_duplicate_recipient",
+      "given": "two watcher seats same recipient same epoch with fresh receipts",
+      "expected": "second stipend rejects",
+      "status": "specified-only"
+    },
+    {
+      "id": "stipend_limit",
+      "given": "stipend_limit100 amount101 with enough gross",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "wrong_stream_asset",
+      "given": "same label PAY but changed network/issuer/reference/scale",
+      "expected": "reject identity mismatch or fixed-source binding; never aggregate into configured asset",
+      "status": "specified-only"
+    },
+    {
+      "id": "wrong_beneficiary",
+      "given": "claim valid payout using different recipient identity",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "wrong_pool_epoch_role_seat",
+      "given": "claim or allocate substituted pool/epoch/role/seat",
+      "expected": "reject absent entitlement or invalid identity; source static slots must bind all components",
+      "status": "specified-only"
+    },
+    {
+      "id": "claim_before_settle",
+      "given": "cost entitlement exists but epoch unsettled",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "reward_early_claim",
+      "given": "epoch0 reward unlock2678400; now2678399",
+      "expected": "reject",
+      "status": "specified-only"
+    },
+    {
+      "id": "reward_boundary_claim",
+      "given": "epoch0 reward unlock2678400; now2678400",
+      "expected": "accept iff positive, entitled, unclaimed",
+      "status": "specified-only"
+    },
+    {
+      "id": "late_claim",
+      "given": "same reward now5356800 after finish_distribution",
+      "expected": "accept iff unclaimed; no expiry; preserve immutable entitlement",
+      "status": "specified-only"
+    },
+    {
+      "id": "double_claim",
+      "given": "repeat successful claim",
+      "expected": "reject; no second transfer",
+      "status": "specified-only"
+    },
+    {
+      "id": "watcher_spend",
+      "given": "held5 receiptfresh kind7 amount3; then kind8 amount2",
+      "expected": "held2 then0; payouts3 and2; same receipt replay rejects; kind3 route rejects; overdraw rejects",
+      "status": "specified-only"
+    },
+    {
+      "id": "claim_adapter_credit_overflow",
+      "given": "recipient balanceU128max payout1",
+      "expected": "reject entire source transfer+claimed update atomically",
+      "status": "specified-only"
+    },
+    {
+      "id": "native_u64_time_overflow",
+      "given": "epoch213503982334601",
+      "expected": "record rejects because close exceedsU64; epoch213503982334600 close18446744073709526400 fits but reward unlock overflows and allocation rejects",
+      "status": "specified-only"
+    }
+  ],
+  "arithmetic_verdict": "Exact native U64 domain fully expressible using existing checked UInt128 +,-,*, comparisons and untrusted constrained q/r; new Div not needed. Generic full-U128 multiplication/division requires explicit source wide-limb equations, specified-only here.",
+  "limitations": [
+    "No source/build/model code changed",
+    "No native SDK/VM/check/k/prove/verify/network/keys/params/SRS/private cache accessed",
+    "No actual Core compile, native producer or runtime integration executed",
+    "No cryptographic import/withdrawal correspondence established"
+  ]
+}
