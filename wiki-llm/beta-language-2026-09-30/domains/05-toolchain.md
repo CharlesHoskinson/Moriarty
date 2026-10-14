@@ -8,6 +8,19 @@ scope: authoring-beta-design
 
 # Modules, packages, testing and developer toolchain
 
+## Subsequent disposition — October 14, 2026
+
+The proposed Node distribution was subsequently delivered as
+[`packages/moriarty-beta`](../../../packages/moriarty-beta/README.md); its
+[package manifest](../../../packages/moriarty-beta/package.json) declares the
+CLI/library and pinned development dependencies. [RESULT](../RESULT.md) records
+the historical packed installation. The private experiment observations below
+refer to the September 30 baseline, not to the shipped beta or the separate
+[Rust CLI](../../../docs/NATIVE-CORE.md). Imports/general linking remain outside
+this delivered beta; no new package execution was performed here.
+
+## Original September 30 research
+
 **Recommendation:** deliver one compiler driver and one reusable library from the existing TypeScript frontend. Use inert `.mori` source, explicit project metadata, deterministic local resolution and common diagnostics. The initial execution slice remains transfer and funded AccrualFirst repayment returning `PreparedUnqualified`. Broader examples can demonstrate authoring syntax while their semantic and execution status remains visible. A package release, test pass or content digest supplies no native proof or Midnight ledger acceptance.
 
 ## Evidence and comparisons

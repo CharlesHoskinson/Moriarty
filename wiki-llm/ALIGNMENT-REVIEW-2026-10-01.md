@@ -1,3 +1,40 @@
+# Current alignment and retained October 1 review
+
+## Current alignment — October 14, 2026
+
+Source baseline: merged [PR50](https://github.com/CharlesHoskinson/Moriarty/pull/50),
+`fc6353bf19b87a76410319c378efe529d52d23d9`. The [roadmap](../ROADMAP.md),
+[mid-roadmap review](../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) and
+[M1–M17 crosswalk](../openspec/changes/consolidated-language-kernel/traceability.md#fenrir-language-capability-crosswalk--2026-10-14)
+control present delivery status. The original review below retains its October 1
+claims, tree, failures and recommendations as historical evidence. Its native
+retry sequence is not a current execution queue or authorization.
+
+| Current child capability | Source/evidence scope | Requirement still open |
+| --- | --- | --- |
+| Rust compile, reference simulation, manifest tests, intent and replay | `moriarty/1` / `moriarty-core/1`; [guide](../docs/NATIVE-CORE.md), [profile constants](../crates/mori-core/src/ir.rs) | U0 matrix and general source/target correspondence |
+| All-action call export and exact reopen | Source-static PR47/49; [compiler command](../crates/mori/src/commands/compile_call.rs) | Native execution, installation and complete authoritative target effects |
+| Sponsorship/recovery holds and metered owner-intent consumers | Bounded local accounting; [sponsorship source](../crates/mori-core/src/source_sponsor.rs), [logical work](../crates/mori-core/src/logical_cost.rs) | Actual DUST/funding/finality and complete cost-plane qualification |
+| Finite FeePool component | Captured local/reference/static 23-action, 162-case scope in [roadmap observation](../ROADMAP.md#current-delivery-observation--2026-10-14) | Full M11, Capacity Exchange and U6 conformance |
+| Node beta/editor/MCP package | Separate [Source/6 bridge imports](../packages/moriarty-beta/src/bridge.ts); historical authoring prerelease | Independent compile-capable release; Rust [LSP](../crates/mori/src/commands/lsp.rs) / [MCP](../crates/mori/src/commands/mcp.rs) remain stubs |
+
+Next ordinary work reconciles the admitted grammar, numeric/work contracts and
+both lowering interfaces against independent financial expectations; it also
+repairs the tooling/reporting gaps named in the [audit plan](../docs/audits/2026-10-14/AUDIT-PLAN.md).
+Two positive contrasting source programs and rule/field coverage are required;
+a static/refusal case cannot replace a positive U2 program. Existing native
+contracts, counters and zero-execution authority remain unchanged. General native,
+recursive/private history, full ACTUS/DeFi and release exits remain open.
+
+Preview and Fenrir evidence retain separate targets. Unknown Fenrir network,
+Anchor and committee/registry facts stay unknown. Current security analysis and
+dispositions are [Opus-owned](../docs/audits/2026-10-14/SECURITY-ROUTING.md);
+the historical security passages below are preserved verbatim, without a new
+security verdict. See the [research crosswalk](RECONCILIATION-2026-10-14.md)
+for the current profile and evidence navigation.
+
+## Historical October 1 review — original text
+
 # Design, roadmap and goal alignment review
 
 2026-10-01. Repository observations and recommendation after reviewed key-generation publication, PR15 / main `df8b155143e90450168af04fbfd20f7620043620`. This review changes no semantic profile, target, acceptance obligation, resource allocation or recursion planning assumption.

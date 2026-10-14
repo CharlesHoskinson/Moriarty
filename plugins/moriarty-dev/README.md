@@ -1,18 +1,16 @@
 # Moriarty Development Plugin (`moriarty-dev`)
 
-Repository-scoped development plugin that enforces stop rules, prevents orchestration displacement, and directs execution toward concrete, demonstrable financial capabilities for Moriarty on Midnight.
+Repository-scoped development guidance for Moriarty's permissionless financial language on Midnight. Existing CLI controls guard registered maintainer execution; the skill selects current work and qualifies evidence.
 
-## Execution focus
+## Current execution focus
 
-The [current parallel workflow](../../docs/PARALLEL-DEVELOPMENT.md) selects three Sol and three Grok authors at high effort.
-Six tasks prepare U0/U1/U2/U3/U6 through disjoint source paths and existing product consumers.
-The user supersedes the single active source item for this scope. One integrator owns shared interfaces.
-Every final candidate requires fresh non-author Sol and Grok audits of the complete exact candidate.
-Existing frozen signed-call native gates retain Opus 5.5 and Muse audits.
+Load the [develop skill](skills/develop/SKILL.md), read checkout `AGENTS.md`, and run CLI `status --json` before following a recovered queue. The user's current request controls task selection. Historical campaign status remains historical operational truth; it does not select today's task or establish consolidated roadmap acceptance.
 
-The [develop skill](skills/develop/SKILL.md) and [execution reference](skills/develop/references/execution-focus.md) retain failure, resource and acceptance rules.
-The task manifest and read-only context script do not create a scheduler or alter native admission.
-The CLI does not enforce the full reviewer roster. The lead verifies both independent audits.
+Current nonsecurity work uses `gpt-6.1-sol` authoring and fresh independent `muse-wonder-1.0` audits, both at high effort. All security work belongs to Opus 5.5 under the [current assignment](../../docs/audits/2026-10-14/SECURITY-ROUTING.md). Later explicit user steering controls its scope. Preserve historical receipts and frozen contracts with their original rosters. Consequential design/resource decisions retain two substantive agreeing votes; that rule is separate from the current audit roster. The CLI does not enforce that roster or make receipt ingestion full acceptance.
+
+The [roadmap](../../ROADMAP.md), [audit plan](../../docs/audits/2026-10-14/AUDIT-PLAN.md), [mid-roadmap review](../../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md), [OpenSpec/EARS package](../../openspec/changes/consolidated-language-kernel/proposal.md) and [wiki index](../../wiki/index.md) supply current requirements and evidence. The [execution reference](skills/develop/references/execution-focus.md) covers profiles, independent financial/work expectations, unchanged U/M/MC/SP/G exits and the Opus-owned zero-native boundary. Existing disjoint source ownership can continue with one integration owner; no scheduler or new campaign is added.
+
+Report implementation, evidence and acceptance separately. Local/static child capabilities, historical proofs and Preview receipts retain their scopes. Fenrir remains separately qualified with unknown external facts left unknown. This plugin update does not complete a product exit or authorize native execution.
 
 ## Guarantees
 
@@ -35,7 +33,7 @@ The CLI does not enforce the full reviewer roster. The lead verifies both indepe
    - Lists selected public Preview observations for posting in the conversation. `deliver` verifies an emitted assistant message in the current Codex session; it does not send a message itself.
    - Accepts only typed public fields. No arbitrary receipt, witness object or free-form status note is persisted. Transaction IDs and addresses must be deliberately selected public identifiers.
 6. **No Synthetic Progress**:
-   - Reports all 12 sprints honestly without marking open gates as complete.
+   - Reports the retained 12-sprint campaign records without marking open gates as complete. Current U/M/MC/SP/G interpretation comes from the roadmap and evidence, not rewritten historical runtime records.
 
 ## Limitations
 
@@ -82,3 +80,24 @@ Delivery and chain status are separate: a later confirmation requires another no
 The wire adapter uses `hook_event_name`, `tool_name` and `tool_input` (with legacy aliases), and emits `additionalContext` for session/post-tool reminders. Output stays valid JSON within 2 KiB. Stop hooks never request continuation. Hook failures produce a diagnostic; the CLI is the independent launch gate. File edits are not interpreted as shell dispatches.
 
 The [official Codex hooks reference](https://developers.openai.com/codex/hooks) documents the inspected wire fields and compatibility `CLAUDE_PLUGIN_ROOT` variable. This source uses that supported variable without changing host internals. `doctor` reports source/installation observations and unverified runtime coverage. Actual interception must be checked through the host after installation and trust; directly calling the Python adapter is only a protocol test.
+
+## Validation and installation
+
+Run the read-only guidance contracts from the checkout root:
+
+```bash
+python3 -m unittest discover -s plugins/moriarty-dev/tests -p test_guidance.py -v
+```
+
+These checks cover explicit task precedence, current nonsecurity routing, profile/evidence qualification, links and manifest metadata. They are not agent-compliance trials or product acceptance. Existing admission/security/notification-auth tests remain under Opus ownership; inspect side effects and obtain their applicable execution authority before selecting any additional suite. No native checks are implied.
+
+The canonical maintained package is `plugins/moriarty-dev/` in the reviewed repository checkout. Installed caches are snapshots: never patch them directly. Inspect `codex plugin marketplace list --json` and `codex plugin list --marketplace personal --json` to locate the configured source and installed version. For the inspected local personal marketplace, the catalog is `/home/charl/.agents/plugins/marketplace.json` and its mutable source is `/home/charl/plugins/moriarty-dev`; it is separate from the repository.
+
+After the reviewed change is integrated, synchronize that canonical package into the configured mutable local source and verify package file digests against the reviewed candidate. Then use the host installer:
+
+```bash
+codex plugin add moriarty-dev@personal --json
+codex plugin list --marketplace personal --json
+```
+
+The inspected CLI uses `plugin add`, not `plugin install`. `plugin marketplace upgrade` refreshes Git marketplace snapshots and does not publish a changed local source. Reopen a fresh context, load the refreshed skill, and compare the installed manifest/skill bytes with the reviewed source. If re-add does not refresh this host's installed version, report its exact result before choosing a host-supported recovery; do not silently edit cache contents or claim success. Installation does not establish hook trust: keep `doctor` coverage unverified until actual host interception has been observed. Repository links in a cache resolve through the active checkout paths described in the execution reference.

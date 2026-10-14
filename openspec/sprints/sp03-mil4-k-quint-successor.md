@@ -26,6 +26,12 @@ Full-completion dependency: SP02. Stage: `successor-semantics`. The `sprints.jso
 
 The earlier report lessons remain useful as discriminator inputs. Keep the distinct financial policies: a simple partial payment of 30 against due 100 leaves 70; interest-first P100/I10/pay7 leaves P100/I3. Compare complete ordered effects, requests, residual principal, interest, fees and work. Include wrong units, rounding, repeated accrual, rollback and intermediate observations wherever the new MIL/4 constructor register admits them. Old traces enter the new corpus only after an explicit source/Core compatibility mapping. No old theorem carries forward by name.
 
+## Current task interpretation — 2026-10-14
+
+The September 17 finite K lifecycle corpus remains evidence for its recorded earlier profile. Current Rust reference replay and sampled Quint models do not close full MIL/4 semantics or rule-level correspondence. Define explicit profile/field adapters and independent complete expectations. Preserve the timed-out large Quint sample as unknown. This documentation audit performs no K or model execution and closes no SP03 task.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 Complete the [MIL/4 plan's exit definition](../../docs/superpowers/plans/2026-09-29-mil4-k-quint-completion.md#exit-definition) on the frozen MIL/4 source/Core domain: full first-profile K semantics, explicit rejects, shared Quint projection and honest discharged/open proof status. Retain all applicable OpenSpec package and stage gates; the historical bounded SP03 run does not close this gate.

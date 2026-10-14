@@ -6,6 +6,9 @@ This iteration follows signed-intent integration merged to `main` in PR13, commi
 
 [Reviewed R4/R5 success](R4-R5-REVIEWED-SUCCESS.md) supersedes the R3 application refusal as the latest experiment: finalized financial proof, default Real native application Success, independent verification, positive consumed DUST, accepted state and replay refusal, and all six native history/claim fault controls. All three current actual-result reviewers approved this fixed trusted public fixture scope. Generic compiler correspondence, authenticated funding/deployment, history/PCD and Preview financial settlement remain open. The earlier refused runs remain unchanged.
 
+**Security currentness (2026-10-14, Opus).** R4/R5 is historical native evidence for one manually specialized kernel with a trusted development genesis. It does not transfer to the current compiler or signed-v2 path, to Preview, or to Fenrir. "Currently" and "active" statements on this page are as of October 1. See [security currentness](../SECURITY-CURRENTNESS-2026-10-14.md).
+
+
 The next sections retain the preparation-stage record from before V7 key generation and V8-03 execution. Their statements about missing keys and proofs describe that earlier stage.
 
 ## Historical evidence through R3, before R4/R5
