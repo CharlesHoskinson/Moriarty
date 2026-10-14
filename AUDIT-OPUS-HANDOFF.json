@@ -1,0 +1,247 @@
+{
+  "audit": "AUDIT-OPUS-HANDOFF",
+  "date": "2026-09-12",
+  "auditor": "Claude Opus 5 (1M context), independent read-only auditor",
+  "implementer": "GPT-5.6 Sol via Codex (cross-vendor)",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol",
+  "commitUnderAudit": "953895a74d9e65fe695673c955658e19de589000",
+  "mergedBaseFix": "068d95e84cbefdc2a2a557db4ce9aa01ea700811",
+  "specification": "openspec/changes/afk-live-financial-execution/specs/afk-loan-executor/spec.md lines 29-41 (requirement \"Concrete one-shot runner invocation handoff\", scenario \"Actual runner-to-script protocol\")",
+  "verdict": "WARNING",
+  "verdictBasis": {
+    "blockingConditionsChecked": [
+      {"condition": "a denial case claimed but not enforced", "result": "not triggered", "note": "The commit claims one-shot enforcement, constant-time nonce, closed environment, bounded ancestry, durable-event ordering and the EOF distinction; each is enforced in code and load-bearing under mutation. It does not claim seven denial cases. Boot mismatch has no denial path (F3), but the specification assigns that check to the child and no child implementation exists in the repository; that is an incomplete scenario, not a false claim."},
+      {"condition": "a durable record written after the answer rather than before", "result": "not triggered", "note": "Invocation event: executor-caller.mjs:104 awaits appendInvocationEvent before runHandoffServer is constructed, so no answer path exists until the append resolves; on append failure the server is never attached (executor-caller.test.mjs:209 asserts connectionListeners===0). Denial event: invocation-handoff.mjs:73 awaits recordDenialEvent before denySocket. Ordering is correct in code. The test that claims to pin it cannot detect its reversal (F5)."},
+      {"condition": "a test that cannot fail", "result": "not triggered", "note": "All 28 handoff tests and all 3 new executor-caller tests were made to fail by at least one targeted mutation (41 mutations applied, 31 detected, 10 survived). Two tests are duplicative or self-computing (F3, F6) but neither is vacuous."},
+      {"condition": "the environment still being inherited wholesale", "result": "not triggered", "note": "Fixed at the spawn site. executor-caller.mjs:100 spawns with env:childEnv, where childEnv is buildInvocationEnv's frozen two-key object (invocation-handoff.mjs:34) or the caller's own closed map; process.env is never spread. executor-caller.mjs:65 refuses env together with handoff. Mutations M19 and M22 (leak process.env at either site) are both caught."}
+    ],
+    "reasonForWarning": "Two high-severity findings outside the named blockers: a reproducible unbounded hang in the new handoff wiring of executor-caller.mjs (F1, measured), and a false byte-identity claim in the commit message that excluded that same file from audit scope (F2). Both are correctable without redesign."
+  },
+  "denialCasesCovered": [
+    {
+      "case": "forged nonce",
+      "implemented": true,
+      "genuinelyTested": true,
+      "implementation": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs:84 (constantTimeEqual at :33, timingSafeEqual over fixed 32-byte buffers)",
+      "test": "invocation-handoff.test.mjs:49,53 (real AF_UNIX exchange) plus :33,:45",
+      "evidence": "Mutations M3 (comparison always true) and M8 (16-byte nonce) both caught; denial precedes any state or response work (calls.confirm 0, calls.response 0)."
+    },
+    {
+      "case": "wrong authority or reservation",
+      "implemented": "partly",
+      "genuinelyTested": "partly",
+      "implementation": "authority equality invocation-handoff.mjs:84; reservation delegated to the mandatory confirmCurrentState hook, awaited at :85 before buildResponse at :86",
+      "test": "authority invocation-handoff.test.mjs:50,53; reservation :51,53",
+      "evidence": "Authority is a real predicate (M4 caught). The reservation case is pass-through only: the test's own confirmCurrentState throws Error('HANDOFF_RESERVATION_MISMATCH') and the server reflects error.message as the denial code, so mutation M33 (stop propagating the message) is what fails tests 19-21. The module holds no reservation predicate (F9)."
+    },
+    {
+      "case": "stale store event",
+      "implemented": "partly",
+      "genuinelyTested": "partly",
+      "implementation": "same confirmCurrentState gate, invocation-handoff.mjs:85",
+      "test": "invocation-handoff.test.mjs:52,53",
+      "evidence": "Identical pass-through shape to the reservation case: the denial code is chosen by the injected dependency. The enforced property is ordering (state confirmation strictly before any payload byte), which M7 confirms is load-bearing across 5 tests."
+    },
+    {
+      "case": "different launcher process",
+      "implemented": true,
+      "genuinelyTested": true,
+      "implementation": "verifyAncestry invocation-handoff.mjs:40 with readProcStatReal :39 (real /proc/<pid>/stat, ppid tokens[1], start ticks tokens[19]); bounded by HANDOFF_ANCESTRY_MAX_DEPTH=32",
+      "test": "invocation-handoff.test.mjs:38 (descendant, PID reuse via start ticks, sibling, depth bound, vanished PID) and :54 (denial over a real socket, before confirm and response)",
+      "evidence": "M6, M12, M13, M14, M15, M30 all caught. Weakness: the chain is anchored on caller-supplied launcherPid/launcherStartTicks, not on the process this runner actually spawned (F4)."
+    },
+    {
+      "case": "replay",
+      "implemented": true,
+      "genuinelyTested": true,
+      "implementation": "one-shot guard invocation-handoff.mjs:78 (consumed||active) to refuseReplay :76, which awaits the peer's first data/end/close (or the setup timeout) and then records a durable HANDOFF_LOAN denial event before writing HANDOFF_REPLAY_DENIED (:73, :61)",
+      "test": "invocation-handoff.test.mjs:56",
+      "evidence": "M1 (guard disabled) and M18 (denial neither recorded nor sent) each fail exactly this test; HANDOFF_REPLAY_DENIED has no other producer in the module, so the denial is genuinely the one-shot rule. Confirm and response each ran exactly once."
+    },
+    {
+      "case": "boot mismatch",
+      "implemented": "comparator only",
+      "genuinelyTested": false,
+      "implementation": "verifyBootId invocation-handoff.mjs:42 (type-checked UUID equality); the parent samples the real boot ID immediately before spawn at executor-caller.mjs:97 and binds it into the payload",
+      "test": "invocation-handoff.test.mjs:39 and :43",
+      "evidence": "No caller turns a false comparison into a denial, and no child-side implementation exists anywhere in the repository (MORIARTY_INVOCATION_NONCE appears only in this module, its test and the specification). Test 14 at :43 restates test 10's assertions; only T2 (verifyBootId always true) fails it. This is the weakest of the seven (F3)."
+    },
+    {
+      "case": "parent disappearance",
+      "implemented": true,
+      "genuinelyTested": "partly",
+      "implementation": "classifyEofBeforeSetup/classifyEofAfterStartup invocation-handoff.mjs:43-44; pre-line EOF listeners at :79 removed once a handshake line arrives at :81; caller wiring at executor-caller.mjs:104 sets parentLost from the retained channel's end/close",
+      "test": "invocation-handoff.test.mjs:57 (EOF before setup, real socket) and :60 (EOF after startup)",
+      "evidence": "EOF-before-setup is real (T4 caught, M11 caught). EOF-after-startup test :60 registers its own listener and calls classifyEofAfterStartup itself, so it pins only that the real accepted socket is returned and emits EOF (T7 caught); the caller's parentLost wiring is untested and inert, because every matrix built in runPrepared carries terminalEvidencePersisted:false, which fault-matrix.mjs:31 consumes before parentLost (M24 survives) (F6)."
+    }
+  ],
+  "loadBearingTestCount": 31,
+  "loadBearingDetail": {
+    "handoffSuiteTests": 28,
+    "handoffSuiteLoadBearing": 28,
+    "newExecutorCallerTests": 3,
+    "newExecutorCallerLoadBearing": 3,
+    "mutationsApplied": 41,
+    "mutationsDetected": 31,
+    "mutationsSurvived": 10,
+    "survivingMutations": [
+      "M2 denial record fire-and-forget instead of awaited",
+      "M17 response payload digest no longer bound to the recorded invocation digest",
+      "M20 denial bytes written before the durable record",
+      "M23 caller ignores HANDSHAKE_DENIED (startupValid stays true)",
+      "M24 caller drops the parent-loss classification",
+      "M26 outer deadline never capped by the block deadline",
+      "M28 socketless denials (EOF before setup, setup timeout) not recorded",
+      "M29 parent /proc stat retry loop reduced to one attempt",
+      "M31 runtime directory suffix not random",
+      "M32 a second handshake line on the same connection answered twice"
+    ],
+    "baselines": "invocation-handoff.test.mjs 28 pass / 0 fail; executor-caller.test.mjs 25 pass / 0 fail (node v24.18.1, --test-timeout=15000, scratchpad copy)"
+  },
+  "carriedOverFiles": [
+    {"file": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs", "byteIdenticalToApproved": true, "approvedCommit": "cff5f1e3", "sha256Prefix": "abc1efa041a9fb6c"},
+    {"file": "experiments/moriarty-midnight-financial/ledger/fault-matrix.test.mjs", "byteIdenticalToApproved": true, "approvedCommit": "cff5f1e3", "sha256Prefix": "19f0c29eb2ebd5d4"},
+    {"file": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs", "byteIdenticalToApproved": true, "approvedCommit": "cff5f1e3", "sha256Prefix": "a046a77a17cd38ab"},
+    {"file": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.test.mjs", "byteIdenticalToApproved": true, "approvedCommit": "cff5f1e3", "sha256Prefix": "693f88c809668f0d"},
+    {"file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs", "byteIdenticalToApproved": false, "approvedCommit": "cff5f1e3", "approvedSha256Prefix": "2d61473270494654", "auditedSha256Prefix": "ac87dccb3495154e"},
+    {"file": "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs", "byteIdenticalToApproved": false, "approvedCommit": "cff5f1e3", "approvedSha256Prefix": "4d53e804ef477b3b", "auditedSha256Prefix": "c85f0ff9009b578d"}
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "dimension": "liveness / protocol correctness",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "96, 104 (with 73 and 125)",
+      "summary": "The invocation socket is listening before spawn, but the 'connection' handler is attached only after the durable append resolves. A child that connects inside that window is dropped silently by Node, the handshake is never served (spurious HANDOFF_SETUP_TIMEOUT and startupValid=false), and the orphaned accepted connection then prevents removeHandoffRuntime's server.close() from ever calling back, so runExitRetainingExecutor never returns.",
+      "whyItMatters": "Measured, not inferred: a probe with a 60 ms appendInvocationEvent and an immediate child connect gives servedHandshake=false, clientGotBytes=false and no return after 8 s; delaying the connect by 40 ms gives a normal HANDSHAKE_OK and a normal return. A separate probe confirms net.Server.close() never fires its callback while an accepted-but-unlistened socket is open, and that a connection emitted before the listener is attached is lost. The window is exactly the durable fsync, the slowest operation in the sequence, and the child's first act after reading its two environment values is to connect. The specification bounds every phase (cleanup, durable result and acknowledgment by outer+1740) and requires the wallet lock to be released after validated durable containment; an unbounded await in cleanup means the debit, claim and lock stay unresolved with no deadline, and a correct child is refused startup."
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "dimension": "audit integrity / provenance",
+      "file": "commit 953895a7 message; experiments/moriarty-midnight-financial/ledger/executor-caller.mjs and executor-caller.test.mjs",
+      "line": "commit message final paragraph",
+      "summary": "The commit states that the executor caller, fault matrix and prover-lifetime model are carried byte-identical from the approved round. fault-matrix and prover-lifetime (both modules and both tests) are byte-identical to the approved cff5f1e3. executor-caller.mjs and executor-caller.test.mjs are not: 2d61473270494654 -> ac87dccb3495154e and 4d53e804ef477b3b -> c85f0ff9009b578d.",
+      "whyItMatters": "The audit brief repeated the claim and instructed the auditor not to re-audit those files. The only high-severity defect found (F1) lives in exactly the code the claim excluded: a new validated option group, a new 21-field handoff contract, the socket/spawn ordering and the cleanup path. The change itself was necessary and is an improvement over the approved placeholder; the inaccuracy is in the provenance statement, which suppressed review of new code."
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "dimension": "specification fidelity",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "42 (test at invocation-handoff.test.mjs:43)",
+      "summary": "Boot mismatch, and the rest of the child's obligations (canonical payload digest against the store event, monotonic deadline, all current claim identities, same-UID private socket ownership), exist only as a comparator or not at all. No child implementation exists in the repository, so no boot mismatch can produce a denial.",
+      "whyItMatters": "The scenario requires all seven cases to deny or to yield the specified unknown cleanup outcome. Six have a real path in the parent; boot mismatch has none, and its dedicated test restates the assertions already made in test 10. Task 5.2 cannot be called complete for the scenario until either the child side exists in the model or the obligation is explicitly deferred with the specification amended to say so."
+    },
+    {
+      "id": "F4",
+      "severity": "medium",
+      "dimension": "trust boundary",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "104 (ancestry argument), with invocation-handoff.mjs:40",
+      "summary": "Ancestry is anchored on caller-supplied launcherPid and launcherStartTicks. The process this runner actually spawned is recorded as parentPid/parentStartTicks from a live /proc read but is never required to appear in the peer's chain; in the fixture the peer's chain (500 -> 400) never contains the spawned PID 4321.",
+      "whyItMatters": "Specification line 32 requires all payload identities to come from current validated producer state rather than caller assertions, and line 34 requires ancestry under the actual Foreman launcher with PID reuse and siblings denied. As wired, a same-UID process descended from the asserted launcher but not from this invocation's spawn satisfies the gate, and a stale or mistaken launcherPid silently relocates the anchor. Retained start ticks are compared only at the anchor, so only the anchor's identity is reuse-proof. No test pins any relationship between the spawned child and the ancestry anchor."
+    },
+    {
+      "id": "F5",
+      "severity": "medium",
+      "dimension": "test strength",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs",
+      "line": "56",
+      "summary": "The replay test's ordering assertion (record-start, record-done, denial-received) passes even when the implementation writes the denial bytes first and awaits the durable record afterwards (mutation M20), and even when the record is fire-and-forget (M2). A setImmediate-based recorder always resolves before socket data reaches the client, so the assertion cannot observe the reversal.",
+      "whyItMatters": "The orchestrator's judgement that the replay fix is genuine is correct on every other count, but its ordering leg rests on an assertion that cannot fail for the property it names. The ordering is nevertheless real at invocation-handoff.mjs:73 by construction. To make the assertion load-bearing the injected recorder must resolve only after an observable I/O turn (for example after an awaited socket round trip or a timer), not a microtask-adjacent setImmediate."
+    },
+    {
+      "id": "F6",
+      "severity": "medium",
+      "dimension": "coverage / dead path",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "104 (startupValid, parentLost) with fault-matrix.mjs:31",
+      "summary": "The caller-level consequences of a denial and of parent disappearance are untested, and parentLost cannot change any outcome: every matrix built in runPrepared carries terminalEvidencePersisted:false, which the fault matrix consumes before it reaches parentLost. Mutations M23 (ignore the denial) and M24 (drop the parent-loss classification) leave all 53 tests passing.",
+      "whyItMatters": "The scenario's requirement that a denial refuse startup without another debit or launch, and that parent disappearance yield the specified unknown cleanup outcome, are asserted nowhere end to end. STARTUP_INVALID is reachable and merely untested; PARENT_LOST is unreachable from this caller, so the wiring is currently decorative."
+    },
+    {
+      "id": "F7",
+      "severity": "low",
+      "dimension": "coverage",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "104 (outerDeadlineMonotonic)",
+      "summary": "The cap of start+1800 by the fixed block deadline is never exercised: every fixture passes blockDeadlineMonotonicNs:null, and mutation M26 (always uncapped) survives both suites.",
+      "whyItMatters": "Specification line 32 makes the cap mandatory, and the deadline requirement forbids squeezing out the retained margin. An uncapped outer deadline would let the invocation plan past a block deadline with no test objecting."
+    },
+    {
+      "id": "F8",
+      "severity": "low",
+      "dimension": "protocol completeness",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "81",
+      "summary": "Exactly-one-handshake is enforced across connections but only silently across lines: after the first line the data handler returns early, so a second handshake line on the same accepted socket receives no denial and no durable record. Mutation M32 (answer every line) survives all 28 tests.",
+      "whyItMatters": "The specification keeps the authenticated channel open through cleanup, so a second request on the live channel is the cheapest replay attempt available to a buggy or hostile child. The current behaviour is safe (no second payload is sent) but unobservable, which is the same defect class the first round was sent back for."
+    },
+    {
+      "id": "F9",
+      "severity": "low",
+      "dimension": "specification fidelity",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "85-86",
+      "summary": "Denial codes are taken verbatim from the injected dependency's error message, and the four distinct pre-response predicates the specification names (current store event, active runtime reservation, master one-shot claim, held wallet ownership) collapse into a single opaque confirmCurrentState hook.",
+      "whyItMatters": "What the module enforces is ordering, not identity: any of the four can be silently absent from the caller's hook and the handshake still answers. The denial vocabulary is also unvalidated, so a dependency can emit a code that impersonates a different case in the durable denial record."
+    },
+    {
+      "id": "F10",
+      "severity": "low",
+      "dimension": "coverage",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "86 (and 35, 73)",
+      "summary": "Four checks are implemented but unexercised: the response digest binding to the recorded invocation digest (M17 survives), durable recording of socketless denials such as EOF before setup and setup timeout (M28 survives), the randomness of the runtime directory suffix (M31 survives), and the parent /proc stat retry loop (M29 survives).",
+      "whyItMatters": "Each is a real safety property of the code; none would be missed by the suite if it were removed in a later refactor. The response digest binding in particular is what stops the parent from answering with a payload whose digest differs from the one already durably recorded."
+    },
+    {
+      "id": "F11",
+      "severity": "low",
+      "dimension": "evidence retention",
+      "file": "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+      "line": "125",
+      "summary": "removeRuntime failures are swallowed by an empty catch, so a socket or directory that could not be removed leaves no retained fact in the returned record.",
+      "whyItMatters": "The specification requires unresolved ownership to be retained rather than discarded; a silently failed cleanup of the runner's own runtime directory is exactly such a fact."
+    },
+    {
+      "id": "F12",
+      "severity": "info",
+      "dimension": "declared boundary / remaining obligation",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "1-3, 99-102",
+      "summary": "Peer UID and PID come from mandatory injected callbacks because Node exposes no SO_PEERCRED; the module declares this in its header, offers peerCredentialsUnavailable() as a loud default, and makes both hooks required options at every layer, so nothing silently passes. Separately, the requirement's obligation to establish by source inspection and an actual isolated launcher test that the pinned Foreman launcher inherits the two variables through strong containment is not discharged anywhere in this commit.",
+      "whyItMatters": "The peer-credential injection is honest and correctly fail-loud, but it means the peer UID gate is only as real as the future production wiring. The launcher-inheritance evidence is a source-approval precondition in the specification text, not an optional extra; the scenario permits a fake launcher for the protocol test, but the transport assumption remains unverified."
+    },
+    {
+      "id": "F13",
+      "severity": "info",
+      "dimension": "specification fidelity",
+      "file": "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+      "line": "84, 37",
+      "summary": "Authority equality uses a plain string comparison while the nonce uses timingSafeEqual, and the socket exists briefly at its umask-derived mode between bind and the chmod to 0600.",
+      "whyItMatters": "Both are defensible: the authority digest is a public digest rather than a secret, and the socket sits inside a directory created 0700 and re-chmodded 0700, so no other user can traverse to it in the window. Recorded so that a later reader does not mistake either for an oversight."
+    }
+  ],
+  "overreach": {
+    "found": false,
+    "scope": "9 files: the four module/test pairs plus package.json (two script lines added: invocation-handoff.test.mjs appended to test:ledger, a new test:executor aggregate).",
+    "accounting": "none", "budgets": "none", "wallets": "none", "docker": "none",
+    "network": "AF_UNIX only; no HTTP, RPC or socket beyond the local parent/child channel",
+    "retainedBuildArtefacts": "none committed; .harness/, FOREMAN_REPORT.* and experiments/moriarty-midnight-financial/.verification-tmp.TLyf2E/ exist only as untracked lane residue",
+    "weakenedTests": "none. executor-caller.test.mjs is purely additive (3 new tests, no existing assertion touched). In the handoff suite the round-one test already demanded {denied:'HANDOFF_REPLAY_DENIED'} and already failed the peer close with an explicit assert.fail; round two changed the implementation to deliver that denial after the peer's write and added assertions (durable denial record, event ordering, exactly-one confirm and response). The expectation was raised, never relaxed."
+  },
+  "orchestratorJudgementOnReplayFix": {
+    "confirmed": true,
+    "reasoning": "The denial comes from the one-shot guard alone (invocation-handoff.mjs:78 is the sole producer of HANDOFF_REPLAY_DENIED, and mutations M1 and M18 each fail exactly the replay test). The round-one defect was in the implementation, not the test: round one already sent a denial but wrote it synchronously on 'connection' before reading, so the client's in-flight write hit EPIPE; round two waits for the peer's first data, end or close before recording and answering. The durable record genuinely precedes the answer at invocation-handoff.mjs:73 and, for the invocation event, at executor-caller.mjs:104. The one correction to the orchestrator's reading is F5: the test's ordering assertion is satisfied by event-loop scheduling and survives a deliberate reversal, so that leg of the confidence comes from the code, not the test."
+  },
+  "reproduction": {
+    "baseline": "cp -r experiments/moriarty-midnight-financial <scratch>/mf && node --test --test-timeout=15000 --test-reporter=tap ledger/invocation-handoff.test.mjs (28 pass), ledger/executor-caller.test.mjs (25 pass)",
+    "mutationBatteries": "41 single-edit mutations applied to scratchpad copies only; product files never modified",
+    "hangProbe": "executor run with an injected 60 ms appendInvocationEvent and a child that connects immediately: servedHandshake=false, clientGotBytes=false, EXECUTOR_NEVER_RETURNED after 8 s; with connect delayed 40 ms: HANDSHAKE_OK and normal return",
+    "closeProbe": "net.Server.close() callback never fires while an accepted-but-unlistened connection remains open; a connection emitted before the 'connection' listener is attached is lost"
+  },
+  "readOnlyCompliance": "No product file was created, edited or deleted. Only AUDIT-OPUS-HANDOFF.md and AUDIT-OPUS-HANDOFF.json were written at the worktree root; all experiments ran on copies under the session scratchpad."
+}

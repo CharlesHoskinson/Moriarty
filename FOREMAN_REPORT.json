@@ -1,0 +1,181 @@
+{
+  "schema": "foreman.worktree-report.v1",
+  "run_id": "moriarty-ll-loop-20260912",
+  "role": "implement",
+  "slug": "handoff-protocol",
+  "branch": "foreman/moriarty-ll-loop-20260912/implement/handoff-protocol",
+  "worktree": "/home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol",
+  "base_sha": "056e662254c38936758af9c6f72c019705a1ff09",
+  "status": "complete",
+  "summary": "Fixed the immediate-connect handoff race, bounded server cleanup, enforced boot-mismatch denial, and made record-before-answer testing mutation-sensitive. All required suites report zero failures.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "status": "fixed",
+      "change": "Installed a paused connection queue before child spawn, transferred queued sockets after the durable append, tracked accepted sockets, and bounded server closure at 250 ms.",
+      "proof": [
+        "The pre-repair 60 ms append probe remained pending after 8008 ms.",
+        "The post-repair probe completed its handshake and returned after 70 ms.",
+        "The immediate-connect regression passed.",
+        "The non-callbacking server-close regression passed."
+      ]
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "status": "fixed",
+      "change": "Compared the persisted boot ID with a fresh boot ID before peer and state checks. A mismatch now durably records and returns HANDOFF_BOOT_ID_MISMATCH.",
+      "proof": [
+        "The boot-mismatch regression checked the result, wire response, durable record, and absence of later state work.",
+        "Ignoring the false comparator result changed the handshake to HANDSHAKE_OK and failed the regression."
+      ]
+    },
+    {
+      "id": "F3",
+      "severity": "medium",
+      "status": "fixed",
+      "change": "Replaced the setImmediate recorder with a test-controlled unresolved recorder gate. Production retains its await-before-write order.",
+      "proof": [
+        "The correct implementation passed while the recorder gate remained controlled.",
+        "A write-before-record mutation produced answeredEarly=true and failed with true !== false."
+      ]
+    }
+  ],
+  "denial_cases": {
+    "enforced": [
+      "forged nonce",
+      "authority mismatch",
+      "boot mismatch",
+      "launcher identity",
+      "replay"
+    ],
+    "pass_through": [
+      {
+        "case": "reservation mismatch",
+        "limit": "confirmCurrentState must detect the predicate and throw the denial code"
+      },
+      {
+        "case": "stale store event",
+        "limit": "confirmCurrentState must detect the predicate and throw the denial code"
+      }
+    ],
+    "additional_enforced": [
+      "peer UID mismatch"
+    ]
+  },
+  "probe_transcripts": {
+    "before": {
+      "exit_status": 13,
+      "output": "BEFORE slowAppendMs=60 immediateConnect=true outcomeAfter8000ms=pending elapsedMs=8008\nWarning: Detected unsettled top-level await at file:///home/charl/Moriarty-wt-moriarty-ll-loop-20260912-implement-handoff-protocol/experiments/moriarty-midnight-financial/[eval1]:51\nconst result=await execution;\n             ^"
+    },
+    "after": {
+      "exit_status": 0,
+      "output": "AFTER slowAppendMs=60 immediateConnect=true handshakeComplete=true returned=true elapsedMs=70 rawExit=exit:0 disposition=PROCESS_UNKNOWN"
+    }
+  },
+  "verification": [
+    {
+      "command": "cd experiments/moriarty-language && npm test",
+      "tests": 889,
+      "pass": 889,
+      "fail": 0,
+      "duration_ms": 20489.691835
+    },
+    {
+      "command": "cd experiments/moriarty-language && npm run typecheck",
+      "exit_status": 0,
+      "output": "> typecheck\n> tsc -p tsconfig.json"
+    },
+    {
+      "command": "cd experiments/moriarty-midnight-financial && npm test",
+      "tests": 52,
+      "pass": 52,
+      "fail": 0,
+      "duration_ms": 188.963457
+    },
+    {
+      "command": "npm run test:ledger",
+      "tests": 610,
+      "pass": 610,
+      "fail": 0,
+      "duration_ms": 60879.408896
+    },
+    {
+      "command": "npm run test:compiled",
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "duration_ms": 1565.893411
+    },
+    {
+      "command": "npm run test:compiled-rejection",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "duration_ms": 1991.704362
+    },
+    {
+      "command": "npm run test:finalized-state",
+      "tests": 27,
+      "pass": 27,
+      "fail": 0,
+      "duration_ms": 1434.870735
+    },
+    {
+      "command": "npm run test:preview",
+      "tests": 89,
+      "pass": 89,
+      "fail": 0,
+      "duration_ms": 1764.388804
+    },
+    {
+      "command": "npm run test:executor",
+      "tests": 86,
+      "pass": 86,
+      "fail": 0,
+      "duration_ms": 653.769046
+    }
+  ],
+  "protected_files": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/fault-matrix.mjs",
+      "sha256_before": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b",
+      "sha256_after": "abc1efa041a9fb6c3936ffcf6708eba24ff6d78a8123b868624ff1696de11c1b"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/prover-lifetime.mjs",
+      "sha256_before": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb",
+      "sha256_after": "a046a77a17cd38ab4d0a97e3df601add97ebde8443e3303d1dfc1a9bb8967cdb"
+    }
+  ],
+  "dependencies": {
+    "dependencies": {},
+    "devDependencies": {},
+    "optionalDependencies": {},
+    "peerDependencies": {}
+  },
+  "limitations": [
+    "Reservation mismatch remains a pass-through predicate.",
+    "Stale store event remains a pass-through predicate.",
+    "The synthetic F1 probe reports PROCESS_UNKNOWN because it does not persist terminal evidence."
+  ],
+  "prohibited_actions": {
+    "git_used": false,
+    "commit_created": false,
+    "docker_used": false,
+    "network_used": false,
+    "accounting_modified": false,
+    "budgets_modified": false,
+    "charges_modified": false,
+    "plugin_python_modified": false
+  },
+  "evidence": [
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.mjs",
+    "experiments/moriarty-midnight-financial/ledger/executor-caller.test.mjs",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.mjs",
+    "experiments/moriarty-midnight-financial/ledger/invocation-handoff.test.mjs",
+    "FOREMAN_REPORT.md"
+  ],
+  "open_questions": []
+}
