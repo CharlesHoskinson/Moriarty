@@ -1,5 +1,17 @@
 # Moriarty repository instructions
 
+## Current model routing — October 14
+
+The user's latest instruction selects `gpt-6.1-sol` implementation and
+`muse-wonder-1.0` independent audits. Use high effort for both.
+This supersedes the Sol/Grok author and reviewer routing below for new language
+roadmap work. Preserve historical records and terminal task contracts.
+Muse reviews the full exact candidate and applicable actual results in a fresh
+non-author session; changed candidates need fresh audits. Missing reviewers
+cannot approve. Consequential designs still need two substantive agreeing votes.
+See [the routing assignment](raw/assignments/moriarty-sol-muse-routing-2026-10-14.md).
+Native authority, resource limits and all roadmap acceptance requirements remain.
+
 ## Required startup: load the development plugin
 
 Whenever an agent starts work in Moriarty, load `moriarty-dev:develop` before
