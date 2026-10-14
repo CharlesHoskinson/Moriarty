@@ -16,7 +16,7 @@ from moriarty_dev.records import load_snapshot, read_actions
 from moriarty_dev.store import (
     get_db_path,
     init_db,
-    make_history_reader,
+    make_guarded_history_reader,
     reserve,
     finish,
     record_review,
@@ -97,6 +97,26 @@ def _derive_sprint_reports(repo: Path) -> list[dict]:
     return rows
 
 
+def catalog_live_lineage(repo: Path):
+    """True when the catalog registers a live-profile action for this lineage."""
+    def check(lineage: dict) -> bool:
+        try:
+            actions = read_actions(str(repo))
+        except Exception:
+            return True
+        req = lineage.get("requirement")
+        cap = lineage.get("capability")
+        for act in actions:
+            if (
+                act.get("requirement") == req
+                and act.get("capability") == cap
+                and act.get("evidenceProfile") == "finalized-financial-settlement"
+            ):
+                return True
+        return False
+    return check
+
+
 def main():
     json_parent = argparse.ArgumentParser(add_help=False)
     json_parent.add_argument("--json", action="store_true", help="Output in JSON format")
@@ -138,7 +158,9 @@ def main():
         sys.exit(3)
 
     db_path = get_db_path(repo)
-    history_reader = make_history_reader(db_path)
+    history_reader = make_guarded_history_reader(
+        db_path, live_lineage=catalog_live_lineage(repo)
+    )
 
     if args.command == "status":
         cmd_status(repo, db_path, history_reader, args.json)
@@ -547,7 +569,9 @@ def cmd_review(repo: Path, db_path: Path, receipt_path: str, as_json: bool, acti
         sys.stderr.write(f"Review rejected: scope '{receipt_scope}' does not match campaign scope '{expected_scope}'\n")
         sys.exit(3)
 
-    history_reader = make_history_reader(db_path)
+    history_reader = make_guarded_history_reader(
+        db_path, live_lineage=catalog_live_lineage(repo)
+    )
     snap = load_snapshot(str(repo), target_action["id"], history_reader=history_reader)
     if snap.get("authorityCurrent") is False:
         sys.stderr.write(f"Review rejected: authority unavailable for action {target_action['id']}\n")

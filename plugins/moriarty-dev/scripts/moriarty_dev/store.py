@@ -81,6 +81,11 @@ class ReservationConflictError(StoreError):
     pass
 
 
+LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
+LEGACY_PRIMARY_KINDS = frozenset(("implement", "repair"))
+KNOWN_NONLIVE_PROFILES = frozenset(("local-runtime", "syntax"))
+
+
 def get_db_path(repo_root: str | Path) -> Path:
     repo_path = Path(repo_root).resolve()
     git_entry = repo_path / ".git"
@@ -182,7 +187,132 @@ def make_history_reader(db_path: Path, *, timeout: float = 10.0):
     return history_reader
 
 
-def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> dict | None:
+def _profile_occupies_slot(profile, action_kind):
+    if action_kind in LEGACY_PRIMARY_KINDS:
+        return True
+    if type(profile) is not str:
+        return True
+    if profile.strip() == "":
+        return True
+    if profile == LIVE_EVIDENCE_PROFILE:
+        return True
+    if profile in KNOWN_NONLIVE_PROFILES:
+        return False
+    return True
+
+
+def _extract_start_profile(payload):
+    if not isinstance(payload, dict):
+        return None
+    action = payload.get("action")
+    if not isinstance(action, dict) or "evidenceProfile" not in action:
+        return None
+    return action.get("evidenceProfile")
+
+
+def _action_start_profiles(conn, repo, requirement, capability, candidate, action_id, reservation_id=None):
+    try:
+        cur = conn.execute(
+            """
+            SELECT payload_json FROM events
+            WHERE event_kind = 'action_start'
+              AND repository = ?
+              AND requirement = ?
+              AND capability = ?
+              AND candidate = ?
+              AND action_id = ?
+            ORDER BY id DESC
+            """,
+            (repo, requirement, capability, candidate, action_id),
+        )
+        matched = []
+        fallback = []
+        for (raw,) in cur.fetchall():
+            try:
+                payload = json.loads(raw) if isinstance(raw, str) else (raw or {})
+            except Exception:
+                fallback.append(None)
+                continue
+            profile = _extract_start_profile(payload)
+            if (
+                reservation_id is not None
+                and isinstance(payload, dict)
+                and payload.get("reservationId") == reservation_id
+            ):
+                matched.append(profile)
+            fallback.append(profile)
+        if reservation_id is not None and matched:
+            return matched
+        return fallback
+    except Exception:
+        return None
+
+
+def _profiles_occupy(profiles, action_kind):
+    if action_kind in LEGACY_PRIMARY_KINDS:
+        return True
+    if not profiles:
+        return True
+    flags = [_profile_occupies_slot(profile, action_kind) for profile in profiles]
+    if any(flags) and not all(flags):
+        return True
+    return flags[0]
+
+
+def _reservation_occupies_primary(conn, reservation_id, action_kind, repo, requirement, capability, candidate, action_id):
+    if action_kind in LEGACY_PRIMARY_KINDS:
+        return True
+    profiles = _action_start_profiles(
+        conn,
+        repo,
+        requirement,
+        capability,
+        candidate,
+        action_id,
+        reservation_id=reservation_id,
+    )
+    if profiles is None:
+        return True
+    return _profiles_occupy(profiles, action_kind)
+
+
+def _any_other_primary(conn, exclude_id=None):
+    rows = conn.execute(
+        """
+        SELECT id, repository, requirement, capability, candidate, action_id, action_kind
+        FROM reservations WHERE status = 'active'
+        """
+    ).fetchall()
+    for rid, repo, req, cap, cand, act_id, kind in rows:
+        if exclude_id is not None and rid == exclude_id:
+            continue
+        if _reservation_occupies_primary(conn, rid, kind, repo, req, cap, cand, act_id):
+            return True
+    return False
+
+
+def _expand_related_repo_ids(conn, requested_ids, requirement, capability):
+    requested_set = set(requested_ids)
+    expanded = list(requested_ids)
+    seen = set(requested_ids)
+    try:
+        cur = conn.execute(
+            "SELECT DISTINCT repository FROM events WHERE requirement = ? AND capability = ?",
+            (requirement, capability),
+        )
+        for (stored,) in cur.fetchall():
+            if stored in seen:
+                continue
+            stored_ids = set(_canonical_repo_ids(stored))
+            if stored_ids & requested_set:
+                expanded.append(stored)
+                seen.add(stored)
+    except Exception:
+        return requested_ids
+    return expanded
+
+
+def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0, expand_related: bool = False) -> dict | None:
     if not db_path.is_file():
         return None
 
@@ -202,6 +332,8 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
             return None
 
         repo_ids = _canonical_repo_ids(repo)
+        if expand_related:
+            repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
         placeholders = ",".join("?" for _ in repo_ids)
 
         # Total events for repository: schema-only or unrecorded database returns None
@@ -216,10 +348,7 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
         # This database belongs to one Git common directory. All linked
         # worktrees share its primary slot. A dead parent is ambiguous: its
         # child and charge can survive, so only recorded completion releases it.
-        primary_active = conn.execute(
-            "SELECT 1 FROM reservations WHERE status = 'active' "
-            "AND action_kind IN ('implement', 'repair') LIMIT 1"
-        ).fetchone() is not None
+        primary_active = _any_other_primary(conn)
 
         cur = conn.execute(
             f"""
@@ -276,8 +405,6 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
                     if resolved and isinstance(resolved, list):
                         for rf in resolved:
                             unresolved_findings.discard(str(rf))
-                    else:
-                        unresolved_findings.clear()
             # Notice: kind == "defect_resolved" is ignored; author events cannot erase blockers
 
         # Admin cycles
@@ -329,6 +456,100 @@ def get_history(db_path: Path, repo: str, requirement: str, capability: str, *, 
             conn.close()
         except Exception:
             pass
+
+
+def read_store_identity(db_path: Path, *, timeout: float = 10.0) -> str | None:
+    """Read a persisted identity token if present. Never creates schema or rows."""
+    if not db_path.is_file():
+        return None
+    try:
+        uri = "file:" + str(Path(db_path).resolve()) + "?mode=ro"
+        conn = sqlite3.connect(uri, uri=True, timeout=timeout)
+    except Exception:
+        return None
+    try:
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='store_identity'"
+        )
+        if not cur.fetchone():
+            return None
+        rows = conn.execute("SELECT token FROM store_identity LIMIT 2").fetchall()
+        if len(rows) != 1:
+            return None
+        token = rows[0][0]
+        if type(token) is not str or token.strip() == "":
+            return None
+        return token
+    except Exception:
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def _exact_lineage_recorded(db_path: Path, repo: str, requirement: str, capability: str, *, timeout: float = 10.0) -> bool:
+    if not db_path.is_file():
+        return False
+    try:
+        conn = sqlite3.connect(str(db_path), timeout=timeout)
+    except Exception:
+        return False
+    try:
+        repo_ids = _canonical_repo_ids(repo)
+        repo_ids = _expand_related_repo_ids(conn, repo_ids, requirement, capability)
+        placeholders = ",".join("?" for _ in repo_ids)
+        cur = conn.execute(
+            f"SELECT count(*) FROM events WHERE repository IN ({placeholders}) AND requirement = ? AND capability = ?",
+            repo_ids + [requirement, capability],
+        )
+        return cur.fetchone()[0] > 0
+    except Exception:
+        return False
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def get_live_history(db_path: Path, repo: str, requirement: str, capability: str, *, identity_anchor=None, timeout: float = 10.0) -> dict | None:
+    """Live-profile history: available only on a positive in-store identity match.
+
+    Production callers pass no anchor, so history stays unavailable until a
+    separately approved identity adoption. Tests may pass an in-process
+    ``identity_anchor`` that must equal the persisted token.
+    """
+    if type(identity_anchor) is not str or identity_anchor.strip() == "":
+        return None
+    token = read_store_identity(db_path, timeout=timeout)
+    if token is None or token != identity_anchor:
+        return None
+    if not _exact_lineage_recorded(db_path, repo, requirement, capability, timeout=timeout):
+        return None
+    return get_history(
+        db_path, repo, requirement, capability, timeout=timeout, expand_related=True
+    )
+
+
+def make_guarded_history_reader(db_path: Path, *, live_lineage=None, identity_anchor=None, timeout: float = 10.0):
+    def history_reader(lineage: dict) -> dict | None:
+        repo = lineage.get("repository", "")
+        req = lineage.get("requirement", "")
+        cap = lineage.get("capability", "")
+        is_live = False
+        if live_lineage is not None:
+            try:
+                is_live = bool(live_lineage(lineage))
+            except Exception:
+                is_live = True
+        if is_live:
+            return get_live_history(
+                db_path, repo, req, cap, identity_anchor=identity_anchor, timeout=timeout
+            )
+        return get_history(db_path, repo, req, cap, timeout=timeout)
+    return history_reader
 
 
 def _derive_authoritative_findings(repo_path: Path) -> list[dict]:
@@ -441,15 +662,13 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
     try:
         conn.execute("BEGIN IMMEDIATE")
         action_kind = action.get("kind", "")
-        if action_kind in ("implement", "repair"):
-            active = conn.execute(
-                "SELECT id FROM reservations WHERE status = 'active' "
-                "AND action_kind IN ('implement', 'repair') LIMIT 1"
-            ).fetchone()
-            if active:
-                raise ReservationConflictError(
-                    f"Unresolved primary implementation reservation already exists: {active[0]}"
-                )
+        incoming_occupies = _profile_occupies_slot(
+            action.get("evidenceProfile"), action_kind
+        )
+        if incoming_occupies and _any_other_primary(conn):
+            raise ReservationConflictError(
+                "Unresolved primary reservation already exists"
+            )
 
         res_id = str(uuid.uuid4())
         if charge_id is not None:
@@ -493,7 +712,7 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
                 action.get("candidate", ""),
                 action.get("id", ""),
                 now,
-                json.dumps({"action": action, "snapshot": snapshot}),
+                json.dumps({"action": action, "snapshot": snapshot, "reservationId": res_id}),
             ),
         )
         conn.commit()
@@ -507,11 +726,7 @@ def reserve(db_path: Path, repo: str, action: dict, snapshot: dict, charge_id: s
 
 def has_other_primary(db_path: Path, reservation_id: str) -> bool:
     with closing(sqlite3.connect(db_path)) as conn:
-        return conn.execute(
-            "SELECT 1 FROM reservations WHERE status='active' "
-            "AND action_kind IN ('implement', 'repair') AND id != ? LIMIT 1",
-            (reservation_id,),
-        ).fetchone() is not None
+        return _any_other_primary(conn, exclude_id=reservation_id)
 
 
 def finish(db_path: Path, reservation_id: str, receipt: dict | None = None, status: str = "finished"):

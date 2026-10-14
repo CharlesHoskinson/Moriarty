@@ -328,7 +328,7 @@ class ExecutionTestCase(unittest.TestCase):
         res = self.run_cli("review", str(receipt_file))
         self.assertEqual(res.returncode, 0, f"CLI review failed: {res.stderr}")
         hist_after = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
-        self.assertEqual(hist_after["sameDefectFailures"], 0)
+        self.assertEqual(hist_after["sameDefectFailures"], 1)
 
     def test_corrupt_history_and_safe_writes(self):
         self.db_path.write_bytes(b"corrupt sqlite header not valid database")
@@ -396,7 +396,7 @@ class ExecutionTestCase(unittest.TestCase):
         hist2 = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
         self.assertEqual(hist2["sameDefectFailures"], 1)
 
-    def test_authentic_review_clears_stable_finding(self):
+    def test_authentic_review_without_named_resolution_leaves_finding(self):
         record_event(
             self.db_path,
             str(self.root),
@@ -422,7 +422,7 @@ class ExecutionTestCase(unittest.TestCase):
         record_review(self.db_path, str(self.root), receipt)
 
         hist2 = get_history(self.db_path, str(self.root), "SP01.6", "loan-swap-subset")
-        self.assertEqual(hist2["sameDefectFailures"], 0)
+        self.assertEqual(hist2["sameDefectFailures"], 1)
 
     def test_lineage_and_finding_identity_survives_candidate_rename(self):
         record_event(

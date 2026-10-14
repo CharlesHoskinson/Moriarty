@@ -22,8 +22,11 @@ Check order for a well-typed input:
 A focused repair after two same-defect failures requires both
 ``reproducerVerified`` and ``approachChanged``. Repair occupies the primary
 implementation slot. Report remains allowed when dispatch is denied.
-Reproduce remains allowed for repeated-failure, history, admin and
+Non-live report remains allowed when dispatch is denied. Non-live
+reproduce remains allowed for repeated-failure, history, admin and
 concurrency limits, but not for admission/command gaps.
+Actions with evidenceProfile ``finalized-financial-settlement`` obey
+history, retry and primary gates regardless of kind, including report.
 """
 from __future__ import annotations
 
@@ -71,6 +74,7 @@ RETRY_BLOCKED_KINDS = frozenset(("implement", "admin"))
 ADMIN_SECONDS_LIMIT = 1800
 ADMIN_CYCLE_LIMIT = 2
 FAILURE_RETRY_LIMIT = 2
+LIVE_EVIDENCE_PROFILE = "finalized-financial-settlement"
 
 
 def assess(snapshot, action):
@@ -83,9 +87,10 @@ def assess(snapshot, action):
     kind = action["kind"]
     missing = list(snapshot["missingEvidence"])
     next_id = snapshot["nextActionId"]
+    live = action["evidenceProfile"] == LIVE_EVIDENCE_PROFILE
     if kind not in KNOWN_KINDS:
         return _decision(False, "UNKNOWN_KIND", next_id, missing)
-    if kind == "report":
+    if kind == "report" and not live:
         return _decision(True, "ALLOWED", next_id, missing)
     if snapshot["authorityCurrent"] is False:
         return _decision(False, "AUTHORITY_UNAVAILABLE", next_id, missing)
@@ -97,21 +102,34 @@ def assess(snapshot, action):
         return _decision(False, "RESOURCE_EXHAUSTED", next_id, missing)
     if _admission_gap(missing):
         return _decision(False, "ADMISSION_UNRESOLVED", next_id, missing)
-    if _history_gap(missing) and kind not in HISTORY_EXEMPT_KINDS:
+    history_exempt = frozenset() if live else HISTORY_EXEMPT_KINDS
+    if _history_gap(missing) and kind not in history_exempt:
         return _decision(False, "HISTORY_UNRESOLVED", next_id, missing)
-    if snapshot["primaryActive"] is True and kind in PRIMARY_BLOCKED_KINDS:
+    primary_blocked = KNOWN_KINDS if live else PRIMARY_BLOCKED_KINDS
+    if snapshot["primaryActive"] is True and kind in primary_blocked:
         return _decision(False, "PRIMARY_ACTIVE", next_id, missing)
     same_failures = snapshot.get("sameDefectFailures")
     if same_failures is not None and same_failures >= FAILURE_RETRY_LIMIT:
-        if kind in RETRY_BLOCKED_KINDS:
-            return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
-        if kind == "repair":
-            ready = (
-                snapshot["reproducerVerified"] is True
-                and snapshot["approachChanged"] is True
-            )
-            if not ready:
-                return _decision(False, "REPAIR_UNREADY", next_id, missing)
+        if live:
+            if kind == "repair":
+                ready = (
+                    snapshot["reproducerVerified"] is True
+                    and snapshot["approachChanged"] is True
+                )
+                if not ready:
+                    return _decision(False, "REPAIR_UNREADY", next_id, missing)
+            else:
+                return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
+        else:
+            if kind in RETRY_BLOCKED_KINDS:
+                return _decision(False, "REPRODUCE_BEFORE_RETRY", next_id, missing)
+            if kind == "repair":
+                ready = (
+                    snapshot["reproducerVerified"] is True
+                    and snapshot["approachChanged"] is True
+                )
+                if not ready:
+                    return _decision(False, "REPAIR_UNREADY", next_id, missing)
     if kind == "admin" and _admin_limit(snapshot):
         return _decision(False, "ADMIN_LIMIT", next_id, missing)
     return _decision(True, "ALLOWED", next_id, missing)
