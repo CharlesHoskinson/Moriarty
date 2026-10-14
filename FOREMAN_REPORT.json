@@ -1,0 +1,147 @@
+{
+  "schema": "moriarty.foreman-report/1",
+  "packetSha256": "ec3982a3d3ce85573cd4c058a08595ecc6392d8114b61bf74641f7d45cd3c6fc",
+  "parentCandidate": "6774e0479c37bb95b3fd1dd6371d1fdd1729e8e40f34c770b1acadbbf3268fdc",
+  "parentFreezeSha256": "dffdeda927945ff5d45f930357bdce14b75749fa28ddd11c325e37db9cf209d3",
+  "reviewAuthorityCandidate": "86e3f88dafbf48aa750ef6f4a12334eeed027083e676b77ff4f7c18105819e3f",
+  "reviewFinding": "R5",
+  "originalReviewSha256": "58fc4395516044d39447e92e569d29bfc00056aa5856f133d447a20f3c9c3d09",
+  "decision": "ADMIT_SOURCE_AUTHOR_ONLY",
+  "baseCommit": "daac83578f105b0a70ce44d88c579018881daae5",
+  "worker": "grok-4.6-high",
+  "pass": "successor-provider-setup-01",
+  "scope": "Independent original R5 provider construction and required SDK interfaces only. Offline source and ordinary constructor/interface tests. No transaction probes, wallet restore, proof, or network execution. Incomplete R6 safety-stopped review was not resumed.",
+  "claims": {
+    "onchain": false,
+    "pcd": false,
+    "sp05Complete": false,
+    "sprintComplete": false,
+    "ledgerAcceptance": false,
+    "networkAcceptance": false,
+    "r5Complete": false,
+    "r6Complete": false,
+    "r6AuditRerun": false,
+    "provenAssetsAdmitted": false,
+    "deploymentAuthorized": false
+  },
+  "predecessorDisposition": {
+    "originalFinding": "R5",
+    "originalDecision": "BLOCKED",
+    "r6Review": "incomplete, unaccepted, not resumed",
+    "thisPass": "new charged R5 constructor/interface source repair"
+  },
+  "ownedFiles": [
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/providers.mjs",
+      "bytes": 65732,
+      "sha256": "0efb5f394a895afb7ee7cb946a14a17542dcee42c9f1ce7beff01516c9b1efa9"
+    },
+    {
+      "path": "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs",
+      "bytes": 83019,
+      "sha256": "654e288dd71aeeb5e0fe1dc305c032f8a3cd1dd065c76ee1ec6329254bd5b15b"
+    },
+    {
+      "path": "FOREMAN_REPORT.md",
+      "bytes": 4995,
+      "sha256": "0bc8fc9c3c876a61dc36ec36a855e6eb0998d7034350480283fd6a85f1b07e60"
+    }
+  ],
+  "reportJsonNote": "FOREMAN_REPORT.json is the fourth owned file. Hash it after freeze. Do not treat this field as a self-digest.",
+  "ownedBytesLimit": 262144,
+  "protectedUnchanged": {
+    "experiments/moriarty-midnight-financial/ledger/README.md": "8dad40c67e53b04c49c0c317bd6da3de4d9b430f473e71051d388aa3a8fc5a2e",
+    "experiments/moriarty-midnight-financial/ledger/build-proven.mjs": "d0120812b0f46f35c8fce31333288c2876720bdb3bb0e26877104349477010ee",
+    "experiments/moriarty-midnight-financial/ledger/decode-receipt.mjs": "fe594c9fab7457fdc3abe228927ee92b38af5873ed2075b9b4048c52d4b5a104",
+    "experiments/moriarty-midnight-financial/ledger/run-local.mjs": "0c5d5347923d169ffb7c9090060f7846ae0d6449378aade4ca7ec779c64bf433"
+  },
+  "protectedProviderRegions": {
+    "beforeConstructorSha256": "ecb3fa6f90feb75daa44bbd6f0d721b3cd1d5887fda25f8b2f959429b35d9c0c",
+    "fundUnshieldedSha256": "4bb791ca1bd9929e279a6c4b71d15e392c772ca07a684676e87544ef6eed0539",
+    "unchangedReviewedSetupSha256BeforeThisPass": "f1832b49f2aac9751e407d491bdc65c0ff1d28e9136fce42f942e6e96b67e799"
+  },
+  "sourcePinChecks": {
+    "providersPackagePinsUnmodified": true,
+    "levelPrivateStateProviderIndexMjs": "fd724431222804df8c643ee17f8c2d71f26d6c71fa9e5bf259369083a57c5ec1",
+    "midnightJsContractsIndexMjs": "9c8079430513e7b459d52fc6d22ab5dede22f86073a4b50dcbdf35de99bb4072",
+    "nodeZkConfigProviderIndexMjs": "0698e57a324a2f8e85f0593d4feb1166c46fce93b7f6be1f65e348e72d12c942",
+    "midnightJsTypesIndexDmts": "c6b9fb7c40e4cbe00a9054ad99026912df4358a3a450a90ede912a87929efb30",
+    "helloWorldDeployTs": "16b273aa8fa65cae09c8601cc783d8034412b136fbee4eaabc1866b7f7bb0698",
+    "matchedBinding": true
+  },
+  "changedProviderInterfaces": {
+    "walletProvider": ["getCoinPublicKey", "getEncryptionPublicKey", "balanceTx"],
+    "midnightProvider": ["submitTx"],
+    "privateStateProviderOptions": {
+      "privateStateStoreName": "moriarty-financial-private",
+      "midnightDbName": "privateStateLocation",
+      "accountId": "caller-supplied",
+      "privateStoragePasswordProvider": "caller-supplied-callback",
+      "rejectedOption": "privateStateStorePath"
+    },
+    "zkConfigProvider": "NodeZkConfigProvider(compiledAssetsLocation)",
+    "proofProvider": "httpClientProofProvider(networkConfig.prover, zkConfigProvider)",
+    "submission": "wrapMidnightSubmit composed, fundUnshielded body unchanged"
+  },
+  "callerRequirements": [
+    "privateStoragePasswordProvider function. Not read from environment. Not generated. Callback output is not logged.",
+    "accountId non-empty string. Wallet identity is not generated or persisted.",
+    "privateStateLocation used as midnightDbName.",
+    "compiledAssetsLocation, or provenAssetManifest compiledAssetsLocation, distinct from privateStateLocation.",
+    "walletContext.shieldedSecretKeys.coinPublicKey and encryptionPublicKey.",
+    "proven true still requires inspectedProofAssets. Unproven assets stay unproven. R8 remains open."
+  ],
+  "commands": [
+    {
+      "phase": "pre-repair-root-constructor-diagnosis",
+      "argv": ["node", "--input-type=module", "root-constructor-diagnosis equivalent against live providers.mjs"],
+      "exit": 0,
+      "constructorError": "privateStoragePasswordProvider is required.",
+      "returnedWalletProvider": false,
+      "returnedMidnightProvider": false
+    },
+    {
+      "phase": "first-substantive-red-r5",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "--test-name-pattern=^R5 ", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 1,
+      "tests": 4,
+      "pass": 0,
+      "fail": 4,
+      "note": "Missing API rejection. Missing walletProvider. Real SDK constructor still required password. ZK directory was private-state path."
+    },
+    {
+      "phase": "final-green-r5",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "--test-name-pattern=^R5 ", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 0,
+      "tests": 4,
+      "pass": 4,
+      "fail": 0
+    },
+    {
+      "phase": "owned-file-constructor-fixture-compatibility",
+      "argv": ["node", "--test", "--test-reporter=tap", "--test-timeout=90000", "experiments/moriarty-midnight-financial/ledger/receipt.test.mjs"],
+      "exit": 0,
+      "tests": 44,
+      "pass": 44,
+      "fail": 0,
+      "note": "Same owned test file after fixture updates. Not an R6 financial audit. Predecessor gpt6-independent-probes not run."
+    }
+  ],
+  "notRerun": [
+    "predecessor gpt6-independent-probes scripts",
+    "incomplete R6 safety-stopped review and its transaction probes",
+    "root-effects and root-sdk-effects as an R6 audit",
+    "wallet restore",
+    "financial transaction submit or finalize",
+    "proof generation",
+    "network contact"
+  ],
+  "remaining": [
+    "R1-R4 and R6-R8 remain open.",
+    "The incomplete R6 review remains unaccepted and was not resumed.",
+    "run-local.mjs is unowned and still does not pass password, account, or compiled-assets fields.",
+    "Constructor instantiation is not transport execution, proof, or ledger settlement.",
+    "Proven compiled-asset admission remains R8.",
+    "Financial Preview settlement, full BNF/K, native PCD, SP05, and twelve-sprint acceptance remain open."
+  ]
+}
