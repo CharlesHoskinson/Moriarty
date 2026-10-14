@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "scope": "SP01.2 proposed theorem obligations, not proofs",
+  "status": "proposed",
+  "profileStatus": "local-oracle-assumptions-are-proposal-only-not-successor-semantic-freeze",
+  "theorems": [
+    {
+      "id": "type-preservation",
+      "type": "type-preservation",
+      "status": "proposed",
+      "predicate": "If StateWellTyped(sigma, Gamma) and Gamma |- e : tau and Eval(profile, e, sigma) = Prepared(sigma', pi), then StateWellTyped(sigma', Gamma) and Gamma |- e : tau. Expression type tau is not the type of sigma'. If Eval = Reject(r), then the post-state is absent and sigma is unchanged.",
+      "definitions": [
+        {
+          "name": "StateWellTyped",
+          "id": "StateWellTyped",
+          "formula": "StateWellTyped(sigma, Gamma) holds iff sigma is a finite record {accounts, debts, shares, fees, duties, requests, messages, orders, work, authority, historyIds, observations} and each field is well-typed in Gamma: accounts : FinMap(AccountId, FinMap(AssetId, Nat[0, M_a])); debts : FinMap(DebtId, {asset:AssetId, principal:Nat, debtor:AccountId, creditor:AccountId}); shares : FinMap(ShareId, {asset:AssetId, quantity:Nat, navUnits:Nat}); fees : FinMap(FeeId, {asset:AssetId, amount:Nat, recipient:AccountId}); duties : FinMap(DutyId, {kind:DutyKind, amount:Nat, asset:AssetId, controller:AccountId, residual:Bool}); requests, messages, orders similarly finite; work : {lifetime:Nat, spent:Nat, remainingOrdinary:Nat, remainingClosure:Nat} with spent + remainingOrdinary + remainingClosure = lifetime; authority : FinMap(PrincipalId, AllowedEffects); historyIds : FinSet(HistoryId); observations : FinSeq(Observation). No host heap. Nat[0, M_a] is the registered bound for asset a."
+        },
+        {
+          "name": "expression-type",
+          "id": "expression-type",
+          "formula": "Gamma |- e : tau is the proposed typing judgement on programs/expressions. tau is an expression type (Plan, Intent, Observation, EffectSet). It is not assigned to a complete successor state."
+        },
+        {
+          "name": "Eval",
+          "id": "Eval",
+          "formula": "Eval(profile, e, sigma) in {Prepared(sigma', pi), Reject(r)} is the proposed successor evaluator. This map does not implement Eval. profile is a proposed local oracle profile, not a frozen language profile."
+        }
+      ],
+      "boundedDomain": "finite named accounts, assets, duties, histories; registered per-asset M_a; work lifetime 1024; no unbounded collections",
+      "assumptions": [
+        "proposed successor profile after SP01.3 freeze",
+        "no host-boolean acceptance",
+        "StateWellTyped is distinct from expression typing"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP03",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/0/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/heldouts:NAM19-capitalization:trace/expected/pre",
+        "deliverables/defi-language-design-2026-09-07/LANGUAGE-DESIGN.md"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "asset-indexed-accounting",
+      "type": "asset-indexed-accounting",
+      "status": "proposed",
+      "predicate": "For every AssetId a, Sum_i post.accounts[i][a] - Sum_i pre.accounts[i][a] = minted(a) - burned(a). Internal transfers cancel. Fees are transfers to a named fee recipient and appear in the account sum. NominalDebt, ShareNAV, UnsettledPnL, LossLabel, and claim reclassification are not terms of this equation.",
+      "definitions": [
+        {
+          "name": "typed-asset-accounting-equation",
+          "id": "typed-asset-accounting-equation",
+          "formula": "DeltaTokens(a) := Sum_{acct in AccountId} (post.bal(acct,a) - pre.bal(acct,a)) = minted(a) - burned(a), where minted, burned : AssetId -> Nat are the explicit mint and burn effects of the transition. For each transfer t in Transfers, t.asset = a implies t.from and t.to are AccountIds and t.amount in Nat, and the transfer contributes +amount to to and -amount to from, hence 0 to DeltaTokens(a)."
+        },
+        {
+          "name": "AllowedEffects-accounting-subset",
+          "id": "AllowedEffects-accounting-subset",
+          "formula": "Accounting effects are {Transfer(from,to,a,n), Mint(a,n,to), Burn(a,n,from), AccrueFee(from,recipient,a,n)}. AccrueFee is a Transfer. Non-token effects are {CreateDebt, ReduceDebt, AssignDuty, RecognizeLossLabel, AdjustShareNAV, CreateRequest, Claim, Lock, Unlock}."
+        },
+        {
+          "name": "nominal-vs-movement",
+          "id": "nominal-vs-movement",
+          "formula": "ReduceDebt(id, n) without a Transfer is forbidden unless n=0. RecognizeLossLabel(n) does not change accounts or erase Debt.principal. ShareNAV adjustment does not mint or burn share quantity unless an explicit Mint/Burn is present."
+        }
+      ],
+      "boundedDomain": "finite asset index, finite accounts, amounts in Nat[0, M_a]",
+      "assumptions": [
+        "no hidden sidecar balances",
+        "bad-debt residual remains a duty unless authorized write-off/novation"
+      ],
+      "owner": "MC01,MC07",
+      "closureSprint": "SP07",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/1/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/DeFi-regressions:bad-debt:trace/expected",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/intent-cases:exact-output-swap:trace/arithmeticDerivation"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "authority-safety",
+      "type": "authority-safety",
+      "status": "proposed",
+      "predicate": "Every accepted effect e satisfies e in AllowedEffects(envelope). Delegation yields AllowedEffects(delegate)subseteq AllowedEffects(parent). Split, cancel, and migrate do not increase remainingOrdinary, remainingClosure, or AllowedEffects cardinality. Revoked or unknown semantics reject with unchanged financial state.",
+      "definitions": [
+        {
+          "name": "AllowedEffects",
+          "id": "AllowedEffects",
+          "formula": "AllowedEffects(envelope) is the finite set of pairs (ctor, bound) signed in envelope. Constructors used in this map: Transfer, Mint, Burn, AccrueFee, CreateDebt, ReduceDebt, AssignDuty, RecognizeLossLabel, TradePortfolioAsset, PayFee, CancelResidual, Claim, Lock, Unlock, SendMessage, ReceiveMessage, RefundLock, WithdrawCash, RedeemOrdered, Swap, AddLiquidity, HookAdjustFee, WriteOff (authorized only). bound is a numeric cap or whitelist. e in AllowedEffects iff e.ctor is present and e.amount <= bound(ctor)."
+        },
+        {
+          "name": "attenuation",
+          "id": "attenuation",
+          "formula": "Delegate(parent, child, S) is valid iff S subseteq AllowedEffects(parent) and no ctor in {CreateDebt, GrantAuthority, ExternalRecipient} is added. Risk metrics of parent need not be preserved."
+        },
+        {
+          "name": "no-refresh",
+          "id": "no-refresh",
+          "formula": "On split of work W into W1, W2: W1.remainingOrdinary + W2.remainingOrdinary = W.remainingOrdinary, W1.remainingClosure + W2.remainingClosure = W.remainingClosure, and AllowedEffects are partitioned, not copied. Cancel and migrate obey the same sum, not a reset to envelope maxima."
+        }
+      ],
+      "boundedDomain": "finite effect list, finite delegates, work lifetime 1024",
+      "assumptions": [
+        "canonical signing schema from SP01.3",
+        "no LLM in the authority path"
+      ],
+      "owner": "MC05",
+      "closureSprint": "SP09",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/2/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/intent-cases:delegated-rebalancing:trace",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/intent-cases:partial-fill-batch:trace"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "frame-noninterference",
+      "type": "frame-noninterference",
+      "status": "proposed",
+      "predicate": "Let F = footprint.reads union footprint.writes. For every named resource r not in F, post(r) = pre(r). Unmentioned duties, debts, and accounts are unchanged. There is no ambient mutation.",
+      "definitions": [
+        {
+          "name": "bounded-frame",
+          "id": "bounded-frame",
+          "formula": "A footprint is a pair (reads, writes) of finite lists of {resource: Name, capacity: Nat}. |reads| + |writes| <= maxCollectionSize (32). Name is drawn from the trace's actual accounts, debts, shares, requests, messages, ticks, positions, work cells, and authority cells. capacity is the max number of records touched."
+        },
+        {
+          "name": "frame",
+          "id": "frame",
+          "formula": "Frame(sigma, F) = the restriction of sigma to names not in F. Frame-noninterference: Frame(pre, F) = Frame(post, F)."
+        }
+      ],
+      "boundedDomain": "finite named resources listed in each challenge boundedFootprint",
+      "assumptions": [
+        "no callbacks",
+        "no host heap"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP03",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/3/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/challenges",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/sharedProfiles/defaultBounds"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "assume-guarantee-composition",
+      "type": "assume-guarantee-composition",
+      "status": "proposed",
+      "predicate": "If A sat GA under AsmA and B sat GB under AsmB and Compat_op(AsmA, AsmB, FP_A, FP_B, Auth_A, Auth_B), then (A op B) sat G_op(GA, GB) under (AsmA intersect AsmB) union OpAsm(op). If Compat_op fails, the composition Rejects with unchanged financial state.",
+      "definitions": [
+        {
+          "name": "compatibility",
+          "id": "Compat",
+          "formula": "Compat_sequential(A,B) iff producedHistories(A) = consumedHistories(B) and Auth_B subseteq residual(A). Compat_disjoint-parallel(A,B) iff (FP_A.writes intersect FP_B.writes = empty) and (FP_A.writes intersect FP_B.reads = empty) and (FP_B.writes intersect FP_A.reads = empty) and (Auth_A intersect Auth_B = empty). Compat_shared-state-interleaving(A,B) iff there exists an explicit total order Ord on conflicting writes and both parties agree on Ord. Compat_atomic-synchronization(A,B) iff there is a joint envelope E with AllowedEffects(E) = AllowedEffects(A) union AllowedEffects(B) and no external observable prefix of a proper subset of legs. Compat_asynchronous-messaging(A,B) iff the message alphabet, timeout, lock, refund, and provenance IDs are named in OpAsm(async)."
+        },
+        {
+          "name": "guarantee-derivation",
+          "id": "G_op",
+          "formula": "G_sequential(GA,GB) = GA then GB on the concatenated history. G_disjoint-parallel(GA,GB) = GA and GB on the pair of histories. G_shared-state-interleaving(GA,GB) = the ordered composition along Ord, not GA and GB unordered. G_atomic-synchronization(GA,GB) = GA and GB on the joint post-state or else Reject all. G_asynchronous-messaging(GA,GB) = GA on send/lock and GB on receive-or-refund, never both credit and refund."
+        },
+        {
+          "name": "OpAsm",
+          "id": "OpAsm",
+          "formula": "OpAsm(op) is the finite assumption set of the operator contract in challenge-map.json compositionOperators[op].environmentAssumptions."
+        }
+      ],
+      "boundedDomain": "finite components, the five registered operators, predecessorFanIn 4",
+      "assumptions": [
+        "operator-specific contracts",
+        "no blanket composition",
+        "proof split/join is not an operator"
+      ],
+      "owner": "MC06",
+      "closureSprint": "SP10",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/4/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/compositionOperators",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/composition:shared-state-interleaving:trace"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "structural-associativity",
+      "type": "structural-associativity",
+      "status": "proposed",
+      "predicate": "For op in {sequential, disjoint-parallel}, ObsEq( (A op B) op C, A op (B op C) ) holds. For shared-state-interleaving, associativity holds only when OrderCond_shared is the same total order on all groupings. Atomic-synchronization associativity holds only for compatible joint envelopes. Asynchronous-messaging is not associative.",
+      "definitions": [
+        {
+          "name": "observation-equivalence",
+          "id": "ObsEq",
+          "formula": "ObsEq(o1, o2) iff there exists an alpha-renaming rho such that rho(o1.accounts, o1.transfers, o1.debts, o1.duties, o1.requests, o1.messages, o1.fees, o1.work.spent) equals the corresponding fields of o2, ignoring bound names in Bindable = {historyId, requestId, messageId, dutyId, claimId, stateId}."
+        },
+        {
+          "name": "alpha-renaming",
+          "id": "alpha-renaming",
+          "formula": "An alpha-renaming is a bijection rho : Bindable -> Bindable that is identity on free names (account ids that appear in the pre-state, asset ids, and signed principals). Substitution is capture-avoiding on bound history names."
+        },
+        {
+          "name": "observation-order",
+          "id": "OrderCond",
+          "formula": "OrderCond_sequential: observations concatenate. OrderCond_disjoint-parallel: observations of the two sides form a bag; no cross order. OrderCond_shared: the explicit serialization Ord is part of the observation; commuting Ord is not ObsEq. OrderCond_atomic: the only observations are pre and post of the joint envelope. OrderCond_async: Created < Pending < {Finalized, Refundable}; Finalized and Refunded are exclusive."
+        }
+      ],
+      "boundedDomain": "finite operator trees of sequential or disjoint-parallel, or other operators only with the stated OrderCond",
+      "assumptions": [
+        "not async/shared-state equivalence",
+        "not proof-split/join substitution"
+      ],
+      "owner": "MC06",
+      "closureSprint": "SP10",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/5/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/composition:sequential:trace",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/composition:disjoint-parallel:trace"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "obligation-preservation",
+      "type": "obligation-preservation",
+      "status": "proposed",
+      "predicate": "DutyConserv(pre, post, effects) holds for every accepted transition. Work exhaustion, cancel, and migrate do not delete duties. Expiry does not delete debt.",
+      "definitions": [
+        {
+          "name": "duty-conservation",
+          "id": "DutyConserv",
+          "formula": "Let Out(sigma) be the finite map DutyId -> Duty of sigma.duties with residual=true. DutyConserv holds iff Out(post) = (Out(pre) minus Discharged) union Created, Discharged intersect Created = empty, and every d in Discharged has an effect in {SettleTransfer matching d.asset and d.amount, WriteOff(d) with ctor WriteOff in AllowedEffects, Novation(d, d') with d' in Created and exact-once assignment}. RecognizeLossLabel is not a discharge. CancelResidual discharges cancel-rights, not payment duties. Successor assignment requires identified S with S.remainingClosure >= minClosure (16 in defaultBounds) and no duplication of remainingOrdinary."
+        },
+        {
+          "name": "closure-reserve",
+          "id": "closure-reserve",
+          "formula": "remainingClosure is a Nat reserved for discharge/successor work. Shutdown with Out nonempty and remainingClosure = 0 Rejects."
+        }
+      ],
+      "boundedDomain": "finite duty set, maxClaims 8",
+      "assumptions": [
+        "shutdown without discharge rejects",
+        "loss-share allocation is not write-off"
+      ],
+      "owner": "MC05,MC06",
+      "closureSprint": "SP09",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/6/definitions/0",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/DeFi-regressions:bad-debt:trace",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/intent-cases:partial-fill-batch:trace",
+        "experiments/moriarty-language/spec/successor/challenge-traces.json#/traces/intent-cases:recurring-payments:trace"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    },
+    {
+      "id": "conservative-extension",
+      "type": "conservative-extension",
+      "status": "proposed",
+      "predicate": "Conditional on the translation relation T defined below: if Admitted_D0(p0) and T(p, p0) and Eval_succ(p, sigma) = Prepared(sigma', pi) then Eval_P0(p0, sigma) = Prepared(sigma0, pi0) and D0Obs(pi) = D0Obs(pi0). This map does not claim that an implementation of T exists. Redesigned syntax (pre/next versus set/state) is outside T.",
+      "definitions": [
+        {
+          "name": "D0",
+          "id": "D0",
+          "formula": "D0 is the already admitted atomic loan/swap program set retained by this map (atomicCoreRetention). A program p0 is in D0 iff it is an admitted loan or swap under the current atomic acceptance and uses only the existing atomic syntax. Admitted_D0(p0) is the existing acceptance predicate on that set. This map does not change those programs."
+        },
+        {
+          "name": "translation-relation-T",
+          "id": "T",
+          "formula": "T subseteq Programs_succ x Programs_D0 is the proposed partial relation: T(p, p0) holds iff p uses only the D0 loan/swap fragment (no successor-only constructors: pending-request, tick-walk, newton-D, async-message, vault-hook, loss-label, composition operators beyond atomic loan/swap) and p0 is the same program text read under profile P0. T is undefined for redesigned syntax. T is a mathematical relation, not an implemented translator."
+        },
+        {
+          "name": "D0Obs",
+          "id": "D0Obs",
+          "formula": "D0Obs(pi) is the projection of observations to {token transfers, loan principal, swap reserves, fees} used by current atomic acceptance."
+        }
+      ],
+      "boundedDomain": "current atomic loan/swap programs only",
+      "assumptions": [
+        "existing atomic acceptance is retained and not changed by this map",
+        "theorem is conditional on T as defined; T is not implemented in this pass"
+      ],
+      "owner": "MC01",
+      "closureSprint": "SP01.3",
+      "evidenceRefs": [
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/7/definitions/0",
+        "experiments/moriarty-language/spec/successor/theorem-ledger.json#/theorems/7/definitions/1",
+        "experiments/moriarty-language/spec/successor/challenge-map.json#/atomicCoreRetention"
+      ],
+      "axioms": [],
+      "mechanizedEvidence": [],
+      "testsDoNotPromoteToProof": true
+    }
+  ],
+  "note": "No test is promoted to a proof. axioms and mechanizedEvidence stay empty. All eight entries remain proposed. Local oracle numeric assumptions are proposal-only."
+}
