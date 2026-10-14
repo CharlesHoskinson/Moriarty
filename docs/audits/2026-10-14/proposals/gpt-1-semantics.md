@@ -1,0 +1,84 @@
+# Independent proposal 1: audit the semantic path
+
+Requested model: GPT; specialty: language architecture and deterministic semantics. Base: `cb8280ef54082853dd8bb6c6a52050328d0fc6fa`. This is an independent advisory audit design, not product approval. I applied the checked-in develop skill, inspected AGENTS and read-only plugin status, all six Luna maps, and structural coverage/build summaries. No peer proposal was read. Status reports stale operational bindings and missing accounting/resource history; it grants no execution authority. Native authority is zero. Latest user routing assigns all security work to Opus. This GPT proposal covers normal language architecture, semantics, numeric correctness, compiler correspondence and nonsecurity conformance; security questions below are ownership handoffs, not GPT assessments.
+
+## Recommendation and alternatives
+
+Use a semantic spine: follow each financial judgment from authored text through typed representation, reference execution, signed intent, target constraints, independent verification, and authoritative ledger effects. At every edge compare admitted source behavior, expected refusal behavior and the defined result representation. Opus owns security invariants, adversarial-witness analysis and security judgments. Audit full result envelopes, including refusal, phase fees, duties and history. Two new programs discriminate integration; a grammar-by-obligation matrix supplies the generality argument. Two successful examples alone cannot establish a general compiler.
+
+Alternative one is compiler-first assurance: enumerate every admitted expression/statement, give a compositional preservation argument, then integrate ledger execution. This exposes ordinary translation mismatches efficiently and scales beyond examples, but can overlook public packaging, state provenance and charged failures. Use its arithmetic and framing work inside the recommended approach.
+
+Alternative two is black-box developer-first qualification: install publicly, author independently, execute varied workflows and inspect effects. It catches unusable interfaces and missing consumer paths quickly, but cannot by itself establish full compiler correspondence or qualify the security of the encoded relation. It also depends on unavailable native authority. Reserve it for the later empirical lane; current planning must specify it without executing it.
+
+## Verified observations that determine audit scope
+
+1. **There are distinct source contracts.** Rust check dispatches `language` text to Core and other text to Beta (`crates/mori/src/commands/check.rs:29,53`). Compile loads Core directly (`crates/mori/src/commands/compile.rs:19`). Beta's bridge refuses non-LocalS0 actions and returns local-stipulation-only preparation (`packages/moriarty-beta/src/bridge.ts:92,236`). Publish an entry-point/profile matrix before promising one authoring path. This is a boundary observation, not proof that any advertised command is defective.
+
+2. **Core typing is narrower than the financial specification.** Its value types are UInt and Bool; assets separately carry network, issuer, reference and scale (`crates/mori-core/src/ir.rs:34,106`). Transfer validation requires declared asset and UInt amount (`crates/mori-core/src/runtime.rs:263`). Determine where dimension/refinement obligations are enforced, rejected or merely assumed; parser/type acceptance cannot imply them. Numeric policy requires base-per-quote conversion, directed rounding and reserve dust (`docs/decisions/u0-numeric-profile-decision.md:7,15,30`). Do not silently transplant source/5 policy into a differently versioned Core contract.
+
+3. **Arithmetic has an inspectable correspondence boundary.** Reference addition/subtraction/multiplication use checked u128 (`runtime.rs:450`). Backend uses 128-bit constraints and a limb multiplication construction (`crates/mori-backend/src/lib.rs:562,588,606`). Compare declared limb ranges, carries, field-modulus bounds and intermediate values to ordinary finite-width arithmetic expectations. Opus owns assessment of adversarial assignments and security soundness. The code structure is useful evidence; it is no correspondence certificate. Eager Boolean operand evaluation (`runtime.rs:446`) also belongs in the declared rejection semantics.
+
+4. **Replay is deterministic recomputation, not an independent oracle.** It invokes the same simulator and compares steps, effects and poststate (`runtime.rs:899,909,916`). Independently derive expected outcomes; retain replay for divergence localization. Intent accounting already separates gross, fees, net and closing liability (`crates/mori-core/src/intent.rs:286,332`); include its public caller and representation mappings in ordinary conformance review, not just this helper.
+
+5. **Current qualification labels matter.** Backend artifacts explicitly retain unperformed native, fraud-cost, frame/history and deployment gates (`crates/mori-backend/src/lib.rs:458`). Static mapped roles are explicitly unauthenticated and cannot construct installation/proving capabilities (`crates/mori-ledger/src/static_compile.rs:1,19`). FeePool uses bounded quotient/remainder witnesses and supplied history is unauthenticated (`examples/core/fee-pool/README.md:29,44`). Preserve these useful partial capabilities without promoting them to M11 or general financial acceptance.
+
+## Exact audit outputs
+
+Create one bounded dossier using existing repository evidence conventions, not a new runner:
+
+- `AUDIT.md`: supported contracts, language conformance findings, ordinary counterexamples, dissent and explicit closure decisions; link Opus security findings separately.
+- `profiles.json`: source/Core/numeric/target/ABI identities, entry points, supported constructs and refusal boundaries.
+- `obligations.json`: every retained U/M/MC/SP/G predicate, dependencies, owner, status, denominator and evidence scope.
+- `field-enforcement.json`: each intent/state/effect/history field, origin, canonical encoding, signer binding, constraint, verifier consumer and ledger reader.
+- `correspondence.json`: grammar rules and primitive contracts, normal completeness/equivalence/framing/resource arguments, assumptions and ordinary counterexamples; security assurance is an Opus-owned dependency.
+- `programs/manifest.json`: newly authored sources, scenarios, independently frozen expectations, semantic coverage and stage identities; retain source and public intermediate artifacts beneath each program directory.
+- `results.jsonl`: one bounded record per attempted check, including refused, unsupported, unknown, timed-out and blocked outcomes.
+- `effects.jsonl`: ordered complete pre/post balances, custody, fees, supply, liabilities, duties, phase outcomes and observation provenance.
+- `coverage.json` and `premises.json`: exact denominators, omissions, independent-oracle lineage and unresolved trusted inputs.
+- `ROADMAP-PATCH.md`: minimal reviewable edits and deferred changes, linked to predicate IDs.
+
+Machine records must reject unknown schema versions, distinguish observation class from verdict, use canonical decimal strings, and bind artifacts by digest. Evidence paths alone are insufficient. Example **specified schema instance**, not an executed result:
+
+```json
+{"schema":"moriarty-audit-predicate/1","id":"U2.arithmetic.mul.correspondence","base_commit":"cb8280ef54082853dd8bb6c6a52050328d0fc6fa","profile":"moriarty-core/1","status":"specified-only","observation":"source-inspected","depends_on":["U0.numeric","U1.mul"],"evidence":[{"path":"crates/mori-backend/src/lib.rs","line":588,"kind":"source"}],"artifacts":[],"oracle":{"producer":"independent","digest":null},"denominator":{"required":1,"demonstrated":0},"blocked_by":["native-authority-zero"]}
+```
+
+Require statuses `specified-only`, `source-inspected`, `historical-run`, `current-run`, `accepted`, `refuted`, `unsupported`, `unknown`, `blocked`; acceptance additionally names its authority and exact predicate. Do not average heterogeneous predicates into a percentage. Structural inventory covers 30,143 tracked entries but only selected content; .mori/.qnt were not AST-parsed. That inventory cannot serve as semantic inspection coverage.
+
+## Two new programs and the full walk-through
+
+Independently author **DeliveryExchange**, a two-asset conditional exchange with fixed recipients and a retained service obligation, and **RoyaltyReserve**, bounded weighted allocation with explicit quotient/remainder witnesses, immutable beneficiaries, residual reserve and claim/discharge actions. They differ in multi-asset transfer versus arithmetic allocation, custody shape, duty evolution and temporal structure. Avoid copying the existing loan/swap/FeePool fixtures; define expectations before implementation. Their proposed constructs are acceptance targets, not assertions of present support.
+
+For each, trace this exact path:
+
+1. Author through the documented public package/CLI from a clean installation without project reviewer metadata. Record executable identity, source profile, canonical program hash and diagnostics. Mark unsupported syntax at its first real boundary; never switch to hand-written ZKIR to rescue the source claim.
+2. Inspect types and Core: names, finite bounds, units, identities, refinements, evaluation order, pre/post environments, preserved untouched cells and every assertion. Record the authorized source-to-Core mapping rather than demanding equal hashes of different representations.
+3. Display/sign a canonical intent covering exact recipients, assets, domain/Anchor, gross debit, fee cap, net floor, liability cap, expiry, nonce, revocation and failure policy. Opus owns their security enforcement review. No invented Fenrir network ID, Anchor or authenticated clock. DeliveryExchange's positive target spends at most 11 A including 1 A fees and receives at least 20 B; partial outcomes must be separately authorized.
+4. Compile through the actual supported public consumer to pinned ledger-9 ZKIR. Inspect each source obligation's emitted constraint and public-input position. An unsigned mapped-role export remains static-only. Freeze program/semantics/intent/predecessor/phase/target bindings and permitted witness variation.
+5. In a later separately authorized lane, produce genuine native proofs and independently verify retained public statements on a compatible installed verifier. Compare valid native results against independently specified source outcomes. Opus specifies and assesses hostile proof/witness cases. This proposal performs no native operation.
+6. Deploy/call on the qualified target, then read authoritative complete effects independently of prover predictions. Reconcile guaranteed versus fallible phase outcomes, DUST, custody, liabilities, fees and source poststate. Proof validity without current authenticated predecessor/account authority is insufficient.
+7. Continue histories: DeliveryExchange submits, waits for recipient/document evidence, partially fills, then settles or recovers; RoyaltyReserve allocates, claims in different valid orders, finishes with outstanding entitlements, then discharges them. Unknown finality preserves holds and duties. Specify ordinary late-result, restart, exhausted-work and current-predecessor behavior. Opus owns race/replay security assessments and their test design. Existing single-stage support may refuse these extensions; record the missing stage rather than pretending local atomic refusal models ledger rollback.
+
+## Independent oracles and normal conformance completeness
+
+Use a separately authored mathematical specification with unbounded integers plus explicit finite-width admission, independent small hand calculations, and independently adjudicated complete effect tables. Neither oracle imports evaluator/compiler helpers. K/Quint comparisons need exact profile adapters, premise inventories and concrete counterexample replay; model truth does not establish implementation correspondence.
+
+Cross every expression/statement rule with normal, boundary and documented refusal inputs. Include 0, 1, 2^64 boundaries, 2^128−1, intermediate-overflow examples and evaluation-order examples such as false Boolean guards with an overflowing second operand. Establish whether the profile specifies eager evaluation. Check name resolution, dimensions, fixed recipients, preserved untouched state and canonical decimal serialization. Distinguish absent duty from present-zero duty, mathematical quotient from finite quotient/remainder construction, and local atomic refusal from ledger phase outcomes. These are arithmetic and language-correctness expectations, not a security test plan.
+
+For financial conformance, independently tabulate gross charges, refunds, fee recipients, reserve dust, supply changes, liability opening/accrual/discharge/closing and residual claims. Compare authorized alternative normal plans and claim orders; check that their differences match the source contract. For incomplete workflows record which observations remain supplied premises. Counterexamples to a normal semantic equation should name the exact profile and first divergent stage.
+
+Route all threat models, vulnerabilities, adversarial-witness soundness, signature/account authority, replay/revocation security, fabricated-history scenarios, key/proof substitution and security attack-test design to Opus. Preserve those mandatory predicates and consume Opus's independently authored assessment as a separate artifact. GPT does not define their attack cases, issue their verdicts or infer security approval from normal conformance. Cross-provider agreement about ordinary semantics cannot substitute for Opus security work.
+
+## Preserved obligations, bounded work and roadmap edits
+
+Keep U0–U7 unchanged and retain MC01–08, SP01–12 and G01–24 individually. Preserve ACTUS 277 fixtures, 18 types/32 dispositions, DS01–07; DeFi 72 rows, DA01–24, adopted supplements, held-outs/intents/regression classes; all five composition operators (`openspec/changes/consolidated-language-kernel/traceability.md:3,49`). Reconcile counts with frozen manifests before scoring.
+
+Copy the brief's controlling M1–M17 rows verbatim into obligations: compilation/target/effects (M1–3), sponsorship and fraud limits (M4–5), replay and authentication/identity/tools (M6–10), FeePool/CapacityExchange/registry/coordinator/swap (M11–14), clearing economics/cost/federation (M15–17). Fenrir remains conformance and external qualification; implement language capabilities, not an application-specific compiler. No design-adoption ambiguity overrides the direct user table.
+
+Useful subordinate gates are profile consistency, independent reference expectations, static all-actions compilation, signed statement completeness, normal primitive correspondence, single-stage effect correspondence, and lifecycle recovery. Security-related dependencies retain separate Opus ownership. They expose usable progress while their parent exits stay open (`ROADMAP.md:45–58`).
+
+Bound work to four parallel review streams: profiles/types/numerics; normal compiler/statement representation; public authoring/oracles; normal effects/history/recovery. Opus separately owns every security workstream and decision. Each returns the same predicate schema and concrete counterexamples. One integrator owns shared interfaces. Critical path is U0 contract → required U1 basis → U2 new programs/native/current-state evidence → U3 lifecycle; U4–U7 retain their dependencies. End each stream after one full initial pass plus one contradiction reconciliation. Planning is done when every retained predicate has an owner, evidence class, blocker and test specification; audit acceptance waits for actual required evidence.
+
+Minimal edits now: add a dated PR45–49 source-only capability observation to ROADMAP's existing inventory; append the profile/qualification matrix and predicate-level progress links; record the next missing semantic boundary. Refresh README's matching status paragraph. Preserve exits and historical failures. Defer milestone closure, percentages, broad sequence rewrites, new infrastructure and target-version assertions.
+
+Dissent: more examples are less valuable than correspondence/framing work if they reuse one expected-result implementation. Conversely, a correspondence argument without the public caller cannot qualify release. Unknowns include authoritative target tuple, source-profile convergence policy, account/time/history authentication, native resource envelope and full recovery implementation. Security review is entirely reserved to Opus. No tests, proofs, native queries, private artifacts or ledger actions occurred; no comprehensive audit, theorem, security certification, native feasibility, settlement, release or milestone completion is claimed.

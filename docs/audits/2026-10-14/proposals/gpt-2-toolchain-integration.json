@@ -1,0 +1,940 @@
+{
+  "model_requested": "GPT (parent-selected GPT brainstormer 2 of 5)",
+  "model_returned": "Inherited parent model; separate provider identity attestation not exposed",
+  "base_commit": "cb8280ef54082853dd8bb6c6a52050328d0fc6fa",
+  "specialty": "Nonsecurity toolchain/build/evidence integration",
+  "routing_notice": {
+    "security_owner": "Opus",
+    "latest_user_steering": "have opus do all the security work since gpt refuses",
+    "scope": "No threat model, vulnerability analysis, security verdict or attack proposal",
+    "superseded_historical_draft": "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/proposals/gpt-2-native-security.superseded.md",
+    "historical_draft_adopted": false
+  },
+  "recommendations": {
+    "recommended": "Profile-to-consumer integration audit with two new-program stage maps and a complete obligation register",
+    "alternatives": [
+      {
+        "approach": "Documentation and packaging first",
+        "tradeoff": "Fast developer clarity, incomplete end-to-end path may remain hidden"
+      },
+      {
+        "approach": "Clean-builder comparison first",
+        "tradeoff": "Dependency/reproduction evidence first, profile-to-native integration still needs separate mapping"
+      }
+    ],
+    "security_controls": "All security work and independent negative controls delegated to Opus; no control designs proposed here",
+    "critical_path": [
+      "Freeze profiles and retained obligation register",
+      "Map actual public consumers and outputs",
+      "Specify fresh and contrasting program complete stage records",
+      "Reconcile build and target inputs",
+      "Prepare separately authorized execution scope",
+      "Reconcile resulting receipts against unchanged exits"
+    ],
+    "safe_parallel": [
+      "Package/build inputs",
+      "Rust command map",
+      "Docs/profile reconciliation",
+      "Target-interface inventory",
+      "Library denominators"
+    ],
+    "done_criteria": [
+      "Every mapped edge has source citation/status or explicit unknown",
+      "No broader acceptance inferred from source/API presence",
+      "Bounded machine records retain all U/M/MC/SP/G exits",
+      "Native/ledger claims require separately authorized actual results",
+      "Security assessments reference Opus outputs"
+    ]
+  },
+  "outputs": {
+    "actual": [
+      "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/proposals/gpt-2-toolchain-integration.md",
+      "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/proposals/gpt-2-toolchain-integration.json"
+    ],
+    "proposed_human": [
+      "TOOLCHAIN-INTEGRATION.md",
+      "PUBLIC-COMMANDS.md",
+      "TWO-PROGRAMS.md",
+      "REPRODUCIBILITY.md",
+      "ROADMAP-DELTA.md"
+    ],
+    "proposed_machine": [
+      "profile-command-map.json",
+      "target-manifest.json",
+      "build-inputs.json",
+      "stage-evidence.jsonl",
+      "obligations.jsonl",
+      "roadmap-delta.json"
+    ],
+    "field_schemas": {
+      "profile_command": [
+        "profile",
+        "executable",
+        "command",
+        "source_header",
+        "parser",
+        "lowerer",
+        "output_schema",
+        "qualification",
+        "implementation_path",
+        "evidence_ids"
+      ],
+      "target_manifest": [
+        "source_commit",
+        "rust",
+        "edition",
+        "ledger_revision",
+        "compat_revision",
+        "zkir_version",
+        "instruction_surface",
+        "compiler_identity",
+        "verifier_identity",
+        "circuit_identity",
+        "network",
+        "anchor",
+        "operation_identity",
+        "status",
+        "unknown_reason"
+      ],
+      "build_record": [
+        "builder_id",
+        "os_arch",
+        "tool_versions",
+        "source_digest",
+        "lockfile_digest",
+        "dependency_inputs",
+        "command",
+        "cwd",
+        "exit_status",
+        "artifact_digests",
+        "comparison_scope"
+      ],
+      "stage_evidence": [
+        "program_id",
+        "profile",
+        "stage",
+        "input_ids",
+        "output_ids",
+        "claim_scope",
+        "status",
+        "source_citations",
+        "receipt_path",
+        "limits",
+        "unknowns"
+      ],
+      "obligation": [
+        "id",
+        "parent_ids",
+        "predicate",
+        "child_status",
+        "evidence_ids",
+        "dependency_owner",
+        "next_artifact"
+      ]
+    }
+  },
+  "findings": [
+    {
+      "id": "TI01",
+      "title": "Different public frontends",
+      "classification": "source-observation",
+      "claim": "Rust check selects Core for a language header and otherwise Beta; Rust compile consumes Core. Record profile per command.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/check.rs",
+          "line": 29
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/compile.rs",
+          "line": 18
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/core_io.rs",
+          "line": 240
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI02",
+      "title": "Two mori executables",
+      "classification": "source-observation",
+      "claim": "Node beta package declares a mori binary and Node >=24; Rust separately defines mori commands.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/package.json",
+          "line": 2
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/cli.rs",
+          "line": 104
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI03",
+      "title": "Native source dependency tuple",
+      "classification": "source-observation",
+      "claim": "Rust 1.99.0, edition 2024, ledger-v9 Git revision and separate compatibility patch are build inputs.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/rust-toolchain.toml",
+          "line": 1
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/Cargo.toml",
+          "line": 8
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/Cargo.toml",
+          "line": 23
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/Cargo.toml",
+          "line": 62
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI04",
+      "title": "Local target qualification",
+      "classification": "source-observation",
+      "claim": "ledger-9 example pins ZKIR 3.0.0-rc.2 but network local and Anchor local-unqualified; artifact size is not transaction size.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/toolchains/ledger-9.json",
+          "line": 1
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/docs/NATIVE-CORE.md",
+          "line": 43
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI05",
+      "title": "Node package reproduction inputs",
+      "classification": "source-observation",
+      "claim": "Node24 ESM bundles, generated declarations and prepack editor preparation belong in clean-builder coverage.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/build.mjs",
+          "line": 1
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/package.json",
+          "line": 27
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI06",
+      "title": "M10 interface status requires precise correction",
+      "classification": "source-observation",
+      "claim": "Rust simulate/test/verify-intent have command bodies; Rust LSP/MCP remain todo while Node documents separate servers.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/simulate.rs",
+          "line": 28
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/test.rs",
+          "line": 37
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/verify_intent.rs",
+          "line": 42
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/lsp.rs",
+          "line": 8
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/mcp.rs",
+          "line": 8
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/README.md",
+          "line": 63
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI07",
+      "title": "Source-static and installed-local evidence differ",
+      "classification": "source-observation",
+      "claim": "Static exports have explicit qualifications; installed-call guide retains native execution as unrun. Preparation reports application, fees and settlement unperformed.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori-ledger/src/static_compile.rs",
+          "line": 18
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/docs/NATIVE-CALL-PROVING.md",
+          "line": 48
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori-ledger/src/prepare.rs",
+          "line": 805
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI08",
+      "title": "Finite source coverage is scoped",
+      "classification": "source-observation",
+      "claim": "FeePool coverage describes 162 unique cases, 23 actions, bounded reports and exclusions from full M11/native qualification.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/examples/core/fee-pool/cases/COVERAGE.md",
+          "line": 3
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/examples/core/fee-pool/cases/COVERAGE.md",
+          "line": 11
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/examples/core/fee-pool/cases/COVERAGE.md",
+          "line": 13
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/examples/core/fee-pool/cases/COVERAGE.md",
+          "line": 46
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    },
+    {
+      "id": "TI09",
+      "title": "Retain original obligation denominators",
+      "classification": "source-observation",
+      "claim": "Traceability preserves all inherited requirements and detailed ACTUS/DeFi/composition scope.",
+      "source_citations": [
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/openspec/changes/consolidated-language-kernel/traceability.md",
+          "line": 3
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/openspec/changes/consolidated-language-kernel/traceability.md",
+          "line": 49
+        },
+        {
+          "path": "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/ROADMAP.md",
+          "line": 43
+        }
+      ],
+      "runtime_reproduced": false,
+      "security_judgment": null
+    }
+  ],
+  "roadmap_edits": {
+    "minimal_now": [
+      "Dated PR45-49 source observation with qualifications",
+      "Explicit executable/profile guidance",
+      "Precise M10 implementation status",
+      "Child capability status and external-dependency columns",
+      "Replace subjective percentages with predicate/profile denominators"
+    ],
+    "evidence_pending": [
+      "Qualified Fenrir tuple",
+      "Measured transaction/fraud/replay limits",
+      "Installed-call native results",
+      "Complete ledger/DUST outputs",
+      "Recursion/private-composition outputs",
+      "Independent release/reproduction"
+    ],
+    "obligation_status": [
+      {
+        "id": "U0",
+        "capability": "profile/target manifest",
+        "child_status": "source-inspected-partial",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U1",
+        "capability": "native interface/result availability",
+        "child_status": "source-inspected; current native results unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U2",
+        "capability": "complete public consumer output chain",
+        "child_status": "source-inspected-partial; ledger results unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U3",
+        "capability": "lifecycle/recovery outputs",
+        "child_status": "specified; local components mapped",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U4",
+        "capability": "history/private-composition interfaces",
+        "child_status": "specified; native evidence unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U5",
+        "capability": "service/federation adapters",
+        "child_status": "specified; local components mapped",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U6",
+        "capability": "financial family coverage",
+        "child_status": "finite FeePool source observed; full denominators open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "U7",
+        "capability": "independent installation/reproduction",
+        "child_status": "specified; no clean builders executed",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M1",
+        "controlling_user_requirement": "General source compile to ledger-9 ZKIR",
+        "child_status": "native Core compiler source inspected; generality evidence open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M2",
+        "controlling_user_requirement": "Pinned toolchain matching Fenrir ledger-9 and qualified devnet target",
+        "child_status": "local pins inspected; Fenrir configuration externally unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M3",
+        "controlling_user_requirement": "Prove/verify/deploy/call with complete effects",
+        "child_status": "interfaces mapped; current full native/ledger evidence unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M4",
+        "controlling_user_requirement": "DUST and Capacity Exchange sponsorship",
+        "child_status": "local sponsor source component mapped; native result unavailable",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M5",
+        "controlling_user_requirement": "64KB transaction, k<=19 fraud circuits, replay budget",
+        "child_status": "specified; artifact/JSON bounds must remain separate",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M6",
+        "controlling_user_requirement": "Deterministic semantics/reference step replay",
+        "child_status": "public source/reference interfaces mapped; conformance evidence scoped",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M7",
+        "controlling_user_requirement": "Signed intents bound networkID+Anchor",
+        "child_status": "interface fields mapped; security disposition delegated to Opus",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M8",
+        "controlling_user_requirement": "Audited in-circuit JubJub Schnorr/native primitive",
+        "child_status": "source presence mapped; security assessment exclusively Opus",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M9",
+        "controlling_user_requirement": "networkID+issuer+reference asset identity",
+        "child_status": "source representation present; security assessment exclusively Opus",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M10",
+        "controlling_user_requirement": "Working simulate/test/verify-intent",
+        "child_status": "Rust implementation bodies inspected; runtime not rerun; blanket all-stubs obsolete",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M11",
+        "controlling_user_requirement": "FeePool and CapacityExchange L2 contracts",
+        "child_status": "finite FeePool source observed; CapacityExchange/full conformance open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M12",
+        "controlling_user_requirement": "Every-block anchored MidnightExpressBusRegistry",
+        "child_status": "specified; target dependency separate",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M13",
+        "controlling_user_requirement": "Kernel coordinator pending/recovery/liability/scoped calls",
+        "child_status": "local components mapped; complete interface/result open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M14",
+        "controlling_user_requirement": "Single-domain swap fastpath in batch clear",
+        "child_status": "retain exact conformance exit; not established by this review",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M15",
+        "controlling_user_requirement": "Batch clearing/uniform price/solver/oracle/liquidation",
+        "child_status": "retain all language/family rows; full evidence open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M16",
+        "controlling_user_requirement": "Fee capability and cost-plane meter counters",
+        "child_status": "local source components mapped; complete qualification open",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "M17",
+        "controlling_user_requirement": "Federation policy naming Fenrir launch agents",
+        "child_status": "specified; external configuration separate from language implementation",
+        "parent_exit": "unchanged/open"
+      },
+      {
+        "id": "MC01",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC02",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC03",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC04",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC05",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC06",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC07",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "MC08",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP01",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP02",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP03",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP04",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP05",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP06",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP07",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP08",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP09",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP10",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP11",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "SP12",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G01",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G02",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G03",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G04",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G05",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G06",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G07",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G08",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G09",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G10",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G11",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G12",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G13",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G14",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G15",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G16",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G17",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G18",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G19",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G20",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G21",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G22",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G23",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      },
+      {
+        "id": "G24",
+        "child_status": "retained; not re-adjudicated in this integration proposal",
+        "parent_exit": "unchanged/open",
+        "security_predicates": "Opus owns assessment; retained intact"
+      }
+    ],
+    "preserved_denominators": {
+      "ACTUS_fixtures": 277,
+      "ACTUS_executable_types": 18,
+      "ACTUS_taxonomy_dispositions": 32,
+      "DS": "01-07",
+      "DeFi_original_rows": 72,
+      "DA": "01-24",
+      "composition_operators": 5,
+      "also_retained": [
+        "adopted supplementary cases",
+        "three held-outs",
+        "eight intent cases",
+        "eight regression classes",
+        "all EARS/positive/hostile acceptance requirements"
+      ]
+    }
+  },
+  "programs": [
+    {
+      "id": "fresh-A",
+      "description": "One-asset supplier payment, separate fee, persistent invoice duty",
+      "profile": "Rust native moriarty/1",
+      "status": "specified-only; no new program authored/executed"
+    },
+    {
+      "id": "contrast-B",
+      "description": "Two-asset staged escrow, condition, partial fulfillment, residual duty and reserved recovery work",
+      "constraint": "spend <=11 A including <=1 A fees, receive >=20 B on successful completion",
+      "status": "specified-only; unsupported profile/consumer edges must remain explicit"
+    }
+  ],
+  "walkthrough_stages": [
+    "source",
+    "Core",
+    "reference expected outputs",
+    "canonical intent",
+    "target manifest",
+    "ZKIR/artifact",
+    "proof",
+    "independent verification",
+    "clean package installation",
+    "on-ledger installation/deployment",
+    "call",
+    "complete effect/state readback",
+    "successor history",
+    "recovery"
+  ],
+  "build_manifest_observed": {
+    "rust": "1.99.0",
+    "edition": "2024",
+    "ledger_revision": "04c9c5d9bcebb8d4427d8589fb54d58a55599c14",
+    "compat_revision": "a01a1ea0270d2e8a1f9a58f0e3cf5ceb029283e1",
+    "zkir_version": "3.0.0-rc.2",
+    "node_requirement": ">=24",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "types_node": "26.6.3",
+    "example_network": "local",
+    "example_anchor": "local-unqualified",
+    "Fenrir_configuration": null,
+    "Fenrir_unknown_reason": "No Fenrir versioning system/configuration supplied; external qualification dependency, no implementation-failure inference"
+  },
+  "blockers": [
+    {
+      "dependency": "native/ledger execution",
+      "status": "not authorized; native authority zero",
+      "effect": "Specify required evidence only"
+    },
+    {
+      "dependency": "historical campaign admission",
+      "status": "blocked SP01.6, stale binding/candidate and missing accounting/resource/operational evidence",
+      "effect": "No old campaign resumed; source review independent"
+    },
+    {
+      "dependency": "Fenrir target configuration",
+      "status": "externally unavailable",
+      "effect": "Do not invent pins or misclassify as language implementation failure"
+    },
+    {
+      "dependency": "clean-builder/native reproducibility",
+      "status": "not executed",
+      "effect": "Document inputs and comparison scope only"
+    },
+    {
+      "dependency": "aggregate JSON report",
+      "status": "retained 1 MiB overflow",
+      "effect": "Bounded manifests; no evidence truncation"
+    },
+    {
+      "dependency": "large Quint sampling",
+      "status": "timeout remains unknown",
+      "effect": "No exhaustive evidence claim"
+    }
+  ],
+  "inspection_paths": [
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/REVIEW-BRIEF.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-evidence.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-frontend.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-libraries.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-native.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-requirements.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-verification.md",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/structural-graph/build-summary.json",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/structural-graph/coverage.json",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/AGENTS.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/Cargo.toml",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/ROADMAP.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori-ledger/src/prepare.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori-ledger/src/static_compile.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/cli.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/check.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/compile.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/core_io.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/lsp.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/mcp.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/simulate.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/test.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/crates/mori/src/commands/verify_intent.rs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/docs/NATIVE-CALL-PROVING.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/docs/NATIVE-CORE.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/examples/core/fee-pool/cases/COVERAGE.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/openspec/changes/consolidated-language-kernel/traceability.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/README.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/build.mjs",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/packages/moriarty-beta/package.json",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/plugins/moriarty-dev/skills/develop/SKILL.md",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/rust-toolchain.toml",
+    "/home/charl/Moriarty/.worktrees/mid-roadmap-20261014/toolchains/ledger-9.json"
+  ],
+  "not_claimed": [
+    "Completed product audit",
+    "Security analysis, verdict or approval",
+    "Native approval or native execution",
+    "Fresh builds/tests/compilation",
+    "Private/key/PK/SRS/cache/provider-log inspection",
+    "Qualified Fenrir configuration",
+    "Compiler correspondence theorem",
+    "Full grammar/native coverage",
+    "Ledger settlement or DUST qualification",
+    "Recursion/private-composition qualification",
+    "Release acceptance",
+    "Any goal or U/M/MC/SP/G milestone closure"
+  ],
+  "coverage_limits": {
+    "inventory_files": 30143,
+    "source_AST_files": 311,
+    "mori_inventory_only": 169,
+    "qnt_inventory_only": 36,
+    "inventory_completeness_is_not_audit_completeness": true
+  },
+  "dissent": [
+    "The manifest is an audit artifact, not a universal developer prerequisite",
+    "Unavailable target information must not stop independent source/build documentation work"
+  ],
+  "authority": {
+    "native": 0,
+    "read_only_public_source": true,
+    "tests_run": false,
+    "builds_run": false,
+    "peer_proposals_read": false,
+    "subagents_spawned": false,
+    "only_runtime_command": "Required guarded development-plugin status --json",
+    "pending_transactions": []
+  }
+}
