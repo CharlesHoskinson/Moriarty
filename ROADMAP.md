@@ -8,9 +8,41 @@ This is the **single delivery sequence**. P0–P7, C0–C4 and K0–K5 are retai
 
 Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifecycle-execution-2026-09-17/RESULT.md), and scoped Preview [loan](deliverables/preview-loan-2026-09-17/recovery-run01/RESULT.md) and [swap](deliverables/sp05-financial-integration-2026-09-09/preview-swap-exit-01/RESULT.md) results are foundations. The [whole-language audit](deliverables/whole-language-review-2026-09-19/REVIEW.md) identifies the missing integrated rich-source/intent/target path, recovery and lifetime-state issues. The [DeFiFormal study](deliverables/defiformal-study-2026-09-19/RESULT.md) supplies semantic reference contracts, not a deployed federation or transferable native proof.
 
-General source-to-ledger correspondence, mandatory native proof-carrying acceptance across the full supported language, recursive/private history, federated integrations and complete conformance remain open. All U milestones below are specified-only until their exact exits are demonstrated. Documentation and advisor agreement do not complete them.
+General source-to-ledger correspondence, mandatory native proof-carrying acceptance across the full supported language, recursive/private history, federated integrations and complete conformance remain open. All U milestone acceptance exits below remain open until their exact exits are demonstrated. Delivered child capabilities are reported separately; documentation and advisor agreement do not complete a parent exit.
 
-## Current delivery observation — 2026-10-11
+## Current delivery observation — 2026-10-14
+
+The [mid-roadmap review](docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) and
+[end-to-end audit plan](docs/audits/2026-10-14/AUDIT-PLAN.md) reconcile the merged
+language work with the retained exits. Six Luna mapping passes and five GPT plus
+five Opus independent proposals informed the review. Opus owns all security
+work. This is static reconnaissance and audit design, not a completed runtime
+audit or native qualification.
+
+| Delivered child capability | Current qualification | Remaining parent requirement |
+|---|---|---|
+| Core compile, simulate, manifest test, intent and reference replay | Supported Rust `moriarty/1` / `moriarty-core/1` local consumers | U0 semantic/target matrix and general U1/U2 correspondence |
+| All-action static call export and exact reopen (PR47/49) | Source-static; mapped-role mode explicitly unauthenticated, unproven and uninstalled | Native custody, proof, installation and complete target effects |
+| Local sponsorship/recovery holds and metered owner-intent consumers (PR46/48) | Bounded local accounting under supplied observations | Actual DUST/funding/finality and complete cost-plane qualification |
+| Finite FeePool source component (PR49) | Captured local/reference/static evidence for 23 actions and 162 financial cases | Full M11, Capacity Exchange, U6 and target-qualified execution |
+| Beta authoring/editor/MCP package | Separate Source/6 to experimental TypeScript Core/5 local preparation | Compile-capable independent developer release; Rust LSP/MCP remain stubs |
+
+The [M1–M17 crosswalk](openspec/changes/consolidated-language-kernel/traceability.md#fenrir-language-capability-crosswalk--2026-10-14)
+keeps the user's language requirements explicit. Preview and Fenrir evidence
+remain separately scoped; Fenrir network/Anchor, committee/registry identities
+and the qualified target tuple are not invented. The complete U0–U7 exits and
+all MC/SP/G, financial and composition obligations remain unchanged.
+
+Progress will use evidence-backed capability and predicate records rather than
+the earlier subjective completion percentages. The discovery package indexes
+69 top-level U/M/MC/SP/G IDs; atomic predicate coverage is still incomplete, so
+it supplies no whole-language completion score. Next reconcile source profiles,
+admitted grammar, numeric contracts and both lowering interfaces against
+independent financial/work expectations, while fixing local tooling/reporting
+gaps. The audit plan separates eligible ordinary work from the unchanged
+zero-native-execution boundary and missing external target facts.
+
+## Delivery observation — 2026-10-11 (retained)
 
 The [bounded integrated signed payment](deliverables/native-owner-intent-2026-10-11/RESULT.md)
 produced and independently verified a genuine local proof for the full original
