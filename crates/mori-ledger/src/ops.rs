@@ -331,6 +331,7 @@ fn lower_ops_inner(
             }
         };
         let mut names = std::collections::BTreeSet::new();
+        let mut duty_reads = Vec::new();
         if let Some(id) = expression {
             let mut visited = std::collections::BTreeSet::new();
             let mut pending = vec![id];
@@ -349,13 +350,13 @@ fn lower_ops_inner(
                         }
                     }
                     mori_core::Expr::Binary { lhs, rhs, .. } => {
-                        pending.push(*lhs);
                         pending.push(*rhs);
+                        pending.push(*lhs);
                     }
                     mori_core::Expr::Not { value } => pending.push(*value),
-                    mori_core::Expr::LiabilityPresent { .. }
-                    | mori_core::Expr::LiabilityAmount { .. } => {
-                        return Err(Error::new("source-profile", "unsupported-liability-read"));
+                    mori_core::Expr::LiabilityPresent { name }
+                    | mori_core::Expr::LiabilityAmount { name } => {
+                        duty_reads.push((id, name.clone()));
                     }
                     _ => {}
                 }
@@ -370,6 +371,37 @@ fn lower_ops_inner(
                     ),
                     Some(step.index),
                     "source-expression-prefix-state",
+                    Some(id),
+                );
+            }
+        }
+        // Match Compiler::statement: sorted state reads first, followed by
+        // eager left-to-right expression DFS, once per ExprId in this statement.
+        // Distinct leaves naming one duty still each observe its current cell.
+        for (id, name) in duty_reads {
+            if !pre.duties.contains_key(&name) {
+                return Err(Error::new("identity", "duty-binding"));
+            }
+            let k = layout::name_key("duty", &name);
+            let maps = if let Some(s) = signed {
+                crate::signed::nonce::root_maps(s, &out.expected_root)?
+            } else {
+                layout::root_maps(&out.expected_root)?
+            };
+            let observed = maps[1].get(&k).map(|v| layout::cell(&v)).transpose()?;
+            add(
+                &mut out,
+                membership(1, k.clone(), observed.is_some()),
+                Some(step.index),
+                "duty-membership",
+                Some(id),
+            );
+            if let Some(value) = observed {
+                add(
+                    &mut out,
+                    read_cell(1, k, value),
+                    Some(step.index),
+                    "duty-old-read",
                     Some(id),
                 );
             }

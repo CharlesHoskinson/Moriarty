@@ -126,14 +126,6 @@ pub fn templates_hash() -> String {
 }
 pub fn admit_source(p: &Program, d: &Deployment) -> Result<LedgerAbi> {
     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
-    if p.expressions.iter().any(|e| {
-        matches!(
-            e,
-            mori_core::Expr::LiabilityPresent { .. } | mori_core::Expr::LiabilityAmount { .. }
-        )
-    }) {
-        return Err(layout_error("unsupported-liability-read"));
-    }
     if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
         return Err(identity("toolchain-or-limits"));
     }
@@ -147,14 +139,6 @@ pub fn admit_source(p: &Program, d: &Deployment) -> Result<LedgerAbi> {
 }
 pub(crate) fn admit_bindings(p: &Program, d: &StaticBindings) -> Result<LedgerAbi> {
     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
-    if p.expressions.iter().any(|e| {
-        matches!(
-            e,
-            mori_core::Expr::LiabilityPresent { .. } | mori_core::Expr::LiabilityAmount { .. }
-        )
-    }) {
-        return Err(layout_error("unsupported-liability-read"));
-    }
     if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
         return Err(identity("toolchain-or-limits"));
     }
@@ -657,40 +641,4 @@ pub(crate) fn validate_static<'a>(
         bindings: d,
         abi,
     })
-}
-
-#[cfg(test)]
-mod duty_read_tests {
-    use super::*;
-    #[test]
-    fn ledger_call_admission_explicitly_refuses_duty_reads_before_native_work() {
-        let p = mori_core::parse(
-            r#"language "moriarty/1"; agreement Reads {
-            asset A = { network: "local", issuer: "i", reference: "A", scale: 0 };
-            action declare() { liability("d", A, "debtor", "creditor", 0); }
-            action run() { requires liability_present("d"); }
-        }"#,
-        )
-        .unwrap();
-        let d = StaticBindings {
-            abi: String::new(),
-            source_hash: String::new(),
-            program_hash: String::new(),
-            abi_hash: String::new(),
-            templates_hash: String::new(),
-            toolchain: Toolchain::pinned(),
-            limits: Limits::supported(),
-            network: String::new(),
-            anchor: String::new(),
-            address_hex: String::new(),
-            payer: String::new(),
-            assets: vec![],
-            roles: vec![],
-            duties: vec![],
-            economic_bounds: None,
-        };
-        let error = admit_bindings(&p, &d).unwrap_err();
-        assert_eq!(error.layer, "source-profile");
-        assert_eq!(error.code, "unsupported-liability-read");
-    }
 }
