@@ -248,6 +248,10 @@ impl Compiler<'_> {
             };
             self.b.op(op, member.clone(), &r, "duty-old-read")?;
         }
+        // Retain every observation as the current ordered snapshot. Repeated
+        // leaves must agree until a source duty write replaces this pair.
+        self.duties
+            .insert(name.to_owned(), (member.clone(), before.clone()));
         Ok((member, before))
     }
     fn duty(&mut self, name: &str, value: Operand, discharge: bool) -> Result<()> {
@@ -445,8 +449,19 @@ impl Compiler<'_> {
             .ok_or(refusal("expression-index"))?
             .clone()
         {
-            Expr::LiabilityPresent { .. } | Expr::LiabilityAmount { .. } => {
-                return Err(refusal("unsupported-liability-read"));
+            Expr::LiabilityPresent { name } => {
+                let (member, _) = self.observe_duty(&name)?;
+                Wire {
+                    val: member,
+                    ty: Type::Bool,
+                }
+            }
+            Expr::LiabilityAmount { name } => {
+                let (_, amount) = self.observe_duty(&name)?;
+                Wire {
+                    val: amount,
+                    ty: Type::UInt,
+                }
             }
             Expr::Literal { value } => Wire {
                 val: imm(match value {

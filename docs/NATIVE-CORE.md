@@ -415,5 +415,17 @@ with the updated state. `liability_present("name")` returns Bool, and
 `liability_amount("name")` returns UInt atomic units. These literal-name reads
 require a source-fixed identity and inspect the current statement snapshot.
 The ordinary relation compiler reuses its existing duty frame. The ledger-call
-compiler refuses these reads until it implements their correspondence. Local
-simulation and public-preimage checks do not authenticate the incoming duties.
+source compiler now lowers these leaves through membership and full duty-cell
+openings with source-fixed identity, Bool membership and UInt128 amount
+constraints. The operation producer orders reads before each statement effect;
+lets retain captured values and fresh statements observe the updated duty.
+Source compilation and operation construction do not authenticate an incoming
+predecessor or establish native proof or ledger acceptance. Native execution and
+constraint-level counterfeit rejection for these new consumers remain unperformed.
+
+The complete escrow example still exceeds the ledger-call one-public-payer
+profile: funding uses buyer and seller, and later actions pay from escrow.
+Admission checks every action, so selecting a later action does not remove this
+refusal. Supported single-payer source consumers can compile duty guards, amounts,
+state updates and events. Existing ABI, phase policy and resource limits remain
+in force; changed source/compiler/template commitments require fresh descriptors.
