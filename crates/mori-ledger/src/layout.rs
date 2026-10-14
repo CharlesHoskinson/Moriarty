@@ -348,6 +348,26 @@ pub(crate) fn admit_frame(
     state: NativeState,
     policy: OperationPolicy<'_>,
 ) -> Result<AdmittedFrame> {
+    admit_frame_inner(p, abi, d, f, state, policy, None)
+}
+pub(crate) fn admit_signed_frame(
+    s: &crate::signed::SignedStaticBindings,
+    abi: &LedgerAbi,
+    f: &FrameBindings,
+    state: NativeState,
+    policy: OperationPolicy<'_>,
+) -> Result<AdmittedFrame> {
+    admit_frame_inner(&s.program, abi, &s.bindings, f, state, policy, Some(s))
+}
+fn admit_frame_inner(
+    p: &Program,
+    abi: &LedgerAbi,
+    d: &StaticBindings,
+    f: &FrameBindings,
+    state: NativeState,
+    policy: OperationPolicy<'_>,
+    signed: Option<&crate::signed::SignedStaticBindings>,
+) -> Result<AdmittedFrame> {
     let policy_cap = match policy {
         OperationPolicy::Keyless => codec::OUTPUT_BYTES as u64,
         OperationPolicy::Installed { limits, .. } => limits.max_input_bytes,
@@ -414,7 +434,12 @@ pub(crate) fn admit_frame(
         .iter()
         .map(|d| (d.name.clone(), d.clone()))
         .collect();
-    let maps = root_maps(contract.data.get_ref())?;
+    let maps = if let Some(s) = signed {
+        crate::signed::nonce::validate_authority(s, contract.data.get_ref())?;
+        crate::signed::nonce::root_maps(s, contract.data.get_ref())?
+    } else {
+        root_maps(contract.data.get_ref())?
+    };
     if maps[0].size() != p.states.len() {
         return Err(identity("state-membership"));
     }

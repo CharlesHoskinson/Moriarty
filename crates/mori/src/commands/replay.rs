@@ -90,17 +90,34 @@ pub struct Args {
     /// Public sidecar to compare; never supplies trusted roots
     #[arg(long, value_name = "FILE")]
     pub record: PathBuf,
+    /// Export a bounded local first-divergence diagnostic to a new file
+    #[arg(long, value_name = "FILE")]
+    pub challenge_out: Option<PathBuf>,
     #[command(flatten)]
     pub authorization: AuthorizationArgs,
 }
 pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
-    let target = super::core_io::read_json(&args.target)?;
-    let authorization = args.authorization.load(&target)?;
-    let candidate = ReplayRecord::from_json(&super::core_io::read_source(&args.record)?)
-        .map_err(super::core_io::operation)?;
-    let source = super::core_io::read_source(&args.input.file)?;
-    let scenario = super::core_io::read_json(&args.input.scenario)?;
-    let result = mori_backend::replay::replay(
+    // File/schema/group errors have the same input classification as failed
+    // reconstruction. Neither case creates or publishes a challenge.
+    let inputs = (|| {
+        let target = super::core_io::read_json(&args.target)?;
+        let authorization = args.authorization.load(&target)?;
+        let candidate = ReplayRecord::from_json(&super::core_io::read_source(&args.record)?)
+            .map_err(super::core_io::operation)?;
+        let source = super::core_io::read_source(&args.input.file)?;
+        let scenario = super::core_io::read_json(&args.input.scenario)?;
+        Ok::<_, mori_diagnostics::Report>((target, authorization, candidate, source, scenario))
+    })();
+    let (target, authorization, candidate, source, scenario) = match inputs {
+        Ok(inputs) => inputs,
+        Err(error) => {
+            super::core_io::print(
+                &serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"input","detail":error.to_string()}}),
+            )?;
+            return Ok(ExitCode::FAILURE);
+        }
+    };
+    let result = mori_backend::replay::challenge(
         &source,
         &args.input.action,
         &scenario,
@@ -110,16 +127,39 @@ pub fn run(args: Args, _shell: &mut Shell) -> super::Result<ExitCode> {
     );
     let (report, status) = match result {
         // Successful full equality includes independently reconstructed record_hash.
-        Ok(()) => (
+        Ok(None) => (
             serde_json::json!({"status":"accepted","qualification":"local-reference-replay","record_hash":candidate.record_hash}),
             ExitCode::SUCCESS,
         ),
-        Err(ReplayError::Divergence(d)) => (
-            serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"divergence","step":d.step,"field":d.field}}),
-            ExitCode::FAILURE,
-        ),
+        Ok(Some(challenge)) => {
+            let d = &challenge.divergence;
+            if let Some(path) = &args.challenge_out {
+                let published = challenge
+                    .to_json()
+                    .map_err(super::core_io::operation)
+                    .and_then(|text| {
+                        super::proof_io::publish_new(path, format!("{text}\n").as_bytes())
+                    });
+                if let Err(error) = published {
+                    super::core_io::print(
+                        &serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"output","detail":error.to_string()},"divergence":d}),
+                    )?;
+                    return Ok(ExitCode::FAILURE);
+                }
+            }
+            (
+                serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"divergence","step":d.step,"field":d.field}}),
+                ExitCode::FAILURE,
+            )
+        }
         Err(ReplayError::Input(error)) => (
             serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"input","detail":error}}),
+            ExitCode::FAILURE,
+        ),
+        // challenge converts semantic divergence to a diagnostic. Preserve an
+        // explicit refusal if that API ever gains another divergence branch.
+        Err(ReplayError::Divergence(d)) => (
+            serde_json::json!({"status":"rejected","qualification":"local-reference-replay","error":{"kind":"divergence","step":d.step,"field":d.field}}),
             ExitCode::FAILURE,
         ),
     };

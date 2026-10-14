@@ -1,6 +1,6 @@
 //! Source-derived, name-unique duty identities for the fixed compiler profile.
 use crate::{Error, error};
-use mori_core::{AssetId, Program, Statement};
+use mori_core::{AssetId, Expr, Program, Statement};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -92,6 +92,16 @@ pub(crate) fn registry(program: &Program) -> Result<Vec<LiabilityIdentity>, Erro
                 return Err(error(
                     "unsupported",
                     format!("Discharge {name:?} has no source-derived liability identity."),
+                ));
+            }
+        }
+    }
+    for expression in &program.expressions {
+        if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expression {
+            if !entries.contains_key(name) {
+                return Err(error(
+                    "unsupported",
+                    format!("Liability read {name:?} has no source-derived identity."),
                 ));
             }
         }

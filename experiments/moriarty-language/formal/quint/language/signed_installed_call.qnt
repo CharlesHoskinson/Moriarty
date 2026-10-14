@@ -5,6 +5,20 @@
 // SDK commitment/PI/proof processing, public SRS and source-derived keygen.
 // Those results are explicit external observations, never model-produced proofs.
 module signed_installed_call {
+  // Consuming-v2 supplied-state component. Authentic current ledger acceptance
+  // remains external; adopting a supplied queried snapshot does not establish it.
+  type SignedVersion = LegacyV1 | ConsumingV2
+  type NoncePackage = {selectedAction: int, domain: int, predecessor: int, nonce: int, preCount: int, postCount: int, preMember: bool, postMember: bool}
+  type NonceState = {version: SignedVersion, domain: int, head: int, consumed: Set[int], packages: int -> NoncePackage, authenticAcceptance: bool}
+  pure val authorizationCapacity = 12153
+  pure def nonceInitial(v: SignedVersion): NonceState = {version:v,domain:1,head:41,consumed:Set(),packages:Map(),authenticAcceptance:false}
+  pure def noncePackage(a: NonceState,n: int): NoncePackage = {selectedAction:1,domain:a.domain,predecessor:a.head,nonce:n,preCount:a.consumed.size()+1,postCount:a.consumed.size()+2,preMember:a.consumed.contains(n),postMember:true}
+  pure def nonceCanPrepare(a: NonceState,n: int,budgets: bool): bool = a.version == ConsumingV2 and n >= 0 and n <= 340282366920938463463374607431768211455
+    and not(a.consumed.contains(n)) and a.consumed.size()+1 < authorizationCapacity and budgets
+  pure def nonceTranscriptOnCurrent(a: NonceState,p: NoncePackage): bool = p.domain == a.domain and p.predecessor == a.head
+    and p.preCount == a.consumed.size()+1 and p.postCount == p.preCount+1 and not(p.preMember) and p.postMember
+    and nonceCanPrepare(a,p.nonce,true)
+  pure def nonceAttachmentMatches(a: NonceState,p: NoncePackage): bool = p == {...noncePackage(a,p.nonce),selectedAction:p.selectedAction}
   type Phase = Idle | PublicMapCompared | SigningPrepared | Attached | NativeResultReported | ColdVerified | Refused
   type Case = A1 | A2 | Freeze | B1 | B2 | Reset
   type Source = Metered | Toggle
@@ -27,7 +41,7 @@ module signed_installed_call {
   // final PI, intent/output IDs, signature/proof or authorization-status fields.
   type SigningReadback = {projection: Projection, operations: List[int], events: List[(int,Value)],
     queryState: int, queryEffects: int, measuredReadGas: int, declaredGas: int, preservedFrame: List[int], prospectiveAmounts: List[int]}
-  type Payload = {context: Context, ir: int, request: Request, projection: Projection, wires: List[Value], readback: SigningReadback}
+  type Payload = {authorityVersion: SignedVersion, authority: NoncePackage, context: Context, ir: int, request: Request, projection: Projection, wires: List[Value], readback: SigningReadback}
   type Package = {payload: Payload, messageDomain: int, messageVersion: int}
   type Signature = {pk: int, r: int, response: int}
   type Attachment = {payload: Payload, signature: Signature}
@@ -47,7 +61,7 @@ module signed_installed_call {
   type Proof = {final: FinalReadback, operation: Key, attachment: Attachment, genuineV3: bool}
   type State = {phase: Phase, instance: Case, context: Context, request: Request, keys: KeyMap,
     package: Package, input: FullInput, proof: Proof, visited: Set[Phase], pkReads: int,
-    expansions: int, faults: Set[int], signatureChecks: Predicates, nativeResult: ExternalCheck}
+    expansions: int, faults: Set[int], signatureChecks: Predicates, nativeResult: ExternalCheck, nonce: NonceState}
   var state: State
   pure val uintMax = 340282366920938463463374607431768211455
   pure val policy: Policy = {owner: 1, beneficiary: 2, pk: 31}
@@ -94,7 +108,25 @@ module signed_installed_call {
     else if(e.kind == Emit) List(e.after) else List(UInt(e.amount))
   pure def endpointWires(c: Context,s: Snapshot): List[Value] = c.stateKeys.foldl(List(),(xs,i) => xs.append(s.values.get(i))).concat(c.dutyOrder.foldl(List(),(xs,i) => xs.concat(List(BoolValue(s.duties.get(i).present),UInt(s.duties.get(i).amount)))))
   pure def wires(c: Context,p: Projection): List[Value] = p.inputs.concat(endpointWires(c,p.pre)).concat(p.effects.foldl(List(),(xs,e) => xs.concat(effectWires(e)))).concat(endpointWires(c,p.post))
-  pure def package(c: Case,q: Request): Package = {payload:{context:context(c),ir:100 + actionId(c),request:q,projection:projection(c),wires:wires(context(c),projection(c)),readback:readback(c)},messageDomain:826494029,messageVersion:1}
+  pure def package(c: Case,q: Request): Package = {payload:{authorityVersion:LegacyV1,authority:{...noncePackage(nonceInitial(LegacyV1),q.nonce),selectedAction:actionId(c)},context:context(c),ir:100 + actionId(c),request:q,projection:projection(c),wires:wires(context(c),projection(c)),readback:readback(c)},messageDomain:826494029,messageVersion:1}
+  pure def contextFor(a: NonceState,c: Case): Context = if(a.version == LegacyV1) context(c) else {...context(c),storageAbi:2,signedAbi:3}
+  pure def keyMapFor(a: NonceState,c: Case): KeyMap = if(a.version == LegacyV1) keyMap(c) else keyMap(c).keys().mapBy(i => {...keyMap(c).get(i),ir:300+i,vk:400+i})
+  pure def authorityFor(a: NonceState,c: Case,q: Request): NoncePackage = {...noncePackage(a,q.nonce),selectedAction:actionId(c)}
+  pure def authorityWires(c: Context,p: Projection,a: NoncePackage): List[Value] = p.inputs.concat(endpointWires(c,p.pre))
+    .concat(List(UInt(a.preCount),BoolValue(a.preMember)))
+    .concat(p.effects.foldl(List(),(xs,e) => xs.concat(effectWires(e))))
+    .concat(endpointWires(c,p.post)).concat(List(UInt(a.postCount),BoolValue(a.postMember)))
+  pure def packageFor(a: NonceState,c: Case,q: Request): Package = if(a.version == LegacyV1) package(c,q) else {
+    val auth = authorityFor(a,c,q)
+    val ctx = contextFor(a,c)
+    {...package(c,q),payload:{...package(c,q).payload,authorityVersion:ConsumingV2,authority:auth,context:ctx,ir:300+actionId(c),wires:authorityWires(ctx,projection(c),auth)}}
+  }
+  pure def authorityBound(s: State,p: Package,q: Request): bool = if(s.nonce.version == LegacyV1) p.payload.authorityVersion == LegacyV1 else and {
+    p.payload.authorityVersion == ConsumingV2,s.nonce.domain == (if(source(s.instance) == Metered) 1 else 2),p.payload.authority == authorityFor(s.nonce,s.instance,q),
+    p.payload.context == contextFor(s.nonce,s.instance),p.payload.context.selectedAction == p.payload.authority.selectedAction,
+    q.predecessor == s.nonce.head,p.payload.request == q,nonceTranscriptOnCurrent(s.nonce,p.payload.authority),
+    p.payload.wires == authorityWires(p.payload.context,p.payload.projection,p.payload.authority),
+  }
   pure def signature(sigChoice: int): Signature = {pk:31,r:71 + sigChoice,response:81 + sigChoice}
   pure def attachment(p: Package,sigChoice: int): Attachment = {payload:p.payload,signature:signature(sigChoice)}
   pure def layout(c: Case): Layout = {typed:request(c).inputs.length() + 11 + 4 * context(c).assets.length(),flattened:request(c).inputs.length() + 13 + 4 * context(c).assets.length(),
@@ -106,17 +138,19 @@ module signed_installed_call {
       offers:p.payload.request.selectedSpends,ttl:p.payload.request.ttl,actions:List(p.payload.context.selectedAction),gas:95,version:3,
       outputIdentity:(96,comm),amounts:p.payload.readback.prospectiveAmounts}
   }
-  pure def proof(p: Package,i: FullInput): Proof = {final:finalReadback(p,i),operation:{ir:p.payload.ir,vk:200 + p.payload.context.selectedAction,policy:policy,signed:true},attachment:{payload:p.payload,signature:i.signature},genuineV3:true}
-  pure def initial(c: Case): State = {
-    val p = package(c,request(c))
+  pure def proof(p: Package,i: FullInput): Proof = {final:finalReadback(p,i),operation:{ir:p.payload.ir,vk:(if(p.payload.authorityVersion == ConsumingV2) 400 else 200) + p.payload.context.selectedAction,policy:policy,signed:true},attachment:{payload:p.payload,signature:i.signature},genuineV3:true}
+  pure def initialFor(a: NonceState,c: Case): State = {
+    val q = {...request(c),predecessor:a.head}
+    val p = packageFor(a,c,q)
     val i = input(p,signature(0),c)
-    {phase:Idle,instance:c,context:context(c),request:request(c),keys:Map(),package:p,input:i,proof:proof(p,i),visited:Set(Idle),pkReads:0,expansions:0,faults:Set(),signatureChecks:acceptedPredicates,nativeResult:ExternalRejected}
+    {phase:Idle,instance:c,context:contextFor(a,c),request:q,keys:Map(),package:p,input:i,proof:proof(p,i),visited:Set(Idle),pkReads:0,expansions:0,faults:Set(),signatureChecks:acceptedPredicates,nativeResult:ExternalRejected,nonce:a}
   }
+  pure def initial(c: Case): State = initialFor(nonceInitial(LegacyV1),c)
   pure def advance(s: State,p: Phase): State = {...s,phase:p,visited:s.visited.union(Set(p))}
   action init = state' = initial(A1)
-  pure def canCompare(s: State,c: Case,k: KeyMap,result: ExternalCheck): bool = s.phase == Idle and k == keyMap(c) and result == ExternalAccepted
+  pure def canCompare(s: State,c: Case,k: KeyMap,result: ExternalCheck): bool = s.phase == Idle and (s.nonce.version == LegacyV1 or source(c) == source(s.instance)) and k == keyMapFor(s.nonce,c) and result == ExternalAccepted
   action compare(c: Case,k: KeyMap,result: ExternalCheck): bool = all {
-    canCompare(state,c,k,result),state' = {...advance(initial(c),PublicMapCompared),keys:k}
+    canCompare(state,c,k,result),state' = {...advance(initialFor(state.nonce,c),PublicMapCompared),keys:k}
   }
   pure def valueUint(v: Value): bool = match v { | UInt(n) => uint(n) | BoolValue(_) => true }
   pure def staticAdmission(c: Context,payers: Set[int]): bool = and {
@@ -169,15 +203,15 @@ module signed_installed_call {
   pure def admittedRequest(c: Case,q: Request): bool = q.inputs == request(c).inputs and completeLimits(context(c),q.limits)
     and uint(q.nonce) and uint(q.start) and uint(q.end) and uint(q.at) and q.start <= q.at and q.at <= q.end
   pure def canPrepare(s: State,p: Package,q: Request,oPre: Observations,oPost: Observations,result: ExternalCheck): bool = and {
-    s.phase == PublicMapCompared,s.keys == keyMap(s.instance),staticAdmission(s.context,Set(1)),admittedRequest(s.instance,q),
-    p == package(s.instance,q),observed(s.context,p.payload.projection.pre,oPre),observed(s.context,p.payload.projection.post,oPost),result == ExternalAccepted,
+    s.phase == PublicMapCompared,s.keys == keyMapFor(s.nonce,s.instance),staticAdmission(s.context,Set(1)),admittedRequest(s.instance,q),
+    p == packageFor(s.nonce,s.instance,q),authorityBound(s,p,q),observed(s.context,p.payload.projection.pre,oPre),observed(s.context,p.payload.projection.post,oPost),result == ExternalAccepted,
   }
   action prepare(p: Package,q: Request,oPre: Observations,oPost: Observations,result: ExternalCheck): bool = all {
-    canPrepare(state,p,q,oPre,oPost,result),state' = {...advance(state,SigningPrepared),package:p,request:q}
+    canPrepare(state,p,q,oPre,oPost,result),state' = {...advance(state,SigningPrepared),package:p,request:q,nonce:if(state.nonce.version == ConsumingV2) {...state.nonce,packages:state.nonce.packages.put(q.nonce,p.payload.authority)} else state.nonce}
   }
   pure def allPredicates(p: Predicates): bool = p == acceptedPredicates
   pure def canAttach(s: State,a: Attachment,i: FullInput,p: Predicates): bool = and {
-    s.phase == SigningPrepared,a.payload == s.package.payload,a.signature.pk == s.context.policy.pk,
+    s.phase == SigningPrepared,authorityBound(s,s.package,s.request),a.payload == s.package.payload,a.signature.pk == s.context.policy.pk,
     i == input(s.package,a.signature,s.instance),allPredicates(p),economic(s.context,s.package.payload.projection,s.request.limits),
   }
   action attach(a: Attachment,i: FullInput,p: Predicates): bool = all {
@@ -185,14 +219,14 @@ module signed_installed_call {
   }
   // Consumes an EXTERNAL genuine result; no native prover executes in Quint.
   pure def canReportNative(s: State,candidate: Proof,result: ExternalCheck): bool = and {
-    s.phase == Attached,s.expansions == 0,candidate == proof(s.package,s.input),
+    s.phase == Attached,authorityBound(s,s.package,s.request),s.expansions == 0,candidate == proof(s.package,s.input),
     candidate.operation == s.keys.get(s.context.selectedAction),result == ExternalAccepted,
   }
   action reportNative(candidate: Proof,result: ExternalCheck): bool = all {
     canReportNative(state,candidate,result),state' = {...advance(state,NativeResultReported),proof:candidate,expansions:1,nativeResult:result}
   }
   pure def canColdVerify(s: State,p: Package,a: Attachment,k: KeyMap,candidate: Proof,pkReads: int,result: ExternalCheck): bool = and {
-    s.phase == NativeResultReported,pkReads == 0,k == keyMap(s.instance),p == package(s.instance,s.request),
+    s.phase == NativeResultReported,pkReads == 0,k == keyMapFor(s.nonce,s.instance),p == packageFor(s.nonce,s.instance,s.request),authorityBound(s,p,s.request),
     a.payload == p.payload,a.signature.pk == s.context.policy.pk,allPredicates(s.signatureChecks),
     candidate == proof(p,input(p,a.signature,s.instance)),candidate == s.proof,
     candidate.operation == k.get(s.context.selectedAction),result == ExternalAccepted,
@@ -201,7 +235,7 @@ module signed_installed_call {
     canColdVerify(state,p,a,k,candidate,pkReads,result),state' = {...advance(state,ColdVerified),pkReads:pkReads}
   }
   pure def distinguishingFault(s: State,f: int): bool = if(s.phase == Idle) f == 0 and
-    not(canCompare(s,s.instance,keyMap(s.instance).put(if(source(s.instance) == Metered) 2 else 4,{ir:999,vk:999,policy:policy,signed:true}),ExternalAccepted))
+    not(canCompare(s,s.instance,keyMapFor(s.nonce,s.instance).put(if(source(s.instance) == Metered) 2 else 4,{ir:999,vk:999,policy:policy,signed:true}),ExternalAccepted))
     else if(s.phase == PublicMapCompared) f == 1 and not(canPrepare(s,{...s.package,payload:{...s.package.payload,context:{...s.context,network:999}}},s.request,observations(pre(s.instance)),observations(post(s.instance)),ExternalAccepted))
     else if(s.phase == SigningPrepared) f == 2 and not(canAttach(s,attachment(s.package,0),{...input(s.package,signature(0),s.instance),layout:{...layout(s.instance),authImpacts:1}},acceptedPredicates))
     else if(s.phase == Attached) f == 3 and not(canReportNative(s,{...proof(s.package,s.input),genuineV3:false},ExternalAccepted))
@@ -215,13 +249,54 @@ module signed_installed_call {
     nondet faultChance = 0.to(9).oneOf()
     val a = attachment(state.package,sigChoice)
     any {
-      compare(c,keyMap(c),ExternalAccepted),
+      compare(c,keyMapFor(state.nonce,c),ExternalAccepted),
       prepare(state.package,state.request,observations(pre(state.instance)),observations(post(state.instance)),ExternalAccepted),
       attach(a,input(state.package,a.signature,state.instance),acceptedPredicates),reportNative(proof(state.package,state.input),ExternalAccepted),
       coldVerify(state.package,{payload:state.package.payload,signature:state.input.signature},state.keys,state.proof,0,ExternalAccepted),
       all {faultChance == 1,refuse(if(state.phase == Idle) 0 else if(state.phase == PublicMapCompared) 1 else if(state.phase == SigningPrepared) 2 else if(state.phase == Attached) 3 else 4)},
     }
   }
+  action initNonce = state' = initialFor(nonceInitial(ConsumingV2),A1)
+  action prepareNonceAction(c: Case,n: int,budgets: bool): bool = {
+    val base = initialFor(state.nonce,c)
+    val q = {...base.request,nonce:n}
+    val p = packageFor(state.nonce,c,q)
+    val compared = {...advance(base,PublicMapCompared),keys:keyMapFor(state.nonce,c)}
+    all {
+      source(c) == source(state.instance),nonceCanPrepare(state.nonce,n,budgets),
+      canPrepare(compared,p,q,observations(pre(c)),observations(post(c)),ExternalAccepted),
+      state' = {...advance(compared,SigningPrepared),package:p,request:q,
+        nonce:{...state.nonce,packages:state.nonce.packages.put(n,p.payload.authority)}}
+    }
+  }
+  action prepareNonce(n: int,budgets: bool): bool = prepareNonceAction(A1,n,budgets)
+  action refuseNonce(n: int,budgets: bool): bool = all {not(nonceCanPrepare(state.nonce,n,budgets)),state' = state}
+  // Explicit supplied-frame adoption; never a native proof or ledger apply.
+  action deriveNonceFrame(n: int): bool = {
+    val successor = {...state.nonce,head:state.nonce.head+1,consumed:state.nonce.consumed.union(Set(n))}
+    all {
+      state.nonce.packages.keys().contains(n),nonceTranscriptOnCurrent(state.nonce,state.nonce.packages.get(n)),
+      state' = initialFor(successor,state.instance)
+    }
+  }
+  // The existing compare/sign/attach/external-native/cold pipeline is sampled in v2.
+  action stepConsuming = {
+    nondet c = Set(A1,A2,Freeze).oneOf()
+    nondet n = 0.to(7).oneOf()
+    val base = initialFor(state.nonce,c)
+    val q = {...base.request,nonce:n}
+    any {
+      step,
+      all {canCompare(state,c,keyMapFor(state.nonce,c),ExternalAccepted),
+        state' = {...advance(base,PublicMapCompared),keys:keyMapFor(state.nonce,c),request:q,package:packageFor(state.nonce,c,q)}},
+      all {state.phase == ColdVerified,deriveNonceFrame(state.request.nonce)}
+    }
+  }
+  pure def nonceSafety(a: NonceState): bool = a.consumed.size()+1 <= authorizationCapacity and not(a.authenticAcceptance)
+    and a.packages.keys().forall(n => {
+      val p = a.packages.get(n)
+      p.nonce == n and p.postCount == p.preCount+1 and p.preCount < authorizationCapacity and not(p.preMember) and p.postMember
+    })
   val comparedWitness = state.visited.contains(PublicMapCompared)
   val preparedWitness = state.visited.contains(SigningPrepared)
   val attachedWitness = state.visited.contains(Attached)
@@ -231,10 +306,10 @@ module signed_installed_call {
   val alternateAttachmentWitness = coldVerifiedWitness and state.input.signature == signature(1)
   val freezeWitness = coldVerifiedWitness and state.instance == Freeze
   val stateOnlyWitness = coldVerifiedWitness and source(state.instance) == Toggle
-  val sourceMapInvariant = state.visited.contains(PublicMapCompared) implies state.keys == keyMap(state.instance)
-  val signingInvariant = state.visited.contains(SigningPrepared) implies state.package == package(state.instance,state.request)
+  val sourceMapInvariant = state.visited.contains(PublicMapCompared) implies state.keys == keyMapFor(state.nonce,state.instance)
+  val signingInvariant = state.visited.contains(SigningPrepared) implies state.package == packageFor(state.nonce,state.instance,state.request) and authorityBound(state,state.package,state.request)
   val sharedSemanticWires = state.visited.contains(Attached) implies and {
-    state.input.payload == state.package.payload,state.input.layout == layout(state.instance),state.package.payload.wires == wires(state.context,state.package.payload.projection),
+    state.input.payload == state.package.payload,state.input.layout == layout(state.instance),state.package.payload.wires == (if(state.nonce.version == LegacyV1) wires(state.context,state.package.payload.projection) else authorityWires(state.context,state.package.payload.projection,state.package.payload.authority)),
     economic(state.context,state.package.payload.projection,state.request.limits),allPredicates(state.signatureChecks),
   }
   val untouchedDutyPreservation = state.visited.contains(SigningPrepared) implies
@@ -244,5 +319,5 @@ module signed_installed_call {
     state.expansions == 1,state.proof == proof(state.package,state.input),state.nativeResult == ExternalAccepted,state.proof.final.pi.communication.input.signature == state.input.signature,
   }
   val publicOnlyColdVerification = coldVerifiedWitness implies state.pkReads == 0 and state.proof.operation == state.keys.get(state.context.selectedAction)
-  val safety = sourceMapInvariant and signingInvariant and sharedSemanticWires and untouchedDutyPreservation and attachmentSpecificFinal and publicOnlyColdVerification
+  val safety = nonceSafety(state.nonce) and sourceMapInvariant and signingInvariant and sharedSemanticWires and untouchedDutyPreservation and attachmentSpecificFinal and publicOnlyColdVerification
 }
