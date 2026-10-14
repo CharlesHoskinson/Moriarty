@@ -436,3 +436,35 @@ Admission checks every action, so selecting a later action does not remove this
 refusal. Supported single-payer source consumers can compile duty guards, amounts,
 state updates and events. Existing ABI, phase policy and resource limits remain
 in force; changed source/compiler/template commitments require fresh descriptors.
+
+## All-action public source-static export and inspection
+
+`mori compile-call FILE --all-actions --static-bindings FILE --authorization
+unsigned|signed-v2 --work-limits FILE --out NEW_DIR` compiles every admitted
+source action to tagged native-call ZKIR through the existing native relation
+compiler. `signed-v2` requires `--signer-policy FILE`; unsigned forbids it. There
+is no default authorization or signed-v1 fallback. The legacy selected-action
+`--action NAME --deployment FILE --out NEW_DIR` remains available.
+
+Replace `--out` with `--inspect-static BUNDLE_DIR` to reopen against independently
+supplied source, public bindings, authorization/policy and work limits. The
+reader bounds and hashes every fixed source/ordinal leaf, rejects extra names
+and symlinks, recompiles caller inputs, and compares complete exact bytes before
+canonical tagged decode. Success means `source-static-recompile-admitted`, with
+no installed or proving capability. See the [public examples](../examples/core/static-compile/README.md).
+
+The new profile rejects explicit null, unknown fields, duplicate decoded keys
+and trailing JSON; absent `economic_bounds` means None. Legacy serialization and
+relation-manifest bytes retain their existing rules. Explicit work limits /2
+count conservative max(raw, typed) input sizes, the limits text itself, all
+action groups/public fields, every leaf and the final marker/aggregate before
+output creation. The example's degree/SRS/key values of `1` are positive schema
+fillers, never measurements or native resource authority.
+
+Export reports `source-static-unproven-uninstalled`. Network, contract address
+and public mappings remain supplied local premises. Source/CLI closure changes
+invalidate historical exact signing contexts, IR, key identities and current
+audit applicability. This delivery opens, regenerates and qualifies no keys,
+parameters or SRS. M1/M2/U2, native soundness, full semantic correspondence,
+64 KiB transaction/k19 qualification, funding/state/history authentication, PCD
+and financial ledger settlement remain open.

@@ -1,0 +1,17 @@
+language "moriarty/1";
+agreement StaticFinancialDraft {
+  asset PAY = {network:"local", issuer:"independent-static", reference:"PAY", scale:0};
+  action accrue(amount: UInt) {
+    requires amount >= 3;
+    transfer(PAY,"alice","bob",amount);
+    transfer(PAY,"alice","bob",amount);
+    fee(PAY,"alice","treasury",2);
+    liability("obligation",PAY,"alice","bob",amount);
+    emit "accrued"(true);
+  }
+  action repay(amount: UInt) {
+    requires liability_present("obligation") and liability_amount("obligation") >= amount;
+    discharge("obligation",amount);
+    ensures liability_amount("obligation") >= 0;
+  }
+}
