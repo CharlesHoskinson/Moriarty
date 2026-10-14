@@ -1,0 +1,157 @@
+{
+  "agent": "/root/luna_graph_frontend",
+  "base_commit": "cb8280ef54082853dd8bb6c6a52050328d0fc6fa",
+  "purpose": "Correct profile labels in the prior Luna graph without modifying its original reports; separate the Rust source/Core path from the experimental TypeScript Source/6-to-Core/5 path.",
+  "corrections": [
+    {
+      "target": "node core5",
+      "previous_label": "Core/5 parser, validated IR, deterministic evaluator",
+      "corrected_label": "Rust Moriarty/1 parser, IR, validated deterministic local evaluator",
+      "profile": "language = moriarty/1; semantics = moriarty-core/1",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 4,
+          "claim": "Rust Core IR declares LANGUAGE as moriarty/1."
+        },
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 5,
+          "claim": "Rust Core IR declares SEMANTICS as moriarty-core/1."
+        }
+      ]
+    },
+    {
+      "target": "node core5_parser",
+      "previous_label": "Core/5 source parser",
+      "corrected_label": "Rust Moriarty/1 source parser",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/parser.rs",
+          "line": 1,
+          "claim": "Rust module implements bounded composable Moriarty source parser."
+        },
+        {
+          "path": "crates/mori-core/src/lib.rs",
+          "line": 13,
+          "claim": "Rust Core exports parser::parse."
+        }
+      ]
+    },
+    {
+      "target": "node core5_runtime",
+      "previous_label": "Core/5 validation, simulation and replay",
+      "corrected_label": "Rust moriarty-core/1 validation, simulation and replay",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 5,
+          "claim": "Rust runtime semantics identity is moriarty-core/1."
+        },
+        {
+          "path": "crates/mori-core/src/lib.rs",
+          "line": 15,
+          "claim": "Rust Core exports replay, simulate and validate."
+        }
+      ]
+    },
+    {
+      "target": "capability Rust Core/5 parse, validate, finite exact local execution and replay",
+      "previous_label": "Rust Core/5 parse, validate, finite exact local execution and replay",
+      "corrected_label": "Rust Moriarty/1 parse with moriarty-core/1 validation, finite exact local execution and replay",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 4,
+          "claim": "Rust source language identity is moriarty/1."
+        },
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 5,
+          "claim": "Rust semantics identity is moriarty-core/1."
+        }
+      ]
+    },
+    {
+      "target": "node source6_core",
+      "previous_label": "Source/6 local S0 unqualified preparation",
+      "corrected_label": "Experimental TypeScript Source/6 adapter to experimental TypeScript Core/5 local S0 preparation",
+      "citations": [
+        {
+          "path": "experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts",
+          "line": 3,
+          "claim": "This separate TypeScript module declares MIL4_S0_CORE as moriarty-core/5."
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts",
+          "line": 5,
+          "claim": "The TypeScript core module declares Source profile moriarty-financial-agreement-source/6."
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/mil4-s0-source-v6.ts",
+          "line": 1,
+          "claim": "Source/6 module describes its output as Core/5 local preparation and says it cannot admit ledger stage."
+        }
+      ]
+    },
+    {
+      "target": "node intent_core",
+      "previous_label": "Core/5 intent and effect checks",
+      "corrected_label": "Rust moriarty-core/1 intent and effect checks",
+      "correction_author": "root integration; nonsecurity profile identity",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 5,
+          "claim": "Rust semantics identity is moriarty-core/1."
+        }
+      ]
+    }
+  ],
+  "graph_boundary": [
+    {
+      "claim": "Rust `mori` compile/check/expand/simulate paths use the Rust mori-core parser/runtime; its language and semantics IDs are moriarty/1 and moriarty-core/1.",
+      "citations": [
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 4,
+          "claim": "Rust language identity."
+        },
+        {
+          "path": "crates/mori-core/src/ir.rs",
+          "line": 5,
+          "claim": "Rust semantics identity."
+        },
+        {
+          "path": "crates/mori/src/commands/core_io.rs",
+          "line": 242,
+          "claim": "Rust CLI program loader calls mori_core::parse."
+        }
+      ]
+    },
+    {
+      "claim": "Node Beta bridge separately imports experimental Source/6 frontend and local-preparation adapter, whose Core/5 identifier belongs to the TypeScript experiment.",
+      "citations": [
+        {
+          "path": "packages/moriarty-beta/src/bridge.ts",
+          "line": 5,
+          "claim": "Bridge imports experimental Source/6 parser/lowerer."
+        },
+        {
+          "path": "packages/moriarty-beta/src/bridge.ts",
+          "line": 6,
+          "claim": "Bridge imports experimental Source/6 local preparation adapter."
+        },
+        {
+          "path": "experiments/moriarty-language/src/successor/mil4-s0-core-v5.ts",
+          "line": 3,
+          "claim": "Experimental TypeScript Core/5 identity."
+        }
+      ]
+    }
+  ],
+  "unchanged_prior_reports": [
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-frontend.json",
+    "/home/charl/Moriarty/.moriarty-dev/runtime/mid-roadmap-20261014/luna-frontend.md"
+  ]
+}

@@ -148,3 +148,61 @@ All rows are required through UNI-017 and their ZR clauses; status is specified-
 | MNR06 | ZR01/05/08/15/16 | U1/U4/U5/U7 | UNI-017 | specified-only |
 | MNR07 | ZR08/09/12/13 | U1/U4 | UNI-017 | specified-only |
 | MNR08 | ZR01/06/14/16 | U0/U1/U4/U7 | UNI-017 | specified-only |
+
+## Fenrir language capability crosswalk — 2026-10-14
+
+Authority: the user's direct M1–M17 request, preserved in [the audit routing
+assignment](../../../raw/assignments/moriarty-mid-roadmap-audit-2026-10-14.md).
+These are language-capability/conformance obligations, not a request to replace
+the language with Fenrir applications. The October 10 design is supporting
+context; the direct user request needs no repeated adoption vote.
+
+Every full M exit remains open. The local observations below preserve partial
+progress without transferring evidence between profiles, trees or targets.
+MC02's Preview evidence and M3's Fenrir-devnet evidence remain separately
+qualified. Missing external target facts do not block independent language work.
+Opus owns all security analysis and judgments for this review. See the
+[mid-roadmap review](../../../docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) for
+source/evidence distinctions, disagreements and the remaining audit.
+
+| Requirement | U owner | Gate / retained L rows | Required capability | Current child observation; full acceptance open |
+|---|---|---|---|---|
+| M1 | U2 | MC01, MC04 | General source → ledger-9 ZKIR | Bounded compile and static export exist; grammar/correspondence and native target qualification open |
+| M2 | U0, U2 | MC04 | Pinned toolchain and qualified Fenrir devnet | Source dependency pins exist; matching deployed tuple/configuration unestablished |
+| M3 | U2 | MC02, MC04 | Prove, verify, deploy/call; complete effects | Narrow local APIs/receipts retain their scope; complete Fenrir chain open |
+| M4 | U2 | MC02 | DUST and Capacity Exchange sponsorship | Local sponsor accounting precursor; actual DUST and exchange settlement open |
+| M5 | U1 | MC04 | 64 KB transaction; fraud k ≤ 19; replay budget | Target resource enforcement/certification open; source/static limits are distinct |
+| M6 | U0, U2 | MC04 | Deterministic semantics and step replay | Reference replay exists; full semantic and fraud-game correspondence open |
+| M7 | U1, U2 | MC05 | Signed intents bound to network ID and Anchor | Local domain/context paths exist; authentic target binding open; Opus security review |
+| M8 | U1 | MC05 | Audited in-circuit JubJub Schnorr primitive/splice | Scoped source/native precursors; required audit/correspondence open and Opus-owned |
+| M9 | U2 | MC05; L3 | Asset identity: network, issuer, reference | Core identity fields exist; complete target binding/readback open |
+| M10 | U2, U7 | MC08 | Working simulate, test and verify-intent | Supported local command consumers exist; complete developer/release qualification open |
+| M11 | U2, U3 | MC04, MC05; L7, L8 | FeePool and Capacity Exchange L2 contracts | Finite FeePool local/static component delivered; full exchange/target contract open |
+| M12 | U2 | MC01, MC04 | Every-block-anchored Midnight Express Bus Registry | Required language/interface and authoritative anchoring evidence open |
+| M13 | U3 | MC05, MC06; L1, L2, L4, L5 | Pending state, recovery, liability caps and scoped calls | Local lifecycle/policy/duty precursors; full authenticated coordinator behavior open |
+| M14 | U2, U3 | MC05 | Single-domain swap fast path in batch clear | Bounded batch/source examples; complete path/conformance open |
+| M15 | U6 | MC07 | Batch clearing, uniform price, solver bounds, oracle, liquidation | Partial examples; all retained modules and full conformance open |
+| M16 | U5 | MC07; L7, L8 | Fee capability and kernel cost-plane meters | Local metering/policy precursors; complete cost-plane capability open |
+| M17 | U5 | MC07 | Federation policy naming the Fenrir committee for clearing, proving and relaying | Local policy precursors; actual committee identity and qualified services open |
+
+### Retained L-row ownership
+
+This adds scheduling references only; each original L predicate and all linked
+MC requirements remain in force. L6 remains retained even though the supplied
+launch table does not name it.
+
+| L row | Required behavior | U owner |
+|---|---|---|
+| L1 | Composition rule joining expression Core to financial objects | U0, U2, U3 |
+| L2 | Domain-qualified callee and signed per-call cap | U2, U3 |
+| L3 | Domain-qualified asset identity | U0, U2 |
+| L4 | Pending head, deadline and bounded recovery | U3 |
+| L5 | Signed liability cap | U2, U3 |
+| L6 | Fan-in above one against a retained benchmark | U4 |
+| L7 | Fee capability type | U3, U5 |
+| L8 | Separate meter-counter family, with no netting against existing counters | U3, U5 |
+
+The [original L rows](../../../docs/superpowers/specs/2026-09-11-defi-kernel-multichain-design.md)
+and complete U/MC/SP/G, ZR/MNR/MPLR/UNI/MOR/AEO, ACTUS/DeFi and composition
+requirements are preserved. The discovery ID index is not the atomic predicate
+denominator and cannot supply a V1 percentage.
