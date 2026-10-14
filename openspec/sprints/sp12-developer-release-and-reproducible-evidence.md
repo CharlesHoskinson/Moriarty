@@ -86,7 +86,7 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 
 ## Current task interpretation — 2026-10-14
 
-Rust simulate/test/intent/reference replay are implemented local consumers; Rust LSP and MCP remain explicit stubs. The Node beta editor/MCP package follows a separate Source/6/experimental TypeScript Core/5 local path. Document executable resolution and the actual compile boundary. The retained aggregate 1 MiB test-report overflow is an engineering gap, not a native blocker. Independent clean installation, compile/target journey, two-builder reproduction and all G01–G24 obligations remain open. No SP12 task is newly complete.
+Rust simulate/test/intent/reference replay are implemented local consumers; Rust LSP and MCP remain stubs that panic through `todo!` (source reading at `cb8280ef`, SEC-19; OSR-1014-14 requires an explicit unsupported status). The Node beta editor/MCP package follows a separate Source/6/experimental TypeScript Core/5 local path. Document executable resolution and the actual compile boundary. The retained aggregate 1 MiB test-report overflow is an engineering gap, not a native blocker. Independent clean installation, compile/target journey, two-builder reproduction and all G01–G24 obligations remain open. No SP12 task is newly complete.
 
 See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
 

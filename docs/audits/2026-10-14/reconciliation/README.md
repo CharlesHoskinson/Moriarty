@@ -57,15 +57,45 @@ The actual plugin status path also reproduced a strict-loader rejection of an
 added guidance field. The machine registers were restored instead of changing
 runtime admission. Historical status blockers remain; they were not waived.
 A root insertion produced one trailing empty line; its failed receipt and repair
-are retained. Product/runtime tests and native operations were not run.
+are retained. Language-product tests and native operations were not run. Opus separately records the plugin runtime verification below.
 
 [Opus source authoring](OPUS-SECURITY-REQUIREMENTS.md) supplies the exact security
 addendum and three maintained-family paragraphs. Its first-pass coverage limits
-are explicit. A separate Opus coverage continuation addresses the public handoffs;
-final independent reviews are retained alongside their frozen candidate identities.
+are explicit. The [Opus coverage continuation](OPUS-SECURITY-COVERAGE.md) inspected all
+64 handed-off OpenSpec entries and the wiki handoff
+(34 authored paths plus eight exact-claim locations). It does not approve its own
+requirements. Its per-file limits and corrections supersede the first pass
+where explicitly stated; the first public output remains unchanged.
+Independent review of candidate `f14df735` produced
+[Muse nonsecurity approval](MUSE-NONSECURITY-REVIEW-R2.md) and an
+[Opus security request for changes](OPUS-INDEPENDENT-REVIEW.md).
+The latter found an installed/repository plugin-runtime divergence. Opus owns
+the source reconciliation and all security corrections before fresh reviews.
 This dossier does not claim a full end-to-end language or security audit.
 The prior [runtime audit plan](../AUDIT-PLAN.md) remains owed.
 
-The install receipt is retained separately after the reviewed plugin is published
-and refreshed through the standard host CLI. Updating guidance does not establish
-host hook interception or target qualification.
+Installation remains pending independent review of the reconciled package. The
+existing source installer must preserve active cached runtimes; bare replacement
+from the older repository runtime is superseded by the Opus review. The
+[public plugin inventory](plugin-pre-reconciliation-inventory.json) records that
+the current mutable source and installed source files match. The original
+`plugin-audit.*` files describe the earlier guidance-only candidate; they do not
+approve the later runtime reconciliation. Installation evidence will record its
+actual reviewed source and result. No hook interception or target qualification
+is inferred from package refresh.
+
+> **Plugin runtime scope (corrected 2026-10-14).** The plugin change is no longer guidance-only. Opus reconciled the hardened runtime already deployed from the personal source as `0.1.0+codex.20260912173932` into the canonical `plugins/moriarty-dev/`. This adds the pinned `python3 -I` hook bootstrap (runtime digest `0b40d8c3…`), the `bootstrap`, `hook_protocol`, `compatibility` and `deployment` modules, the hardened `hook`, `cli` and `store` modules, `COMPATIBILITY.md`, and the compatibility and upgrade tests. Runtime Python files and `hooks/hooks.json` are byte-identical to the deployed source. Manifest 0.1.1 and the current guidance are kept, and a new read-only test requires registrations to match the generated pin. Opus's receipts, exclusions and finding dispositions are in [OPUS-PLUGIN-RECONCILIATION.md](OPUS-PLUGIN-RECONCILIATION.md). Installation is pending an independent review of this candidate and must use the source `deployment.py install` path, not a bare `codex plugin add`. Host hook interception remains unverified, native authority remains zero, and no product or milestone acceptance follows.
+
+## Integrated source identities
+
+For the integrated candidate, use [integrated-source-manifest.json](integrated-source-manifest.json),
+[final-verification.json](final-verification.json) and
+[final-navigation.json](final-navigation.json). The source projection excludes
+only append-only reconciliation receipts to avoid self-reference; it does not
+establish semantic or security acceptance. All 686 checked maintained navigation
+targets resolve. The original `source-navigation.json` remains an earlier
+`b585967f` receipt. Earlier author manifests, including the pre-integration runtime
+copy of `wiki-audit.json`, retain their original review scopes; the integrated
+manifest records current source bytes. The plugin source manifest is the exact
+37-file Opus manifest, verified separately. No frozen provider result is relabelled
+as a review of later bytes.

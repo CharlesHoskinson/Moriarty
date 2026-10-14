@@ -25,7 +25,7 @@ Report implementation, evidence and acceptance separately. Local/static child ca
 3. **Review Validation and Ingestion**:
    - Strictly validates review receipts against registered candidate hash, campaign scope, and independent non-author reviewer identity before mutating operational state.
    - Rejects receipts for unrelated candidate or scope with exit code 3.
-   - Only authentic independent reviews (`verdict == "APPROVED"`) can clear active blockers; author `defect_resolved` entries cannot erase unresolved findings.
+   - Only authentic independent reviews (`verdict == "APPROVED"`) with explicit `resolvedFindings` IDs (legacy alias `resolved`) can clear those named blockers; missing or empty lists clear nothing and malformed lists are rejected; author `defect_resolved` entries cannot erase unresolved findings.
 4. **History Integrity and Admin Accounting**:
    - Corrupt or unverified empty operational history remains explicitly unknown (`None`), preventing crashes and preventing false assertion of clean operational zeros.
    - Admin intervals are union-merged, excluding `test`, `testing`, `afk`, and `idle` durations.
@@ -41,7 +41,7 @@ Report implementation, evidence and acceptance separately. Local/static child ca
 - **Charging**: The existing budget runner records the full debit before invoking the CLI. The debit must bind `actionId`, `candidateHash` and the canonical runner-plan SHA-256 (`runnerDigest`). The plugin consumes that charge once in the shared operational store and never charges or refunds the budget. An already charged verification does not require a second allocation. Existing worker-dispatch caps still apply.
 - **Behavioral evidence**: An admitted reproducer declares a nonempty assertion ID, a distinct defect exit code and expected stdout digest. Its reviewed source must emit that result only after evaluating the specified behavior. The parent records observed output and process status; child JSON cannot supply charge or completion authority. This contract is not a formal proof or a product acceptance verdict.
 - **Recovery**: Unresolved supervisor completion leaves the reservation and charge claimed. Parent death does not establish child termination. Output is bounded during collection; overflow fails the action. Automatic reconciliation of ambiguous runs is not implemented.
-- **Coverage**: Direct invocation via the CLI wrapper is guaranteed. Host hook interception depends on host trust and active hook execution; `doctor` reports unverified coverage and never infers interception from source or registration files. Supported hook adapters recognize shell action IDs and exact registered argv; arbitrary shell encodings, code-mode composition and native delegation remain outside that recognition guarantee.
+- **Coverage**: Direct invocation via the CLI wrapper is guaranteed. Host hook interception depends on host trust and active hook execution; `doctor` reports unverified coverage and never infers interception from source or registration files. Supported hook adapters recognize simple Python CLI `run --action` forms and exact registered argv; arbitrary shell encodings, code-mode composition and native delegation remain outside that recognition guarantee.
 - **Security Boundary**: The plugin does not protect against an adversarial agent rewriting local files or bypassing the CLI. It guards the standard agent workflow against accidental loop recurrence.
 - **Historical campaign compatibility**: The reader validates the closed bounded-K observation family (`admission`, `result`, and nonnegative integer `consumed` compile/krun counters) for its three recorded failed/pending-review statuses. Provenance paths must be present and contained. These retained observations grant no dispatch authority or budget credit; current bindings, candidates, accounting and operational history still need their independent checks. Malformed observations and unknown fields remain fail-closed.
 
@@ -75,7 +75,13 @@ python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor --json
 
 Delivery and chain status are separate: a later confirmation requires another notification. Unavailable host records leave delivery pending. The adapter supports the locally inspected Codex session format; it proves local host emission, not human receipt or network finality. Local same-user tampering remains outside this plugin's security boundary.
 
+## Compatibility and upgrades
+
+See [the compatibility contract](COMPATIBILITY.md) for the support matrix and upgrade procedure. New hook registrations embed their bootstrap and pin a runtime retained outside Codex's disposable cache. The source `deployment.py install` command snapshots and restores legacy cache files within the same invocation, before PostToolUse runs. Old sessions still need their exact retained packages. Missing runtime diagnostics report degraded interception; they never establish coverage. `doctor --expected-plugin-root PATH --json` checks a known session reference and reports runtime pins without changing installation or trust.
+
 ## Host adapter
+
+Normal Stop returns `{}`. Permitted PreToolUse calls omit the permission decision; explicit denials remain intact. Malformed input receives bounded diagnostic JSON. Only supported CLI `run` invocations and exact registered raw argv are treated as dispatches, so searches and review commands may mention action IDs.
 
 The wire adapter uses `hook_event_name`, `tool_name` and `tool_input` (with legacy aliases), and emits `additionalContext` for session/post-tool reminders. Output stays valid JSON within 2 KiB. Stop hooks never request continuation. Hook failures produce a diagnostic; the CLI is the independent launch gate. File edits are not interpreted as shell dispatches.
 
@@ -83,21 +89,23 @@ The [official Codex hooks reference](https://developers.openai.com/codex/hooks) 
 
 ## Validation and installation
 
-Run the read-only guidance contracts from the checkout root:
+Run the read-only guidance and registration contracts from the checkout root:
 
 ```bash
 python3 -m unittest discover -s plugins/moriarty-dev/tests -p test_guidance.py -v
+python3 -m unittest discover -s plugins/moriarty-dev/tests -p test_registration_pin.py -v
 ```
 
-These checks cover explicit task precedence, current nonsecurity routing, profile/evidence qualification, links and manifest metadata. They are not agent-compliance trials or product acceptance. Existing admission/security/notification-auth tests remain under Opus ownership; inspect side effects and obtain their applicable execution authority before selecting any additional suite. No native checks are implied.
+The guidance checks cover explicit task precedence, current nonsecurity routing, profile/evidence qualification, links and manifest metadata. They are not agent-compliance trials or product acceptance. The registration check fails when `hooks/hooks.json` differs from the registration generated for the current runtime digest. Regenerate it with `deployment.py prepare` after any runtime Python change; never hand-edit a pin.
+
+The self-contained `test_compatibility.py` and `test_upgrade.py` suites run from any copied plugin root with temporary stores, cache roots, runtime homes and a stub installer ([compatibility tests](COMPATIBILITY.md#tests-from-source-and-from-a-cache)). Existing admission/security/notification-auth suites remain under Opus ownership. Inspect side effects before selecting any of them and run them with a temporary `HOME`. Three are not ordinary checks and need their own execution authority: `test_runner.py` starts the external Foreman launcher, `test_regressions.py` `test_reproducer_demonstrates_defect` imports a Midnight local ledger driver, and `test_records.py` `test_actual_master_family_admits_review` reads live budget/ledger state. No native checks are implied.
 
 The canonical maintained package is `plugins/moriarty-dev/` in the reviewed repository checkout. Installed caches are snapshots: never patch them directly. Inspect `codex plugin marketplace list --json` and `codex plugin list --marketplace personal --json` to locate the configured source and installed version. For the inspected local personal marketplace, the catalog is `/home/charl/.agents/plugins/marketplace.json` and its mutable source is `/home/charl/plugins/moriarty-dev`; it is separate from the repository.
 
-After the reviewed change is integrated, synchronize that canonical package into the configured mutable local source and verify package file digests against the reviewed candidate. Then use the host installer:
+Version 0.1.1 retains the hardened runtime first deployed as `0.1.0+codex.20260912173932`: the pinned isolated bootstrap, bounded hook protocol, explicit finding resolution and cache-retaining upgrade utility. Upgrade through the [compatibility procedure](COMPATIBILITY.md#upgrade-without-breaking-an-active-session), not a bare `codex plugin add`. A bare re-add skips cache snapshots that active sessions still need, and an older unpinned package would drop the runtime controls above.
 
-```bash
-codex plugin add moriarty-dev@personal --json
-codex plugin list --marketplace personal --json
-```
+1. Back up the configured mutable source. Synchronize this reviewed package into it and verify every file digest against the reviewed candidate.
+2. Run `deployment.py prepare --plugin SOURCE`. It must leave `hooks/hooks.json` byte-identical and report the reviewed runtime digest; any change means the bytes differ from review, so stop.
+3. Run the source `deployment.py install --plugin SOURCE --marketplace personal`. It confirms the local marketplace mapping, snapshots every retained Moriarty cache root, invokes `codex plugin add` and restores retained files before returning. Its receipt remains under `~/.local/share/moriarty-dev/backups/`.
 
-The inspected CLI uses `plugin add`, not `plugin install`. `plugin marketplace upgrade` refreshes Git marketplace snapshots and does not publish a changed local source. Reopen a fresh context, load the refreshed skill, and compare the installed manifest/skill bytes with the reviewed source. If re-add does not refresh this host's installed version, report its exact result before choosing a host-supported recovery; do not silently edit cache contents or claim success. Installation does not establish hook trust: keep `doctor` coverage unverified until actual host interception has been observed. Repository links in a cache resolve through the active checkout paths described in the execution reference.
+The inspected CLI uses `plugin add`, not `plugin install`. `plugin marketplace upgrade` refreshes Git marketplace snapshots and does not publish a changed local source. Reopen a fresh context, load the refreshed skill, and compare the installed manifest/skill bytes with the reviewed source. If the receipt reports `installedVerified: false` or a restoration conflict, report it exactly before choosing a host-supported recovery; do not silently edit cache contents or claim success. Installation does not establish hook trust: keep `doctor` coverage unverified until actual host interception has been observed. Repository links in a cache resolve through the active checkout paths described in the execution reference.

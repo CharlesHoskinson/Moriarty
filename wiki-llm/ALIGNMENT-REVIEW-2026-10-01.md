@@ -29,8 +29,7 @@ recursive/private history, full ACTUS/DeFi and release exits remain open.
 Preview and Fenrir evidence retain separate targets. Unknown Fenrir network,
 Anchor and committee/registry facts stay unknown. Current security analysis and
 dispositions are [Opus-owned](../docs/audits/2026-10-14/SECURITY-ROUTING.md);
-the historical security passages below are preserved verbatim, without a new
-security verdict. See the [research crosswalk](RECONCILIATION-2026-10-14.md)
+Opus dispositions of the historical security passages below are in the [security currentness guide](SECURITY-CURRENTNESS-2026-10-14.md#statements-to-read-as-historical); the passages themselves are preserved verbatim. See the [research crosswalk](RECONCILIATION-2026-10-14.md)
 for the current profile and evidence navigation.
 
 ## Historical October 1 review — original text
