@@ -1,0 +1,67 @@
+// Independent smaller four-action financial consumer, not a second full FeePool.
+// Fixed 99-unit capital, distinct exact asset, actors, state names and claim order.
+language "moriarty/1";
+agreement IndependentFeeSplit {
+  asset ALT = { network: "local", issuer: "independent-fee-source", reference: "ALT", scale: 0 };
+  state capital: UInt = 0;
+  state secondAmount: UInt = 0;
+  state firstAmount: UInt = 0;
+  state reserve: UInt = 0;
+  state funded: Bool = false;
+  state splitDone: Bool = false;
+  state secondClaimed: Bool = false;
+  state firstClaimed: Bool = false;
+
+  action deposit(grossAmount: UInt) {
+    requires grossAmount == 99;
+    requires capital == 0 and secondAmount == 0 and firstAmount == 0 and reserve == 0;
+    requires not funded and not splitDone and not secondClaimed and not firstClaimed;
+    requires not liability_present("second_due") and not liability_present("first_due");
+    transfer(ALT, "capital-source", "alternate-pool", grossAmount);
+    next capital = grossAmount;
+    next funded = true;
+  }
+
+  action split(operatorQ: UInt, operatorR: UInt, daQ: UInt, daR: UInt, watcherQ: UInt, watcherR: UInt, l2Q: UInt, l2R: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires capital < exclusiveU64 and secondAmount < exclusiveU64 and firstAmount < exclusiveU64 and reserve < exclusiveU64;
+    requires operatorQ < exclusiveU64 and operatorR < 100 and daQ < exclusiveU64 and daR < 100;
+    requires watcherQ < exclusiveU64 and watcherR < 100 and l2Q < exclusiveU64 and l2R < 100;
+    requires funded and not splitDone and not secondClaimed and not firstClaimed;
+    requires capital == 99 and secondAmount == 0 and firstAmount == 0 and reserve == 0;
+    requires not liability_present("second_due") and not liability_present("first_due");
+    requires operatorQ * 100 + operatorR == capital * 55;
+    requires daQ * 100 + daR == capital * 10;
+    requires watcherQ * 100 + watcherR == capital * 5;
+    requires l2Q * 100 + l2R == capital * 15;
+    let originalFloors = operatorQ + daQ + watcherQ + l2Q;
+    requires originalFloors <= capital;
+    let midnightResidual = capital - originalFloors;
+    let retained = daQ + watcherQ + l2Q;
+    requires operatorQ + midnightResidual + retained == capital;
+    liability("second_due", ALT, "alternate-pool", "second-beneficiary", operatorQ);
+    liability("first_due", ALT, "alternate-pool", "first-beneficiary", midnightResidual);
+    next secondAmount = operatorQ;
+    next firstAmount = midnightResidual;
+    next reserve = retained;
+    next splitDone = true;
+  }
+
+  action claimSecond() {
+    requires funded and splitDone and not secondClaimed;
+    requires capital == 99 and secondAmount == 54 and firstAmount == 18 and reserve == 27;
+    requires liability_present("second_due") and liability_amount("second_due") == secondAmount;
+    transfer(ALT, "alternate-pool", "second-beneficiary", secondAmount);
+    discharge("second_due", secondAmount);
+    next secondClaimed = true;
+  }
+
+  action claimFirst() {
+    requires funded and splitDone and not firstClaimed;
+    requires capital == 99 and secondAmount == 54 and firstAmount == 18 and reserve == 27;
+    requires liability_present("first_due") and liability_amount("first_due") == firstAmount;
+    transfer(ALT, "alternate-pool", "first-beneficiary", firstAmount);
+    discharge("first_due", firstAmount);
+    next firstClaimed = true;
+  }
+}

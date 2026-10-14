@@ -1,0 +1,34 @@
+{
+  "verdict": "CHANGES_REQUIRED",
+  "reviewer_requested": "muse-wonder-1.0 high",
+  "reviewer_actual": "host-telemetry (fresh non-author Muse session)",
+  "native_authority": 0,
+  "authorizes_implementation_or_native_execution": false,
+  "reviewed_design_md_sha256": "984a3cfdfd398f857a1431fb559852644e1486ab12c8dd9583f1cda7934a4f88",
+  "design_recorded_head": "dc31345850b5800687b16b26bfa20f1d66d94211",
+  "observed_head_at_review": "9c4dce4547781293b5cd089f018a63aedad75428",
+  "head_note": "HEAD advanced during review by committing the FeePool consumer (6 PASS / 1 RED); all ten design-pinned compiler source hashes re-verified unchanged at the new HEAD.",
+  "method": "source reads and public-data hashes only; no tests, builds, native SDK query/check/model/k/proof/key/SRS/cache, network, keys, or subagents",
+  "current_failure_verified": {
+    "chain": "static_compile::compile -> compile_all_policy unsigned branch -> relation::compile_bindings -> layout::validate_static -> admit_bindings one-public-payer (layout.rs:197-201)",
+    "qa": "cli-qa/pre-export-repair 6 PASS / 1 RED (public_source_static_all_actions_and_separate_process_reopen_both_programs, one-public-payer); sol-static-refusal-results.json both programs refused, no output directory",
+    "funded_source": "fee-pool.mori 23 actions, intake funding-source->fee-pool, claims fee-pool->beneficiaries, bindings payer=fee-pool (kept intact)"
+  },
+  "findings": [
+    {"id": "MUST-1", "severity": "required-change", "title": "CLI status qualification and FeePool consumer/README migration unspecified; hardcoded legacy qualification (compile_call.rs:226) asserted by existing consumer (fee_pool_component.rs:429-476) would mislabel mapped mode or keep the RED test red"},
+    {"id": "MUST-2", "severity": "required-change", "title": "debit_sources definition ambiguous (from-only vs from+to, sort key, empty-action serialization) and mapped-mode recipient/asset refusal codes unpinned"},
+    {"id": "MUST-3", "severity": "required-change", "title": "New manifest compiler_hash coverage unspecified; existing relation concat (relation/mod.rs:117-126) omits layout.rs/static_compile.rs"},
+    {"id": "MUST-4", "severity": "required-change", "title": "Visibility (pub(crate)) and StaticAuthorization deserializer arm, plus compile-fail doctest locations, not pinned"},
+    {"id": "MUST-5", "severity": "required-change", "title": "Native early-refusal fixtures must use coherent single-payer-variant Deployment with overwritten hashes (duty_reads_source.rs:751-773 pattern) and assert exact one-public-payer code"},
+    {"id": "MUST-6", "severity": "required-change", "title": "Refresh recorded current_head to 9c4dce45 at adoption (compiler hashes unchanged)"}
+  ],
+  "verified_sound": [
+    "strict admit_bindings/validate_static and error order retained; no relaxed flag on compile_all_policy/derive_all",
+    "distinct ValidatedSourceStaticBindings/SourceStaticArtifact, no conversion to native Artifact/seed/key/proving capability",
+    "all native/signed consumers recompile strictly before decode/VM/k/key/proof (prepare.rs:271, local_deployment.rs:34, proving.rs:327)",
+    "fresh byte-for-byte reopen before tagged IR decode; mode/profile/qualification derived from caller authorization, not imported marker",
+    "proposed refusal tests terminate before any SDK query/check/model/k/proof/key/SRS/cache under empty inputs",
+    "compiler/build hashes allowed to invalidate historic closure; no frozen hashes"
+  ],
+  "open_scope": "Full M1-M17/U0-U7, authenticated multi-owner native custody, FeePool ledger withdrawal remain open; this vote approves no implementation."
+}

@@ -1,0 +1,29 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1607591,
+  "interruption_signal": null,
+  "elapsed_seconds": 270.83753364500444,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "e936b1017d78c7e6457b31cf4b8f2fbd4c5d91a0697aaa7d80b9834666b74423",
+  "stderr_sha256": "45545c20fb8a30fae5dc8ba36d79235837308280bec1515be2824adbf4dcc26d",
+  "stdout_bytes": 2352,
+  "stderr_bytes": 790,
+  "report_exists": true,
+  "report_sha256": "fcccd4e85211b2d08a7fe0ba8185438dbd8c3d80dd3a2f361f081751eb0828e2",
+  "public_result": {
+    "text": "**Verdict: CHANGES_REQUIRED** on the exact proposal. The additive mapped-role architecture is sound and approved in direction, but the design is not yet implementable without ambiguity at three load-bearing points.\n\nThe top finding is at the CLI and consumer surface: the CLI hardcodes the legacy `source-static-unproven-uninstalled` status and the existing RED FeePool consumer asserts exactly that text while invoking `--authorization unsigned`, so the design as written would either leave the one RED test red or make it pass under a misleading qualification. It must explicitly migrate the consumer and README to `--authorization unsigned-mapped-roles`, derive the status line from the selected mode, pin the `debit_sources` definition (debit `from` rows only, sorted, always serialized) and mapped-mode error codes, pin the new manifest `compiler_hash` coverage, pin `pub(crate)` visibility and the deserializer arm, specify the coherent-fixture pattern for the native early-refusal tests, and refresh its recorded HEAD.\n\nEverything else verified clean against the full current production chain: the `one-public-payer` failure is real (QA is 6 PASS / 1 RED), the funded FeePool source stays intact, native custody is genuinely single-owner so the strict guard must remain, every native and signed consumer recompiles strictly before any decode, VM, `k`, key, or proof work, the proposed refusal tests terminate before any forbidden SDK work under empty inputs, and all ten design-pinned compiler hashes still match at the new HEAD (`9c4dce45`, which committed the FeePool consumer during this review). Native authority remains zero and full M1\u2013M17/U0\u2013U7 remains open.\n\nThe full audit is written to [muse-mapped-role-design-review.md](/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/fee-pool/muse-mapped-role-design-review.md) with its companion [muse-mapped-role-design-review.json](/home/charl/Moriarty/.moriarty-dev/runtime/language-wave1-20261014/fee-pool/muse-mapped-role-design-review.json); no source files were edited and no tests or native work were executed.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "muse-wonder-1.0": {
+        "model": "muse-wonder-1.0",
+        "provider": "meta",
+        "request_id": "37421abf-71ea-48cc-b199-bc2258d00757",
+        "response_id": "resp_6acfefc3c2f6472b25574458"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

@@ -1,0 +1,310 @@
+{
+  "status": "specified-only-awaiting-root-design-agreement",
+  "purpose": "M11 actual Moriarty FeePool library monetary QA, not Fenrir deployment or synthetic signature/proof evidence",
+  "base_commit": "dc31345850b5800687b16b26bfa20f1d66d94211",
+  "reference_commit": "ec8da3be532f29e5e92ff7b1804b7dff0bc89b15",
+  "reference_manifest": "reference-manifest.json",
+  "skills": [
+    "moriarty-dev:develop",
+    "quint-llm-kit:quint-modeling (from-code shared-state flow)",
+    "quint-llm-kit:quint-lang"
+  ],
+  "implementation_authority": "No .qnt or product source edits until root design agreement. Runtime scope documents only.",
+  "coordination": "Plain shared ledger state; no messages, no Choreo.",
+  "profile": {
+    "candidate": "A finite Core source profile, conditional on design freeze",
+    "streams_per_program": 1,
+    "epochs_per_program": 1,
+    "seats": {
+      "operator": 2,
+      "da": 1,
+      "watcher": 1
+    },
+    "receipts": {
+      "ordinary_meter": 1,
+      "watcher_stipend": 1,
+      "watcher_reserve_spend": 1
+    },
+    "payout_slots": [
+      "ordinary_cost",
+      "stipend_cost",
+      "operator_0",
+      "operator_1",
+      "da_0",
+      "l2_initial",
+      "midnight",
+      "l2_residue",
+      "watcher_spend"
+    ],
+    "nonzero_literal_accounts": [
+      "pool",
+      "meter_recipient",
+      "operator_0",
+      "operator_1",
+      "da_0",
+      "watcher_0",
+      "l2_treasury",
+      "midnight_treasury",
+      "watcher_spend_recipient"
+    ],
+    "literal_asset_identity": "exact network/issuer/reference/scale; another exact identity is a held-out sentinel",
+    "u64_max": "18446744073709551615",
+    "quint_small_max": 1000,
+    "sample_domains": {
+      "gross": [
+        0,
+        1,
+        7,
+        99,
+        100,
+        101,
+        111,
+        999
+      ],
+      "meter_amount": [
+        0,
+        1,
+        10,
+        50,
+        100,
+        111
+      ],
+      "weights": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "targets": [
+        0,
+        1,
+        15,
+        17,
+        500
+      ],
+      "time_phase": [
+        "before_close",
+        "closed_before_vesting",
+        "vested"
+      ]
+    },
+    "native_time_constants": {
+      "epoch_seconds": 86400,
+      "vesting_seconds": 2592000
+    },
+    "sample_limit_notes": "Checked monetary aggregate <=1000 in small instances; separate arithmetic fixtures cover full U64/U128. Small bounds are QA restrictions, never a claim to native U64 completeness."
+  },
+  "layers": {
+    "state": "Pool {initialized,target,backstop,watcherReserve,epoch,seatBySlot,meterBySlot,payoutBySlot}; fixed slot maps prepopulated with present bool; QA {actionHits,claimCount,backstopCredits,watcherCredits,watcherDebits,transferHistory,initialBalances,maxHistoricalTarget}. Environment {maturity,importedFacts} distinct from product state.",
+    "functional": "pure canX(Pool,args,Environment) -> bool; pure applyX(Pool,args) -> Pool; independent expectedEffectsX(before,args) -> List[Effect].",
+    "actions": "Guard then assignment only. No reject/no-op fallback in step; failed calls tested as disabled predicates and actual Core Err with no committed effects.",
+    "atomicity": "One accepted actual Core action equals one Quint transition; compare full intermediate statement snapshots separately because next updates are immediate in Core."
+  },
+  "actions": [
+    {
+      "name": "initialize",
+      "scope": "genesis premise or real frozen source action only",
+      "witness": "wInitialized"
+    },
+    {
+      "name": "record_epoch",
+      "scope": "imported cumulative intake and unique epoch/header slot",
+      "witness": "wRecorded"
+    },
+    {
+      "name": "register_operator_0/register_operator_1/register_da_0/register_watcher_0",
+      "scope": "bounded slots; effective weight=attested?weight:0; freeze roster at settle",
+      "witness": "one hit per registration action"
+    },
+    {
+      "name": "submit_ordinary_meter",
+      "scope": "positive cost, meter<=gross, fresh receipt, creates cost entitlement",
+      "witness": "wOrdinaryMeter"
+    },
+    {
+      "name": "submit_watcher_stipend",
+      "scope": "eligible positive watcher weight, matching recipient, stipend cap, once per recipient/epoch",
+      "witness": "wStipend"
+    },
+    {
+      "name": "settle_epoch",
+      "scope": "reimbursement first; independent55/10/5/15 floors; Midnight residual; watcher reserve credit; backstop initial refill",
+      "witness": "wSettled"
+    },
+    {
+      "name": "allocate_operator_0/allocate_operator_1/allocate_da_0",
+      "scope": "original category total/original aggregate denominator (zero->1); once per slot; no watcher seat reward",
+      "witness": "one hit per allocation action"
+    },
+    {
+      "name": "finish_distribution",
+      "scope": "all registered reward seats allocated; residual op+DA to backstop gap then L2; one finish only",
+      "witness": "wFinished"
+    },
+    {
+      "name": "spend_watcher_pool",
+      "scope": "positive bounded reserve debit; bounty/inclusion kinds only; globally fresh receipt; entitlement",
+      "witness": "wWatcherSpent"
+    },
+    {
+      "name": "claim_<each_payout_slot>",
+      "scope": "present, positive, unclaimed, recipient bound, settled and mature under explicit clock premise; actual Transfer if selected source supports it",
+      "witness": "one positive claim witness per nonzero reachable payout slot"
+    },
+    {
+      "name": "set_backstop_target",
+      "scope": "include only if frozen API includes target update; otherwise test configured fixed target profiles",
+      "witness": "wTargetChanged"
+    },
+    {
+      "name": "advance_maturity",
+      "scope": "finite monotone environment transition, never product/circuit evidence",
+      "witness": "wVestedEnvironment"
+    }
+  ],
+  "invariants": [
+    {
+      "name": "accountingConservation",
+      "predicate": "gross = all cost entitlement amounts + all operator/DA/treasury entitlement amounts + cumulative backstop credit + watcher credit + unallocated operator/DA remainder (pre-settle carry=gross-metered)",
+      "nonvacuity": "wRecorded,wSettled,wAllocated,wFinished"
+    },
+    {
+      "name": "custodyConservation",
+      "predicate": "initial exact-asset pool balance + accepted intake transfers = current pool balance + cumulative actual outgoing exact-asset Transfer/Fee effects; duties and funds counted in separate equations",
+      "nonvacuity": "positive incoming/outgoing effects; immutable expected full sequence"
+    },
+    {
+      "name": "costsFirst",
+      "predicate": "sum original cost entitlements = metered <= gross; splits use gross-metered; cost claim blocked until epoch settled",
+      "nonvacuity": "positive ordinary+stipend meter before settlement"
+    },
+    {
+      "name": "splitsExact",
+      "predicate": "op=floor(55*s/100),da=floor(10*s/100),watcher=floor(5*s/100),l2=floor(15*s/100); midnight=s-op-da-watcher-l2; 0<=midnight-floor(15*s/100)<=4",
+      "nonvacuity": "s=99 required"
+    },
+    {
+      "name": "fixedOriginalWeight",
+      "predicate": "each allocated amount=floor(originalCategoryTotal*effectiveSeatWeight/max(originalAggregateWeight,1)); totals and weights immutable after settle; sum allocations<=total",
+      "nonvacuity": "weights1/2 with55 gives18/36 and residue1; reverse order identical"
+    },
+    {
+      "name": "noDoubleClaim",
+      "predicate": "claimCount[k]<=1; claimed implies present positive payout; consumed duty cannot reappear; failed replay has no effects",
+      "nonvacuity": "one successful then one repeated actual claim"
+    },
+    {
+      "name": "noCrossStream",
+      "predicate": "every financial effect uses configured exact AssetId and literal source/recipient; other-asset balances and unrelated duties unchanged; source has no separate capacity/burn intake API, but intake economic provenance remains an authenticated-import premise",
+      "nonvacuity": "two assets in real Scenario with nonzero sentinel; wrong-asset substitutions refuse or leave sentinel unchanged"
+    },
+    {
+      "name": "reserveHeld",
+      "predicate": "watcherReserve + cumulative watcher-spend entitlements = cumulative5% watcher credits; watcher reward seat allocation disabled; stipends consume gross via meters, never reserve",
+      "nonvacuity": "credit5 and spend3 leaves2; stipend exists separately"
+    },
+    {
+      "name": "backstopRoute",
+      "predicate": "each refill=min(amount,max(target-beforeBalance,0)); no withdrawal on target decrease; balance<=max(initialBalance,all historical targets); L2 receives amount-refill",
+      "nonvacuity": "initial target17,settle refill15,finish refill2; target lowering case"
+    },
+    {
+      "name": "residualSweep",
+      "predicate": "finished implies all reward slots allocated and remainders0; finish payout+finish refill=pre-finish remainder; second finish disabled",
+      "nonvacuity": "zero-weight DA leaves10 and unequal operator floors leave1"
+    },
+    {
+      "name": "vestingConditional",
+      "predicate": "reward unlock=epochClose+2592000 and claimTime>=unlock; ordinary/treasury/watcher unlock=epochClose; valid only under explicit authenticated-clock premise for source correspondence",
+      "nonvacuity": "early disabled then exact-boundary accepted in reference model; actual profile must disclose missing binding"
+    },
+    {
+      "name": "recipientBindingConditional",
+      "predicate": "claim output/Transfer exact frozen entitlement recipient and amount; foreign claimant disabled only if real source provides claim authority, otherwise external authorization premise remains open",
+      "nonvacuity": "wrong account mutation and full expected effects"
+    },
+    {
+      "name": "frozenInputsAndUniqueSlots",
+      "predicate": "meter/roster immutable after settle; header/receipt/seat/payout fresh; ordinary and reserve receipt identities disjoint or global replay-rejected",
+      "nonvacuity": "post-settle meter/register and cross-kind receipt replay negatives"
+    }
+  ],
+  "premises": [
+    "Genesis is atomically initialized before public use; nonzero authority/asset/treasury identities; federated mode. A constructor or Scenario seed is not demonstrated deployment.",
+    "Imported canonical header, revenue escrow, attestation/uptime, DA weights, metered costs and fraud/inclusion evidence are true and asset-normalized. No foreign-proof importer is established.",
+    "Source cannot replace authority with caller supplied Bool and count it as cryptographic authentication. Existing signed-call relation/native authorization gates remain separate.",
+    "Clock freshness/monotonicity and ledger time binding are external until actual frozen source/native path enforces them. Caller supplied now is not authenticated time.",
+    "Literal account/slot specialization abstracts hash-domain separation and recipient secret commitments; real recipient authentication and cross-instance hash uniqueness are not proven.",
+    "Model conservation describes monetary accounting. Actual withdrawal acceptance requires actual complete Transfer effects, native output binding and real ledger evidence; Core simulate or compile success is not settlement.",
+    "No slashing, graduation weighting, governance truth/valuation, source signal_step_down, general dynamic registries or multi-epoch/multi-instance import replay coverage in finite M11 monetary profile.",
+    "Exact AssetId isolation does not prove economic revenue origin: record_epoch imports a gross amount, and source cannot determine whether canonical importer included forbidden capacity proceeds or used the wrong economic token. This remains external import evidence."
+  ],
+  "expected_cases": [
+    {
+      "id": "golden111-10",
+      "expected": "surplus101: op55,da10,watcher5,l2floor15,mid16; op weights1/2 ->18/36; zero-weight DA ->0; residual11; target17: initial refill15, finish refill2, L2residue9"
+    },
+    {
+      "id": "residual99",
+      "expected": "54/9/4/14/18; Midnight floor15%=14 plus4; any +3 invariant fails"
+    },
+    {
+      "id": "order-independent",
+      "expected": "op55 weights1/2 gives18,36 in either order and dust1; cumulative-floor algorithm gives18,37 in one ordering and must fail"
+    },
+    {
+      "id": "lowered-target",
+      "expected": "settle100 target17 yields balance15; lower target0 retains15; next route refills0; balance<=currentTarget is false by reference design"
+    },
+    {
+      "id": "all-cost",
+      "expected": "gross=metered -> all split totals0, zero claims disabled, cost exact and claimable after settle"
+    },
+    {
+      "id": "reserve-not-reward",
+      "expected": "surplus100 ->held5; watcher allocation disabled; bounty3 ->held2; same receipt stipend/reserve replay rejected"
+    },
+    {
+      "id": "reference-multi-epoch-reserve",
+      "expected": "Reference global reserve may fund receipt recorded against another settled epoch; per-epoch watcher-debit<=same-epoch-credit is invalid. Finite one-epoch M11 excludes this case explicitly."
+    },
+    {
+      "id": "full-domain",
+      "expected": "Consume arithmetic-expected.json independent50 cases: U64 max and overflow rejection; small Quint scope cannot replace these"
+    }
+  ],
+  "correspondence_plan": [
+    "Freeze actual .mori bytes, public Program JSON, full static compile artifacts and exported action names before writing model adapter; map each public state/input/action/effect to one named Quint field/transition.",
+    "For every deterministic scenario calculate expected state/duties/transfers independently from pinned arithmetic vectors and pure model, then execute actual parse/validate/simulate action; compare all pre/post state, balances, liabilities, ordered effects including kind/asset/from/to/amount, and emitted values.",
+    "For each disabled guard run actual source action and require a coded refusal with no committed snapshot/effects; never accept host success flag, unchecked q, omitted effect or synthetic signature as correspondence.",
+    "Check statement snapshots for immediate next/read semantics and witness equations before financial effects. Inspect static public constraints for q,d,r bounds, positive d and r<d along every action that consumes division witnesses.",
+    "Include contrasting source that changes one share or recipient; unchanged inputs must produce expected behavioral/complete-effect divergence. Compile both actual Programs through existing static route only; no proving or native dispatch.",
+    "Record source/Program/model/expected artifact hashes, concrete instance bounds, commands, seed, exact Quint version/backend, sample count, witness counts, failures and terminal trace lengths. Passing sampled runs establish only bounded sampled model evidence."
+  ],
+  "validation_plan": {
+    "implementation_sequence": [
+      "types+concrete instance typecheck",
+      "one accepted action+positive witness run",
+      "add each pure guard/apply and witness then typecheck/run",
+      "separate *_test.qnt deterministic golden/negative cases",
+      "all invariants and witnesses sampled run"
+    ],
+    "commands": [
+      "quint typecheck fee_pool_m11.qnt",
+      "quint typecheck fee_pool_m11_test.qnt",
+      "quint test fee_pool_m11_test.qnt --main fee_pool_m11_test --seed 20261014",
+      "quint run fee_pool_m11.qnt --main fee_pool_m11_small --max-samples 10000 --max-steps 48 --seed 20261014 --invariant allInvariants --witnesses <all_positive_action_witnesses>"
+    ],
+    "limits": "typecheck/test/sampled run only; bounded48 steps,10000 samples; timeout120s per invocation and stop/report partial on timebox; no quint verify, installs, setup, SDK/nativeVM/network/keys/params/SRS/private cache",
+    "current_result": "Not run: no new model authorized yet. quint executable observed at /home/charl/.npm-global/bin/quint. No model tests or conformance claimed."
+  },
+  "open_design_requirements": [
+    "exact source action names and register-vs-fixed-roster API",
+    "custody/intake and immutable entitlement/liability encoding",
+    "actual authority/clock/recipient bindings or named missing predicates",
+    "whether target update is in finite profile",
+    "per-slot receipt identity/cross-kind replay encoding",
+    "source size and liability limits for actual nine payout slots"
+  ],
+  "session_mutations": "Only D/quint-scope.md and D/quint-scope.json authored; no shared session/campaign files or model/product source modified."
+}

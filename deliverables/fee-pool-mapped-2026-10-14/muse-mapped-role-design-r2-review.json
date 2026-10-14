@@ -1,0 +1,51 @@
+{
+  "verdict": "APPROVE",
+  "scope": "exact R2 consequential-design vote only; not a code or result review",
+  "reviewer_requested": "muse-wonder-1.0 high",
+  "reviewer_actual": "host-telemetry (fresh non-author Muse session)",
+  "native_authority": 0,
+  "authorizes_implementation_or_native_execution": false,
+  "root_adoption_required_before_implementation": true,
+  "later_fresh_full_candidate_and_actual_qa_audit_mandatory": true,
+  "reviewed_r2_md_sha256": "bc72fa30a959e3cb232ff1efd199a2e58affc4893cbedf1d0db2c18e2eb83519",
+  "reviewed_r2_json_sha256": "50fcff4555541f180befe150387efdf60e7037c50561c5a2ac8973ca4eb46903",
+  "incorporated_r1_md_sha256": "984a3cfdfd398f857a1431fb559852644e1486ab12c8dd9583f1cda7934a4f88",
+  "incorporated_r1_json_sha256": "57da0c16e6e89bf6590e580a6ea5c46223f103d03c457eeced6bdec1f2e831ee",
+  "background_prior_review_md_sha256": "fcccd4e85211b2d08a7fe0ba8185438dbd8c3d80dd3a2f361f081751eb0828e2",
+  "background_prior_review_json_sha256": "71e2a84f3ee7b3a23f33687d1bde95d1e9c93822da43b1a4a4b9fc3d61de93c2",
+  "base_head": "9c4dce4547781293b5cd089f018a63aedad75428",
+  "ten_compiler_hashes_verified_at_head": {
+    "crates/mori-ledger/src/static_compile.rs": "8f2bcd1420fb0e6104f11509632b8054e96b18df7c98422eb9a5649e2081b42c",
+    "crates/mori-ledger/src/layout.rs": "a0186338d039aa0742a2caf0448b45814e7dd8139367afbfe1db2c551311cb21",
+    "crates/mori-ledger/src/relation/mod.rs": "4452dbc95dba4476f52039314ad9732225fc9dc823dc512e194d7a98af53e006",
+    "crates/mori-ledger/src/relation/compiler.rs": "e31e9e72c6786d4ee2759c81cc16e7726b5aa6c83b6f2a9cae00534533eb996c",
+    "crates/mori-ledger/src/local_deployment.rs": "7ef140bdb61ea61e3af6a59fbc3d80335cb214fdcabe81187a3f7fbfdbc53272",
+    "crates/mori-ledger/src/custody.rs": "62cc69361d77a2f955fc51c222c37acfa4a7e431bf88abea160ac3c228693321",
+    "crates/mori-ledger/src/prepare.rs": "e85449c454fc88701c21c1d2a5f6b7ea770208d1eab1b6a28158566a3e619c37",
+    "crates/mori-ledger/src/profile.rs": "8bde32c8601b7444abe80387ddce90a4bbea5f95ca402dc7f9ce2c9a0ea97d93",
+    "crates/mori-ledger/src/signed/mod.rs": "a198909dcfccb5325bca59be1176ee3e123642b2459dde2aa1ff86d5625ddc70",
+    "crates/mori/src/commands/compile_call.rs": "4f8a92cf9be6874ef043553c0af31ed4bf8f64b816680c371f9edf2e1b481fe5"
+  },
+  "method": "full tracked-source reads and SHA-256 hashes only; no tests, builds, provider/network, native SDK query/check/model/k/proof/key/SRS/cache, credentials, session logs, subagents, or web",
+  "six_clarifications_resolved": {
+    "MUST-1": "explicit unsigned-mapped-roles CLI shape before reads, exhaustive run_static selection with exact mode byte count, mode-derived qualification() (legacy for unsigned/signed-v2, mapped for mapped), export {q} format, mapped inspect appends qualification from validated caller mode, both FeePool programs plus README migrate to mapped positives, legacy unsigned one-public-payer refusal with no output directory added, signed-v2 refusal retained",
+    "MUST-2": "debit_sources only deduplicated full RoleBinding rows of Transfer/Fee from roles, sorted by role name, always serialized (empty array without payments), computed from validated Program; recipients committed via full ABI/actions; exact order Core then toolchain/limits/profile, roles/key-address, payer, asset/token, declared-asset (identity/source-asset), duties, source-order statements; undeclared asset source-profile/core-validation first, then source-profile/source-debit-role before source-profile/source-recipient-role; strict precedence unchanged",
+    "MUST-3": "new manifest compiler_hash exactly proving::source_closure(), verified pure include_str text hashing covering layout validation, emitter, inventory, serializer, CLI, signed precedent at signed/context.rs:206; code stays in covered files or closure extended; legacy hash rules and stale-build invalidation preserved",
+    "MUST-4": "validate_source_static_roles, ValidatedSourceStaticBindings, compile_source_static_roles, SourceStaticArtifact pub(crate) with private fields; custom decoder adds only length-1 unsigned-mapped-roles arm (extra fields, signer_policy, unknown modes, nulls, duplicate keys refuse); compile-fail privacy doctests on new types in layout.rs/relation/mod.rs and public no-conversion doctests on StaticBundle targeting relation::Artifact, AdmittedSeed, DerivedLocalDeployment; no From/Deref/Deserialize bridge to native artifact, admitted seed, or proving capability",
+    "MUST-5": "coherent public single-payer-derived Deployment fixture following duty_reads_source.rs:751-773 with only source_hash/program_hash overwritten and variant ABI hash retained (guard precedes ABI comparison); exact one-public-payer asserted per selected action for relation::compile/admit, admit_local_seed, and prepare_native_call with valid public request, empty predecessor/parameter slices, no output, before native decode/query/VM/SDK check/k/key/proof/SRS/cache; private compile_all_policy unit refusal without derive_all; signed and full-escrow refusals kept",
+    "MUST-6": "current head 9c4dce4547781293b5cd089f018a63aedad75428 recorded and all ten compiler hashes re-verified unchanged"
+  },
+  "security_architecture_confirmed": [
+    "native single-owner custody guard remains: attach_request payer-owned spends and payer caller (layout.rs:534-591), prepare_offer change to first selected owner and validate_offer reconstruction (custody.rs:26-266)",
+    "unsigned emitter claim constrains only token/recipient/amount (relation/compiler.rs:316-387); from recorded only for signed descriptors, so mapped export claims no debit custody, ownership, authorization, or enforced economic bounds",
+    "distinct SourceStaticArtifact and validated capability export only mapped-role public source arithmetic, state/duty operations, and recipient claims under unproven/unauthenticated qualifications with absent custody/authorization/predecessor/economic/intent-history-PCD/native predicates",
+    "per-action debit_sources inventory identity plus independently supplied authorization and fresh recompile byte equality prevent relabel, downgrade, and native promotion; all native/signed consumers recompile strictly before decode/VM/k/key/proof",
+    "existing unsigned/signed/native qualification, error-order, schema, and IR-shape semantics unchanged apart from naturally invalidated build/compiler hashes"
+  ],
+  "non_blocking_observations": [
+    "R2 line citations drift slightly (declared-asset check at layout.rs:171-173); no substance depends on them",
+    "SourceStaticArtifact needs pub(crate) accessors or manifest-byte parsing for static_compile bounds/marker rows; must not become public in the candidate",
+    "candidate audit should confirm compile-fail doctests assert literal construction/conversion failure, not merely pub(crate) name inaccessibility"
+  ],
+  "open_scope": "Full roadmap, M11, authenticated multi-owner native custody, native proof, and ledger settlement remain open; this vote approves no implementation or result."
+}
