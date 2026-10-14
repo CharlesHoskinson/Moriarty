@@ -227,7 +227,11 @@ pub fn replay(
     candidate.validate().map_err(ReplayError::Input)?;
     let actual =
         generate(source, action, scenario, target, authorization).map_err(ReplayError::Input)?;
-    let a = serde_json::to_value(&actual)
+    compare_records(&actual, candidate)
+}
+// Keep one comparison order for ordinary replay and challenge export.
+fn compare_records(actual: &ReplayRecord, candidate: &ReplayRecord) -> Result<(), ReplayError> {
+    let a = serde_json::to_value(actual)
         .map_err(|e| ReplayError::Input(error("serialization", e.to_string())))?;
     let b = serde_json::to_value(candidate)
         .map_err(|e| ReplayError::Input(error("serialization", e.to_string())))?;
@@ -311,4 +315,108 @@ pub fn replay(
         )?;
     }
     unequal(&a["record_hash"], &b["record_hash"], "/record_hash")
+}
+
+pub const CHALLENGE_FORMAT: &str = "moriarty-reference-challenge/1";
+/// Local diagnostic output cap, including ASCII escapes and the final newline.
+/// This is not a Fenrir transaction limit or a measured replay certificate.
+pub const MAX_CHALLENGE_BYTES: usize = 4096;
+
+/// Public identities copied exclusively from independent reconstruction.
+/// The input and record hashes also bind the attachment-free signed statement.
+/// Signature bytes, R, s, proving keys and private witnesses are excluded.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayChallengeContext {
+    pub language: String,
+    pub semantics: String,
+    pub network: String,
+    pub anchor: String,
+    pub program_name: String,
+    pub program_address: Option<String>,
+    pub action: String,
+    pub source_hash: String,
+    pub program_hash: String,
+    pub target_hash: String,
+    pub scenario_hash: String,
+    pub zkir_hash: String,
+    pub authority_hash: Option<String>,
+    pub authorization_mode: String,
+    pub at: Option<UInt>,
+    pub input_hash: String,
+    pub trace_hash: String,
+    pub record_hash: String,
+}
+/// A bounded first-divergence diagnostic, not a proof or fraud-game transcript.
+/// The candidate digest hashes the entire canonical typed record, including
+/// its possibly false declared hashes. It never trusts its record_hash label.
+#[derive(Debug, Clone, Serialize)]
+pub struct ReplayChallenge {
+    pub format: String,
+    pub qualification: String,
+    pub trusted: ReplayChallengeContext,
+    pub candidate_digest: String,
+    pub divergence: ReplayDifference,
+}
+impl ReplayChallenge {
+    /// Prepare complete bytes before any file creation or publication.
+    pub fn to_json(&self) -> Result<String, Error> {
+        let text = mori_core::json::export(self).map_err(|e| error("limit", e.to_string()))?;
+        if text.len() >= MAX_CHALLENGE_BYTES {
+            return Err(error(
+                "limit",
+                "Escaped challenge and final newline exceed 4096 bytes.",
+            ));
+        }
+        Ok(text)
+    }
+}
+/// Reconstruct once from separate roots and use the ordinary replay order.
+/// Equality returns no challenge. Invalid input returns no diagnostic record.
+/// Exporters must call to_json before publication to enforce the output cap.
+pub fn challenge(
+    source: &str,
+    action: &str,
+    scenario: &Scenario,
+    target: &Target,
+    authorization: ReplayAuthorization<'_>,
+    candidate: &ReplayRecord,
+) -> Result<Option<ReplayChallenge>, ReplayError> {
+    candidate.validate().map_err(ReplayError::Input)?;
+    let actual =
+        generate(source, action, scenario, target, authorization).map_err(ReplayError::Input)?;
+    let divergence = match compare_records(&actual, candidate) {
+        Ok(()) => return Ok(None),
+        Err(ReplayError::Divergence(d)) => d,
+        Err(error) => return Err(error),
+    };
+    let candidate_digest = public_hash(candidate).map_err(ReplayError::Input)?;
+    let b = actual.body;
+    let claim = b.claim;
+    let trusted = ReplayChallengeContext {
+        language: b.language,
+        semantics: b.semantics,
+        network: b.network,
+        anchor: b.anchor,
+        program_name: b.program_name,
+        program_address: b.program_address,
+        action: claim.action,
+        source_hash: claim.source_hash,
+        program_hash: claim.program_hash,
+        target_hash: claim.target_hash,
+        scenario_hash: claim.scenario_hash,
+        zkir_hash: b.zkir_hash,
+        authority_hash: b.authority_hash,
+        authorization_mode: claim.authorization_mode,
+        at: claim.authorization.map(|a| a.at),
+        input_hash: b.input_hash,
+        trace_hash: b.trace_hash,
+        record_hash: actual.record_hash,
+    };
+    Ok(Some(ReplayChallenge {
+        format: CHALLENGE_FORMAT.into(),
+        qualification: "local-reference-replay-diagnostic".into(),
+        trusted,
+        candidate_digest,
+        divergence,
+    }))
 }

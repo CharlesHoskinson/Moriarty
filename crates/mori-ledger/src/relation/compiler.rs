@@ -445,6 +445,9 @@ impl Compiler<'_> {
             .ok_or(refusal("expression-index"))?
             .clone()
         {
+            Expr::LiabilityPresent { .. } | Expr::LiabilityAmount { .. } => {
+                return Err(refusal("unsupported-liability-read"));
+            }
             Expr::Literal { value } => Wire {
                 val: imm(match value {
                     Value::UInt(n) => n.0,

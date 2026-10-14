@@ -67,6 +67,12 @@ pub enum BinaryOp {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum Expr {
+    LiabilityPresent {
+        name: String,
+    },
+    LiabilityAmount {
+        name: String,
+    },
     Literal {
         value: Value,
     },

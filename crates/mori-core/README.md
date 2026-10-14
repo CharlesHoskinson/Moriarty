@@ -56,6 +56,21 @@ identified residual duty. Its exact asset and parties cannot change.
 Discharge records a duty reduction; authors express any corresponding payment
 as a separate transfer. Zero residual duties remain in the snapshot.
 
+`liability_present("delivery")` returns Bool and `liability_amount("delivery")`
+returns UInt atomic units. Each read accepts one quoted literal name and requires
+an unambiguous source-wide identity from a `liability` statement. A declaration
+in another action is sufficient. Unknown, empty or conflicting read identities
+refuse validation. Calls with dynamic names or extra arguments refuse parsing.
+These spellings remain ordinary identifiers when used without a call.
+
+Both reads inspect the current snapshot at the enclosing statement. A missing
+row returns false/0. A present-zero tombstone returns true/0. Reads after creation
+or discharge see the updated duty. A `let` captures its earlier value, and a
+`next` right-hand side reads before the state update. `requires` and `ensures`
+check where written. Reads add no effects and do not authenticate supplied duties.
+Legacy Core external duties and discharge-only programs retain their rules.
+
+
 `Scenario` contains `state`, `inputs`, `balances` and `liabilities`. An empty
 state map selects declared initial values; a nonempty map supplies exactly
 all declared state values. Inputs must exactly match the selected action.

@@ -1,0 +1,1181 @@
+{
+  "profile": "moriarty-tests/1",
+  "cases": [
+    {
+      "name": "fund-exact-effects",
+      "source": "escrow.mori",
+      "scenario": "fund.json",
+      "action": "fund",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "phase": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "terminal": {
+              "type": "Bool",
+              "value": false
+            },
+            "quantity": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "delivered": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "remaining": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "price": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "fundedAt": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "deadline": {
+              "type": "UInt",
+              "value": "100"
+            },
+            "grossPayment": {
+              "type": "UInt",
+              "value": "21"
+            },
+            "paid": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "refunded": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "feePaid": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "10"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "79"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "20"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "1"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "delivery",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "debtor": "seller",
+              "creditor": "buyer",
+              "amount": "10"
+            },
+            {
+              "name": "refund",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "debtor": "escrow",
+              "creditor": "buyer",
+              "amount": "20"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "from": "buyer",
+            "to": "escrow",
+            "amount": "20"
+          },
+          {
+            "kind": "Fee",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "from": "buyer",
+            "to": "treasury",
+            "amount": "1"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "from": "seller",
+            "to": "escrow",
+            "amount": "10"
+          },
+          {
+            "kind": "Liability",
+            "name": "delivery",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "debtor": "seller",
+            "creditor": "buyer",
+            "before": "0",
+            "after": "10"
+          },
+          {
+            "kind": "Liability",
+            "name": "refund",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "debtor": "escrow",
+            "creditor": "buyer",
+            "before": "0",
+            "after": "20"
+          },
+          {
+            "kind": "State",
+            "name": "phase",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "quantity",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "10"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "remaining",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "10"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "price",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "2"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "fundedAt",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "10"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "deadline",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "100"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "grossPayment",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "21"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "feePaid",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "funded",
+            "value": {
+              "type": "UInt",
+              "value": "10"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "partial-exact-effects",
+      "source": "escrow.mori",
+      "scenario": "partial.json",
+      "action": "partial",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "phase": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "terminal": {
+              "type": "Bool",
+              "value": false
+            },
+            "quantity": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "delivered": {
+              "type": "UInt",
+              "value": "3"
+            },
+            "remaining": {
+              "type": "UInt",
+              "value": "7"
+            },
+            "price": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "fundedAt": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "deadline": {
+              "type": "UInt",
+              "value": "100"
+            },
+            "grossPayment": {
+              "type": "UInt",
+              "value": "21"
+            },
+            "paid": {
+              "type": "UInt",
+              "value": "6"
+            },
+            "refunded": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "feePaid": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "3"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "7"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "79"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "14"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "6"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "1"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "delivery",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "debtor": "seller",
+              "creditor": "buyer",
+              "amount": "7"
+            },
+            {
+              "name": "refund",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "debtor": "escrow",
+              "creditor": "buyer",
+              "amount": "14"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "buyer",
+            "amount": "3"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "seller",
+            "amount": "6"
+          },
+          {
+            "kind": "Liability",
+            "name": "delivery",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "debtor": "seller",
+            "creditor": "buyer",
+            "before": "10",
+            "after": "7"
+          },
+          {
+            "kind": "Liability",
+            "name": "refund",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "debtor": "escrow",
+            "creditor": "buyer",
+            "before": "20",
+            "after": "14"
+          },
+          {
+            "kind": "State",
+            "name": "delivered",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "3"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "remaining",
+            "before": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "7"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "paid",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "6"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "phase",
+            "before": {
+              "type": "UInt",
+              "value": "1"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "2"
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "remaining_delivery",
+            "value": {
+              "type": "UInt",
+              "value": "7"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "complete-exact-effects",
+      "source": "escrow.mori",
+      "scenario": "complete.json",
+      "action": "complete",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "phase": {
+              "type": "UInt",
+              "value": "3"
+            },
+            "terminal": {
+              "type": "Bool",
+              "value": true
+            },
+            "quantity": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "delivered": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "remaining": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "price": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "fundedAt": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "deadline": {
+              "type": "UInt",
+              "value": "100"
+            },
+            "grossPayment": {
+              "type": "UInt",
+              "value": "21"
+            },
+            "paid": {
+              "type": "UInt",
+              "value": "20"
+            },
+            "refunded": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "feePaid": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "10"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "79"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "20"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "1"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "delivery",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "debtor": "seller",
+              "creditor": "buyer",
+              "amount": "0"
+            },
+            {
+              "name": "refund",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "debtor": "escrow",
+              "creditor": "buyer",
+              "amount": "0"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "buyer",
+            "amount": "7"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "seller",
+            "amount": "14"
+          },
+          {
+            "kind": "Liability",
+            "name": "delivery",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "debtor": "seller",
+            "creditor": "buyer",
+            "before": "7",
+            "after": "0"
+          },
+          {
+            "kind": "Liability",
+            "name": "refund",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "debtor": "escrow",
+            "creditor": "buyer",
+            "before": "14",
+            "after": "0"
+          },
+          {
+            "kind": "State",
+            "name": "delivered",
+            "before": {
+              "type": "UInt",
+              "value": "3"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "10"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "remaining",
+            "before": {
+              "type": "UInt",
+              "value": "7"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "0"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "paid",
+            "before": {
+              "type": "UInt",
+              "value": "6"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "20"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "phase",
+            "before": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "3"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "terminal",
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "after": {
+              "type": "Bool",
+              "value": true
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "completed",
+            "value": {
+              "type": "UInt",
+              "value": "10"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "recover-exact-effects",
+      "source": "escrow.mori",
+      "scenario": "recover.json",
+      "action": "recover",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "phase": {
+              "type": "UInt",
+              "value": "4"
+            },
+            "terminal": {
+              "type": "Bool",
+              "value": true
+            },
+            "quantity": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "delivered": {
+              "type": "UInt",
+              "value": "3"
+            },
+            "remaining": {
+              "type": "UInt",
+              "value": "7"
+            },
+            "price": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "fundedAt": {
+              "type": "UInt",
+              "value": "10"
+            },
+            "deadline": {
+              "type": "UInt",
+              "value": "100"
+            },
+            "grossPayment": {
+              "type": "UInt",
+              "value": "21"
+            },
+            "paid": {
+              "type": "UInt",
+              "value": "6"
+            },
+            "refunded": {
+              "type": "UInt",
+              "value": "14"
+            },
+            "feePaid": {
+              "type": "UInt",
+              "value": "1"
+            }
+          },
+          "balances": [
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "3"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "7"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "buyer",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "93"
+            },
+            {
+              "account": "escrow",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "0"
+            },
+            {
+              "account": "seller",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "6"
+            },
+            {
+              "account": "treasury",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "amount": "1"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "delivery",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-goods",
+                "reference": "GOODS",
+                "scale": 0
+              },
+              "debtor": "seller",
+              "creditor": "buyer",
+              "amount": "7"
+            },
+            {
+              "name": "refund",
+              "asset": {
+                "network": "local",
+                "issuer": "escrow-payment",
+                "reference": "PAY",
+                "scale": 0
+              },
+              "debtor": "escrow",
+              "creditor": "buyer",
+              "amount": "0"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Liability",
+            "name": "delivery",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "debtor": "seller",
+            "creditor": "buyer",
+            "before": "7",
+            "after": "7"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "buyer",
+            "amount": "14"
+          },
+          {
+            "kind": "Transfer",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-goods",
+              "reference": "GOODS",
+              "scale": 0
+            },
+            "from": "escrow",
+            "to": "seller",
+            "amount": "7"
+          },
+          {
+            "kind": "Liability",
+            "name": "refund",
+            "asset": {
+              "network": "local",
+              "issuer": "escrow-payment",
+              "reference": "PAY",
+              "scale": 0
+            },
+            "debtor": "escrow",
+            "creditor": "buyer",
+            "before": "14",
+            "after": "0"
+          },
+          {
+            "kind": "State",
+            "name": "refunded",
+            "before": {
+              "type": "UInt",
+              "value": "0"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "14"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "phase",
+            "before": {
+              "type": "UInt",
+              "value": "2"
+            },
+            "after": {
+              "type": "UInt",
+              "value": "4"
+            }
+          },
+          {
+            "kind": "State",
+            "name": "terminal",
+            "before": {
+              "type": "Bool",
+              "value": false
+            },
+            "after": {
+              "type": "Bool",
+              "value": true
+            }
+          },
+          {
+            "kind": "Emit",
+            "name": "unfulfilled_delivery",
+            "value": {
+              "type": "UInt",
+              "value": "7"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
