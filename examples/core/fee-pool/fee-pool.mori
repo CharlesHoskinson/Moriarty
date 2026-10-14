@@ -1,0 +1,1427 @@
+// Finite one-epoch monetary component; no native authentication or clock binding.
+// Public observations and fixed recipients are explicit external premises.
+// Entitlements reserve funded custody; only claims transfer it.
+language "moriarty/1";
+agreement FeePoolU64Component {
+  asset FEES = { network: "local", issuer: "fee-pool-source", reference: "SERVICE", scale: 0 };
+  state epoch: UInt = 0;
+  state epochClose: UInt = 0;
+  state gross: UInt = 0;
+  state metered: UInt = 0;
+  state target: UInt = 0;
+  state backstop: UInt = 0;
+  state watcherHeld: UInt = 0;
+  state stipendLimit: UInt = 0;
+  state opWeight: UInt = 0;
+  state daWeight: UInt = 0;
+  state rewardSeatCount: UInt = 0;
+  state allocatedCount: UInt = 0;
+  state opTotal: UInt = 0;
+  state daTotal: UInt = 0;
+  state watcherTotal: UInt = 0;
+  state opRemaining: UInt = 0;
+  state daRemaining: UInt = 0;
+  state opAWeight: UInt = 0;
+  state opBWeight: UInt = 0;
+  state daSeatWeight: UInt = 0;
+  state watcherWeight: UInt = 0;
+  state ordinaryAmount: UInt = 0;
+  state stipendAmount: UInt = 0;
+  state opAAmount: UInt = 0;
+  state opBAmount: UInt = 0;
+  state daAmount: UInt = 0;
+  state l2Amount: UInt = 0;
+  state midnightAmount: UInt = 0;
+  state dustAmount: UInt = 0;
+  state spendAmount: UInt = 0;
+  state claimedTotal: UInt = 0;
+  state carried: UInt = 0;
+  state recorded: Bool = false;
+  state settled: Bool = false;
+  state finished: Bool = false;
+  state opARegistered: Bool = false;
+  state opBRegistered: Bool = false;
+  state daRegistered: Bool = false;
+  state watcherRegistered: Bool = false;
+  state ordinaryRecorded: Bool = false;
+  state stipendRecorded: Bool = false;
+  state opAAllocated: Bool = false;
+  state opBAllocated: Bool = false;
+  state daAllocated: Bool = false;
+  state spendIssued: Bool = false;
+  state ordinaryClaimed: Bool = false;
+  state stipendClaimed: Bool = false;
+  state opAClaimed: Bool = false;
+  state opBClaimed: Bool = false;
+  state daClaimed: Bool = false;
+  state l2Claimed: Bool = false;
+  state midnightClaimed: Bool = false;
+  state dustClaimed: Bool = false;
+  state spendClaimed: Bool = false;
+
+  action intake(epochId: UInt, grossAmount: UInt, closeObservedAt: UInt, initialTarget: UInt, watcherStipendLimit: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires epochId < exclusiveU64 and grossAmount < exclusiveU64 and closeObservedAt < exclusiveU64 and initialTarget < exclusiveU64 and watcherStipendLimit < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires epoch == 0 and
+      epochClose == 0 and
+      gross == 0 and
+      metered == 0 and
+      target == 0 and
+      backstop == 0 and
+      watcherHeld == 0 and
+      stipendLimit == 0 and
+      opWeight == 0 and
+      daWeight == 0 and
+      rewardSeatCount == 0 and
+      allocatedCount == 0 and
+      opTotal == 0 and
+      daTotal == 0 and
+      watcherTotal == 0 and
+      opRemaining == 0 and
+      daRemaining == 0 and
+      opAWeight == 0 and
+      opBWeight == 0 and
+      daSeatWeight == 0 and
+      watcherWeight == 0 and
+      ordinaryAmount == 0 and
+      stipendAmount == 0 and
+      opAAmount == 0 and
+      opBAmount == 0 and
+      daAmount == 0 and
+      l2Amount == 0 and
+      midnightAmount == 0 and
+      dustAmount == 0 and
+      spendAmount == 0 and
+      claimedTotal == 0 and
+      carried == 0;
+    requires not recorded and
+      not settled and
+      not finished and
+      not opARegistered and
+      not opBRegistered and
+      not daRegistered and
+      not watcherRegistered and
+      not ordinaryRecorded and
+      not stipendRecorded and
+      not opAAllocated and
+      not opBAllocated and
+      not daAllocated and
+      not spendIssued and
+      not ordinaryClaimed and
+      not stipendClaimed and
+      not opAClaimed and
+      not opBClaimed and
+      not daClaimed and
+      not l2Claimed and
+      not midnightClaimed and
+      not dustClaimed and
+      not spendClaimed;
+    requires not liability_present("cost_ordinary");
+    requires not liability_present("cost_stipend");
+    requires not liability_present("reward_operator_a");
+    requires not liability_present("reward_operator_b");
+    requires not liability_present("reward_da");
+    requires not liability_present("treasury_l2");
+    requires not liability_present("treasury_midnight");
+    requires not liability_present("treasury_dust");
+    requires not liability_present("watcher_spend");
+    let nextEpoch = epochId + 1;
+    requires nextEpoch < exclusiveU64;
+    let close = nextEpoch * 86400;
+    requires close < exclusiveU64;
+    requires closeObservedAt >= close;
+    transfer(FEES, "funding-source", "fee-pool", grossAmount);
+    next epoch = epochId;
+    next epochClose = close;
+    next gross = grossAmount;
+    next target = initialTarget;
+    next stipendLimit = watcherStipendLimit;
+    next carried = grossAmount;
+    next recorded = true;
+  }
+
+  action registerOperatorA(weight: UInt, attested: Bool, effectiveWeight: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires weight < exclusiveU64 and effectiveWeight < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not opARegistered;
+    requires weight <= 86400;
+    requires (attested and effectiveWeight == weight) or (not attested and effectiveWeight == 0);
+    let nextWeight = opWeight + effectiveWeight;
+    requires nextWeight < exclusiveU64;
+    let nextSeats = rewardSeatCount + 1;
+    requires nextSeats <= 3;
+    next opAWeight = effectiveWeight;
+    next opWeight = nextWeight;
+    next rewardSeatCount = nextSeats;
+    next opARegistered = true;
+  }
+
+  action registerOperatorB(weight: UInt, attested: Bool, effectiveWeight: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires weight < exclusiveU64 and effectiveWeight < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not opBRegistered;
+    requires weight <= 86400;
+    requires (attested and effectiveWeight == weight) or (not attested and effectiveWeight == 0);
+    let nextWeight = opWeight + effectiveWeight;
+    requires nextWeight < exclusiveU64;
+    let nextSeats = rewardSeatCount + 1;
+    requires nextSeats <= 3;
+    next opBWeight = effectiveWeight;
+    next opWeight = nextWeight;
+    next rewardSeatCount = nextSeats;
+    next opBRegistered = true;
+  }
+
+  action registerDa(weight: UInt, attested: Bool, effectiveWeight: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires weight < exclusiveU64 and effectiveWeight < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not daRegistered;
+    requires (attested and effectiveWeight == weight) or (not attested and effectiveWeight == 0);
+    let nextWeight = daWeight + effectiveWeight;
+    requires nextWeight < exclusiveU64;
+    let nextSeats = rewardSeatCount + 1;
+    requires nextSeats <= 3;
+    next daSeatWeight = effectiveWeight;
+    next daWeight = nextWeight;
+    next rewardSeatCount = nextSeats;
+    next daRegistered = true;
+  }
+
+  action registerWatcher(weight: UInt, attested: Bool, effectiveWeight: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires weight < exclusiveU64 and effectiveWeight < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not watcherRegistered;
+    requires (attested and effectiveWeight == weight) or (not attested and effectiveWeight == 0);
+    next watcherWeight = effectiveWeight;
+    next watcherRegistered = true;
+  }
+
+  action submitOrdinary(amount: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires amount < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not ordinaryRecorded;
+    requires amount > 0;
+    requires not liability_present("cost_ordinary");
+    requires ordinaryAmount == 0 and not ordinaryClaimed;
+    let nextMetered = metered + amount;
+    requires nextMetered <= gross;
+    requires amount <= carried;
+    let nextCarried = carried - amount;
+    liability("cost_ordinary", FEES, "fee-pool", "cost-provider", amount);
+    next ordinaryAmount = amount;
+    next metered = nextMetered;
+    next carried = nextCarried;
+    next ordinaryRecorded = true;
+  }
+
+  action submitStipend(amount: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires amount < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled and not stipendRecorded;
+    requires amount > 0;
+    requires not liability_present("cost_stipend");
+    requires stipendAmount == 0 and not stipendClaimed;
+    requires watcherRegistered and watcherWeight > 0 and amount <= stipendLimit;
+    let nextMetered = metered + amount;
+    requires nextMetered <= gross;
+    requires amount <= carried;
+    let nextCarried = carried - amount;
+    liability("cost_stipend", FEES, "fee-pool", "watcher", amount);
+    next stipendAmount = amount;
+    next metered = nextMetered;
+    next carried = nextCarried;
+    next stipendRecorded = true;
+  }
+
+  action settle(opQ: UInt, opR: UInt, daQ: UInt, daR: UInt, watcherQ: UInt, watcherR: UInt, l2Q: UInt, l2R: UInt, refill: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires opQ < exclusiveU64 and opR < exclusiveU64 and daQ < exclusiveU64 and daR < exclusiveU64 and watcherQ < exclusiveU64 and watcherR < exclusiveU64 and l2Q < exclusiveU64 and l2R < exclusiveU64 and refill < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and not settled;
+    requires not liability_present("treasury_l2");
+    requires not liability_present("treasury_midnight");
+    requires l2Amount == 0 and midnightAmount == 0 and not l2Claimed and not midnightClaimed;
+    let surplus = gross - metered;
+    requires opR < 100;
+    requires opQ * 100 + opR == surplus * 55;
+    requires daR < 100;
+    requires daQ * 100 + daR == surplus * 10;
+    requires watcherR < 100;
+    requires watcherQ * 100 + watcherR == surplus * 5;
+    requires l2R < 100;
+    requires l2Q * 100 + l2R == surplus * 15;
+    let shares = opQ + daQ + watcherQ + l2Q;
+    requires shares <= surplus;
+    let midnight = surplus - shares;
+    requires refill <= l2Q;
+    let afterBackstop = backstop + refill;
+    requires afterBackstop < exclusiveU64;
+    requires (backstop >= target and refill == 0) or (backstop < target and afterBackstop <= target and (refill == l2Q or afterBackstop == target));
+    let newL2 = l2Q - refill;
+    let nextWatcher = watcherHeld + watcherQ;
+    requires nextWatcher < exclusiveU64;
+    let nextCarried = opQ + daQ;
+    requires nextCarried < exclusiveU64;
+    liability("treasury_l2", FEES, "fee-pool", "l2-treasury", newL2);
+    liability("treasury_midnight", FEES, "fee-pool", "midnight-treasury", midnight);
+    next opTotal = opQ;
+    next daTotal = daQ;
+    next watcherTotal = watcherQ;
+    next opRemaining = opQ;
+    next daRemaining = daQ;
+    next carried = nextCarried;
+    next watcherHeld = nextWatcher;
+    next backstop = afterBackstop;
+    next l2Amount = newL2;
+    next midnightAmount = midnight;
+    next settled = true;
+  }
+
+  action allocateOperatorA(denominator: UInt, quotient: UInt, remainder: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires denominator < exclusiveU64 and quotient < exclusiveU64 and remainder < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and not finished and opARegistered and not opAAllocated;
+    requires not liability_present("reward_operator_a");
+    requires opAAmount == 0 and not opAClaimed;
+    requires (opWeight == 0 and denominator == 1) or (opWeight > 0 and denominator == opWeight);
+    requires denominator > 0 and remainder < denominator;
+    requires quotient * denominator + remainder == opTotal * opAWeight;
+    requires quotient <= opRemaining and quotient <= carried;
+    let nextRemaining = opRemaining - quotient;
+    let nextCarried = carried - quotient;
+    let nextAllocated = allocatedCount + 1;
+    requires nextAllocated <= rewardSeatCount;
+    let rewardUnlock = epochClose + 2592000;
+    requires rewardUnlock < exclusiveU64;
+    liability("reward_operator_a", FEES, "fee-pool", "operator-a", quotient);
+    next opAAmount = quotient;
+    next opRemaining = nextRemaining;
+    next carried = nextCarried;
+    next allocatedCount = nextAllocated;
+    next opAAllocated = true;
+  }
+
+  action allocateOperatorB(denominator: UInt, quotient: UInt, remainder: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires denominator < exclusiveU64 and quotient < exclusiveU64 and remainder < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and not finished and opBRegistered and not opBAllocated;
+    requires not liability_present("reward_operator_b");
+    requires opBAmount == 0 and not opBClaimed;
+    requires (opWeight == 0 and denominator == 1) or (opWeight > 0 and denominator == opWeight);
+    requires denominator > 0 and remainder < denominator;
+    requires quotient * denominator + remainder == opTotal * opBWeight;
+    requires quotient <= opRemaining and quotient <= carried;
+    let nextRemaining = opRemaining - quotient;
+    let nextCarried = carried - quotient;
+    let nextAllocated = allocatedCount + 1;
+    requires nextAllocated <= rewardSeatCount;
+    let rewardUnlock = epochClose + 2592000;
+    requires rewardUnlock < exclusiveU64;
+    liability("reward_operator_b", FEES, "fee-pool", "operator-b", quotient);
+    next opBAmount = quotient;
+    next opRemaining = nextRemaining;
+    next carried = nextCarried;
+    next allocatedCount = nextAllocated;
+    next opBAllocated = true;
+  }
+
+  action allocateDa(denominator: UInt, quotient: UInt, remainder: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires denominator < exclusiveU64 and quotient < exclusiveU64 and remainder < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and not finished and daRegistered and not daAllocated;
+    requires not liability_present("reward_da");
+    requires daAmount == 0 and not daClaimed;
+    requires (daWeight == 0 and denominator == 1) or (daWeight > 0 and denominator == daWeight);
+    requires denominator > 0 and remainder < denominator;
+    requires quotient * denominator + remainder == daTotal * daSeatWeight;
+    requires quotient <= daRemaining and quotient <= carried;
+    let nextRemaining = daRemaining - quotient;
+    let nextCarried = carried - quotient;
+    let nextAllocated = allocatedCount + 1;
+    requires nextAllocated <= rewardSeatCount;
+    let rewardUnlock = epochClose + 2592000;
+    requires rewardUnlock < exclusiveU64;
+    liability("reward_da", FEES, "fee-pool", "da-provider", quotient);
+    next daAmount = quotient;
+    next daRemaining = nextRemaining;
+    next carried = nextCarried;
+    next allocatedCount = nextAllocated;
+    next daAllocated = true;
+  }
+
+  action finish(refill: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires refill < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and not finished and allocatedCount == rewardSeatCount;
+    requires not liability_present("treasury_dust");
+    requires dustAmount == 0 and not dustClaimed;
+    let residue = opRemaining + daRemaining;
+    requires residue < exclusiveU64 and carried == residue;
+    requires refill <= residue;
+    let afterBackstop = backstop + refill;
+    requires afterBackstop < exclusiveU64;
+    requires (backstop >= target and refill == 0) or (backstop < target and afterBackstop <= target and (refill == residue or afterBackstop == target));
+    let dust = residue - refill;
+    liability("treasury_dust", FEES, "fee-pool", "l2-treasury", dust);
+    next backstop = afterBackstop;
+    next dustAmount = dust;
+    next opRemaining = 0;
+    next daRemaining = 0;
+    next carried = 0;
+    next finished = true;
+  }
+
+  action spendWatcher(kind: UInt, amount: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires kind < exclusiveU64 and amount < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and not spendIssued;
+    requires kind == 7 or kind == 8;
+    requires amount > 0 and amount <= watcherHeld;
+    requires not liability_present("watcher_spend");
+    requires spendAmount == 0 and not spendClaimed;
+    let nextHeld = watcherHeld - amount;
+    liability("watcher_spend", FEES, "fee-pool", "watcher", amount);
+    next watcherHeld = nextHeld;
+    next spendAmount = amount;
+    next spendIssued = true;
+  }
+
+  action setTarget(newTarget: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires newTarget < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded;
+    next target = newTarget;
+  }
+
+  action claimOrdinary(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and ordinaryRecorded and not ordinaryClaimed;
+    requires ordinaryAmount > 0;
+    requires liability_present("cost_ordinary");
+    requires liability_amount("cost_ordinary") == ordinaryAmount;
+    requires observedAt >= epochClose;
+    let claimAmount = ordinaryAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "cost-provider", claimAmount);
+    discharge("cost_ordinary", claimAmount);
+    next claimedTotal = nextClaimed;
+    next ordinaryClaimed = true;
+  }
+
+  action claimStipend(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and stipendRecorded and not stipendClaimed;
+    requires stipendAmount > 0;
+    requires liability_present("cost_stipend");
+    requires liability_amount("cost_stipend") == stipendAmount;
+    requires observedAt >= epochClose;
+    let claimAmount = stipendAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "watcher", claimAmount);
+    discharge("cost_stipend", claimAmount);
+    next claimedTotal = nextClaimed;
+    next stipendClaimed = true;
+  }
+
+  action claimOperatorA(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and opAAllocated and not opAClaimed;
+    requires opAAmount > 0;
+    requires liability_present("reward_operator_a");
+    requires liability_amount("reward_operator_a") == opAAmount;
+    let unlock = epochClose + 2592000;
+    requires unlock < exclusiveU64;
+    requires observedAt >= unlock;
+    let claimAmount = opAAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "operator-a", claimAmount);
+    discharge("reward_operator_a", claimAmount);
+    next claimedTotal = nextClaimed;
+    next opAClaimed = true;
+  }
+
+  action claimOperatorB(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and opBAllocated and not opBClaimed;
+    requires opBAmount > 0;
+    requires liability_present("reward_operator_b");
+    requires liability_amount("reward_operator_b") == opBAmount;
+    let unlock = epochClose + 2592000;
+    requires unlock < exclusiveU64;
+    requires observedAt >= unlock;
+    let claimAmount = opBAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "operator-b", claimAmount);
+    discharge("reward_operator_b", claimAmount);
+    next claimedTotal = nextClaimed;
+    next opBClaimed = true;
+  }
+
+  action claimDa(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and daAllocated and not daClaimed;
+    requires daAmount > 0;
+    requires liability_present("reward_da");
+    requires liability_amount("reward_da") == daAmount;
+    let unlock = epochClose + 2592000;
+    requires unlock < exclusiveU64;
+    requires observedAt >= unlock;
+    let claimAmount = daAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "da-provider", claimAmount);
+    discharge("reward_da", claimAmount);
+    next claimedTotal = nextClaimed;
+    next daClaimed = true;
+  }
+
+  action claimL2(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and settled and not l2Claimed;
+    requires l2Amount > 0;
+    requires liability_present("treasury_l2");
+    requires liability_amount("treasury_l2") == l2Amount;
+    requires observedAt >= epochClose;
+    let claimAmount = l2Amount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "l2-treasury", claimAmount);
+    discharge("treasury_l2", claimAmount);
+    next claimedTotal = nextClaimed;
+    next l2Claimed = true;
+  }
+
+  action claimMidnight(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and settled and not midnightClaimed;
+    requires midnightAmount > 0;
+    requires liability_present("treasury_midnight");
+    requires liability_amount("treasury_midnight") == midnightAmount;
+    requires observedAt >= epochClose;
+    let claimAmount = midnightAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "midnight-treasury", claimAmount);
+    discharge("treasury_midnight", claimAmount);
+    next claimedTotal = nextClaimed;
+    next midnightClaimed = true;
+  }
+
+  action claimDust(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and finished and not dustClaimed;
+    requires dustAmount > 0;
+    requires liability_present("treasury_dust");
+    requires liability_amount("treasury_dust") == dustAmount;
+    requires observedAt >= epochClose;
+    let claimAmount = dustAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "l2-treasury", claimAmount);
+    discharge("treasury_dust", claimAmount);
+    next claimedTotal = nextClaimed;
+    next dustClaimed = true;
+  }
+
+  action claimWatcherSpend(observedAt: UInt) {
+    let exclusiveU64 = 18446744073709551616;
+    requires epoch < exclusiveU64 and
+      epochClose < exclusiveU64 and
+      gross < exclusiveU64 and
+      metered < exclusiveU64 and
+      target < exclusiveU64 and
+      backstop < exclusiveU64 and
+      watcherHeld < exclusiveU64 and
+      stipendLimit < exclusiveU64 and
+      opWeight < exclusiveU64 and
+      daWeight < exclusiveU64 and
+      rewardSeatCount < exclusiveU64 and
+      allocatedCount < exclusiveU64 and
+      opTotal < exclusiveU64 and
+      daTotal < exclusiveU64 and
+      watcherTotal < exclusiveU64 and
+      opRemaining < exclusiveU64 and
+      daRemaining < exclusiveU64 and
+      opAWeight < exclusiveU64 and
+      opBWeight < exclusiveU64 and
+      daSeatWeight < exclusiveU64 and
+      watcherWeight < exclusiveU64 and
+      ordinaryAmount < exclusiveU64 and
+      stipendAmount < exclusiveU64 and
+      opAAmount < exclusiveU64 and
+      opBAmount < exclusiveU64 and
+      daAmount < exclusiveU64 and
+      l2Amount < exclusiveU64 and
+      midnightAmount < exclusiveU64 and
+      dustAmount < exclusiveU64 and
+      spendAmount < exclusiveU64 and
+      claimedTotal < exclusiveU64 and
+      carried < exclusiveU64;
+    requires observedAt < exclusiveU64;
+    requires metered == ordinaryAmount + stipendAmount;
+    requires metered <= gross;
+    requires opWeight == opAWeight + opBWeight;
+    requires daWeight == daSeatWeight;
+    requires rewardSeatCount <= 3 and allocatedCount <= rewardSeatCount;
+    requires not finished or settled;
+    requires recorded and settled and spendIssued and not spendClaimed;
+    requires spendAmount > 0;
+    requires liability_present("watcher_spend");
+    requires liability_amount("watcher_spend") == spendAmount;
+    requires observedAt >= epochClose;
+    let claimAmount = spendAmount;
+    let nextClaimed = claimedTotal + claimAmount;
+    requires nextClaimed < exclusiveU64;
+    transfer(FEES, "fee-pool", "watcher", claimAmount);
+    discharge("watcher_spend", claimAmount);
+    next claimedTotal = nextClaimed;
+    next spendClaimed = true;
+  }
+}
