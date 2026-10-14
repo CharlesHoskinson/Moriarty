@@ -1,0 +1,84 @@
+{
+  "correctionPass": "04-focused-source-correction",
+  "author": "AGY Gemini 3.8 Flash high",
+  "reviewRouting": {
+    "firstReview": "Grok 4.6 high",
+    "secondReview": "fresh GPT-6 Astra"
+  },
+  "scope": "Focused source correction addressing ONLY M2-HISTORY-ZERO-ON-MISSING and M2-REVIEW-AND-FINDING-IDENTITY from grok-result-review.json. All other findings remain OPEN.",
+  "findingsAddressed": [
+    {
+      "id": "M2-HISTORY-ZERO-ON-MISSING",
+      "resolution": "Unverified empty or corrupt SQLite database returns None instead of clean zeros. init_db verifies 16-byte SQLite header magic and raises StoreError on corrupt database files, preserving corrupt bytes for diagnosis. policy and records safely handle None history values without crashing. cli status reports unresolved history honestly."
+    },
+    {
+      "id": "M2-REVIEW-AND-FINDING-IDENTITY",
+      "resolution": "Public CLI review validates candidateHash (min 16 hex chars), audit scope against campaign admission, and non-author reviewer identity before mutating SQLite history; rejects invalid or mismatched receipts with exit code 3. Findings tracked across lineage (repo, req, cap) and cannot be erased by author defect_resolved events; cleared only on authentic approved reviews. Admin intervals union-merged with testing/afk/idle excluded."
+    }
+  ],
+  "openFindings": [
+    {
+      "id": "M2-LAUNCH-NOT-REVALIDATED-NOT-CHARGED",
+      "status": "OPEN",
+      "note": "Not targeted in this focused pass"
+    },
+    {
+      "id": "M2-OUTBOX-DELIVERED-ON-STATUS",
+      "status": "OPEN",
+      "note": "Not targeted in this focused pass"
+    },
+    {
+      "id": "M3-DOCTOR-AND-HOST-UNVERIFIED",
+      "status": "OPEN",
+      "note": "Not targeted in this focused pass"
+    },
+    {
+      "id": "M4-HARDCODED-REPRODUCER",
+      "status": "OPEN",
+      "note": "Not targeted in this focused pass"
+    },
+    {
+      "id": "M4-REPORT-NOT-FROM-RECORDS",
+      "status": "OPEN",
+      "note": "Not targeted in this focused pass"
+    }
+  ],
+  "demonstratedCapabilities": [
+    "Public review CLI rejects unrelated candidate/scope receipt with exit code 3 before mutating SQLite history",
+    "Corrupt/missing/unverified-empty history returns None, preventing uncaught DatabaseError or clean operational zeros",
+    "Genuine current non-author review accepted with exit code 0",
+    "Stable unresolved findings survive restarts and candidate renames across lineage; author defect_resolved cannot erase blockers; authentic approved reviews clear findings",
+    "Admin intervals union-merged; excluded intervals (test, testing, afk, idle) omitted; unmeasured timing remains None"
+  ],
+  "verification": {
+    "unitAndRegressionTests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=plugins/moriarty-dev/scripts python3 -m unittest discover -s plugins/moriarty-dev/tests -v",
+      "exitCode": 0,
+      "ran": 126,
+      "failures": 0,
+      "errors": 0,
+      "result": "OK"
+    },
+    "pluginValidation": {
+      "command": "python3 /home/charl/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/moriarty-dev",
+      "exitCode": 0,
+      "result": "Plugin validation passed"
+    },
+    "skillValidation": {
+      "command": "python3 /home/charl/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/moriarty-dev/skills/develop",
+      "exitCode": 0,
+      "result": "Skill is valid!"
+    }
+  },
+  "modifiedFiles": [
+    "plugins/moriarty-dev/scripts/moriarty_dev/records.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/policy.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/store.py",
+    "plugins/moriarty-dev/scripts/moriarty_dev/cli.py",
+    "plugins/moriarty-dev/tests/test_records.py",
+    "plugins/moriarty-dev/tests/test_execution.py",
+    "plugins/moriarty-dev/README.md",
+    "FOREMAN_REPORT.md",
+    "FOREMAN_REPORT.json"
+  ]
+}
