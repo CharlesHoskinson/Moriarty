@@ -4,11 +4,15 @@ Repository-scoped development plugin that enforces stop rules, prevents orchestr
 
 ## Execution focus
 
-The [develop skill](skills/develop/SKILL.md) adds the September 11 delivery recommendations: one acceptance predicate in progress, one short reconciliation in existing records, implementation through the actual caller, independent failure cases before authoring, and concurrent fresh audits of the complete candidate. The current target is uncertified I2/MC02 integration; it is not full SP05 or mandatory PCD acceptance. A separately bounded F0 verifier-compatibility decision may proceed with independent capacity and resource authority. Existing K failures call for a single-case reproduction before broad retries, with full final conformance retained.
+The [current parallel workflow](../../docs/PARALLEL-DEVELOPMENT.md) selects three Sol and three Grok authors at high effort.
+Six tasks prepare U0/U1/U2/U3/U6 through disjoint source paths and existing product consumers.
+The user supersedes the single active source item for this scope. One integrator owns shared interfaces.
+Every final candidate requires fresh non-author Sol and Grok audits of the complete exact candidate.
+Existing frozen signed-call native gates retain Opus 5.5 and Muse audits.
 
-The [execution reference](skills/develop/references/execution-focus.md) provides financial coverage checks, context and review practice, six manual metrics, and native/K investigation boundaries. These are agent workflow instructions, not new runtime enforcement or proof of increased speed. No scheduler, admission exception, or new evidence register is introduced. New profiles, broad finance expansion, backend migration and deferred productization/mandatory CI work remain outside this focus interval.
-
-For this plugin update the user selected Astra authoring and fresh Grok 4.6 high plus Astra medium audits. The earlier general product routing remains Grok authoring with fresh Opus/Astra reviews unless later user steering changes it. The CLI's receipt validation does not itself enforce either complete reviewer roster.
+The [develop skill](skills/develop/SKILL.md) and [execution reference](skills/develop/references/execution-focus.md) retain failure, resource and acceptance rules.
+The task manifest and read-only context script do not create a scheduler or alter native admission.
+The CLI does not enforce the full reviewer roster. The lead verifies both independent audits.
 
 ## Guarantees
 
@@ -17,7 +21,8 @@ For this plugin update the user selected Astra authoring and fresh Grok 4.6 high
    - Requires an admitted reproducer before permitting any focused repair.
    - Blocks administrative displacement after 2 administrative cycles or 1,800 observed seconds of administrative overhead (`PROCESS_DISPLACEMENT` / `ADMIN_LIMIT`).
 2. **Atomic Single-Reservation**:
-   - Enforces single primary implementation reservation across repository and all linked git worktrees.
+   - Enforces one primary reservation for registered guarded execution across all linked git worktrees.
+   - Ordinary authorized source edits do not acquire this reservation. Native dispatch retains every existing gate.
    - Shared operational failure history stored in `<git-common-dir>/moriarty-dev/state.sqlite3`.
 3. **Review Validation and Ingestion**:
    - Strictly validates review receipts against registered candidate hash, campaign scope, and independent non-author reviewer identity before mutating operational state.
