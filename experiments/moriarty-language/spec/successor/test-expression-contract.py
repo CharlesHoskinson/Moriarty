@@ -63,5 +63,64 @@ class ContractTests(unittest.TestCase):
         c, cases = self.inputs(); cases['cases'].append(copy.deepcopy(cases['cases'][0]))
         self.assertIn('duplicate-case', self.module.validate(c, cases))
 
+    def test_strict_version_rejected(self):
+        c, cases = self.inputs(); c['schemaVersion'] = 'moriarty-expression-contract/0'
+        self.assertIn('claim-scope', self.module.validate(c, cases))
+
+    def test_eager_boolean_metadata_rejected(self):
+        c, cases = self.inputs()
+        row = next(r for r in c['constructors'] if r['constructor'] == 'And')
+        row['evaluatedOperands'] = ['left', 'right']
+        self.assertIn('boolean-evaluation-metadata:And', self.module.validate(c, cases))
+
+    def test_skipped_static_operand_rejected(self):
+        c, cases = self.inputs()
+        row = next(r for r in c['constructors'] if r['constructor'] == 'Or')
+        row['staticOperands'] = ['left']
+        self.assertIn('boolean-evaluation-metadata:Or', self.module.validate(c, cases))
+
+    def test_wrong_selection_predicate_rejected(self):
+        c, cases = self.inputs()
+        row = next(r for r in c['constructors'] if r['constructor'] == 'Or')
+        row['conditionalEvaluatedOperands'][0]['when'] = 'left=true'
+        self.assertIn('boolean-evaluation-metadata:Or', self.module.validate(c, cases))
+
+    def test_reused_strict_positive_id_rejected(self):
+        c, cases = self.inputs()
+        row = next(r for r in c['constructors'] if r['constructor'] == 'And')
+        row['caseIds'][0] = 'And-positive'
+        self.assertIn('case-reference:And', self.module.validate(c, cases))
+
+    def supplement(self):
+        return json.loads((HERE/'boolean-cases.json').read_text())
+
+    def test_complete_boolean_fixture_structure(self):
+        c, _ = self.inputs()
+        self.assertEqual([], self.module.validate_booleans(c, self.supplement()))
+
+    def test_missing_truth_row_rejected(self):
+        c, _ = self.inputs(); b = self.supplement()
+        b['cases'] = [r for r in b['cases'] if r['id'] != 'BC1-truth-and-true-true']
+        self.assertIn('boolean-truth-coverage', self.module.validate_booleans(c, b))
+
+    def test_unentered_path_not_a_charge(self):
+        c, _ = self.inputs(); b = self.supplement()
+        row = next(r for r in b['cases'] if r['id'] == 'BC1-work2-select-and')
+        row['enteredNodePaths'].append([1])
+        self.assertTrue(any('specified-entry-accounting' in e for e in self.module.validate_booleans(c, b)))
+
+    def test_rebased_selected_span_rejected(self):
+        c, _ = self.inputs(); b = self.supplement()
+        row = next(r for r in b['cases'] if r['id'] == 'BC1-source-selected-work-exhaustion')
+        row['expected']['span'] = row['core']['span']
+        self.assertTrue(any('rejection-span-provenance' in e for e in self.module.validate_booleans(c, b)))
+
+    def test_metadata_checks_do_not_evaluate_truth(self):
+        c, _ = self.inputs(); b = self.supplement()
+        row = next(r for r in b['cases'] if r['id'] == 'BC1-truth-and-true-true')
+        row['expected']['value'] = False
+        self.assertEqual([], self.module.validate_booleans(c, b),
+                         'This checker is structural; independent review must catch wrong semantic values.')
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
