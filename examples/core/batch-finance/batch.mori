@@ -1,0 +1,109 @@
+language "moriarty/1";
+// price is the supplied base-per-quote count: atomic BASE units per 1 atomic QUOTE unit.
+// The caller supplies the quote. Acceptance requires baseQty == quoteQty * price, exactly.
+// This source does not divide and does not round. price is a UInt premise, not a price type.
+// sameDomain, oracleAuthorized, solverAuthorized, observedAt and now are local premises.
+// The freshness window is 8 time units. gross is quote notionals plus fees.
+// Rebates stay outside gross. net is quote notionals minus fees.
+// minNet is applied to that net. clearDuty and swapDuty keep the residual after settledDuty.
+agreement ExactBatchSwap {
+  asset BASE = { network: "local", issuer: "base-desk", reference: "BASE", scale: 0 };
+  asset QUOTE = { network: "local", issuer: "quote-desk", reference: "QUOTE", scale: 0 };
+  state gross: UInt = 0;
+  state fees: UInt = 0;
+  state net: UInt = 0;
+  state duty: UInt = 0;
+  action clear(
+    aliceQuote: UInt, bobQuote: UInt, aliceBase: UInt, bobBase: UInt,
+    price: UInt, alicePrice: UInt, bobPrice: UInt, oraclePrice: UInt,
+    observedAt: UInt, now: UInt,
+    aliceFee: UInt, bobFee: UInt, aliceRebate: UInt, bobRebate: UInt,
+    solverCap: UInt, grossCap: UInt, minNet: UInt, settledDuty: UInt,
+    sameDomain: Bool, oracleAuthorized: Bool, solverAuthorized: Bool
+  ) {
+    requires sameDomain;
+    requires oracleAuthorized;
+    requires solverAuthorized;
+    requires now >= observedAt;
+    let age = now - observedAt;
+    requires age <= 8;
+    requires price > 0;
+    requires price == oraclePrice;
+    requires alicePrice == price;
+    requires bobPrice == price;
+    requires aliceQuote > 0;
+    requires bobQuote > 0;
+    let aliceBaseDue = aliceQuote * price;
+    let bobBaseDue = bobQuote * price;
+    requires aliceBase == aliceBaseDue;
+    requires bobBase == bobBaseDue;
+    let baseFilled = aliceBase + bobBase;
+    requires baseFilled <= solverCap;
+    let notional = aliceQuote + bobQuote;
+    let feeTotal = aliceFee + bobFee;
+    requires notional >= feeTotal + minNet;
+    let grossCharge = notional + feeTotal;
+    requires gross + grossCharge <= grossCap;
+    requires aliceRebate <= aliceQuote;
+    requires bobRebate <= bobQuote;
+    requires settledDuty <= feeTotal;
+    let netNow = notional - feeTotal;
+    let dutyNow = feeTotal - settledDuty;
+    transfer(BASE, "maker", "alice", aliceBase);
+    transfer(BASE, "maker", "bob", bobBase);
+    transfer(QUOTE, "alice", "maker", aliceQuote);
+    transfer(QUOTE, "bob", "maker", bobQuote);
+    fee(QUOTE, "alice", "pool", aliceFee);
+    fee(QUOTE, "bob", "pool", bobFee);
+    transfer(QUOTE, "maker", "alice", aliceRebate);
+    transfer(QUOTE, "maker", "bob", bobRebate);
+    liability("clearDuty", QUOTE, "maker", "reserve", feeTotal);
+    discharge("clearDuty", settledDuty);
+    next gross = gross + grossCharge;
+    next fees = fees + feeTotal;
+    next net = net + netNow;
+    next duty = duty + dutyNow;
+    ensures gross == net + fees + fees;
+    emit "base_per_quote"(price);
+  }
+  action swap(
+    quoteQty: UInt, baseQty: UInt,
+    price: UInt, leftPrice: UInt, rightPrice: UInt, oraclePrice: UInt,
+    observedAt: UInt, now: UInt,
+    leftFee: UInt, settledDuty: UInt,
+    solverCap: UInt, grossCap: UInt, minNet: UInt,
+    sameDomain: Bool, oracleAuthorized: Bool, solverAuthorized: Bool
+  ) {
+    requires sameDomain;
+    requires oracleAuthorized;
+    requires solverAuthorized;
+    requires now >= observedAt;
+    let age = now - observedAt;
+    requires age <= 8;
+    requires price > 0;
+    requires price == oraclePrice;
+    requires leftPrice == price;
+    requires rightPrice == price;
+    requires quoteQty > 0;
+    let baseDue = quoteQty * price;
+    requires baseQty == baseDue;
+    requires baseQty <= solverCap;
+    requires quoteQty >= leftFee + minNet;
+    let grossCharge = quoteQty + leftFee;
+    requires gross + grossCharge <= grossCap;
+    requires settledDuty <= leftFee;
+    let netNow = quoteQty - leftFee;
+    let dutyNow = leftFee - settledDuty;
+    transfer(BASE, "right", "left", baseQty);
+    transfer(QUOTE, "left", "right", quoteQty);
+    fee(QUOTE, "left", "pool", leftFee);
+    liability("swapDuty", QUOTE, "left", "reserve", leftFee);
+    discharge("swapDuty", settledDuty);
+    next gross = gross + grossCharge;
+    next fees = fees + leftFee;
+    next net = net + netNow;
+    next duty = duty + dutyNow;
+    ensures gross == net + fees + fees;
+    emit "base_per_quote"(price);
+  }
+}

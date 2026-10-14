@@ -1,0 +1,310 @@
+{
+  "profile": "moriarty-tests/1",
+  "cases": [
+    {
+      "name": "exact-canonical-clear",
+      "source": "batch.mori",
+      "scenario": "clear.json",
+      "action": "clear",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "duty": { "type": "UInt", "value": "2" },
+            "fees": { "type": "UInt", "value": "3" },
+            "gross": { "type": "UInt", "value": "11" },
+            "net": { "type": "UInt", "value": "5" }
+          },
+          "balances": [
+            {
+              "account": "alice",
+              "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+              "amount": "12"
+            },
+            {
+              "account": "bob",
+              "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+              "amount": "20"
+            },
+            {
+              "account": "maker",
+              "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+              "amount": "8"
+            },
+            {
+              "account": "alice",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "8"
+            },
+            {
+              "account": "bob",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "14"
+            },
+            {
+              "account": "maker",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "5"
+            },
+            {
+              "account": "pool",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "3"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "clearDuty",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "debtor": "maker",
+              "creditor": "reserve",
+              "amount": "2"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+            "from": "maker",
+            "to": "alice",
+            "amount": "12"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+            "from": "maker",
+            "to": "bob",
+            "amount": "20"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "alice",
+            "to": "maker",
+            "amount": "3"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "bob",
+            "to": "maker",
+            "amount": "5"
+          },
+          {
+            "kind": "Fee",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "alice",
+            "to": "pool",
+            "amount": "1"
+          },
+          {
+            "kind": "Fee",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "bob",
+            "to": "pool",
+            "amount": "2"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "maker",
+            "to": "alice",
+            "amount": "2"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "maker",
+            "to": "bob",
+            "amount": "1"
+          },
+          {
+            "kind": "Liability",
+            "name": "clearDuty",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "debtor": "maker",
+            "creditor": "reserve",
+            "before": "0",
+            "after": "3"
+          },
+          {
+            "kind": "Liability",
+            "name": "clearDuty",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "debtor": "maker",
+            "creditor": "reserve",
+            "before": "3",
+            "after": "2"
+          },
+          {
+            "kind": "State",
+            "name": "gross",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "11" }
+          },
+          {
+            "kind": "State",
+            "name": "fees",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "3" }
+          },
+          {
+            "kind": "State",
+            "name": "net",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "5" }
+          },
+          {
+            "kind": "State",
+            "name": "duty",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "2" }
+          },
+          {
+            "kind": "Emit",
+            "name": "base_per_quote",
+            "value": { "type": "UInt", "value": "4" }
+          }
+        ]
+      }
+    },
+    {
+      "name": "exact-canonical-swap",
+      "source": "batch.mori",
+      "scenario": "atomic-swap.json",
+      "action": "swap",
+      "expected": {
+        "status": "accepted",
+        "post": {
+          "state": {
+            "duty": { "type": "UInt", "value": "0" },
+            "fees": { "type": "UInt", "value": "2" },
+            "gross": { "type": "UInt", "value": "8" },
+            "net": { "type": "UInt", "value": "4" }
+          },
+          "balances": [
+            {
+              "account": "left",
+              "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+              "amount": "43"
+            },
+            {
+              "account": "right",
+              "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+              "amount": "8"
+            },
+            {
+              "account": "left",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "7"
+            },
+            {
+              "account": "pool",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "11"
+            },
+            {
+              "account": "right",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "amount": "10"
+            }
+          ],
+          "liabilities": [
+            {
+              "name": "swapDuty",
+              "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+              "debtor": "left",
+              "creditor": "reserve",
+              "amount": "0"
+            }
+          ]
+        },
+        "effects": [
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "base-desk", "reference": "BASE", "scale": 0 },
+            "from": "right",
+            "to": "left",
+            "amount": "42"
+          },
+          {
+            "kind": "Transfer",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "left",
+            "to": "right",
+            "amount": "6"
+          },
+          {
+            "kind": "Fee",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "from": "left",
+            "to": "pool",
+            "amount": "2"
+          },
+          {
+            "kind": "Liability",
+            "name": "swapDuty",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "debtor": "left",
+            "creditor": "reserve",
+            "before": "0",
+            "after": "2"
+          },
+          {
+            "kind": "Liability",
+            "name": "swapDuty",
+            "asset": { "network": "local", "issuer": "quote-desk", "reference": "QUOTE", "scale": 0 },
+            "debtor": "left",
+            "creditor": "reserve",
+            "before": "2",
+            "after": "0"
+          },
+          {
+            "kind": "State",
+            "name": "gross",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "8" }
+          },
+          {
+            "kind": "State",
+            "name": "fees",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "2" }
+          },
+          {
+            "kind": "State",
+            "name": "net",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "4" }
+          },
+          {
+            "kind": "State",
+            "name": "duty",
+            "before": { "type": "UInt", "value": "0" },
+            "after": { "type": "UInt", "value": "0" }
+          },
+          {
+            "kind": "Emit",
+            "name": "base_per_quote",
+            "value": { "type": "UInt", "value": "7" }
+          }
+        ]
+      }
+    },
+    {
+      "name": "stale-observation-refuses",
+      "source": "batch.mori",
+      "scenario": "reject-stale.json",
+      "action": "clear",
+      "expected": { "status": "rejected", "code": "mori::core::requires" }
+    },
+    {
+      "name": "cross-domain-asset-refuses",
+      "source": "batch.mori",
+      "scenario": "reject-cross-domain.json",
+      "action": "clear",
+      "expected": { "status": "rejected", "code": "mori::core::asset" }
+    }
+  ]
+}
