@@ -210,3 +210,112 @@ pub fn admit(
     }
     Ok(a)
 }
+
+pub(crate) const SOURCE_STATIC_FORMAT: &str = "moriarty-mapped-role-source-static-relation/1";
+pub(crate) const SOURCE_STATIC_QUALIFICATION: &str = "source-static-mapped-debits-unauthenticated";
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub(crate) struct SourceStaticManifest {
+    pub(crate) format: String,
+    pub(crate) source_hash: String,
+    pub(crate) program_hash: String,
+    pub(crate) action: String,
+    pub(crate) abi: layout::LedgerAbi,
+    pub(crate) ir_hash: String,
+    pub(crate) input_count: usize,
+    pub(crate) groups: Vec<Group>,
+    pub(crate) qualification: String,
+    pub(crate) compiler_hash: String,
+    pub(crate) open_predicates: Vec<String>,
+    pub(crate) debit_sources: Vec<crate::profile::RoleBinding>,
+}
+/// Export bytes only; cannot construct a native relation artifact or key capability.
+/// ```compile_fail
+/// let artifact = mori_ledger::relation::SourceStaticArtifact {
+///     ir: todo!(), manifest: todo!(),
+/// };
+/// let _: mori_ledger::relation::Artifact = artifact.into();
+/// ```
+pub(crate) struct SourceStaticArtifact {
+    ir: IrSource,
+    manifest: SourceStaticManifest,
+}
+impl SourceStaticArtifact {
+    pub(crate) fn manifest(&self) -> &SourceStaticManifest {
+        &self.manifest
+    }
+    pub(crate) fn ir_bytes(&self) -> Result<Vec<u8>> {
+        codec::encode(&self.ir)
+    }
+    pub(crate) fn manifest_bytes(&self) -> Result<Vec<u8>> {
+        crate::call_artifacts::json_bytes(&self.manifest, codec::OUTPUT_BYTES as u64)
+    }
+}
+pub(crate) fn compile_source_static_roles(
+    validated: &layout::ValidatedSourceStaticBindings<'_>,
+    action: &str,
+) -> Result<SourceStaticArtifact> {
+    let (ir, groups, input_count) = compiler::compile_source_static_roles(validated, action)?;
+    let p = validated.program();
+    let bindings = validated.bindings();
+    let source_action = p
+        .actions
+        .iter()
+        .find(|a| a.name == action)
+        .ok_or(refusal("action"))?;
+    let names = source_action
+        .statements
+        .iter()
+        .filter_map(|s| match s {
+            mori_core::Statement::Transfer { from, .. }
+            | mori_core::Statement::Fee { from, .. } => Some(from),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    let debit_sources = names
+        .into_iter()
+        .map(|name| {
+            bindings
+                .roles
+                .iter()
+                .find(|r| &r.role == name)
+                .cloned()
+                .ok_or(refusal("source-debit-role"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let artifact = SourceStaticArtifact {
+        manifest: SourceStaticManifest {
+            format: SOURCE_STATIC_FORMAT.into(),
+            source_hash: bindings.source_hash.clone(),
+            program_hash: bindings.program_hash.clone(),
+            action: action.into(),
+            abi: validated.abi().clone(),
+            ir_hash: codec::hash(&codec::encode(&ir)?),
+            input_count,
+            groups,
+            qualification: SOURCE_STATIC_QUALIFICATION.into(),
+            compiler_hash: crate::proving::source_closure(),
+            open_predicates: [
+                "debit-source custody and funding ownership",
+                "role and beneficiary authorization",
+                "authenticated predecessor and deployment",
+                "economic intention authority",
+                "final intent/history/PCD",
+                "native proof and ledger settlement",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect(),
+            debit_sources,
+        },
+        ir,
+    };
+    if artifact
+        .ir_bytes()?
+        .len()
+        .checked_add(artifact.manifest_bytes()?.len())
+        .is_none_or(|n| n > codec::OUTPUT_BYTES)
+    {
+        return Err(refusal("artifact-size"));
+    }
+    Ok(artifact)
+}

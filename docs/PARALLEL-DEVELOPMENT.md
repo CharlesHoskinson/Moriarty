@@ -1,5 +1,12 @@
 # Parallel Moriarty source development
 
+The October 14 user update selects `gpt-6.1-sol` high implementation and fresh
+independent `muse-wonder-1.0` high audits for new language roadmap work.
+This replaces the author/reviewer routing in the initial October 13 wave below;
+its records, task contracts, resource limits and acceptance requirements remain.
+See [the routing assignment](../raw/assignments/moriarty-sol-muse-routing-2026-10-14.md).
+Review the full exact candidate and applicable actual results before merging.
+
 The October 13 user instruction selects three `gpt-6.1-sol` authors and three `grok-4.7` authors, all at high effort.
 This instruction supersedes the single active source delivery restriction for this workflow.
 It preserves every U0–U7, M1–M17, MC and SP acceptance requirement.
