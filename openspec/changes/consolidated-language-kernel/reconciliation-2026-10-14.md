@@ -148,9 +148,11 @@ the original SHA-256. The validator resolves this explicit historical snapshot;
 it does not relabel today's maintained guidance as the old report source.
 
 `parallel-language-workflow.json` retains the October 13 task contracts and roster
-as historical scoped preparation. Its current-guidance reference selects current
-routing; no old roster, proposed command or JSON flag grants native authority.
-The same distinction applies to the completion program and sprint registers.
+as historical scoped preparation. This document and the current repository routing
+assignment select new work; no old roster, proposed command or JSON flag grants
+native authority. The completion program and sprint registers also retain their
+original bytes. Current context belongs in documentation, not additional fields
+in these consumed machine contracts.
 
 Ordinary documentation checks are `python3 openspec/sprints/verify.py`,
 `python3 openspec/sprints/test_verify.py`, and
