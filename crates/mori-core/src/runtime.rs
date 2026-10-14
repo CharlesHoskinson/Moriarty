@@ -1,3 +1,4 @@
+use crate::policy::{CostPlane, Meter};
 use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -388,8 +389,22 @@ fn evaluate(
     id: ExprId,
     env: &BTreeMap<String, Value>,
     snapshot: &Snapshot,
+    meter: &mut Option<&mut Meter>,
 ) -> Result<Value, Error> {
-    eval_cached(p, id, env, snapshot, &mut vec![None; p.expressions.len()])
+    eval_cached(
+        p,
+        id,
+        env,
+        snapshot,
+        &mut vec![None; p.expressions.len()],
+        meter,
+    )
+}
+fn charge_logical(meter: &mut Option<&mut Meter>) -> Result<(), Error> {
+    if let Some(meter) = meter.as_deref_mut() {
+        meter.charge(CostPlane::Logical, UInt(1))?;
+    }
+    Ok(())
 }
 fn eval_cached(
     p: &Program,
@@ -397,11 +412,15 @@ fn eval_cached(
     env: &BTreeMap<String, Value>,
     snapshot: &Snapshot,
     cache: &mut [Option<Value>],
+    meter: &mut Option<&mut Meter>,
 ) -> Result<Value, Error> {
     let i = usize::from(id);
     if let Some(value) = &cache[i] {
         return Ok(value.clone());
     }
+    // Charge the attempted node before its children or operation. Cache hits
+    // above remain free, and evaluate creates a new cache for each statement.
+    charge_logical(meter)?;
     let result = match &p.expressions[i] {
         Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } => {
             let row = snapshot
@@ -420,13 +439,13 @@ fn eval_cached(
             .get(name)
             .cloned()
             .ok_or_else(|| failure("name", format!("Unknown name {name:?}.")))?,
-        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache)? {
+        Expr::Not { value } => match eval_cached(p, *value, env, snapshot, cache, meter)? {
             Value::Bool(b) => Value::Bool(!b),
             _ => return Err(failure("type", "not expects Bool.")),
         },
         Expr::Binary { op, lhs, rhs } => {
-            let a = eval_cached(p, *lhs, env, snapshot, cache)?;
-            let b = eval_cached(p, *rhs, env, snapshot, cache)?;
+            let a = eval_cached(p, *lhs, env, snapshot, cache, meter)?;
+            let b = eval_cached(p, *rhs, env, snapshot, cache, meter)?;
             match (op, a, b) {
                 (BinaryOp::Add, Value::UInt(UInt(a)), Value::UInt(UInt(b))) => {
                     Value::UInt(UInt(a.checked_add(b).ok_or_else(|| {
@@ -463,8 +482,9 @@ fn amount(
     id: ExprId,
     env: &BTreeMap<String, Value>,
     snapshot: &Snapshot,
+    meter: &mut Option<&mut Meter>,
 ) -> Result<UInt, Error> {
-    match evaluate(p, id, env, snapshot)? {
+    match evaluate(p, id, env, snapshot, meter)? {
         Value::UInt(v) => Ok(v),
         _ => Err(failure("type", "Expected UInt amount.")),
     }
@@ -675,6 +695,14 @@ fn move_funds(
 }
 /// Executes one finite action on a clone. A refusal exposes no committed effects.
 pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<Execution, Error> {
+    simulate_with_meter(program, action, scenario, None)
+}
+pub(crate) fn simulate_with_meter(
+    program: &Program,
+    action: &str,
+    scenario: &Scenario,
+    mut meter: Option<&mut Meter>,
+) -> Result<Execution, Error> {
     validate(program)?;
     let selected = program
         .actions
@@ -690,14 +718,15 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
     for (i, stmt) in selected.statements.iter().enumerate() {
         let mut effects = vec![];
         let result = (|| -> Result<Option<Value>, Error> {
+            charge_logical(&mut meter)?;
             match stmt {
                 Statement::Let { name, value } => {
-                    let v = evaluate(program, *value, &env, &current)?;
+                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
                     env.insert(name.clone(), v.clone());
                     Ok(Some(v))
                 }
                 Statement::Requires { predicate } | Statement::Ensures { predicate } => {
-                    let v = evaluate(program, *predicate, &env, &current)?;
+                    let v = evaluate(program, *predicate, &env, &current, &mut meter)?;
                     if v != Value::Bool(true) {
                         return Err(failure(
                             if matches!(stmt, Statement::Requires { .. }) {
@@ -711,7 +740,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(v))
                 }
                 Statement::Next { state, value } => {
-                    let after = evaluate(program, *value, &env, &current)?;
+                    let after = evaluate(program, *value, &env, &current, &mut meter)?;
                     let before = current.state[state].clone();
                     current.state.insert(state.clone(), after.clone());
                     env.insert(state.clone(), after.clone());
@@ -723,7 +752,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(after))
                 }
                 Statement::Emit { name, value } => {
-                    let v = evaluate(program, *value, &env, &current)?;
+                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
                     effects.push(Effect::Emit {
                         name: name.clone(),
                         value: v.clone(),
@@ -742,7 +771,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     to,
                     amount: expr,
                 } => {
-                    let amount = amount(program, *expr, &env, &current)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let id = validate_asset(program, asset)?.clone();
                     move_funds(&mut current, &id, from, to, amount)?;
                     effects.push(if matches!(stmt, Statement::Fee { .. }) {
@@ -769,7 +798,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     creditor,
                     amount: expr,
                 } => {
-                    let amount = amount(program, *expr, &env, &current)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let id = validate_asset(program, asset)?.clone();
                     let found = current.liabilities.iter().position(|l| l.name == *name);
                     let before = if let Some(index) = found {
@@ -813,7 +842,7 @@ pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<
                     Ok(Some(Value::UInt(amount)))
                 }
                 Statement::Discharge { name, amount: expr } => {
-                    let amount = amount(program, *expr, &env, &current)?;
+                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
                     let l = current
                         .liabilities
                         .iter_mut()

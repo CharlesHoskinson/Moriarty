@@ -95,6 +95,38 @@ backend's [public replay sidecar](../mori-backend/README.md) prefixes these
 paths with `/body/execution` and binds source/Target/authorization identities.
 Core comparison alone does not supply target or ledger authority.
 
+`simulate_metered(program, action, scenario, cap)` runs the same interpreter
+with a separately supplied `UInt` cap and returns `MeteredExecution` or
+`MeteredExecutionError`. Both carry a `CostReport` with `profile`, `cap` and
+`used`. The provisional profile is `moriarty-reference-logical-cost/1`.
+It charges one logical unit before each attempted statement and one before each
+uncached expression node within that statement. Repeated `ExprId` cache hits
+cost no additional unit; caches reset for each statement. Distinct nodes with
+equal values still charge separately. Boolean operands retain eager left-to-right
+evaluation. The counter above costs 16 units: 4 + 4 + 2 + 4 + 2.
+
+A denied charge leaves `used` unchanged. Prior charged attempts remain visible
+on any refusal, with the existing failed step and no partial execution, effects
+or poststate. Structural validation, action lookup and scenario normalization
+run first and report zero on refusal. Each invocation starts a fresh meter.
+`replay_detailed_metered(program, action, scenario, candidate, cap)` reconstructs
+once under the trusted cap before existing first-divergence comparison. It
+returns the cost report on acceptance or `MeteredReplayError` with the existing
+`DetailedReplayError` and cost. Candidate data cannot supply the cap or cost.
+Step, Execution, Scenario and backend ReplayRecord/1 representations stay unchanged.
+
+The existing command accepts `--logical-cap 16` on `mori simulate`. The cap must
+be a canonical unsigned decimal in the u128 range; it conflicts with `--trace`.
+Metered output adds `profile` and `logical` cap/used strings alongside the existing
+execution or error. Omitting the flag preserves existing output bytes.
+
+This profile measures primitive interpretation only. Parsing, validation, input
+normalization, snapshot allocation, account lookup complexity and replay comparison
+are outside its count. It is not a wall-clock or allocation bound. Dust, service
+and external costs are unmeasured. The cap is local and unsigned; it supplies no
+native DUST fee bound, authenticated sponsorship, signed lifetime budget or
+reserved recovery work. Native cost correspondence and all U0–U3 exits remain open.
+
 The language bounds source to 65,536 bytes, 8,192 tokens and expression nodes,
 256 declarations, 256 inputs per action, 1,024 statements per action and
 expression depth 64. Scenario bounds and a trace allocation budget limit
@@ -109,4 +141,5 @@ same parser as every developer program.
 This interpreter demonstrates local language semantics. It does not establish
 Midnight proof generation, ledger settlement, phase rollback, external
 attestation correctness or private recursive composition. Owner intent and
-resource policy are separate APIs; callers must explicitly apply them.
+non-logical resource policy remain separate APIs; callers must explicitly apply
+them. Logical caps are applied only by the metered APIs or CLI flag above.
