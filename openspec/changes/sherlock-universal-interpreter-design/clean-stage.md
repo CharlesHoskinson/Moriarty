@@ -1,5 +1,7 @@
 # Sherlock required Lean/Clean stage: Candidate B
 
+Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../../../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+
 Status: REQUIRED DEVELOPMENT STAGE; scoped pure Lean foundation delivered separately, remaining B representation/circuit/export work SPECIFIED-ONLY. No Lean/Clean build, model, proof, key, SDK, backend or native command is performed for this design integration. [interfaces.md](interfaces.md) owns the proposed API; [model-coverage.md](model-coverage.md) owns the distinction between model observations and unestablished correspondence.
 
 ## Position and existing foundation
@@ -9,6 +11,10 @@ The required path is K reference/design reconciliation → Quint finite validati
 The existing Fenrir Clean fork contains a merged, independently source-reviewed **pure first-order Lean reference foundation**. Its scoped publication checks cover eight normal cases plus exact-remaining-zero result publication. That child implementation is delivered in its own repository. This public package neither copies its source/pins nor claims a fresh execution of it. It supplies no Clean step circuit, bounded MachineImage, generic ADT adapter, helper-metered B semantics, K/Lean refinement, soundness/completeness, Midnight exporter, native result or financial acceptance. Changes needed for Candidate B require their own actual source and correspondence evidence; earlier approval does not extend automatically to new bytes.
 
 The private integration destination stays the existing Fenrir fork/worktree. Sherlock language/OpenSpec and shareable research stay in Moriarty. No new public Clean fork, alternative proving system or replacement Lean implementation is requested.
+
+## Iterate alongside handwritten circuits
+
+Apply the [correctness loop](../../../docs/SHERLOCK-CORRECTNESS-LOOP.md) within each transition slice: maintain K rules, the explicit finite Quint projection, Lean semantics, bounded Clean components and handwritten circuits against the same independently frozen complete observations. The path above describes dependencies, not a delayed final comparison. Record each actual component/constraint implementation separately, shared dependencies, first-divergence regressions and unsupported/unrun layers. No cross-layer acceptance or execution authority follows from this workflow update.
 
 ## Semantic definitions and bounded representation
 

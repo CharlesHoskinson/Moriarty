@@ -1,5 +1,7 @@
 # Sherlock Candidate B Implementation Plan
 
+Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+
 > **For agentic workers:** Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` for authorized implementation packages. Checkboxes below track planned delivery; none records execution in this design edit. Retain existing execution authority and resource limits.
 
 **Goal:** Deliver the full supported Sherlock interpreter, compiler mapping, required Lean/Clean transition implementation and Midnight integration while preserving complete language, financial and release obligations.
@@ -19,6 +21,10 @@
 - Current implementation fact: Fenrir PR1 merged the generic pure Lean reference foundation with eight normal and exact-remaining-zero publication checks and independent scoped source approval. That child result supplies no Clean step circuit, K/Lean refinement, soundness/completeness, native exporter or financial acceptance. Extend and reconcile that foundation; do not start a duplicate implementation or report zero Lean implementation.
 - Nonsecurity authors are GPT-6.1 Sol high; fresh non-author nonsecurity audits use Muse Wonder 1.0 high. All security analysis, requirements, hostile tests, theorems and judgments belong to Opus 5.5. Security packages below identify ownership only and do not supply substitute requirements.
 - U0–U7, M1–M17, MC01–08, SP01–12, G01–24 and retained UNI/MOR/MPLR/AEO/ZR/MNR requirements remain in force. Source/child success closes no full parent exit. Moriarty remains permissionless; maintainer controls never become developer compile/prove/deploy approval.
+
+## Correctness loop within every phase
+
+Apply the [shared correctness loop](SHERLOCK-CORRECTNESS-LOOP.md) to every transition slice and optimization. Iterate K, Quint and Lean/Clean alongside the handwritten circuits against independent complete-state/prefix expectations. The phases below express dependencies, not a one-time model stage. Maintain an exact-source per-layer matrix, first-divergence regressions and explicit execution gaps; required cross-layer acceptance remains open until its evidence exists. Current security ownership follows the temporary override in [AGENTS.md](../AGENTS.md); historical Opus-authored requirements and gates retain their identities and scope.
 
 ## File and ownership map
 

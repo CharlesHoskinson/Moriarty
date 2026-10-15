@@ -1,11 +1,31 @@
 # Moriarty repository instructions
 
+## Temporary security routing — October 15
+
+The user's latest override assigns work otherwise owned by Opus 5.5 to
+**Gemini 4 Argon through AGY until Opus is available again**. Pin the listed
+`gemini-4-argon-high` model slug. This includes all new security analysis,
+requirements, hostile tests, recommendations and judgments; Sol does not take
+over that work. GPT-6.1 Sol high implementation and fresh Muse Wonder1.0 high
+nonsecurity audits continue. Preserve original identities on historical reports
+and frozen contracts. This temporary routing does not change a native gate,
+resource limit, acceptance requirement or public developer permission.
+
+The failed Muse-provider request for `gemini-4-argon` is not evidence about
+AGY availability. Use AGY's authenticated model listing and actual result
+status; see [the routing record](raw/assignments/moriarty-argon-temporary-security-2026-10-15.md).
+Restore Opus only after availability is observed, without interrupting a live
+assigned Argon task or relabelling its work as Opus.
+
 ## Current model routing — October 14
 
 Use `gpt-6.1-sol` at high effort for nonsecurity implementation.
 Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.
-The user's later instruction assigns **all security work to Opus 5.5**.
-That includes security analysis, requirements, tests, recommendations and judgments.
+The October 14 standing assignment gives **all security work to Opus 5.5**.
+For new work, this is temporarily superseded by the October 15 AGY Argon
+assignment above until Opus availability is observed. Security analysis,
+requirements, tests, recommendations and judgments stay with that designated
+security owner; historical and frozen records keep their original rosters.
 Preserve historical rosters on frozen contracts; they do not select new work.
 Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
 Missing reviewers cannot approve. Changed candidates need fresh applicable audits.
@@ -67,6 +87,10 @@ Give shared IR, ABI and result interfaces to the integrator.
 Luna supplies advisory context, not product certification.
 Preserve frozen native gates, resource limits and objective acceptance requirements.
 This workflow creates no public developer permission requirement.
+
+## Sherlock correctness iteration
+
+For Sherlock transition and circuit work, use the [correctness loop](docs/SHERLOCK-CORRECTNESS-LOOP.md). Iterate K, the explicit finite Quint projection, Lean/Clean and handwritten circuits on the same independently specified transition slices. Keep complete-state/prefix comparisons and per-layer gaps current; model observations, circuit checks, proofs and native results remain separate. This instruction adds no execution authority.
 
 ## Prevent orchestration displacement
 

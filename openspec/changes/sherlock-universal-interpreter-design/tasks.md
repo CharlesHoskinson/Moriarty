@@ -1,5 +1,7 @@
 # Sherlock Candidate B tasks
 
+Routing for new work: the temporary Gemini 4 Argon through AGY assignment in [AGENTS.md](../../../AGENTS.md) supersedes standing Opus routing below until Opus availability is observed. Historical Opus-authored requirements and frozen gates retain their original identities and scope.
+
 FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their linked source/model evidence. Other implementation and acceptance tasks remain open; a source file does not complete them. Root owns registration, integration and review. No task authorizes K/Quint/native execution, a new campaign or counter reset.
 
 ## Reconcile and freeze the candidate
@@ -10,6 +12,12 @@ FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their lin
 - [ ] Review Candidate B against direct AST/native K stack, typed bytecode, small relation family and specialized-circuit alternatives; retain dissent and unresolved questions.
 - [x] Record the concrete design/model interface freeze before launching the user-requested second ten-agent optimization wave.
 - [ ] Obtain the required non-author nonsecurity review and separate Opus-owned security review of the exact candidate; no public developer permission gate is created.
+
+## Continuous correctness iteration
+
+- [ ] Implement the [per-slice correctness loop](../../../docs/SHERLOCK-CORRECTNESS-LOOP.md), keeping K, the declared Quint abstraction, Lean/Clean and handwritten circuits aligned with independent complete-state/prefix expectations.
+- [ ] Implement the paired Clean/handwritten-step projection comparison through the actual component consumers; record shared dependencies, first divergence and every missing/unrun layer.
+- [ ] Retain an exact-source evidence matrix and regressions for each slice/optimization; obtain separately admitted executions and required reviews without substituting normal comparisons for security/theorem/native evidence.
 
 ## Models and correspondence
 
