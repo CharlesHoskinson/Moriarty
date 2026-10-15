@@ -51,6 +51,14 @@ The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
 U0–U7, M1–M17 or MC/SP/G exit.
 
+The [October 15 stagenet requirement](raw/assignments/moriarty-stagenet-acceptance-2026-10-15.md)
+adds explicit Sherlock/Moriarty end-to-end target evidence to the existing
+U0/U1/U2/U4/U7 path: real source compilation, proof/independent verification,
+stagenet deployment/call and full effects readback. The
+[correctness loop](docs/SHERLOCK-CORRECTNESS-LOOP.md#required-stagenet-end-to-end-evidence)
+records required identities and results. This remains unexecuted; Preview and
+Fenrir qualification, resource limits and every existing exit remain separate.
+
 ## Core continuation closure observation — 2026-10-15
 
 The [closure observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)

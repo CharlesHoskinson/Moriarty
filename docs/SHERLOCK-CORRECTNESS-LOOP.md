@@ -105,13 +105,35 @@ affected comparisons. Re-run that affected closure before reusing its result.
 An unchanged historical receipt stays valid only for its recorded candidate.
 Report unavailable stages explicitly rather than counting them as successful.
 
+## Required stagenet end-to-end evidence
+
+The [October 15 stagenet instruction](../raw/assignments/moriarty-stagenet-acceptance-2026-10-15.md)
+requires an actual target run after the relevant semantic/component checks.
+Compile supported source through the real compiler/native path, produce and
+independently verify its proof, deploy and call on stagenet, then read back the
+complete resulting state and ordered effects against the independent expectations.
+Use two distinct supported programs as required by the retained U2 contract;
+full financial/continuation and release coverage remains in scope.
+
+Pin the actual stagenet network identity, endpoints, toolchain/ZKIR/ledger/verifier
+versions, relation and key/artifact identities, submission references and readback
+position. Check compatibility rather than treating a target name as a version.
+Retain fee, debit, liability and residual-duty observations where applicable,
+plus the existing security-owner negative and failure requirements. Keep this
+row not run until its actual receipts exist. Preview and Fenrir devnet evidence
+retain their own scopes. Select execution through the existing admission and
+resource limits; this document supplies no new configuration or execution grant.
+
 ## Current gaps and execution boundary
 
 The typed A host component and independent normal test consumer exist. K runtime
 execution and the generic K/Quint projection remain open. The pure Lean foundation
-has its separately recorded narrow scope. A Sherlock bounded Clean step circuit,
-paired handwritten-step comparison adapter and cross-layer runner are not yet
-delivered; the tasks below the implementation plan remain unchecked.
+has its separately recorded narrow scope. The typed A [first-difference comparator](../crates/mori-core/src/sherlock/compare.rs)
+now supplies the shared observation comparison primitive, with its own
+[normal RED/GREEN evidence](audits/2026-10-15/sherlock-trace-comparison/README.md).
+A Sherlock bounded Clean step circuit, paired handwritten-step comparison adapter
+and complete cross-layer runner are not yet delivered; those implementation
+tasks remain unchecked.
 
 Use the current AGENTS.md routing for authors and independent reviews, including
 the temporary AGY Argon security assignment. Security requirements, hostile cases,

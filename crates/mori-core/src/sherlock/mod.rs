@@ -5,6 +5,7 @@
 //! or `/2`, implement the proposed B helper schedule, or produce constraints.
 //! Pure helpers and host allocation remain unmetered in this A profile.
 
+pub mod compare;
 mod reference;
 pub mod reference_display;
 mod reference_types;
@@ -20,3 +21,6 @@ mod reference_oracles_tests;
 
 #[cfg(test)]
 mod resource_tests;
+
+#[cfg(test)]
+mod compare_tests;
