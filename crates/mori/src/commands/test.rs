@@ -73,12 +73,109 @@ pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
         "Tested",
         format!("{} passed; {} failed", reports.len() - failed, failed),
     );
-    core_io::print(
-        &serde_json::json!({"status":if failed==0{"passed"}else{"failed"},"cases":reports}),
-    )?;
+    let report = aggregate_report(failed == 0, reports)?;
+    println!("{report}");
     Ok(if failed == 0 {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
     })
+}
+
+/// Pretty report identical to exporting the whole value, without applying the
+/// single-document 1 MiB cap to the aggregate. Every case is exported, bounded
+/// and escaped by the unchanged mori_core::json::export; only trusted
+/// structural bytes are added here. Nothing is written until all cases export.
+fn aggregate_report(passed: bool, mut cases: Vec<serde_json::Value>) -> super::Result<String> {
+    // Field order follows serde_json::Map exactly as the legacy json! wrapper did.
+    let mut order = serde_json::Map::new();
+    order.insert("status".into(), serde_json::Value::Null);
+    order.insert("cases".into(), serde_json::Value::Null);
+    let mut out = String::from("{");
+    for (field, key) in order.keys().enumerate() {
+        out.push_str(if field == 0 { "\n  " } else { ",\n  " });
+        if key == "status" {
+            out.push_str(if passed {
+                r#""status": "passed""#
+            } else {
+                r#""status": "failed""#
+            });
+            continue;
+        }
+        out.push_str(r#""cases": ["#);
+        let count = cases.len();
+        for (index, case) in std::mem::take(&mut cases).into_iter().enumerate() {
+            let case = mori_core::json::export(&case).map_err(core_io::operation)?;
+            out.push_str(if index == 0 { "\n    " } else { ",\n    " });
+            // Pretty JSON escapes newlines inside strings, so every raw newline
+            // is structural and takes the enclosing array-element indentation.
+            out.push_str(&case.replace('\n', "\n    "));
+        }
+        out.push_str(if count == 0 { "]" } else { "\n  ]" });
+    }
+    out.push_str("\n}");
+    Ok(out)
+}
+
+#[cfg(test)]
+mod report_tests {
+    use super::aggregate_report;
+    use serde_json::{Value, json};
+
+    const HOSTILE: &str = "x\n}\"\\\r\u{1b}[31m\u{7f}\u{85}\u{202e}\u{1f9ea}";
+
+    fn case(index: usize, padding: usize) -> Value {
+        json!({
+            "name": format!("case-{index:03}{HOSTILE}"),
+            "passed": index % 2 == 0,
+            "actual": {"Ok": {
+                "pad": "\u{202e}".repeat(padding),
+                "empty": [],
+                "none": {},
+                "nested": [[{"k": [1, -2, 3.5, null, true, HOSTILE]}]]
+            }}
+        })
+    }
+
+    fn whole(passed: bool, cases: &[Value]) -> Value {
+        json!({"status": if passed { "passed" } else { "failed" }, "cases": cases})
+    }
+
+    #[test]
+    fn small_aggregate_is_byte_identical_to_whole_export() {
+        for passed in [true, false] {
+            for count in [1, 2, 3] {
+                let cases: Vec<_> = (0..count).map(|index| case(index, 1)).collect();
+                let legacy = mori_core::json::export(&whole(passed, &cases)).unwrap();
+                assert_eq!(aggregate_report(passed, cases).unwrap(), legacy);
+            }
+        }
+    }
+
+    #[test]
+    fn full_256_aggregate_exceeds_whole_cap_and_round_trips_safely() {
+        let cases: Vec<_> = (0..256).map(|index| case(index, 1024)).collect();
+        let expected = whole(false, &cases);
+        assert!(mori_core::json::export(&expected).is_err());
+        let text = aggregate_report(false, cases).unwrap();
+        assert!(text.len() > 1_048_576);
+        assert!(text.is_ascii());
+        assert!(text.bytes().all(|b| b == b'\n' || !b.is_ascii_control()));
+        assert!(text.ends_with("\n}"));
+        assert_eq!(serde_json::from_str::<Value>(&text).unwrap(), expected);
+    }
+
+    #[test]
+    fn any_individually_oversized_case_fails_before_output() {
+        // Raw pretty size over 1 MiB, then raw size under 1 MiB but escaped size over it.
+        for pad in [
+            json!("x".repeat(1_048_576)),
+            json!("\u{202e}".repeat(200_000)),
+        ] {
+            let mut cases: Vec<_> = (0..256).map(|index| case(index, 1)).collect();
+            cases[255]["actual"]["Ok"]["pad"] = pad;
+            assert!(mori_core::json::export(&cases[255]).is_err());
+            assert!(aggregate_report(true, cases).is_err());
+        }
+    }
 }

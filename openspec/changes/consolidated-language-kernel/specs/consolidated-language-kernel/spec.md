@@ -263,3 +263,7 @@ When a developer journey or maintainer task is documented, the documentation SHA
 #### Scenario: Incomplete public journey
 - **WHEN** Local Rust commands and a separate Node beta package exist while Rust LSP/MCP are stubs or a required compile/target stage is unavailable.
 - **THEN** The journey reports those exact boundaries, leaves U7/M10 open and does not label all CLI commands as stubs or claim an independently qualified release.
+
+#### Scenario: Complete aggregate CLI test report
+- **WHEN** A valid `moriarty-tests/1` suite of at most 256 cases has individually exportable complete case reports whose combined JSON exceeds 1 MiB.
+- **THEN** `mori test` SHALL emit every full actual result in manifest order, retain each comparison result and the overall status, and return exit 1 for expectation mismatches or exit 0 when all expectations match. Smaller reports SHALL retain their existing pretty JSON bytes, including the final newline.

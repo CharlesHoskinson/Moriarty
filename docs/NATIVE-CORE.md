@@ -219,6 +219,11 @@ source, target, artifact, frame and IR digests and raw logs are recorded in
 `test DIRECTORY` loads `mori-tests.json`, profile `moriarty-tests/1`. Each
 case supplies a source, scenario, action and either exact accepted poststate
 and complete effects or an exact rejection code. Empty manifests refuse.
+The JSON report retains every case in manifest order, including its full actual
+execution or error. An execution includes the prestate, poststate, every step
+and ordered effects. Expectation mismatches retain all results and produce
+`status: "failed"` with exit 1; a matching suite produces `status: "passed"`
+with exit 0. Small reports retain their existing pretty JSON format.
 The batch example has hand-authored expected effects for one uniform price,
 per-party fees and stale-observation refusal. Oracle authenticity remains
 an external premise; supplying an input called `oracle` is not authentication.
