@@ -44,3 +44,9 @@ No Cargo, K/model/Quint, Lean/Clean/circuit, SDK/native/proof or ledger operatio
 ran here. The stagenet instruction is an unexecuted required target acceptance
 row. Current source audits, B adoption, all native/target evidence and every full
 U/M/MC/SP/G/ZR/MNR/ACTUS/DeFi/composition exit remain separate obligations.
+
+After rebasing the candidate onto merged PR57 main2258a6bc, the complete compiled
+source closure remained byte-identical. `INTEGRATED-GREEN-RESULT.json` records a
+fresh29-test pass at source commite3fed8fb563ae304b126d4297d7a2b63da927b31,
+with the same executable digest as the earlier GREEN run. This appendix changes
+no executable source.
