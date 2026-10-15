@@ -1,0 +1,68 @@
+{
+  "format": "repair-failure-record/1",
+  "rule": "Every failure, denial, deviation and limitation known to this review-repair lane. The origin's FAILURES.json is kept byte-identical at the root as history; this file does not edit it.",
+  "executed": {
+    "cargo_rustc_node_quint_k_aiken_sdk_vm_crypto_setup_keys_proofs_network_ledger": "none (not even --help or -V)",
+    "guarded_cli": "not run; Bash is restricted to python3 and the root refreshed guarded status at 13:19",
+    "stdlib_python_runs": [
+      "repair-tools/verify_inputs.py -> INPUT-VERIFICATION.json (hash/read only; toolchain binaries hashed as bytes, not executed)",
+      "repair-tools/materialize.py -> 69 origin files copied and verified, COPY-PINS.json, history/origin-r2/",
+      "repair-tools/freeze.py -> REPAIR-EXPECTATIONS/FREEZE.json (before any F-12 assertion or edit)",
+      "repair-tools/f01_rename.py (mechanical F-01 edit, printed every changed line)",
+      "repair-tools/repair_static_checks.py passes 1-3 (lexical only)",
+      "repair-tools/manifests.py build, delta and source",
+      "repair-tools/lock_pair_compare.py on three synthetic control locks (SAME -> 0, DIFFER -> 3)",
+      "repair-tools/make_request.py -> CORRECTED-EXECUTION-REQUEST.json",
+      "inline python3 -I -c reads of JSON records (no candidate or reviewer script imported)"
+    ],
+    "limits": "each script sets RLIMIT_CPU 60 s and RLIMIT_AS 1 GiB and was run under timeout <= 120 s"
+  },
+  "failures": [
+    {
+      "id": "TOOL-DENIAL-1",
+      "what": "A compound shell command (cd + python3 + output redirect + `echo exit=$?`) was denied by the permission guard because a shell variable could not be checked before running.",
+      "disposition": "Not performed and not retried in that form. The same script was then run as one plain `python3 -I <abs script> <abs args>` invocation, which printed the changed-line report to the console instead of writing repair-tools/f01_rename.out.json (that file was never created)."
+    },
+    {
+      "id": "CHECKER-DEFECT-PASS-1",
+      "what": "repair_static_checks.py pass 1 reported C3 and C12 false. C3: the F-11 allowlist omitted the comment line '    // renamed agreement (different Program) yields a different program hash.', which was intentionally extended. C12: single-item `pub use` re-exports were not parsed.",
+      "disposition": "Checker defects, not candidate defects. Pass 1 is kept at static-passes/REPAIR-STATIC-CHECKS-PASS-1.json. The checker was fixed with an inline comment."
+    },
+    {
+      "id": "CHECKER-DEFECT-PASS-2",
+      "what": "Pass 2 still reported C12 false: the module-path regex class [a-z_:] excluded digits, so `pub use r1cs::Tamper;` was missed.",
+      "disposition": "Checker defect. Pass 2 is kept at static-passes/REPAIR-STATIC-CHECKS-PASS-2.json. The class was widened to [a-z0-9_:]. Pass 3 (REPAIR-STATIC-CHECKS.json) passes 12/12. That is two failed cycles of the same checker-defect class, so I stopped adding lexical checks there instead of iterating further."
+    }
+  ],
+  "deviations": [
+    {
+      "id": "DEV-PC1-BUILD-MANIFEST",
+      "what": "Reviewer PC-1 literally requires BUILD-MANIFEST to stay 2c943b51.... The user-mandated F-04 relabel (src/coverage.rs REFUSALS, src/adapter.rs TARGET_OBLIGATIONS) and F-12 validation (src/circuit.rs, src/error.rs) are under src/, so BUILD-MANIFEST is now 4e3ba2e2796b425598b9b2abc022c4d6782bf032044aa53e124af4946c543b47.",
+      "disposition": "Tracked in BUILD-IDENTITY-DELTA.json; PC-1 amended to PC-1r (REPAIR-VOTES.md)."
+    },
+    {
+      "id": "DEV-HARNESS-STALE-BUILD-CONSTANT",
+      "what": "The reviewer harness hard-codes BUILD_MANIFEST_SHA256 2c943b51... as its caller-supplied build digest. That constant is stale for the successor.",
+      "disposition": "The harness is not edited (reviewer-owned). It cannot change satisfiability outcomes; its identity and r1cs digest columns are declared non-evidence in the corrected request E5."
+    }
+  ],
+  "limitations": [
+    "Nothing was compiled. F-01 being resolved, the F-12 code type-checking and the 41 tests compiling or passing are predictions from reading source. The root's own record shows a static review that found no source defect being contradicted by an actual compile in another lane (ABI RG R3 E0277); the same risk applies here.",
+    "REPAIR-STATIC-CHECKS are lexical text checks with an approximate Rust lexer. They can catch the F-01 name-collision class and byte-level invariance, not type, borrow or trait errors.",
+    "The F-12 expectations are the repair author's own derivation, frozen before the assertions, and are not independent. The reviewer's frozen vectors remain the only independent expectations, and they do not cover F-12.",
+    "The repair author, the r2 author and the compiler reviewer are the same model family (claude-opus-5-5). Independence is at the level of context only.",
+    "The F-04 and F-05 changes are relabels and documentation. The underlying relation still admits a missing-row 0 balance and still cannot represent unregistered duties.",
+    "The harness's E5 output, if ever run against the successor, carries the origin build identity.",
+    "The ABI review V6 (f3ae8556) and the compiler review overlapped in time (PROCESS timestamps). Which P3 text the source owner adopts is unresolved and deferred.",
+    "The verify_inputs.py head check reads git metadata files only; no git command was run.",
+    "The origin's tools/static_checks.py, STATIC-CHECKS.json and static-passes/STATIC-CHECKS-PASS-1.json are byte-identical history describing the origin tree. They were not rerun on the successor (no candidate script is run here); their test-name cross-check predates the F-11 rename and the new F-12 tests.",
+    "repair-tools/repair_static_checks.py is the pass-3 version; passes 1 and 2 were produced by the earlier versions described under CHECKER-DEFECT-PASS-1/2."
+  ],
+  "not_failures_but_open": [
+    "F-02 external duties, F-03 conservative bound, F-04 presence bit, F-05 duty frame and extra rows, F-10 Emit policy wiring, F-14 rejection relation",
+    "/2 staged lowering and every staged obligation (staged::STAGED_REMAINING)",
+    "ABI v1 mapping (pending that ABI's full review)",
+    "P3 physical effects, debit authority and signed intent (V6 P3-7 CHANGE unreconciled)",
+    "All 20 patterns, general obligations, residual duties, recursion/PCD, private handoff, multi-parent composition, every U0-U7, M1-M17, MC/SP/G exit"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "format": "repair-author-expectations/1",
+  "author": "claude-opus-5-5, review-repair source author (SOURCEONLY)",
+  "classification": "REPAIR-AUTHOR derivation from reading the candidate source and the review finding F-12. NOT an independent oracle, NOT reviewer-authored, NOT executed. Written and frozen before tests/assignment_shape.rs and before the circuit.rs F-12 edit.",
+  "finding": "F-12 (review a0d1725f...): Assignment fields are public, so a hand-built Assignment with wrong vector lengths can panic when synthesize indexes values.inputs / values.pre.{states,cells,duties}. Required action: validate lengths in circuit().",
+  "intended_source_change": {
+    "where": "source/mori-r1cs/src/circuit.rs CompiledRelation::circuit, before TransitionCircuit is constructed (it is the only constructor; TransitionCircuit fields are private)",
+    "checks": "lengths only: values.inputs vs plan.inputs; values.pre and values.post (states, cells, duties) vs plan; values.effects vs plan.effects; public vs layout.field_count",
+    "error": "new CompileError::AssignmentShape(String) in source/mori-r1cs/src/error.rs",
+    "not_checked_here": "value types, absent-duty canonicality, cap presence and every value relation: these stay with the constraint system (or with the existing encoder), so a well-shaped hostile claim is still decided only by constraints",
+    "constraints_changed": false,
+    "setup_mode": "circuit(None, ..) is unaffected"
+  },
+  "relation_under_test": {
+    "program": "EXPECTED-PACKET/fresh/self-move.mori (frozen author packet, unchanged)",
+    "action": "move",
+    "options": "CapBinding::NotBound, FrameCells::TouchedOnly, AccountingBinding::NotBound, DirectFieldV0, test placeholder CompilerBuild",
+    "plan_shape_from_source_reading": {"inputs": 1, "states": 0, "cells": 1, "duties": 0, "effects": 1},
+    "honest_claim": "S1 shape from duties_frame.rs move_claim(5, 5): inputs [5], pre cells [5], post cells [5], effects [Amount 5], cap None"
+  },
+  "cases": [
+    {"id": "R12-0", "mutation": "none (honest S1 claim via rel.assignment)", "expected": "circuit(Some) is Ok; synthesis succeeds; is_satisfied == true"},
+    {"id": "R12-0s", "mutation": "setup mode: circuit(None)", "expected": "Ok"},
+    {"id": "R12-1", "mutation": "values.inputs cleared (0 instead of 1)", "expected": "Err(CompileError::AssignmentShape(_)) from circuit()"},
+    {"id": "R12-2", "mutation": "values.inputs gains one extra UInt", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-3", "mutation": "values.pre.states gains one UInt (plan has 0)", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-4", "mutation": "values.pre.cells cleared", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-5", "mutation": "values.pre.duties gains one absent duty (plan has 0)", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-6", "mutation": "values.post.cells gains one cell", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-7", "mutation": "values.effects cleared", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-8", "mutation": "public vector loses its last field", "expected": "Err(CompileError::AssignmentShape(_))"},
+    {"id": "R12-9", "mutation": "public vector gains one field", "expected": "Err(CompileError::AssignmentShape(_))"}
+  ],
+  "prior_behaviour_by_reading": {
+    "R12-1, R12-4": "index out of bounds panic inside synthesize (values.inputs[0], values.pre.cells[0])",
+    "R12-2, R12-3, R12-5, R12-6, R12-7": "no panic; extra or missing unused entries were silently ignored",
+    "R12-8, R12-9": "no panic; adapter::bind returned BindError::Adapter(Shape), surfaced as SynthesisError::Unsatisfiable"
+  },
+  "frozen_outcome_invariance": "No candidate test or reviewer-harness row builds an Assignment except through CompiledRelation::assignment (which already enforces every length) and then mutates only public-vector elements in place, so no frozen outcome depends on the changed paths."
+}

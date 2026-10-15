@@ -1,0 +1,106 @@
+{
+ "format": "evidence-repair-heldout-addendum/4",
+ "author": "claude-opus-5-5, evidence-repair RESUME source author (AUTH: author-derived, NOT independent, NOT held-out)",
+ "status": "POST-FREEZE, dated 2026-10-15 (resume after the provider session limit; written after reading the candidate, the frozen packet, the actual run, the result review and the inherited addendum 3). Not executed. Frozen reviewer addenda 1 (HOSTILE-CLAIMS-ADDENDUM) and 2 and the inherited AUTH addendum 3 keep their bytes, rows and outcomes; nothing here edits them.",
+ "inputs": {
+  "heldout/HELDOUT-VECTORS.json": "b72cec5a94219da8bd0959138430c0c6fb366712236280c064071e4ea87c2f1f",
+  "HOSTILE-CLAIMS-ADDENDUM.json": "bdc444016f9edefe5cd252e176c5ed302eaba2e0b3e5806ff5c68094e610e078",
+  "heldout-addendum-2/HELDOUT-ADDENDUM-2.json": "66b91c46806f2bad97e7b46c1026d9c724b27e40516ba01f10ec87acbc12f33f",
+  "heldout-addendum-3/HELDOUT-ADDENDUM-3.json": "5e03d91b802a8a15098d8f7812c867f0d9aa4066936bcb73c2314a80b1345124",
+  "heldout-addendum-3/HW-TRACEABILITY.json": "251a898c140e5de87beda6c0fd1e4ed67c5828c139df1bb38144afb17a99bba3"
+ },
+ "rule": "Expected outcomes below are AUTH predictions from source reading. Values compared with them come from actual Core and the compiled relation in a future authorized run. Every frozen reviewer value is read from the frozen files, never restated here.",
+ "s9_program_level": {
+  "frozen_row": "S-9: input 'Program whose layout capacity (balances/duties/states) exceeds compiler caps'; expected 'explicit refusal naming the cap; never truncate rows from the frame'",
+  "why": "Addendum 3 represented the balance capacity with FrameCells::Include and left states and duties OPEN. Core's limits (ir.rs MAX_DECLARATIONS 256, MAX_STATEMENTS 1024 per action, MAX_EXPRESSIONS 8192) admit programs whose own layout exceeds the compiler caps (plan.rs: trace product <= 65,536 checked first, then cells <= 4,096 and registry duties <= 1,024). These cases build such programs in memory from the frozen H3 program and admit them through the same Core validate (admit_program). No compiler option, no frame trick.",
+  "cases": [
+   {
+    "id": "S-9/states",
+    "construction": "H3-dag program + 200 UInt states s9s000..s9s199 (initial 0) + one Bool literal true + action 's9states' with 400 statements 'requires <true literal>'",
+    "core_limits": "declarations 1 + 200 states, 1 asset, 6 actions = 208 <= 256; 400 statements <= 1024; 21 expressions",
+    "arithmetic": "records = 201 states + 0 cells + 1 registry duty (d) + 0 Liability statements + 1 = 203; 203 * (400 + 2) = 81,606 > 65,536",
+    "compile_action": "s9states",
+    "expected": "Err(CompileError::Bound) whose text names 65536 (MAX_TRACE_CELLS printed by plan.rs); no relation"
+   },
+   {
+    "id": "S-9/duties",
+    "construction": "H3-dag program + one UInt literal 1 + one Bool literal true + action 's9dutiesa' with 513 statements liability(s9d0000..s9d0512, T, \"p\", \"q\", 1) + action 's9dutiesb' with 512 statements liability(s9d0513..s9d1024, T, \"p\", \"q\", 1) + action 's9dutiesc' with 1 statement 'requires <true literal>'",
+    "core_limits": "declarations 1 state, 1 asset, 8 actions = 10; 513 and 512 statements <= 1024; 22 expressions; liability names 1..1024 bytes",
+    "arithmetic": "registry = d + 1025 = 1026 duties. Compiling s9dutiesc: records = 1 + 0 + 1026 + 0 + 1 = 1028; 1028 * 3 = 3,084 <= 65,536, so the trace check passes and 1026 > 1024 refuses",
+    "compile_action": "s9dutiesc",
+    "expected": "Err(CompileError::Bound) whose text names 1,024; no relation"
+   },
+   {
+    "id": "S-9/duties-trace",
+    "construction": "the S-9/duties program",
+    "arithmetic": "compiling s9dutiesa: records = 1 + 0 + 1026 + 513 + 1 = 1541; 1541 * (513 + 2) = 793,615 > 65,536",
+    "compile_action": "s9dutiesa",
+    "expected": "Err(CompileError::Bound) whose text names 65536; no relation"
+   }
+  ],
+  "addendum_3_correction": "Addendum 3 s9_capacity S-9/trace arithmetic says the H1 settle action has 9 statements. H1-settle.mori settle has 10 statements, so records 6010 * (10 + 2) = 72,120 > 65,536. The predicted outcome (Bound naming 65536) is unchanged. Addendum 3 bytes are not edited; this is an AUTH correction of an AUTH record, not of any frozen reviewer value."
+ },
+ "reencoded_reason_note": {
+  "rows": ["H1-R11-r3", "H2-R5-r3"],
+  "note": "Addendum 3 attributes the predicted UNSAT to Discharge's present = 1. Statement 0 of both actions is 'requires liability_present(...)', which also lowers to root = 1 with present = 0 in the claimed pre-state, so both constraints refuse. An UNSAT outcome does not say which constraint refused. The predicted class (UNSAT) is unchanged."
+ },
+ "cases": [
+  {
+   "id": "HW-14-r3",
+   "frozen_row": "HW-14 base H1-P1: prove with program H1' that differs only in asset reference 'usdx' -> 'usdy' under the H1 key/VK or program-identity public input; required reject",
+   "construction": "H1' source = H1-settle.mori with reference: \"usdx\" replaced by reference: \"usdy\"; H1' scenario = the H1-P1 frozen scenario JSON with the string \"usdx\" replaced by \"usdy\" (it occurs only as the asset reference). Actual Core simulates H1' settle; witness::from_records maps that execution for the H1' relation (TouchedOnly, NotBound, NotBound). The resulting H1' assignment (values and public vector) is then supplied unchanged to the H1 settle relation's circuit.",
+   "expected": {
+    "HW-14-r3/control": "SAT (H1' assignment under the H1' relation)",
+    "HW-14-r3/identity": "H1' and H1 relations have different program_hash and different shape_digest (observed and printed; the inequality is asserted)",
+    "HW-14-r3": "UNSAT (the H1' public vector under the H1 relation: header program_hash and shape_digest constants differ)"
+   }
+  },
+  {
+   "id": "HW-15-r3",
+   "frozen_row": "HW-15 base H1-P1: select action 'close' witness under the 'settle' circuit / action id; required reject",
+   "construction": "the honest H1-P3 assignment of the H1 close relation supplied to the H1 settle relation's circuit",
+   "expected": "ASSIGNMENT-SHAPE (CompiledRelation::circuit refuses the vector lengths before synthesis). This is a refusal before the constraint system, NOT relation evidence; the relation-level counterpart is M-13/action_index (frozen M-13).",
+   "relation_counterpart": "mutations M-13/action_index"
+  },
+  {
+   "id": "HW-18-r3",
+   "frozen_row": "HW-18 base W-2: claim work_used 35 / omit charge of one statement or DAG node; required 'unsatisfiable if work is a constrained output; otherwise state work is unconstrained'",
+   "construction": "W-1 frozen records (H1 settle, PublicCap, claimed cap 36) under the PublicCap relation; the first field (lo64) of header.logical_work is set to 35 in the honest public vector",
+   "expected": "UNSAT: W is a header constant bound in-circuit (there is no separate claimed work output). Control: the unchanged honest W-1 vector is SAT (already asserted by the held-out row W-1)."
+  },
+  {
+   "id": "HW-23-r3/H6-B1",
+   "frozen_row": "HW-23 base H6-B*: Bool wire value 2 or p - 1 used as true; required unsatisfiable (booleanity)",
+   "construction": "H6-B1 frozen records under the H6 beq relation; the public field of the Input slot of 'p' is set to 2, and separately to p - 1 (0 - 1 in Fr)",
+   "expected": {
+    "HW-23-r3/H6-B1/control": "SAT",
+    "HW-23-r3/H6-B1/two": "UNSAT",
+    "HW-23-r3/H6-B1/minus-one": "UNSAT"
+   },
+   "note": "Only the public field is mutated: the honest entry wire stays 0/1, so these UNSAT outcomes come from the binding equality, not from booleanity. Internal Bool wires (for example the flag computed by Eq) remain covered only by E4 author tests (limbs_and_bools_are_canonical) and the source argument."
+  },
+  {
+   "id": "booleanity-isolation",
+   "frozen_rows": "M-10 (H3-P4: public slot input.v = 2; required UNSATISFIABLE (booleanity)), HW-23 (Bool wire value 2 used as true), HW-24 (poly_b: treat v as 2 to satisfy Eq(v, v))",
+   "why": "A public-only edit is refused by the binding equality whatever booleanity does. To exercise booleanity the claimed public field AND the entry witness must both be 2, which the existing public test hook Tamper (labels scope/role#n, r1cs.rs) expresses without any compiler change: the entry scope is 'entry' and the first Bool input's witness label is 'entry/input0#0' (circuit.rs alloc_value role 'input{i}', gadgets::alloc_bool).",
+   "cases": [
+    {"id": "M-10/wire", "relation": "H3-dag poly_b (TouchedOnly, NotBound, NotBound)", "base": "H3-P4 honest assignment", "edit": "public field of the Input slot of 'v' = 2 and Tamper entry/input0#0 = 2"},
+    {"id": "HW-23-r3/H6-B1/wire-two", "relation": "H6-bounds beq (TouchedOnly, NotBound, NotBound)", "base": "H6-B1 honest assignment", "edit": "public field of the Input slot of 'p' = 2 and Tamper entry/input0#0 = 2"}
+   ],
+   "expected": "UNSAT, SynthesisReport.overrides_used == 1 (the tamper reached the wire), and ConstraintSystemRef::which_is_unsatisfied() names constraint index 0, which lies inside the 'entry' region (regions[0]); index 0 is the booleanity constraint v * v = v of input 0, the first constraint synthesized (circuit.rs entry order; gadgets::alloc_bool). ark-relations 0.4.0 returns the index as a decimal string when no ConstraintLayer trace is installed (constraint_system.rs which_is_unsatisfied, read from the registry source; UNVERIFIED-LIB until run)."
+  },
+  {
+   "id": "HW-26-r3/unsorted",
+   "frozen_row": "HW-26 base H1-P1: unsorted or padding row with nonzero amount in layout slots; required unsatisfiable",
+   "construction": "H1-P1 honest assignment under the H1 settle relation; the two public fields of slot pre.cell.USDX.buyer are exchanged with those of pre.cell.USDX.seller (1000000 and 0)",
+   "expected": "UNSAT",
+   "padding_half": "NOT-APPLICABLE: DirectFieldV0 has no padding rows (one slot per represented cell in the plan's fixed order). OPEN for any future padded ABI mapping; never counted as a pass."
+  }
+ ],
+ "addendum_2_work": {
+  "rows": ["H8-P1/W", "H8-P2/W"],
+  "rule": "The frozen reviewer addendum 2 carries work_used for its accepted vectors; the r2 harness never compared it. r3 compares plan.logical_work with that frozen value. Frozen values only; no AUTH number."
+ },
+ "m14_label_fix": "The inherited r3 draft reported a Core refusal of the M-14 construction with the class CIRCUIT-ERROR. r3 now reports it as a CORE-REFUSED FAIL row; the expected outcome (SAT, finding F-04) is unchanged.",
+ "hw_traceability": "heldout-addendum-4/HW-TRACEABILITY-2.json supersedes addendum 3's HW-TRACEABILITY.json for r3 (that file stays unchanged). Each mapping names machine row references {table, row} that the post-run parser checks against the actual printed rows, or E4 test names, or an unexecuted reason."
+}

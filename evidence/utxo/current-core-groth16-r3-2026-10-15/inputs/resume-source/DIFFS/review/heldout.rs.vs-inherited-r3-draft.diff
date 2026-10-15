@@ -1,0 +1,454 @@
+--- r3-inherited-draft/heldout.rs (0dd8b1f5, UNACCEPTED partial)
++++ r3-resume/heldout.rs
+@@ -23,6 +23,13 @@
+ //!   every rejected vector;
+ //! - every compiled relation prints its ProbeReport and identities (future observations,
+ //!   nothing predicted).
++//!
++//! RESUME additions (same author, after the provider session limit; addendum 4, AUTH,
++//! frozen before these assertions): S-9 states/duties capacity on Core-valid programs;
++//! dated cases HW-14-r3, HW-15-r3, HW-18-r3, HW-23-r3/H6-B1, HW-26-r3; booleanity
++//! isolation (M-10/wire: the Bool entry wire AND its public field set to 2, which only
++//! booleanity can refuse); addendum-2 work_used; M-14 Core refusal labelled CORE-REFUSED;
++//! HW traceability v2 with machine row references resolved by the post-run parser.
+ //! Every outcome is printed; a test fails after printing its whole table.
+ //! Deliberately no glob imports (review finding F-01).
+ use ark_bls12_381::Fr;
+@@ -48,9 +55,12 @@
+ /// POST-FREEZE addendum 2 (absent-duty discharge control).
+ const H8: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-2/programs/H8-discharge.mori"));
+ const ADDENDUM2: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-2/HELDOUT-ADDENDUM-2.json"));
+-/// POST-FREEZE evidence-repair addendum 3 (AUTH) and the HW-01..26 traceability table.
++/// POST-FREEZE evidence-repair addendum 3 (AUTH).
+ const ADDENDUM3: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-3/HELDOUT-ADDENDUM-3.json"));
+-const HW_TRACE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-3/HW-TRACEABILITY.json"));
++/// POST-FREEZE resume addendum 4 (AUTH) and the HW-01..26 traceability table v2 (it
++/// supersedes addendum 3's HW-TRACEABILITY.json for this harness; that file is unchanged).
++const ADDENDUM4: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-4/HELDOUT-ADDENDUM-4.json"));
++const HW_TRACE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-4/HW-TRACEABILITY-2.json"));
+ 
+ /// Root of the isolated layout: this crate sits at `<root>/review/proposals/<crate>/`.
+ const LAYOUT_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
+@@ -191,8 +201,18 @@
+     serde_json::from_str(H3_JSON).expect("H3 decodes through the v1 wire")
+ }
+ 
++/// Addendum 4 HW-14-r3: H1 with the USDX asset reference "usdx" replaced by "usdy".
++fn h1_prime() -> String {
++    let text = H1.replace("reference: \"usdx\"", "reference: \"usdy\"");
++    assert_ne!(text, H1, "H1' differs from H1 in exactly the USDX reference");
++    text
++}
++
+ fn relation(program: &str, action: &str, cap: bool, frame: FrameCells, accounting: AccountingBinding) -> Result<CompiledRelation, CompileError> {
+     let source = match program {
++        "H1-settle-usdy" => {
++            return mori_r1cs::compile_source::<Fr>(&h1_prime(), opts(action, cap, frame, accounting), StatementAdapter::DirectFieldV0);
++        }
+         "H1-settle" => H1,
+         "H2-accrual" => H2,
+         "H4-emit" => H4,
+@@ -221,6 +241,7 @@
+     match program {
+         "H3-dag" => h3_program(),
+         "H1-settle" => mori_core::parse(H1).expect("Core parses H1"),
++        "H1-settle-usdy" => mori_core::parse(&h1_prime()).expect("Core parses H1'"),
+         "H2-accrual" => mori_core::parse(H2).expect("Core parses H2"),
+         "H4-emit" => mori_core::parse(H4).expect("Core parses H4"),
+         "H5-strict" => mori_core::parse(H5).expect("Core parses H5"),
+@@ -316,6 +337,56 @@
+         Ok(false) => Outcome::Unsat,
+         Err(e) => Outcome::CircuitError(format!("is_satisfied: {e}")),
+     }
++}
++
++/// One checked assignment with the facts needed to say WHICH constraint refused:
++/// tamper hits and arkworks' first unsatisfied constraint index (`which_is_unsatisfied`,
++/// a decimal index when no ConstraintLayer trace is installed), plus the size of the
++/// "entry" region, which synthesis records first (circuit.rs).
++struct Deep {
++    outcome: Outcome,
++    overrides_used: usize,
++    first_unsatisfied: Option<String>,
++    entry_constraints: Option<usize>,
++}
++
++impl Deep {
++    fn detail(&self) -> String {
++        format!(
++            "{}; overrides_used={} first_unsatisfied={:?} entry_region_constraints={:?}",
++            self.outcome.detail(),
++            self.overrides_used,
++            self.first_unsatisfied,
++            self.entry_constraints
++        )
++    }
++    /// UNSAT at the first constraint of the entry region (booleanity of input 0).
++    fn refused_at_entry_constraint_zero(&self) -> bool {
++        matches!(self.outcome, Outcome::Unsat)
++            && self.first_unsatisfied.as_deref() == Some("0")
++            && self.entry_constraints.is_some_and(|n| n > 0)
++    }
++}
++
++fn check_assignment_deep(rel: &CompiledRelation, assignment: Assignment<Fr>, tamper: Tamper<Fr>) -> Deep {
++    let failed = |outcome: Outcome| Deep { outcome, overrides_used: 0, first_unsatisfied: None, entry_constraints: None };
++    let circuit = match rel.circuit(Some(assignment), tamper) {
++        Ok(c) => c,
++        Err(CompileError::AssignmentShape(m)) => return failed(Outcome::AssignmentShape(m)),
++        Err(e) => return failed(Outcome::CircuitError(format!("circuit: {e}"))),
++    };
++    let cs = ConstraintSystem::<Fr>::new_ref();
++    let report = match circuit.synthesize_into(cs.clone()) {
++        Ok(r) => r,
++        Err(e) => return failed(Outcome::CircuitError(format!("synthesis: {e}"))),
++    };
++    let entry_constraints = report.regions.first().filter(|r| r.label == "entry").map(|r| r.constraints);
++    let (outcome, first_unsatisfied) = match cs.which_is_unsatisfied() {
++        Ok(None) => (Outcome::Sat, None),
++        Ok(Some(index)) => (Outcome::Unsat, Some(index)),
++        Err(e) => (Outcome::CircuitError(format!("which_is_unsatisfied: {e}")), None),
++    };
++    Deep { outcome, overrides_used: report.overrides_used, first_unsatisfied, entry_constraints }
+ }
+ 
+ fn check_values(rel: &CompiledRelation, values: TransitionValues) -> Outcome {
+@@ -622,9 +693,20 @@
+                 let index = rel.plan().inputs.iter().position(|i| i.name == "v").expect("input v");
+                 match slot_offset(&rel, SlotKind::Input { index }) {
+                     Some((offset, 1)) => {
++                        // Frozen edit: public field only. The honest entry wire stays 0/1, so
++                        // the binding equality refuses it; the first failing index is printed.
+                         let mut two = honest.clone();
+                         two.public[offset] = Fr::from(2u64);
+-                        t.expect("M-10", &check_assignment(&rel, two, Tamper::none()), "UNSAT", " (booleanity)");
++                        let deep = check_assignment_deep(&rel, two.clone(), Tamper::none());
++                        t.expect("M-10", &deep.outcome, "UNSAT", &format!(" (frozen public edit; {})", deep.detail()));
++                        // Addendum 4 booleanity isolation: entry wire AND public field = 2.
++                        let wire = check_assignment_deep(&rel, two, Tamper::none().set("entry/input0#0", Fr::from(2u64)));
++                        t.check(
++                            "M-10/wire",
++                            wire.refused_at_entry_constraint_zero() && wire.overrides_used == 1,
++                            wire.outcome.class(),
++                            format!("{} (AUTH expected: UNSAT at constraint 0, the booleanity of input 0, with 1 override)", wire.detail()),
++                        );
+                         let mut minus_one = honest;
+                         minus_one.public[offset] = -Fr::from(1u64);
+                         t.expect("HW-23-r3", &check_assignment(&rel, minus_one, Tamper::none()), "UNSAT", " (AUTH; p - 1 as true)");
+@@ -694,11 +776,15 @@
+         let usdx = rel.plan().cells.iter().find(|c| c.account == "buyer").unwrap().asset.clone();
+         s.balances.push(mori_core::Balance { account: "operator".into(), asset: usdx, amount: UInt(0) });
+         let core = core_program("H1-settle");
+-        let outcome = match mori_core::simulate(&core, "settle", &s) {
+-            Ok(exe) => check_records(&rel, &s, &exe.pre, &exe.post, &exe.effects, None),
+-            Err(e) => Outcome::CircuitError(format!("Core refused the M-14 construction: {e}")),
+-        };
+-        t.expect("M-14", &outcome, "SAT", " (documents F-04: balance-row existence is a target premise, not a relation fact)");
++        match mori_core::simulate(&core, "settle", &s) {
++            Ok(exe) => t.expect(
++                "M-14",
++                &check_records(&rel, &s, &exe.pre, &exe.post, &exe.effects, None),
++                "SAT",
++                " (documents F-04: balance-row existence is a target premise, not a relation fact)",
++            ),
++            Err(e) => t.check("M-14", false, "CORE-REFUSED", format!("Core refused the M-14 construction: {e} (expected SAT, F-04)")),
++        }
+     }
+     t.finish();
+ }
+@@ -721,6 +807,16 @@
+             let effects: Vec<Effect> = serde_json::from_value(ex["effects"].clone()).unwrap();
+             t.check(id, observed.as_ref().is_ok_and(|e| e.post == post && e.effects == effects), "CORE-EQUAL", "Core reference equals reviewer oracle".into());
+             t.expect(id, &check_records(&rel, &scenario, &pre, &post, &effects, None), "SAT", "");
++            // Frozen addendum-2 work_used (never compared by r2).
++            match ex["work_used"].as_u64() {
++                Some(work) => t.check(
++                    &format!("{id}/W"),
++                    rel.plan().logical_work == UInt(u128::from(work)),
++                    "W",
++                    format!("W {} vs frozen addendum-2 work_used {work}", rel.plan().logical_work.0),
++                ),
++                None => t.check(&format!("{id}/W"), false, "W", "frozen work_used missing".into()),
++            }
+         } else {
+             t.check(id, observed.as_ref().is_err_and(|e| e.code == ex["error"].as_str().unwrap()), "CORE-REFUSAL", "Core refuses as the reviewer oracle".into());
+             let claim = &v["hostile_claim"];
+@@ -793,8 +889,61 @@
+         "BOUND",
+         format!("{:?} (expected Bound naming 4,096)", r.as_ref().err().map(|e| e.to_string())),
+     );
+-    t.open("S-9/states-duties", "TARGET-GAP", "state and duty capacity not exercised (needs a Core-valid program near Core's declaration/statement limits)".into());
++    // S-9 program-level (addendum 4, AUTH construction): Core-valid programs whose own
++    // layout exceeds the compiler caps; admitted by Core validate, refused by the plan.
++    let compile_in_memory = |p: Program, action: &str| {
++        mori_r1cs::admit_program(p).and_then(|a| {
++            mori_r1cs::compile::<Fr>(a, opts(action, false, FrameCells::TouchedOnly, nb), StatementAdapter::DirectFieldV0)
++        })
++    };
++    for (id, program, action, cap_text) in [
++        ("S-9/states", s9_states_program(), "s9states", "65536"),
++        ("S-9/duties", s9_duties_program(), "s9dutiesc", "1,024"),
++        ("S-9/duties-trace", s9_duties_program(), "s9dutiesa", "65536"),
++    ] {
++        let r = compile_in_memory(program, action);
++        t.check(
++            id,
++            matches!(&r, Err(CompileError::Bound(m)) if m.contains(cap_text)),
++            "BOUND",
++            format!("{:?} (expected Bound naming {cap_text}; no relation, nothing truncated)", r.as_ref().err().map(|e| e.to_string())),
++        );
++    }
+     t.finish();
++}
++
++/// Addendum 4 S-9/states: H3 + 200 UInt states + an action of 400 `requires true`.
++/// 203 trace records * 402 = 81,606 > 65,536 within Core's declaration and statement bounds.
++fn s9_states_program() -> Program {
++    let mut p = h3_program();
++    for i in 0..200 {
++        p.states.push(mori_core::StateDecl { name: format!("s9s{i:03}"), ty: mori_core::Type::UInt, initial: mori_core::Value::UInt(UInt(0)) });
++    }
++    let t = u16::try_from(p.expressions.len()).expect("expression id fits u16");
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::Bool(true) });
++    p.actions.push(mori_core::Action { name: "s9states".into(), inputs: Vec::new(), statements: vec![mori_core::Statement::Requires { predicate: t }; 400] });
++    p
++}
++
++/// Addendum 4 S-9/duties: H3 + 1025 source Liability statements over two actions (registry
++/// 1026 duties > 1,024) + a one-statement action whose trace product stays under the cap.
++fn s9_duties_program() -> Program {
++    let mut p = h3_program();
++    let one = u16::try_from(p.expressions.len()).expect("expression id fits u16");
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::UInt(UInt(1)) });
++    let t = one + 1;
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::Bool(true) });
++    let duty = |i: usize| mori_core::Statement::Liability {
++        name: format!("s9d{i:04}"),
++        asset: "T".into(),
++        debtor: "p".into(),
++        creditor: "q".into(),
++        amount: one,
++    };
++    p.actions.push(mori_core::Action { name: "s9dutiesa".into(), inputs: Vec::new(), statements: (0..513).map(&duty).collect() });
++    p.actions.push(mori_core::Action { name: "s9dutiesb".into(), inputs: Vec::new(), statements: (513..1025).map(&duty).collect() });
++    p.actions.push(mori_core::Action { name: "s9dutiesc".into(), inputs: Vec::new(), statements: vec![mori_core::Statement::Requires { predicate: t }] });
++    p
+ }
+ 
+ #[test]
+@@ -1310,36 +1459,53 @@
+ 
+ #[test]
+ fn hw_traceability() {
+-    // Every frozen HW-01..26 proposal has exactly one typed traceability entry. This test
+-    // checks the table's form; it does not claim any HW requirement is met.
++    // Every frozen HW-01..26 proposal has exactly one typed traceability entry (v2, machine
++    // row references). This test checks only the table's form, so every HW entry is an OPEN
++    // row carrying its class: whether the referenced rows ran and passed is decided after
++    // the run by resolving each {table, row} against the printed rows (operator-proposals/
++    // libtest_rows.py), never by this table.
+     const CLASSES: [&str; 7] =
+         ["RELATION-EXECUTED", "RELATION-PARTIAL", "ENCODER-ONLY", "CORE-AND-PREMISE", "TARGET-GAP", "STRUCTURAL-SOURCE", "NOT-APPLICABLE"];
++    const TABLES: [&str; 13] = [
++        "heldout", "hostile", "mutations", "addendum2", "static", "addendum3", "addendum4", "accounting", "grossfees", "rejected", "hw25", "hwtrace",
++        "probe",
++    ];
+     let frozen: Vec<String> =
+         json(VECTORS)["hostile_witness_proposals"].as_array().expect("hostile_witness_proposals").iter().map(|h| h["id"].as_str().unwrap().to_string()).collect();
+     let trace = json(HW_TRACE);
+     let entries = trace["entries"].as_array().expect("entries");
+     let ids: Vec<String> = entries.iter().map(|e| e["id"].as_str().unwrap_or("").to_string()).collect();
+     let mut t = Table::new("hwtrace");
+-    t.check("ids", ids == frozen, "COVERAGE", format!("{} entries vs {} frozen proposals", ids.len(), frozen.len()));
++    t.check("ids", ids == frozen, "TRACE-FORM", format!("{} entries vs {} frozen proposals, same order", ids.len(), frozen.len()));
++    let mut malformed = Vec::new();
+     for e in entries {
+         let id = e["id"].as_str().unwrap_or("?");
+         let class = e["class"].as_str().unwrap_or("?");
+-        let mapped: Vec<&str> = e["mapped_rows"].as_array().map(|a| a.iter().filter_map(Json::as_str).collect()).unwrap_or_default();
++        let refs: Vec<String> = e["refs"]
++            .as_array()
++            .map(|a| {
++                a.iter()
++                    .map(|r| match (r["table"].as_str(), r["row"].as_str()) {
++                        (Some(tb), Some(row)) if TABLES.contains(&tb) && !row.is_empty() => format!("{tb}/{row}"),
++                        _ => "MALFORMED".to_string(),
++                    })
++                    .collect()
++            })
++            .unwrap_or_else(|| vec!["MALFORMED".to_string()]);
++        let e4: Vec<&str> = e["e4"].as_array().map(|a| a.iter().filter_map(Json::as_str).collect()).unwrap_or_default();
+         let reason = e["reason"].as_str().unwrap_or("");
+         let well_formed = CLASSES.contains(&class)
++            && !refs.iter().any(|r| r == "MALFORMED")
+             && match class {
+-                "RELATION-EXECUTED" | "RELATION-PARTIAL" | "ENCODER-ONLY" | "CORE-AND-PREMISE" => !mapped.is_empty(),
+-                _ => mapped.is_empty() && !reason.is_empty(),
++                "RELATION-EXECUTED" | "RELATION-PARTIAL" | "ENCODER-ONLY" | "CORE-AND-PREMISE" => !refs.is_empty(),
++                _ => refs.is_empty() && !reason.is_empty(),
+             };
+-        let detail = format!("{} | {}", mapped.join(", "), reason);
+         if !well_formed {
+-            t.check(id, false, class, detail);
+-        } else if class == "RELATION-EXECUTED" {
+-            t.check(id, true, class, detail);
+-        } else {
+-            t.open(id, class, detail);
+-        }
+-    }
++            malformed.push(id.to_string());
++        }
++        t.open(id, class, format!("refs [{}] e4 [{}] | {}", refs.join(", "), e4.join(", "), reason));
++    }
++    t.check("form", malformed.is_empty(), "TRACE-FORM", format!("malformed entries: {malformed:?}"));
+     t.finish();
+ }
+ 
+@@ -1366,6 +1532,7 @@
+     configs.insert(("H8-discharge".into(), "open".into(), false, false, false));
+     configs.insert(("H1-settle".into(), "settle".into(), false, true, false));
+     configs.insert(("H1-settle".into(), "settle".into(), false, true, true));
++    configs.insert(("H1-settle-usdy".into(), "settle".into(), false, false, false));
+     let expected_build = build().digest().expect("canonical CompilerBuild");
+     let core = recomputed_build().core_closure_sha256.clone();
+     let mut t = Table::new("probe");
+@@ -1409,3 +1576,139 @@
+     }
+     t.finish();
+ }
++
++// ---------------------------------------------------------------------------------------
++// Resume addendum 4 (AUTH, dated, frozen before these assertions).
++// ---------------------------------------------------------------------------------------
++
++/// Swaps the fields of two equally wide public slots.
++fn swap_slots(public: &mut [Fr], a: usize, b: usize, width: usize) {
++    for k in 0..width {
++        public.swap(a + k, b + k);
++    }
++}
++
++#[test]
++fn addendum4_dated_cases() {
++    let mut t = Table::new("addendum4");
++    let add4 = json(ADDENDUM4);
++    t.check("format", add4["format"] == "evidence-repair-heldout-addendum/4", "TRACE-FORM", format!("addendum 4 format {}", add4["format"]));
++
++    // HW-14-r3: H1' (usdx -> usdy) assignment under the H1 relation.
++    {
++        let base = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let v = vector("H1-P1");
++        let text = v["scenario"].to_string().replace("\"usdx\"", "\"usdy\"");
++        let scenario: Scenario = serde_json::from_str(&text).expect("H1' scenario decodes");
++        match relation("H1-settle-usdy", "settle", false, FrameCells::TouchedOnly, AccountingBinding::NotBound) {
++            Ok(prime) => {
++                let pi = prime.identity();
++                let bi = base.identity();
++                t.check(
++                    "HW-14-r3/identity",
++                    pi.program_hash != bi.program_hash && pi.shape_digest != bi.shape_digest,
++                    "IDENTITY",
++                    format!(
++                        "H1' program_hash {} shape {} vs H1 program_hash {} shape {}",
++                        pi.program_hash.hex(),
++                        pi.shape_digest.hex(),
++                        bi.program_hash.hex(),
++                        bi.shape_digest.hex()
++                    ),
++                );
++                let proposal = mori_core::simulate(&core_program("H1-settle-usdy"), "settle", &scenario)
++                    .map_err(|e| format!("Core refused H1': {e}"))
++                    .and_then(|exe| values_from(&prime, &scenario, &exe.pre, &exe.post, &exe.effects, None).map_err(|e| format!("not encodable: {e}")))
++                    .and_then(|vals| prime.assignment::<Fr>(vals).map_err(|e| format!("not encodable: {e}")));
++                match proposal {
++                    Ok(a) => {
++                        t.expect("HW-14-r3/control", &check_assignment(&prime, a.clone(), Tamper::none()), "SAT", " (AUTH: H1' honest under H1')");
++                        t.expect("HW-14-r3", &check_assignment(&base, a, Tamper::none()), "UNSAT", " (AUTH: H1' public vector under the H1 relation)");
++                    }
++                    Err(e) => t.check("HW-14-r3", false, "NOT-ENCODABLE", e),
++                }
++            }
++            Err(e) => t.check("HW-14-r3", false, "COMPILE-REFUSED", e.to_string()),
++        }
++    }
++
++    // HW-15-r3: a close-shaped witness under the settle circuit (refused before synthesis).
++    {
++        let settle = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let close = plain("H1-settle", "close", false).expect("H1 close compiles");
++        match honest_assignment(&close, &vector("H1-P3"), None) {
++            Ok(a) => t.expect(
++                "HW-15-r3",
++                &check_assignment(&settle, a, Tamper::none()),
++                "ASSIGNMENT-SHAPE",
++                " (AUTH: refused before the constraint system, not relation evidence; relation counterpart M-13/action_index)",
++            ),
++            Err(e) => t.check("HW-15-r3", false, "NOT-ENCODABLE", e),
++        }
++    }
++
++    // HW-18-r3: claim W = 35 instead of 36 on the W-1 capped relation.
++    {
++        let v = vector("W-1");
++        let cap = cap_of(&v);
++        let rel = plain("H1-settle", "settle", cap.is_some()).expect("H1 settle (PublicCap) compiles");
++        match (honest_assignment(&rel, &v, cap), slot_offset_by_label(&rel, "header.logical_work")) {
++            (Ok(mut a), Some(offset)) => {
++                a.public[offset] = Fr::from(35u64);
++                t.expect("HW-18-r3", &check_assignment(&rel, a, Tamper::none()), "UNSAT", " (AUTH: W is a bound header constant)");
++            }
++            (Err(e), _) => t.check("HW-18-r3", false, "NOT-ENCODABLE", e),
++            (_, None) => t.check("HW-18-r3", false, "LAYOUT", "no slot header.logical_work".into()),
++        }
++    }
++
++    // HW-23-r3/H6-B1: Bool input p of beq.
++    {
++        let rel = plain("H6-bounds", "beq", false).expect("H6 beq compiles");
++        let index = rel.plan().inputs.iter().position(|i| i.name == "p").expect("input p");
++        match (honest_assignment(&rel, &vector("H6-B1"), None), slot_offset(&rel, SlotKind::Input { index })) {
++            (Ok(honest), Some((offset, 1))) => {
++                t.expect("HW-23-r3/H6-B1/control", &check_assignment(&rel, honest.clone(), Tamper::none()), "SAT", " (AUTH control)");
++                let mut two = honest.clone();
++                two.public[offset] = Fr::from(2u64);
++                let deep = check_assignment_deep(&rel, two.clone(), Tamper::none());
++                t.expect("HW-23-r3/H6-B1/two", &deep.outcome, "UNSAT", &format!(" (AUTH; public field only; {})", deep.detail()));
++                let mut minus_one = honest;
++                minus_one.public[offset] = -Fr::from(1u64);
++                t.expect("HW-23-r3/H6-B1/minus-one", &check_assignment(&rel, minus_one, Tamper::none()), "UNSAT", " (AUTH; p - 1 as true)");
++                let wire = check_assignment_deep(&rel, two, Tamper::none().set("entry/input0#0", Fr::from(2u64)));
++                t.check(
++                    "HW-23-r3/H6-B1/wire-two",
++                    wire.refused_at_entry_constraint_zero() && wire.overrides_used == 1,
++                    wire.outcome.class(),
++                    format!("{} (AUTH expected: UNSAT at constraint 0, the booleanity of input 0, with 1 override)", wire.detail()),
++                );
++            }
++            (Err(e), _) => t.check("HW-23-r3/H6-B1/control", false, "NOT-ENCODABLE", e),
++            (_, other) => t.check("HW-23-r3/H6-B1/control", false, "LAYOUT", format!("input p slot {other:?} is not one Bool field")),
++        }
++    }
++
++    // HW-26-r3: exchange the buyer and seller USDX pre-cell slots (unsorted rows).
++    {
++        let rel = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let slot = |label: &str| rel.layout().slot(label).map(|s| (s.offset, s.encoding.width()));
++        match (honest_assignment(&rel, &vector("H1-P1"), None), slot("pre.cell.USDX.buyer"), slot("pre.cell.USDX.seller")) {
++            (Ok(mut a), Some((buyer, 2)), Some((seller, 2))) => {
++                let distinct = a.public[buyer..buyer + 2] != a.public[seller..seller + 2];
++                swap_slots(&mut a.public, buyer, seller, 2);
++                let outcome = check_assignment(&rel, a, Tamper::none());
++                t.check(
++                    "HW-26-r3/unsorted",
++                    distinct && matches!(outcome, Outcome::Unsat),
++                    outcome.class(),
++                    format!("{} (AUTH expected UNSAT; slots distinct before the swap = {distinct})", outcome.detail()),
++                );
++            }
++            (Err(e), _, _) => t.check("HW-26-r3/unsorted", false, "NOT-ENCODABLE", e),
++            (_, b, s) => t.check("HW-26-r3/unsorted", false, "LAYOUT", format!("buyer {b:?} seller {s:?} are not UInt slots")),
++        }
++        t.open("HW-26-r3/padding", "NOT-APPLICABLE", "DirectFieldV0 has no padding rows; open for any padded ABI mapping, never a pass".into());
++    }
++    t.finish();
++}

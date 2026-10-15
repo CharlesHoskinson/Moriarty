@@ -1,0 +1,1823 @@
+--- old
++++ new
+@@ -1,33 +1,47 @@
+-//! PROPOSED, UNCOMPILED reviewer-authored held-out harness (claude-opus-5-5, non-author).
++//! PROPOSED, UNCOMPILED evidence-repair harness r3 (claude-opus-5-5, evidence-repair source
++//! author, 2026-10-15). Sibling of heldout-harness-r2 (4592f21a...), which stays unchanged.
+ //!
+-//! Expected values come only from the reviewer's frozen HELDOUT-VECTORS.json
+-//! (freeze aggregate 7f6a4d1e…b53c, frozen before any candidate test, fixture or
+-//! source was read) and the post-freeze HOSTILE-CLAIMS-ADDENDUM.json. Nothing here
+-//! derives an expectation from the candidate or from Core.
++//! Expected values come only from the reviewer's frozen HELDOUT-VECTORS.json (freeze
++//! aggregate 7f6a4d1e...b53c), the frozen post-freeze HOSTILE-CLAIMS-ADDENDUM.json and
++//! HELDOUT-ADDENDUM-2.json (all read unchanged from the same paths as r2), and the dated
++//! post-freeze evidence-repair addendum 3 (AUTH: author-derived, not independent). Nothing
++//! here derives an expectation from the candidate or from Core: Core and the relation are
++//! the observed side of every comparison.
+ //!
+-//! Two differentials per vector:
+-//! 1. actual Core (`mori_core::simulate[_metered]`) against the reviewer oracle values;
+-//! 2. the compiled relation against the same values (accepted => satisfiable;
+-//!    rejected => the permissive claim is unsatisfiable or not encodable).
+-//! Every outcome is printed; the test fails on the first unexpected result after
+-//! printing all rows, so one run yields the complete table.
+-//! Deliberately no glob imports (see review finding F-01).
++//! Changes from r2 (result review N-01..N-03, N-07; FIX-PROPOSALS P-3):
++//! - every relation check is classified SAT / UNSAT / NOT-ENCODABLE / NOT-DECODABLE /
++//!   ASSIGNMENT-SHAPE / CIRCUIT-ERROR. A circuit, synthesis or is_satisfied error is a
++//!   FAIL, never an OK. Rows that carry no relation evidence (null premise claims,
++//!   not-decodable frozen claims, target gaps, contradictions, observations) are OPEN,
++//!   never OK;
++//! - frozen rows the actual run omitted are executed: S-9, M-10, M-11, M-13 (and the
++//!   encoder half of M-06); M-07 and M-11's second half are typed OPEN rows;
++//! - H1-R11 / H2-R5 are re-encoded in Core's wire (addendum 3) and reach the constraints;
++//! - the frozen expected.accounting block is compared for every accepted vector, against
++//!   actual Core and against the public statement; a second relation per accepted vector
++//!   binds AccountingBinding::GrossDebitAndFees; phase and work_attempted are compared for
++//!   every rejected vector;
++//! - every compiled relation prints its ProbeReport and identities (future observations,
++//!   nothing predicted).
+ //!
+-//! r2 IDENTITY PLUMBING ONLY (fresh reviewer, 2026-10-15; the only change from
+-//! heldout.rs 4851a1a1…f600): no build digest is hard-coded. `build()` recomputes both
+-//! CompilerBuild inputs from the bytes this crate is compiled against in the isolated
+-//! layout, and any mismatch panics with "IDENTITY STOP", which is an identity-plumbing
+-//! failure, never a candidate, oracle or relation outcome. Frozen vectors, hostile
+-//! claims, addenda and every expected outcome are read unchanged from the same paths.
++//! RESUME additions (same author, after the provider session limit; addendum 4, AUTH,
++//! frozen before these assertions): S-9 states/duties capacity on Core-valid programs;
++//! dated cases HW-14-r3, HW-15-r3, HW-18-r3, HW-23-r3/H6-B1, HW-26-r3; booleanity
++//! isolation (M-10/wire: the Bool entry wire AND its public field set to 2, which only
++//! booleanity can refuse); addendum-2 work_used; M-14 Core refusal labelled CORE-REFUSED;
++//! HW traceability v2 with machine row references resolved by the post-run parser.
++//! Every outcome is printed; a test fails after printing its whole table.
++//! Deliberately no glob imports (review finding F-01).
+ use ark_bls12_381::Fr;
+ use ark_relations::r1cs::ConstraintSystem;
+-use mori_core::{Effect, Program, Scenario, Snapshot, UInt};
++use mori_core::{AssetId, Effect, Program, Scenario, Snapshot, UInt};
++use mori_r1cs::statement::EffectRole;
+ use mori_r1cs::{
+-    AccountingBinding, CapBinding, CellRef, CompileError, CompileOptions, CompiledRelation, CompilerBuild, Digest32,
+-    FrameCells, StatementAdapter, Tamper, TransitionValues,
++    AccountingBinding, Assignment, CapBinding, CellRef, CompileError, CompileOptions, CompiledRelation, CompilerBuild, Digest32,
++    EffectShape, FrameCells, MappingError, SlotKind, StatementAdapter, Tamper, TransitionValues,
+ };
+ use serde_json::Value as Json;
+-use std::collections::BTreeMap;
++use std::collections::{BTreeMap, BTreeSet};
+ 
+ const VECTORS: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout/HELDOUT-VECTORS.json"));
+ const HOSTILE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../HOSTILE-CLAIMS-ADDENDUM.json"));
+@@ -41,22 +55,30 @@
+ /// POST-FREEZE addendum 2 (absent-duty discharge control).
+ const H8: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-2/programs/H8-discharge.mori"));
+ const ADDENDUM2: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-2/HELDOUT-ADDENDUM-2.json"));
++/// POST-FREEZE evidence-repair addendum 3 (AUTH).
++const ADDENDUM3: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-3/HELDOUT-ADDENDUM-3.json"));
++/// POST-FREEZE resume addendum 4 (AUTH) and the HW-01..26 traceability table v2 (it
++/// supersedes addendum 3's HW-TRACEABILITY.json for this harness; that file is unchanged).
++const ADDENDUM4: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-4/HELDOUT-ADDENDUM-4.json"));
++const HW_TRACE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../heldout-addendum-4/HW-TRACEABILITY-2.json"));
+ 
+ /// Root of the isolated layout: this crate sits at `<root>/review/proposals/<crate>/`.
+ const LAYOUT_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
+ 
++const MASK64: u128 = u64::MAX as u128;
++
+ fn json(text: &str) -> Json {
+-    serde_json::from_str(text).expect("frozen reviewer JSON parses")
+-}
++    serde_json::from_str(text).expect("frozen JSON parses")
++}
++
++// ---------------------------------------------------------------------------------------
++// Identity plumbing: identical in behaviour to r2 (recomputed from the copied bytes).
++// ---------------------------------------------------------------------------------------
+ 
+ /// CompilerBuild inputs recomputed from bytes; never a constant, a flag or a claim.
+ struct RecomputedBuild {
+-    /// SHA-256 of `<root>/r1cs/BUILD-MANIFEST.json`, each of whose entries equals the
+-    /// `<root>/r1cs/source/mori-r1cs` bytes that the `mori-r1cs` path dependency compiles.
+     build_manifest_sha256: String,
+     build_manifest_entries: usize,
+-    /// Recomputed from every file under `<root>/moriarty` (the `mori-core` path
+-    /// dependency) by the CORE-CLOSURE-PINS `closure_sha256_rule`.
+     core_closure_sha256: String,
+     core_closure_files: usize,
+ }
+@@ -109,8 +131,6 @@
+ }
+ 
+ fn recompute_build() -> RecomputedBuild {
+-    // BUILD-MANIFEST: the copied file's digest; every entry equal to the compiled bytes;
+-    // the entry set exactly Cargo.toml plus every file under src/ (the manifest rule).
+     let manifest_bytes = layout_bytes("r1cs/BUILD-MANIFEST.json");
+     let manifest = layout_json("r1cs/BUILD-MANIFEST.json");
+     let mut listed = Vec::new();
+@@ -130,12 +150,9 @@
+         identity_stop(format!("BUILD-MANIFEST entries {listed:?} differ from Cargo.toml + src/** {rule:?}"));
+     }
+     let build_manifest_sha256 = sha(&manifest_bytes);
+-    // Cross-check only, never the source of the value.
+     if layout_json("r1cs/SOURCE-MANIFEST.json")["build_manifest_sha256"].as_str() != Some(build_manifest_sha256.as_str()) {
+         identity_stop("SOURCE-MANIFEST build_manifest_sha256 differs from the recomputed BUILD-MANIFEST digest".into());
+     }
+-    // Core closure: {path, sha256, bytes} rows for every file under <root>/moriarty,
+-    // sorted by path; SHA-256 of their compact sorted-key JSON (Core's canonical encoder).
+     let files = layout_files("moriarty", "moriarty");
+     let rows: Vec<Json> = files
+         .iter()
+@@ -146,7 +163,6 @@
+         .collect();
+     let canonical = mori_core::intent::canonical(&rows).unwrap_or_else(|e| identity_stop(format!("closure rows do not encode: {e}")));
+     let core_closure_sha256 = sha(&canonical);
+-    // Cross-check only: the copied pin record names the same closure and file count.
+     let pins = layout_json("r1cs/CORE-CLOSURE-PINS.json");
+     if pins["closure_sha256"].as_str() != Some(core_closure_sha256.as_str()) || pins["files"].as_array().map(Vec::len) != Some(files.len()) {
+         identity_stop(format!("recomputed Core closure {core_closure_sha256} ({} files) differs from CORE-CLOSURE-PINS.json", files.len()));
+@@ -167,12 +183,16 @@
+     }
+ }
+ 
+-fn opts(action: &str, cap: bool, frame: FrameCells) -> CompileOptions {
++// ---------------------------------------------------------------------------------------
++// Programs, relations and frozen records.
++// ---------------------------------------------------------------------------------------
++
++fn opts(action: &str, cap: bool, frame: FrameCells, accounting: AccountingBinding) -> CompileOptions {
+     CompileOptions {
+         action: action.to_string(),
+         cap: if cap { CapBinding::PublicCap } else { CapBinding::NotBound },
+         frame,
+-        accounting: AccountingBinding::NotBound,
++        accounting,
+         compiler: build(),
+     }
+ }
+@@ -181,8 +201,18 @@
+     serde_json::from_str(H3_JSON).expect("H3 decodes through the v1 wire")
+ }
+ 
+-fn relation(program: &str, action: &str, cap: bool, frame: FrameCells) -> Result<CompiledRelation, CompileError> {
++/// Addendum 4 HW-14-r3: H1 with the USDX asset reference "usdx" replaced by "usdy".
++fn h1_prime() -> String {
++    let text = H1.replace("reference: \"usdx\"", "reference: \"usdy\"");
++    assert_ne!(text, H1, "H1' differs from H1 in exactly the USDX reference");
++    text
++}
++
++fn relation(program: &str, action: &str, cap: bool, frame: FrameCells, accounting: AccountingBinding) -> Result<CompiledRelation, CompileError> {
+     let source = match program {
++        "H1-settle-usdy" => {
++            return mori_r1cs::compile_source::<Fr>(&h1_prime(), opts(action, cap, frame, accounting), StatementAdapter::DirectFieldV0);
++        }
+         "H1-settle" => H1,
+         "H2-accrual" => H2,
+         "H4-emit" => H4,
+@@ -191,17 +221,27 @@
+         "H8-discharge" => H8,
+         "H3-dag" => {
+             let admitted = mori_r1cs::admit_program(h3_program())?;
+-            return mori_r1cs::compile::<Fr>(admitted, opts(action, cap, frame), StatementAdapter::DirectFieldV0);
++            return mori_r1cs::compile::<Fr>(admitted, opts(action, cap, frame, accounting), StatementAdapter::DirectFieldV0);
+         }
+         other => panic!("unknown held-out program {other}"),
+     };
+-    mori_r1cs::compile_source::<Fr>(source, opts(action, cap, frame), StatementAdapter::DirectFieldV0)
++    mori_r1cs::compile_source::<Fr>(source, opts(action, cap, frame, accounting), StatementAdapter::DirectFieldV0)
++}
++
++/// The relation every r2 row used: touched cells only, no accounting summary.
++fn plain(program: &str, action: &str, cap: bool) -> Result<CompiledRelation, CompileError> {
++    relation(program, action, cap, FrameCells::TouchedOnly, AccountingBinding::NotBound)
++}
++
++fn auditor_frame() -> FrameCells {
++    FrameCells::Include(vec![CellRef { asset: "USDX".into(), account: "auditor".into() }])
+ }
+ 
+ fn core_program(program: &str) -> Program {
+     match program {
+         "H3-dag" => h3_program(),
+         "H1-settle" => mori_core::parse(H1).expect("Core parses H1"),
++        "H1-settle-usdy" => mori_core::parse(&h1_prime()).expect("Core parses H1'"),
+         "H2-accrual" => mori_core::parse(H2).expect("Core parses H2"),
+         "H4-emit" => mori_core::parse(H4).expect("Core parses H4"),
+         "H5-strict" => mori_core::parse(H5).expect("Core parses H5"),
+@@ -215,138 +255,361 @@
+     v["logical_cap"].as_str().map(|s| UInt(s.parse().expect("cap")))
+ }
+ 
+-fn satisfied(rel: &CompiledRelation, values: TransitionValues, tamper: Tamper<Fr>) -> Result<bool, String> {
+-    let assignment = rel.assignment::<Fr>(values).map_err(|e| format!("not encodable: {e}"))?;
++fn vectors() -> Vec<Json> {
++    json(VECTORS)["vectors"].as_array().expect("vectors").clone()
++}
++
++fn vector(id: &str) -> Json {
++    vectors().into_iter().find(|v| v["id"] == id).expect("frozen vector")
++}
++
++/// (scenario, pre, post, effects) of a frozen accepted vector.
++fn parts(v: &Json) -> (Scenario, Snapshot, Snapshot, Vec<Effect>) {
++    let ex = &v["expected"];
++    (
++        serde_json::from_value(v["scenario"].clone()).expect("Scenario"),
++        serde_json::from_value(ex["pre"].clone()).expect("pre"),
++        serde_json::from_value(ex["post"].clone()).expect("post"),
++        serde_json::from_value(ex["effects"].clone()).expect("effects"),
++    )
++}
++
++/// Actual Core on a frozen vector, metered when the vector carries a cap (as r2).
++fn reference(core: &Program, action: &str, scenario: &Scenario, cap: Option<UInt>) -> Result<mori_core::Execution, mori_core::Error> {
++    match cap {
++        Some(c) => mori_core::simulate_metered(core, action, scenario, c).map(|m| m.execution).map_err(|e| e.error),
++        None => mori_core::simulate(core, action, scenario),
++    }
++}
++
++// ---------------------------------------------------------------------------------------
++// Typed relation outcomes (P-3 item 1).
++// ---------------------------------------------------------------------------------------
++
++#[derive(Debug, Clone)]
++enum Outcome {
++    /// `is_satisfied() == Ok(true)`.
++    Sat,
++    /// `is_satisfied() == Ok(false)`: a genuine constraint refusal.
++    Unsat,
++    /// The candidate encoder refused the claim (`MappingError`).
++    NotEncodable(String),
++    /// The frozen claim JSON is outside Core's wire format.
++    NotDecodable(String),
++    /// `CompiledRelation::circuit` refused the vector lengths (F-12 check).
++    AssignmentShape(String),
++    /// Any other circuit, synthesis or is_satisfied error: never a pass.
++    CircuitError(String),
++}
++
++impl Outcome {
++    fn class(&self) -> &'static str {
++        match self {
++            Self::Sat => "SAT",
++            Self::Unsat => "UNSAT",
++            Self::NotEncodable(_) => "NOT-ENCODABLE",
++            Self::NotDecodable(_) => "NOT-DECODABLE",
++            Self::AssignmentShape(_) => "ASSIGNMENT-SHAPE",
++            Self::CircuitError(_) => "CIRCUIT-ERROR",
++        }
++    }
++    fn detail(&self) -> String {
++        match self {
++            Self::Sat => "is_satisfied = true".into(),
++            Self::Unsat => "is_satisfied = false".into(),
++            Self::NotEncodable(m) | Self::NotDecodable(m) | Self::AssignmentShape(m) | Self::CircuitError(m) => m.clone(),
++        }
++    }
++}
++
++fn check_assignment(rel: &CompiledRelation, assignment: Assignment<Fr>, tamper: Tamper<Fr>) -> Outcome {
++    let circuit = match rel.circuit(Some(assignment), tamper) {
++        Ok(c) => c,
++        Err(CompileError::AssignmentShape(m)) => return Outcome::AssignmentShape(m),
++        Err(e) => return Outcome::CircuitError(format!("circuit: {e}")),
++    };
+     let cs = ConstraintSystem::<Fr>::new_ref();
+-    rel.circuit(Some(assignment), tamper)
+-        .map_err(|e| format!("circuit: {e}"))?
+-        .synthesize_into(cs.clone())
+-        .map_err(|e| format!("synthesis: {e}"))?;
+-    cs.is_satisfied().map_err(|e| format!("is_satisfied: {e}"))
+-}
+-
+-fn values_from(rel: &CompiledRelation, scenario: &Scenario, pre: &Snapshot, post: &Snapshot, effects: &[Effect], cap: Option<UInt>) -> Result<TransitionValues, String> {
+-    mori_r1cs::witness::from_records(rel.plan(), &scenario.inputs, pre, post, effects, cap).map_err(|e| format!("not encodable: {e}"))
++    if let Err(e) = circuit.synthesize_into(cs.clone()) {
++        return Outcome::CircuitError(format!("synthesis: {e}"));
++    }
++    match cs.is_satisfied() {
++        Ok(true) => Outcome::Sat,
++        Ok(false) => Outcome::Unsat,
++        Err(e) => Outcome::CircuitError(format!("is_satisfied: {e}")),
++    }
++}
++
++/// One checked assignment with the facts needed to say WHICH constraint refused:
++/// tamper hits and arkworks' first unsatisfied constraint index (`which_is_unsatisfied`,
++/// a decimal index when no ConstraintLayer trace is installed), plus the size of the
++/// "entry" region, which synthesis records first (circuit.rs).
++struct Deep {
++    outcome: Outcome,
++    overrides_used: usize,
++    first_unsatisfied: Option<String>,
++    entry_constraints: Option<usize>,
++}
++
++impl Deep {
++    fn detail(&self) -> String {
++        format!(
++            "{}; overrides_used={} first_unsatisfied={:?} entry_region_constraints={:?}",
++            self.outcome.detail(),
++            self.overrides_used,
++            self.first_unsatisfied,
++            self.entry_constraints
++        )
++    }
++    /// UNSAT at the first constraint of the entry region (booleanity of input 0).
++    fn refused_at_entry_constraint_zero(&self) -> bool {
++        matches!(self.outcome, Outcome::Unsat)
++            && self.first_unsatisfied.as_deref() == Some("0")
++            && self.entry_constraints.is_some_and(|n| n > 0)
++    }
++}
++
++fn check_assignment_deep(rel: &CompiledRelation, assignment: Assignment<Fr>, tamper: Tamper<Fr>) -> Deep {
++    let failed = |outcome: Outcome| Deep { outcome, overrides_used: 0, first_unsatisfied: None, entry_constraints: None };
++    let circuit = match rel.circuit(Some(assignment), tamper) {
++        Ok(c) => c,
++        Err(CompileError::AssignmentShape(m)) => return failed(Outcome::AssignmentShape(m)),
++        Err(e) => return failed(Outcome::CircuitError(format!("circuit: {e}"))),
++    };
++    let cs = ConstraintSystem::<Fr>::new_ref();
++    let report = match circuit.synthesize_into(cs.clone()) {
++        Ok(r) => r,
++        Err(e) => return failed(Outcome::CircuitError(format!("synthesis: {e}"))),
++    };
++    let entry_constraints = report.regions.first().filter(|r| r.label == "entry").map(|r| r.constraints);
++    let (outcome, first_unsatisfied) = match cs.which_is_unsatisfied() {
++        Ok(None) => (Outcome::Sat, None),
++        Ok(Some(index)) => (Outcome::Unsat, Some(index)),
++        Err(e) => (Outcome::CircuitError(format!("which_is_unsatisfied: {e}")), None),
++    };
++    Deep { outcome, overrides_used: report.overrides_used, first_unsatisfied, entry_constraints }
++}
++
++fn check_values(rel: &CompiledRelation, values: TransitionValues) -> Outcome {
++    match rel.assignment::<Fr>(values) {
++        Ok(a) => check_assignment(rel, a, Tamper::none()),
++        Err(e) => Outcome::NotEncodable(e.to_string()),
++    }
++}
++
++fn values_from(rel: &CompiledRelation, scenario: &Scenario, pre: &Snapshot, post: &Snapshot, effects: &[Effect], cap: Option<UInt>) -> Result<TransitionValues, MappingError> {
++    mori_r1cs::witness::from_records(rel.plan(), &scenario.inputs, pre, post, effects, cap)
++}
++
++fn check_records(rel: &CompiledRelation, scenario: &Scenario, pre: &Snapshot, post: &Snapshot, effects: &[Effect], cap: Option<UInt>) -> Outcome {
++    match values_from(rel, scenario, pre, post, effects, cap) {
++        Ok(v) => check_values(rel, v),
++        Err(e) => Outcome::NotEncodable(e.to_string()),
++    }
++}
++
++/// An honest assignment from frozen records, for public-vector mutations.
++fn honest_assignment(rel: &CompiledRelation, v: &Json, cap: Option<UInt>) -> Result<Assignment<Fr>, String> {
++    let (s, pre, post, eff) = parts(v);
++    let values = values_from(rel, &s, &pre, &post, &eff, cap).map_err(|e| format!("not encodable: {e}"))?;
++    rel.assignment::<Fr>(values).map_err(|e| format!("not encodable: {e}"))
++}
++
++fn slot_offset(rel: &CompiledRelation, kind: SlotKind) -> Option<(usize, usize)> {
++    rel.layout().slots.iter().find(|s| s.kind == kind).map(|s| (s.offset, s.encoding.width()))
++}
++
++fn slot_offset_by_label(rel: &CompiledRelation, label: &str) -> Option<usize> {
++    rel.layout().slot(label).map(|s| s.offset)
++}
++
++fn slot_fields(rel: &CompiledRelation, public: &[Fr], kind: SlotKind) -> Option<Vec<Fr>> {
++    slot_offset(rel, kind).map(|(offset, width)| public[offset..offset + width].to_vec())
++}
++
++fn uint_fe(v: u128) -> Vec<Fr> {
++    vec![Fr::from(v & MASK64), Fr::from(v >> 64)]
++}
++
++fn bool_fe(b: bool) -> Vec<Fr> {
++    vec![Fr::from(u64::from(b))]
++}
++
++/// The `[lo64, mid64, top16]` encoding of an exact sum below 2^128.
++fn wide_fe(v: u128) -> Vec<Fr> {
++    vec![Fr::from(v & MASK64), Fr::from(v >> 64), Fr::from(0u64)]
++}
++
++fn num(j: &Json) -> u128 {
++    j.as_str().expect("frozen decimal string").parse().expect("frozen decimal fits u128")
++}
++
++// ---------------------------------------------------------------------------------------
++// Typed result table.
++// ---------------------------------------------------------------------------------------
++
++#[derive(Clone, Copy, PartialEq, Eq)]
++enum Status {
++    /// The observation equals the frozen (or AUTH) expectation.
++    Ok,
++    /// It does not, or the row could not be evaluated.
++    Fail,
++    /// No relation evidence by design: premise, not-decodable frozen claim, target gap,
++    /// contradiction, unrepresented field or unasserted observation.
++    Open,
+ }
+ 
+ struct Table {
++    name: &'static str,
+     rows: Vec<String>,
+-    unexpected: usize,
++    counts: [usize; 3],
++    classes: BTreeMap<String, usize>,
+ }
+ 
+ impl Table {
+-    fn row(&mut self, id: &str, ok: bool, detail: String) {
+-        if !ok {
+-            self.unexpected += 1;
+-        }
+-        self.rows.push(format!("{} {id}: {detail}", if ok { "OK  " } else { "FAIL" }));
+-    }
+-    fn finish(self, name: &str) {
++    fn new(name: &'static str) -> Self {
++        Self { name, rows: Vec::new(), counts: [0; 3], classes: BTreeMap::new() }
++    }
++    fn push(&mut self, id: &str, status: Status, class: &str, detail: String) {
++        let (tag, i) = match status {
++            Status::Ok => ("OK  ", 0),
++            Status::Fail => ("FAIL", 1),
++            Status::Open => ("OPEN", 2),
++        };
++        self.counts[i] += 1;
++        *self.classes.entry(class.to_string()).or_insert(0) += 1;
++        self.rows.push(format!("{tag} {id}: [{class}] {detail}"));
++    }
++    fn check(&mut self, id: &str, ok: bool, class: &str, detail: String) {
++        self.push(id, if ok { Status::Ok } else { Status::Fail }, class, detail);
++    }
++    fn open(&mut self, id: &str, class: &str, detail: String) {
++        self.push(id, Status::Open, class, detail);
++    }
++    /// OK exactly when the observed class equals `expected`.
++    fn expect(&mut self, id: &str, outcome: &Outcome, expected: &str, note: &str) {
++        let ok = outcome.class() == expected;
++        self.push(id, if ok { Status::Ok } else { Status::Fail }, outcome.class(), format!("{} (expected {expected}){note}", outcome.detail()));
++    }
++    fn finish(self) {
+         for r in &self.rows {
+-            println!("{name} {r}");
+-        }
+-        assert_eq!(self.unexpected, 0, "{name}: {} unexpected rows (see output)", self.unexpected);
+-    }
+-}
++            println!("{} {r}", self.name);
++        }
++        let classes: Vec<String> = self.classes.iter().map(|(k, v)| format!("{k}={v}")).collect();
++        println!("summary {} ok={} fail={} open={} classes={}", self.name, self.counts[0], self.counts[1], self.counts[2], classes.join(","));
++        assert_eq!(self.counts[1], 0, "{}: {} FAIL rows (see output)", self.name, self.counts[1]);
++    }
++}
++
++// ---------------------------------------------------------------------------------------
++// r2 tests, with typed outcomes.
++// ---------------------------------------------------------------------------------------
+ 
+ #[test]
+ fn heldout_vectors_core_and_relation() {
+-    let doc = json(VECTORS);
+-    let mut t = Table { rows: Vec::new(), unexpected: 0 };
+-    for v in doc["vectors"].as_array().expect("vectors") {
++    // Same rows and expectations as r2; relation rows are typed (expected SAT).
++    let mut t = Table::new("heldout");
++    for v in vectors() {
+         let id = v["id"].as_str().expect("id");
+         let program = v["program"].as_str().expect("program");
+         let action = v["action"].as_str().expect("action");
+-        let cap = cap_of(v);
++        let cap = cap_of(&v);
+         let scenario: Scenario = serde_json::from_value(v["scenario"].clone()).expect("Scenario");
+         let ex = &v["expected"];
+         let core = core_program(program);
+-        // Differential 1: actual Core versus the reviewer oracle.
+-        let reference = match cap {
+-            Some(c) => mori_core::simulate_metered(&core, action, &scenario, c).map(|m| m.execution).map_err(|e| e.error),
+-            None => mori_core::simulate(&core, action, &scenario),
+-        };
+-        let rel = match relation(program, action, cap.is_some(), FrameCells::TouchedOnly) {
++        let observed = reference(&core, action, &scenario, cap);
++        let rel = match plain(program, action, cap.is_some()) {
+             Ok(r) => r,
+             Err(e) => {
+-                t.row(id, false, format!("compile refused: {e}"));
++                t.check(id, false, "COMPILE-REFUSED", e.to_string());
+                 continue;
+             }
+         };
+         if ex["accepted"].as_bool() == Some(true) {
+-            let pre: Snapshot = serde_json::from_value(ex["pre"].clone()).expect("pre");
+-            let post: Snapshot = serde_json::from_value(ex["post"].clone()).expect("post");
+-            let effects: Vec<Effect> = serde_json::from_value(ex["effects"].clone()).expect("effects");
++            let (_, pre, post, effects) = parts(&v);
+             let work = ex["work_used"].as_u64().expect("work") as u128;
+-            match &reference {
+-                Ok(exe) => t.row(id, exe.pre == pre && exe.post == post && exe.effects == effects, "Core reference equals reviewer oracle".into()),
+-                Err(e) => t.row(id, false, format!("Core refused an expected success: {e}")),
+-            }
+-            t.row(id, rel.plan().logical_work == UInt(work), format!("W {} vs reviewer {work}", rel.plan().logical_work.0));
+-            match values_from(&rel, &scenario, &pre, &post, &effects, cap).and_then(|vals| satisfied(&rel, vals, Tamper::none())) {
+-                Ok(sat) => t.row(id, sat, format!("relation satisfiable = {sat} (expected true)")),
+-                Err(e) => t.row(id, false, e),
+-            }
++            match &observed {
++                Ok(exe) => t.check(id, exe.pre == pre && exe.post == post && exe.effects == effects, "CORE-EQUAL", "Core reference equals reviewer oracle".into()),
++                Err(e) => t.check(id, false, "CORE-REFUSED", format!("Core refused an expected success: {e}")),
++            }
++            t.check(id, rel.plan().logical_work == UInt(work), "W", format!("W {} vs reviewer {work}", rel.plan().logical_work.0));
++            let outcome = check_records(&rel, &scenario, &pre, &post, &effects, cap);
++            t.expect(id, &outcome, "SAT", "");
+         } else {
+             let code = ex["error"].as_str().expect("code");
+             let step = ex["step"].as_u64().map(|s| s as u16);
+-            match &reference {
+-                Ok(_) => t.row(id, false, "Core accepted an expected refusal".into()),
+-                Err(e) => t.row(id, e.code == code && e.step == step, format!("Core refusal {} step {:?} vs reviewer {code} {step:?}", e.code, e.step)),
+-            }
+-        }
+-    }
+-    t.finish("heldout");
++            match &observed {
++                Ok(_) => t.check(id, false, "CORE-ACCEPTED", "Core accepted an expected refusal".into()),
++                Err(e) => t.check(id, e.code == code && e.step == step, "CORE-REFUSAL", format!("Core refusal {} step {:?} vs reviewer {code} {step:?}", e.code, e.step)),
++            }
++        }
++    }
++    t.finish();
+ }
+ 
+ #[test]
+ fn permissive_hostile_claims_are_refused() {
++    // Frozen requirement per row: "UNSATISFIABLE under the compiled relation (or not
++    // encodable)". UNSAT and NOT-ENCODABLE are both OK but counted separately; only UNSAT
++    // is relation evidence. Null claims are PREMISE rows and not-decodable frozen claims
++    // are OPEN; both are allowed only for the four rows the result review identified.
++    const PREMISE_ROWS: [&str; 2] = ["H1-R6", "H1-R7"];
++    const NOT_DECODABLE_ROWS: [&str; 2] = ["H1-R11", "H2-R5"];
+     let doc = json(HOSTILE);
+-    let vectors = json(VECTORS);
+-    let by_id: BTreeMap<String, Json> =
+-        vectors["vectors"].as_array().expect("vectors").iter().map(|v| (v["id"].as_str().unwrap().to_string(), v.clone())).collect();
+-    let mut t = Table { rows: Vec::new(), unexpected: 0 };
++    let by_id: BTreeMap<String, Json> = vectors().into_iter().map(|v| (v["id"].as_str().unwrap().to_string(), v)).collect();
++    let mut t = Table::new("hostile");
++    let mut open_seen = BTreeSet::new();
+     for c in doc["rejected_vector_claims"].as_array().expect("claims") {
+         let id = c["base_vector"].as_str().expect("id");
+         let v = &by_id[id];
+         let program = v["program"].as_str().unwrap();
+         let action = v["action"].as_str().unwrap();
+         let cap = cap_of(v);
+-        let rel = relation(program, action, cap.is_some(), FrameCells::TouchedOnly).expect("held-out program compiles");
++        let rel = match plain(program, action, cap.is_some()) {
++            Ok(r) => r,
++            Err(e) => {
++                t.check(id, false, "COMPILE-REFUSED", e.to_string());
++                continue;
++            }
++        };
+         let claim = &c["claim"];
+         if claim.is_null() {
+-            t.row(id, true, "admission refusal; see note (premise rows)".into());
++            if PREMISE_ROWS.contains(&id) {
++                open_seen.insert(id.to_string());
++                t.open(id, "PREMISE", "null claim: no relation check (target premise; see coverage REFUSALS)".into());
++            } else {
++                t.check(id, false, "PREMISE", "unexpected null claim".into());
++            }
+             continue;
+         }
+         let scenario: Scenario = serde_json::from_value(v["scenario"].clone()).expect("Scenario");
+-        let parsed = (|| -> Result<TransitionValues, String> {
+-            let pre: Snapshot = serde_json::from_value(claim["pre"].clone()).map_err(|e| format!("not decodable: {e}"))?;
+-            let post: Snapshot = serde_json::from_value(claim["post"].clone()).map_err(|e| format!("not decodable: {e}"))?;
+-            let effects: Vec<Effect> = serde_json::from_value(claim["effects"].clone()).map_err(|e| format!("not decodable: {e}"))?;
+-            values_from(&rel, &scenario, &pre, &post, &effects, cap)
++        let decoded = (|| -> Result<(Snapshot, Snapshot, Vec<Effect>), String> {
++            Ok((
++                serde_json::from_value(claim["pre"].clone()).map_err(|e| format!("pre: {e}"))?,
++                serde_json::from_value(claim["post"].clone()).map_err(|e| format!("post: {e}"))?,
++                serde_json::from_value(claim["effects"].clone()).map_err(|e| format!("effects: {e}"))?,
++            ))
+         })();
+-        match parsed.and_then(|vals| satisfied(&rel, vals, Tamper::none())) {
+-            Ok(sat) => t.row(id, !sat, format!("permissive claim satisfiable = {sat} (expected false)")),
+-            Err(e) => t.row(id, true, format!("refused before proving: {e}")),
+-        }
+-    }
+-    t.finish("hostile");
++        let outcome = match decoded {
++            Ok((pre, post, effects)) => check_records(&rel, &scenario, &pre, &post, &effects, cap),
++            Err(e) => Outcome::NotDecodable(e),
++        };
++        match &outcome {
++            Outcome::Unsat | Outcome::NotEncodable(_) => t.check(id, true, outcome.class(), format!("{} (frozen: UNSAT or not encodable)", outcome.detail())),
++            Outcome::NotDecodable(_) if NOT_DECODABLE_ROWS.contains(&id) => {
++                open_seen.insert(id.to_string());
++                t.open(id, outcome.class(), format!("{}; frozen claim outside Core's wire, re-encoded in addendum 3 as {id}-r3", outcome.detail()));
++            }
++            _ => t.check(id, false, outcome.class(), format!("{} (frozen: UNSAT or not encodable)", outcome.detail())),
++        }
++    }
++    let expected_open: BTreeSet<String> = PREMISE_ROWS.iter().chain(NOT_DECODABLE_ROWS.iter()).map(|s| s.to_string()).collect();
++    t.check("open-rows", open_seen == expected_open, "COVERAGE", format!("OPEN rows {open_seen:?} vs predicted {expected_open:?}"));
++    t.finish();
+ }
+ 
+ #[test]
+ fn targeted_mutations() {
+-    let vectors = json(VECTORS);
+-    let get = |id: &str| -> Json { vectors["vectors"].as_array().unwrap().iter().find(|v| v["id"] == id).cloned().expect("vector") };
+-    let parts = |v: &Json| -> (Scenario, Snapshot, Snapshot, Vec<Effect>) {
+-        let ex = &v["expected"];
+-        (
+-            serde_json::from_value(v["scenario"].clone()).unwrap(),
+-            serde_json::from_value(ex["pre"].clone()).unwrap(),
+-            serde_json::from_value(ex["post"].clone()).unwrap(),
+-            serde_json::from_value(ex["effects"].clone()).unwrap(),
+-        )
+-    };
+-    let mut t = Table { rows: Vec::new(), unexpected: 0 };
++    let mut t = Table::new("mutations");
+ 
+     // M-01 / M-02 / M-08: delete a present-zero post duty row.
+     for (mid, vid, program, action, duty) in [
+@@ -354,131 +617,233 @@
+         ("M-02", "H1-P3", "H1-settle", "close", "warranty"),
+         ("M-08", "H2-P3", "H2-accrual", "repay", "loan"),
+     ] {
+-        let rel = relation(program, action, false, FrameCells::TouchedOnly).unwrap();
+-        let (s, pre, mut post, eff) = parts(&get(vid));
++        let rel = plain(program, action, false).unwrap();
++        let (s, pre, mut post, eff) = parts(&vector(vid));
+         post.liabilities.retain(|l| l.name != duty);
+-        let r = values_from(&rel, &s, &pre, &post, &eff, None).and_then(|v| satisfied(&rel, v, Tamper::none()));
+-        t.row(mid, matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
++        t.expect(mid, &check_records(&rel, &s, &pre, &post, &eff, None), "UNSAT", "");
+     }
+ 
+     // M-03: swap Transfer and Fee amounts.
+     {
+-        let rel = relation("H1-settle", "settle", false, FrameCells::TouchedOnly).unwrap();
+-        let (s, pre, post, mut eff) = parts(&get("H1-P1"));
++        let rel = plain("H1-settle", "settle", false).unwrap();
++        let (s, pre, post, mut eff) = parts(&vector("H1-P1"));
+         let a0 = match &eff[0] { Effect::Transfer { amount, .. } => *amount, _ => panic!("effect 0 kind") };
+         let a1 = match &eff[1] { Effect::Fee { amount, .. } => *amount, _ => panic!("effect 1 kind") };
+         if let Effect::Transfer { amount, .. } = &mut eff[0] { *amount = a1; }
+         if let Effect::Fee { amount, .. } = &mut eff[1] { *amount = a0; }
+-        let r = values_from(&rel, &s, &pre, &post, &eff, None).and_then(|v| satisfied(&rel, v, Tamper::none()));
+-        t.row("M-03", matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
++        t.expect("M-03", &check_records(&rel, &s, &pre, &post, &eff, None), "UNSAT", "");
+     }
+ 
+     // M-04: change the fee recipient (a relation constant).
+     {
+-        let rel = relation("H1-settle", "settle", false, FrameCells::TouchedOnly).unwrap();
+-        let (s, pre, post, mut eff) = parts(&get("H1-P1"));
++        let rel = plain("H1-settle", "settle", false).unwrap();
++        let (s, pre, post, mut eff) = parts(&vector("H1-P1"));
+         if let Effect::Fee { to, .. } = &mut eff[1] { *to = "seller".into(); }
+         let r = values_from(&rel, &s, &pre, &post, &eff, None);
+-        t.row("M-04", r.is_err(), format!("encodable = {} (expected not encodable)", r.is_ok()));
++        let ok = matches!(&r, Err(MappingError::Shape(_)));
++        t.check("M-04", ok, if r.is_ok() { "ENCODABLE" } else { "NOT-ENCODABLE" }, format!("{:?} (expected MappingError::Shape)", r.err().map(|e| e.to_string())));
+     }
+ 
+     // M-05: framed auditor cell must be preserved.
+     {
+-        let frame = FrameCells::Include(vec![CellRef { asset: "USDX".into(), account: "auditor".into() }]);
+-        let rel = relation("H1-settle", "settle", false, frame).unwrap();
+-        let (s, pre, post, eff) = parts(&get("H1-P1"));
+-        let honest = values_from(&rel, &s, &pre, &post, &eff, None).and_then(|v| satisfied(&rel, v, Tamper::none()));
+-        t.row("M-05-honest", matches!(honest, Ok(true)), format!("{honest:?}"));
++        let rel = relation("H1-settle", "settle", false, auditor_frame(), AccountingBinding::NotBound).unwrap();
++        let (s, pre, post, eff) = parts(&vector("H1-P1"));
++        t.expect("M-05-honest", &check_records(&rel, &s, &pre, &post, &eff, None), "SAT", "");
+         let mut vals = values_from(&rel, &s, &pre, &post, &eff, None).unwrap();
+         let cell = rel.plan().cells.iter().position(|c| c.account == "auditor").unwrap();
+         vals.post.cells[cell] = UInt(8);
+-        let r = satisfied(&rel, vals, Tamper::none());
+-        t.row("M-05", matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
+-    }
++        t.expect("M-05", &check_values(&rel, vals), "UNSAT", "");
++    }
++
++    // M-06 (frozen: MappingError::FrameChanged from the encoder; relation half is a target
++    // obligation): executed for the encoder half only.
++    {
++        let rel = plain("H1-settle", "settle", false).unwrap();
++        let (s, pre, mut post, eff) = parts(&vector("H1-P1"));
++        let usdx = rel.plan().cells.iter().find(|c| c.account == "buyer").unwrap().asset.clone();
++        for b in post.balances.iter_mut() {
++            if b.account == "auditor" && b.asset == usdx {
++                b.amount = UInt(8);
++            }
++        }
++        let r = values_from(&rel, &s, &pre, &post, &eff, None);
++        t.check("M-06/encoder", matches!(&r, Err(MappingError::FrameChanged(_))), "NOT-ENCODABLE", format!("{:?} (expected MappingError::FrameChanged)", r.err().map(|e| e.to_string())));
++        t.open("M-06/relation", "TARGET-OBLIGATION", "a claimant bypassing the encoder faces no auditor slot under TouchedOnly: frame completeness (TARGET_OBLIGATIONS)".into());
++    }
++
++    // M-07: not representable (F-05).
++    t.open("M-07", "TARGET-GAP", "no FrameCells option can represent the unregistered duty 'legacy' (F-05); not executed".into());
+ 
+     // M-09: one shared wire for DAG node 2 across statements.
+     {
+-        let rel = relation("H3-dag", "bump", false, FrameCells::TouchedOnly).unwrap();
+-        let (s, pre, mut post, mut eff) = parts(&get("H3-P1"));
++        let rel = plain("H3-dag", "bump", false).unwrap();
++        let (s, pre, mut post, mut eff) = parts(&vector("H3-P1"));
+         post.state.insert("s".into(), mori_core::Value::UInt(UInt(5)));
+         if let Effect::State { after, .. } = &mut eff[0] { *after = mori_core::Value::UInt(UInt(5)); }
+         if let Effect::State { before, after, .. } = &mut eff[1] { *before = mori_core::Value::UInt(UInt(5)); *after = mori_core::Value::UInt(UInt(5)); }
+-        let r = values_from(&rel, &s, &pre, &post, &eff, None).and_then(|v| satisfied(&rel, v, Tamper::none()));
+-        t.row("M-09", matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
++        t.expect("M-09", &check_records(&rel, &s, &pre, &post, &eff, None), "UNSAT", "");
++    }
++
++    // M-10 (frozen, first execution) and HW-23-r3 (AUTH): public Bool input v = 2 / p - 1.
++    {
++        let rel = plain("H3-dag", "poly_b", false).unwrap();
++        match honest_assignment(&rel, &vector("H3-P4"), None) {
++            Ok(honest) => {
++                t.expect("M-10-honest", &check_assignment(&rel, honest.clone(), Tamper::none()), "SAT", " (AUTH control)");
++                let index = rel.plan().inputs.iter().position(|i| i.name == "v").expect("input v");
++                match slot_offset(&rel, SlotKind::Input { index }) {
++                    Some((offset, 1)) => {
++                        // Frozen edit: public field only. The honest entry wire stays 0/1, so
++                        // the binding equality refuses it; the first failing index is printed.
++                        let mut two = honest.clone();
++                        two.public[offset] = Fr::from(2u64);
++                        let deep = check_assignment_deep(&rel, two.clone(), Tamper::none());
++                        t.expect("M-10", &deep.outcome, "UNSAT", &format!(" (frozen public edit; {})", deep.detail()));
++                        // Addendum 4 booleanity isolation: entry wire AND public field = 2.
++                        let wire = check_assignment_deep(&rel, two, Tamper::none().set("entry/input0#0", Fr::from(2u64)));
++                        t.check(
++                            "M-10/wire",
++                            wire.refused_at_entry_constraint_zero() && wire.overrides_used == 1,
++                            wire.outcome.class(),
++                            format!("{} (AUTH expected: UNSAT at constraint 0, the booleanity of input 0, with 1 override)", wire.detail()),
++                        );
++                        let mut minus_one = honest;
++                        minus_one.public[offset] = -Fr::from(1u64);
++                        t.expect("HW-23-r3", &check_assignment(&rel, minus_one, Tamper::none()), "UNSAT", " (AUTH; p - 1 as true)");
++                    }
++                    other => t.check("M-10", false, "LAYOUT", format!("input v slot {other:?} is not one Bool field")),
++                }
++            }
++            Err(e) => t.check("M-10", false, "NOT-ENCODABLE", e),
++        }
++    }
++
++    // M-11 (frozen, first execution): limb alias on input x of H6-A1.
++    {
++        let rel = plain("H6-bounds", "add", false).unwrap();
++        match honest_assignment(&rel, &vector("H6-A1"), None) {
++            Ok(honest) => {
++                t.expect("M-11-honest", &check_assignment(&rel, honest.clone(), Tamper::none()), "SAT", " (AUTH control)");
++                let index = rel.plan().inputs.iter().position(|i| i.name == "x").expect("input x");
++                match slot_offset(&rel, SlotKind::Input { index }) {
++                    Some((offset, 2)) => {
++                        let mut alias = honest;
++                        alias.public[offset] += Fr::from(1u128 << 64);
++                        alias.public[offset + 1] -= Fr::from(1u64);
++                        t.expect("M-11a", &check_assignment(&rel, alias, Tamper::none()), "UNSAT", " ((lo + 2^64, hi - 1); bit-sum binding)");
++                    }
++                    other => t.check("M-11a", false, "LAYOUT", format!("input x slot {other:?} is not two UInt limbs")),
++                }
++            }
++            Err(e) => t.check("M-11a", false, "NOT-ENCODABLE", e),
++        }
++        t.open("M-11b", "CONTRADICTION", "(lo + r, hi) is the same field vector as the honest claim; frozen expectation kept, not executed (addendum 3 m11b_contradiction)".into());
+     }
+ 
+     // M-12: cap below W.
+     {
+-        let rel = relation("H1-settle", "settle", true, FrameCells::TouchedOnly).unwrap();
+-        let (s, pre, post, eff) = parts(&get("W-1"));
+-        let r = values_from(&rel, &s, &pre, &post, &eff, Some(UInt(35))).and_then(|v| satisfied(&rel, v, Tamper::none()));
+-        t.row("M-12", matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
+-    }
+-
+-    // M-14 (finding F-04, documented, expected SATISFIABLE today): the operator row is
+-    // missing in the Core scenario of H1-R7, but the relation has no balance presence bit.
++        let rel = plain("H1-settle", "settle", true).unwrap();
++        let (s, pre, post, eff) = parts(&vector("W-1"));
++        t.expect("M-12", &check_records(&rel, &s, &pre, &post, &eff, Some(UInt(35))), "UNSAT", "");
++    }
++
++    // M-13 (frozen, first execution): header fields + 1, one at a time.
+     {
+-        let rel = relation("H1-settle", "settle", false, FrameCells::TouchedOnly).unwrap();
+-        let v = get("H1-R7");
++        let rel = plain("H1-settle", "settle", false).unwrap();
++        match honest_assignment(&rel, &vector("H1-P1"), None) {
++            Ok(honest) => {
++                for label in ["header.program_hash", "header.shape_digest", "header.action_index"] {
++                    let id = format!("M-13/{}", label.trim_start_matches("header."));
++                    match slot_offset_by_label(&rel, label) {
++                        Some(offset) => {
++                            let mut a = honest.clone();
++                            a.public[offset] += Fr::from(1u64);
++                            t.expect(&id, &check_assignment(&rel, a, Tamper::none()), "UNSAT", "");
++                        }
++                        None => t.check(&id, false, "LAYOUT", format!("no slot {label}")),
++                    }
++                }
++            }
++            Err(e) => t.check("M-13", false, "NOT-ENCODABLE", e),
++        }
++    }
++
++    // M-14 (finding F-04, documented, expected SATISFIABLE): unchanged from r2.
++    {
++        let rel = plain("H1-settle", "settle", false).unwrap();
++        let v = vector("H1-R7");
+         let mut s: Scenario = serde_json::from_value(v["scenario"].clone()).unwrap();
+         let usdx = rel.plan().cells.iter().find(|c| c.account == "buyer").unwrap().asset.clone();
+         s.balances.push(mori_core::Balance { account: "operator".into(), asset: usdx, amount: UInt(0) });
+         let core = core_program("H1-settle");
+-        let r = mori_core::simulate(&core, "settle", &s)
+-            .map_err(|e| e.to_string())
+-            .and_then(|exe| values_from(&rel, &s, &exe.pre, &exe.post, &exe.effects, None))
+-            .and_then(|vals| satisfied(&rel, vals, Tamper::none()));
+-        t.row("M-14", matches!(r, Ok(true)), format!("{r:?} (expected Ok(true): documents F-04, row presence is an unauthenticated premise)"));
+-    }
+-    t.finish("mutations");
++        match mori_core::simulate(&core, "settle", &s) {
++            Ok(exe) => t.expect(
++                "M-14",
++                &check_records(&rel, &s, &exe.pre, &exe.post, &exe.effects, None),
++                "SAT",
++                " (documents F-04: balance-row existence is a target premise, not a relation fact)",
++            ),
++            Err(e) => t.check("M-14", false, "CORE-REFUSED", format!("Core refused the M-14 construction: {e} (expected SAT, F-04)")),
++        }
++    }
++    t.finish();
+ }
+ 
+ #[test]
+ fn absent_duty_discharge_control() {
+-    // POST-FREEZE addendum 2: the in-circuit presence assertion is the only refusal.
++    // POST-FREEZE addendum 2, unchanged expectations; typed outcomes.
+     let doc = json(ADDENDUM2);
+-    let mut t = Table { rows: Vec::new(), unexpected: 0 };
+-    let rel = relation("H8-discharge", "pay", false, FrameCells::TouchedOnly).expect("H8 compiles");
++    let mut t = Table::new("addendum2");
++    let rel = plain("H8-discharge", "pay", false).expect("H8 compiles");
+     let core = core_program("H8-discharge");
+     for v in doc["vectors"].as_array().expect("vectors") {
+         let id = v["id"].as_str().unwrap();
+         let scenario: Scenario = serde_json::from_value(v["scenario"].clone()).expect("Scenario");
+         let ex = &v["expected"];
+-        let reference = mori_core::simulate(&core, "pay", &scenario);
++        let observed = mori_core::simulate(&core, "pay", &scenario);
+         if ex["accepted"].as_bool() == Some(true) {
+             let pre: Snapshot = serde_json::from_value(ex["pre"].clone()).unwrap();
+             let post: Snapshot = serde_json::from_value(ex["post"].clone()).unwrap();
+             let effects: Vec<Effect> = serde_json::from_value(ex["effects"].clone()).unwrap();
+-            t.row(id, reference.as_ref().is_ok_and(|e| e.post == post && e.effects == effects), "Core reference equals reviewer oracle".into());
+-            let r = values_from(&rel, &scenario, &pre, &post, &effects, None).and_then(|vals| satisfied(&rel, vals, Tamper::none()));
+-            t.row(id, matches!(r, Ok(true)), format!("{r:?} (expected Ok(true))"));
++            t.check(id, observed.as_ref().is_ok_and(|e| e.post == post && e.effects == effects), "CORE-EQUAL", "Core reference equals reviewer oracle".into());
++            t.expect(id, &check_records(&rel, &scenario, &pre, &post, &effects, None), "SAT", "");
++            // Frozen addendum-2 work_used (never compared by r2).
++            match ex["work_used"].as_u64() {
++                Some(work) => t.check(
++                    &format!("{id}/W"),
++                    rel.plan().logical_work == UInt(u128::from(work)),
++                    "W",
++                    format!("W {} vs frozen addendum-2 work_used {work}", rel.plan().logical_work.0),
++                ),
++                None => t.check(&format!("{id}/W"), false, "W", "frozen work_used missing".into()),
++            }
+         } else {
+-            t.row(id, reference.as_ref().is_err_and(|e| e.code == ex["error"].as_str().unwrap()), "Core refuses as the reviewer oracle".into());
++            t.check(id, observed.as_ref().is_err_and(|e| e.code == ex["error"].as_str().unwrap()), "CORE-REFUSAL", "Core refuses as the reviewer oracle".into());
+             let claim = &v["hostile_claim"];
+             let pre = Snapshot { state: BTreeMap::new(), balances: Vec::new(), liabilities: Vec::new() };
+             let post: Snapshot = serde_json::from_value(claim["post"].clone()).unwrap();
+             let effects: Vec<Effect> = serde_json::from_value(claim["effects"].clone()).unwrap();
+-            let r = values_from(&rel, &scenario, &pre, &post, &effects, None).and_then(|vals| satisfied(&rel, vals, Tamper::none()));
+-            t.row(id, matches!(r, Ok(false)), format!("{r:?} (expected Ok(false))"));
+-        }
+-    }
+-    t.finish("addendum2");
++            t.expect(id, &check_records(&rel, &scenario, &pre, &post, &effects, None), "UNSAT", "");
++        }
++    }
++    t.finish();
+ }
+ 
+ #[test]
+ fn static_refusals() {
+-    let mut t = Table { rows: Vec::new(), unexpected: 0 };
++    let mut t = Table::new("static");
++    let nb = AccountingBinding::NotBound;
+     // S-1: moriarty/2 source.
+-    let r = mori_r1cs::compile_source::<Fr>(H7, opts("go", false, FrameCells::TouchedOnly), StatementAdapter::DirectFieldV0);
+-    t.row("S-1", matches!(r, Err(CompileError::StagedNotLowered(_)) | Err(CompileError::Core(_))), format!("{:?}", r.as_ref().err().map(|e| e.to_string())));
++    let r = mori_r1cs::compile_source::<Fr>(H7, opts("go", false, FrameCells::TouchedOnly, nb), StatementAdapter::DirectFieldV0);
++    t.check("S-1", matches!(r, Err(CompileError::StagedNotLowered(_)) | Err(CompileError::Core(_))), "REFUSED", format!("{:?}", r.as_ref().err().map(|e| e.to_string())));
+     // S-2: in-memory /1 program carrying Await.
+     let mut p = h3_program();
+     p.actions[1].statements.push(mori_core::Statement::Await { label: "x".into(), binders: Vec::new(), guard: 5 });
+-    t.row("S-2", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "Await under /1 refused by Core".into());
++    t.check("S-2", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "REFUSED", "Await under /1 refused by Core".into());
+     // S-3: semantics label mismatch.
+     let mut p = h3_program();
+     p.semantics = "moriarty-core/2".into();
+-    t.row("S-3", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "profile refused".into());
++    t.check("S-3", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "REFUSED", "profile refused".into());
+     // S-5: depth 65 chain.
+     let mut p = h3_program();
+     let base = p.expressions.len() as u16;
+@@ -486,32 +851,104 @@
+     for i in 0..65u16 {
+         p.expressions.push(mori_core::Expr::Binary { op: mori_core::BinaryOp::Add, lhs: base + i, rhs: 1 });
+     }
+-    t.row("S-5", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "depth > 64 refused".into());
++    t.check("S-5", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "REFUSED", "depth > 64 refused".into());
+     // S-6: self reference.
+     let mut p = h3_program();
+     p.expressions[2] = mori_core::Expr::Binary { op: mori_core::BinaryOp::Add, lhs: 2, rhs: 1 };
+-    t.row("S-6", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "cycle refused".into());
++    t.check("S-6", matches!(mori_r1cs::admit_program(p), Err(CompileError::Core(_))), "REFUSED", "cycle refused".into());
+     // S-7: dead nodes admitted; every action compiles.
+     for action in ["open", "bump", "pay", "poly_u", "poly_b"] {
+-        let r = relation("H3-dag", action, false, FrameCells::TouchedOnly);
+-        t.row(&format!("S-7/{action}"), r.is_ok(), format!("{:?}", r.as_ref().err().map(|e| e.to_string())));
++        let r = plain("H3-dag", action, false);
++        t.check(&format!("S-7/{action}"), r.is_ok(), "ADMITTED", format!("{:?}", r.as_ref().err().map(|e| e.to_string())));
+     }
+     // S-8: asset scale 39.
+     let bad = H1.replace("scale: 6", "scale: 39");
+-    let r = mori_r1cs::compile_source::<Fr>(&bad, opts("settle", false, FrameCells::TouchedOnly), StatementAdapter::DirectFieldV0);
+-    t.row("S-8", matches!(r, Err(CompileError::Core(_))), "scale 39 refused".into());
+-    // H4: Emit lowered by the compiler, refused whole-program by the initial ledger target.
+-    let r = relation("H4-emit", "tick", false, FrameCells::TouchedOnly);
+-    t.row("S-4/compile", r.is_ok(), "Emit program compiles under the test adapter".into());
++    let r = mori_r1cs::compile_source::<Fr>(&bad, opts("settle", false, FrameCells::TouchedOnly, nb), StatementAdapter::DirectFieldV0);
++    t.check("S-8", matches!(r, Err(CompileError::Core(_))), "REFUSED", "scale 39 refused".into());
++    // S-4: Emit lowered by the compiler, refused whole-program by the initial ledger target.
++    let r = plain("H4-emit", "tick", false);
++    t.check("S-4/compile", r.is_ok(), "ADMITTED", "Emit program compiles under the test adapter".into());
+     let target = mori_r1cs::initial_ledger_target_admits(&core_program("H4-emit"));
+-    t.row("S-4/target", target.is_err(), "initial ledger target refuses whole-program Emit".into());
+-    t.finish("static");
++    t.check("S-4/target", target.is_err(), "REFUSED", "initial ledger target refuses whole-program Emit".into());
++    // S-9 (frozen, first execution; AUTH representation through FrameCells::Include, see
++    // addendum 3 s9_capacity): an explicit refusal naming the cap, no truncation.
++    let frame = |asset: &str, n: usize| {
++        FrameCells::Include((0..n).map(|i| CellRef { asset: asset.into(), account: format!("s9-frame-{i:05}") }).collect())
++    };
++    let r = relation("H1-settle", "settle", false, frame("USDX", 6000), nb);
++    t.check(
++        "S-9/trace",
++        matches!(&r, Err(CompileError::Bound(m)) if m.contains("65536")),
++        "BOUND",
++        format!("{:?} (expected Bound naming 65536)", r.as_ref().err().map(|e| e.to_string())),
++    );
++    let r = relation("H8-discharge", "pay", false, frame("T", 4097), nb);
++    t.check(
++        "S-9/cells",
++        matches!(&r, Err(CompileError::Bound(m)) if m.contains("4,096")),
++        "BOUND",
++        format!("{:?} (expected Bound naming 4,096)", r.as_ref().err().map(|e| e.to_string())),
++    );
++    // S-9 program-level (addendum 4, AUTH construction): Core-valid programs whose own
++    // layout exceeds the compiler caps; admitted by Core validate, refused by the plan.
++    let compile_in_memory = |p: Program, action: &str| {
++        mori_r1cs::admit_program(p).and_then(|a| {
++            mori_r1cs::compile::<Fr>(a, opts(action, false, FrameCells::TouchedOnly, nb), StatementAdapter::DirectFieldV0)
++        })
++    };
++    for (id, program, action, cap_text) in [
++        ("S-9/states", s9_states_program(), "s9states", "65536"),
++        ("S-9/duties", s9_duties_program(), "s9dutiesc", "1,024"),
++        ("S-9/duties-trace", s9_duties_program(), "s9dutiesa", "65536"),
++    ] {
++        let r = compile_in_memory(program, action);
++        t.check(
++            id,
++            matches!(&r, Err(CompileError::Bound(m)) if m.contains(cap_text)),
++            "BOUND",
++            format!("{:?} (expected Bound naming {cap_text}; no relation, nothing truncated)", r.as_ref().err().map(|e| e.to_string())),
++        );
++    }
++    t.finish();
++}
++
++/// Addendum 4 S-9/states: H3 + 200 UInt states + an action of 400 `requires true`.
++/// 203 trace records * 402 = 81,606 > 65,536 within Core's declaration and statement bounds.
++fn s9_states_program() -> Program {
++    let mut p = h3_program();
++    for i in 0..200 {
++        p.states.push(mori_core::StateDecl { name: format!("s9s{i:03}"), ty: mori_core::Type::UInt, initial: mori_core::Value::UInt(UInt(0)) });
++    }
++    let t = u16::try_from(p.expressions.len()).expect("expression id fits u16");
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::Bool(true) });
++    p.actions.push(mori_core::Action { name: "s9states".into(), inputs: Vec::new(), statements: vec![mori_core::Statement::Requires { predicate: t }; 400] });
++    p
++}
++
++/// Addendum 4 S-9/duties: H3 + 1025 source Liability statements over two actions (registry
++/// 1026 duties > 1,024) + a one-statement action whose trace product stays under the cap.
++fn s9_duties_program() -> Program {
++    let mut p = h3_program();
++    let one = u16::try_from(p.expressions.len()).expect("expression id fits u16");
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::UInt(UInt(1)) });
++    let t = one + 1;
++    p.expressions.push(mori_core::Expr::Literal { value: mori_core::Value::Bool(true) });
++    let duty = |i: usize| mori_core::Statement::Liability {
++        name: format!("s9d{i:04}"),
++        asset: "T".into(),
++        debtor: "p".into(),
++        creditor: "q".into(),
++        amount: one,
++    };
++    p.actions.push(mori_core::Action { name: "s9dutiesa".into(), inputs: Vec::new(), statements: (0..513).map(&duty).collect() });
++    p.actions.push(mori_core::Action { name: "s9dutiesb".into(), inputs: Vec::new(), statements: (513..1025).map(&duty).collect() });
++    p.actions.push(mori_core::Action { name: "s9dutiesc".into(), inputs: Vec::new(), statements: vec![mori_core::Statement::Requires { predicate: t }] });
++    p
+ }
+ 
+ #[test]
+ fn build_identity_is_recomputed_from_the_copied_bytes() {
+-    // r2 identity plumbing: prints the CompilerBuild that every other test supplies. It
+-    // adds no relation, oracle, hostile or financial expectation.
++    // As r2: prints the CompilerBuild every other test supplies. No relation expectation.
+     let r = recomputed_build();
+     let b = build();
+     println!("identity build_manifest_sha256 {} ({} entries equal to the compiled crate bytes)", r.build_manifest_sha256, r.build_manifest_entries);
+@@ -519,3 +956,759 @@
+     println!("identity compiler_build_digest {}", b.digest().expect("canonical CompilerBuild").hex());
+     assert!(!b.compiler_source_manifest_sha256.is_zero() && !b.core_closure_sha256.is_zero());
+ }
++
++// ---------------------------------------------------------------------------------------
++// New r3 tests.
++// ---------------------------------------------------------------------------------------
++
++#[test]
++fn reencoded_hostile_claims_addendum3() {
++    // AUTH post-freeze addendum 3: H1-R11 / H2-R5 in Core's Snapshot/Effect wire (absent
++    // duty by omission). Expected strictly UNSAT: the point is to reach the constraints.
++    let doc = json(ADDENDUM3);
++    let mut t = Table::new("addendum3");
++    for c in doc["reencoded_claims"].as_array().expect("reencoded_claims") {
++        let id = c["id"].as_str().expect("id");
++        let v = vector(c["base_vector"].as_str().expect("base"));
++        let program = v["program"].as_str().unwrap();
++        let action = v["action"].as_str().unwrap();
++        let cap = cap_of(&v);
++        let scenario: Scenario = serde_json::from_value(v["scenario"].clone()).expect("Scenario");
++        let core = core_program(program);
++        let want = &c["core_expected"];
++        match reference(&core, action, &scenario, cap) {
++            Ok(_) => t.check(&format!("{id}/core"), false, "CORE-ACCEPTED", "Core accepted the base scenario".into()),
++            Err(e) => t.check(
++                &format!("{id}/core"),
++                Some(e.code.as_str()) == want["error"].as_str() && e.step.map(u64::from) == want["step"].as_u64(),
++                "CORE-REFUSAL",
++                format!("{} step {:?} vs frozen {want}", e.code, e.step),
++            ),
++        }
++        let rel = match plain(program, action, cap.is_some()) {
++            Ok(r) => r,
++            Err(e) => {
++                t.check(id, false, "COMPILE-REFUSED", e.to_string());
++                continue;
++            }
++        };
++        let claim = &c["claim"];
++        let decoded = (|| -> Result<(Snapshot, Snapshot, Vec<Effect>), String> {
++            Ok((
++                serde_json::from_value(claim["pre"].clone()).map_err(|e| format!("pre: {e}"))?,
++                serde_json::from_value(claim["post"].clone()).map_err(|e| format!("post: {e}"))?,
++                serde_json::from_value(claim["effects"].clone()).map_err(|e| format!("effects: {e}"))?,
++            ))
++        })();
++        let outcome = match decoded {
++            Ok((pre, post, effects)) => check_records(&rel, &scenario, &pre, &post, &effects, cap),
++            Err(e) => Outcome::NotDecodable(e),
++        };
++        t.expect(id, &outcome, "UNSAT", " (AUTH; discharge of an absent duty)");
++    }
++    t.finish();
++}
++
++/// Actual Core observations projected with this harness's own arithmetic into the frozen
++/// accounting fields (never the candidate's accounting code).
++struct Observed {
++    balances: BTreeMap<(AssetId, String), BTreeMap<String, Json>>,
++    duties: BTreeMap<String, BTreeMap<String, Json>>,
++    residual: Vec<String>,
++}
++
++fn signed_delta(post: u128, pre: u128) -> String {
++    if post >= pre { (post - pre).to_string() } else { format!("-{}", pre - post) }
++}
++
++fn observe(pre: &Snapshot, post: &Snapshot, effects: &[Effect]) -> Result<Observed, String> {
++    let mut balances = BTreeMap::new();
++    if pre.balances.len() != post.balances.len() {
++        return Err("pre and post balance row counts differ".into());
++    }
++    for b in &pre.balances {
++        let after = post
++            .balances
++            .iter()
++            .find(|p| p.asset == b.asset && p.account == b.account)
++            .ok_or_else(|| format!("post lacks {}", b.account))?
++            .amount
++            .0;
++        let (mut gross, mut gross_ex_self, mut fees) = (0u128, 0u128, 0u128);
++        for e in effects {
++            let (asset, from, to, amount, is_fee) = match e {
++                Effect::Transfer { asset, from, to, amount } => (asset, from, to, amount.0, false),
++                Effect::Fee { asset, from, to, amount } => (asset, from, to, amount.0, true),
++                _ => continue,
++            };
++            if *asset == b.asset && *from == b.account {
++                gross = gross.checked_add(amount).ok_or("gross debit overflows u128")?;
++                if to != from {
++                    gross_ex_self = gross_ex_self.checked_add(amount).ok_or("gross debit overflows u128")?;
++                }
++                if is_fee {
++                    fees = fees.checked_add(amount).ok_or("fees overflow u128")?;
++                }
++            }
++        }
++        let mut row = BTreeMap::new();
++        row.insert("pre".to_string(), Json::String(b.amount.0.to_string()));
++        row.insert("post".to_string(), Json::String(after.to_string()));
++        row.insert("net_delta".to_string(), Json::String(signed_delta(after, b.amount.0)));
++        row.insert("gross_debit".to_string(), Json::String(gross.to_string()));
++        row.insert("gross_debit_excluding_self".to_string(), Json::String(gross_ex_self.to_string()));
++        row.insert("fees_paid".to_string(), Json::String(fees.to_string()));
++        balances.insert((b.asset.clone(), b.account.clone()), row);
++    }
++    let mut names: BTreeSet<String> = pre.liabilities.iter().map(|l| l.name.clone()).collect();
++    names.extend(post.liabilities.iter().map(|l| l.name.clone()));
++    let mut duties = BTreeMap::new();
++    let mut residual = Vec::new();
++    for name in names {
++        let opening = pre.liabilities.iter().find(|l| l.name == name).map(|l| l.amount.0);
++        let closing = post.liabilities.iter().find(|l| l.name == name).map(|l| l.amount.0);
++        let (mut accrued, mut discharged) = (0u128, 0u128);
++        for e in effects {
++            if let Effect::Liability { name: n, before, after, .. } = e {
++                if *n == name {
++                    if after.0 >= before.0 {
++                        accrued = accrued.checked_add(after.0 - before.0).ok_or("accrual overflows u128")?;
++                    } else {
++                        discharged = discharged.checked_add(before.0 - after.0).ok_or("discharge overflows u128")?;
++                    }
++                }
++            }
++        }
++        let mut row = BTreeMap::new();
++        row.insert("opening".to_string(), Json::String(opening.unwrap_or(0).to_string()));
++        row.insert("closing".to_string(), Json::String(closing.unwrap_or(0).to_string()));
++        row.insert("accrued".to_string(), Json::String(accrued.to_string()));
++        row.insert("discharged".to_string(), Json::String(discharged.to_string()));
++        row.insert("present_before".to_string(), Json::Bool(opening.is_some()));
++        row.insert("present_after".to_string(), Json::Bool(closing.is_some()));
++        row.insert("present_zero_after".to_string(), Json::Bool(closing == Some(0)));
++        if closing.is_some_and(|c| c > 0) {
++            residual.push(name.clone());
++        }
++        duties.insert(name, row);
++    }
++    residual.sort();
++    Ok(Observed { balances, duties, residual })
++}
++
++const BALANCE_FIELDS: [&str; 6] = ["pre", "post", "net_delta", "gross_debit", "gross_debit_excluding_self", "fees_paid"];
++const DUTY_FIELDS: [&str; 7] = ["opening", "accrued", "discharged", "closing", "present_before", "present_after", "present_zero_after"];
++
++fn frozen_asset(j: &Json) -> AssetId {
++    serde_json::from_value(j.clone()).expect("frozen asset identity decodes")
++}
++
++/// Field-by-field differences between a frozen accounting block and an observation.
++fn compare_accounting(frozen: &Json, obs: &Observed) -> Vec<String> {
++    let mut diffs = Vec::new();
++    let mut seen = BTreeSet::new();
++    for row in frozen["balances"].as_array().expect("frozen balances") {
++        let key = (frozen_asset(&row["asset"]), row["account"].as_str().expect("account").to_string());
++        match obs.balances.get(&key) {
++            None => diffs.push(format!("balance {}/{}: no observed row", key.0.reference, key.1)),
++            Some(o) => {
++                for f in BALANCE_FIELDS {
++                    if o.get(f) != Some(&row[f]) {
++                        diffs.push(format!("balance {}/{} {f}: observed {:?} frozen {}", key.0.reference, key.1, o.get(f), row[f]));
++                    }
++                }
++            }
++        }
++        seen.insert(key);
++    }
++    for key in obs.balances.keys().filter(|k| !seen.contains(*k)) {
++        diffs.push(format!("balance {}/{}: observed row absent from the frozen block", key.0.reference, key.1));
++    }
++    let mut seen = BTreeSet::new();
++    for row in frozen["duties"].as_array().expect("frozen duties") {
++        let name = row["name"].as_str().expect("duty name").to_string();
++        match obs.duties.get(&name) {
++            None => diffs.push(format!("duty {name}: no observed row")),
++            Some(o) => {
++                for f in DUTY_FIELDS {
++                    if o.get(f) != Some(&row[f]) {
++                        diffs.push(format!("duty {name} {f}: observed {:?} frozen {}", o.get(f), row[f]));
++                    }
++                }
++            }
++        }
++        seen.insert(name);
++    }
++    for name in obs.duties.keys().filter(|n| !seen.contains(*n)) {
++        diffs.push(format!("duty {name}: observed row absent from the frozen block"));
++    }
++    let mut frozen_residual: Vec<String> =
++        frozen["residual_positive"].as_array().expect("residual_positive").iter().map(|n| n.as_str().expect("name").to_string()).collect();
++    frozen_residual.sort();
++    if frozen_residual != obs.residual {
++        diffs.push(format!("residual_positive: observed {:?} frozen {frozen_residual:?}", obs.residual));
++    }
++    diffs
++}
++
++/// The public statement of `rel` for frozen records, compared with the frozen block:
++/// represented pre/post cells, registry duty presence and amounts, Liability effect slots.
++/// Returns (mismatches, rows outside the statement).
++fn compare_statement(rel: &CompiledRelation, public: &[Fr], frozen: &Json, effects: &[Effect]) -> (Vec<String>, Vec<String>) {
++    let plan = rel.plan();
++    let mut diffs = Vec::new();
++    let mut outside = Vec::new();
++    let rows: BTreeMap<(AssetId, String), &Json> = frozen["balances"]
++        .as_array()
++        .expect("frozen balances")
++        .iter()
++        .map(|r| ((frozen_asset(&r["asset"]), r["account"].as_str().expect("account").to_string()), r))
++        .collect();
++    for (i, cell) in plan.cells.iter().enumerate() {
++        let Some(row) = rows.get(&(cell.asset.clone(), cell.account.clone())) else {
++            diffs.push(format!("represented cell {}/{} has no frozen row", cell.asset_name, cell.account));
++            continue;
++        };
++        if slot_fields(rel, public, SlotKind::PreCell { index: i }) != Some(uint_fe(num(&row["pre"]))) {
++            diffs.push(format!("pre.cell.{}.{} differs from frozen pre {}", cell.asset_name, cell.account, row["pre"]));
++        }
++        if slot_fields(rel, public, SlotKind::PostCell { index: i }) != Some(uint_fe(num(&row["post"]))) {
++            diffs.push(format!("post.cell.{}.{} differs from frozen post {}", cell.asset_name, cell.account, row["post"]));
++        }
++    }
++    for ((asset, account), row) in &rows {
++        if plan.cell_index(asset, account).is_none() {
++            if row["gross_debit"].as_str() != Some("0") {
++                diffs.push(format!("debited row {}/{account} is not represented", asset.reference));
++            } else {
++                outside.push(format!("balance {}/{account} (frame row; not in the statement under this option)", asset.reference));
++            }
++        }
++    }
++    let duties: BTreeMap<String, &Json> =
++        frozen["duties"].as_array().expect("frozen duties").iter().map(|d| (d["name"].as_str().expect("name").to_string(), d)).collect();
++    for (j, d) in plan.duties.iter().enumerate() {
++        let (pb, opening, pa, closing) = match duties.get(&d.name) {
++            Some(r) => (
++                r["present_before"].as_bool().expect("bool"),
++                num(&r["opening"]),
++                r["present_after"].as_bool().expect("bool"),
++                num(&r["closing"]),
++            ),
++            // A registry duty absent before and after has no frozen row: canonical (false, 0).
++            None => (false, 0, false, 0),
++        };
++        let checks = [
++            (SlotKind::PreDutyPresent { index: j }, bool_fe(pb), "pre.present"),
++            (SlotKind::PreDutyAmount { index: j }, uint_fe(opening), "pre.amount (opening)"),
++            (SlotKind::PostDutyPresent { index: j }, bool_fe(pa), "post.present"),
++            (SlotKind::PostDutyAmount { index: j }, uint_fe(closing), "post.amount (closing)"),
++        ];
++        for (kind, want, what) in checks {
++            if slot_fields(rel, public, kind) != Some(want) {
++                diffs.push(format!("duty {} {what} differs from the frozen block", d.name));
++            }
++        }
++    }
++    for name in duties.keys() {
++        if plan.duty_index(name).is_none() {
++            outside.push(format!("duty {name} (unregistered; not representable, F-05)"));
++        }
++    }
++    for (k, shape) in plan.effects.iter().enumerate() {
++        if let EffectShape::Liability { name, .. } = shape {
++            match effects.get(k) {
++                Some(Effect::Liability { name: n, before, after, .. }) if n == name => {
++                    let b = slot_fields(rel, public, SlotKind::Effect { index: k, role: EffectRole::DutyBefore });
++                    let a = slot_fields(rel, public, SlotKind::Effect { index: k, role: EffectRole::DutyAfter });
++                    if b != Some(uint_fe(before.0)) || a != Some(uint_fe(after.0)) {
++                        diffs.push(format!("effect {k} liability {name} before/after slots differ from the frozen effect"));
++                    }
++                }
++                _ => diffs.push(format!("effect {k}: frozen effect is not liability {name}")),
++            }
++        }
++    }
++    (diffs, outside)
++}
++
++#[test]
++fn financial_accounting_against_frozen() {
++    // P-3 item 4 (N-03): the frozen expected.accounting block of EVERY accepted vector,
++    // against actual Core (harness arithmetic over Core's records) and against the public
++    // statement of the NotBound relation. Unrepresented planes are OPEN rows.
++    let mut t = Table::new("accounting");
++    for v in vectors().iter().filter(|v| v["expected"]["accepted"].as_bool() == Some(true)) {
++        let id = v["id"].as_str().unwrap();
++        let program = v["program"].as_str().unwrap();
++        let action = v["action"].as_str().unwrap();
++        let cap = cap_of(v);
++        let frozen = &v["expected"]["accounting"];
++        let (s, pre, post, eff) = parts(v);
++        let core = core_program(program);
++        match reference(&core, action, &s, cap).map_err(|e| e.to_string()).and_then(|exe| observe(&exe.pre, &exe.post, &exe.effects)) {
++            Ok(obs) => {
++                let diffs = compare_accounting(frozen, &obs);
++                t.check(&format!("{id}/core"), diffs.is_empty(), "CORE-ACCOUNTING", if diffs.is_empty() { "every frozen field equal".into() } else { diffs.join("; ") });
++            }
++            Err(e) => t.check(&format!("{id}/core"), false, "CORE-ACCOUNTING", e),
++        }
++        let rel = match plain(program, action, cap.is_some()) {
++            Ok(r) => r,
++            Err(e) => {
++                t.check(&format!("{id}/statement"), false, "COMPILE-REFUSED", e.to_string());
++                continue;
++            }
++        };
++        match values_from(&rel, &s, &pre, &post, &eff, cap).and_then(|vals| rel.public_inputs::<Fr>(&vals)) {
++            Ok(public) => {
++                let (diffs, outside) = compare_statement(&rel, &public, frozen, &eff);
++                t.check(&format!("{id}/statement"), diffs.is_empty(), "STATEMENT-SLOTS", if diffs.is_empty() { "represented cells, registry duties and liability effects equal the frozen block".into() } else { diffs.join("; ") });
++                if !outside.is_empty() {
++                    t.open(&format!("{id}/outside"), "NOT-IN-STATEMENT", outside.join("; "));
++                }
++            }
++            Err(e) => t.check(&format!("{id}/statement"), false, "NOT-ENCODABLE", e.to_string()),
++        }
++        t.open(
++            &format!("{id}/planes"),
++            "NOT-REPRESENTED",
++            "reserve, DUST, service fees and recovery reservations: no frozen field and no slot; gross_debit_excluding_self is compared with Core only".into(),
++        );
++    }
++    for v in json(ADDENDUM2)["vectors"].as_array().expect("vectors").iter().filter(|v| v["expected"]["accepted"].as_bool() == Some(true)) {
++        t.open(v["id"].as_str().unwrap(), "NO-FROZEN-ACCOUNTING", "addendum 2 carries no accounting block; nothing compared".into());
++    }
++    t.finish();
++}
++
++fn gross_rows(rel: &CompiledRelation, public: &[Fr], frozen: &Json) -> (Vec<String>, Vec<String>) {
++    let plan = rel.plan();
++    let mut diffs = Vec::new();
++    let mut notes = Vec::new();
++    let rows: BTreeMap<(AssetId, String), &Json> = frozen["balances"]
++        .as_array()
++        .expect("frozen balances")
++        .iter()
++        .map(|r| ((frozen_asset(&r["asset"]), r["account"].as_str().expect("account").to_string()), r))
++        .collect();
++    for &cell in &plan.debit_cells {
++        let c = &plan.cells[cell];
++        let Some(row) = rows.get(&(c.asset.clone(), c.account.clone())) else {
++            diffs.push(format!("debit cell {}/{} has no frozen row", c.asset_name, c.account));
++            continue;
++        };
++        let gross = slot_fields(rel, public, SlotKind::GrossDebit { cell });
++        let fees = slot_fields(rel, public, SlotKind::FeesPaid { cell });
++        if gross != Some(wide_fe(num(&row["gross_debit"]))) {
++            diffs.push(format!("gross_debit {}/{}: public slot differs from frozen {}", c.asset_name, c.account, row["gross_debit"]));
++        }
++        if fees != Some(wide_fe(num(&row["fees_paid"]))) {
++            diffs.push(format!("fees_paid {}/{}: public slot differs from frozen {}", c.asset_name, c.account, row["fees_paid"]));
++        }
++    }
++    for ((asset, account), row) in &rows {
++        if !plan.debit_cells.iter().any(|&i| plan.cells[i].asset == *asset && plan.cells[i].account == *account) {
++            if row["gross_debit"].as_str() != Some("0") || row["fees_paid"].as_str() != Some("0") {
++                diffs.push(format!("frozen debit on {}/{account} has no accounting slot", asset.reference));
++            } else {
++                notes.push(format!("{}/{account}: no slot, frozen 0", asset.reference));
++            }
++        }
++    }
++    (diffs, notes)
++}
++
++fn gross_and_fee_rows(t: &mut Table, id: &str, rel: &CompiledRelation, v: &Json, cap: Option<UInt>) {
++    let frozen = &v["expected"]["accounting"];
++    let honest = match honest_assignment(rel, v, cap) {
++        Ok(a) => a,
++        Err(e) => {
++            t.check(id, false, "NOT-ENCODABLE", e);
++            return;
++        }
++    };
++    t.expect(id, &check_assignment(rel, honest.clone(), Tamper::none()), "SAT", " (AUTH: GrossDebitAndFees relation on frozen records)");
++    let (diffs, notes) = gross_rows(rel, &honest.public, frozen);
++    t.check(
++        &format!("{id}/sums"),
++        diffs.is_empty(),
++        "BOUND-SUMS",
++        if diffs.is_empty() { format!("{} debit cell(s) equal frozen gross_debit/fees_paid; {}", rel.plan().debit_cells.len(), notes.join("; ")) } else { diffs.join("; ") },
++    );
++    for &cell in &rel.plan().debit_cells {
++        let c = &rel.plan().cells[cell];
++        for (kind, what) in [(SlotKind::GrossDebit { cell }, "gross"), (SlotKind::FeesPaid { cell }, "fees")] {
++            let row_id = format!("{id}/tamper-{what}-{}.{}", c.asset_name, c.account);
++            match slot_offset(rel, kind) {
++                Some((offset, 3)) => {
++                    let mut a = honest.clone();
++                    a.public[offset] += Fr::from(1u64);
++                    t.expect(&row_id, &check_assignment(rel, a, Tamper::none()), "UNSAT", " (AUTH: public sum + 1)");
++                }
++                other => t.check(&row_id, false, "LAYOUT", format!("slot {other:?} is not a 3-field wide sum")),
++            }
++        }
++    }
++}
++
++#[test]
++fn gross_debit_and_fees_relation() {
++    // P-3 item 4: a second relation per accepted vector with
++    // AccountingBinding::GrossDebitAndFees and the vector's own cap binding.
++    let mut t = Table::new("grossfees");
++    for v in vectors().iter().filter(|v| v["expected"]["accepted"].as_bool() == Some(true)) {
++        let id = v["id"].as_str().unwrap();
++        let cap = cap_of(v);
++        match relation(v["program"].as_str().unwrap(), v["action"].as_str().unwrap(), cap.is_some(), FrameCells::TouchedOnly, AccountingBinding::GrossDebitAndFees) {
++            Ok(rel) => gross_and_fee_rows(&mut t, id, &rel, v, cap),
++            Err(e) => t.check(id, false, "COMPILE-REFUSED", e.to_string()),
++        }
++    }
++    // Frame option: H1-P1 with the auditor cell represented.
++    let v = vector("H1-P1");
++    match relation("H1-settle", "settle", false, auditor_frame(), AccountingBinding::GrossDebitAndFees) {
++        Ok(rel) => {
++            gross_and_fee_rows(&mut t, "H1-P1/frame", &rel, &v, None);
++            match honest_assignment(&rel, &v, None) {
++                Ok(a) => {
++                    let (diffs, _) = compare_statement(&rel, &a.public, &v["expected"]["accounting"], &parts(&v).3);
++                    t.check("H1-P1/frame/statement", diffs.is_empty(), "STATEMENT-SLOTS", if diffs.is_empty() { "auditor pre/post slots and every represented cell equal the frozen block".into() } else { diffs.join("; ") });
++                }
++                Err(e) => t.check("H1-P1/frame/statement", false, "NOT-ENCODABLE", e),
++            }
++        }
++        Err(e) => t.check("H1-P1/frame", false, "COMPILE-REFUSED", e.to_string()),
++    }
++    t.finish();
++}
++
++#[test]
++fn rejected_phase_and_work_attempted() {
++    // P-3 item 4: frozen phase and work_attempted for every rejected vector (held-out and
++    // addendum 2). Observation method (AUTH, addendum 3): phase = "admission" when Core's
++    // error has no step, else "execution"; work = simulate_metered(..).cost.used under the
++    // vector's cap, or u128::MAX when it has none.
++    let mut t = Table::new("rejected");
++    let mut rows: Vec<Json> = vectors();
++    rows.extend(json(ADDENDUM2)["vectors"].as_array().expect("vectors").iter().cloned());
++    for v in rows.iter().filter(|v| v["expected"]["accepted"].as_bool() == Some(false)) {
++        let id = v["id"].as_str().unwrap();
++        let program = v["program"].as_str().unwrap();
++        let action = v["action"].as_str().unwrap();
++        let ex = &v["expected"];
++        let scenario: Scenario = serde_json::from_value(v["scenario"].clone()).expect("Scenario");
++        let core = core_program(program);
++        let cap = cap_of(v);
++        match mori_core::simulate_metered(&core, action, &scenario, cap.unwrap_or(UInt(u128::MAX))) {
++            Ok(_) => t.check(id, false, "CORE-ACCEPTED", "Core accepted an expected refusal under metering".into()),
++            Err(m) => {
++                let phase = if m.error.step.is_some() { "execution" } else { "admission" };
++                t.check(&format!("{id}/phase"), Some(phase) == ex["phase"].as_str(), "PHASE", format!("observed {phase} (step {:?}) vs frozen {}", m.error.step, ex["phase"]));
++                t.check(
++                    &format!("{id}/work_attempted"),
++                    Some(m.cost.used.0) == ex["work_attempted"].as_u64().map(u128::from),
++                    "WORK-ATTEMPTED",
++                    format!("observed {} vs frozen {}", m.cost.used.0, ex["work_attempted"]),
++                );
++                if cap.is_none() {
++                    let plain_err = mori_core::simulate(&core, action, &scenario).err();
++                    t.check(
++                        &format!("{id}/meter-method"),
++                        plain_err.as_ref().is_some_and(|e| e.code == m.error.code && e.step == m.error.step),
++                        "METHOD-CONTROL",
++                        "unmetered and u128::MAX-metered refusals agree on code and step".into(),
++                    );
++                }
++            }
++        }
++    }
++    t.finish();
++}
++
++#[test]
++fn hw25_duplicate_balance_key() {
++    // AUTH dated case (addendum 3 hw25_duplicate_balance_key).
++    let mut t = Table::new("hw25");
++    let v = vector("H1-P1");
++    let (mut s, mut pre, post, eff) = parts(&v);
++    let rel = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++    let usdx = rel.plan().cells.iter().find(|c| c.account == "buyer").expect("buyer cell").asset.clone();
++    let split = |rows: &mut Vec<mori_core::Balance>| {
++        for b in rows.iter_mut() {
++            if b.account == "buyer" && b.asset == usdx {
++                b.amount = UInt(600000);
++            }
++        }
++        rows.push(mori_core::Balance { account: "buyer".into(), asset: usdx.clone(), amount: UInt(400000) });
++    };
++    split(&mut s.balances);
++    let core = core_program("H1-settle");
++    match mori_core::simulate(&core, "settle", &s) {
++        Ok(_) => t.check("HW-25-r3/core", false, "CORE-ACCEPTED", "Core accepted a duplicate balance key".into()),
++        Err(e) => t.check("HW-25-r3/core", e.code == "mori::core::balance" && e.step.is_none(), "CORE-REFUSAL", format!("{} step {:?} (expected mori::core::balance, admission)", e.code, e.step)),
++    }
++    let slots = rel.plan().cells.iter().filter(|c| c.account == "buyer" && c.asset == usdx).count();
++    t.check("HW-25-r3/layout", slots == 1, "LAYOUT-ONE-SLOT", format!("{slots} buyer/USDX cell(s) in the plan"));
++    t.open("HW-25-r3/premise", "TARGET-PREMISE", "uniqueness of the ledger row behind a slot is pre-state authenticity (coverage REFUSALS scenario-row TargetPremise)".into());
++    split(&mut pre.balances);
++    let observed = check_records(&rel, &s, &pre, &post, &eff, None);
++    t.open("HW-25-r3/encoder", observed.class(), format!("observed only, not asserted: {}", observed.detail()));
++    t.finish();
++}
++
++#[test]
++fn hw_traceability() {
++    // Every frozen HW-01..26 proposal has exactly one typed traceability entry (v2, machine
++    // row references). This test checks only the table's form, so every HW entry is an OPEN
++    // row carrying its class: whether the referenced rows ran and passed is decided after
++    // the run by resolving each {table, row} against the printed rows (operator-proposals/
++    // libtest_rows.py), never by this table.
++    const CLASSES: [&str; 7] =
++        ["RELATION-EXECUTED", "RELATION-PARTIAL", "ENCODER-ONLY", "CORE-AND-PREMISE", "TARGET-GAP", "STRUCTURAL-SOURCE", "NOT-APPLICABLE"];
++    const TABLES: [&str; 13] = [
++        "heldout", "hostile", "mutations", "addendum2", "static", "addendum3", "addendum4", "accounting", "grossfees", "rejected", "hw25", "hwtrace",
++        "probe",
++    ];
++    let frozen: Vec<String> =
++        json(VECTORS)["hostile_witness_proposals"].as_array().expect("hostile_witness_proposals").iter().map(|h| h["id"].as_str().unwrap().to_string()).collect();
++    let trace = json(HW_TRACE);
++    let entries = trace["entries"].as_array().expect("entries");
++    let ids: Vec<String> = entries.iter().map(|e| e["id"].as_str().unwrap_or("").to_string()).collect();
++    let mut t = Table::new("hwtrace");
++    t.check("ids", ids == frozen, "TRACE-FORM", format!("{} entries vs {} frozen proposals, same order", ids.len(), frozen.len()));
++    let mut malformed = Vec::new();
++    for e in entries {
++        let id = e["id"].as_str().unwrap_or("?");
++        let class = e["class"].as_str().unwrap_or("?");
++        let refs: Vec<String> = e["refs"]
++            .as_array()
++            .map(|a| {
++                a.iter()
++                    .map(|r| match (r["table"].as_str(), r["row"].as_str()) {
++                        (Some(tb), Some(row)) if TABLES.contains(&tb) && !row.is_empty() => format!("{tb}/{row}"),
++                        _ => "MALFORMED".to_string(),
++                    })
++                    .collect()
++            })
++            .unwrap_or_else(|| vec!["MALFORMED".to_string()]);
++        let e4: Vec<&str> = e["e4"].as_array().map(|a| a.iter().filter_map(Json::as_str).collect()).unwrap_or_default();
++        let reason = e["reason"].as_str().unwrap_or("");
++        let well_formed = CLASSES.contains(&class)
++            && !refs.iter().any(|r| r == "MALFORMED")
++            && match class {
++                "RELATION-EXECUTED" | "RELATION-PARTIAL" | "ENCODER-ONLY" | "CORE-AND-PREMISE" => !refs.is_empty(),
++                _ => refs.is_empty() && !reason.is_empty(),
++            };
++        if !well_formed {
++            malformed.push(id.to_string());
++        }
++        t.open(id, class, format!("refs [{}] e4 [{}] | {}", refs.join(", "), e4.join(", "), reason));
++    }
++    t.check("form", malformed.is_empty(), "TRACE-FORM", format!("malformed entries: {malformed:?}"));
++    t.finish();
++}
++
++#[test]
++fn probe_reports_and_identities() {
++    // P-3 item 5 (N-07): the actual ProbeReport and identities of every relation this
++    // harness compiles. Future observations only; no value is predicted or asserted except
++    // that the relation names the recomputed build.
++    let mut configs: BTreeSet<(String, String, bool, bool, bool)> = BTreeSet::new();
++    for v in vectors() {
++        let program = v["program"].as_str().unwrap().to_string();
++        let action = v["action"].as_str().unwrap().to_string();
++        let cap = cap_of(&v).is_some();
++        configs.insert((program.clone(), action.clone(), cap, false, false));
++        if v["expected"]["accepted"].as_bool() == Some(true) {
++            configs.insert((program, action, cap, false, true));
++        }
++    }
++    for action in ["open", "bump", "pay", "poly_u", "poly_b"] {
++        configs.insert(("H3-dag".into(), action.into(), false, false, false));
++    }
++    configs.insert(("H4-emit".into(), "tick".into(), false, false, false));
++    configs.insert(("H8-discharge".into(), "pay".into(), false, false, false));
++    configs.insert(("H8-discharge".into(), "open".into(), false, false, false));
++    configs.insert(("H1-settle".into(), "settle".into(), false, true, false));
++    configs.insert(("H1-settle".into(), "settle".into(), false, true, true));
++    configs.insert(("H1-settle-usdy".into(), "settle".into(), false, false, false));
++    let expected_build = build().digest().expect("canonical CompilerBuild");
++    let core = recomputed_build().core_closure_sha256.clone();
++    let mut t = Table::new("probe");
++    for (program, action, cap, frame, gross) in configs {
++        let id = format!(
++            "{program}/{action}/{}/{}/{}",
++            if cap { "PublicCap" } else { "NotBound" },
++            if frame { "Include(USDX.auditor)" } else { "TouchedOnly" },
++            if gross { "GrossDebitAndFees" } else { "NotBound" }
++        );
++        let frame_cells = if frame { auditor_frame() } else { FrameCells::TouchedOnly };
++        let accounting = if gross { AccountingBinding::GrossDebitAndFees } else { AccountingBinding::NotBound };
++        match relation(&program, &action, cap, frame_cells, accounting) {
++            Ok(rel) => {
++                let p = rel.probe();
++                let i = rel.identity();
++                let relation_identity = i.digest().map(|d| d.hex()).unwrap_or_else(|e| format!("ERROR {e}"));
++                let detail = format!(
++                    "constraints={} instance_variables={} witness_variables={} r1cs_sha256={} field_bits={} statement_fields={} instance_eq_fields_plus_one={} \
++                     program_hash={} profile_digest={} shape_digest={} compiler_build_digest={} relation_identity={} W={} adapter={:?} core_closure={core}",
++                    p.constraints,
++                    p.instance_variables,
++                    p.witness_variables,
++                    p.r1cs_sha256.hex(),
++                    p.field_modulus_bits,
++                    rel.layout().field_count,
++                    p.instance_variables == rel.layout().field_count + 1,
++                    i.program_hash.hex(),
++                    i.profile_digest.hex(),
++                    i.shape_digest.hex(),
++                    i.compiler_build_digest.hex(),
++                    relation_identity,
++                    i.logical_work.0,
++                    i.adapter,
++                );
++                let ok = i.compiler_build_digest == expected_build && !p.r1cs_sha256.is_zero() && p.constraints > 0 && !relation_identity.starts_with("ERROR");
++                t.check(&id, ok, "PROBE", detail);
++            }
++            Err(e) => t.check(&id, false, "COMPILE-REFUSED", e.to_string()),
++        }
++    }
++    t.finish();
++}
++
++// ---------------------------------------------------------------------------------------
++// Resume addendum 4 (AUTH, dated, frozen before these assertions).
++// ---------------------------------------------------------------------------------------
++
++/// Swaps the fields of two equally wide public slots.
++fn swap_slots(public: &mut [Fr], a: usize, b: usize, width: usize) {
++    for k in 0..width {
++        public.swap(a + k, b + k);
++    }
++}
++
++#[test]
++fn addendum4_dated_cases() {
++    let mut t = Table::new("addendum4");
++    let add4 = json(ADDENDUM4);
++    t.check("format", add4["format"] == "evidence-repair-heldout-addendum/4", "TRACE-FORM", format!("addendum 4 format {}", add4["format"]));
++
++    // HW-14-r3: H1' (usdx -> usdy) assignment under the H1 relation.
++    {
++        let base = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let v = vector("H1-P1");
++        let text = v["scenario"].to_string().replace("\"usdx\"", "\"usdy\"");
++        let scenario: Scenario = serde_json::from_str(&text).expect("H1' scenario decodes");
++        match relation("H1-settle-usdy", "settle", false, FrameCells::TouchedOnly, AccountingBinding::NotBound) {
++            Ok(prime) => {
++                let pi = prime.identity();
++                let bi = base.identity();
++                t.check(
++                    "HW-14-r3/identity",
++                    pi.program_hash != bi.program_hash && pi.shape_digest != bi.shape_digest,
++                    "IDENTITY",
++                    format!(
++                        "H1' program_hash {} shape {} vs H1 program_hash {} shape {}",
++                        pi.program_hash.hex(),
++                        pi.shape_digest.hex(),
++                        bi.program_hash.hex(),
++                        bi.shape_digest.hex()
++                    ),
++                );
++                let proposal = mori_core::simulate(&core_program("H1-settle-usdy"), "settle", &scenario)
++                    .map_err(|e| format!("Core refused H1': {e}"))
++                    .and_then(|exe| values_from(&prime, &scenario, &exe.pre, &exe.post, &exe.effects, None).map_err(|e| format!("not encodable: {e}")))
++                    .and_then(|vals| prime.assignment::<Fr>(vals).map_err(|e| format!("not encodable: {e}")));
++                match proposal {
++                    Ok(a) => {
++                        t.expect("HW-14-r3/control", &check_assignment(&prime, a.clone(), Tamper::none()), "SAT", " (AUTH: H1' honest under H1')");
++                        t.expect("HW-14-r3", &check_assignment(&base, a, Tamper::none()), "UNSAT", " (AUTH: H1' public vector under the H1 relation)");
++                    }
++                    Err(e) => t.check("HW-14-r3", false, "NOT-ENCODABLE", e),
++                }
++            }
++            Err(e) => t.check("HW-14-r3", false, "COMPILE-REFUSED", e.to_string()),
++        }
++    }
++
++    // HW-15-r3: a close-shaped witness under the settle circuit (refused before synthesis).
++    {
++        let settle = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let close = plain("H1-settle", "close", false).expect("H1 close compiles");
++        match honest_assignment(&close, &vector("H1-P3"), None) {
++            Ok(a) => t.expect(
++                "HW-15-r3",
++                &check_assignment(&settle, a, Tamper::none()),
++                "ASSIGNMENT-SHAPE",
++                " (AUTH: refused before the constraint system, not relation evidence; relation counterpart M-13/action_index)",
++            ),
++            Err(e) => t.check("HW-15-r3", false, "NOT-ENCODABLE", e),
++        }
++    }
++
++    // HW-18-r3: claim W = 35 instead of 36 on the W-1 capped relation.
++    {
++        let v = vector("W-1");
++        let cap = cap_of(&v);
++        let rel = plain("H1-settle", "settle", cap.is_some()).expect("H1 settle (PublicCap) compiles");
++        match (honest_assignment(&rel, &v, cap), slot_offset_by_label(&rel, "header.logical_work")) {
++            (Ok(mut a), Some(offset)) => {
++                a.public[offset] = Fr::from(35u64);
++                t.expect("HW-18-r3", &check_assignment(&rel, a, Tamper::none()), "UNSAT", " (AUTH: W is a bound header constant)");
++            }
++            (Err(e), _) => t.check("HW-18-r3", false, "NOT-ENCODABLE", e),
++            (_, None) => t.check("HW-18-r3", false, "LAYOUT", "no slot header.logical_work".into()),
++        }
++    }
++
++    // HW-23-r3/H6-B1: Bool input p of beq.
++    {
++        let rel = plain("H6-bounds", "beq", false).expect("H6 beq compiles");
++        let index = rel.plan().inputs.iter().position(|i| i.name == "p").expect("input p");
++        match (honest_assignment(&rel, &vector("H6-B1"), None), slot_offset(&rel, SlotKind::Input { index })) {
++            (Ok(honest), Some((offset, 1))) => {
++                t.expect("HW-23-r3/H6-B1/control", &check_assignment(&rel, honest.clone(), Tamper::none()), "SAT", " (AUTH control)");
++                let mut two = honest.clone();
++                two.public[offset] = Fr::from(2u64);
++                let deep = check_assignment_deep(&rel, two.clone(), Tamper::none());
++                t.expect("HW-23-r3/H6-B1/two", &deep.outcome, "UNSAT", &format!(" (AUTH; public field only; {})", deep.detail()));
++                let mut minus_one = honest;
++                minus_one.public[offset] = -Fr::from(1u64);
++                t.expect("HW-23-r3/H6-B1/minus-one", &check_assignment(&rel, minus_one, Tamper::none()), "UNSAT", " (AUTH; p - 1 as true)");
++                let wire = check_assignment_deep(&rel, two, Tamper::none().set("entry/input0#0", Fr::from(2u64)));
++                t.check(
++                    "HW-23-r3/H6-B1/wire-two",
++                    wire.refused_at_entry_constraint_zero() && wire.overrides_used == 1,
++                    wire.outcome.class(),
++                    format!("{} (AUTH expected: UNSAT at constraint 0, the booleanity of input 0, with 1 override)", wire.detail()),
++                );
++            }
++            (Err(e), _) => t.check("HW-23-r3/H6-B1/control", false, "NOT-ENCODABLE", e),
++            (_, other) => t.check("HW-23-r3/H6-B1/control", false, "LAYOUT", format!("input p slot {other:?} is not one Bool field")),
++        }
++    }
++
++    // HW-26-r3: exchange the buyer and seller USDX pre-cell slots (unsorted rows).
++    {
++        let rel = plain("H1-settle", "settle", false).expect("H1 settle compiles");
++        let slot = |label: &str| rel.layout().slot(label).map(|s| (s.offset, s.encoding.width()));
++        match (honest_assignment(&rel, &vector("H1-P1"), None), slot("pre.cell.USDX.buyer"), slot("pre.cell.USDX.seller")) {
++            (Ok(mut a), Some((buyer, 2)), Some((seller, 2))) => {
++                let distinct = a.public[buyer..buyer + 2] != a.public[seller..seller + 2];
++                swap_slots(&mut a.public, buyer, seller, 2);
++                let outcome = check_assignment(&rel, a, Tamper::none());
++                t.check(
++                    "HW-26-r3/unsorted",
++                    distinct && matches!(outcome, Outcome::Unsat),
++                    outcome.class(),
++                    format!("{} (AUTH expected UNSAT; slots distinct before the swap = {distinct})", outcome.detail()),
++                );
++            }
++            (Err(e), _, _) => t.check("HW-26-r3/unsorted", false, "NOT-ENCODABLE", e),
++            (_, b, s) => t.check("HW-26-r3/unsorted", false, "LAYOUT", format!("buyer {b:?} seller {s:?} are not UInt slots")),
++        }
++        t.open("HW-26-r3/padding", "NOT-APPLICABLE", "DirectFieldV0 has no padding rows; open for any padded ABI mapping, never a pass".into());
++    }
++    t.finish();
++}

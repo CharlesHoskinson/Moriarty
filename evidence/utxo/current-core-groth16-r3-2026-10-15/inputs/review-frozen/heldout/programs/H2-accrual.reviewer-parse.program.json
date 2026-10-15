@@ -1,0 +1,236 @@
+{
+  "actions": [
+    {
+      "inputs": [
+        {
+          "name": "rate",
+          "ty": "UInt"
+        },
+        {
+          "name": "units",
+          "ty": "UInt"
+        }
+      ],
+      "name": "accrue",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 1
+        },
+        {
+          "kind": "Let",
+          "name": "due",
+          "value": 4
+        },
+        {
+          "amount": 5,
+          "asset": "CRD",
+          "creditor": "lender",
+          "debtor": "borrower",
+          "kind": "Liability",
+          "name": "loan"
+        },
+        {
+          "kind": "Requires",
+          "predicate": 8
+        },
+        {
+          "kind": "Next",
+          "state": "periods",
+          "value": 11
+        }
+      ]
+    },
+    {
+      "inputs": [
+        {
+          "name": "pay",
+          "ty": "UInt"
+        },
+        {
+          "name": "stop",
+          "ty": "Bool"
+        }
+      ],
+      "name": "repay",
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 12
+        },
+        {
+          "amount": 13,
+          "asset": "CRD",
+          "from": "borrower",
+          "kind": "Transfer",
+          "to": "lender"
+        },
+        {
+          "amount": 14,
+          "kind": "Discharge",
+          "name": "loan"
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 19
+        },
+        {
+          "amount": 20,
+          "asset": "CRD",
+          "from": "borrower",
+          "kind": "Fee",
+          "to": "borrower"
+        },
+        {
+          "kind": "Next",
+          "state": "frozen",
+          "value": 21
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "identity": {
+        "issuer": "holdout-bank",
+        "network": "holdout-net",
+        "reference": "credit",
+        "scale": 2
+      },
+      "name": "CRD"
+    }
+  ],
+  "expressions": [
+    {
+      "kind": "Name",
+      "name": "frozen"
+    },
+    {
+      "kind": "Not",
+      "value": 0
+    },
+    {
+      "kind": "Name",
+      "name": "rate"
+    },
+    {
+      "kind": "Name",
+      "name": "units"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 2,
+      "op": "Mul",
+      "rhs": 3
+    },
+    {
+      "kind": "Name",
+      "name": "due"
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "loan"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "50000"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 6,
+      "op": "Le",
+      "rhs": 7
+    },
+    {
+      "kind": "Name",
+      "name": "periods"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 9,
+      "op": "Add",
+      "rhs": 10
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "loan"
+    },
+    {
+      "kind": "Name",
+      "name": "pay"
+    },
+    {
+      "kind": "Name",
+      "name": "pay"
+    },
+    {
+      "kind": "LiabilityAmount",
+      "name": "loan"
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "0"
+      }
+    },
+    {
+      "kind": "Binary",
+      "lhs": 15,
+      "op": "Ne",
+      "rhs": 16
+    },
+    {
+      "kind": "LiabilityPresent",
+      "name": "loan"
+    },
+    {
+      "kind": "Binary",
+      "lhs": 17,
+      "op": "Or",
+      "rhs": 18
+    },
+    {
+      "kind": "Literal",
+      "value": {
+        "type": "UInt",
+        "value": "1"
+      }
+    },
+    {
+      "kind": "Name",
+      "name": "stop"
+    }
+  ],
+  "language": "moriarty/1",
+  "name": "HoldoutAccrual",
+  "semantics": "moriarty-core/1",
+  "states": [
+    {
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      },
+      "name": "periods",
+      "ty": "UInt"
+    },
+    {
+      "initial": {
+        "type": "Bool",
+        "value": false
+      },
+      "name": "frozen",
+      "ty": "Bool"
+    }
+  ]
+}
