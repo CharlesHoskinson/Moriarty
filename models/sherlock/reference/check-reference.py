@@ -28,6 +28,8 @@ FROZEN = {
 }
 SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/mod.rs",
+    "crates/mori-core/src/sherlock/compare.rs",
+    "crates/mori-core/src/sherlock/compare_tests.rs",
     "crates/mori-core/src/sherlock/reference.rs",
     "crates/mori-core/src/sherlock/reference_types.rs",
     "crates/mori-core/src/sherlock/reference_display.rs",
