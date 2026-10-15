@@ -1,4 +1,4 @@
-use super::{Group, refusal};
+use super::{DynamicField, Group, refusal};
 use crate::{Result, ops::NativeOp};
 use midnight_transient_crypto::{curve::Fr, repr::FieldRepr};
 use midnight_zkir_v3::{Identifier, Instruction, ir::Operand, ir_types::IrType};
@@ -15,6 +15,7 @@ pub fn field(n: Fr) -> Operand {
 pub struct Builder {
     pub instructions: Vec<Instruction>,
     pub groups: Vec<Group>,
+    pub dynamic: Vec<DynamicField>,
     serial: u32,
 }
 impl Builder {
@@ -201,6 +202,10 @@ impl Builder {
         for (index, val) in replacements {
             let cell = inputs.get_mut(*index).ok_or(refusal("template-offset"))?;
             *cell = val.clone();
+            self.dynamic.push(DynamicField {
+                group: self.groups.len(),
+                offset: *index,
+            });
         }
         self.groups.push(Group {
             field_count: inputs.len(),

@@ -195,7 +195,7 @@ fn mixed_roles_export_reopen_and_debit_inventory_are_source_bound() {
     );
     for (i, names) in [(0, vec!["alice"]), (1, vec!["alice", "bob"]), (2, vec![])] {
         let m = manifest(&a, i);
-        assert_eq!(m["format"], "moriarty-mapped-role-source-static-relation/1");
+        assert_eq!(m["format"], "moriarty-mapped-role-source-static-relation/2");
         assert_eq!(
             m["qualification"],
             "source-static-mapped-debits-unauthenticated"
@@ -494,5 +494,283 @@ fn mapped_export_and_reopen_honor_action_operation_input_leaf_and_aggregate_limi
             .unwrap()
             .code,
         "aggregate-work-limit"
+    );
+}
+
+#[test]
+fn source_step_fields_match_independent_ir_oracle() {
+    use midnight_zkir_v3::{Instruction, IrSource, ir::Operand};
+    use serde_json::json;
+
+    // Independent normal oracle33e37dc74dd01bfec329b38eee3adeea462cdb4514e24f0116b75a3081cc1c88.
+    // Decode only: no relation checks, instruction evaluation, model or VM calls.
+    const SOURCE: &str = r#"language "moriarty/1";
+agreement SourceMapOracle {
+  state base: UInt = 3;
+  asset PAY = { network: "local", issuer: "independent-static", reference: "PAY", scale: 0 };
+  action mapped(amount: UInt) {
+    transfer(PAY, "alice", "treasury", 2);
+    fee(PAY, "alice", "treasury", amount);
+    let local = base + 1;
+    transfer(PAY, "alice", "treasury", local);
+    fee(PAY, "bob", "treasury", 2);
+  }
+}
+"#;
+    let (program, public_bindings) = bindings(SOURCE);
+    let bundle =
+        static_compile::compile(SOURCE, &program, &public_bindings, &mode(), &limits()).unwrap();
+    let manifest = manifest(&bundle, 0);
+    let ir: IrSource =
+        codec::decode_artifact(&bundle.leaves().leaves["action-000000.ir.bin"]).unwrap();
+    assert_eq!(ir.inputs.len(), 1);
+    assert_eq!(ir.instructions.len(), 155);
+    assert!(
+        matches!(ir.instructions.last(), Some(Instruction::Output { vals }) if vals.is_empty())
+    );
+    let impacts = ir
+        .instructions
+        .iter()
+        .enumerate()
+        .filter_map(|(index, instruction)| {
+            if let Instruction::Impact { guard, inputs } = instruction {
+                Some((index, guard, inputs))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    // Exact kth-Impact positions/widths and known guards, copied from the frozen oracle.
+    // Prelude/state-read guards have no literal guard row in that freeze and are not guessed.
+    let expected_groups: &[(usize, usize, &str, Option<&str>)] = &[
+        (1, 1, "abi-root", None),
+        (2, 1, "abi-root", None),
+        (6, 4, "abi-root", None),
+        (28, 1, "source-claim", Some("%native.3")),
+        (29, 4, "source-claim", Some("%native.3")),
+        (30, 1, "source-claim", Some("%native.3")),
+        (31, 19, "source-claim", Some("%native.3")),
+        (32, 1, "source-claim", Some("%native.3")),
+        (33, 4, "source-claim", Some("%native.3")),
+        (34, 1, "source-claim", Some("%native.6")),
+        (35, 18, "source-claim", Some("%native.6")),
+        (36, 4, "source-claim", Some("%native.6")),
+        (37, 19, "source-claim", Some("%native.3")),
+        (38, 5, "source-claim", Some("%native.3")),
+        (39, 1, "source-claim", Some("%native.3")),
+        (40, 1, "source-claim", Some("%native.3")),
+        (62, 1, "source-claim", Some("%native.15")),
+        (63, 4, "source-claim", Some("%native.15")),
+        (64, 1, "source-claim", Some("%native.15")),
+        (65, 19, "source-claim", Some("%native.15")),
+        (66, 1, "source-claim", Some("%native.15")),
+        (67, 4, "source-claim", Some("%native.15")),
+        (68, 1, "source-claim", Some("%native.18")),
+        (69, 18, "source-claim", Some("%native.18")),
+        (70, 4, "source-claim", Some("%native.18")),
+        (71, 19, "source-claim", Some("%native.15")),
+        (72, 5, "source-claim", Some("%native.15")),
+        (73, 1, "source-claim", Some("%native.15")),
+        (74, 1, "source-claim", Some("%native.15")),
+        (78, 1, "state-read", None),
+        (79, 8, "state-read", None),
+        (80, 4, "state-opening", None),
+        (107, 1, "source-claim", Some("%native.30")),
+        (108, 4, "source-claim", Some("%native.30")),
+        (109, 1, "source-claim", Some("%native.30")),
+        (110, 19, "source-claim", Some("%native.30")),
+        (111, 1, "source-claim", Some("%native.30")),
+        (112, 4, "source-claim", Some("%native.30")),
+        (113, 1, "source-claim", Some("%native.33")),
+        (114, 18, "source-claim", Some("%native.33")),
+        (115, 4, "source-claim", Some("%native.33")),
+        (116, 19, "source-claim", Some("%native.30")),
+        (117, 5, "source-claim", Some("%native.30")),
+        (118, 1, "source-claim", Some("%native.30")),
+        (119, 1, "source-claim", Some("%native.30")),
+        (141, 1, "source-claim", Some("%native.42")),
+        (142, 4, "source-claim", Some("%native.42")),
+        (143, 1, "source-claim", Some("%native.42")),
+        (144, 19, "source-claim", Some("%native.42")),
+        (145, 1, "source-claim", Some("%native.42")),
+        (146, 4, "source-claim", Some("%native.42")),
+        (147, 1, "source-claim", Some("%native.45")),
+        (148, 18, "source-claim", Some("%native.45")),
+        (149, 4, "source-claim", Some("%native.45")),
+        (150, 19, "source-claim", Some("%native.42")),
+        (151, 5, "source-claim", Some("%native.42")),
+        (152, 1, "source-claim", Some("%native.42")),
+        (153, 1, "source-claim", Some("%native.42")),
+    ];
+    assert_eq!(impacts.len(), 58);
+    assert_eq!(manifest["groups"].as_array().unwrap().len(), 58);
+    for (group, &(expected_instruction, expected_width, expected_origin, expected_guard)) in
+        expected_groups.iter().enumerate()
+    {
+        let (instruction, guard, fields) = impacts[group];
+        assert_eq!(instruction, expected_instruction, "group {group}");
+        assert_eq!(fields.len(), expected_width, "group {group}");
+        assert_eq!(manifest["groups"][group]["field_count"], expected_width);
+        assert_eq!(manifest["groups"][group]["origin"], expected_origin);
+        if let Some(expected_guard) = expected_guard {
+            assert!(
+                matches!(guard, Operand::Variable(id) if id.0 == expected_guard),
+                "group {group}: {guard:?}"
+            );
+        }
+    }
+    let expected_emissions = json!([
+        {
+            "statement": 0,
+            "expression": 0,
+            "instruction_start": 7,
+            "instruction_end": 41,
+            "group_start": 3,
+            "group_end": 16,
+            "dynamic_fields": [
+                {
+                    "group": 8,
+                    "offset": 3
+                },
+                {
+                    "group": 11,
+                    "offset": 3
+                },
+                {
+                    "group": 13,
+                    "offset": 4
+                }
+            ]
+        },
+        {
+            "statement": 1,
+            "expression": 1,
+            "instruction_start": 41,
+            "instruction_end": 75,
+            "group_start": 16,
+            "group_end": 29,
+            "dynamic_fields": [
+                {
+                    "group": 21,
+                    "offset": 3
+                },
+                {
+                    "group": 24,
+                    "offset": 3
+                },
+                {
+                    "group": 26,
+                    "offset": 4
+                }
+            ]
+        },
+        {
+            "statement": 2,
+            "expression": 4,
+            "instruction_start": 75,
+            "instruction_end": 86,
+            "group_start": 29,
+            "group_end": 32,
+            "dynamic_fields": [
+                {
+                    "group": 31,
+                    "offset": 3
+                }
+            ]
+        },
+        {
+            "statement": 3,
+            "expression": 5,
+            "instruction_start": 86,
+            "instruction_end": 120,
+            "group_start": 32,
+            "group_end": 45,
+            "dynamic_fields": [
+                {
+                    "group": 37,
+                    "offset": 3
+                },
+                {
+                    "group": 40,
+                    "offset": 3
+                },
+                {
+                    "group": 42,
+                    "offset": 4
+                }
+            ]
+        },
+        {
+            "statement": 4,
+            "expression": 6,
+            "instruction_start": 120,
+            "instruction_end": 154,
+            "group_start": 45,
+            "group_end": 58,
+            "dynamic_fields": [
+                {
+                    "group": 50,
+                    "offset": 3
+                },
+                {
+                    "group": 53,
+                    "offset": 3
+                },
+                {
+                    "group": 55,
+                    "offset": 4
+                }
+            ]
+        }
+    ]);
+    assert_eq!(manifest["statement_emissions"], expected_emissions);
+    // Operand identifiers are independent literal expectations, not the map's own account.
+    let expected_fields: &[(usize, usize, &str)] = &[
+        (8, 3, "%native.9"),
+        (11, 3, "%native.12"),
+        (13, 4, "%native.7"),
+        (21, 3, "%native.21"),
+        (24, 3, "%native.24"),
+        (26, 4, "%native.19"),
+        (31, 3, "%native.27"),
+        (37, 3, "%native.36"),
+        (40, 3, "%native.39"),
+        (42, 4, "%native.34"),
+        (50, 3, "%native.48"),
+        (53, 3, "%native.51"),
+        (55, 4, "%native.46"),
+    ];
+    let listed_fields = manifest["statement_emissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|statement| statement["dynamic_fields"].as_array().unwrap())
+        .map(|field| {
+            (
+                field["group"].as_u64().unwrap() as usize,
+                field["offset"].as_u64().unwrap() as usize,
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        listed_fields,
+        expected_fields
+            .iter()
+            .map(|&(group, offset, _)| (group, offset))
+            .collect::<Vec<_>>()
+    );
+    for &(group, offset, expected_operand) in expected_fields {
+        let actual = &impacts[group].2[offset];
+        assert!(
+            matches!(actual, Operand::Variable(id) if id.0 == expected_operand),
+            "group {group} field {offset}: {actual:?}"
+        );
+    }
+    assert_eq!(
+        impacts
+            .iter()
+            .map(|(_, _, fields)| fields.len())
+            .sum::<usize>(),
+        335
     );
 }

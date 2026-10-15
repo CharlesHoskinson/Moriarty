@@ -1,5 +1,5 @@
 use super::{
-    Group,
+    Group, StatementEmission,
     arithmetic::{Builder, imm},
     refusal,
 };
@@ -499,7 +499,7 @@ impl Compiler<'_> {
         cache.insert(id, w.clone());
         Ok(w)
     }
-    fn statement(&mut self, s: &Statement) -> Result<()> {
+    fn statement(&mut self, s: &Statement) -> Result<ExprId> {
         let id = match s {
             Statement::Let { value, .. }
             | Statement::Next { value, .. }
@@ -586,7 +586,7 @@ impl Compiler<'_> {
                 super::event::emit(&mut self.b, name, self.action, value.val, value.ty)?
             }
         }
-        Ok(())
+        Ok(id)
     }
 }
 pub fn compile(
@@ -600,7 +600,7 @@ pub fn compile(
         None,
         None,
     )
-    .map(|(ir, g, n, _)| (ir, g, n))
+    .map(|(ir, g, n, _, _)| (ir, g, n))
 }
 pub(crate) fn compile_signed(
     validated: &layout::ValidatedStaticBindings<'_>,
@@ -620,11 +620,12 @@ pub(crate) fn compile_signed(
         Some(signed),
         context,
     )
+    .map(|(ir, groups, inputs, wires, _)| (ir, groups, inputs, wires))
 }
 pub(crate) fn compile_source_static_roles(
     validated: &layout::ValidatedSourceStaticBindings<'_>,
     action: &str,
-) -> Result<(IrSource, Vec<Group>, usize)> {
+) -> Result<(IrSource, Vec<Group>, usize, Vec<StatementEmission>)> {
     compile_inner(
         validated.program(),
         validated.bindings(),
@@ -632,7 +633,7 @@ pub(crate) fn compile_source_static_roles(
         None,
         None,
     )
-    .map(|(ir, groups, inputs, _)| (ir, groups, inputs))
+    .map(|(ir, groups, inputs, _, emissions)| (ir, groups, inputs, emissions))
 }
 // Only the typed entry points above call this shared emitter. It grants no admission.
 fn compile_inner(
@@ -646,6 +647,7 @@ fn compile_inner(
     Vec<Group>,
     usize,
     Vec<crate::signed::WireDescriptor>,
+    Vec<StatementEmission>,
 )> {
     let a: &Action = p
         .actions
@@ -734,9 +736,22 @@ fn compile_inner(
             c.record("pre.authority.nonce.present".into(), Type::Bool, imm(0));
         }
     }
+    let mut statement_emissions = Vec::new();
     for (i, statement) in a.statements.iter().enumerate() {
         c.statement_index = i;
-        c.statement(statement)?;
+        let instruction_start = c.b.instructions.len();
+        let group_start = c.b.groups.len();
+        let dynamic_start = c.b.dynamic.len();
+        let expression = c.statement(statement)?;
+        statement_emissions.push(StatementEmission {
+            statement: i,
+            expression,
+            instruction_start,
+            instruction_end: c.b.instructions.len(),
+            group_start,
+            group_end: c.b.groups.len(),
+            dynamic_fields: c.b.dynamic[dynamic_start..].to_vec(),
+        });
     }
     if let Some(signed) = signed {
         c.observations(true)?;
@@ -771,5 +786,6 @@ fn compile_inner(
         c.b.groups,
         a.inputs.len() + signed.map_or(0, |s| 13 + 4 * s.assets.len()),
         c.wires.into_iter().map(|(d, _)| d).collect(),
+        statement_emissions,
     ))
 }

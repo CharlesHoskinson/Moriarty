@@ -1,0 +1,134 @@
+{
+  "schema": "opus-public-security-expectations/1",
+  "author": "Opus 5.5 (claude-opus-5-5), high effort, sole security owner",
+  "frozen_at_utc": "2026-10-15T02:25:00Z",
+  "status": "frozen-before-regression-code-and-before-any-execution; specified-only; not executed; not approval",
+  "checkout": "/home/charl/Moriarty/.worktrees/core-source-provenance-20261015",
+  "branch": "feat/core-source-provenance-20261015",
+  "base_commit": "eb2577d6c67684b950288d769ea2fcb91e731bf1",
+  "native_authority": "zero; gross 4334 / remaining 0 unchanged",
+  "derivation_inputs_sha256": {
+    "crates/mori/tests/mapped_role_static_io.rs (pre-edit, Sol)": "dfec0e675babb5686c019739f239ac5a1e48854ca70f30ac7ecf6bf61be16389",
+    "crates/mori-ledger/src/static_compile.rs": "e698e22ca8d4d718803c971ba834ba3c6b927436c04c46925fc98768531a1ff8",
+    "crates/mori-ledger/src/relation/compiler.rs": "203e7589ddc137b88b3317dc54014e38f8d084ce30d213c04172b2ac4b9d4548",
+    "crates/mori-ledger/src/relation/mod.rs": "b7ecafb38dd14d803db29b6430dda8788a0596504d560eedacce988750e1ab63",
+    "crates/mori-ledger/src/relation/arithmetic.rs": "dea48a884062407cd745c9dc02a56b055f472aee50e8f8ed6e5f7c290725e47a",
+    "crates/mori-ledger/src/layout.rs": "d7000e5affee81f58f7f4d3b1e67565139de812ae426b33882c0e86dffa4025f",
+    "crates/mori-ledger/src/ops.rs": "e209c6a880b126c12c285ff49f3ebae8fa956cf9c0ea8988284ded40a5ee652c",
+    "crates/mori-ledger/src/codec.rs": "0a460630b87d793cba7a8ee00157c12d65ad4de7c829a926eec07df7acc8cc7b",
+    "crates/mori-ledger/src/call_artifacts.rs": "e5ed10d4d0bbbc0da52808578daf5737da0c0ba73b879a9e7140a3814132bed3",
+    "crates/mori-core/src/intent.rs": "a1f2713e2ecb7e56fcbaa23b22e6254bcdcb4a91571ddd8c27c8047ecd93f88c",
+    "crates/mori/src/commands/compile_call.rs": "8a8ebae6ec431b963e684c397f2f02f2b008451d4d0459653677475fb6cbf4e2",
+    "examples/core/static-compile/financial-duty.bindings.json": "d47ccdf9f5a837eb0fcf352c2fbe95efce7746672668cb9030c664a44af36d3f",
+    "examples/core/static-compile/work-limits.json": "2dcb137e6bed56c53e82d9ce1eb13454b7a259b51992d6ad52b843a650a6590f",
+    "R/ORACLE-DESIGN.json": "33e37dc74dd01bfec329b38eee3adeea462cdb4514e24f0116b75a3081cc1c88",
+    "R/ORACLE-DESIGN.md": "ce475de8f95a9ce85fde7bc0a2195837aa78982c441bfd4ce13261b71ba74f07",
+    "R/oracle-normal.mori": "f8e9f77d16743637a1a08d3e23a821673180d2de4ad2f4f2372fd714ab8f455d",
+    "R/OPUS-DESIGN.md": "bf9eb9b30310d728922e9ac9cf3e90f322633176f72c005b997d13c4106601f4",
+    "R/OPUS-SOURCE-ADDITIONS-DETAIL.md": "60f482835115b542845491672196b3e8d60fc76c0184a93becddf6aa0d6b2dba"
+  },
+  "source_facts_used": [
+    "compiler.rs:553-577 Transfer and Fee share one lowering arm; kind (fee flag) and from reach only record() and payments",
+    "compiler.rs:45-56 record() is a no-op unless signed bindings are present; payments are consumed only by signed constraints::append (compiler.rs:762-771)",
+    "compiler.rs:316-388 claim(asset, to, amount) keys the claim by token and recipient only",
+    "ops.rs:25-34 abi_guard is Dup/Size/Popeq(3); the IR prologue commits to no source, program or ABI hash",
+    "relation/mod.rs:375-394 debit_sources is the BTreeSet of Transfer/Fee from names mapped to role rows (sorted, deduplicated, no statement index)",
+    "relation/mod.rs:232-246 manifest field order format, source_hash, program_hash, action, abi, ir_hash, input_count, groups, qualification, compiler_hash, open_predicates, debit_sources, statement_emissions",
+    "relation/mod.rs:221-230 StatementEmission field order statement, expression, instruction_start, instruction_end, group_start, group_end, dynamic_fields; DynamicField group, offset",
+    "relation/mod.rs:265-267 + call_artifacts.rs:433-440 manifest leaf bytes are serde_json pretty output of the struct",
+    "static_compile.rs:215-232,431-442 marker bytes are serde_json pretty output of a serde_json::Value; identity = codec::object_hash(marker without identity) = sha256(mori_core::intent::canonical(..))",
+    "static_compile.rs:513-611 reopen checks marker identity (marker-identity), leaf digests (action-leaf-identity) and leaf bytes (leaf-identity) before the fresh compile",
+    "static_compile.rs:612-619 the only remaining check after those is fresh-producer byte equality, refusing static-compile/fresh-source-mismatch",
+    "static_compile.rs:519-532 marker.bindings != supplied bindings refuses static-compile/marker-identity",
+    "layout.rs:215-223 mapped roles require only that from and to are bound roles; mori-core runtime.rs:263-280 accepts any non-empty from/to and UInt amount",
+    "mori_core parser.rs:312 transfer and fee parse identically; expression ids are allocated in source order, so the variants below keep ids 0..6 unchanged"
+  ],
+  "harness": {
+    "file": "crates/mori/tests/mapped_role_static_io.rs",
+    "reuse": ["Fixture", "bindings()", "invoke", "accepted", "refused", "read", "PROVENANCE_SOURCE", "MODE", "QUALIFICATION", "examples/core/static-compile/work-limits.json"],
+    "product_subprocesses": "only `mori --color never compile-call <source> --all-actions --static-bindings <b> --authorization unsigned-mapped-roles --work-limits <l> (--out|--inspect-static) <dir>`",
+    "other_operations": "temp-dir JSON/text read/write; mori_ledger::codec::{hash, object_hash} public hashing; mori_core::parse inside the existing bindings() helper",
+    "variant_derivation": "exact single-occurrence textual edits of the frozen five-step PROVENANCE_SOURCE (oracle-normal.mori sha256 f8e9f77d...); every edit pattern must occur exactly once or the test fails",
+    "filter_prefix": "provenance_security_"
+  },
+  "tests": [
+    {
+      "id": "H2",
+      "name": "provenance_security_h2_kind_swap_changes_abi_not_ir",
+      "variant_K_edits": [
+        ["transfer(PAY, \"alice\", \"treasury\", 2);", "fee(PAY, \"alice\", \"treasury\", 2);"],
+        ["fee(PAY, \"alice\", \"treasury\", amount);", "transfer(PAY, \"alice\", \"treasury\", amount);"]
+      ],
+      "expectations": [
+        "E2.1 baseline B and variant K exports are accepted, each printing '<QUALIFICATION> 1 actions into'",
+        "E2.2 lawful identity: K bindings are recomputed by bindings(); K source_hash, program_hash and abi_hash all differ from B",
+        "E2.3 action-000000.ir.bin bytes of K equal those of B; marker actions[0].ir_hash equal",
+        "E2.4 K manifest with members source_hash, program_hash, abi removed equals B manifest with the same members removed (so ir_hash, input_count, groups, qualification, compiler_hash, open_predicates, debit_sources and statement_emissions are equal)",
+        "E2.5 K manifest source_hash, program_hash and abi each differ from B",
+        "E2.6 K abi equals B abi with program_hash set to K's program_hash and statements[0].kind='Fee', statements[1].kind='Transfer'; nothing else in the abi differs",
+        "E2.7 K abi.actions[0].statements equals the literal [Fee alice->treasury amount 0, Transfer alice->treasury amount 1, Let local value 4, Transfer alice->treasury amount 5, Fee bob->treasury amount 6]",
+        "E2.8 K debit_sources equals the alice and bob role rows in that order (unchanged from B)",
+        "E2.9 marker identities differ; marker build equal",
+        "E2.10 B bundle reopens under B inputs and K bundle reopens under K inputs (each prints 'source-static-recompile-admitted 1 actions; identity')",
+        "E2.11 B bundle reopened under K source and bindings is refused with 'static-compile: marker-identity'"
+      ],
+      "security_reading": "Transfer/Fee kind is not bound by the IR or by statement_emissions; it is visible only through the committed source/program/ABI. Kind attribution therefore rests on the source commitment, not on any runtime or native check."
+    },
+    {
+      "id": "H3",
+      "name": "provenance_security_h3_payer_change_changes_debit_metadata_not_ir",
+      "variant_P1_edits": [["fee(PAY, \"bob\", \"treasury\", 2);", "fee(PAY, \"alice\", \"treasury\", 2);"]],
+      "variant_P2_edits": [["transfer(PAY, \"alice\", \"treasury\", 2);", "transfer(PAY, \"bob\", \"treasury\", 2);"]],
+      "expectations": [
+        "E3.1 B, P1 and P2 exports are accepted with '<QUALIFICATION> 1 actions into'; P1 and P2 reopen under their own inputs",
+        "E3.2 lawful identity: P1 and P2 bindings recomputed by bindings(); each source_hash, program_hash and abi_hash differs from B",
+        "E3.3 P1 and P2 action-000000.ir.bin bytes equal B's",
+        "E3.4 P1 payer set changes: debit_sources equals [alice row] (B has [alice row, bob row])",
+        "E3.5 P1 manifest minus source_hash, program_hash, abi, debit_sources equals B's minus the same members",
+        "E3.6 P1 abi equals B abi with program_hash replaced and statements[4].from='alice'",
+        "E3.7 P2 payer reattribution with unchanged set: debit_sources equals [alice row, bob row], identical to B",
+        "E3.8 P2 manifest minus source_hash, program_hash, abi equals B's minus the same members (debit_sources and statement_emissions equal)",
+        "E3.9 P2 abi equals B abi with program_hash replaced and statements[0].from='bob'",
+        "E3.10 B, P1 and P2 marker identities are pairwise distinct"
+      ],
+      "security_reading": "Payer (from) is not bound by the IR or statement_emissions. debit_sources is an unordered role set with no statement index: P2 shows a per-statement payer reattribution that leaves debit_sources byte-identical. Per-statement payer attribution exists only in the committed ABI statements. Nothing here authenticates, funds or checks any debit."
+    },
+    {
+      "id": "H4",
+      "name": "provenance_security_h4_rehashed_map_tampering_refuses_fresh_source_mismatch",
+      "baseline": "export of PROVENANCE_SOURCE with bindings(PROVENANCE_SOURCE) to directory out",
+      "reseal_procedure": "write mutated manifest bytes; in the original marker JSON set leaves['action-000000.manifest.json'].sha256 = codec::hash(bytes), leaves[..].bytes = byte length, actions[0].manifest_hash = same sha256; identity = codec::object_hash(marker without identity); write marker as serde_json pretty",
+      "harness_preconditions": [
+        "P4.1 resealing the unmodified manifest reproduces the original marker identity and byte-identical marker file",
+        "P4.2 each mutation's text edit patterns occur exactly once in the original manifest",
+        "P4.3 each mutated manifest parses and equals the original parsed manifest with exactly the stated JSON-level change applied, and differs in bytes"
+      ],
+      "mutations": [
+        {"id": "M1-range-swap", "change": "statement_emissions[0] and [1] exchange instruction_start/instruction_end/group_start/group_end: entry0 becomes 41/75/16/29, entry1 becomes 7/41/3/16"},
+        {"id": "M2-offset-shift", "change": "statement_emissions[2].dynamic_fields[0] {group 31, offset 3} becomes offset 2 (still inside width 4)"},
+        {"id": "M3-dynamic-field-deleted", "change": "statement_emissions[2].dynamic_fields becomes []"},
+        {"id": "M4-map-member-missing", "change": "manifest member statement_emissions removed"},
+        {"id": "M5-format-relabel", "change": "format 'moriarty-mapped-role-source-static-relation/2' becomes '/1'"},
+        {"id": "M6-downgrade", "change": "M4 and M5 together (a /1-shaped manifest without the map)"}
+      ],
+      "expectations": [
+        "E4.1 every mutation M1-M6, after reseal, is refused by --inspect-static with message containing 'static-compile: fresh-source-mismatch' (therefore marker-identity, action-leaf-identity and leaf-identity all accepted the recomputed hashes)",
+        "E4.2 after each refusal the bundle files on disk equal exactly what the test wrote (reopen writes nothing); IR and source leaves equal the original export",
+        "E4.3 restoring the original manifest and marker bytes yields an accepted reopen"
+      ],
+      "security_reading": "The emission map is producer-side only (no Deserialize). A caller who rewrites the map and recomputes every public hash is caught solely by fresh-recompile byte equality. H4 is the regression for that single dependency."
+    }
+  ],
+  "non_claims": [
+    "No runtime value, guard activity, debit funding, custody, authorization, ledger, proof or native correspondence is checked or claimed",
+    "H2/H3 IR equality is a static byte observation of the exported IR, not evidence that Transfer and Fee settle identically",
+    "No baseline IR digest is claimed; the optional MORI_PROVENANCE_BASELINE_BINARY branch belongs to Sol's normal test and is unchanged",
+    "No U0-U7, M1-M17, MC, SP or G exit closes from these expectations"
+  ],
+  "out_of_scope": {
+    "H5": "review-only; no ordinary unsigned product call is added (ordinary-path closure not separately classified)",
+    "compiler_injection_seam": "not required now",
+    "existing_unit_tests": "relation::emission_tests unchanged"
+  },
+  "if_results_disagree": "Stop and report. Do not edit these expectations to match output; examine source first."
+}
