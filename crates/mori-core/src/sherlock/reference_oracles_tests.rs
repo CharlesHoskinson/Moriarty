@@ -188,7 +188,29 @@ fn compare_snapshot(
     assert_eq!(actual.outcome.to_k(), output, "{context}: complete outcome");
 }
 
-fn compare_case(case_id: &str) {
+trait NormalExecution {
+    fn snapshot(&self) -> Snapshot;
+    fn step(&mut self) -> Option<StepRecord>;
+    fn run(&mut self) -> Snapshot;
+}
+
+impl NormalExecution for Machine {
+    fn snapshot(&self) -> Snapshot { Machine::snapshot(self) }
+    fn step(&mut self) -> Option<StepRecord> { Machine::step(self) }
+    fn run(&mut self) -> Snapshot { Machine::run(self) }
+}
+
+impl NormalExecution for super::image_reference::ImageMachine {
+    fn snapshot(&self) -> Snapshot { self.snapshot() }
+    fn step(&mut self) -> Option<StepRecord> { self.step() }
+    fn run(&mut self) -> Snapshot { self.run() }
+}
+
+// One common assertion consumer; neither implementation computes expectations.
+fn compare_case_with<M: NormalExecution>(
+    case_id: &str,
+    new_machine: impl Fn(Arc<Program>, u128, usize) -> M,
+) {
     let case = CASES
         .iter()
         .chain(EXTRA_CASES.iter())
@@ -209,7 +231,7 @@ fn compare_case(case_id: &str) {
 
     for prefix in case.prefixes {
         let context = format!("{case_id}, fuel {}", prefix.initial_fuel);
-        let mut machine = Machine::new(program.clone(), prefix.initial_fuel, case.stack_limit);
+        let mut machine = new_machine(program.clone(), prefix.initial_fuel, case.stack_limit);
         let mut prior = machine.snapshot();
         let initial = &case.states[0];
         compare_snapshot(
@@ -307,7 +329,7 @@ fn compare_case(case_id: &str) {
         );
 
         // Exercise run() through the same production implementation as step().
-        let mut run_machine = Machine::new(program.clone(), prefix.initial_fuel, case.stack_limit);
+        let mut run_machine = new_machine(program.clone(), prefix.initial_fuel, case.stack_limit);
         assert_eq!(
             run_machine.run(),
             publication.after,
@@ -336,6 +358,17 @@ fn compare_case(case_id: &str) {
             }
         }
     }
+}
+
+fn compare_case(case_id: &str) {
+    compare_case_with(case_id, Machine::new);
+}
+
+fn compare_image_case(case_id: &str) {
+    compare_case_with(case_id, |program, fuel, stack_limit| {
+        let image = super::program_image::prepare_program_image(&program);
+        super::image_reference::ImageMachine::new(Arc::new(image), fuel, stack_limit)
+    });
 }
 
 #[test]
@@ -383,4 +416,44 @@ fn frozen_normal_oracle_membership() {
         CASES.iter().map(|case| case.prefixes.len()).sum::<usize>(),
         92
     );
+}
+
+#[test]
+fn image_n01_literal() {
+    compare_image_case("N01");
+}
+
+#[test]
+fn image_n02_addition() {
+    compare_image_case("N02");
+}
+
+#[test]
+fn image_n03_conditional() {
+    compare_image_case("N03");
+}
+
+#[test]
+fn image_n04_lexical_restoration() {
+    compare_image_case("N04");
+}
+
+#[test]
+fn image_n05_named_recursion() {
+    compare_image_case("N05");
+}
+
+#[test]
+fn image_n06_ordered_list_tree_match() {
+    compare_image_case("N06");
+}
+
+#[test]
+fn image_n07_three_ordered_arguments() {
+    compare_image_case("N07");
+}
+
+#[test]
+fn image_n08_recursive_factorial() {
+    compare_image_case("N08");
 }

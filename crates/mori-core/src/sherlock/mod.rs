@@ -24,3 +24,11 @@ mod resource_tests;
 
 #[cfg(test)]
 mod compare_tests;
+
+// Host-only image proposal: exercised here without exporting a public runtime API.
+#[cfg(test)]
+mod program_image;
+
+// Private flat-table consumer proposal, normal-oracle comparisons only.
+#[cfg(test)]
+mod image_reference;
