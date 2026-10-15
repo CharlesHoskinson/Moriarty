@@ -43,10 +43,11 @@ enum ImageControl {
 
 /// Host-only source candidate. Integrator wiring is limited to cfg(test).
 /// No arbitrary-state importer or observer-controlled transition flags exist.
+#[derive(Clone)]
 pub(super) struct ImageMachine {
     image: Arc<ProgramImageDraft>,
     constants: Vec<Value>,
-    observations: SourceObservations,
+    observations: Arc<SourceObservations>,
     control: Option<ImageControl>,
     // Causal host metadata, deliberately absent from frozen A Snapshots.
     control_origin: ExprId,
@@ -60,12 +61,18 @@ pub(super) struct ImageMachine {
     outcome: Outcome,
 }
 
+/// An owned, typed in-memory cut of a real machine. Its private payload cannot
+/// be assembled from an arbitrary Snapshot. No codec/admission policy is added.
+pub(super) struct ImageCheckpoint {
+    machine: ImageMachine,
+}
+
 impl ImageMachine {
     /// Requires an unchanged image produced by prepare_program_image. This
     /// constructor deliberately adds no policy for arbitrary malformed tables.
     pub(super) fn new(image: Arc<ProgramImageDraft>, fuel: u128, stack_limit: usize) -> Self {
         let constants = decode_constants(&image);
-        let observations = SourceObservations::new(&image, &constants);
+        let observations = Arc::new(SourceObservations::new(&image, &constants));
         Self {
             control: Some(ImageControl::Eval(image.entry)),
             control_origin: image.entry,
@@ -80,6 +87,19 @@ impl ImageMachine {
             initial_fuel: fuel,
             outcome: Outcome::Pending,
         }
+    }
+
+    /// Clone all actual execution state without stepping or charging work.
+    /// Immutable image/observation identities stay shared; values, controls,
+    /// environments, frames, origins, counters and outcome are retained in full.
+    pub(super) fn checkpoint(&self) -> ImageCheckpoint {
+        ImageCheckpoint { machine: self.clone() }
+    }
+
+    /// Consume a typed cut and continue its saved execution directly. No source
+    /// reconstruction, Snapshot import, replay, or counter adjustment occurs.
+    pub(super) fn resume(checkpoint: ImageCheckpoint) -> Self {
+        checkpoint.machine
     }
 
     pub(super) fn snapshot(&self) -> Snapshot {

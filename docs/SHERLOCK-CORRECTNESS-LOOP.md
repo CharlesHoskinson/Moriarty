@@ -187,3 +187,9 @@ adds actual image-machine occurrence/frame-owner metadata and real call-helper
 capture. Three new literal source-path/cursor cases pass alongside the unchanged
 eight programs/216 prefixes (82 checks total). This does not adopt B, bind a
 program digest or establish circuit/native correspondence.
+
+The [typed host checkpoint comparison](audits/2026-10-15/sherlock-host-checkpoint-normal/README.md)
+checks actual image/helper cut/resume against selected complete frozen boundaries,
+including pending returns/cursors and retained origins (86 host checks total).
+Internal event equality is supplemental; no canonical serialization, B/native or
+financial continuation result is inferred.

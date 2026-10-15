@@ -76,6 +76,12 @@ All 82 host checks pass, including the unchanged eight-program/216-prefix
 comparisons. Image/digest binding, B adoption and circuit/native/target acceptance
 remain open.
 
+[Typed in-memory cuts](docs/audits/2026-10-15/sherlock-host-checkpoint-normal/README.md)
+now checkpoint and resume the actual private image/helper consumers, retaining
+pending state and source origins. All 86 host checks pass; eleven image cuts and
+37 helper cut positions compare against selected frozen normal boundaries.
+Canonical serialized checkpoints, B and financial/native acceptance remain open.
+
 The user's demonstrated ledger-9 recursion route does not require VerifyProof.
 The older March 2027 planning assumption below is historical context, not a
 prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
