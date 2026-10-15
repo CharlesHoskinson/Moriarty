@@ -1,0 +1,151 @@
+{
+  "format": "moriarty-cardano-staged-source-inspection/1",
+  "language": "moriarty/2",
+  "semantics": "moriarty-core/2",
+  "source_sha256": "2eb952dd267922c968764154e9d29fbc17f40f5e45fe8b5dac74d229f3d5d60a",
+  "program_hash": "511bcac385cba4fc9b2452b71013a0cfdaa507661684c8f357a7dc647368465e",
+  "plan_hash": "0405200b4e9758ffdd0daede5db60ccb0698f504f7f17b1531450fc99c19ce25",
+  "logical_cost_profile": "moriarty-reference-logical-cost/2",
+  "qualification": "local-reference-stage",
+  "authentication": "none",
+  "consumption": "untracked",
+  "program": {
+    "language": "moriarty/2",
+    "semantics": "moriarty-core/2",
+    "name": "ContinuationEscrowOracle",
+    "states": [
+      {
+        "name": "marker",
+        "ty": "UInt",
+        "initial": {
+          "type": "UInt",
+          "value": "77"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "name": "PAY",
+        "identity": {
+          "network": "local",
+          "issuer": "continuation-escrow-oracle",
+          "reference": "PAY",
+          "scale": 0
+        }
+      }
+    ],
+    "expressions": [
+      {
+        "kind": "Name",
+        "name": "amount"
+      },
+      {
+        "kind": "Name",
+        "name": "amount"
+      },
+      {
+        "kind": "Name",
+        "name": "ready"
+      },
+      {
+        "kind": "Name",
+        "name": "amount"
+      },
+      {
+        "kind": "Name",
+        "name": "amount"
+      }
+    ],
+    "actions": [
+      {
+        "name": "deliver",
+        "inputs": [
+          {
+            "name": "amount",
+            "ty": "UInt"
+          }
+        ],
+        "statements": [
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "alice",
+            "to": "escrow",
+            "amount": 0
+          },
+          {
+            "kind": "Liability",
+            "name": "release",
+            "asset": "PAY",
+            "debtor": "escrow",
+            "creditor": "bob",
+            "amount": 1
+          },
+          {
+            "kind": "Await",
+            "label": "delivery",
+            "binders": [
+              {
+                "name": "ready",
+                "ty": "Bool"
+              }
+            ],
+            "guard": 2
+          },
+          {
+            "kind": "Transfer",
+            "asset": "PAY",
+            "from": "escrow",
+            "to": "bob",
+            "amount": 3
+          },
+          {
+            "kind": "Discharge",
+            "name": "release",
+            "amount": 4
+          }
+        ]
+      }
+    ]
+  },
+  "plan": {
+    "format": "moriarty-stage-plan/1",
+    "program_hash": "511bcac385cba4fc9b2452b71013a0cfdaa507661684c8f357a7dc647368465e",
+    "actions": [
+      {
+        "action": "deliver",
+        "statement_count": 5,
+        "sites": [
+          {
+            "site": 1,
+            "ordinal": 2,
+            "label": "delivery",
+            "binders": [
+              {
+                "name": "ready",
+                "ty": "Bool"
+              }
+            ],
+            "captures": [
+              {
+                "name": "amount",
+                "ty": "UInt",
+                "origin": "Input",
+                "ordinal": 0
+              }
+            ]
+          }
+        ],
+        "segment_cost": [
+          "5",
+          "6"
+        ],
+        "committed_before": [
+          "0",
+          "5"
+        ],
+        "plan_total": "11"
+      }
+    ]
+  }
+}
