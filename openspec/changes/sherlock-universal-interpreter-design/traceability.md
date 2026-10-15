@@ -191,4 +191,13 @@ No old observed `allInv` result is reinterpreted as a new security judgment. Sec
 
 Candidate B has 35 Sherlock functional clauses and 36 normal demonstration contracts; the pre-existing canonical 160 clauses are a separate unchanged index, not a denominator of195 or a completion fraction. U0–U7, M1–M17, MC01–MC08, SP01–SP12, G01–G24, ZR01–ZR16 and MNR01–MNR08 keep every existing exit and conformance denominator stated above. No source-design progress closes one.
 
+The [private draft-source observation](../../../docs/audits/2026-10-15/sherlock-draft-source/README.md)
+adds scoped preparation support for UIREQ-001, UIREQ-005 and UIREQ-027. Eleven
+new tests pass through the real lexer/parser/checker and image bridge, including
+factorial(4) = 24 and tree folding = 7 through both host interpreters. The 86
+older tests compiled but were filtered out and were not rerun. This unregistered
+test-only envelope does not execute a Candidate B acceptance scenario or close
+any retained requirement. Full grammar, bounded images, complete prefixes,
+cross-layer correspondence, circuits and qualified targets remain open.
+
 Before implementation acceptance, exact helper-rule inventories/payload bounds and profile admission must be reviewed; completed-interval helper erasure and partial representation relations remain unproved. Concrete scalar/arena/frame layouts, backend realization and any measured winner remain open. Generic ADTs beyond the admitted closed fragment and bounded parameter instantiation remain extensions. Core/2 financial await preservation is required, but exact future Commit/Yield/Await opcodes, complete financial machine fields and target phase correspondence are still open. Fresh independent Muse nonsecurity and Opus security reviews plus the existing decision rule are required before architecture adoption. These are maintainer delivery obligations, never public developer membership or compile/prove/deploy permissions.
