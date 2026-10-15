@@ -24,7 +24,7 @@ Frame-cap overflow is terminal and explicit. It is never success, and it never t
 | Profile | Frame overflow | `resourceLimit(o)` |
 |---|---|---|
 | `sherlock-k-a/1` | `Rejected(error4)` | `Exhausted(_) ∨ Rejected(error4)` |
-| `sherlock-quint-a/1` | `pushFrame` with `depth > MAX_FRAMES` ⇒ `refuse(s,StackBound)` | `phase=Exhausted ∨ (phase=Rejected ∧ reason=StackBound)` |
+| `sherlock-quint-a/1` | `push` with `depth > MAX_FRAMES` ⇒ `refuse(s,StackBound)` | `phase=Exhausted ∨ (phase=Rejected ∧ reason=StackBound)` |
 | `sherlock-helper-microstep/1` | `Rejected(error4)`: a charged failing push, then zero-cost error publication | `Exhausted(_) ∨ Rejected(error4)` |
 
 Only these arms are resourceLimit. `ScalarBound`, `ConstructorMismatch`, `MissingReference` and all other errors are not. No consumer SHALL read a resourceLimit outcome as a semantic, typing or financial rejection. UISEC-007 and B008 hold under it.
