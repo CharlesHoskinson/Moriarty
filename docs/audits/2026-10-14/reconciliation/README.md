@@ -99,3 +99,22 @@ copy of `wiki-audit.json`, retain their original review scopes; the integrated
 manifest records current source bytes. The plugin source manifest is the exact
 37-file Opus manifest, verified separately. No frozen provider result is relabelled
 as a review of later bytes.
+
+## M5 correction and review supersession
+
+The [fresh Opus review of f2923e22](OPUS-SECURITY-FINAL-REVIEW-R2.md)
+found no blocking runtime/upgrade defect but requested one blocking requirements
+correction. Its exact OSR-1014-11 text is applied: 64 KB per transaction, fraud
+k ≤ 19 and the per-contract replay budget remain mandatory. Measurement cannot
+relax them. Existing JSON/envelope/source limits do not implement the transaction
+requirement. The source author's earlier statement that the transaction ceiling
+was wrong is superseded by this correction; its original report is preserved.
+The plugin's exact 37 source files remain unchanged. Fresh review of this narrow
+correction is recorded separately from the f2923e22 reviews.
+
+The [Muse review of f2923e22](MUSE-NONSECURITY-FINAL-REVIEW.md) approved its
+nonsecurity scope. Its introductory sentence calling the security coverage
+continuation pending is stale: that continuation had completed and is retained
+above. The outstanding item at that time was the independent Opus verdict.
+The receipt is preserved verbatim; this status correction does not supply a
+security judgment.
