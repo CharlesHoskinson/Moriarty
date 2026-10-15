@@ -10,6 +10,15 @@ Local source/5 lifecycle evaluation, finite [K comparisons](deliverables/k-lifec
 
 General source-to-ledger correspondence, mandatory native proof-carrying acceptance across the full supported language, recursive/private history, federated integrations and complete conformance remain open. All U milestone acceptance exits below remain open until their exact exits are demonstrated. Delivered child capabilities are reported separately; documentation and advisor agreement do not complete a parent exit.
 
+## Local tooling observation — 2026-10-15
+
+The [Core test report evidence](docs/audits/2026-10-15/core-test-report/README.md)
+records four passing public CLI regressions: unchanged small-report bytes,
+complete ordered results for 256 cases, complete results with three expectation
+mismatches and failure exit, and the 87 accepted FeePool financial cases in one
+aggregate report. This is local Rust Core reporting evidence. Full M10/U7/MC08
+qualification and every existing parent exit remain open.
+
 ## Current delivery observation — 2026-10-14
 
 The [mid-roadmap review](docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) and

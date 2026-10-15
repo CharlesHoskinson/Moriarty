@@ -1,0 +1,829 @@
+You are Opus 5.5 high, user-assigned sole security owner. Return concise FINAL public advice and exact code if needed; no tools, no execution, no chain of thought. A prior broad read-only review timed out700s without verdict. This retry changes approach: supplied exact public source snapshot. Do not claim any checks executed. Task U7/M10/MC08: fix pure Rust mori test aggregate exceeding1MiB after evaluating up to256 individually lawful cases. User authorized routine source repairs; current native authority ZERO: no SDK relation/check/model/degree/k/VM/transcript/keygen/prove/verify/deploy/ledger/private key/PK/SRS/witness/proving-cache operations. Ordinary Rust compilation and pure Core reference commands are distinct; names alone insufficient. No new scheduler/campaign/resource budget.
+
+Need your security/output implementation contract, exact ready-to-apply minimal helper code (you author all security-related bounds/escaping tests; Sol integrates normal callsite), and command classification. Shared mori_core::json serializer/readers must remain unchanged, no limits relaxed elsewhere. Proposed private helper within test.rs: preflight every complete case through unchanged bounded ASCII-safe exporter, compose one complete pretty JSON aggregate preserving old small output byte-for-byte, order, status and final newline; no truncation/dropped steps. Existing manifest <=256. Independent normal oracle frozen before tests: small28093byte exact legacypretty; large256 ~7.18MB full output; mixed0/127/255 expected mismatches253/3 exit1 complete results;87 FeePoolaccepted-only complete frozen post/effects. Tests source only, no commands executed.
+
+Classify narrow exact command cargo +1.99.0 --offline --locked test -p mori --test core_test_report -j2 -- --test-threads=1 (target below executes only public mori test); rustfmt exact source --check; optionally cargo test -p mori --test init -j2 both_starters_check_simulate_and_test_with_complete_literal_expectations -- --exact --test-threads=1 after its source inspected. Do NOT clear fullfee_pool_component (includes other compile/signed/negative paths), broad cargo suites, or any native operation. Cargo links backend/ledger/Midnight deps; build/link alone does not authorize calling native SDK. Git-tracked workspace has no build.rs. Third-party pinned SDK build scripts have NOT been freshly inspected; distinguish residual build assumptions and say exact additional source needed if those block compilation. Could alternatively execute a previously built binary only if provenance matches unchanged product source, do not assume such provenance.
+
+Give decision within supplied-source scope, small exact code helper and own security-test requirements/snippets if needed. Prefer reuse existing exporter without bespoke escaping. Buffer/preflight before stdout for serialization failures; ordinary I/O errors may propagate after partial writes as normal OS behavior, do not promise filesystem atomic stdout. Fixed wrapper/status trusted, all variable case content comes solely from existing exporter. Preserve max256 and individually bounded exports. Explicitly state aggregate resource bound chosen and why; no new arbitrary smaller cap that masks legitimate256 outputs. Security helper/tests can be Opus-authored while Sol owns nonsecurity callsite/regressions. Final max2500words; no broad plan.
+
+
+FILE crates/mori/src/main.rs
+use std::process::ExitCode;
+
+use clap::Parser;
+
+use crate::cli::Cli;
+use crate::shell::Shell;
+
+mod cli;
+mod commands;
+mod display;
+mod error;
+mod json;
+mod shell;
+mod styles;
+
+fn main() -> ExitCode {
+    let cli = Cli::parse();
+    let mut shell = Shell::new(cli.global.verbosity(), cli.global.color.into());
+
+    match commands::run(cli.command, &mut shell) {
+        Ok(code) => code,
+        Err(report) => {
+            shell.report(&report);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+FILE crates/mori/src/commands/test.rs
+use super::core_io;
+use crate::shell::Shell;
+use serde::Deserialize;
+use std::{path::PathBuf, process::ExitCode};
+
+#[derive(Debug, clap::Args)]
+pub struct Args {
+    pub dir: PathBuf,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Manifest {
+    profile: String,
+    cases: Vec<Case>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Case {
+    name: String,
+    source: PathBuf,
+    scenario: PathBuf,
+    action: String,
+    expected: Expected,
+}
+#[derive(Deserialize)]
+#[serde(tag = "status", rename_all = "snake_case", deny_unknown_fields)]
+enum Expected {
+    Accepted {
+        post: mori_core::Snapshot,
+        effects: Vec<mori_core::Effect>,
+    },
+    Rejected {
+        code: String,
+    },
+}
+
+pub fn run(args: Args, shell: &mut Shell) -> super::Result<ExitCode> {
+    let manifest: Manifest = core_io::read_json(&args.dir.join("mori-tests.json"))?;
+    if manifest.profile != "moriarty-tests/1"
+        || manifest.cases.is_empty()
+        || manifest.cases.len() > 256
+    {
+        return Err(core_io::operation(
+            "expected a nonempty bounded moriarty-tests/1 manifest",
+        ));
+    }
+    let mut names = std::collections::BTreeSet::new();
+    let mut reports = Vec::new();
+    let mut failed = 0;
+    for case in manifest.cases {
+        if case.name.is_empty() || !names.insert(case.name.clone()) {
+            return Err(core_io::operation(
+                "test case names must be nonempty and unique",
+            ));
+        }
+        let source = core_io::read_source(&args.dir.join(&case.source))?;
+        let scenario: mori_core::Scenario = core_io::read_json(&args.dir.join(&case.scenario))?;
+        let result = mori_core::parse(&source)
+            .and_then(|p| mori_core::simulate(&p, &case.action, &scenario));
+        let passed = match (&case.expected, &result) {
+            (Expected::Accepted { post, effects }, Ok(actual)) => {
+                post == &actual.post && effects == &actual.effects
+            }
+            (Expected::Rejected { code }, Err(error)) => code == &error.code,
+            _ => false,
+        };
+        if !passed {
+            failed += 1;
+        }
+        reports.push(serde_json::json!({"name":case.name,"passed":passed,"actual":result}));
+    }
+    shell.status(
+        "Tested",
+        format!("{} passed; {} failed", reports.len() - failed, failed),
+    );
+    core_io::print(
+        &serde_json::json!({"status":if failed==0{"passed"}else{"failed"},"cases":reports}),
+    )?;
+    Ok(if failed == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+FILE crates/mori-core/src/json.rs
+//! Bounded JSON parsing that rejects duplicate keys before schema decoding.
+use crate::Error;
+use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
+use serde_json::{Map, Value};
+use std::{cell::Cell, fmt};
+const MAX_BYTES: usize = 1_048_576;
+struct Seed<'a> {
+    depth: usize,
+    nodes: &'a Cell<usize>,
+}
+impl<'de> DeserializeSeed<'de> for Seed<'_> {
+    type Value = Value;
+    fn deserialize<D: serde::Deserializer<'de>>(self, d: D) -> Result<Value, D::Error> {
+        use serde::de::Error as _;
+        self.nodes.set(self.nodes.get() + 1);
+        if self.depth > 32 || self.nodes.get() > 65_536 {
+            return Err(D::Error::custom("JSON work/depth limit"));
+        }
+        d.deserialize_any(self)
+    }
+}
+impl<'de> Visitor<'de> for Seed<'_> {
+    type Value = Value;
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("bounded JSON")
+    }
+    fn visit_bool<E: serde::de::Error>(self, v: bool) -> Result<Value, E> {
+        Ok(Value::Bool(v))
+    }
+    fn visit_unit<E: serde::de::Error>(self) -> Result<Value, E> {
+        Ok(Value::Null)
+    }
+    fn visit_i64<E: serde::de::Error>(self, v: i64) -> Result<Value, E> {
+        Ok(v.into())
+    }
+    fn visit_u64<E: serde::de::Error>(self, v: u64) -> Result<Value, E> {
+        Ok(v.into())
+    }
+    fn visit_f64<E: serde::de::Error>(self, v: f64) -> Result<Value, E> {
+        serde_json::Number::from_f64(v)
+            .map(Value::Number)
+            .ok_or_else(|| E::custom("nonfinite JSON number"))
+    }
+    fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Value, E> {
+        Ok(v.into())
+    }
+    fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Value, E> {
+        Ok(v.into())
+    }
+    fn visit_seq<A: SeqAccess<'de>>(self, mut a: A) -> Result<Value, A::Error> {
+        let mut out = Vec::new();
+        while let Some(v) = a.next_element_seed(Seed {
+            depth: self.depth + 1,
+            nodes: self.nodes,
+        })? {
+            out.push(v)
+        }
+        Ok(Value::Array(out))
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut a: A) -> Result<Value, A::Error> {
+        use serde::de::Error as _;
+        let mut out = Map::new();
+        while let Some(k) = a.next_key::<String>()? {
+            if out.contains_key(&k) {
+                return Err(A::Error::custom("duplicate decoded key"));
+            }
+            let v = a.next_value_seed(Seed {
+                depth: self.depth + 1,
+                nodes: self.nodes,
+            })?;
+            out.insert(k, v);
+        }
+        Ok(Value::Object(out))
+    }
+}
+/// Strict recursive JSON value decoding for versioned DTO dynamic fields.
+/// Duplicate decoded keys and the existing depth/node bounds apply even when
+/// a consumer invokes serde directly instead of the bounded text entry point.
+pub fn deserialize_strict<'de, D: serde::Deserializer<'de>>(decoder: D) -> Result<Value, D::Error> {
+    let nodes = Cell::new(0);
+    Seed {
+        depth: 0,
+        nodes: &nodes,
+    }
+    .deserialize(decoder)
+}
+pub fn parse(text: &str) -> Result<Value, Error> {
+    use serde::de::DeserializeSeed;
+    if text.len() > MAX_BYTES {
+        return Err(Error::new("json", "JSON exceeds 1 MiB"));
+    }
+    let nodes = Cell::new(0);
+    let mut decoder = serde_json::Deserializer::from_str(text);
+    let value = Seed {
+        depth: 0,
+        nodes: &nodes,
+    }
+    .deserialize(&mut decoder)
+    .map_err(|e| Error::new("json", e.to_string()))?;
+    decoder
+        .end()
+        .map_err(|e| Error::new("json", e.to_string()))?;
+    Ok(value)
+}
+
+/// ASCII-safe pretty JSON that fits the same public reader profile, including
+/// the final newline added by CLI printing. Parsed values and signing bytes
+/// are preserved; terminal-controlled Unicode remains visibly escaped.
+pub fn export(value: &impl serde::Serialize) -> Result<String, Error> {
+    let json =
+        serde_json::to_string_pretty(value).map_err(|e| Error::new("json", e.to_string()))?;
+    parse(&json)?;
+    let mut display = String::with_capacity(json.len());
+    for character in json.chars() {
+        if character.is_ascii() && (!character.is_control() || character == '\n') {
+            display.push(character);
+        } else {
+            for unit in character.encode_utf16(&mut [0; 2]) {
+                use std::fmt::Write;
+                write!(&mut display, "\\u{unit:04x}").expect("writing to String cannot fail");
+            }
+        }
+        if display.len() >= MAX_BYTES {
+            return Err(Error::new(
+                "json",
+                "Escaped JSON and final newline exceed 1 MiB",
+            ));
+        }
+    }
+    parse(&display)?;
+    Ok(display)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn duplicate_decoded_keys_and_trailing_data_reject() {
+        assert!(parse(r#"{"x":1,"\u0078":2}"#).is_err());
+        assert!(parse("{} []").is_err());
+        assert!(parse(r#"{"x":"1"}"#).is_ok());
+    }
+}
+
+FILE crates/mori/Cargo.toml
+[package]
+name = "mori"
+version = "0.1.0"
+description = "Command-line interface for the Moriarty toolchain"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anstream.workspace = true
+anstyle.workspace = true
+clap.workspace = true
+ignore.workspace = true
+mori-ast.workspace = true
+mori-checker.workspace = true
+mori-core.workspace = true
+mori-backend.workspace = true
+mori-ledger.workspace = true
+mori-diagnostics = { workspace = true, features = ["fancy"] }
+mori-fmt.workspace = true
+mori-lexer.workspace = true
+mori-parser.workspace = true
+mori-span.workspace = true
+rayon.workspace = true
+futures.workspace = true
+rand.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+terminal_size.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+indoc.workspace = true
+insta.workspace = true
+
+midnight-ledger.workspace = true
+midnight-base-crypto.workspace = true
+midnight-coin-structure.workspace = true
+midnight-onchain-state.workspace = true
+midnight-onchain-runtime.workspace = true
+midnight-storage.workspace = true
+midnight-transient-crypto.workspace = true
+midnight-serialize.workspace = true
+
+FILE crates/mori-core/Cargo.toml
+[package]
+name = "mori-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+mori-lexer.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sha2.workspace = true
+k256.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+midnight-base-crypto.workspace = true
+midnight-serialize.workspace = true
+
+FILE crates/mori/tests/core_test_report.rs
+//! Public Core test reports with independently frozen normal financial results.
+//! No evaluator/compiler imports or runtime evidence directory dependencies.
+use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::{Command, Output},
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+// Independent expectation freeze: 3911ef8990bbcdf067f641bcae032f48828b2035ddae55f8687969ecc0cb2395.
+// Each case transfers 25 from alice100 to bob0. Sixteen observer balances42
+// and incoming_duty11 survive. Repeated cases start from independent inputs.
+const SOURCE: &str = r#"language "moriarty/1";
+agreement NormalReportTransfer {
+  asset TEST = { network: "local", issuer: "independent-report-oracle", reference: "TEST", scale: 0 };
+  action pay(amount: UInt) {
+    requires amount > 0;
+    transfer(TEST, "alice", "bob", amount);
+  }
+}
+"#;
+static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+struct Project(PathBuf);
+impl Project {
+    fn new() -> Self {
+        let path = std::env::temp_dir().join(format!(
+            "mori-core-test-report-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+
+    fn write_json(&self, name: &str, value: &Value) {
+        fs::write(self.0.join(name), serde_json::to_vec(value).unwrap()).unwrap();
+    }
+
+    fn normal(count: usize, mixed: bool) -> Self {
+        let project = Self::new();
+        fs::write(project.0.join("source.mori"), SOURCE).unwrap();
+        let mut scenario = snapshot("100", "0");
+        scenario["inputs"] = json!({"amount":{"type":"UInt","value":"25"}});
+        project.write_json("scenario.json", &scenario);
+        let execution = execution();
+        let cases = (0..count)
+            .map(|index| {
+                let mut expected = json!({
+                    "status":"accepted",
+                    "post":execution["post"],
+                    "effects":execution["effects"]
+                });
+                if mixed {
+                    match index {
+                        0 => expected["post"]["balances"][0]["amount"] = json!("74"),
+                        127 => expected["effects"][0]["amount"] = json!("24"),
+                        255 => {
+                            expected = json!({"status":"rejected","code":"mori::core::requires"})
+                        }
+                        _ => {}
+                    }
+                }
+                json!({
+                    "name":format!("normal-transfer-{index:03}"),
+                    "source":"source.mori",
+                    "scenario":"scenario.json",
+                    "action":"pay",
+                    "expected":expected
+                })
+            })
+            .collect::<Vec<_>>();
+        project.write_json(
+            "mori-tests.json",
+            &json!({"profile":"moriarty-tests/1","cases":cases}),
+        );
+        project
+    }
+}
+impl Drop for Project {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn asset() -> Value {
+    json!({"network":"local","issuer":"independent-report-oracle","reference":"TEST","scale":0})
+}
+
+fn snapshot(alice: &str, bob: &str) -> Value {
+    let mut balances = vec![
+        json!({"account":"alice","asset":asset(),"amount":alice}),
+        json!({"account":"bob","asset":asset(),"amount":bob}),
+    ];
+    balances.extend((0..16).map(
+        |index| json!({"account":format!("observer-{index:02}"),"asset":asset(),"amount":"42"}),
+    ));
+    json!({
+        "state":{},
+        "balances":balances,
+        "liabilities":[{"name":"incoming_duty","asset":asset(),"debtor":"observer-00","creditor":"bob","amount":"11"}]
+    })
+}
+
+// Full literal execution derived independently before the product is run.
+// Source expression order gives predicate index2 and transfer amount index3.
+fn execution() -> Value {
+    let pre = snapshot("100", "0");
+    let post = snapshot("75", "25");
+    let effects =
+        json!([{"kind":"Transfer","asset":asset(),"from":"alice","to":"bob","amount":"25"}]);
+    json!({
+        "semantics":"moriarty-core/1",
+        "action":"pay",
+        "pre":pre,
+        "post":post,
+        "steps":[
+            {"index":0,"statement":{"kind":"Requires","predicate":2},"value":{"type":"Bool","value":true},"snapshot":pre,"effects":[]},
+            {"index":1,"statement":{"kind":"Transfer","asset":"TEST","from":"alice","to":"bob","amount":3},"value":{"type":"UInt","value":"25"},"snapshot":post,"effects":effects}
+        ],
+        "effects":effects
+    })
+}
+
+fn expected_report(count: usize, mixed: bool) -> Value {
+    let actual = json!({"Ok":execution()});
+    let cases = (0..count)
+        .map(|index| {
+            json!({
+                "name":format!("normal-transfer-{index:03}"),
+                "passed":!(mixed && [0,127,255].contains(&index)),
+                "actual":actual
+            })
+        })
+        .collect::<Vec<_>>();
+    json!({"status":if mixed {"failed"} else {"passed"},"cases":cases})
+}
+
+fn run(project: &Project) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_mori"))
+        .args(["--color", "never", "test"])
+        .arg(&project.0)
+        .output()
+        .unwrap()
+}
+
+fn check_output(output: &Output, exit: i32, passed: usize, failed: usize) -> Value {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(exit), "{stderr}");
+    assert!(
+        stderr.contains(&format!("{passed} passed; {failed} failed")),
+        "{stderr}"
+    );
+    assert!(output.stdout.ends_with(b"\n"));
+    serde_json::from_slice(&output.stdout).unwrap_or_else(|error| {
+        panic!("expected one complete JSON report: {error}; stderr={stderr}")
+    })
+}
+
+#[test]
+fn small_report_preserves_legacy_pretty_bytes() {
+    let expected = expected_report(1, false);
+    let mut bytes = serde_json::to_vec_pretty(&expected).unwrap();
+    bytes.push(b'\n');
+    // Pin to the independent small stdout oracle, including its final newline.
+    assert_eq!(bytes.len(), 28_093);
+    assert_eq!(
+        format!("{:x}", Sha256::digest(&bytes)),
+        "b57043f1d8fd55e80cfde729ef8e85f78225ff29129bc8da6696c7f1163e5118"
+    );
+    let output = run(&Project::normal(1, false));
+    assert_eq!(check_output(&output, 0, 1, 0), expected);
+    assert_eq!(output.stdout, bytes);
+}
+
+#[test]
+fn large_report_retains_all_256_full_executions() {
+    let output = run(&Project::normal(256, false));
+    let report = check_output(&output, 0, 256, 0);
+    assert!(output.stdout.len() > 1_048_576);
+    assert_eq!(report, expected_report(256, false));
+}
+
+#[test]
+fn mixed_report_retains_results_after_all_three_expectation_mismatches() {
+    let output = run(&Project::normal(256, true));
+    let report = check_output(&output, 1, 253, 3);
+    assert!(output.stdout.len() > 1_048_576);
+    assert_eq!(report, expected_report(256, true));
+}
+
+#[test]
+fn fee_pool_positive_aggregate_retains_frozen_financial_outcomes() {
+    let example = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../examples/core/fee-pool")
+        .canonicalize()
+        .unwrap();
+    let frozen: Value =
+        serde_json::from_slice(&fs::read(example.join("cases/expected.json")).unwrap()).unwrap();
+    let mut cases = frozen["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["expected"]["status"] == "accepted")
+        .cloned()
+        .collect::<Vec<_>>();
+    assert_eq!(cases.len(), 87);
+    for case in &mut cases {
+        for field in ["source", "scenario"] {
+            case[field] = json!(example.join(case[field].as_str().unwrap()));
+        }
+    }
+    let project = Project::new();
+    project.write_json(
+        "mori-tests.json",
+        &json!({"profile":"moriarty-tests/1","cases":cases}),
+    );
+    let output = run(&project);
+    let report = check_output(&output, 0, 87, 0);
+    assert!(output.stdout.len() > 1_048_576);
+    assert_eq!(report["status"], "passed");
+    let actual = report["cases"].as_array().unwrap();
+    assert_eq!(actual.len(), cases.len());
+    for (report, case) in actual.iter().zip(&cases) {
+        assert_eq!(report["name"], case["name"]);
+        assert_eq!(report["passed"], true);
+        let execution = &report["actual"]["Ok"];
+        assert_eq!(execution["semantics"], "moriarty-core/1");
+        assert_eq!(execution["action"], case["action"]);
+        assert_eq!(
+            execution["post"], case["expected"]["post"],
+            "{}",
+            case["name"]
+        );
+        assert_eq!(
+            execution["effects"], case["expected"]["effects"],
+            "{}",
+            case["name"]
+        );
+        assert!(execution["pre"].is_object());
+        assert!(!execution["steps"].as_array().unwrap().is_empty());
+    }
+}
+
+CORE IO read_source, read_json, program, print excerpt
+pub fn read_source(path: &Path) -> super::Result<String> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(|source| CliError::Read {
+        path: path.into(),
+        source,
+    })?;
+    let mut source = String::new();
+    file.take(1_048_577)
+        .read_to_string(&mut source)
+        .map_err(|source| CliError::Read {
+            path: path.into(),
+            source,
+        })?;
+    if source.len() > 1_048_576 {
+        return Err(operation("input file exceeds 1 MiB"));
+    }
+    Ok(source)
+}
+
+#[cfg(test)]
+mod key_export_diagnostic_tests {
+    use super::*;
+    use mori_ledger::{Error, KeyExportDiagnostic, KeyExportFailureReason, KeyExportKind};
+
+    fn refusal(action: &str, key_kind: KeyExportKind, reason: KeyExportFailureReason) -> Error {
+        let cap_refusal = reason == KeyExportFailureReason::ByteCapExceeded;
+        Error::new("native-proving", "generated-key-size-or-encode").with_key_export(
+            KeyExportDiagnostic {
+                action: action.into(),
+                key_kind,
+                discovered_degree: 0,
+                byte_cap: 3,
+                accepted_bytes: 2,
+                failed_write_bytes: (reason != KeyExportFailureReason::Serialization).then_some(2),
+                attempted_minimum: cap_refusal.then_some(4),
+                reason,
+            },
+        )
+    }
+    #[test]
+    fn key_export_cli_preserves_category_and_discriminates_reasons() {
+        for kind in [KeyExportKind::Prover, KeyExportKind::Verifier] {
+            for (reason, label) in [
+                (KeyExportFailureReason::ByteCapExceeded, "byte-cap-exceeded"),
+                (
+                    KeyExportFailureReason::ByteCountOverflow,
+                    "byte-count-overflow",
+                ),
+                (
+                    KeyExportFailureReason::Serialization,
+                    "serialization-failure",
+                ),
+            ] {
+                let report = ledger_operation(refusal("settle", kind, reason)).to_string();
+                let kind = if kind == KeyExportKind::Prover {
+                    "prover"
+                } else {
+                    "verifier"
+                };
+                assert!(report.starts_with("mori::command: mori::ledger::native-proving: generated-key-size-or-encode; "), "{report}");
+                assert!(report.contains(&format!("action=\"settle\" key-kind={kind} discovered-degree=0 byte-cap=3 accepted-bytes=2 reason={label}")), "{report}");
+                assert_eq!(
+                    report.contains("failed-write-bytes=2"),
+                    reason != KeyExportFailureReason::Serialization
+                );
+                assert_eq!(
+                    report.contains("attempted-minimum=4"),
+                    reason == KeyExportFailureReason::ByteCapExceeded
+                );
+            }
+        }
+        let legacy = Error::new("native-proving", "sdk-keygen");
+        assert_eq!(
+            ledger_operation(legacy.clone()).to_string(),
+            operation(legacy).to_string()
+        );
+    }
+    #[test]
+    fn key_export_cli_action_is_ascii_json_escaped_once_and_round_trips() {
+        let action = "settle\"\\\nforged\r\u{1b}[31m\u{7f}\u{85}\u{202e}\u{1f9ea}";
+        let error = refusal(
+            action,
+            KeyExportKind::Verifier,
+            KeyExportFailureReason::ByteCapExceeded,
+        );
+        assert_eq!(error.key_export().unwrap().action, action);
+        let report = ledger_operation(error).to_string();
+        let encoded = report
+            .split_once("; action=")
+            .unwrap()
+            .1
+            .split_once(" key-kind=")
+            .unwrap()
+            .0;
+        assert_eq!(serde_json::from_str::<String>(encoded).unwrap(), action);
+        assert!(report.is_ascii(), "{report}");
+        assert!(report.chars().all(|c| !c.is_control()), "{report}");
+        assert!(encoded.contains(r"\u0085"));
+        assert!(encoded.contains(r"\u202e"));
+        assert!(encoded.contains(r"\ud83e\uddea"));
+        assert_eq!(
+            encoded,
+            r#""settle\"\\\nforged\r\u001b[31m\u007f\u0085\u202e\ud83e\uddea""#
+        );
+    }
+    #[test]
+    fn key_export_quiet_shell_reports_safe_metadata_on_actual_stderr() {
+        const CHILD: &str = "MORI_KEY_EXPORT_DIAGNOSTIC_REPORT_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            let report = ledger_operation(refusal(
+                "settle\n\u{1b}\u{202e}",
+                KeyExportKind::Prover,
+                KeyExportFailureReason::ByteCapExceeded,
+            ));
+            let mut shell = crate::shell::Shell::new(
+                crate::shell::Verbosity::Quiet,
+                anstream::ColorChoice::Never,
+            );
+            shell.report(&report);
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "commands::core_io::key_export_diagnostic_tests::key_export_quiet_shell_reports_safe_metadata_on_actual_stderr", "--nocapture"])
+            .env(CHILD, "1").output().unwrap();
+        assert!(output.status.success());
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        // The trusted renderer adds Unicode box drawing and may wrap a field
+        // across lines. Inspect its joined content, plus raw hostile controls.
+        let content: String = stderr
+            .lines()
+            .map(|line| {
+                line.strip_prefix("  │ ")
+                    .or_else(|| line.strip_prefix("  × "))
+                    .unwrap_or(line)
+            })
+            .collect();
+        for value in [
+            "generated-key-size-or-encode",
+            "key-kind=prover",
+            "discovered-degree=0",
+            "byte-cap=3",
+            "accepted-bytes=2",
+            "byte-cap-exceeded",
+            "failed-write-bytes=2",
+            "attempted-minimum=4",
+            r#"action="settle\n\u001b\u202e""#,
+        ] {
+            assert!(content.contains(value), "{stderr}");
+        }
+        assert!(!stderr.contains(['\u{1b}', '\u{85}', '\u{202e}']));
+        assert!(!stderr.contains("key-bytes"));
+    }
+}
+pub fn operation(error: impl std::fmt::Display) -> mori_diagnostics::Report {
+    CliError::Operation {
+        code: "mori::command".into(),
+        message: crate::display::text(&error.to_string()),
+    }
+    .into()
+}
+pub fn ledger_operation(error: mori_ledger::Error) -> mori_diagnostics::Report {
+    use mori_ledger::{DegreeRefusalReason, KeyExportFailureReason, KeyExportKind};
+    let mut message = crate::display::text(&error.to_string());
+    if let Some(diagnostic) = error.degree_refusal() {
+        let reason = match diagnostic.reason {
+            DegreeRefusalReason::CallerCeilingExceeded => "caller-ceiling-exceeded",
+            DegreeRefusalReason::UnsupportedPinnedDegree => "unsupported-pinned-degree",
+            DegreeRefusalReason::CachedDegreeMismatch { .. } => "cached-degree-mismatch",
+        };
+        // Quote the exact source identity once; operation() would escape this
+        // already-rendered identity again. All remaining context is metadata.
+        message.push_str(&format!(
+            "; action={} discovered-degree={} caller-ceiling={} pinned-supported={} reason={reason}",
+            review_identity(&diagnostic.action),
+            diagnostic.discovered_degree,
+            diagnostic.caller_ceiling,
+            diagnostic.pinned_supported,
+        ));
+        if let DegreeRefusalReason::CachedDegreeMismatch { cached_degree } = diagnostic.reason {
+            message.push_str(&format!(" cached-degree={cached_degree}"));
+        }
+    }
+    if let Some(diagnostic) = error.key_export() {
+        let kind = match diagnostic.key_kind {
+            KeyExportKind::Prover => "prover",
+            KeyExportKind::Verifier => "verifier",
+        };
+        let reason = match diagnostic.reason {
+            KeyExportFailureReason::ByteCapExceeded => "byte-cap-exceeded",
+            KeyExportFailureReason::ByteCountOverflow => "byte-count-overflow",
+            KeyExportFailureReason::Serialization => "serialization-failure",
+        };
+        message.push_str(&format!(
+            "; action={} key-kind={kind} discovered-degree={} byte-cap={} accepted-bytes={} reason={reason}",
+            key_export_identity(&diagnostic.action),
+            diagnostic.discovered_degree,
+            diagnostic.byte_cap,
+            diagnostic.accepted_bytes,
+        ));
+        if let Some(bytes) = diagnostic.failed_write_bytes {
+            message.push_str(&format!(" failed-write-bytes={bytes}"));
+        }
+        if let Some(minimum) = diagnostic.attempted_minimum {
+            message.push_str(&format!(" attempted-minimum={minimum}"));
+        }
+    }
+    CliError::Operation {
+        code: "mori::command".into(),
+        message,
+    }
+    .into()
+}
+/// JSON escaping quotes/controls once, with UTF-16 escapes for non-ASCII
+/// identities. This remains valid JSON even for supplementary Unicode scalars.
+fn key_export_identity(value: &str) -> String {
+    let json = serde_json::to_string(value).expect("serializing a string cannot fail");
+    let mut escaped = String::with_capacity(json.len());
+    for character in json.chars() {
+        if character.is_ascii() && !character.is_control() {
+            escaped.push(character);
+        } else {
+            let mut units = [0; 2];
+            for unit in character.encode_utf16(&mut units) {
+                use std::fmt::Write;
+                write!(escaped, "\\u{unit:04x}").expect("writing to a String cannot fail");
+            }
+        }
+    }
+    escaped
+}
+pub fn read_json<T: DeserializeOwned>(path: &Path) -> super::Result<T> {
+    let source = read_source(path)?;
+    let value = mori_core::json::parse(&source).map_err(operation)?;
+    serde_json::from_value(value).map_err(operation)
+}
+pub fn program(path: &Path) -> super::Result<(String, mori_core::Program)> {
+    let source = read_source(path)?;
+    let program = mori_core::parse(&source).map_err(operation)?;
+    Ok((source, program))
+}
+pub fn print<T: Serialize>(value: &T) -> super::Result<()> {
+    let display = mori_core::json::export(value).map_err(operation)?;
+    println!("{display}");
+    Ok(())
+}
