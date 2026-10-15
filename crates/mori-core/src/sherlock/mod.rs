@@ -32,3 +32,7 @@ mod program_image;
 // Private flat-table consumer proposal, normal-oracle comparisons only.
 #[cfg(test)]
 mod image_reference;
+
+// Host-only event grouping; every internal reference record stays observable.
+#[cfg(test)]
+mod reference_slice;
