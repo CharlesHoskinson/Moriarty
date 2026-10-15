@@ -1,20 +1,21 @@
 # Core continuation examples
 
 These examples have been executed through the local Core and public CLI suites.
-Current selected evidence covers 86 distinct focused Rust test functions:
-24 passed in the final test/documentation-repair captures (10 backend relation,
-11 public CLI and 3 ledger profile-refusal cases), while 62 are retained on
-unchanged selected call paths. This is not a fresh rerun of all 86. Separate
+Current selected evidence covers 88 distinct focused Rust test functions:
+17 passed in the last closure captures (12 public CLI and 5 Core compatibility
+cases), while 71 are retained on unchanged selected call paths. This is not a
+fresh rerun of all 88. Separate
 Quint QA has 11 normal tests and is excluded from the Rust total. The earlier
-78-test (49 fresh plus 29 carried forward) and 58-test candidates retain their
+86-test (24 fresh plus 62 retained), 78-test (49 fresh plus 29 carried forward)
+and 58-test candidates retain their
 historical scope. These examples use `moriarty/2`,
 `moriarty-core/2`, and the local reference-stage consumer. See the
 [developer guide](../../../docs/CORE-CONTINUATIONS.md) and
 [evidence dossier](../../../docs/audits/2026-10-15/core-continuations/README.md)
 for the captured scope and its
-[final selections](../../../docs/audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
-and [source scope](../../../docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json).
-The successor is local and unmerged; final successor Muse and Opus reviews
+[closure selections](../../../docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)
+and [source scope](../../../docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-CLOSURE.json).
+The successor is local and unmerged; final closure Muse and Opus reviews
 remain pending. All U0–U7, M1–M17, and MC/SP/G acceptance exits remain open.
 
 `delivery.mori` suspends after moving 10 units into escrow and creating a

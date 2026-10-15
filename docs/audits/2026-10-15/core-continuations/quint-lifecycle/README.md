@@ -2,7 +2,7 @@
 
 This second abstract model increment has **nine passing normal example tests**
 and a separate TypeScript simulation of **32 traces**, with at most four resume
-invocations per trace. These counts remain separate from the feature's current 86 Rust
+invocations per trace. These counts remain separate from the feature's current 88 Rust
 tests and the first model increment's two prefix tests/four one-transition
 samples. Full source and actual-results Muse and Opus reviews of the successor
 containing this append are **PENDING**. No Rust/compiler correspondence or full

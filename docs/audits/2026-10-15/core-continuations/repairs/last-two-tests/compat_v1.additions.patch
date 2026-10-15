@@ -1,0 +1,27 @@
+--- crates/mori-core/tests/compat_v1.rs	2026-10-14 22:40:15.956580992 -0600
++++ /home/charl/Moriarty/.moriarty-dev/runtime/core-continuations-20261015/opus-last-two-tests/crates/mori-core/tests/compat_v1.rs	2026-10-15 00:43:51.435816150 -0600
+@@ -120,3 +120,24 @@
+     assert_eq!(error.code, "mori::core::profile");
+     assert_eq!(error.message, "Await requires moriarty-core/2.");
+ }
++
++// H15 (C6): `await` and `when` stay ordinary `/1` names. The fixtures were
++// derived by hand from the fe01bc8b wire definitions before this test existed;
++// each is the `json::export` text plus the CLI's final newline.
++const H15_SOURCE: &str = r#"language "moriarty/1"; agreement Identifiers { state count: UInt = 0; action run() { let await = 1; let when = await; next count = when; } }"#;
++const H15_PROGRAM: &str = include_str!("fixtures/compat_v1_identifiers/program.json");
++const H15_EXECUTION: &str = include_str!("fixtures/compat_v1_identifiers/execution.json");
++
++#[test]
++fn h15_await_and_when_identifiers_keep_program_and_execution_bytes() {
++    let program = mori_core::parse(H15_SOURCE).unwrap();
++    assert_eq!(format!("{}\n", mori_core::json::export(&program).unwrap()), H15_PROGRAM);
++    assert_eq!(serde_json::from_str::<Program>(H15_PROGRAM).unwrap(), program);
++    let scenario: Scenario = serde_json::from_value(json!({
++        "state": {}, "inputs": {}, "balances": [], "liabilities": []
++    }))
++    .unwrap();
++    let execution = mori_core::simulate(&program, "run", &scenario).unwrap();
++    assert_eq!(format!("{}\n", mori_core::json::export(&execution).unwrap()), H15_EXECUTION);
++    assert_eq!(serde_json::from_str::<Execution>(H15_EXECUTION).unwrap(), execution);
++}

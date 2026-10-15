@@ -1,11 +1,11 @@
 # Core continuations: local reference and static compiler evidence
 
-The selected captured runs contain **86 distinct selected passing Rust tests**: 24 functions have last-round
-captures (relation 10, CLI 11, ledger profile refusals 3), and 62 unchanged
-selected functions retain their prior captures. Separately, the first Quint increment has
+The selected captured runs contain **88 distinct selected passing Rust tests**: 17 functions have last-closure
+captures (CLI 12, compatibility 5), and 71 unchanged selected functions retain
+their prior captures. Separately, the first Quint increment has
 two normal tests/four one-transition samples, and the lifecycle increment has nine
 normal tests/32 sampled traces. This is scoped local evidence for `moriarty/2`,
-`moriarty-core/2`, and unsigned static `/4` artifacts. Fresh final-successor source, actual-result and documentation Muse and integrated
+`moriarty-core/2`, and unsigned static `/4` artifacts. Fresh last-closure source, actual-result and documentation Muse and integrated
 independent Opus reviews are **PENDING**. All U0–U7, M1–M17, MC/SP/G,
 and native/target acceptance gates remain open.
 
@@ -16,10 +16,13 @@ remain unchanged historical snapshots of candidate `e9a2b80b3cdf5bc94b11dd4b7a12
 [SOURCE-SCOPE-CURRENT.json](SOURCE-SCOPE-CURRENT.json) and
 [OBSERVATIONS-CURRENT.json](OBSERVATIONS-CURRENT.json) remain unchanged historical
 78-test snapshots reviewed at `7d6c3965b89d713575ade6a8dddc4f1780b3fdd3`.
-[SOURCE-SCOPE-FINAL.json](SOURCE-SCOPE-FINAL.json) records final relative paths and hashes;
+[SOURCE-SCOPE-FINAL.json](SOURCE-SCOPE-FINAL.json) and
+[OBSERVATIONS-FINAL.json](OBSERVATIONS-FINAL.json) remain byte-exact historical
+86-test snapshots reviewed at `dd4e4298322666c140c74343a7827000f578c848`.
+[SOURCE-SCOPE-CLOSURE.json](SOURCE-SCOPE-CLOSURE.json) records closure paths and hashes;
 each captured command's `start.json.gz` retains its own actual source/input pins.
 A current source snapshot does not replace those historical command pins.
-[OBSERVATIONS-FINAL.json](OBSERVATIONS-FINAL.json) binds the final selected
+[OBSERVATIONS-CLOSURE.json](OBSERVATIONS-CLOSURE.json) binds the closure selected
 counts to exact result receipts and explicitly records carried-forward coverage. [EVIDENCE-INVENTORY.json](EVIDENCE-INVENTORY.json) records every
 copied artifact's original and stored hashes. Gzip files decompress to the exact
 original bytes; nothing in this dossier reruns the product.
@@ -50,7 +53,7 @@ The oracle was frozen before implementation. Its unchanged SHA-256 is
 The exact [oracle JSON](oracle/ORACLE-CONTINUATIONS.json),
 [manual derivations](oracle/ORACLE-CONTINUATIONS.md), and three source specimens
 are retained. The expectation tables below come from that oracle. The
-`core-normal-01` and `cli-normal-04` captures report passing comparisons.
+`core-normal-01` and `cli-normal-05` captures report passing comparisons.
 
 | Delivery invocation | Frozen financial/frame expectation matched by normal assertions | Attempted / committed |
 |---|---|---|
@@ -93,36 +96,38 @@ logical work 6, and completes with work 10 for true input.
 
 ## Exact Rust counts and retained failures
 
-| Final capture | Selected target | Passed | Evidence selection |
+| Closure capture | Selected target | Passed | Evidence selection |
 |---|---|---:|---|
 | `core-normal-01` | Core normal continuations | 5 | Retained unchanged |
-| `core-compat-01` | Frozen `/1` wire compatibility | 4 | Retained unchanged |
+| `core-compat-02` | Frozen `/1` wire and identifier byte compatibility | 5 | Last-closure capture |
 | `core-static-cost-01` | Opus-authored static cost tests | 13 | Retained unchanged |
 | `core-hostile-02` | Expanded Opus-authored stage tests | 22 | Retained unchanged |
 | `backend-normal-03` | Static compiler structure; comparator ignored in this run | 5 | Retained unchanged |
-| `backend-relation-03` | Relation tests plus H20 reverse decoder case | 10 | Last-round capture |
-| `cli-normal-04` | Public CLI normal and exact refusal cases | 11 | Last-round capture |
+| `backend-relation-03` | Relation tests plus H20 reverse decoder case | 10 | Retained unchanged |
+| `cli-normal-05` | Public CLI normal and exact refusal cases, including H18 | 12 | Last-closure capture |
 | `ledger-source-closure-02` | Source-closure membership tests | 6 | Retained unchanged |
-| `ledger-profile-refusals-01` | Exact ledger profile refusal/control cases | 3 | Last-round capture |
+| `ledger-profile-refusals-01` | Exact ledger profile refusal/control cases | 3 | Retained unchanged |
 | `backend-frame-01` | Six selected frame units; 17 others filtered out | 6 | Retained unchanged |
 | `legacy-byte-comparator-01` | Selected baseline byte comparator | 1 | Retained unchanged `/1` path |
-| **Total distinct selected Rust test functions** | | **86** | **24 last-round + 62 retained unchanged** |
+| **Total distinct selected Rust test functions** | | **88** | **17 last-closure + 71 retained unchanged** |
 
-The 58-test `OBSERVATIONS.json` and 78-test `OBSERVATIONS-CURRENT.json` remain
-byte-exact historical snapshots. Relation 9 is replaced by 10 and CLI 7 by 11;
-the new ledger target adds 3. Repeated passes, failed runs and property-generated
-cases are not added as distinct functions. The final selection is eleven capture
-targets. Production code is unchanged since `7d6c3965`; only tests and docs changed.
-The [root production projection](execution-inputs/PRODUCTION-SOURCE-PROJECTION-FINAL.json)
-and [final capture-pin comparison](execution-inputs/CAPTURE-PIN-COMPARISON-FINAL.json)
-retain that byte observation and disclose all differences across 990 pins and 22
-stream digests. This is not semantic/security acceptance or a rerun of the 62.
+The 58-, 78- and 86-test observation/source snapshots remain byte-exact historical
+records. CLI 11 is replaced by 12 and compatibility 4 by 5. Repeated passes,
+failed runs and property-generated cases are not additional distinct functions.
+The closure selection is eleven capture targets. Production code is unchanged
+since `dd4e4298`; only two test files append and two public literal fixtures are
+added, with documentation/evidence updates. The [closure pin comparison](execution-inputs/CAPTURE-PIN-COMPARISON-CLOSURE.json)
+retains all 1086 pin observations and 22 stream digests over 11 selected captures;
+all stream digests match their result receipts, with every pin difference
+disclosed. The [closure production projection](execution-inputs/PRODUCTION-SOURCE-PROJECTION-CLOSURE.json)
+records unchanged production source since DD. These are root byte observations
+separate from independent review.
+This is not a rerun of the 71 retained functions or semantic/security acceptance.
 
 The `backend-frame-01` capture remains six passes, no failures/ignores, 17 filtered
-out. The [backend author report](reviews/OPUS-BACKEND-REPAIR-RESULT.md) retains its
-classification because its call path does not reach the repaired lowerer. The
-legacy comparator is retained for its unchanged `/1` path. Exact captured counts
-and all carry-forward qualifications remain in `OBSERVATIONS-FINAL.json`.
+out. Its selected call path and the legacy comparator's `/1` path remain unchanged.
+Exact counts and retained-evidence qualifications are in
+`OBSERVATIONS-CLOSURE.json`; earlier root projections stay historical.
 
 - `cli-normal-01` exited 101 during compilation with an unhandled
   `Statement::Await` match in ledger `relation/mod.rs`. It executed zero tests.
@@ -176,7 +181,7 @@ two direct imports, and `-04` passed nine tests once each. The passed model
 run/typecheck were not repeated. The failed original command is retained and is
 not counted as a pass.
 
-Model counts are separate from the 86 Rust functions and from each other.
+Model counts are separate from the 88 Rust functions and from each other.
 Sampled witnesses are not exhaustive checking or Rust/compiler correspondence.
 The [tree summary](quint-prefix/EXECUTION-TREE-DIGESTS.json) and per-command receipts
 retain pinned tools and unchanged-directory observations without copying the
@@ -249,14 +254,35 @@ to key order, exactly as that report describes. `backend-relation-03` passed 10.
 The [legacy source projection](execution-inputs/LEGACY-SOURCE-PROJECTION-CURRENT.json)
 is a retained root public-source observation, not a rebuilt baseline executable.
 
-[REVIEW-STATUS.json](REVIEW-STATUS.json) keeps final-successor Muse and integrated
-independent Opus reviews **PENDING**. Required findings have source-author fixes
-and captured checks, but no final independent acceptance is inferred. Opus B's
-unread normative documentation still needs the final integrated review. Every
-original limitation and timeout remains visible. The objective
+The completed [dd4 Muse final review](reviews/MUSE-FINAL-INTEGRATION.md) approved
+its qualified source/results/docs scope. The completed
+[dd4 Opus final review](reviews/OPUS-FINAL-INTEGRATION.md) approved actual results
+and docs, but marked SOURCE and INTEGRATED **NEEDS_CHANGES** for exactly F-1/H18
+and F-2/H15. It completed the full H1–H28 mapping and previously unread normative
+coverage and reports no production defect. Its prior finding closures and two
+remaining findings remain verbatim. The
+[historical dd4 binding](historical/dd4e4298/FINAL-REVIEW-BINDING.json) is explicitly
+a NEEDS_CHANGES record, not current whole-feature approval.
+
+The completed [last-two source-author report](reviews/OPUS-LAST-TWO-TESTS-RESULT.md)
+and [integration record](execution-inputs/LAST-TWO-TESTS-INTEGRATION.json) retain
+four exact proposed files. For F-1/H18, the added public compile test pins the
+signed-Target refusal and absence of an output directory. For F-2/H15, the new
+compatibility test compares Program and Execution bytes for `/1` identifiers
+`await` and `when` against hand-typed literal JSON. The
+[freeze note](repairs/last-two-tests/ORACLE-FREEZE-NOTE.md) records the 881-byte
+Program and 2092-byte Execution fixtures frozen before assertions; their exact
+payload bytes remain unchanged. CLI 12 and compatibility 5 then passed with
+unchanged pins and no public fixture leftovers. Expected literals were not
+regenerated from candidate output. Authorship/classification and passing captures
+are not independent closure acceptance.
+
+[REVIEW-STATUS.json](REVIEW-STATUS.json) keeps fresh closure Muse and integrated
+independent Opus source/results/docs reviews **PENDING**. No earlier report's
+disposition is silently upgraded. The objective
 [plain-capture count correction](execution-inputs/PUBLIC-CAPTURE-COUNT-CORRECTION.json)
-records 108 files/27 captures while preserving B's 100/25 statement verbatim;
-it does not infer that the reviewer independently checked all 108.
+retains the historical 108 files/27 captures while preserving B's 100/25 statement
+verbatim, without inferring that the reviewer independently checked all 108.
 
 The [whitespace observation](execution-inputs/WHITESPACE-CHECK-OBSERVATION.json)
 retains the full-branch check's raw patch-context whitespace findings and the

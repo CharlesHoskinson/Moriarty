@@ -274,3 +274,20 @@ fn h19_core_two_compile_call_refuses_before_deployment_read_or_emission() {
     assert_eq!(diagnostic(&output), "mori::command: mori::core::profile: Expected language \"moriarty/1\"; found \"moriarty/2\".");
     assert!(!out.exists() && !deployment.exists());
 }
+// H18: byte-identical copy of the public `target_canonical_utf8` in
+// examples/core/native-owner-intent/golden-vector.json (the backend
+// `signed_target()` fixture); only the Target data, no key material.
+const SIGNED_TARGET: &str = r#"{"anchor":"native-liability-qa","ledger_revision":"04c9c5d9bcebb8d4427d8589fb54d58a55599c14","max_artifact_bytes":16777216,"max_instructions":100000,"network":"local","profile":"ledger-9","signed_policy":{"beneficiary":"bob","owner":"alice","program_address":"local/DutySettlement"},"zkir_version":"3.0.0-rc.2"}"#;
+#[test]
+fn h18_core_two_compile_signed_target_is_unsupported_before_output_directory() {
+    assert!(mori_backend::Target::from_json(SIGNED_TARGET).unwrap().signed_policy.is_some());
+    let f = Files::new(DELIVERY);
+    f.write("target.json", SIGNED_TARGET);
+    let out = f.path("out");
+    let output = f.command("compile").arg("--target").arg(f.path("target.json")).arg("--out").arg(&out).output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(diagnostic(&output), "mori::command: mori::backend::unsupported: Staged moriarty/2 relations are unsigned; a signed Target is refused.");
+    assert!(!out.exists());
+    assert_eq!(std::fs::read_dir(&f.0).unwrap().count(), 2);
+}
