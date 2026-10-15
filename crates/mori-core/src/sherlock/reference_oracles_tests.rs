@@ -3,6 +3,9 @@
 //! none of these expectations use
 //! the machine, a second evaluator, or a compiler to calculate an answer.
 
+#[path = "helper_call_adapter_tests.rs"]
+mod helper_call_adapter_tests;
+
 use super::reference_display::{KDisplay, environment_to_k};
 use super::*;
 use std::sync::Arc;
