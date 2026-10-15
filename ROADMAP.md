@@ -23,6 +23,28 @@ qualification and every existing parent exit remain open.
 
 The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md) records compiler-produced statement/expression-to-field metadata, public export/reopen, byte-identical IR for one independent specimen and ten passing focused tests. Full source/result audits remain pending. This is source-static correspondence support; all U0/U2 and other parent exits remain open.
 
+## Sherlock design work — 2026-10-15
+
+[Sherlock](openspec/changes/sherlock-universal-interpreter-design/proposal.md)
+is the proposed universal interpreter. Its [model sources](models/sherlock/README.md)
+cover a generic pure K machine and a separate finite Quint companion. They are
+design artifacts; exact observed checks are reported separately. Financial
+suspension, metered helper work, general compiler lowering and circuit/native
+correspondence remain open.
+
+The design includes a required Lean/Clean stage for semantic definitions,
+bounded representations, a transition circuit and correspondence obligations.
+A generic pure Lean reference foundation and normal examples have merged in the
+existing private Fenrir fork. B helper/representation reconciliation, the Clean
+step circuit, correspondence and Midnight exporter remain open. The
+[Candidate B implementation plan](docs/SHERLOCK-IMPLEMENTATION-PLAN.md) maps the
+research into parallel source components; its proposed design awaits fresh audits.
+
+The user's demonstrated ledger-9 recursion route does not require VerifyProof.
+The older March 2027 planning assumption below is historical context, not a
+prerequisite for this route. This work prepares U0/U1/U2/U4; it closes no full
+U0–U7, M1–M17 or MC/SP/G exit.
+
 ## Core continuation closure observation — 2026-10-15
 
 The [closure observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)
