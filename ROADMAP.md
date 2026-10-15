@@ -27,10 +27,26 @@ The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provena
 
 [Sherlock](openspec/changes/sherlock-universal-interpreter-design/proposal.md)
 is the proposed universal interpreter. Its [model sources](models/sherlock/README.md)
-cover a generic pure K machine and a separate finite Quint companion. They are
-design artifacts; exact observed checks are reported separately. Financial
-suspension, metered helper work, general compiler lowering and circuit/native
+cover a generic pure K machine, a generic finite K-A Quint counterpart and the
+historical scalar15 algorithm-specific Quint instance. Exact observed checks
+are reported separately. Financial suspension, metered helper work, general
+compiler lowering and circuit/native
 correspondence remain open.
+
+The merged [K-A Quint counterpart](models/sherlock/quint/K-PROFILE-README.md)
+interprets immutable `ExprId -> Expr` syntax and source-ordered function tables,
+with nine frame forms, lexical restoration and named calls with source-ordered
+arguments. It uses exact charged K rules and free terminal publication under
+`sherlock-k-a/1`; the historical `universalMachine.qnt` retains its different
+`sherlock-quint-a/1` clock, eight normal tests and 32 sampled seed-1 observations.
+The [recorded evidence](docs/audits/2026-10-15/sherlock-k-profile-quint/README.md)
+binds typecheck exit 0 and 98 passing deterministic normal tests (six complete
+traces and 92 published fuel prefixes), under Quint 0.32.0's TypeScript engine,
+seed 1 and one sample per test. [Completed exact-source reviews](docs/audits/2026-10-15/sherlock-k-profile-quint/reviews/README.md)
+retain their limitations. These finite model observations leave K execution,
+full refinement, canonical state serialization, B schema/helper work, full
+grammar and field/constraint coverage, circuit/native correspondence and
+stagenet qualification open; they close no full roadmap milestone.
 
 The design includes a required Lean/Clean stage for semantic definitions,
 bounded representations, a transition circuit and correspondence obligations.
