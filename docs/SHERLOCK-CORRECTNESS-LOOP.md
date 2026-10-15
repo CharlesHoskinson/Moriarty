@@ -156,6 +156,12 @@ adds caller-limited host row tables and complete structural materialization. Its
 captured 72-test closure includes the same eight independent normal programs
 and 216 prefixes; it is private test-only preparation, not bounded native
 representation, canonical state admission or a B-T04 completion.
+The [finite call-helper proposal](audits/2026-10-15/sherlock-call-helper-normal/README.md)
+adds three literal host units and a retained real-context adapter. Its integrated
+79-test capture checks 12 call-completion boundaries against unchanged frozen
+snapshots, plus a separate complete List/Tree case. H diagnostics stay separate
+from A fuel/work; full B budgets, source-occurrence propagation and schema remain
+open. This is normal projection evidence toward B-T03, not phase acceptance.
 K runtime execution, full K/Quint refinement, canonical state serialization,
 B schema/helper work, field/constraint correspondence and full grammar coverage
 remain open. The pure Lean foundation has its separately recorded narrow scope.
