@@ -5,16 +5,22 @@ return a local prefix and a continuation, then evaluate its remaining statements
 when supplied a typed event. Existing `moriarty/1` programs retain their atomic
 semantics, JSON and logical-cost profile.
 
-Current successor evidence covers **78 distinct focused Rust test functions**:
-49 affected functions passed in fresh post-repair captures, and 29 unchanged
-functions are carried forward from earlier captures using source and call-path
-projections. The fresh captures cover 22 Core hostile cases, 5 backend normal
-cases, 9 backend relation cases, 7 public CLI cases and 6 ledger closure cases.
-This is not a rerun of all 78 functions after the repairs. See
-[current observations](audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json)
-and [current source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-CURRENT.json)
-for the exact selections and carry-forward basis. The candidate remains local
-and unmerged; fresh successor Muse and Opus source/result reviews are pending.
+Current selected evidence covers **86 distinct focused Rust test functions**:
+24 functions passed in the final test/documentation-repair captures (10 backend
+relation, 11 public CLI and 3 ledger profile-refusal cases). Another 62 functions
+are retained on unchanged selected call paths: 44 Core, 5 backend normal,
+6 ledger closure, 6 backend frame and 1 legacy byte-comparison case. This is not
+a fresh rerun of all 86 functions. See
+[final observations](audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
+and [final source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json)
+for the selections and retained-evidence basis. The candidate remains local and
+unmerged; final successor Muse and Opus source/result reviews are pending.
+
+Historical successor `7d6c3965` covered 78 distinct functions: 49 freshly captured
+and 29 carried forward. Its
+[observations](audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json)
+and [source scope](audits/2026-10-15/core-continuations/SOURCE-SCOPE-CURRENT.json)
+retain that earlier scope.
 
 Separate Quint QA totals 11 normal tests: 2 prefix tests and 9 lifecycle tests,
 with 4 prefix one-transition samples and 32 sampled lifecycle traces. These
@@ -116,6 +122,16 @@ Waiting and complete results exit with status 0; rejected stages exit with
 status 1. A rejected suffix
 returns its error and attempted work, with no segment or replacement
 continuation; the prior local prefix and input continuation remain available.
+
+The stored `continuation.logical.cap` is outside both continuation digests,
+`program_hash` and `plan_hash`. A caller can edit it, remove it or raise it,
+and resume will not detect the change. Treat it as a local advisory ceiling.
+It is not an authenticated lifetime work budget. Resume still checks that
+`logical.committed` matches the planned prefix work for the stored `site`.
+An optional resume `--logical-cap` must not exceed a present stored cap. The
+effective cap, which is that flag when given and otherwise the stored cap,
+must cover `committed` plus the next segment. None of these
+checks authenticates the continuation or records its consumption.
 
 Every staged JSON report and `/4` manifest carries the Opus-authored labels exactly:
 
