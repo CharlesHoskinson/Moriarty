@@ -1,0 +1,28 @@
+import os,json,subprocess,sys,time
+from pathlib import Path
+r=Path('/home/charl/Moriarty/.moriarty-dev/runtime/sherlock-reference-20261015/draft-frontend-eleven-r4-local-check')
+expected_status={'Uid','Gid','Groups','CapInh','CapPrm','CapEff','CapBnd','CapAmb','NoNewPrivs','NSpid','Pid'}
+def status(path):
+ return {k:v.strip() for line in path.read_text().splitlines() for k,_,v in [line.partition(':')] if k in expected_status}
+self_record=json.loads((r/'hostread-subject.stdout').read_text())
+reader={'pid':os.getpid(),'status':status(Path('/proc/self/status')),'user_namespace':os.readlink('/proc/self/ns/user')}
+unit='sherlock-draft-frontend-eleven-r4-credentials-hostread-20261015.scope'
+env=json.loads((r/'PROPOSED-ENVIRONMENT.json').read_text())
+shown=subprocess.run(['/usr/bin/systemctl','--user','show',unit,'--property','ControlGroup','--value'],env=env,capture_output=True,text=True,timeout=5)
+if shown.returncode or not shown.stdout.strip().startswith('/'):raise RuntimeError('scope ControlGroup observation failed')
+cgroup=shown.stdout.strip()
+pids=[int(x) for x in (Path('/sys/fs/cgroup')/cgroup.lstrip('/')/'cgroup.procs').read_text().split()]
+records=[];errors=[]
+for pid in pids:
+ p=Path('/proc')/str(pid)
+ try:
+  before=os.readlink(p/'ns/user');pidns_before=os.readlink(p/'ns/pid');stat_before=(p/'stat').read_text()
+  item={'host_pid':pid,'namespace_before':before,'pid_namespace_before':pidns_before,'status':status(p/'status'),'uid_map':(p/'uid_map').read_text(),'gid_map':(p/'gid_map').read_text(),'setgroups':(p/'setgroups').read_text(),'stat_before':stat_before}
+  item['namespace_after']=os.readlink(p/'ns/user');item['pid_namespace_after']=os.readlink(p/'ns/pid');item['stat_after']=(p/'stat').read_text();records.append(item)
+ except OSError as e:errors.append({'pid':pid,'errno':e.errno,'error':str(e)})
+ns_matches=[x['host_pid'] for x in records if x['namespace_before']==self_record['user_namespace']]
+exact_matches=[x['host_pid'] for x in records if x['namespace_before']==self_record['user_namespace'] and x['pid_namespace_before']==self_record['pid_namespace'] and x['status'].get('NSpid','').split()[-1:]==[str(self_record['pid'])]]
+result={'scope':'one-shot host-reader namespace/credential metadata only; no compiler admission','reader':reader,'subject_self':self_record,'unit':unit,'control_group':cgroup,'cgroup_procs':pids,'records':records,'read_errors':errors,'namespace_only_match_pids':ns_matches,'exact_self_pidnamespace_match_pids':exact_matches,'wall_time':time.time()}
+(r/'HOST-READER-OBSERVATION.json').write_text(json.dumps(result,indent=2)+'\n')
+print(json.dumps({'host_pid_count':len(pids),'namespace_matches':ns_matches,'exact_matches':exact_matches,'read_errors':errors}))
+sys.exit(1 if errors else 0)

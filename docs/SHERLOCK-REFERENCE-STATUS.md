@@ -87,8 +87,25 @@ complete source occurrence paths. The preparation API does not execute their
 generated functions; source-to-machine values and prefixes remain unobserved.
 The source-reviewed backend/CLI wrapper adds separate projection metadata while
 preserving artifact selection. Its build, SDK-backed tests and publication
-execution are not established by the six Core tests. Recursive source grammar,
-financial effects, bounded B representation and target acceptance remain open.
+execution are not established by the six Core tests. Recursive grammar in this
+stable Core projection, financial effects, bounded B representation and target
+acceptance remain open.
+
+## Private draft source frontend
+
+The [draft source capture](audits/2026-10-15/sherlock-draft-source/README.md)
+records eleven passing new tests through the lexer (cached rlib; source correspondence unproven), parser, monomorphic
+checker and actual image builder. Factorial(4) yields 24 and tree folding yields
+7 through both host interpreters. Literal AST/provenance comparisons and five
+Opus-authored typing/boundary tests complete this scoped capture. The 86 older
+tests compiled but were filtered out and were not rerun.
+
+`moriarty-sherlock-draft/1` remains an unregistered, private test-only envelope.
+Source calls remain named references. This result does not implement general
+declaration-driven ADTs, public compiler/CLI integration, bounded B preparation,
+complete prefix correspondence, a constrained step or native/target acceptance.
+Core library and whole-crate Cargo integration were not built by this capture.
+H1 untrusted-input restrictions remain in force.
 
 ## Observed comparison
 
