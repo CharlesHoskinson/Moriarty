@@ -1,0 +1,13 @@
+Publication projection: local source links map to repository files; the handoff link maps to this publication result index. The original handoff and report remain locally retained by digest. Original report SHA256: a8eaf31e571af71689a168a522f560841e9501751557896147f0c372c9b3f6f5.
+
+APPROVE_SOURCE_ONLY
+
+**Source correctness — APPROVE.** [kProfileExtraNormalTest.qnt](../../../../models/sherlock/quint/kProfileExtraNormalTest.qnt) faithfully encodes N07 `(1 + 10*2) + 100*3 = 321` over 38 charged steps and N08 self-recursive factorial(2) = 2 over 82 charged steps. Full frames, environments, control, fuel, outcomes, rule numbers, and charges were spot-checked internally against the unchanged model's transition structure in [kProfileMachine.qnt](../../../../models/sherlock/quint/kProfileMachine.qnt): argument accumulation order (177/181), binding (204/208), If true/false (161/165), pending-multiplication suspension and restoration across recursive calls, and terminal ReturnFrame unwinding (185) all align. Prefix tests correctly model exhaustion (rule 84, free) at every fuel boundary and free publication (rule 80) at and above exact completion.
+
+**Transcription independence — APPROVE.** [transcribe-extra-normal.py](../../../../models/sherlock/oracles/transcribe-extra-normal-quint.py) is a literal serializer: it parses K terms, interns structurally equal expressions, and emits Quint literals, taking rule/charge values solely from the frozen oracles (dd85…/acf46…), never from candidate evaluation. [readback-extra-normal.py](../../../../models/sherlock/oracles/check-extra-normal-quint.py) is a genuinely separate reverse parser that reconstructs K constructor trees and compares them to independently parsed frozen JSON, asserting oracle/model/old-test digests and unique run names. Structural ExprId sharing (e.g. shared `Variable(0)`, `Literal(UInt(1))` in N08) expands back to identical K trees, so sharing is semantics-preserving. I did not read the full 1.8 MB readback report; this assessment relies on its SHA in [source-handoff.json](RESULT.json) and the replayable parser source.
+
+**Common model API — APPROVE.** The new module imports only `./kProfileMachine`, uses only its existing types, constructors, `machine`/`lastRule`/`lastCharge`, `initProgram`, and `step`, and defines no new actions, variables, or model policies.
+
+**Scope/readiness — APPROVE with stated limit.** Scope is confined to two additive normal cases against the unchanged model; old tests are untouched. The source is ready for the integrator's ordinary Quint test run. No typecheck or test execution has occurred, so I make no claim that the 126 tests pass — only that the source is correct and consistent as written.
+
+END_EXTRA_NORMAL_QUINT_SOURCE_MUSE
