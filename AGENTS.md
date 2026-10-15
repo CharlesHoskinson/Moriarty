@@ -21,8 +21,11 @@ assigned Argon task or relabelling its work as Opus.
 
 Use `gpt-6.1-sol` at high effort for nonsecurity implementation.
 Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.
-The user's later instruction assigns **all security work to Opus 5.5**.
-That includes security analysis, requirements, tests, recommendations and judgments.
+The October 14 standing assignment gives **all security work to Opus 5.5**.
+For new work, this is temporarily superseded by the October 15 AGY Argon
+assignment above until Opus availability is observed. Security analysis,
+requirements, tests, recommendations and judgments stay with that designated
+security owner; historical and frozen records keep their original rosters.
 Preserve historical rosters on frozen contracts; they do not select new work.
 Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
 Missing reviewers cannot approve. Changed candidates need fresh applicable audits.
