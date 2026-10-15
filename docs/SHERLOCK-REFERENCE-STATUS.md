@@ -55,6 +55,14 @@ that graph passed all eight tests and 92 prefixes, with the constants checked
 byte for byte against the frozen JSON. Whole-crate Cargo execution remains
 unobserved; module discovery is not a claim that it was run.
 
+The [diagnostic follow-up](audits/2026-10-15/sherlock-resource-diagnostics/README.md)
+implements Argon's resource classifier, additive checked counter and host API
+documentation. Its five authored tests first failed against stubs, then all
+thirteen tests passed, including the original 92 prefixes. That capture used an
+isolated checkout; integration membership records the sole doc-header difference
+from this combined tree. The error/cap tests are finite observations; full host
+resource admission remains open and untrusted consumers remain excluded.
+
 These are finite host observations. The full `mori-core` Cargo build and public
 CLI were not exercised, and the source `/1` and `/2` parsers/compilers do not yet
 lower to this reference API. This is not observed K execution, K/Lean

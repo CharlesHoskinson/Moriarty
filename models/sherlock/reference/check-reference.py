@@ -32,6 +32,7 @@ SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/reference_types.rs",
     "crates/mori-core/src/sherlock/reference_display.rs",
     "crates/mori-core/src/sherlock/reference_tests.rs",
+    "crates/mori-core/src/sherlock/resource_tests.rs",
     "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
     "crates/mori-core/src/sherlock/normal_oracles.rs",
     "models/sherlock/reference/check-reference.py",

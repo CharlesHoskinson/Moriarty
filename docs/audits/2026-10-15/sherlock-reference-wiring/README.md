@@ -32,7 +32,8 @@ Fresh full-candidate source/result reviews are separate from these records.
 
 `ARGON-HOST-FOLLOWUP-AUTHOR*` retains the separate security-author proposal for
 the K-A resource classifier, checked diagnostic counter, API documentation and
-five security-owned tests. That proposal is not applied or executed in this
-test-wiring delivery. Its own instructions require the actual RED/GREEN source
-closures to be classified before execution and fresh non-author review after
-integration. Authoring is not approval.
+five security-owned tests. It was unapplied and unexecuted at the original
+`5bc06733` wiring candidate. The subsequent combined candidate implements it;
+the separate [diagnostic evidence](../sherlock-resource-diagnostics/README.md)
+retains the actual classified RED/GREEN source and results. Authoring is not
+approval; fresh non-author review of the combined candidate remains required.

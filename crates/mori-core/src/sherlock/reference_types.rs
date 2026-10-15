@@ -133,9 +133,31 @@ pub enum Outcome {
     Exhausted,
 }
 
+impl Outcome {
+    /// Host-diagnostic classifier for the frozen `sherlock-k-a/1` A1 resource-limit partition.
+    ///
+    /// Returns `true` iff `self` is [`Outcome::Exhausted`] (zero-fuel termination) or
+    /// [`Outcome::Rejected(4)`] (K-A frame-cap overflow at `D >=Int L`). All other outcomes—
+    /// including [`Outcome::Pending`], [`Outcome::Done`], and all other [`Outcome::Rejected`]
+    /// codes (such as semantic, typing, binding, pattern, or arithmetic errors `3, 5..=11` and
+    /// unreachable literal code `2`)—return `false`.
+    ///
+    /// Scope: host diagnostic only on the `sherlock-k-a/1` typed common domain. This predicate
+    /// carries zero native or cryptographic authority, does not transfer across Quint
+    /// (`sherlock-quint-a/1`) or Candidate B (`sherlock-helper-microstep/1`), and does not make
+    /// the unmetered host evaluator safe for untrusted inputs. No consumer may interpret a
+    /// resource-limit outcome as a semantic, typing, or financial rejection.
+    pub const fn is_resource_limit(&self) -> bool {
+        matches!(self, Self::Exhausted | Self::Rejected(4))
+    }
+}
+
 /// Complete post-startup K boundary state on the typed host common domain.
 /// Frames are stored top first. `None` control represents K's `.K`.
 /// Snapshots are observations; no arbitrary-state import is exposed.
+///
+/// Machine invariant: every `Snapshot` produced by [`super::reference::Machine`] satisfies
+/// `remaining_fuel <= initial_fuel`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Snapshot {
     pub program: Arc<Program>,
@@ -152,8 +174,21 @@ impl Snapshot {
     pub fn depth(&self) -> usize {
         self.frames.len()
     }
+
+    /// Returns `initial_fuel - remaining_fuel` for machine-valid observations.
+    ///
+    /// # Preconditions
+    /// Requires the machine invariant `self.remaining_fuel <= self.initial_fuel`.
+    /// For hand-constructed snapshots where this invariant is not guaranteed, use
+    /// [`Snapshot::checked_charged_steps`] so invalid counters are reported as `None`
+    /// rather than silently clamped, wrapped, or panicked.
     pub fn charged_steps(&self) -> u128 {
         self.initial_fuel - self.remaining_fuel
+    }
+
+    /// Checked host-diagnostic step counter returning `None` if `remaining_fuel > initial_fuel`.
+    pub const fn checked_charged_steps(&self) -> Option<u128> {
+        self.initial_fuel.checked_sub(self.remaining_fuel)
     }
 }
 

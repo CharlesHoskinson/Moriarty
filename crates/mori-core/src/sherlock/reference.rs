@@ -1,6 +1,11 @@
 use super::reference_types::*;
 use std::sync::Arc;
 
+/// Host reference evaluator for the frozen `sherlock-k-a/1` profile on the typed common domain.
+///
+/// # Security Warning (H1 — Unmetered Host Evaluator)
+/// This machine is a host diagnostic reference with zero native authority and no host time,
+/// heap, or native stack admission bounds. Do not expose it to untrusted inputs.
 pub struct Machine {
     pub(super) state: Snapshot,
 }
@@ -25,6 +30,10 @@ impl Machine {
         self.state.clone()
     }
 
+    /// Executes at most one `sherlock-k-a/1` transition or free terminal publication.
+    ///
+    /// Clones the full [`Snapshot`] twice (`before` and `after`), including environments and
+    /// lists. Unmetered on host resources; not safe for untrusted input (H1).
     pub fn step(&mut self) -> Option<StepRecord> {
         if self.state.outcome != Outcome::Pending {
             return None;
@@ -260,6 +269,19 @@ impl Machine {
         }
     }
 
+    /// Runs the machine until a terminal [`Outcome`] (`Done`, `Rejected`, or `Exhausted`) is
+    /// published.
+    ///
+    /// # Security Warning (H1 — DoS and Native Stack Overflow Risks)
+    /// This method is an **unmetered** host reference evaluator and **must not** be connected to
+    /// the CLI, LSP, MCP, the `/1` or `/2` source compiler adapter, or any untrusted/network-reachable
+    /// input path until host time, memory, and nesting bounds are enforced:
+    /// - `fuel: u128` and `stack_limit: usize` have no host ceiling.
+    /// - Every step clones the full [`Snapshot`] twice (`before`/`after`) and `run()` discards
+    ///   both copies; every pushed [`Frame`] clones its [`Environment`]; `BinaryOp::Cons` is $O(n)$.
+    /// - Derived `Drop`, `Clone`, and `PartialEq` impls (as well as diagnostic K rendering)
+    ///   recurse over `Arc<Expr>` and `Arc<Tree>`. Deep caller-supplied ASTs or runtime-built
+    ///   `Branch`/`Leaf` trees can overflow the native call stack and abort the process.
     pub fn run(&mut self) -> Snapshot {
         while self.step().is_some() {}
         self.snapshot()
