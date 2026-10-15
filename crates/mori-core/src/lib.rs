@@ -6,6 +6,8 @@ mod logical_cost;
 mod parser;
 pub mod policy;
 pub mod sherlock;
+#[path = "sherlock/source_adapter.rs"]
+pub mod sherlock_source;
 pub mod stage;
 mod replay;
 mod runtime;
