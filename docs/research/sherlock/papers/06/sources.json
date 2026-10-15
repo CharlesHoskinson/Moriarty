@@ -1,0 +1,1217 @@
+{
+  "schema": "sherlock.academic-project-study.v1",
+  "lane": "06",
+  "topic": "Witness generation, constraint IR and compiler engineering",
+  "retrieved_date_utc": "2026-10-15",
+  "status": "research-draft",
+  "source_families": [
+    {
+      "id": "SIEVE-zkInterface",
+      "primary_sources": [
+        "https://github.com/sieve-zk/ir",
+        "https://github.com/QED-it/zkinterface-ir",
+        "https://github.com/QED-it/zkinterface"
+      ],
+      "independence": "Related standards/toolbox family; not independent corroboration between these repositories."
+    },
+    {
+      "id": "Noir",
+      "primary_sources": [
+        "https://noir-lang.github.io/noir/docs/brillig/index.html",
+        "https://github.com/noir-lang/noir"
+      ],
+      "independence": "Official project docs and source; same family."
+    },
+    {
+      "id": "CirC",
+      "primary_sources": [
+        "https://eprint.iacr.org/2020/1586",
+        "https://github.com/circify/circ",
+        "https://cs.stanford.edu/~aozdemir/docs/circ.pdf"
+      ],
+      "independence": "Authors paper metadata/abstract, official implementation and author slides; same family."
+    }
+  ],
+  "repositories": [
+    {
+      "repository": "circify/circ",
+      "remote_url": "https://github.com/circify/circ.git",
+      "default_branch": "master",
+      "head": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "head_observation": "Current default-branch HEAD observed online during this study; not a release pin.",
+      "commit_date": "2026-01-27T19:54:18Z",
+      "license_observation": "Apache-2.0 OR MIT",
+      "license_note": "COPYING explicitly says dual-licensed; GitHub classifier NOASSERTION is preserved.",
+      "license_path": "COPYING",
+      "copying_scope": "No upstream code copied into implementation; captured source is research evidence. Independent concept rebuilding is recommended."
+    },
+    {
+      "repository": "noir-lang/noir",
+      "remote_url": "https://github.com/noir-lang/noir.git",
+      "default_branch": "master",
+      "head": "8f43979071cd16451d176ae3a15246e5c2d29bac",
+      "head_observation": "Current default-branch HEAD observed online during this study; not a release pin.",
+      "commit_date": "2026-10-14T22:36:23Z",
+      "license_observation": "MIT OR Apache-2.0",
+      "license_note": "Cargo.toml line66; both root license texts inspected.",
+      "license_path": "LICENSE-APACHE",
+      "copying_scope": "No upstream code copied into implementation; captured source is research evidence. Independent concept rebuilding is recommended."
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "remote_url": "https://github.com/QED-it/zkinterface-ir.git",
+      "default_branch": "master",
+      "head": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "head_observation": "Current default-branch HEAD observed online during this study; not a release pin.",
+      "commit_date": "2023-09-14T13:38:18Z",
+      "license_observation": "MIT",
+      "license_note": "GitHub license API and decoded LICENSE inspected.",
+      "license_path": "LICENSE",
+      "copying_scope": "No upstream code copied into implementation; captured source is research evidence. Independent concept rebuilding is recommended."
+    },
+    {
+      "repository": "QED-it/zkinterface",
+      "remote_url": "https://github.com/QED-it/zkinterface.git",
+      "default_branch": "master",
+      "head": "4f8d9785871ddf959500458d5f5d9912c0a851f7",
+      "head_observation": "Current default-branch HEAD observed online during this study; not a release pin.",
+      "commit_date": "2021-07-21T11:28:02Z",
+      "license_observation": "MIT",
+      "license_note": "GitHub license API and decoded LICENSE inspected.",
+      "license_path": "LICENSE",
+      "copying_scope": "No upstream code copied into implementation; captured source is research evidence. Independent concept rebuilding is recommended."
+    },
+    {
+      "repository": "sieve-zk/ir",
+      "remote_url": "https://github.com/sieve-zk/ir.git",
+      "default_branch": "main",
+      "head": "478c958a4d14517dceeefb0016b5435a501d4b2b",
+      "head_observation": "Current default-branch HEAD observed online during this study; not a release pin.",
+      "commit_date": "2024-05-14T18:44:17Z",
+      "license_observation": "CC-BY-4.0",
+      "license_note": "Specification license.txt; does not imply backend code licensing.",
+      "license_path": "license.txt",
+      "copying_scope": "No upstream code copied into implementation; captured source is research evidence. Independent concept rebuilding is recommended."
+    }
+  ],
+  "claims": [
+    {
+      "id": "L06-F1",
+      "type": "source-fact",
+      "family": "SIEVE-zkInterface",
+      "claim": "Separate relation/public/private resources; sequential gates and explicit wire-lifetime management; exact input-stream consumption.",
+      "locators": [
+        "SIEVE2.2 introduction PDF pp5-6",
+        "v2.2.0/circuit-ir/04-input_streams.tex",
+        "v2.2.0/circuit-ir/sieve_ir.fbs"
+      ]
+    },
+    {
+      "id": "L06-F2",
+      "type": "source-fact",
+      "family": "SIEVE-zkInterface",
+      "claim": "QED toolbox exposes ZKBackend methods for arithmetic, assert_zero, inputs, allocation, conversions and plugins.",
+      "locators": [
+        "rust/src/consumers/evaluator.rs:23-125",
+        "sieve_ir.fbs:10-37,103-172,204-238",
+        "rust/src/producers/from_r1cs.rs"
+      ]
+    },
+    {
+      "id": "L06-F3",
+      "type": "source-fact",
+      "family": "Noir",
+      "claim": "ACIR distinguishes AssertZero, black boxes, fixed-length memory and unconstrained BrilligCall; ACVM solve statuses describe witness execution.",
+      "locators": [
+        "acvm-repo/acir/src/circuit/opcodes.rs:58-180",
+        "acvm-repo/acvm/src/pwg/mod.rs:109-126,487-526"
+      ]
+    },
+    {
+      "id": "L06-F4",
+      "type": "source-fact",
+      "family": "Noir",
+      "claim": "Brillig wraps integer arithmetic; ACIR field arithmetic and source checked integers are distinct; documented liveness reuse.",
+      "locators": [
+        "Official Brillig documentation sections Bytecode and Arithmetic; capture text lines499-506"
+      ]
+    },
+    {
+      "id": "L06-F5",
+      "type": "source-fact",
+      "family": "CirC",
+      "claim": "Typed named precomputation outputs are sequenced, topologically reordered and evaluated with shared term caching.",
+      "locators": [
+        "src/ir/term/precomp.rs:18-23,88-99,155-225",
+        "src/ir/term/eval.rs:16-41"
+      ]
+    },
+    {
+      "id": "L06-F6",
+      "type": "source-fact",
+      "family": "CirC",
+      "claim": "Constraint triples and precomputation terms are separate fields; PfDiv lowerer implements Incomplete mode and leaves other modes unimplemented.",
+      "locators": [
+        "src/target/r1cs/mod.rs:127-148",
+        "src/target/r1cs/trans.rs:1096-1105"
+      ]
+    },
+    {
+      "id": "L06-R1",
+      "type": "recommendation",
+      "claim": "Rebuild typed DAG, stable topological schedule, last-use row streaming and separate witness/constraint visitors in Sherlock/Clean.",
+      "derived_from": [
+        "L06-F1",
+        "L06-F3",
+        "L06-F5",
+        "L06-F6"
+      ],
+      "optimization_ids": [
+        "07",
+        "09",
+        "10"
+      ],
+      "requirements": [
+        "UIREQ-006",
+        "UIREQ-012",
+        "UIREQ-013",
+        "UIREQ-022",
+        "UIREQ-023",
+        "UIREQ-024",
+        "UIREQ-025",
+        "UIREQ-026"
+      ],
+      "status": "specified-only, no adoption or execution"
+    }
+  ],
+  "inherited_context": [
+    {
+      "path": "optimization/07/proposal.md",
+      "sha256": "4d44b3272d1e736ed5074edfcfba9dfc4a07cf2f79199c6dcfca72e12401d3e4",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "optimization/09/proposal.md",
+      "sha256": "56240c74d4e215db70eae3183925e5477206f5786021db8ab5ed87bf9a0b8528",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "optimization/10/proposal.md",
+      "sha256": "b155ec672cdbfb498258a0abc42a8b56e11b2075a1a90d32d846fbfee5e768fb",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "spec-package/clean-stage.md",
+      "sha256": "7bdcb70cae119e9f34856f588c851e28ecfb67931b954fa629b2d0193d18dfee",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "spec-package/design.md",
+      "sha256": "10a0bbfa915c8cae5303e68ee56f055e12487db25205ea740024cc2cea61403a",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "spec-package/model-coverage.md",
+      "sha256": "652ae110cd117f2b2ff3bfe765eac5d2816e8948e6cab1070e37841d4d038356",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    },
+    {
+      "path": "spec-package/requirements.md",
+      "sha256": "8bc52953931b66f99f2966db7bb451bd9a05a3d36c04b8a6f61af8cdca90a6cd",
+      "role": "Inherited project context, read locally; not a fresh external source."
+    }
+  ],
+  "captures": [
+    {
+      "requested_url": "https://api.github.com/repos/circify/circ",
+      "canonical_url": "https://api.github.com/repos/circify/circ",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:29:58.112582+00:00",
+      "raw_path": "captures/circify--circ--metadata.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "9ab8959b98290ede7b34643b02e1cefac932267aedb3e93b4f0c2588974b75c6"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/circify/circ/commits/master",
+      "canonical_url": "https://api.github.com/repos/circify/circ/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:29:58.824022+00:00",
+      "raw_path": "captures/circify--circ--head.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "f2215446b24f8177b7935184481958150c1e880521350425d10dad6f4dbdacff"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/circify/circ/git/trees/271f911bab2c8ab15f12f599fd7abf89c4561093?recursive=1",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/trees/271f911bab2c8ab15f12f599fd7abf89c4561093?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:29:59.793857+00:00",
+      "raw_path": "captures/circify--circ--tree.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "d8d688c87c171e9885f09b4b698145218fb3c107a115c60b7aabbd80128cce32"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/circify/circ/license",
+      "canonical_url": "https://api.github.com/repos/circify/circ/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:00.361060+00:00",
+      "raw_path": "captures/circify--circ--license.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "a875c585dbab16d28b4c2ef518466529bee5f1e8d12d521469b9a23a6dba5358"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/noir-lang/noir",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:00.957772+00:00",
+      "raw_path": "captures/noir-lang--noir--metadata.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "d08d7f8f71703f290b7bbd872d65cb6b5cf85bf7ce237c7e91c3a0151778e512"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/commits/master",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:01.684611+00:00",
+      "raw_path": "captures/noir-lang--noir--head.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "502e2814f3a97ca0fcbcbddbd551f58a89edee1e84b62752cec8bec377f9b6f4"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/git/trees/8f43979071cd16451d176ae3a15246e5c2d29bac?recursive=1",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/git/trees/8f43979071cd16451d176ae3a15246e5c2d29bac?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:02.865129+00:00",
+      "raw_path": "captures/noir-lang--noir--tree.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "c66fef2cd8b7f786df21e7d2800afb983e7ccac9d7d135e5943eb4ed2aa3daa7"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/license",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:03.516584+00:00",
+      "raw_path": "captures/noir-lang--noir--license.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "823d55b2212ad6d92d4ec6ef5563efcad18db8ce66298fefacc0be04374b6ea5"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:04.144274+00:00",
+      "raw_path": "captures/QED-it--zkinterface-ir--metadata.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "ee271d494d47726180cba8c6840e3bdfc465aab9aa8b4dd7321894ae19c4576e"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/commits/master",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:04.836318+00:00",
+      "raw_path": "captures/QED-it--zkinterface-ir--head.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "2fc27c304e97b9151b5621aa58f82b5b470dff01adcc8115ff6a47c73d8a1b46"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/trees/e9ad95a5b5aef50b2e7b72370ea673ffd489165e?recursive=1",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/trees/e9ad95a5b5aef50b2e7b72370ea673ffd489165e?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:05.438010+00:00",
+      "raw_path": "captures/QED-it--zkinterface-ir--tree.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "90e9f3cd734351b9fae0d25daf7525301ee7cf450c8803a6fe64c4f10a01b970"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/license",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:06.084666+00:00",
+      "raw_path": "captures/QED-it--zkinterface-ir--license.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "f32cb8b279112cbd319d3669abaf601ff973492a9adaf270603a98b8b9436a1d"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:06.684090+00:00",
+      "raw_path": "captures/QED-it--zkinterface--metadata.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "46592872f0ef7ae9dce00e4e6d55f82ff622e400a4153417af3c0ac34983d708"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/commits/master",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:07.295809+00:00",
+      "raw_path": "captures/QED-it--zkinterface--head.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "b36eb5e42e3349553f939c44670457a87ce3c0160e6e5fa584171244f3ff2420"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/git/trees/4f8d9785871ddf959500458d5f5d9912c0a851f7?recursive=1",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/git/trees/4f8d9785871ddf959500458d5f5d9912c0a851f7?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:07.957307+00:00",
+      "raw_path": "captures/QED-it--zkinterface--tree.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "938a8c71582b1a8b3cf4ee87694c4b3df1959cf64369ae5a78cc94583be906e5"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/license",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/license",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:30:08.577361+00:00",
+      "raw_path": "captures/QED-it--zkinterface--license.json",
+      "transport": "GitHub REST structured API",
+      "manifest_origin": "repo-capture-manifest.json",
+      "raw_sha256": "0c44e11debf67bba763d43f59d5026145c1fc5709f898a20d541259e070ee817"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--metadata.json",
+      "raw_sha256": "c6a3407787ab176164dda40fa67ebb258df45e1deeb8603a12ddd6ffd95fa411",
+      "retrieved_at": "2026-10-15T08:31:29.752993+00:00",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/commits/main",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/commits/main",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--head.json",
+      "raw_sha256": "99dae1e0fbdace912b5f6e3fdff113e4e07cf26213a3132dfa7e9922da8353e7",
+      "retrieved_at": "2026-10-15T08:31:30.204920+00:00",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--license.json",
+      "raw_sha256": "ca2c1a66e8ae649f8d2953832c8ff0252e62ceae51ee239d0527e852c69a6f8f",
+      "retrieved_at": "2026-10-15T08:31:30.749392+00:00",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/git/trees/478c958a4d14517dceeefb0016b5435a501d4b2b?recursive=1",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/git/trees/478c958a4d14517dceeefb0016b5435a501d4b2b?recursive=1",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--tree.json",
+      "raw_sha256": "ca9f3d5bcc7fc7522064f88dd323131061c7eaad2ff2df29aa55bab189910ca2",
+      "retrieved_at": "2026-10-15T08:31:31.236958+00:00",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://noir-lang.github.io/robots.txt",
+      "canonical_url": "https://noir-lang.github.io/robots.txt",
+      "status": 404,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/robots-noir.html",
+      "raw_sha256": "70d613e3acfba24fd2876fcbacaf639e1e111ef4d54baf70761c47673f37d6a3",
+      "retrieved_at": "2026-10-15T08:31:31.594827+00:00",
+      "extracted_path": "captures/robots-noir.html.txt",
+      "extracted_sha256": "60317b99b132d51239934dd1a564aaeb2f89968633a54f2b0241c46a47aba42c",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/robots.txt",
+      "canonical_url": "https://eprint.iacr.org/robots.txt",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/robots-eprint.html",
+      "raw_sha256": "856dcf622e618110b06e02289dad5255084b65ed3c18229f9fcfc20f276cde80",
+      "retrieved_at": "2026-10-15T08:31:32.439812+00:00",
+      "extracted_path": "captures/robots-eprint.html.txt",
+      "extracted_sha256": "028ae652a70d1daab9f4fca57b5ddfd539209264db0c2e9e5ab3a7d11dd29b87",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://sieve-zk.github.io/robots.txt",
+      "canonical_url": "https://sieve-zk.github.io/robots.txt",
+      "status": 404,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/robots-sieve.html",
+      "raw_sha256": "70d613e3acfba24fd2876fcbacaf639e1e111ef4d54baf70761c47673f37d6a3",
+      "retrieved_at": "2026-10-15T08:31:33.158449+00:00",
+      "extracted_path": "captures/robots-sieve.html.txt",
+      "extracted_sha256": "60317b99b132d51239934dd1a564aaeb2f89968633a54f2b0241c46a47aba42c",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://noir-lang.github.io/noir/docs/brillig/index.html",
+      "canonical_url": "https://noir-lang.github.io/noir/docs/brillig/index.html",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/noir-brillig.html",
+      "raw_sha256": "54cbcb67343413d99472b22881753b6c9ef5f723ba9247aadca402b9bdf28e02",
+      "retrieved_at": "2026-10-15T08:31:33.917597+00:00",
+      "extracted_path": "captures/noir-brillig.html.txt",
+      "extracted_sha256": "441e83e37baa6c0881febfa35cad9d010521a639fe855ee85a069aab62c4ece1",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/2020/1586",
+      "canonical_url": "https://eprint.iacr.org/2020/1586",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/circ-paper-page.html",
+      "raw_sha256": "98fcc154168a69a534528842626429dae800ffcb3c744ee80cba0d7a4e9cd151",
+      "retrieved_at": "2026-10-15T08:31:34.569007+00:00",
+      "extracted_path": "captures/circ-paper-page.html.txt",
+      "extracted_sha256": "40737a0095006c20471b6d4e0e8e09d1b5ff604916b8261bbf96616b3caedd49",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://github.com/sieve-zk/ir",
+      "canonical_url": "https://github.com/sieve-zk/ir",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/sieve-home-corrected.html",
+      "raw_sha256": "185063c728e3e18a6673c9753a9743f23bfd4ed9b1a56301a50fb626eb47eae1",
+      "retrieved_at": "2026-10-15T08:31:35.901299+00:00",
+      "extracted_path": "captures/sieve-home-corrected.html.txt",
+      "extracted_sha256": "04334c0c2cabf89d72860e961d238ec4c23290b9ade4489baa378b125c8aa882",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://github.com/QED-it/zkinterface",
+      "canonical_url": "https://github.com/QED-it/zkinterface",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/zkinterface-project.html",
+      "raw_sha256": "f23da8f5aa1a0956c74d5e9b433a6281183f16be4d9198336de83c2fe90e251b",
+      "retrieved_at": "2026-10-15T08:31:36.859283+00:00",
+      "extracted_path": "captures/zkinterface-project.html.txt",
+      "extracted_sha256": "b267820076951966ce7568df32f25e69a51ab50e673fe62acaa210b56d8e3fc8",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://github.com/QED-it/zkinterface-ir",
+      "canonical_url": "https://github.com/QED-it/zkinterface-ir",
+      "status": 200,
+      "transport": "Scrapling Fetcher 0.4.15",
+      "selector": "main / article / whole response fallback",
+      "raw_path": "captures/zkinterface-ir-project.html",
+      "raw_sha256": "a7f4ceb79190866bf9b40858dafd9dfd3a63db6227983e48f7af34f3e2fb8af3",
+      "retrieved_at": "2026-10-15T08:31:37.761245+00:00",
+      "extracted_path": "captures/zkinterface-ir-project.html.txt",
+      "extracted_sha256": "fc44bcf76db0328328ca8da082b77ef15417084b89ad7b8b2ed0edae09ef9448",
+      "manifest_origin": "web-capture-manifest.json"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "README.md",
+      "blob_sha": "197da4bb3185b891c4fca85e6f13eb00a7098fd5",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/197da4bb3185b891c4fca85e6f13eb00a7098fd5",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/197da4bb3185b891c4fca85e6f13eb00a7098fd5",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.123125+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--README.md",
+      "raw_sha256": "8ec055a953460538afad551445592759e545b9d46219d67654712c1e532046c4",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/README.md",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--README.md",
+      "extracted_sha256": "8ec055a953460538afad551445592759e545b9d46219d67654712c1e532046c4",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "COPYING",
+      "blob_sha": "b7fd42fe32d1dc414b7967b9a5a3c2a11e4ec5bd",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/b7fd42fe32d1dc414b7967b9a5a3c2a11e4ec5bd",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/b7fd42fe32d1dc414b7967b9a5a3c2a11e4ec5bd",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:08.070697+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--COPYING",
+      "raw_sha256": "17e74500c57765b0a8dcd5d27fb4582087653b29a908d14b62cfa96e85faf2ff",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/COPYING",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--COPYING",
+      "extracted_sha256": "17e74500c57765b0a8dcd5d27fb4582087653b29a908d14b62cfa96e85faf2ff",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "Cargo.toml",
+      "blob_sha": "f2ff14f88a42a41aa5ed8b856975a94fd950778e",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/f2ff14f88a42a41aa5ed8b856975a94fd950778e",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/f2ff14f88a42a41aa5ed8b856975a94fd950778e",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:07.941730+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--Cargo.toml",
+      "raw_sha256": "94069a1355b38af0af1b2ece05b81cf6852d554534d7cdbf1e359bc2a4022805",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/Cargo.toml",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--Cargo.toml",
+      "extracted_sha256": "94069a1355b38af0af1b2ece05b81cf6852d554534d7cdbf1e359bc2a4022805",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "src/ir/term/precomp.rs",
+      "blob_sha": "bbf644b4551509d0beb1f8f744eb12263a140604",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/bbf644b4551509d0beb1f8f744eb12263a140604",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/bbf644b4551509d0beb1f8f744eb12263a140604",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:08.133080+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--src--ir--term--precomp.rs",
+      "raw_sha256": "bb6a27067dab07e897e91fd61376ca6948af8aeb89d2fe06e1cd8b1aa5189d54",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/src/ir/term/precomp.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--src--ir--term--precomp.rs",
+      "extracted_sha256": "bb6a27067dab07e897e91fd61376ca6948af8aeb89d2fe06e1cd8b1aa5189d54",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "src/ir/term/eval.rs",
+      "blob_sha": "3e0a010a8e9ec36404658dba115bf9928b825cc7",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/3e0a010a8e9ec36404658dba115bf9928b825cc7",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/3e0a010a8e9ec36404658dba115bf9928b825cc7",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:08.641252+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--src--ir--term--eval.rs",
+      "raw_sha256": "51cb41e661da37622bf4e677bd533538c15e1a56f873efa9a3047f91f515b47a",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/src/ir/term/eval.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--src--ir--term--eval.rs",
+      "extracted_sha256": "51cb41e661da37622bf4e677bd533538c15e1a56f873efa9a3047f91f515b47a",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "src/target/r1cs/mod.rs",
+      "blob_sha": "4c0f464b69579e6001a21aa12e979f1b8f0ffda4",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/4c0f464b69579e6001a21aa12e979f1b8f0ffda4",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/4c0f464b69579e6001a21aa12e979f1b8f0ffda4",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:08.931736+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--src--target--r1cs--mod.rs",
+      "raw_sha256": "9ce562294ce578e1ed273dd34d5ecebf8597a558a2086de344113b73b3554942",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/src/target/r1cs/mod.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--src--target--r1cs--mod.rs",
+      "extracted_sha256": "9ce562294ce578e1ed273dd34d5ecebf8597a558a2086de344113b73b3554942",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "circify/circ",
+      "commit": "271f911bab2c8ab15f12f599fd7abf89c4561093",
+      "path": "src/target/r1cs/trans.rs",
+      "blob_sha": "e5b6defdaa3dc15152169ec643fbacb139d368a9",
+      "requested_url": "https://api.github.com/repos/circify/circ/git/blobs/e5b6defdaa3dc15152169ec643fbacb139d368a9",
+      "canonical_url": "https://api.github.com/repos/circify/circ/git/blobs/e5b6defdaa3dc15152169ec643fbacb139d368a9",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:08.934581+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/circify--circ--src--target--r1cs--trans.rs",
+      "raw_sha256": "bd1ff1779a4d2f31c0588d2ceecdbf78159e9a38019a6b1ddf26df299b593954",
+      "url": "https://github.com/circify/circ/blob/271f911bab2c8ab15f12f599fd7abf89c4561093/src/target/r1cs/trans.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/circify--circ--src--target--r1cs--trans.rs",
+      "extracted_sha256": "bd1ff1779a4d2f31c0588d2ceecdbf78159e9a38019a6b1ddf26df299b593954",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "noir-lang/noir",
+      "commit": "8f43979071cd16451d176ae3a15246e5c2d29bac",
+      "path": "acvm-repo/acir/src/circuit/opcodes.rs",
+      "blob_sha": "c4fba9febde189c4a58c4da278e2de95ad28f51b",
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/c4fba9febde189c4a58c4da278e2de95ad28f51b",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/c4fba9febde189c4a58c4da278e2de95ad28f51b",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.354078+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/noir-lang--noir--acvm-repo--acir--src--circuit--opcodes.rs",
+      "raw_sha256": "7c253548c71d4b36d014909d4a0f77c4de8a8c4926a286f0fade2569c3c9c73e",
+      "url": "https://github.com/noir-lang/noir/blob/8f43979071cd16451d176ae3a15246e5c2d29bac/acvm-repo/acir/src/circuit/opcodes.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/noir-lang--noir--acvm-repo--acir--src--circuit--opcodes.rs",
+      "extracted_sha256": "7c253548c71d4b36d014909d4a0f77c4de8a8c4926a286f0fade2569c3c9c73e",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "noir-lang/noir",
+      "commit": "8f43979071cd16451d176ae3a15246e5c2d29bac",
+      "path": "acvm-repo/acir/src/circuit/mod.rs",
+      "blob_sha": "1a2a2e03238c751c4a51aa79c5bd56d155ce75a1",
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/1a2a2e03238c751c4a51aa79c5bd56d155ce75a1",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/1a2a2e03238c751c4a51aa79c5bd56d155ce75a1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.625801+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/noir-lang--noir--acvm-repo--acir--src--circuit--mod.rs",
+      "raw_sha256": "67783906d32070ca9ab9d098bd9d9915d13c5871f29e1bb34a7aab7e6763bc8f",
+      "url": "https://github.com/noir-lang/noir/blob/8f43979071cd16451d176ae3a15246e5c2d29bac/acvm-repo/acir/src/circuit/mod.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/noir-lang--noir--acvm-repo--acir--src--circuit--mod.rs",
+      "extracted_sha256": "67783906d32070ca9ab9d098bd9d9915d13c5871f29e1bb34a7aab7e6763bc8f",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "noir-lang/noir",
+      "commit": "8f43979071cd16451d176ae3a15246e5c2d29bac",
+      "path": "acvm-repo/acvm/src/pwg/mod.rs",
+      "blob_sha": "b722a973c910744c96dae3ecbf5834ab5ed4d6d2",
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/b722a973c910744c96dae3ecbf5834ab5ed4d6d2",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/b722a973c910744c96dae3ecbf5834ab5ed4d6d2",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.659114+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/noir-lang--noir--acvm-repo--acvm--src--pwg--mod.rs",
+      "raw_sha256": "bc95468315008937bcc7533ab16e5490e529e1de3f968ec0f18bcf77a14aad3d",
+      "url": "https://github.com/noir-lang/noir/blob/8f43979071cd16451d176ae3a15246e5c2d29bac/acvm-repo/acvm/src/pwg/mod.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/noir-lang--noir--acvm-repo--acvm--src--pwg--mod.rs",
+      "extracted_sha256": "bc95468315008937bcc7533ab16e5490e529e1de3f968ec0f18bcf77a14aad3d",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "noir-lang/noir",
+      "commit": "8f43979071cd16451d176ae3a15246e5c2d29bac",
+      "path": "acvm-repo/brillig/src/opcodes.rs",
+      "blob_sha": "ddaccce303ab4a65d68db224355daec069261c5a",
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/ddaccce303ab4a65d68db224355daec069261c5a",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/git/blobs/ddaccce303ab4a65d68db224355daec069261c5a",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.857795+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/noir-lang--noir--acvm-repo--brillig--src--opcodes.rs",
+      "raw_sha256": "b615829998c29caeabbec5061a8980d8c3ac478627175f3016d2c8400e6d8853",
+      "url": "https://github.com/noir-lang/noir/blob/8f43979071cd16451d176ae3a15246e5c2d29bac/acvm-repo/brillig/src/opcodes.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/noir-lang--noir--acvm-repo--brillig--src--opcodes.rs",
+      "extracted_sha256": "b615829998c29caeabbec5061a8980d8c3ac478627175f3016d2c8400e6d8853",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "commit": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "path": "README.md",
+      "blob_sha": "6e858312079f6be318e920c1317b8dca53ca6827",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/6e858312079f6be318e920c1317b8dca53ca6827",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/6e858312079f6be318e920c1317b8dca53ca6827",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:09.964656+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface-ir--README.md",
+      "raw_sha256": "25a1a19610aee3f62eda37d057fbdec20c598db3fe99bf0d844665cd1c931cba",
+      "url": "https://github.com/QED-it/zkinterface-ir/blob/e9ad95a5b5aef50b2e7b72370ea673ffd489165e/README.md",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface-ir--README.md",
+      "extracted_sha256": "25a1a19610aee3f62eda37d057fbdec20c598db3fe99bf0d844665cd1c931cba",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "commit": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "path": "sieve_ir.fbs",
+      "blob_sha": "c5ae53d6366a2ffb1bb1896e0eb63f8f6eecdddd",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/c5ae53d6366a2ffb1bb1896e0eb63f8f6eecdddd",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/c5ae53d6366a2ffb1bb1896e0eb63f8f6eecdddd",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.285608+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface-ir--sieve_ir.fbs",
+      "raw_sha256": "c1ae05bb994cf7e88ce93dbafc25736a5c8cb1e717361f28ca5f7c5aa73f1cb6",
+      "url": "https://github.com/QED-it/zkinterface-ir/blob/e9ad95a5b5aef50b2e7b72370ea673ffd489165e/sieve_ir.fbs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface-ir--sieve_ir.fbs",
+      "extracted_sha256": "c1ae05bb994cf7e88ce93dbafc25736a5c8cb1e717361f28ca5f7c5aa73f1cb6",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "commit": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "path": "rust/src/consumers/evaluator.rs",
+      "blob_sha": "5df6683d4ac49b0aaf30521ec8fe517a5ead1bd5",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/5df6683d4ac49b0aaf30521ec8fe517a5ead1bd5",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/5df6683d4ac49b0aaf30521ec8fe517a5ead1bd5",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.381717+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface-ir--rust--src--consumers--evaluator.rs",
+      "raw_sha256": "7ce130c19df119c0f48de97b8597edb2e47c8627a1bfac7bad08b80b8dacd906",
+      "url": "https://github.com/QED-it/zkinterface-ir/blob/e9ad95a5b5aef50b2e7b72370ea673ffd489165e/rust/src/consumers/evaluator.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface-ir--rust--src--consumers--evaluator.rs",
+      "extracted_sha256": "7ce130c19df119c0f48de97b8597edb2e47c8627a1bfac7bad08b80b8dacd906",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "commit": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "path": "rust/src/producers/from_r1cs.rs",
+      "blob_sha": "d0bdde3319d9e849ff5b8ff944e81160b8bfe78c",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/d0bdde3319d9e849ff5b8ff944e81160b8bfe78c",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/d0bdde3319d9e849ff5b8ff944e81160b8bfe78c",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.505272+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface-ir--rust--src--producers--from_r1cs.rs",
+      "raw_sha256": "ff6bed63b90798ba34d21854e31801c2a478af1b8fe9893bc90ffd3c8c3fabef",
+      "url": "https://github.com/QED-it/zkinterface-ir/blob/e9ad95a5b5aef50b2e7b72370ea673ffd489165e/rust/src/producers/from_r1cs.rs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface-ir--rust--src--producers--from_r1cs.rs",
+      "extracted_sha256": "ff6bed63b90798ba34d21854e31801c2a478af1b8fe9893bc90ffd3c8c3fabef",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface-ir",
+      "commit": "e9ad95a5b5aef50b2e7b72370ea673ffd489165e",
+      "path": "spec/04-input_streams.tex",
+      "blob_sha": "7c6d3a973b9f84dded0da82b4a280496399e8354",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/7c6d3a973b9f84dded0da82b4a280496399e8354",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/git/blobs/7c6d3a973b9f84dded0da82b4a280496399e8354",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.461511+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface-ir--spec--04-input_streams.tex",
+      "raw_sha256": "96e48c00ae9686314d0dcec2e04bb9cb5d3f9c044e8c5bcfea716aa9d408a931",
+      "url": "https://github.com/QED-it/zkinterface-ir/blob/e9ad95a5b5aef50b2e7b72370ea673ffd489165e/spec/04-input_streams.tex",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface-ir--spec--04-input_streams.tex",
+      "extracted_sha256": "96e48c00ae9686314d0dcec2e04bb9cb5d3f9c044e8c5bcfea716aa9d408a931",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface",
+      "commit": "4f8d9785871ddf959500458d5f5d9912c0a851f7",
+      "path": "zkinterface.fbs",
+      "blob_sha": "b6ff0df8177fda6b90112f5cc05159515e9f5fdf",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/git/blobs/b6ff0df8177fda6b90112f5cc05159515e9f5fdf",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/git/blobs/b6ff0df8177fda6b90112f5cc05159515e9f5fdf",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.970667+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface--zkinterface.fbs",
+      "raw_sha256": "ec3ecab9928e5ded6d34c84803253658bca5ae71313773e4756cf578d115f5bf",
+      "url": "https://github.com/QED-it/zkinterface/blob/4f8d9785871ddf959500458d5f5d9912c0a851f7/zkinterface.fbs",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface--zkinterface.fbs",
+      "extracted_sha256": "ec3ecab9928e5ded6d34c84803253658bca5ae71313773e4756cf578d115f5bf",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "repository": "QED-it/zkinterface",
+      "commit": "4f8d9785871ddf959500458d5f5d9912c0a851f7",
+      "path": "spec/execution.tex",
+      "blob_sha": "8302cef0b1dec49e8e75f64db3158bae19faea7c",
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/git/blobs/8302cef0b1dec49e8e75f64db3158bae19faea7c",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/git/blobs/8302cef0b1dec49e8e75f64db3158bae19faea7c",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:31:10.897641+00:00",
+      "transport": "GitHub REST git/blob API (base64 decoded)",
+      "raw_path": "captures/QED-it--zkinterface--spec--execution.tex",
+      "raw_sha256": "9571a6f9f4fd1dda68724e6ae6c7a7097ede7220526e36a69e5f2fa003338f7b",
+      "url": "https://github.com/QED-it/zkinterface/blob/4f8d9785871ddf959500458d5f5d9912c0a851f7/spec/execution.tex",
+      "manifest_origin": "code-capture-manifest.json",
+      "extracted_path": "captures/QED-it--zkinterface--spec--execution.tex",
+      "extracted_sha256": "9571a6f9f4fd1dda68724e6ae6c7a7097ede7220526e36a69e5f2fa003338f7b",
+      "extraction": "Exact UTF-8 source bytes, no HTML cleaning"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/2020/1586.pdf",
+      "status": 403,
+      "raw_path": "captures/circ-paper-eprint-403.html",
+      "raw_sha256": "9eb0eb79264600650322d23710957fbd4a7fea29038a7f2d932232f8c5c55e9b",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "note": "HTML denial, not PDF; retained failure",
+      "manifest_origin": "additional-capture-manifest.json",
+      "retrieved_at": "2026-10-15T08:31:45Z",
+      "time_basis": "Scrapling acquisition log local02:31:45 converted from America/Denver to UTC."
+    },
+    {
+      "requested_url": "https://circ.zk.fyi",
+      "canonical_url": "https://circ.zk.fyi/",
+      "status": 526,
+      "retrieved_at": "2026-10-15T08:32:36.159878+00:00",
+      "raw_path": "captures/circ-author-site.raw",
+      "raw_sha256": "b0c521efa677c7fde35796d3d01c46754b749e4106cced64e996341115739074",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/circ-author-site.raw.txt",
+      "extracted_sha256": "772b986418e7a3daf73b8e6f55ae710c587a1080a9888993a6723e46d295de08",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://cs.stanford.edu/~aozdemir/papers/circ.pdf",
+      "canonical_url": "https://cs.stanford.edu/~aozdemir/papers/circ.pdf",
+      "status": 404,
+      "retrieved_at": "2026-10-15T08:32:36.735406+00:00",
+      "raw_path": "captures/circ-author-paper.raw",
+      "raw_sha256": "c8dd3690a0717f851cb07099703ede0747ca201c9b31b4a7c7eeda1596d11991",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/circ-author-paper.raw.txt",
+      "extracted_sha256": "2a83fd4d5f22a72ae1ec6f7e27ebd5b4e28361058ae0e1184b6b7941dd132d56",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/readme.adoc",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/readme.adoc",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:32:37.236875+00:00",
+      "raw_path": "captures/sieve-zk--ir--readme.adoc.raw",
+      "raw_sha256": "d95dce70fbc171a70bd170f314151d67879750886fa1bf7a95c0d63fd05ad20a",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/sieve-zk--ir--readme.adoc.raw.txt",
+      "extracted_sha256": "5ad474fdbf5a0d20a8280b9c459b6d400c741e83ef125be2fffee93c61e2804d",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/02-circuitIR.tex",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/02-circuitIR.tex",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:32:37.720197+00:00",
+      "raw_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--02-circuitIR.tex.raw",
+      "raw_sha256": "a5d6eb4d3176dc2f90f1fcce7421182e55714237ceccda35265a82f38b89a864",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--02-circuitIR.tex.raw.txt",
+      "extracted_sha256": "97781aae1d096f96de471ec2a03504dcea8bcd0c85a7cc4fb5f2a9f893596612",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/04-input_streams.tex",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/04-input_streams.tex",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:32:39.474609+00:00",
+      "raw_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--04-input_streams.tex.raw",
+      "raw_sha256": "d437a15bc17a30e22e980680039de2a59968ae7c03d968e3af841eaa55dfd4cd",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--04-input_streams.tex.raw.txt",
+      "extracted_sha256": "f563316d9da622741dd56cf943b36a0cf863b35af6ed16d20d60a53af806c5f6",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/sieve_ir.fbs",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/circuit-ir/sieve_ir.fbs",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:32:40.007323+00:00",
+      "raw_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--sieve_ir.fbs.raw",
+      "raw_sha256": "5c1bdb214223af62408548dc11f50602f6d7c4b052815f00b9967019b6a11cba",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/sieve-zk--ir--v2.2.0--circuit-ir--sieve_ir.fbs.raw.txt",
+      "extracted_sha256": "06c036a91b3f3fbf18cfb51c567bd704086579c972f717568b8fc4de69b0fa28",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://cs.stanford.edu/~aozdemir/research/",
+      "canonical_url": "https://cs.stanford.edu/~aozdemir/research/",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:33:18.549838+00:00",
+      "raw_path": "captures/circ-author-research.html",
+      "raw_sha256": "6d280eea4b6bb1df22e03c093fa4afccad22e0727b30d74dc234726041bcfc8e",
+      "extracted_path": "captures/circ-author-research.txt",
+      "extracted_sha256": "157a354802d9de0f59f8ab99fe95b0981d25f1a50f85952c5febfe99c286f967",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/archive/versions/2020/1586",
+      "canonical_url": "https://eprint.iacr.org/archive/versions/2020/1586",
+      "status": 403,
+      "retrieved_at": "2026-10-15T08:33:32.411580+00:00",
+      "raw_path": "captures/circ-versions.html",
+      "raw_sha256": "0aab2e6d9bfacf953cfc36de8da7ff722b8138dc6beeb291b9eece723192047f",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "extracted_path": "captures/circ-versions.txt",
+      "extracted_sha256": "05f8bdf19ca64ec98ac31c13061fb810966197580390f0688c67e092c21b5a3f",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/sieve-ir-v2.2.0.pdf",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/sieve-ir-v2.2.0.pdf",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:33:33.215494+00:00",
+      "raw_path": "captures/sieve-introduction.pdf",
+      "raw_sha256": "f7061737a97ab2d58e4d6eb55fd23069c6e59c2f1b514bcd3bd105c66ef03010",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json",
+      "extracted_path": "captures/sieve-introduction.txt",
+      "extracted_sha256": "f6474d4ccabd256a3cab8d655befb3e8ead38fa32d2ef880ff9c8f8f62e880bf",
+      "extraction": "pdftotext -layout; no researched project code executed"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/noir-lang/noir/8f43979071cd16451d176ae3a15246e5c2d29bac/LICENSE-MIT",
+      "canonical_url": "https://raw.githubusercontent.com/noir-lang/noir/8f43979071cd16451d176ae3a15246e5c2d29bac/LICENSE-MIT",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:34:08.500482+00:00",
+      "raw_path": "captures/noir-license-mit.raw",
+      "raw_sha256": "6a06d9cf24f111de5f29c559c12f8f16fa0e6e4a0aadf81f548c6d447d0f2847",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/noir-lang/noir/8f43979071cd16451d176ae3a15246e5c2d29bac/Cargo.toml",
+      "canonical_url": "https://raw.githubusercontent.com/noir-lang/noir/8f43979071cd16451d176ae3a15246e5c2d29bac/Cargo.toml",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:34:08.944282+00:00",
+      "raw_path": "captures/noir-cargo.raw",
+      "raw_sha256": "f84a44fee396ad02999a65f844c5b6a1dc8350f9b3a3b8aec431889f62ec5be6",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/01-intro.tex",
+      "canonical_url": "https://raw.githubusercontent.com/sieve-zk/ir/478c958a4d14517dceeefb0016b5435a501d4b2b/v2.2.0/01-intro.tex",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:34:09.392496+00:00",
+      "raw_path": "captures/sieve-intro-source.raw",
+      "raw_sha256": "d9acd9283b7e353d5a9f64d4dc8535e89b8d298950754a8d6cd7117fc9c314c7",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json"
+    },
+    {
+      "requested_url": "https://cs.stanford.edu/~aozdemir/docs/circ.pdf",
+      "canonical_url": "https://cs.stanford.edu/~aozdemir/docs/circ.pdf",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:34:10.264603+00:00",
+      "raw_path": "captures/circ-slides.pdf",
+      "raw_sha256": "80b89b8e9c4414942cef9de2aa2b9801e852ab904da72cd9b15ba66d7f02ed71",
+      "transport": "Scrapling Fetcher 0.4.15",
+      "manifest_origin": "additional-capture-manifest.json",
+      "extracted_path": "captures/circ-slides.txt",
+      "extracted_sha256": "b40a5ad9fe021084c2b93b840f42a8e6816d326fc0c3a601edac5809597a6ea3",
+      "extraction": "pdftotext -layout; no researched project code executed"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/circify/circ/license",
+      "canonical_url": "https://api.github.com/repos/circify/circ/license",
+      "status": 200,
+      "raw_path": "captures/circify--circ--license.json",
+      "raw_sha256": "a875c585dbab16d28b4c2ef518466529bee5f1e8d12d521469b9a23a6dba5358",
+      "extracted_path": "captures/circify--circ--license-decoded.txt",
+      "extracted_sha256": "17e74500c57765b0a8dcd5d27fb4582087653b29a908d14b62cfa96e85faf2ff",
+      "extraction": "Base64 decode of previously captured GitHub license response",
+      "retrieved_at": "2026-10-15T08:30:00.361060+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/noir-lang/noir/license",
+      "canonical_url": "https://api.github.com/repos/noir-lang/noir/license",
+      "status": 200,
+      "raw_path": "captures/noir-lang--noir--license.json",
+      "raw_sha256": "823d55b2212ad6d92d4ec6ef5563efcad18db8ce66298fefacc0be04374b6ea5",
+      "extracted_path": "captures/noir-lang--noir--license-decoded.txt",
+      "extracted_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "extraction": "Base64 decode of previously captured GitHub license response",
+      "retrieved_at": "2026-10-15T08:30:03.516584+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface-ir/license",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface-ir/license",
+      "status": 200,
+      "raw_path": "captures/QED-it--zkinterface-ir--license.json",
+      "raw_sha256": "f32cb8b279112cbd319d3669abaf601ff973492a9adaf270603a98b8b9436a1d",
+      "extracted_path": "captures/QED-it--zkinterface-ir--license-decoded.txt",
+      "extracted_sha256": "4a11419339d0006c44cade6a0ab2727d48043f7fb2a3609e67d73083bd3922cf",
+      "extraction": "Base64 decode of previously captured GitHub license response",
+      "retrieved_at": "2026-10-15T08:30:06.084666+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/QED-it/zkinterface/license",
+      "canonical_url": "https://api.github.com/repos/QED-it/zkinterface/license",
+      "status": 200,
+      "raw_path": "captures/QED-it--zkinterface--license.json",
+      "raw_sha256": "0c44e11debf67bba763d43f59d5026145c1fc5709f898a20d541259e070ee817",
+      "extracted_path": "captures/QED-it--zkinterface--license-decoded.txt",
+      "extracted_sha256": "faca0f47e78ae9f98f3de8142a9d49bfe22eb67f6f1f1c4435fc5268283dc6ac",
+      "extraction": "Base64 decode of previously captured GitHub license response",
+      "retrieved_at": "2026-10-15T08:30:08.577361+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "status": 200,
+      "raw_path": "captures/sieve-zk--ir--license.json",
+      "raw_sha256": "ca2c1a66e8ae649f8d2953832c8ff0252e62ceae51ee239d0527e852c69a6f8f",
+      "extracted_path": "captures/sieve-zk--ir--license-decoded.txt",
+      "extracted_sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "extraction": "Base64 decode of previously captured GitHub license response",
+      "retrieved_at": "2026-10-15T08:31:30.749392+00:00"
+    }
+  ],
+  "initial_failed_extractions": [
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--metadata.json",
+      "raw_sha256": "c6a3407787ab176164dda40fa67ebb258df45e1deeb8603a12ddd6ffd95fa411",
+      "retrieved_at": "2026-10-15T08:30:49.828777+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/commits/main",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/commits/main",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--head.json",
+      "raw_sha256": "99dae1e0fbdace912b5f6e3fdff113e4e07cf26213a3132dfa7e9922da8353e7",
+      "retrieved_at": "2026-10-15T08:30:50.601051+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/license",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--license.json",
+      "raw_sha256": "ca2c1a66e8ae649f8d2953832c8ff0252e62ceae51ee239d0527e852c69a6f8f",
+      "retrieved_at": "2026-10-15T08:30:51.385100+00:00"
+    },
+    {
+      "requested_url": "https://api.github.com/repos/sieve-zk/ir/git/trees/478c958a4d14517dceeefb0016b5435a501d4b2b?recursive=1",
+      "canonical_url": "https://api.github.com/repos/sieve-zk/ir/git/trees/478c958a4d14517dceeefb0016b5435a501d4b2b?recursive=1",
+      "status": 200,
+      "transport": "GitHub REST structured API",
+      "raw_path": "captures/sieve-zk--ir--tree.json",
+      "raw_sha256": "ca9f3d5bcc7fc7522064f88dd323131061c7eaad2ff2df29aa55bab189910ca2",
+      "retrieved_at": "2026-10-15T08:30:52.033221+00:00"
+    },
+    {
+      "requested_url": "https://noir-lang.github.io/robots.txt",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:52.458379+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/robots.txt",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:53.339726+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://sieve-zk.github.io/robots.txt",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:54.054226+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://noir-lang.github.io/noir/docs/brillig/index.html",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:54.854378+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://eprint.iacr.org/2020/1586",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:55.611461+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://sieve-zk.github.io/ir/",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:56.322064+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://github.com/QED-it/zkinterface",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:57.771807+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    },
+    {
+      "requested_url": "https://github.com/QED-it/zkinterface-ir",
+      "status": "FAILED",
+      "error": "'Response' object has no attribute 'css_first'",
+      "retrieved_at": "2026-10-15T08:30:59.317289+00:00",
+      "transport": "Scrapling Fetcher 0.4.15"
+    }
+  ],
+  "additional_failures": [
+    {
+      "url": "https://api.github.com/repos/sieve-zk/ir/git/blobs/43ca3242176cc3bea0e30a9a568322225c36f816",
+      "status": 403,
+      "reason": "GitHub unauthenticated shared rate limit; subsequent pinned raw URLs fetched with Scrapling. No token used.",
+      "observed_time": "2026-10-15T08:31Z (minute precision; converted from America/Denver acquisition log)",
+      "raw_capture": "Unavailable: urllib raised HTTPError before capture; failure retained from command output."
+    },
+    {
+      "tool": "web.open",
+      "url": "https://eprint.iacr.org/2020/1586.pdf",
+      "status": 403,
+      "reason": "PDF inaccessible; metadata/abstract and author slides only."
+    }
+  ],
+  "scope": {
+    "execution": "Only acquisition, decoding, text extraction and local artifact validation scripts ran. No project/model/Lean/build/native/proof/benchmark commands.",
+    "private_material": "No private Fenrir content queried, captured or sent online.",
+    "security": "All security work and judgments remain Opus-owned.",
+    "adoption": "Concept rebuilding proposed; no canonical wiki merge or architecture adoption.",
+    "site_patterns": "No credentials/cookies saved; existing GitHub raw/PDF site patterns sufficient. No skill files modified."
+  },
+  "measurement": {
+    "status": "specified-only, no empirical results",
+    "preservation": "Complete decoded StepRecord traces/outcomes/work/caps equal for eight independent frozen fixtures plus reused function IDs and pending tree-right traversal across uncached/cold/warm paths.",
+    "cost_planes": [
+      "program preparation",
+      "witness evaluation",
+      "bytes copied and streamed",
+      "peak live values/RSS",
+      "I/O",
+      "circuit rows/degree",
+      "proof/key bytes",
+      "native time/memory",
+      "DUST"
+    ],
+    "counterargument": "Additional IR and serialization may cost more than avoided traversal; compare independent components before adoption."
+  },
+  "figure_nomination": {
+    "primary_paper_url": "https://eprint.iacr.org/2020/1586.pdf",
+    "figure": "Figure1",
+    "pdf_page": 2,
+    "evidence": "Fresh indexed primary-paper caption; direct PDF403, page requires root visual confirmation.",
+    "fully_captured_primary_author_alternative": {
+      "url": "https://cs.stanford.edu/~aozdemir/docs/circ.pdf",
+      "page": 18,
+      "title": "CirC’s Architecture",
+      "local_path": "captures/circ-slides.pdf"
+    },
+    "question": "Which graph transformations can be rebuilt for witness scheduling while preserving Sherlock explicit step/work observations, and which require separately named constraint lowering?"
+  }
+}

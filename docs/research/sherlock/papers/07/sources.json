@@ -1,0 +1,912 @@
+{
+  "schema": "sherlock.academic-research.v1",
+  "lane": "07",
+  "topic": "lookup-oriented and decomposed instruction dispatch, readonly program-image preprocessing",
+  "status": "source-inspected / specified-only recommendation; no architecture adoption",
+  "baseline_freeze_sha256": "57d830f46fee57c56ed8b854d21f5dd7a695d2977d061b1ef6905eaecd7de30e",
+  "retrieved_date_utc": "2026-10-15",
+  "scope": "nonsecurity algorithms, representation, compiler architecture and cost accounting only",
+  "sources": [
+    {
+      "id": "S1",
+      "family": "jolt-lasso-research",
+      "independence_key": "jolt-lasso-author-lineage",
+      "title": "Jolt: SNARKs for Virtual Machines via Lookups",
+      "authors": [
+        "Arasu Arun",
+        "Srinath Setty",
+        "Justin Thaler"
+      ],
+      "publication_year": 2023,
+      "publication_date": "UNKNOWN exact revision date of author-hosted PDF",
+      "url": "https://people.cs.georgetown.edu/jthaler/Jolt-paper.pdf",
+      "canonical_identifier": "https://eprint.iacr.org/2023/1217",
+      "authority": "author-hosted primary research paper",
+      "freshness": "historical paper freshly retrieved; does not describe current HEAD",
+      "captures": [
+        "jolt-author-paper"
+      ],
+      "locators": [
+        {
+          "section": "3.2 Using Memory-Checking",
+          "claim": "program code/registers/RAM separated"
+        },
+        {
+          "section": "7.2 The case of Lasso",
+          "pdf_pages": [
+            28,
+            29,
+            30
+          ],
+          "claim": "grouped opcode execution versus uniform all-instruction construction and associated work distinction"
+        }
+      ],
+      "license": "UNKNOWN paper reuse license; concepts are independently rebuilt"
+    },
+    {
+      "id": "S2",
+      "family": "jolt-lasso-research",
+      "independence_key": "jolt-lasso-author-lineage",
+      "title": "Unlocking the lookup singularity with Lasso",
+      "authors": [
+        "Srinath Setty",
+        "Justin Thaler",
+        "Riad Wahby"
+      ],
+      "publication_year": 2023,
+      "publication_date": "UNKNOWN exact revision date of author-hosted PDF",
+      "url": "https://people.cs.georgetown.edu/jthaler/Lasso-paper.pdf",
+      "canonical_identifier": "https://eprint.iacr.org/2023/1216",
+      "authority": "author-hosted primary research paper",
+      "freshness": "historical paper freshly retrieved",
+      "captures": [
+        "lasso-author-paper"
+      ],
+      "locators": [
+        {
+          "section": "1.1 Technical contributions, item2",
+          "pdf_page": 4,
+          "claim": "decomposable SOS tables express entries using smaller subtables and a collation expression"
+        },
+        {
+          "section": "3 Technical overview",
+          "claim": "chunk/table-size versus query/collation work tradeoff"
+        }
+      ],
+      "license": "UNKNOWN paper reuse license",
+      "dependency_note": "companion to S1; not independent corroboration"
+    },
+    {
+      "id": "S3",
+      "family": "jolt-current-oss",
+      "independence_key": "jolt-lasso-author-lineage",
+      "title": "Jolt current source and official JoltBook architecture",
+      "publisher": "a16z crypto / a16z/jolt maintainers",
+      "url": "https://github.com/a16z/jolt",
+      "authority": "official project source, official architecture documentation",
+      "publication_date": "rolling repository/documentation; exact HEAD and retrieval timestamps retained",
+      "freshness": "fresh current default-branch HEAD capture",
+      "repository_id": "jolt",
+      "captures": [
+        "jolt-architecture",
+        "jolt-bytecode",
+        "jolt-lookups",
+        "jolt-repo",
+        "jolt-head",
+        "jolt-license",
+        "jolt-tree",
+        "jolt-source-crates--jolt-program--src--preprocess--bytecode.rs",
+        "jolt-source-crates--jolt-program--src--preprocess--program.rs",
+        "jolt-source-crates--jolt-program--src--preprocess--ram.rs",
+        "jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--add.rs",
+        "jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--mul.rs",
+        "jolt-source-crates--jolt-lookup-tables--src--tables--mod.rs",
+        "jolt-source-crates--jolt-lookup-tables--src--instructions--mod.rs",
+        "jolt-source-crates--jolt-riscv--src--instructions--m--divu.rs",
+        "jolt-source-crates--jolt-riscv--src--instructions--i--lb.rs",
+        "jolt-source-tracer--src--instruction--divu.rs"
+      ],
+      "locators": [
+        {
+          "path": "crates/jolt-program/src/preprocess/bytecode.rs",
+          "lines": [
+            23,
+            65,
+            108,
+            224
+          ],
+          "claim": "decoded readonly program image, padding, separate address/index mapping"
+        },
+        {
+          "path": "crates/jolt-program/src/preprocess/ram.rs",
+          "lines": [
+            40,
+            89
+          ],
+          "claim": "sort bytes and pack initialized words"
+        },
+        {
+          "path": "crates/jolt-lookup-tables/src/instructions/riscv/add.rs",
+          "lines": [
+            7,
+            30
+          ],
+          "claim": "lookup operands/index/output interfaces and wrapping word output"
+        },
+        {
+          "path": "crates/jolt-lookup-tables/src/tables/mod.rs",
+          "lines": [
+            1,
+            10
+          ],
+          "claim": "table entry and MLE interfaces; production XLEN64"
+        },
+        {
+          "path": "tracer/src/instruction/divu.rs",
+          "lines": [
+            34,
+            49
+          ],
+          "claim": "concrete virtual-sequence tracing with quotient advice; division semantics are outside Sherlock baseline, not proposed for adoption"
+        },
+        {
+          "url": "https://jolt.a16zcrypto.com/how/architecture/architecture.html",
+          "section": "components note",
+          "claim": "current Shout/Twist versus original Lasso/Spice distinction"
+        }
+      ],
+      "license": "Apache-2.0 repository root observation"
+    },
+    {
+      "id": "S4",
+      "family": "sp1-current-oss",
+      "independence_key": "succinctlabs-sp1",
+      "title": "SP1 core program, instruction chips and executor",
+      "publisher": "Succinct / succinctlabs/sp1 maintainers",
+      "url": "https://github.com/succinctlabs/sp1",
+      "authority": "official project source",
+      "publication_date": "rolling repository; exact HEAD retained",
+      "freshness": "fresh current default-branch HEAD capture",
+      "repository_id": "sp1",
+      "captures": [
+        "sp1-repo",
+        "sp1-head",
+        "sp1-license",
+        "sp1-tree",
+        "sp1-source-crates--core--machine--src--riscv--mod.rs",
+        "sp1-source-crates--core--machine--src--program--mod.rs",
+        "sp1-source-crates--core--machine--src--program--instruction_fetch.rs",
+        "sp1-source-crates--core--machine--src--program--instruction_decode.rs",
+        "sp1-source-crates--core--machine--src--alu--add_sub--add.rs",
+        "sp1-source-crates--core--executor--src--instruction.rs",
+        "sp1-source-crates--core--executor--src--program.rs",
+        "sp1-source-crates--core--machine--src--memory--consistency--trace.rs",
+        "sp1-source-crates--core--machine--src--program--trusted.rs"
+      ],
+      "locators": [
+        {
+          "path": "crates/core/machine/src/riscv/mod.rs",
+          "lines": [
+            98,
+            104
+          ],
+          "claim": "program/fetch/decode partition in concrete machine enum"
+        },
+        {
+          "path": "crates/core/machine/src/program/trusted.rs",
+          "lines": [
+            25,
+            34,
+            80,
+            130,
+            134,
+            290
+          ],
+          "claim": "program static rows versus dynamic opcode-event multiplicity accumulation"
+        },
+        {
+          "path": "crates/core/machine/src/alu/add_sub/add.rs",
+          "lines": [
+            164,
+            171
+          ],
+          "claim": "shape override or nonempty-event Add inclusion"
+        },
+        {
+          "path": "crates/core/executor/src/program.rs",
+          "lines": [
+            35,
+            60
+          ],
+          "claim": "instructions, initial memory image, preprocessing shape"
+        },
+        {
+          "path": "crates/core/machine/src/memory/consistency/trace.rs",
+          "lines": [
+            9,
+            35
+          ],
+          "claim": "memory/register access population distinct from static program rows"
+        }
+      ],
+      "license": "Apache-2.0 repository root observation"
+    }
+  ],
+  "repositories": [
+    {
+      "id": "jolt",
+      "remote_url": "https://github.com/a16z/jolt.git",
+      "canonical_url": "https://github.com/a16z/jolt",
+      "default_branch": "main",
+      "full_current_head": "8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "head_commit_timestamp": "2026-10-14T20:41:19Z",
+      "license_spdx_observation": "Apache-2.0",
+      "license_path": "LICENSE-APACHE",
+      "license_scope": "repository root license observation only; no code copied into Sherlock",
+      "head_capture": "jolt-head",
+      "license_capture": "jolt-license",
+      "tree_capture": "jolt-tree",
+      "tree_truncated": false
+    },
+    {
+      "id": "sp1",
+      "remote_url": "https://github.com/succinctlabs/sp1.git",
+      "canonical_url": "https://github.com/succinctlabs/sp1",
+      "default_branch": "main",
+      "full_current_head": "02fa30185ecd658174b211d56128b14867ab8e81",
+      "head_commit_timestamp": "2026-10-13T19:14:49Z",
+      "license_spdx_observation": "Apache-2.0",
+      "license_path": "LICENSE-APACHE",
+      "license_scope": "repository root license observation only; no code copied into Sherlock",
+      "head_capture": "sp1-head",
+      "license_capture": "sp1-license",
+      "tree_capture": "sp1-tree",
+      "tree_truncated": false
+    }
+  ],
+  "capture_receipts": [
+    {
+      "id": "jolt-paper",
+      "requested_url": "https://eprint.iacr.org/2023/1217.pdf",
+      "canonical_url": "https://eprint.iacr.org/2023/1217.pdf",
+      "retrieved_at": "2026-10-15T08:33:45.772630+00:00",
+      "http_status": 403,
+      "method": "scrapling",
+      "raw_path": "captures/jolt-paper.html",
+      "raw_sha256": "2267bc928faaec2d0dc0354340b7fdabfd943a61e858b0802228babebadda2e5",
+      "extracted_path": "captures/jolt-paper.txt",
+      "extracted_sha256": "05f8bdf19ca64ec98ac31c13061fb810966197580390f0688c67e092c21b5a3f",
+      "raw_bytes": 6009,
+      "extracted_bytes": 58
+    },
+    {
+      "id": "lasso-paper",
+      "requested_url": "https://eprint.iacr.org/2023/1216.pdf",
+      "canonical_url": "https://eprint.iacr.org/2023/1216.pdf",
+      "retrieved_at": "2026-10-15T08:33:47.080378+00:00",
+      "http_status": 403,
+      "method": "scrapling",
+      "raw_path": "captures/lasso-paper.html",
+      "raw_sha256": "6f183f7ac6d8bc98d97d2119d5d8d95725e4aad98483a67635ddf47f911f335a",
+      "extracted_path": "captures/lasso-paper.txt",
+      "extracted_sha256": "05f8bdf19ca64ec98ac31c13061fb810966197580390f0688c67e092c21b5a3f",
+      "raw_bytes": 6031,
+      "extracted_bytes": 58
+    },
+    {
+      "id": "jolt-architecture",
+      "requested_url": "https://jolt.a16zcrypto.com/how/architecture/architecture.html",
+      "canonical_url": "https://jolt.a16zcrypto.com/how/architecture/architecture.html",
+      "retrieved_at": "2026-10-15T08:33:48.424147+00:00",
+      "http_status": 200,
+      "method": "scrapling",
+      "raw_path": "captures/jolt-architecture.html",
+      "raw_sha256": "7f3bd84d6a2ccf0b0c7afef1114ecb7e5fa14104f3884acd9b8ab5daa6cf3369",
+      "extracted_path": "captures/jolt-architecture.txt",
+      "extracted_sha256": "646f1a3fc165ec2a94b1670a50112a7eed7afdcf12992b4c6863222e5386a227",
+      "raw_bytes": 39183,
+      "extracted_bytes": 7935
+    },
+    {
+      "id": "jolt-bytecode",
+      "requested_url": "https://jolt.a16zcrypto.com/how/architecture/bytecode.html",
+      "canonical_url": "https://jolt.a16zcrypto.com/how/architecture/bytecode.html",
+      "retrieved_at": "2026-10-15T08:33:49.988919+00:00",
+      "http_status": 200,
+      "method": "scrapling",
+      "raw_path": "captures/jolt-bytecode.html",
+      "raw_sha256": "5fa8debcf3652ca7a6260f7720b779ec37c03356fc35e2c91f394d79d5ad1cdd",
+      "extracted_path": "captures/jolt-bytecode.txt",
+      "extracted_sha256": "212e5d14045b09a6ca0ce0332a6de8301aa37863209fcf75206a56be17e50841",
+      "raw_bytes": 185487,
+      "extracted_bytes": 10931
+    },
+    {
+      "id": "jolt-lookups",
+      "requested_url": "https://jolt.a16zcrypto.com/how/architecture/instruction_execution.html",
+      "canonical_url": "https://jolt.a16zcrypto.com/how/architecture/instruction_execution.html",
+      "retrieved_at": "2026-10-15T08:33:51.331830+00:00",
+      "http_status": 200,
+      "method": "scrapling",
+      "raw_path": "captures/jolt-lookups.html",
+      "raw_sha256": "1b16dc7c57c950ae0e10be6bf9832e1f7f1e4394ca9d0f20bfa81473ef3207d1",
+      "extracted_path": "captures/jolt-lookups.txt",
+      "extracted_sha256": "0de4ed52f20d82229f13de5d3c2e39a9154d2f0650b60f2a53db09d3e40f1c9c",
+      "raw_bytes": 364407,
+      "extracted_bytes": 15017
+    },
+    {
+      "id": "jolt-repo",
+      "requested_url": "https://api.github.com/repos/a16z/jolt",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt",
+      "retrieved_at": "2026-10-15T08:33:52.807906+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-repo.json",
+      "raw_sha256": "2037e3c58c03d19d48631087bde9b90f286df904770704142fcdc936329cde09",
+      "extracted_path": "captures/jolt-repo.txt",
+      "extracted_sha256": "2037e3c58c03d19d48631087bde9b90f286df904770704142fcdc936329cde09",
+      "raw_bytes": 5890,
+      "extracted_bytes": 5890
+    },
+    {
+      "id": "jolt-head",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/commits/main",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/commits/main",
+      "retrieved_at": "2026-10-15T08:33:53.351658+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-head.json",
+      "raw_sha256": "1813f793e6af698e7d5a50d2e507b9fa1b0f41caec4b3fd255e6e4a39468f009",
+      "extracted_path": "captures/jolt-head.txt",
+      "extracted_sha256": "1813f793e6af698e7d5a50d2e507b9fa1b0f41caec4b3fd255e6e4a39468f009",
+      "raw_bytes": 341552,
+      "extracted_bytes": 341552
+    },
+    {
+      "id": "jolt-license",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/license",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/license",
+      "retrieved_at": "2026-10-15T08:33:54.220420+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-license.json",
+      "raw_sha256": "004956437349b1399b57d8bbea88d38144eefaf97ee3f257fe98fcf28d73f8af",
+      "extracted_path": "captures/jolt-license.txt",
+      "extracted_sha256": "004956437349b1399b57d8bbea88d38144eefaf97ee3f257fe98fcf28d73f8af",
+      "raw_bytes": 15817,
+      "extracted_bytes": 15817,
+      "decoded_license_sha256": "64c2c3bffa37ff79fc724150c9015a974369cea4c63e25b0b1f41c389ab646a7"
+    },
+    {
+      "id": "jolt-tree",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/git/trees/8bbb2357890928d8f83b00ca542879077c4d3d28?recursive=1",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/git/trees/8bbb2357890928d8f83b00ca542879077c4d3d28?recursive=1",
+      "retrieved_at": "2026-10-15T08:33:54.863636+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-tree.json",
+      "raw_sha256": "bb0d31909b401162efcbfc28958c7287e6b3f0f7885fcfbf0e23f918278f0576",
+      "extracted_path": "captures/jolt-tree.txt",
+      "extracted_sha256": "bb0d31909b401162efcbfc28958c7287e6b3f0f7885fcfbf0e23f918278f0576",
+      "raw_bytes": 697803,
+      "extracted_bytes": 697803
+    },
+    {
+      "id": "sp1-repo",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1",
+      "retrieved_at": "2026-10-15T08:33:55.808380+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-repo.json",
+      "raw_sha256": "be26a60131dc4f8b0483b2bd6a79ebf62ef0be3ea73f785297c417d80a38add4",
+      "extracted_path": "captures/sp1-repo.txt",
+      "extracted_sha256": "be26a60131dc4f8b0483b2bd6a79ebf62ef0be3ea73f785297c417d80a38add4",
+      "raw_bytes": 6409,
+      "extracted_bytes": 6409
+    },
+    {
+      "id": "sp1-head",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/commits/main",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/commits/main",
+      "retrieved_at": "2026-10-15T08:33:56.426730+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-head.json",
+      "raw_sha256": "31d18e6cb9be6ba7cc00be349cfda26176a5119e74d4e9ae9d9b0a902cd8fbd3",
+      "extracted_path": "captures/sp1-head.txt",
+      "extracted_sha256": "31d18e6cb9be6ba7cc00be349cfda26176a5119e74d4e9ae9d9b0a902cd8fbd3",
+      "raw_bytes": 8200,
+      "extracted_bytes": 8200
+    },
+    {
+      "id": "sp1-license",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/license",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/license",
+      "retrieved_at": "2026-10-15T08:33:57.010677+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-license.json",
+      "raw_sha256": "c723c05ba0e7788ac1b5a5bd5b5da3849bdf9bd843e45f80841d0ff83a251df9",
+      "extracted_path": "captures/sp1-license.txt",
+      "extracted_sha256": "c723c05ba0e7788ac1b5a5bd5b5da3849bdf9bd843e45f80841d0ff83a251df9",
+      "raw_bytes": 15878,
+      "extracted_bytes": 15878,
+      "decoded_license_sha256": "50e1c4e4124097b9afed83212b74e73248d74776c3a2b3a6ae9c320e7adb2062"
+    },
+    {
+      "id": "sp1-tree",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/git/trees/02fa30185ecd658174b211d56128b14867ab8e81?recursive=1",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/git/trees/02fa30185ecd658174b211d56128b14867ab8e81?recursive=1",
+      "retrieved_at": "2026-10-15T08:33:57.679344+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-tree.json",
+      "raw_sha256": "34318645c06698475d3370eb96c9b4651542528225a681f23a84ba52be5bafa6",
+      "extracted_path": "captures/sp1-tree.txt",
+      "extracted_sha256": "34318645c06698475d3370eb96c9b4651542528225a681f23a84ba52be5bafa6",
+      "raw_bytes": 740152,
+      "extracted_bytes": 740152
+    },
+    {
+      "id": "jolt-author-paper",
+      "requested_url": "https://people.cs.georgetown.edu/jthaler/Jolt-paper.pdf",
+      "canonical_url": "https://people.cs.georgetown.edu/jthaler/Jolt-paper.pdf",
+      "retrieved_at": "2026-10-15T08:34:34.890868+00:00",
+      "http_status": 200,
+      "method": "scrapling",
+      "raw_path": "captures/jolt-author-paper.pdf",
+      "raw_sha256": "176b8759c5490d823e99f47d5e64bb76f973eedb03480fff8afdb2dda249a63e",
+      "extracted_path": "captures/jolt-author-paper.txt",
+      "extracted_sha256": "84325fa95648fff0f18444e7dc2641eebe04d70af85a055c255be4a07280900e",
+      "raw_bytes": 852117,
+      "extracted_bytes": 170995
+    },
+    {
+      "id": "lasso-author-paper",
+      "requested_url": "https://people.cs.georgetown.edu/jthaler/Lasso-paper.pdf",
+      "canonical_url": "https://people.cs.georgetown.edu/jthaler/Lasso-paper.pdf",
+      "retrieved_at": "2026-10-15T08:34:35.944478+00:00",
+      "http_status": 200,
+      "method": "scrapling",
+      "raw_path": "captures/lasso-author-paper.pdf",
+      "raw_sha256": "c4a6d7d8650d4706d221b400f6d34dbd8aeff69ffeaed34e809536ffd6e563ae",
+      "extracted_path": "captures/lasso-author-paper.txt",
+      "extracted_sha256": "db927c980db10e9049554970e57f053751b1761b6a3776c9fa674008d7a4237c",
+      "raw_bytes": 859439,
+      "extracted_bytes": 262380
+    },
+    {
+      "id": "jolt-source-crates--jolt-program--src--preprocess--bytecode.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/bytecode.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/bytecode.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:34:36.827403+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-program--src--preprocess--bytecode.rs.json",
+      "raw_sha256": "fa6419f343aa7bb5de97e11b0981519962afd39084544bf04607a75c6aba37a8",
+      "extracted_path": "captures/jolt-source-crates--jolt-program--src--preprocess--bytecode.rs.txt",
+      "extracted_sha256": "fa6419f343aa7bb5de97e11b0981519962afd39084544bf04607a75c6aba37a8",
+      "raw_bytes": 27606,
+      "extracted_bytes": 27606,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-program--src--preprocess--bytecode.rs.rs",
+      "decoded_source_sha256": "24d3c85634dab205267afdaa61480d565c9bd59efad2196d8bee1f7e9c30cedf",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-program--src--preprocess--program.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/program.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/program.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:34:37.481118+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-program--src--preprocess--program.rs.json",
+      "raw_sha256": "6ef2c9ee8325b19e8163ba2adb7d8343e05ecd2fc36d766068747f49b3ee0ff8",
+      "extracted_path": "captures/jolt-source-crates--jolt-program--src--preprocess--program.rs.txt",
+      "extracted_sha256": "6ef2c9ee8325b19e8163ba2adb7d8343e05ecd2fc36d766068747f49b3ee0ff8",
+      "raw_bytes": 3906,
+      "extracted_bytes": 3906,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-program--src--preprocess--program.rs.rs",
+      "decoded_source_sha256": "75498951216bcc2ec09912cd53e3e86f29a389dce7dc66a16247237d2772a895",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-program--src--preprocess--ram.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/ram.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-program/src/preprocess/ram.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:34:38.124675+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-program--src--preprocess--ram.rs.json",
+      "raw_sha256": "465e11166915150afa84f631c510dac56b10df16453591b7fc7ff047403780ed",
+      "extracted_path": "captures/jolt-source-crates--jolt-program--src--preprocess--ram.rs.txt",
+      "extracted_sha256": "465e11166915150afa84f631c510dac56b10df16453591b7fc7ff047403780ed",
+      "raw_bytes": 15645,
+      "extracted_bytes": 15645,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-program--src--preprocess--ram.rs.rs",
+      "decoded_source_sha256": "c868ffef98186086aa2daf801a3220a6e926a8774bee7f576fad03e10e2c5c82",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--riscv--mod.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/riscv/mod.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/riscv/mod.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:38.752805+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--riscv--mod.rs.json",
+      "raw_sha256": "520a1fb0afd4c21f1121248796bb2398eed7810f956a876e83a4419677461a11",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--riscv--mod.rs.txt",
+      "extracted_sha256": "520a1fb0afd4c21f1121248796bb2398eed7810f956a876e83a4419677461a11",
+      "raw_bytes": 151879,
+      "extracted_bytes": 151879,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--riscv--mod.rs.rs",
+      "decoded_source_sha256": "b6b3cc360bd3817f569340e9e0ccb5c1fab366986770107b89abe7c8e87815aa",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--program--mod.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/mod.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/mod.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:39.513007+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--program--mod.rs.json",
+      "raw_sha256": "692a01f93068fb87795b093a5bf391f452dd192b0bf01bacee0b0004600b96f8",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--program--mod.rs.txt",
+      "extracted_sha256": "692a01f93068fb87795b093a5bf391f452dd192b0bf01bacee0b0004600b96f8",
+      "raw_bytes": 1378,
+      "extracted_bytes": 1378,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--program--mod.rs.rs",
+      "decoded_source_sha256": "aeea05d947f9ab5297e7425a3dba7ece55da076f214a546e1e60c3877f61aacc",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--program--instruction_fetch.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/instruction_fetch.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/instruction_fetch.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:40.125183+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--program--instruction_fetch.rs.json",
+      "raw_sha256": "f49560169faf5c6e268dfaa0bdb83e328914fdba946218ee7d1a2df1362afa99",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--program--instruction_fetch.rs.txt",
+      "extracted_sha256": "f49560169faf5c6e268dfaa0bdb83e328914fdba946218ee7d1a2df1362afa99",
+      "raw_bytes": 19602,
+      "extracted_bytes": 19602,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--program--instruction_fetch.rs.rs",
+      "decoded_source_sha256": "48fb3fe9ab18fc529dda1ca1c8476e4c3159ca003ddfc3312732f4d000d6099d",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--program--instruction_decode.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/instruction_decode.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/instruction_decode.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:40.740356+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--program--instruction_decode.rs.json",
+      "raw_sha256": "7fef898ca64338615887f6fa26401af6e808f2fce347a3b1543c47d0c10bbc21",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--program--instruction_decode.rs.txt",
+      "extracted_sha256": "7fef898ca64338615887f6fa26401af6e808f2fce347a3b1543c47d0c10bbc21",
+      "raw_bytes": 36117,
+      "extracted_bytes": 36117,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--program--instruction_decode.rs.rs",
+      "decoded_source_sha256": "2212efb837992798d261e594ed0c8f120ba2f59352d5f5af97ea9163c0d6b5cf",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--alu--add_sub--add.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/alu/add_sub/add.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/alu/add_sub/add.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:41.385051+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--alu--add_sub--add.rs.json",
+      "raw_sha256": "9bca032226197756eaceb65547cad117ccfa58cce43a56631c65b1a55e139cd8",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--alu--add_sub--add.rs.txt",
+      "extracted_sha256": "9bca032226197756eaceb65547cad117ccfa58cce43a56631c65b1a55e139cd8",
+      "raw_bytes": 14899,
+      "extracted_bytes": 14899,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--alu--add_sub--add.rs.rs",
+      "decoded_source_sha256": "4671d6a4990f6c942a128cb54bee3737c08bef61f22383078ef6df1514b4d425",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--executor--src--instruction.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/executor/src/instruction.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/executor/src/instruction.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:42.060759+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--executor--src--instruction.rs.json",
+      "raw_sha256": "d94d335a8934d04794e2a6f9c059da01e43b839717df5d4922d3011a401d1e5b",
+      "extracted_path": "captures/sp1-source-crates--core--executor--src--instruction.rs.txt",
+      "extracted_sha256": "d94d335a8934d04794e2a6f9c059da01e43b839717df5d4922d3011a401d1e5b",
+      "raw_bytes": 26388,
+      "extracted_bytes": 26388,
+      "decoded_source_path": "captures/sp1-source-crates--core--executor--src--instruction.rs.rs",
+      "decoded_source_sha256": "70bbfc86b7949c8d9208c7735527ce0c6c288341c83a293262a8ea8b0d5d7e00",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--executor--src--program.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/executor/src/program.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/executor/src/program.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:42.633493+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--executor--src--program.rs.json",
+      "raw_sha256": "5ff620ffc9aced97a7f0eb64822e321b75924536aa036f392e42659181452199",
+      "extracted_path": "captures/sp1-source-crates--core--executor--src--program.rs.txt",
+      "extracted_sha256": "5ff620ffc9aced97a7f0eb64822e321b75924536aa036f392e42659181452199",
+      "raw_bytes": 14373,
+      "extracted_bytes": 14373,
+      "decoded_source_path": "captures/sp1-source-crates--core--executor--src--program.rs.rs",
+      "decoded_source_sha256": "7b904bdcc199bf27d91243a431a55f88e22811db5d7a9f9db0deeda74b7effc8",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--memory--consistency--trace.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/memory/consistency/trace.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/memory/consistency/trace.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:34:43.249496+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--memory--consistency--trace.rs.json",
+      "raw_sha256": "7496346fd92b36c4532af07f91ef14a05976e4bfe822f4e5ac53321831ec40bc",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--memory--consistency--trace.rs.txt",
+      "extracted_sha256": "7496346fd92b36c4532af07f91ef14a05976e4bfe822f4e5ac53321831ec40bc",
+      "raw_bytes": 7819,
+      "extracted_bytes": 7819,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--memory--consistency--trace.rs.rs",
+      "decoded_source_sha256": "b611f8817c5b67ca077112c372d048f315958dfb63f1f448b4b04d1660ab730e",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--add.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/riscv/add.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/riscv/add.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:18.764283+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--add.rs.json",
+      "raw_sha256": "582c3d8d25bd91b6f972015d0cde5f0b8fc41632731141d0658c4b54ebd9c230",
+      "extracted_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--add.rs.txt",
+      "extracted_sha256": "582c3d8d25bd91b6f972015d0cde5f0b8fc41632731141d0658c4b54ebd9c230",
+      "raw_bytes": 3354,
+      "extracted_bytes": 3354,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--add.rs.rs",
+      "decoded_source_sha256": "81fd92d1c349439ce3a93973f5463afdbdafcc507ae06f4c7409bac14d684599",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--mul.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/riscv/mul.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/riscv/mul.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:19.451444+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--mul.rs.json",
+      "raw_sha256": "06cbed39326911ea579467c77ae4240c1e836b95e9d876630f2cd3ebcdce7e91",
+      "extracted_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--mul.rs.txt",
+      "extracted_sha256": "06cbed39326911ea579467c77ae4240c1e836b95e9d876630f2cd3ebcdce7e91",
+      "raw_bytes": 3354,
+      "extracted_bytes": 3354,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--riscv--mul.rs.rs",
+      "decoded_source_sha256": "48ed4fe2d995c1c8163b5f1db590d7414ca36dece6b7a34d535ff7fe0eff1ca1",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-lookup-tables--src--tables--mod.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/tables/mod.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/tables/mod.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:20.081616+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-lookup-tables--src--tables--mod.rs.json",
+      "raw_sha256": "6c4a63d407591f9f0ff4d4f64e8a042ad3464242a4b0e0f508e9dbeb81a3bd23",
+      "extracted_path": "captures/jolt-source-crates--jolt-lookup-tables--src--tables--mod.rs.txt",
+      "extracted_sha256": "6c4a63d407591f9f0ff4d4f64e8a042ad3464242a4b0e0f508e9dbeb81a3bd23",
+      "raw_bytes": 20713,
+      "extracted_bytes": 20713,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-lookup-tables--src--tables--mod.rs.rs",
+      "decoded_source_sha256": "ac76716aea2da48646df5adf468345a6fcd3eed7c3a9b0cb689fc790eeaf831c",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-lookup-tables--src--instructions--mod.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/mod.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-lookup-tables/src/instructions/mod.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:20.773388+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--mod.rs.json",
+      "raw_sha256": "1161a393bb5a62fe634ca90e58884aec2e2d45536827cbd7b2f215defad5c965",
+      "extracted_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--mod.rs.txt",
+      "extracted_sha256": "1161a393bb5a62fe634ca90e58884aec2e2d45536827cbd7b2f215defad5c965",
+      "raw_bytes": 1279,
+      "extracted_bytes": 1279,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-lookup-tables--src--instructions--mod.rs.rs",
+      "decoded_source_sha256": "e5785676e74cad86ca4fb91d489918c3f47e8370bf8f3e7f9967287469c8421e",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-riscv--src--instructions--m--divu.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-riscv/src/instructions/m/divu.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-riscv/src/instructions/m/divu.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:21.478122+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--m--divu.rs.json",
+      "raw_sha256": "37506a25c7cc71a582cabb9a0b70c49f3b72e678c361aa55b8532f86eaf9a2f9",
+      "extracted_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--m--divu.rs.txt",
+      "extracted_sha256": "37506a25c7cc71a582cabb9a0b70c49f3b72e678c361aa55b8532f86eaf9a2f9",
+      "raw_bytes": 1420,
+      "extracted_bytes": 1420,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--m--divu.rs.rs",
+      "decoded_source_sha256": "68d8cb850d2d8452aec9e955de55eec6f7eb49096ca961ece389cacafdbf49e4",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-crates--jolt-riscv--src--instructions--i--lb.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-riscv/src/instructions/i/lb.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/crates/jolt-riscv/src/instructions/i/lb.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:22.197706+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--i--lb.rs.json",
+      "raw_sha256": "73ac71fea1a10a200f1b9f70bb8704ea2a1c29fd3f103df07268557ff8799d98",
+      "extracted_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--i--lb.rs.txt",
+      "extracted_sha256": "73ac71fea1a10a200f1b9f70bb8704ea2a1c29fd3f103df07268557ff8799d98",
+      "raw_bytes": 1310,
+      "extracted_bytes": 1310,
+      "decoded_source_path": "captures/jolt-source-crates--jolt-riscv--src--instructions--i--lb.rs.rs",
+      "decoded_source_sha256": "7bdf95365757c40fd12f3280a4f594b2c6375f8deac4598724dbce4c4a4c974b",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "sp1-source-crates--core--machine--src--program--trusted.rs",
+      "requested_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/trusted.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "canonical_url": "https://api.github.com/repos/succinctlabs/sp1/contents/crates/core/machine/src/program/trusted.rs?ref=02fa30185ecd658174b211d56128b14867ab8e81",
+      "retrieved_at": "2026-10-15T08:35:32.007415+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/sp1-source-crates--core--machine--src--program--trusted.rs.json",
+      "raw_sha256": "f42991405da0c8a43fe3710d82f474a057a6071275a570dda7442c82a177fed2",
+      "extracted_path": "captures/sp1-source-crates--core--machine--src--program--trusted.rs.txt",
+      "extracted_sha256": "f42991405da0c8a43fe3710d82f474a057a6071275a570dda7442c82a177fed2",
+      "raw_bytes": 20422,
+      "extracted_bytes": 20422,
+      "decoded_source_path": "captures/sp1-source-crates--core--machine--src--program--trusted.rs.rs",
+      "decoded_source_sha256": "e183fe36843884151cbb77c950890de8b61d085be871309a3da6335ff445bfaf",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    },
+    {
+      "id": "jolt-source-tracer--src--instruction--divu.rs",
+      "requested_url": "https://api.github.com/repos/a16z/jolt/contents/tracer/src/instruction/divu.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "canonical_url": "https://api.github.com/repos/a16z/jolt/contents/tracer/src/instruction/divu.rs?ref=8bbb2357890928d8f83b00ca542879077c4d3d28",
+      "retrieved_at": "2026-10-15T08:35:48.516334+00:00",
+      "http_status": 200,
+      "method": "github-api",
+      "raw_path": "captures/jolt-source-tracer--src--instruction--divu.rs.json",
+      "raw_sha256": "a2ee82ddb58801c217fcc60ee9054c28ed7679b1b0b3e0b7d5934d7a13094edf",
+      "extracted_path": "captures/jolt-source-tracer--src--instruction--divu.rs.txt",
+      "extracted_sha256": "a2ee82ddb58801c217fcc60ee9054c28ed7679b1b0b3e0b7d5934d7a13094edf",
+      "raw_bytes": 2915,
+      "extracted_bytes": 2915,
+      "decoded_source_path": "captures/jolt-source-tracer--src--instruction--divu.rs.rs",
+      "decoded_source_sha256": "91bc101f33e7d5b787815d9f6e62964e27bf216965835b7272097761428aeef8",
+      "decoded_source_encoding": "GitHub content API base64 decoded, unchanged bytes"
+    }
+  ],
+  "failures": [
+    {
+      "capture_id": "jolt-paper",
+      "requested_url": "https://eprint.iacr.org/2023/1217.pdf",
+      "http_status": 403,
+      "error": null,
+      "disposition": "retained failure; author-hosted primary PDF succeeded without bypass"
+    },
+    {
+      "capture_id": "lasso-paper",
+      "requested_url": "https://eprint.iacr.org/2023/1216.pdf",
+      "http_status": 403,
+      "error": null,
+      "disposition": "retained failure; author-hosted primary PDF succeeded without bypass"
+    }
+  ],
+  "old_new_source_distinction": "No old local captures reused. Original 2023 paper designs were fetched anew. Current repository observations are separately pinned and current Jolt is not labeled Lasso implementation. Jolt paper, companion Lasso paper and Jolt OSS are related evidence, not three independent confirmations. SP1 is the second implementation lineage.",
+  "research_budget": {
+    "material_primary_records": 4,
+    "independent_implementation_lineages": 2,
+    "search_rounds": 2,
+    "acquisition_scope": "bounded primary papers plus exact source/metadata subresources of two repositories; stopped after image/scalar/dispatch alternatives had concrete locators"
+  },
+  "recommendations": [
+    {
+      "id": "R1",
+      "optimization_ids": [
+        "02",
+        "07"
+      ],
+      "uireq": [
+        "001",
+        "004",
+        "005",
+        "012",
+        "013",
+        "022",
+        "024"
+      ],
+      "concept_priority": "P1",
+      "idea": "independently rebuilt immutable predecoded image with explicit original/expanded row identities",
+      "evidence": [
+        "S1",
+        "S3",
+        "S4"
+      ]
+    },
+    {
+      "id": "R2",
+      "optimization_ids": [
+        "05"
+      ],
+      "uireq": [
+        "006",
+        "023",
+        "024",
+        "026"
+      ],
+      "concept_priority": "P1",
+      "implementation_comparison_priority": "P2",
+      "idea": "bounded scalar entry/collate interfaces and checked UInt128 limb decomposition",
+      "evidence": [
+        "S1",
+        "S2",
+        "S3"
+      ]
+    },
+    {
+      "id": "R3",
+      "optimization_ids": [
+        "05",
+        "07"
+      ],
+      "uireq": [
+        "010",
+        "013",
+        "023",
+        "026"
+      ],
+      "concept_priority": "P1 interface",
+      "implementation_comparison_priority": "P2",
+      "idea": "opcode-class event partitions with ordered logical trace retained",
+      "evidence": [
+        "S1",
+        "S4"
+      ]
+    }
+  ],
+  "measurement_status": "specified-only; all Sherlock physical-cost values unknown",
+  "compatibility_limits": [
+    "No claim of lookup-native Midnight compatibility",
+    "Clean bounded representation and actual lowering remain new work",
+    "Original RISC-V wrapping arithmetic is not checked UInt128",
+    "No foreign proof-system port",
+    "Financial suspension/effects remain absent from current pure reference"
+  ],
+  "pixelrag_nomination": {
+    "primary_page": "https://jolt.a16zcrypto.com/how/architecture/bytecode.html",
+    "actual_image_url": "https://jolt.a16zcrypto.com/imgs/bytecode.png",
+    "purpose": "Explain readonly decoded code tuple and distinguish original instruction address from expanded bytecode index",
+    "status": "root-shared visual research requested; lane captured embedding page only"
+  },
+  "scrapling": {
+    "installed_version": "0.4.15",
+    "used": "Fetcher.get for actual primary paper and official documentation captures; selected main/article extraction; PDF saved from response body then pdftotext -layout",
+    "new_cookie_or_site_pattern": "No cookies retained, no authentication or bypass. Existing academic-PDF/static-documentation pattern sufficed; no skill files changed."
+  },
+  "prohibited_execution": "No project execution, models, Lean, builds, native checks, proofs, benchmarks, private Fenrir queries, content access or writes outside lane."
+}

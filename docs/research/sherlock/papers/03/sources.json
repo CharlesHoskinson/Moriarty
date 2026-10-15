@@ -1,0 +1,520 @@
+{
+  "schema": "sherlock.academic-project-research.v1",
+  "lane": "03",
+  "topic": "Resource-preserving compiler optimization and physical stack/cost accounting",
+  "status": "specified-only; public source acquisition and static inspection",
+  "candidate_freeze_sha256": "57d830f46fee57c56ed8b854d21f5dd7a695d2977d061b1ef6905eaecd7de30e",
+  "generated_at": "2026-10-15T08:25:16.922754+00:00",
+  "skills": [
+    "moriarty-dev:develop",
+    "claude-obsidian:autoresearch",
+    "scrapling"
+  ],
+  "startup": {
+    "checkout": "isolated Moriarty design checkout",
+    "status_command": "python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json",
+    "result": "exit0; historical queue ignored",
+    "wiki_query": "wiki/index.md and source/claim ledger keyword query; no CakeML/CerCo/CompCert hit reported"
+  },
+  "budget": {
+    "search_rounds": 2,
+    "maximum_rounds": 3,
+    "material_source_families": 4,
+    "scrapling_fetches": 15,
+    "maximum_fetches": 15,
+    "rounds": "Two search rounds; 15 sequential Scrapling requests total, supporting four material sources. Acquisition included repository metadata and selected code; all requests succeeded. No additional requests planned.",
+    "stop_reason": "Supported precise design recommendations and counterargument; no additional source needed"
+  },
+  "privacy": "Only public URLs and public project names were sent externally. No private integration content/paths queried.",
+  "baseline_context": [
+    {
+      "path": "../../spec-package/model-coverage.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../spec-package/design.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../spec-package/clean-stage.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../spec-package/specs/universal-interpreter/spec.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../optimization/01/proposal.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../optimization/04/proposal.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../optimization/06/proposal.md",
+      "class": "old local context"
+    },
+    {
+      "path": "../../optimization/09/proposal.md",
+      "class": "old local context"
+    }
+  ],
+  "sources": [
+    {
+      "id": "S1",
+      "title": "Do you have space for dessert? A verified space cost semantics for CakeML programs",
+      "authors": [
+        "Alejandro Gómez-Londoño",
+        "Johannes Åman Pohjola",
+        "Hira Taqdees Syeda",
+        "Magnus O. Myreen",
+        "Yong Kiam Tan"
+      ],
+      "publication": "Proceedings of the ACM on Programming Languages 4, OOPSLA, article204",
+      "publication_date": "2020-11",
+      "doi": "10.1145/3428272",
+      "authority": "primary",
+      "independence_key": "cakeml-space-2020",
+      "freshness": "Fresh online acquisition of historical research",
+      "urls": [
+        "https://cakeml.org/oopsla20.pdf",
+        "https://cakeml.org/projects.html"
+      ],
+      "captures": [
+        "cake-projects",
+        "cake-space-paper"
+      ],
+      "coverage": "Full 29-page PDF captured/extracted; closely inspected sections2.3–2.5,3.3,5–5.1; no whole-paper close-read claim",
+      "locators": [
+        "PDF pp4–5: DataLang and clock",
+        "PDF pp16–18: physical stack frames, helper calls and tail-call caveats"
+      ],
+      "license": "Paper rights not independently inspected; no code reuse from PDF",
+      "supports": [
+        "Physical post-optimization space model distinct from source fuel",
+        "Physical frame sizes need later lowering/register allocation information"
+      ],
+      "limitations": [
+        "Own compiler/runtime configuration; no Sherlock or circuit measurements"
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "CakeML compiler source",
+      "publisher": "CakeML contributors",
+      "publication_date": null,
+      "authority": "official",
+      "independence_key": "cakeml-space-2020",
+      "freshness": "Fresh current default-branch commit pinned",
+      "repository": {
+        "url": "https://github.com/CakeML/cakeml",
+        "default_branch": "master",
+        "commit": "5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+        "license": "BSD-3-Clause",
+        "license_path": "LICENSE",
+        "license_capture": "captures/cakeml-LICENSE.txt"
+      },
+      "captures": [
+        "cakeml-repo",
+        "cakeml-commit",
+        "cakeml-license",
+        "cakeml-tree",
+        "cake-data-sem",
+        "cake-word-to-stack"
+      ],
+      "coverage": "Static inspection of selected source definitions only; no project execution",
+      "locators": [
+        "compiler/backend/word_to_stackScript.sml:594–622 compile_prog and frame map",
+        "compiler/backend/semantics/dataSemScript.sml:430–446 size_of_stack",
+        "compiler/backend/semantics/dataSemScript.sml:1257–1286 call_env/push_env",
+        "compiler/backend/semantics/dataSemScript.sml:1481–1528 Call"
+      ],
+      "reuse": "Potentially adapt BSD-3-Clause algorithms with attribution; no source copied; HOL4/SML is not drop-in Clean code",
+      "supports": [
+        "Actual frame-layout computation",
+        "Separate maximum tracking and semantic clock"
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "Certified Complexity (CerCo)",
+      "authors": "R. M. Amadio, N. Ayache, F. Bobot, J. P. Boender, B. Campbell, I. Garnier, A. Madet, J. McKinna, D. P. Mulligan, M. Piccolo, R. Pollack, Y. Régis-Gianas, C. Sacerdoti Coen, I. Stark, P. Tranquilli",
+      "publication_date": null,
+      "authority": "primary",
+      "independence_key": "cerco-overview-2013",
+      "freshness": "Fresh author-hosted PDF discovery and acquisition",
+      "urls": [
+        "https://dominicpm.github.io/publications/amadio-certified-2013.pdf"
+      ],
+      "captures": [
+        "cerco-paper"
+      ],
+      "coverage": "Full PDF captured/extracted; closely inspected introduction, sections4.1–4.2 and figures1–2 only",
+      "locators": [
+        "PDF pp7–9 section4.1: four components, label scope, sound versus precise labels",
+        "PDF p8 Fig2: __cost/__stack/__stack_max",
+        "Section4.2: prototype versus trusted compiler scope"
+      ],
+      "license": "UNKNOWN: no CerCo repository or license acquired; no code reuse proposed",
+      "supports": [
+        "Cost-label trace correspondence across compiler stages",
+        "Basic labelling restrictions and limitations of aggregate costs"
+      ],
+      "limitations": [
+        "8051 cycle examples are configuration-specific",
+        "No Sherlock costs inferred",
+        "No direct CerCo code/API reuse claim"
+      ],
+      "date_note": "Author-hosted filename says amadio-certified-2013.pdf; exact proceedings publication date not independently verified."
+    },
+    {
+      "id": "S4",
+      "title": "CompCert Bounds source and Stacking documentation",
+      "publisher": "INRIA / AbsInt / CompCert contributors",
+      "publication_date": null,
+      "authority": "official",
+      "independence_key": "compcert-backend",
+      "freshness": "Fresh official docs and pinned default-branch source",
+      "urls": [
+        "https://compcert.org/doc/html/compcert.backend.Stacking.html"
+      ],
+      "repository": {
+        "url": "https://github.com/AbsInt/CompCert",
+        "default_branch": "master",
+        "commit": "e276a3f881669252e2a5c4b5fec06f51f7143161",
+        "license": "INRIA Non-Commercial License Agreement or AbsInt Software Usage Agreement; listed files dual-licensed LGPL-2.1-or-later",
+        "license_path": "LICENSE",
+        "license_capture": "captures/compcert-LICENSE.txt",
+        "relevant_file_license_observation": "backend/Bounds.v file header explicitly states INRIA Non-Commercial License Agreement; it is not in LICENSE listed dual-license exceptions."
+      },
+      "captures": [
+        "compcert-stacking-doc",
+        "compcert-repo",
+        "compcert-commit",
+        "compcert-license",
+        "compcert-tree",
+        "compcert-bounds"
+      ],
+      "locators": [
+        "backend/Bounds.v:36–45 bounds record",
+        "backend/Bounds.v:225–229 function_bounds",
+        "backend/Bounds.v:467–475 frame_env",
+        "Stacking docs: transl_instr / transf_function"
+      ],
+      "coverage": "Static selected source and official generated documentation; documentation not assumed to match pinned commit byte-for-byte",
+      "reuse": "Independent design using slot decomposition only; direct backend code reuse not proposed",
+      "supports": [
+        "Separate outgoing arguments/local slots/saved registers/stack data",
+        "Checked concrete activation-record lowering"
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "I1",
+      "class": "inference/recommendation",
+      "sources": [
+        "S1",
+        "S2",
+        "S4"
+      ],
+      "optimization_ids": [
+        "01",
+        "04",
+        "09"
+      ],
+      "uireq": [
+        "UIREQ-012",
+        "UIREQ-013",
+        "UIREQ-024",
+        "UIREQ-026"
+      ],
+      "idea": "Separate logical caps/fuel from physical layout manifest; preserve virtual reference frames",
+      "priority": "P0/P1",
+      "measurement": "Same normal trace yields identical reference states/outcomes/work; report preparation, physical peaks and helper scratch separately",
+      "status": "specified-only"
+    },
+    {
+      "id": "I2",
+      "class": "inference/recommendation",
+      "sources": [
+        "S3"
+      ],
+      "optimization_ids": [
+        "06",
+        "09"
+      ],
+      "uireq": [
+        "UIREQ-012",
+        "UIREQ-013",
+        "UIREQ-024",
+        "UIREQ-026"
+      ],
+      "idea": "Retain ordered reference slices and prefix stopping locations through batching",
+      "priority": "P2",
+      "measurement": "m1/m2/m4 factorial/list/tree produce identical reference prefixes and exact stopping observations",
+      "status": "specified-only"
+    }
+  ],
+  "figure_nominations": [
+    {
+      "url": "https://cakeml.org/oopsla20.pdf",
+      "pdf_page_one_based": 7,
+      "figure": "1 and2",
+      "purpose": "State/clock/stack/code distinction"
+    },
+    {
+      "url": "https://cakeml.org/oopsla20.pdf",
+      "pdf_page_one_based": 16,
+      "figure": "Stack-frame/stack_size formulas, not numbered figure",
+      "purpose": "Physical byte/word accounting differs from logical frame count"
+    },
+    {
+      "url": "https://dominicpm.github.io/publications/amadio-certified-2013.pdf",
+      "pdf_page_one_based": 6,
+      "figure": "1",
+      "purpose": "Cost annotation workflow"
+    },
+    {
+      "url": "https://dominicpm.github.io/publications/amadio-certified-2013.pdf",
+      "pdf_page_one_based": 8,
+      "figure": "2",
+      "purpose": "Elapsed cost versus current/peak stack instrumentation"
+    }
+  ],
+  "acquisitions": [
+    {
+      "id": "cake-projects",
+      "requested_url": "https://cakeml.org/projects.html",
+      "canonical_url": "https://cakeml.org/projects.html",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:19.036153+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cake-projects.html",
+      "raw_sha256": "543a3b4e61b4b552e637484e5ec8693524275d165f0924a355e965596d631b40",
+      "extracted_path": "captures/cake-projects.txt",
+      "extracted_sha256": "68eb06f0087c45a284c4e6b9641139ea635716bcf5be589efeddff8cfda28a41",
+      "extracted_bytes": 7596
+    },
+    {
+      "id": "cake-space-paper",
+      "requested_url": "https://cakeml.org/oopsla20.pdf",
+      "canonical_url": "https://cakeml.org/oopsla20.pdf",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:19.941833+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cake-space-paper.pdf",
+      "raw_sha256": "694147749b07218f39fdd9ec4133b38606d6f93c7bc9afed73ae06ce8cc87ae8",
+      "extraction_status": 0,
+      "extracted_path": "captures/cake-space-paper.txt",
+      "extracted_sha256": "a04e4ea9f8aa157790176cc4dcbeedab2d32b7e358457af6502e0458c9757589",
+      "extracted_bytes": 108056
+    },
+    {
+      "id": "cerco-paper",
+      "requested_url": "https://dominicpm.github.io/publications/amadio-certified-2013.pdf",
+      "canonical_url": "https://dominicpm.github.io/publications/amadio-certified-2013.pdf",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:21.430552+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cerco-paper.pdf",
+      "raw_sha256": "e885e2c7f2b67ae77dcea152862050a9cd278e5f602eaea010111c731de2ec59",
+      "extraction_status": 0,
+      "extracted_path": "captures/cerco-paper.txt",
+      "extracted_sha256": "61606c5b35699b10e2ea38518e4c6047735a1af992d12a0704da447bb577a784",
+      "extracted_bytes": 54286
+    },
+    {
+      "id": "compcert-stacking-doc",
+      "requested_url": "https://compcert.org/doc/html/compcert.backend.Stacking.html",
+      "canonical_url": "https://compcert.org/doc/html/compcert.backend.Stacking.html",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:22.250950+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-stacking-doc.html",
+      "raw_sha256": "c0d63cd0b9789510d150fad19ea2578c04b03bd75b84269b71e3956caa3a7f98",
+      "extracted_path": "captures/compcert-stacking-doc.txt",
+      "extracted_sha256": "9f56349f2c9137297d4e7d982470922d4c168c53380307d9dae14fb9e8918781",
+      "extracted_bytes": 7268
+    },
+    {
+      "id": "cakeml-repo",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:22.732593+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cakeml-repo.json",
+      "raw_sha256": "3e145014c0b2626980dcccdb813057fadcefa53d2bbb6e2cfc158bbdb9ee3c8e",
+      "extracted_path": "captures/cakeml-repo.txt",
+      "extracted_sha256": "f46d24cbdeb51617cc8cb621f565e735cdbc4a36ff59e147cabacdca831c2043",
+      "extracted_bytes": 6786
+    },
+    {
+      "id": "cakeml-commit",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml/commits/master",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:23.312505+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cakeml-commit.json",
+      "raw_sha256": "a93780c2cc1f6b11b6dbee310aa7c7ded8492c79b134811933ed43bcffae4338",
+      "extracted_path": "captures/cakeml-commit.txt",
+      "extracted_sha256": "676621b065c49b4367b84179bb3bd1e660fdde938268c94cb69b5ca9a6868cab",
+      "extracted_bytes": 1011283
+    },
+    {
+      "id": "cakeml-license",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml/license?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml/license?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:24.642968+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cakeml-license.json",
+      "raw_sha256": "72b52c65d6605233c07de8db66b40a22db2d2aeecae0412abd71a9404e7e6347",
+      "extracted_path": "captures/cakeml-license.txt",
+      "extracted_sha256": "00887a0ee90c804e4fa29ea5d7723bf8bf1f319f953a6266cade430405940b8f",
+      "extracted_bytes": 3457
+    },
+    {
+      "id": "cakeml-tree",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml/git/trees/5c42e58f78e5915ca95a044abfb7bc9bb3ae3583?recursive=1",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml/git/trees/5c42e58f78e5915ca95a044abfb7bc9bb3ae3583?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:25.320434+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cakeml-tree.json",
+      "raw_sha256": "6ba4d19d3b81eff77f31c03a5a537b90bb9f2990c836adf44ef3aed125e81174",
+      "extracted_path": "captures/cakeml-tree.txt",
+      "extracted_sha256": "23e2ec9b6259d737033bdf16f6295c5fcbb2d059ed00f7cc6fa47b5b733fabb2",
+      "extracted_bytes": 677125
+    },
+    {
+      "id": "compcert-repo",
+      "requested_url": "https://api.github.com/repos/AbsInt/CompCert",
+      "canonical_url": "https://api.github.com/repos/AbsInt/CompCert",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:26.200359+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-repo.json",
+      "raw_sha256": "371c25711cd70fe336762e26ad8c5cd56229acba1c3495282e77adb7f4c24a78",
+      "extracted_path": "captures/compcert-repo.txt",
+      "extracted_sha256": "7612a38d6adf289081bcaf6876f8c4a2062c31104456035e787d8131cedc49b6",
+      "extracted_bytes": 6705
+    },
+    {
+      "id": "compcert-commit",
+      "requested_url": "https://api.github.com/repos/AbsInt/CompCert/commits/master",
+      "canonical_url": "https://api.github.com/repos/AbsInt/CompCert/commits/master",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:26.860807+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-commit.json",
+      "raw_sha256": "9816b5bcc01178353b339992858e2d6fd0f6fda466aee7ea1de22183d3b2a870",
+      "extracted_path": "captures/compcert-commit.txt",
+      "extracted_sha256": "8dad47fe3bd8d78d625cfd25b69473e0341b5f50419733fed0922d4780d0023d",
+      "extracted_bytes": 4914
+    },
+    {
+      "id": "compcert-license",
+      "requested_url": "https://api.github.com/repos/AbsInt/CompCert/license?ref=e276a3f881669252e2a5c4b5fec06f51f7143161",
+      "canonical_url": "https://api.github.com/repos/AbsInt/CompCert/license?ref=e276a3f881669252e2a5c4b5fec06f51f7143161",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:27.532797+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-license.json",
+      "raw_sha256": "6545eb604d09dfb363fe73d468d369806d1874a1f57c1afc21e1867bebf8ec4e",
+      "extracted_path": "captures/compcert-license.txt",
+      "extracted_sha256": "84153e0d048ee2e5ec4a3f6f29cebc3f77ac18a2b62b1f49139c906ededa0820",
+      "extracted_bytes": 61486
+    },
+    {
+      "id": "compcert-tree",
+      "requested_url": "https://api.github.com/repos/AbsInt/CompCert/git/trees/e276a3f881669252e2a5c4b5fec06f51f7143161?recursive=1",
+      "canonical_url": "https://api.github.com/repos/AbsInt/CompCert/git/trees/e276a3f881669252e2a5c4b5fec06f51f7143161?recursive=1",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:22:28.819474+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-tree.json",
+      "raw_sha256": "db8c953915a854c0a91cd848d0d05bc9ba1fbe5eb8695c6d8b164284aad6e8fc",
+      "extracted_path": "captures/compcert-tree.txt",
+      "extracted_sha256": "9cbd7df58ce3190a9b82d1568eaa0d014d99c03db87a5acca96fa61c19f9641f",
+      "extracted_bytes": 173198
+    },
+    {
+      "id": "cake-data-sem",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml/contents/compiler/backend/semantics/dataSemScript.sml?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml/contents/compiler/backend/semantics/dataSemScript.sml?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:23:00.583501+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cake-data-sem.json",
+      "raw_sha256": "4ebfdfee43f697a165f0ce734a97c1fa31c2999257f702cd9b6163bce55a0d74",
+      "extracted_path": "captures/cake-data-sem.txt",
+      "extracted_sha256": "e1218acb58394c4cd31bc15add39b67ed47125c332c42af5c18aaade441e8316",
+      "extracted_bytes": 89148
+    },
+    {
+      "id": "cake-word-to-stack",
+      "requested_url": "https://api.github.com/repos/CakeML/cakeml/contents/compiler/backend/word_to_stackScript.sml?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "canonical_url": "https://api.github.com/repos/CakeML/cakeml/contents/compiler/backend/word_to_stackScript.sml?ref=5c42e58f78e5915ca95a044abfb7bc9bb3ae3583",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:23:01.449979+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/cake-word-to-stack.json",
+      "raw_sha256": "83d9a47410bdfed96383cd68ded641440bf440bab3c05e3d79ce06cc77c6221c",
+      "extracted_path": "captures/cake-word-to-stack.txt",
+      "extracted_sha256": "db474eb95e044173c134dac803c1194e093039828cfe01816442c2e149792db5",
+      "extracted_bytes": 32376
+    },
+    {
+      "id": "compcert-bounds",
+      "requested_url": "https://api.github.com/repos/AbsInt/CompCert/contents/backend/Bounds.v?ref=e276a3f881669252e2a5c4b5fec06f51f7143161",
+      "canonical_url": "https://api.github.com/repos/AbsInt/CompCert/contents/backend/Bounds.v?ref=e276a3f881669252e2a5c4b5fec06f51f7143161",
+      "status": 200,
+      "retrieved_at": "2026-10-15T08:23:02.408421+00:00",
+      "method": "Scrapling Fetcher.get",
+      "raw_path": "captures/compcert-bounds.json",
+      "raw_sha256": "c1bc5b5a43383bc94cf655acdc4fc04e22fada9e19945380b0ad8c7c13c779a8",
+      "extracted_path": "captures/compcert-bounds.txt",
+      "extracted_sha256": "2ccc7d4d25d90a733285808e9e991d54a2bcce398c1e088c768d519c3978c0ba",
+      "extracted_bytes": 23041
+    }
+  ],
+  "limitations": [
+    "No implementation, timing, row count or acceptance claim",
+    "No security judgment, theorem statement or hostile-test design",
+    "No native or private project content used",
+    "No canonical wiki changes",
+    "No source access failures or paywalls encountered in chosen four material families",
+    "No cookies persisted; existing static scholarly-PDF and GitHub API site patterns sufficed; no skill files changed"
+  ],
+  "decoded_artifacts": [
+    {
+      "path": "captures/cake-data-sem.source",
+      "sha256": "27f55781d1aeb8d90ea465ab16810e1462ff69bb669b021614081c4d76e2c258",
+      "bytes": 63831
+    },
+    {
+      "path": "captures/cake-word-to-stack.source",
+      "sha256": "b4a94800550492c14b3bf665c7ff1bb933ad5aca667582ff901d38319d6743ae",
+      "bytes": 22638
+    },
+    {
+      "path": "captures/compcert-bounds.source",
+      "sha256": "dee68d14fc48b060535503b1f34123bead416e2a186d4e707fe05759a88fb335",
+      "bytes": 15968
+    },
+    {
+      "path": "captures/cakeml-LICENSE.txt",
+      "sha256": "563807b6d147728614cb470a86568f60e0ba1a5582b3ae8c9758e470e89066fb",
+      "bytes": 1637
+    },
+    {
+      "path": "captures/compcert-LICENSE.txt",
+      "sha256": "40e8151cb26269a4e051309a958714191a706b5dfc7aaec00a61137cb338a648",
+      "bytes": 43807
+    }
+  ]
+}
