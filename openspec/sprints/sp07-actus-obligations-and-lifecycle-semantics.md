@@ -83,6 +83,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP07.2: implement NAM19 zero-payoff capitalization and authorized refinance first. Carry old/new debt identity, nominal liability, interest allocation and time separately from immediate token transfers.
 - [ ] SP07.3: all 277 filename-qualified fixtures compare every present ordered field through shared source/Core/K/evaluator/lowering. No fixture-specific bypass, silent tolerance, quarantine or expected-failure exclusion. TX02/TX03 supplement; they do not rewrite ACTUS semantics.
 
+## Current task interpretation — 2026-10-14
+
+Retain all 277 fixtures and expected fields, 18 executable types, 32 taxonomy dispositions and DS01–07. Existing finite libraries and new FeePool cases do not resolve ACTUS source gaps or replace family-specific semantic evidence. Validate exact manifest membership before scoring. Independent source/arithmetic preparation can continue under U0/U6 while applicable accepted semantic inputs still govern full SP09/U4 qualification. No SP07 task is newly complete.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 Complete ACTUS semantic evidence and held-out implementation. MC07 remains open until native, compiler and acceptance coverage are requalified.

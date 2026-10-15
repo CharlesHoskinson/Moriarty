@@ -84,6 +84,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP12.3: reconcile all G01–G24 individually. Require two non-toy pilots including full ACTUS against the audited Compact-library baseline, licenses/attribution, named trusted dependencies, separate confidential leakage evidence and no unresolved high/critical audit findings.
 - [ ] SP12.4: publish current reviewed evidence and exact limitations. G18 retains its historical text; failure stops the affected language release, and any scope reduction needs a new user decision. Planning or plugin installation never substitutes for these results.
 
+## Current task interpretation — 2026-10-14
+
+Rust simulate/test/intent/reference replay are implemented local consumers; Rust LSP and MCP remain stubs that panic through `todo!` (source reading at `cb8280ef`, SEC-19; OSR-1014-14 requires an explicit unsupported status). The Node beta editor/MCP package follows a separate Source/6/experimental TypeScript Core/5 local path. Document executable resolution and the actual compile boundary. The retained aggregate 1 MiB test-report overflow is an engineering gap, not a native blocker. Independent clean installation, compile/target journey, two-builder reproduction and all G01–G24 obligations remain open. No SP12 task is newly complete.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 A reproducible bounded Midnight developer release with all requested language/PCD/financial predicates closed and broader release limitations stated.

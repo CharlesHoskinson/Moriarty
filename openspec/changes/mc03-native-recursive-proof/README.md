@@ -1,12 +1,18 @@
 # MC03: Reviewed native encoding and recursive proof
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc03-native-recursive-proof/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+Historical scoped local native results remain evidence for their exact predicates. Full two-step native recursive financial history remains open. Current native authority is zero; no command below authorizes a retry.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

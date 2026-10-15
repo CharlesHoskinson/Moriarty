@@ -76,6 +76,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP05.3: pass local Docker transaction checks, then finalize both loan and swap on Preview and compare every material effect with independent expectations. Wrong payer, wrong recipient and omitted-fee controls must exercise the callable production path.
 - [ ] Publish each actual transaction ID and observed status. I2 proves financial integration only; its receipt remains an uncertified probe until SP09 verifies the mandatory acceptance lineage.
 
+## Current task interpretation — 2026-10-14
+
+Retain the historical scoped Preview loan/swap receipts, complete observations and failures. PR47/49 static all-action call export/reopen is delivered child source capability, not a newly executed Preview result. MC02 Preview and M3 Fenrir remain separately qualified. Current native/ledger authority is zero; the commands and campaign records above do not authorize execution. Full SP05 remains open.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 MC02 integration evidence only. Neither hello-world settlement nor these uncertified transactions establishes mandatory PCD.

@@ -77,13 +77,32 @@ for id in ['SP02', 'SP03', 'SP07', 'SP08']:
     require(sprints[id]['stages'], f'Missing successor implementation admission for {id}')
 
 actual = set()
+actual_clauses = {}
 for spec in sorted((ROOT / 'openspec/changes').glob('*/specs/*/spec.md')):
-    for line in spec.read_text().splitlines():
-        if line.startswith('### Requirement: '):
-            actual.add((str(spec.relative_to(ROOT)), line.removeprefix('### Requirement: ')))
+    text = spec.read_text()
+    headings = list(re.finditer(r'^### Requirement: (.+)$', text, re.MULTILINE))
+    for index, heading in enumerate(headings):
+        key = (str(spec.relative_to(ROOT)), heading.group(1))
+        require(key not in actual, f'Duplicate current requirement: {key}')
+        actual.add(key)
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+        actual_clauses[key] = hashlib.sha256(text[heading.start():end].encode()).hexdigest()
 expected = {(row['spec'], row['requirement']) for row in coverage['requirements']}
 require(len(expected) == len(coverage['requirements']), 'Duplicate requirement crosswalk')
-require(actual == expected, f'Requirement crosswalk differs: {actual ^ expected}')
+current = json.loads((ROOT / 'openspec/current-requirement-crosswalk.json').read_text())
+require(hashlib.sha256((ROOT / current['historicalCoverage']).read_bytes()).hexdigest() == current['historicalCoverageSha256'], 'Requirement crosswalk differs: historical crosswalk changed')
+aliases = {(row['spec'], row['historicalHeading']): row['currentHeading'] for row in current['historicalHeadingAliases']}
+require(len(aliases) == len(current['historicalHeadingAliases']), 'Duplicate historical heading alias')
+require(set(aliases) == expected - actual, 'Historical heading alias differs')
+retained = {(path, aliases.get((path, name), name)) for path, name in expected}
+require(retained <= actual, f'Legacy requirement crosswalk differs: {retained - actual}')
+current_rows = {(row['spec'], row['requirement']): row for row in current['requirements']}
+require(len(current_rows) == len(current['requirements']), 'Duplicate current requirement crosswalk')
+require(set(current_rows) == actual, f'Current requirement crosswalk differs: {set(current_rows) ^ actual}')
+for key, row in current_rows.items():
+    require(row['uOwners'] and set(row['uOwners']) <= {f'U{i}' for i in range(8)}, f'Invalid U owner: {key}')
+    require(row['acceptance'] == 'open', f'Reconciliation claims acceptance: {key}')
+    require(row['clauseSha256'] == actual_clauses[key], f'Current requirement clause differs: {key}')
 for section in ['requirements', 'outcomes', 'targetFamilies']:
     for row in coverage[section]:
         require(row['sprints'] and set(row['sprints']) <= set(sprints), f'Invalid coverage owner: {row}')
@@ -144,7 +163,12 @@ for key, row in mapped.items():
 
 reports = json.loads((SPRINTS / 'report-lessons.json').read_text())
 for path, digest in reports['sourceDigests'].items():
-    require(hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == digest, f'Stale report source: {path}')
+    source = ROOT / path
+    snapshot = current.get('historicalSourceSnapshots', {}).get(path)
+    if snapshot is not None:
+        require(snapshot['sha256'] == digest, f'Historical report digest differs: {path}')
+        source = ROOT / snapshot['snapshot']
+    require(hashlib.sha256(source.read_bytes()).hexdigest() == digest, f'Stale report source: {path}')
 for section in ['lessons', 'modeledRegressions', 'comparativeCases', 'sourceGaps']:
     rows = reports[section]
     require(len({r['id'] for r in rows}) == len(rows), f'Duplicate report identity: {section}')

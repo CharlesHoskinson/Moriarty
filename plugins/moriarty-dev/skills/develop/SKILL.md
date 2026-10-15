@@ -1,101 +1,37 @@
 ---
 name: develop
-description: Use when developing, reviewing, researching, planning, or reporting status in the Moriarty repository, including recovery and guarded campaign dispatch.
+description: Use when developing, reviewing, researching, planning, recovering work, or reporting status in the Moriarty repository or its linked worktrees.
 ---
 
-# Moriarty Development Workflow
+# Moriarty development workflow
 
-Use this skill to guide and guard development on the Moriarty financial language for Midnight.
-The CLI enforces registered dispatch controls; this skill supplies workflow guidance toward demonstrable product capabilities. Focus, context selection, model routing and acceptance reconciliation are agent responsibilities, not new mechanical gates.
+Apply the user's current request before any recovered queue. This skill supplies workflow guidance; the guarded CLI retains registered execution controls.
+Read checkout `docs/MORIARTY-PRODUCT-CONTRACT.md`. Moriarty remains permissionless: maintainer review/campaign controls never become public developer compile/prove/deploy permissions. Preserve objective financial and proof obligations.
 
-## Permissionless product boundary
+## Start in the active checkout
 
-The September 19 [product contract](../../../../docs/MORIARTY-PRODUCT-CONTRACT.md) controls language scope. Moriarty programs compile to ZKIRv3 and run on Midnight. Project review, campaign and resource controls apply to maintainer-operated work only. They never authorize individual developers or become public compile/prove/deploy prerequisites. Preserve objective financial/proof requirements; supersede administrative program restrictions.
+1. Read checkout `AGENTS.md` and current user steering. Load this skill once per fresh context; restore it on resume or checkout changes.
+2. Run from that checkout:
 
-## Operating Principles
+   ```bash
+   python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status --json
+   ```
 
-1. **User Steering**: User requests, intent, or interruptions always take precedence over automatic action selection.
-2. **Product Routing**:
-   - The October 13 parallel source workflow selects three **GPT-6.1 Sol high** and three **Grok 4.7 high** authors.
-   - Follow [parallel development](../../../../docs/PARALLEL-DEVELOPMENT.md) and its manifest for exact owned paths and reviewer rotation.
-   - Every final candidate needs fresh non-author `gpt-6.1-sol` and `grok-4.7` audits at high effort. Review the full exact candidate.
-   - Record requested and returned identities separately. Missing auditors do not approve or trigger substitution.
-   - Existing frozen signed-call native gates retain Opus 5.5 and Muse audits. Historical verdicts retain their original scope.
-   - Consequential design decisions retain majority rule (two substantive agreeing votes). Routine repairs within approved scope proceed without repeated design votes.
-3. **Guarded Dispatch**: Launch registered campaign actions through the plugin CLI `run`, which validates authority, candidate commitments, debit identity and stop rules in an atomic reservation. Routine authorized file inspection and source edits do not need a new runner, campaign or design vote.
-4. **Host Interception and Fallback**: Direct CLI execution (`cli.py run`) is the verified fallback procedure whenever host hook trust is unverified, degraded, or wrapper-only.
-5. **Transaction Transparency**: When Midnight public transaction notifications are present, always post pending transaction IDs in the conversation before providing a network status summary.
-6. **No Synthetic Progress**: Tests and packet approvals cannot establish missing behavior. Mandatory Preview financial settlement and PCD correspondence remain open until proven by real ledger evidence.
+3. Read [current scope and evidence](references/execution-focus.md), the checkout roadmap and applicable OpenSpec/EARS requirements. Query `wiki/index.md` before new research; preserve wiki provenance and use its transaction workflow for canonical changes.
+4. State the requested result and one falsifiable predicate per source task. A historical campaign in `status`, `next`, `report` or a hook reminder is operational history, not today's priority or roadmap acceptance. Keep its blockers and counters intact.
 
-## Standard Product Development Workflow
+Read-only diagnosis and authorized source edits need no new campaign, runner, design vote or permission request. Missing admission blocks dependent dispatch, not independent authorized work. Use `next --json` only when selecting registered execution; dispatch through `run --action <ACTION_ID>` only with its existing authority. No new scheduler or campaign is needed.
 
-For execution work, use:
-```text
-User Intent -> status -> next -> Focused Implementation -> Actual Checks -> Both Fresh Audits -> Scoped Result
-```
-Read-only diagnosis, reviews and authorized edits need `status` but do not require a new campaign or executable `next` action. An admission failure blocks its dependent dispatch, not independent source repair.
+## Select the current scope and reviewers
 
-### 1. Inspect Status (`status`)
-Check current capability, last demonstrated result, active stop rules, and pending transactions:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . status
-```
-If pending transaction IDs are returned, obtain their current statuses from `report --json` and post a dedicated conversation message containing only the public notification lines (one or more), before a separate network status summary:
+Current nonsecurity language work uses `gpt-6.1-sol` authoring and a fresh non-author `muse-wonder-1.0` audit, both at high effort. The user's latest security assignment gives **all security work to Opus 5.5**; route that work and its judgments to Opus. Later explicit user instructions control their stated scope. Preserve historical receipts and frozen task contracts with their original rosters; old Astra/Grok or paired-review defaults must not override current routing.
 
-```text
-Midnight Preview transaction <TX_ID>: <STATUS>.
-```
+Give reviewers the exact full candidate, applicable requirements, independent expectations and actual results. Record requested/returned identities, effort, terminal status, dissent and limitations. Changed bytes need fresh audits; missing reviewers cannot approve or silently trigger substitution. Consequential design/resource choices retain two substantive agreeing votes; that decision rule is separate from the current result-review roster. The CLI does not enforce the reviewer roster; ingestion is not full approval.
 
-Use `notify --tx-id <TX_ID> --status submitted` after selecting a real public submission observation, and the same command with `unknown-finality`, `failed` or `confirmed` for subsequent observed changes. These are reported observations; the command does not query Midnight or establish financial acceptance. Never use test IDs as real transaction evidence.
+## Deliver and report
 
-After the line has been emitted in this conversation, call `deliver --tx-id <TX_ID>`. The CLI checks the current Codex session's emitted assistant message and stores its identity and digest. Tool output and caller-written acknowledgement JSON do not establish delivery. If the host record is unavailable, leave the notification pending. A later chain status becomes pending again. Delivery means an emitted host message, not proof that the user read it.
+Inspect the real consumer before changing helpers. Freeze independent financial/work expectations before execution; run inspected ordinary checks within existing authority. Keep disjoint source tasks within their assigned paths and one integrator on shared interfaces. After two failed cycles of the same defect class, reproduce and change approach before retrying. After two process-only cycles or thirty minutes of administration, return to eligible diagnosis or implementation.
 
-### 2. Determine Next Eligible Action (`next`)
-Query policy for the next authorized action:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . next
-```
-If an implementation attempt is blocked by repeated failures (two cycles of the same defect class), the policy enforces reproduction (`reproduce`) before any retry.
+Report implementation, evidence and acceptance separately. Retain U0–U7, M1–M17 and every MC/SP/G exit; source, static exports, passing tests or merged PRs cannot close unobserved stages. Preview and Fenrir need separate qualified evidence. Current native authority is zero: apply the [Opus-owned execution boundary](references/execution-focus.md#opus-owned-execution-boundary) before any command selection.
 
-Name one scoped executable predicate per source task. Prepare the six disjoint tasks in the [current workflow](../../../../docs/PARALLEL-DEVELOPMENT.md) concurrently. One integrator owns shared interfaces and serial composition. This supersedes the single-source-item limit. Native F0 and other expensive work retain their separate admission and physical limits. Do not add a scheduler or orchestration framework.
-
-The current parallel source tasks prepare U0/U1/U2/U3/U6 through existing product consumers. Preserve the earlier **I2/MC02 complete-effect loan/swap integration** obligations. I2 remains uncertified until MC05 and does not require native PCD; full SP05 still depends on SP01. Reconcile existing MC02 evidence once, then change or execute the actual missing caller path. The current user authorizes the manifest's bounded source preparation. Full ACTUS/DeFi, new backends and release acceptance remain separate obligations.
-
-Read [execution focus](references/execution-focus.md) when selecting I2 work, preparing author/review context, investigating native feasibility or K failures, or measuring this workflow. It contains the exact financial gap checks, lifecycle failure matrix, F0 discriminator and reviewer pressure scenarios.
-
-### 3. Implement Focused Repair (selected author)
-Include the actual consumer of a new helper in the same demonstrable behavior. Before authoring, have an independent reviewer define expected outcomes and failure cases; run the existing callable integration tests before freezing bytes. Return all current failures together with focused patches and sufficient current context; retain complete history on disk. Continue the author through repairs and use a fresh author at the next independent capability boundary. Preserve approved scope, resources and recorded failures.
-
-### 4. Execute and Check Action (`run`)
-Run the action through the guarded CLI:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . run --action <ACTION_ID>
-```
-Exit codes:
-- `0`: Success.
-- `2`: Policy denial (repeated failure, administrative displacement, or resource exhaustion).
-- `3`: Unavailable or stale inputs.
-- `4`: Child command failure.
-
-### 5. Ingest Independent Review (`review`)
-Obtain both selected fresh audits on the same frozen full candidate and applicable contract, not diff-only or reused source approval. Ingest supported receipts individually:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . review --receipt <PATH_TO_RECEIPT_JSON>
-```
-Author self-review, mismatched candidate hashes, and empty scopes are rejected.
-Receipt ingestion validates its schema and identity; it does not mechanically enforce this skill's two-provider routing. Retain both actual audit outputs in existing records and verify both required scopes before reporting approval. Changed candidate bytes require fresh current audits; source approval never replaces actual-result review or live admission.
-
-### 6. Report Progress Honestly (`report`)
-Generate an all-sprint status report derived from actual program records:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . report
-```
-
-### 7. Inspect Environment Health (`doctor`)
-Check repository store state, hook registration, and host trust:
-```bash
-python3 plugins/moriarty-dev/scripts/moriarty_dev/cli.py --repo . doctor
-```
-Reports `unverified` or `installed-unverified`. Hook definition and cached installation paths do not establish runtime trust or interception. Use the guarded CLI and retain a separate actual-host smoke result for each tested tool path.
-
-Do not expand orchestration infrastructure to follow this workflow. Name the next demonstrable capability, implement its smallest authorized repair, and check its behavior. Preserve unresolved safety stops and independent acceptance gates.
+Use `report --json` for historical program records and `doctor --json` for observed host state. Installation and adapter protocol tests do not establish hook interception. The guarded CLI is the fallback when host trust is unverified. Public transaction notifications and delivery follow the [existing reporting procedure](../../README.md#public-transaction-reporting); publish pending public lines before a separate network summary. Never turn test IDs into live evidence.

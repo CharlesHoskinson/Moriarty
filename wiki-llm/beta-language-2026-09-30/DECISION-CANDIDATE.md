@@ -1,6 +1,12 @@
 # Beta decisions under research
 
-**Status:** preliminary alternatives, not yet the five-reviewer candidate.
+**Status:** historical preliminary alternatives from September 30. The later
+[BETA-DESIGN](BETA-DESIGN.md), [convergence](CONVERGENCE.md) and
+[final authoring-beta result](RESULT.md) record the selected bounded TypeScript
+frontend and completed review/delivery scope. Langium and host embedding remain
+unselected alternatives in this record; the research tasks below are the original
+pre-freeze questions, not a current queue. See the [October 14 crosswalk](../RECONCILIATION-2026-10-14.md)
+for the separate Rust language path and open roadmap work.
 
 ## Three implementation approaches
 

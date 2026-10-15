@@ -1,6 +1,11 @@
 # Initial designer integration instructions
 
-These are initial source/plan reviews; actual assembled-page reviews remain required. Three GPT6.1 Sol medium reports and one exact Opus5.5 medium result are currently present; remaining Opus seats are owed. No design approval of an unbuilt page follows.
+These are historical initial source/plan instructions. The later
+[design convergence](POLISH-DECISION.md) records all six assembled-page designer
+seats and the integrated local result; the [root publication decision](publication-reviews/R2-ROOT-PUBLICATION-DECISION.md)
+records the exact R2 source/result review. The initial three-Sol/one-Opus count
+was an interim observation, not the final review count. The requirements below
+retain their original scope and do not establish a fresh current deployment.
 
 ## Required presentation corrections
 

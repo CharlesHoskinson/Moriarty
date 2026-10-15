@@ -1,0 +1,15 @@
+# wiki-llm reconciliation audit — October 14, 2026
+
+Author: GPT-6.1 Sol, high effort. Baseline PR50 `fc6353bf19b87a76410319c378efe529d52d23d9`, tree `0749dd0fb60166e49a424a9aadae582f6ce0e08d`. Nonsecurity source/documentation work only; zero native execution.
+
+Inventoried all 1,871 tracked paths (260 Markdown). The defined authored candidate set contains 88 Markdown files: 44 nonsecurity content/prose reviews, 41 security-owned authored records/proposals delegated to Opus, and 3 preserved provider publication reports inventoried without content reading. All other paths received an explicit metadata-only role, method and disposition in `wiki-audit.json`. A keyword scan was used for discovery, never counted as semantic review.
+
+Changed 19 maintained tracked documents and added `wiki-llm/RECONCILIATION-2026-10-14.md`. Current entry points now map Rust `moriarty/1` / `moriarty-core/1`, actual compile/reference/static consumers, the separate Node beta → experimental Source/6/Core/5 path, Node editor/MCP delivery and the remaining Rust server stubs. Completed beta/site plans have scoped historical dispositions. Domain updates preserve the rejected price direction as dissent and name the shipped MCP interfaces and actual package/framework decisions. The dated crosswalk names current code and retained work rather than assigning a completion score.
+
+Original RESULT/REVIEW/repair narratives and hash-bound mockup/horizon designs retain their exact original scopes and bytes. October 1 alignment text is preserved verbatim beneath a current nonsecurity alignment. Native/crypto/signed-intent security-specific questions and exact stale-status lines are in `security-handoffs-wiki.json` for Opus; this audit supplies no security judgment.
+
+Verification: 487 relative navigation targets resolve using tracked metadata, with no missing tracked targets; `git diff --check` passed; six hash-bound public designs/results match HEAD; original alignment body remains exact. No product tests, SDK checks/queries, K/Quint/model/VM runs, native keygen/prove/verify, ledger action, browser or live deployment check ran. No commits or index changes were made.
+
+Review limits: complete horizon prose was inspected, while approximately 87 KB of fenced proposed contracts were inventoried by boundaries and not semantically revalidated. Frozen provider/developer transcripts, raw captures and native/private artifacts remained metadata-only. Git blob IDs in inventory-only before/after fields identify recorded tracked objects and do not imply a prohibited excluded-content hash read. No all-artifact semantic audit or full runtime/end-to-end audit is claimed. Current native, recursion/private history, full ACTUS/DeFi, Fenrir and release gates remain open under U0–U7 and direct M1–M17 requirements; Preview evidence retains its own target.
+
+The precise per-file manifest includes path, before/after Git object identity (plus SHA256 for inspected public prose), role, method, findings and disposition. Root must refresh hashes for any subsequent Opus/integration changes before freezing the combined candidate.

@@ -186,3 +186,80 @@ When the next ZKIR/recursion interface is qualified for Moriarty, the integratio
 #### Scenario: Incomplete cryptographic or release evidence
 - **WHEN** A proposed instruction, outer-only check, six-month forecast or different proof format is offered as completed backend support.
 - **THEN** The affected requirements remain open and no weaker mechanism is relabeled as full recursive compliance.
+
+### Requirement: UNI-018 Profile and consumer admission
+When a tool reports checking, compilation or simulation, it SHALL identify the source/Core profile, resolved executable, consumer and admitted subset, and SHALL report unsupported consumer constructs explicitly.
+
+#### Scenario: Supported Rust Core program
+- **WHEN** A `moriarty/1` program is checked and compiled by its supported Rust consumers.
+- **THEN** The record names `moriarty-core/1`, both consumers and the construct coverage actually exercised.
+
+#### Scenario: Different authoring profile
+- **WHEN** A beta or Source/6 program passes its local checker but is outside a Rust compiler's admitted input.
+- **THEN** The record retains the local checking result and reports the compiler boundary as unsupported; compilation receives no inferred pass.
+
+### Requirement: UNI-019 Scoped lowering comparison
+When two lowering consumers are compared, the comparison SHALL state their statements, admitted constructs and common domain, and SHALL compare independently specified complete observations only within that domain.
+
+#### Scenario: Common construct domain
+- **WHEN** Both lowerings admit a case with declared numeric and effect representations.
+- **THEN** The comparison records each representation and the complete expected observations under the stated mapping.
+
+#### Scenario: Different admitted statements
+- **WHEN** One consumer intentionally refuses a construct admitted by another.
+- **THEN** The admission matrix records that refusal and its reason; neither global equivalence nor identical artifact bytes is inferred.
+
+### Requirement: UNI-020 Independent financial and work expectations
+When a semantic or conformance result is scored, its expected values SHALL come from independently derived arithmetic and observations frozen before the run, with shared-code dependencies and numeric-profile scope declared.
+
+#### Scenario: Complete finite observation
+- **WHEN** A finite financial example is evaluated under a versioned numeric and logical-work schedule.
+- **THEN** The comparator checks ordered effects, changed and preserved state, gross debit, fees, net receipts, dust, liability changes, duty presence and logical work against the independent expectations.
+
+#### Scenario: Shared evaluator oracle
+- **WHEN** Expected results come only from the same evaluator, static reopen or a wrapper around the implementation under review.
+- **THEN** The record describes internal agreement and leaves independent semantic-oracle coverage open.
+
+### Requirement: UNI-021 Capability evidence and parent acceptance
+When a capability report is updated, it SHALL record implementation, evidence and acceptance separately for the exact predicate, tree, profile, consumer and target, while retaining every unmet parent exit.
+
+#### Scenario: Delivered finite library child
+- **WHEN** The report cites the PR49 FeePool dossier's 23 actions and 162 captured finite financial cases.
+- **THEN** It records captured local/reference/static evidence and leaves full M11, Capacity Exchange, U6 and target qualification open.
+
+#### Scenario: Incomplete predicate denominator
+- **WHEN** A discovery index contains 69 top-level IDs but mandatory atomic clauses are not fully reconciled.
+- **THEN** The report supplies no whole-language completion percentage and identifies the unresolved coverage.
+
+### Requirement: UNI-022 Target-separated requirement reconciliation
+When M1–M17 or existing Preview requirements are reconciled, the register SHALL retain the user's direct M requirements and preserve each result's actual target, qualified tuple and unresolved external facts.
+
+#### Scenario: Scoped Preview result
+- **WHEN** A historical Preview loan or swap result is cited alongside an open Fenrir requirement.
+- **THEN** The record retains the Preview observation and identifies the missing Fenrir result without transferring acceptance.
+
+#### Scenario: Unknown Fenrir configuration
+- **WHEN** Fenrir versioning, network ID, Anchor, committee, registry or deployed tuple is unavailable.
+- **THEN** The corresponding fields remain unknown and their dependent qualification remains open; independent language preparation can continue without another M1–M17 adoption decision.
+
+### Requirement: UNI-023 Complete retained membership
+When conformance coverage is reported, it SHALL validate membership against the frozen manifests and retain all ACTUS, DeFi, composition and release obligations, with semantic, local, native, Preview and Fenrir evidence recorded separately.
+
+#### Scenario: Full family accounting
+- **WHEN** A conformance inventory is prepared.
+- **THEN** It retains 277 ACTUS fixtures and expected fields, 18 executable types, 32 dispositions, DS01–07, 72 DeFi rows, DA01–24, adopted supplements, three held-outs, eight intent cases, eight regression classes, all five composition operators and G01–G24.
+
+#### Scenario: Finite library sample
+- **WHEN** A new finite FeePool or batch example passes its local cases.
+- **THEN** Only its named cells gain that scoped evidence; missing original rows and broader parent exits remain open.
+
+### Requirement: UNI-024 Developer journey and current maintainer routing
+When a developer journey or maintainer task is documented, the documentation SHALL identify implemented local commands, stubs and missing stages, and SHALL apply the current scoped routing without rewriting historical receipts or terminal task contracts.
+
+#### Scenario: Current nonsecurity task
+- **WHEN** New nonsecurity language work is implemented under the October 14 assignment.
+- **THEN** The record names GPT-6.1 Sol high authorship and fresh non-author Muse Wonder 1.0 high review of the exact candidate and applicable results, with requested and returned identities retained.
+
+#### Scenario: Incomplete public journey
+- **WHEN** Local Rust commands and a separate Node beta package exist while Rust LSP/MCP are stubs or a required compile/target stage is unavailable.
+- **THEN** The journey reports those exact boundaries, leaves U7/M10 open and does not label all CLI commands as stubs or claim an independently qualified release.

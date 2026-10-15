@@ -1,7 +1,13 @@
 # Tutorial GitHub website: content and layout decision
 
-Recommendation derived from six independent developer trials, not a deployed
-website or an empirical comparison of documentation frameworks. Original feedback
+Historical content/layout recommendation derived from six September 30 developer
+trials. The later [website implementation plan](../website-2026-10-01/PLAN.md),
+[integrated local result](../website-2026-10-01/POLISH-DECISION.md#integrated-result)
+and [root publication decision](../website-2026-10-01/publication-reviews/R2-ROOT-PUBLICATION-DECISION.md)
+record the subsequent React/Vite implementation and its captured review scope.
+The current documentation entry is [`site/documentation.html`](../../site/documentation.html).
+This reconciliation observes source and historical narratives; it performs no
+fresh browser, deployment or human-usability experiment. Original feedback
 is preserved: [S1](developer-trials/S1/website-feedback.md),
 [S2](developer-trials/S2/website-feedback.md),
 [S3](developer-trials/S3/website-feedback.md),
@@ -64,21 +70,23 @@ reject. Never teach copying simulator outputs into expected results to force gre
 
 All code blocks should come from versioned runnable example files. Store their
 independent expectations, actual command outputs and the release digest together.
-A future site CI can run the displayed CLI commands and compare scopes/statuses;
-site CI is proposed, not installed by this delivery. Each displayed output must
+The later website [local result](../website-2026-10-01/POLISH-DECISION.md#integrated-result)
+records download/program and interaction checks. This original content-plan
+delivery itself did not install site CI; fresh site checks remain scoped to the
+source candidate and package they actually execute. Each displayed output must
 state which release produced it; historical feedback describes the v3 trial
 artifact and does not replace the final package's current verification.
 
 ## Framework and deployment boundary
 
 The developers suggested Astro Starlight, mdBook, Docusaurus, MkDocs and plain
-Markdown. These are preferences, not benchmark findings. Select **portable
-Markdown content in the Moriarty repo first**. A future site build may use an
-existing repository documentation tool or Starlight if its search/navigation and
-GitHub Pages requirements are verified at that time. Avoid adding a second
-framework merely to publish this feedback. Current scope supplies the content,
-examples and layout plan; no website deployment or framework installation is
-claimed.
+Markdown. These are preferences, not benchmark findings. The original decision was **portable Markdown content in the Moriarty repo
+first**. The subsequent authorized site reused the existing React/Vite application;
+[implementation scope](../website-2026-10-01/PLAN.md) records that choice.
+Starlight was an alternative, not an adopted framework. The source now contains
+separate tutorial, how-to, reference and explanation pages. Current public
+availability still needs its own live observation; no such observation was made
+by this documentation reconciliation.
 
 ## Preserved differences in preference
 
