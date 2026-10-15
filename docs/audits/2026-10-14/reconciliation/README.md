@@ -6,6 +6,37 @@ This dossier records the requested currentness audit of Moriarty OpenSpec/EARS,
 It updates language documentation and maintainer guidance. No product, SDK,
 formal-model, native or ledger execution occurred, and no roadmap exit closes.
 
+## Delivered status
+
+Reviewed source: `9bd7ccc1b5522b22cf633b46cdad080d24448f39`, projection
+`15a69be761f4d97312725a1a683df7e8541ddc367acbc9740d097f0340e1a762`.
+Fresh [Muse composition review](MUSE-APPROVED-CANDIDATE-REVIEW.md) and
+[Opus applicable security review](OPUS-APPROVED-CANDIDATE-REVIEW.md) approve
+their stated scopes. Earlier full reviews and corrections remain below.
+
+Plugin **0.1.1 is installed and enabled**. The actual
+[upgrade receipt](plugin-installation.json) records installer exit 0,
+`restorationComplete: true`, `installedVerified: true`, exact 37-file
+source/installed matches and preservation of the original 35-file cache.
+The [post-install receipt](plugin-post-install-verification.json) records
+25 compatibility tests passing with actual exit 0, matching hashes before/after,
+no bytecode, and no HOME or CODEX_HOME override. These actual results received
+fresh [Muse](MUSE-INSTALL-RESULT-REVIEW.md) and
+[Opus](OPUS-INSTALL-RESULT-REVIEW.md) approvals within their separate scopes.
+
+The earlier 211-test run and its 20 exclusions retain their original scope.
+The later installed suite supplies separate evidence for five previously excluded
+InstallationCompatibility cases. No full 231-test-suite pass is claimed.
+The cache's filesystem mode observation is recorded separately; no operating-system
+read-only guarantee or host hook interception is inferred. All native, target,
+product and roadmap acceptance limits remain unchanged.
+
+Final publication adds only these receipts and review records to the frozen
+source. Source-phase statements below that say installation/review is pending
+are retained history, superseded by this delivered status. The first final Opus
+provider error produced no verdict; the readiness canary and subsequent fresh
+reviews are recorded separately. No credential-status output is published.
+
 ## Current entrypoints
 
 - [OpenSpec reconciliation](../../../../openspec/changes/consolidated-language-kernel/reconciliation-2026-10-14.md)
