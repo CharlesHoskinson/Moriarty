@@ -6,7 +6,7 @@
 - [35 nonsecurity EARS requirements and scenarios](specs/universal-interpreter/spec.md), [index](requirements.md) and [traceability](traceability.md).
 - [36 independent normal demonstration contracts](demonstrators.md); these are proposed expectations, not executed results.
 - [Required Lean/Clean stage](clean-stage.md) and [public API inventory](public-clean-api-inventory.json).
-- Opus-owned [original security draft](security-requirements.md) and [Candidate B delta](security-candidate-b.md); their open profile conflicts require their owner's disposition.
+- Opus-owned [original security draft](security-requirements.md) and [Candidate B delta](security-candidate-b.md); the leading Opus reconciliation section governs the proposed B profile dispositions.
 - [Implementation plan](../../../docs/SHERLOCK-IMPLEMENTATION-PLAN.md), [concept adoption matrix](../../../docs/research/sherlock/CONCEPT-ADOPTION.md) and [unchecked implementation tasks](tasks.md).
 - [Ten online academic/project studies](../../../docs/research/sherlock/papers/README.md), following [ten optimization studies](../../../docs/research/sherlock/optimization/README.md).
 - [Model coverage](model-coverage.md), [actual observations](../../../models/sherlock/observations.json) and [model source entrypoint](../../../models/sherlock/README.md).
