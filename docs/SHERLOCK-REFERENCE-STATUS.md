@@ -43,6 +43,17 @@ all original expectations and92 fuel-prefix checks are unchanged. The existing
 H1 untrusted-input restriction remains in force. Independent source audits and
 full cross-layer/native/stagenet acceptance remain separate.
 
+## Added complete normal and flat-image observations
+
+The [additional normal evidence](audits/2026-10-15/sherlock-extra-normal/README.md)
+extends the public host comparison to eight programs and 216 literal prefixes.
+The [flat-image preparation](audits/2026-10-15/sherlock-program-image-normal/README.md)
+adds a private test-only builder and genuine expression-ID interpreter. Its
+captured 46-test closure checks both interpreters against the same frozen
+complete-state expectations. Public API exports are unchanged. Arbitrary image
+admission, bounded native representation and all B/circuit/target acceptance
+remain open. The older observations below retain their original scopes.
+
 ## Observed comparison
 
 The [dedicated consumer](../models/sherlock/reference/check-reference.py) compiled

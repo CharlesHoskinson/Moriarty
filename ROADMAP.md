@@ -43,7 +43,7 @@ The [recorded evidence](docs/audits/2026-10-15/sherlock-k-profile-quint/README.m
 binds typecheck exit 0 and 98 passing deterministic normal tests (six complete
 traces and 92 published fuel prefixes), under Quint 0.32.0's TypeScript engine,
 seed 1 and one sample per test. [Completed exact-source reviews](docs/audits/2026-10-15/sherlock-k-profile-quint/reviews/README.md)
-retain their limitations. These finite model observations leave K execution,
+retain their limitations. A separately recorded [126-test addition](docs/audits/2026-10-15/sherlock-extra-normal-quint/README.md) covers the three-argument call and recursive factorial-two traces plus 124 fuel prefixes against the unchanged generic model; the older 98-test cohort was not rerun. These finite model observations leave K execution,
 full refinement, canonical state serialization, B schema/helper work, full
 grammar and field/constraint coverage, circuit/native correspondence and
 stagenet qualification open; they close no full roadmap milestone.
@@ -57,8 +57,8 @@ step circuit, correspondence and Midnight exporter remain open. The
 research into parallel source components; its proposed design awaits fresh audits.
 
 The [typed A-profile host component](docs/SHERLOCK-REFERENCE-STATUS.md) adds an
-executable public library API and complete-state comparison against six
-independent normal programs and 92 fuel prefixes. This child result does not
+executable public library API and complete-state comparison against eight
+independent normal programs and 216 fuel prefixes. A [private test-only flat image and ID interpreter](docs/audits/2026-10-15/sherlock-program-image-normal/README.md) now matches the same normal expectations in its captured 46-test host closure. This child result does not
 implement B's bounded helpers, general ADTs, source compiler adapter or circuit.
 Its exact evidence and limitations are separate from the design proposal.
 
