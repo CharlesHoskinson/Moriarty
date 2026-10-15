@@ -206,6 +206,34 @@ impl NormalExecution for super::image_reference::ImageMachine {
     fn run(&mut self) -> Snapshot { self.run() }
 }
 
+// Exercise the new physical host representation, not a new semantic relation.
+// The complete frozen literals below remain the independent authority. The
+// encoder/decoder inverse comparison alone would only be internal consistency.
+struct ImageMaterializedMachine(Machine);
+
+fn materialize_snapshot(snapshot: &Snapshot) -> Snapshot {
+    use super::machine_image::{HostImageLimits, encode_snapshot, decode_snapshot};
+    // Explicit host test limits only; these select no native/product capacities.
+    let limits = HostImageLimits { rows: 20_000, cells: 40_000, name_bytes: 1_000_000 };
+    let image = encode_snapshot(snapshot, limits).expect("normal snapshot fits test host limits");
+    let materialized = decode_snapshot(&image);
+    assert_eq!(&materialized, snapshot, "complete typed host materialization");
+    materialized
+}
+
+impl NormalExecution for ImageMaterializedMachine {
+    fn snapshot(&self) -> Snapshot { materialize_snapshot(&self.0.snapshot()) }
+    fn step(&mut self) -> Option<StepRecord> {
+        self.0.step().map(|record| StepRecord {
+            rule_start_line: record.rule_start_line,
+            charge: record.charge,
+            before: materialize_snapshot(&record.before),
+            after: materialize_snapshot(&record.after),
+        })
+    }
+    fn run(&mut self) -> Snapshot { materialize_snapshot(&self.0.run()) }
+}
+
 // One common assertion consumer; neither implementation computes expectations.
 fn compare_case_with<M: NormalExecution>(
     case_id: &str,
@@ -564,4 +592,60 @@ fn grouped_n07_three_ordered_arguments() {
 #[test]
 fn grouped_n08_recursive_factorial() {
     compare_grouped_case("N08");
+}
+
+#[test]
+fn materialized_n01_literal() {
+    compare_case_with("N01", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n02_addition() {
+    compare_case_with("N02", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n03_conditional() {
+    compare_case_with("N03", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n04_lexical_restoration() {
+    compare_case_with("N04", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n05_named_recursion() {
+    compare_case_with("N05", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n06_ordered_list_tree_match() {
+    compare_case_with("N06", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n07_three_ordered_arguments() {
+    compare_case_with("N07", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
+}
+
+#[test]
+fn materialized_n08_recursive_factorial() {
+    compare_case_with("N08", |program, fuel, limit| {
+        ImageMaterializedMachine(Machine::new(program, fuel, limit))
+    });
 }

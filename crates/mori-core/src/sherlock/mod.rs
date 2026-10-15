@@ -36,3 +36,7 @@ mod image_reference;
 // Host-only event grouping; every internal reference record stays observable.
 #[cfg(test)]
 mod reference_slice;
+
+// Unadopted host snapshot rows; normal materialization checks only.
+#[cfg(test)]
+mod machine_image;
