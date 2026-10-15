@@ -207,6 +207,7 @@ impl SignedStaticBindings {
         policy: &FixedSignerPolicy,
         version: SignedVersion,
     ) -> Result<Self> {
+        crate::layout::require_core1(program)?;
         policy.validate()?;
         if bindings.economic_bounds.is_some() {
             return Err(refuse("economic-bounds-forbidden"));
@@ -303,6 +304,7 @@ impl SignedStaticBindings {
                         }
                     }
                     Statement::Let { name, .. } | Statement::Emit { name, .. } => label(name)?,
+                    Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
                     _ => {}
                 }
             }

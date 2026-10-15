@@ -1,0 +1,80 @@
+A9 forced Await arms and require_core1 entry gates (ledger + backend proving.rs).
+Against uncommitted worktree 2026-10-14; not applied, not compiled. Hunks carry minimal context;
+integrators apply verbatim. Ledger identity: mori::ledger::profile: core1-required.
+Backend identity: existing crate::stage::core1_refusal (mori::backend::program wrapping).
+
+--- a/crates/mori-ledger/src/layout.rs
++++ b/crates/mori-ledger/src/layout.rs
+@@ -58,3 +58,12 @@
+ fn layout_error(code: &'static str) -> Error {
+     Error::new("source-profile", code)
+ }
++/// Typed `/1` refusal for an Await reaching a legacy ledger statement match.
++pub(crate) fn core1_refusal() -> Error {
++    Error::new("profile", "core1-required")
++}
++/// Required at every ledger `/1` entry point before evaluation or layout.
++pub(crate) fn require_core1(p: &Program) -> Result<()> {
++    mori_core::stage::require_core1(p).map_err(|_| core1_refusal())
++}
+@@ -149,2 +158,3 @@
+ fn admit_bindings_inner(p: &Program, d: &StaticBindings, debits: DebitRule) -> Result<LedgerAbi> {
++    require_core1(p)?;
+     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
+@@ -251,2 +261,3 @@
+                 }
++                Statement::Await { .. } => return Err(core1_refusal()),
+                 _ => {}
+--- a/crates/mori-ledger/src/ops.rs
++++ b/crates/mori-ledger/src/ops.rs
+@@ -329,4 +329,5 @@
+             Statement::Requires { predicate } | Statement::Ensures { predicate } => {
+                 Some(*predicate)
+             }
++            Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
+         };
+--- a/crates/mori-ledger/src/relation/compiler.rs
++++ b/crates/mori-ledger/src/relation/compiler.rs
+@@ -511,3 +511,4 @@
+             | Statement::Discharge { amount, .. } => *amount,
++            Statement::Await { .. } => return Err(layout::core1_refusal()),
+         };
+@@ -520,2 +521,3 @@
+         match s {
++            Statement::Await { .. } => return Err(layout::core1_refusal()),
+             Statement::Let { name, .. } => {
+--- a/crates/mori-ledger/src/relation/mod.rs
++++ b/crates/mori-ledger/src/relation/mod.rs
+@@ -359,2 +359,3 @@
+ ) -> Result<SourceStaticArtifact> {
++    layout::require_core1(validated.program())?;
+     let (ir, groups, input_count, statement_emissions) =
+--- a/crates/mori-ledger/src/static_compile.rs
++++ b/crates/mori-ledger/src/static_compile.rs
+@@ -369,2 +369,3 @@
+ ) -> Result<StaticBundle> {
++    crate::layout::require_core1(program)?;
+     check_input_budget(source.len(), bindings, authorization, limits, 0, 0, 0)?;
+--- a/crates/mori-ledger/src/signed/mod.rs
++++ b/crates/mori-ledger/src/signed/mod.rs
+@@ -209,2 +209,3 @@
+     ) -> Result<Self> {
++        crate::layout::require_core1(program)?;
+         policy.validate()?;
+@@ -305,2 +306,3 @@
+                     Statement::Let { name, .. } | Statement::Emit { name, .. } => label(name)?,
++                    Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
+                     _ => {}
+--- a/crates/mori-backend/src/proving.rs
++++ b/crates/mori-backend/src/proving.rs
+@@ -680,2 +680,3 @@
+ ) -> Result<Vec<Value>, Error> {
++    crate::stage::require_core1(program)?;
+     let registry = crate::liabilities::registry(program)?;
+@@ -735,5 +736,6 @@
+             Statement::Liability { name, .. } | Statement::Discharge { name, .. } => {
+                 Some(name.as_str())
+             }
++            Statement::Await { .. } => return Err(crate::stage::core1_refusal(program)),
+             _ => None,
+         };

@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1167331,
+  "interruption_signal": null,
+  "elapsed_seconds": 119.75052661599875,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "7123f10296e4a88fdc10b9f619ea18a463c640494dce5594588a81fe48bbf2ca",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 3044,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "9df5c72e8d81bded49c7647f81efaeac1910e74e7232d32ab9418e404ae892fd",
+  "public_result": {
+    "text": "SOURCE_WRITTEN. I've written the patch files but not applied them to the worktree. Nothing was compiled, formatted or tested, and nothing was committed or pushed. This is not execution approval.\n\n**Files written (in R):**\n- **`OPUS-SOURCE-CLOSURE.patch`**: the A2 change to `crates/mori-ledger/src/proving.rs`. It adds a comma after the `diagnostics.rs` entry, then appends the 8 core stage files in alphabetical order: admit, cost, decode, digest, mod, plan, profile, validate. The existing order is kept, and no backend or CLI files are added to the closure.\n- **`OPUS-LEGACY-REFUSALS.patch`**: the A9 Await arms and `/1` entry checks.\n  - **Ledger `layout.rs`:** two new `pub(crate)` helpers, `core1_refusal()` and `require_core1()`. The refusal is `mori::ledger::profile: core1-required`. `require_core1` now runs at the top of `admit_bindings_inner`, before `validate`, so both callers are covered. There is also an explicit Await arm before the inner `_ => {}`.\n  - **Ledger Await arms:** `ops.rs`, `relation/compiler.rs` (both matches in `statement()`) and the `signed/mod.rs` label scan each return the refusal. All the surrounding functions already return `Result`, so no helper's signature changed.\n  - **Ledger entry checks:** `relation::compile_source_static_roles`, `static_compile::compile` and `SignedStaticBindings::from_source`.\n  - **Backend `proving.rs::financial_values`:** a `require_core1` check plus an Await arm before `_ => None`. Both reuse Sol's `crate::stage::core1_refusal`, so nothing in `OPUS-BACKEND-SHARED.patch` is duplicated. The second statement match there (around line 982) already returns an error for any non-duty statement, so I left it alone.\n- **`OPUS-LEGACY-REFUSALS-DETAIL.md`**: summary plus the pending items below.\n\n**Not done:**\n- **Exact line numbers:** the context lines in the patches match the current uncommitted files, but the `@@` line numbers are approximate. Apply by context.\n- **Other ledger entry points:** `local_deployment`, signed preparation and the CLI `CompileCall`/`run_static` path have no check of their own. They do reach `admit_bindings_inner` or `static_compile::compile`, which are now checked.\n- **CLI `inspect.rs`:** the `statement_rule` and `expression_constraints` arms are still missing, as is the refusal for an unsupported `--target`. The CLI won't compile until those arms exist.\n- **Closure coverage test:** `crates/mori-ledger/tests/source_closure_coverage.rs` (H28) was not written.\n- **Tests still needed:** checks that pin the ledger and backend Await refusal errors, H28 closure coverage, and the CLI inspect and target refusals.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 44,
+        "outputTokens": 11296,
+        "cacheReadInputTokens": 490618,
+        "cacheCreationInputTokens": 31256,
+        "webSearchRequests": 0,
+        "costUSD": 0.5742676,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 1998,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

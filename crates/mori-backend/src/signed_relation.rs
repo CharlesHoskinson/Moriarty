@@ -47,6 +47,7 @@ fn label(kind: &str, value: &str) -> Result<(), Error> {
 /// any proportional allocation. Every action counts, including actions that a
 /// scenario never selects. Unsigned compilation keeps Core's own rules.
 pub(crate) fn admit(program: &Program, policy: &SignedPolicy) -> Result<Layout, Error> {
+    crate::stage::require_core1(program)?;
     if program.assets.len() > MAX_SIGNED_ASSETS {
         return Err(error(
             "limit",
@@ -114,6 +115,9 @@ pub(crate) fn admit(program: &Program, policy: &SignedPolicy) -> Result<Layout, 
                 Statement::Let { name, .. } => label("local", name)?,
                 Statement::Next { state, .. } => label("state", state)?,
                 Statement::Requires { .. } | Statement::Ensures { .. } => {}
+                Statement::Await { .. } => {
+                    return Err(crate::stage::core1_refusal(program));
+                }
             }
         }
     }
@@ -134,12 +138,12 @@ pub(crate) fn admit(program: &Program, policy: &SignedPolicy) -> Result<Layout, 
 }
 
 #[derive(Serialize)]
-struct Projection<'a> {
-    position: u32,
-    role: &'a str,
-    name: &'a str,
-    ty: Type,
-    asset: &'a Option<AssetId>,
+pub(crate) struct Projection<'a> {
+    pub(crate) position: u32,
+    pub(crate) role: &'a str,
+    pub(crate) name: &'a str,
+    pub(crate) ty: Type,
+    pub(crate) asset: &'a Option<AssetId>,
 }
 
 /// SHA256 of the canonical 18-element context array. The projection excludes
@@ -188,7 +192,7 @@ pub(crate) fn context_hash(
         json(&replay_steps)?,
     ])
 }
-fn json<T: Serialize + ?Sized>(value: &T) -> Result<serde_json::Value, Error> {
+pub(crate) fn json<T: Serialize + ?Sized>(value: &T) -> Result<serde_json::Value, Error> {
     serde_json::to_value(value).map_err(|e| error("serialization", e.to_string()))
 }
 
@@ -670,6 +674,7 @@ fn reconstruct_statement(
         authority.validate()?;
     }
     let program = mori_core::parse(source).map_err(|e| error("program", e.to_string()))?;
+    crate::stage::require_core1(&program)?;
     let artifact = crate::compile_mode(&program, target)?;
     let mut selected = artifact.circuits.into_iter().filter(|c| c.action == action);
     let circuit = selected

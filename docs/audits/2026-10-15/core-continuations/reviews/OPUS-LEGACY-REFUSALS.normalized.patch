@@ -1,0 +1,117 @@
+--- a/crates/mori-ledger/src/layout.rs
++++ b/crates/mori-ledger/src/layout.rs
+@@ -58,6 +58,14 @@
+ fn layout_error(code: &'static str) -> Error {
+     Error::new("source-profile", code)
+ }
++/// Typed `/1` refusal for an Await reaching a legacy ledger statement match.
++pub(crate) fn core1_refusal() -> Error {
++    Error::new("profile", "core1-required")
++}
++/// Required at every ledger `/1` entry point before evaluation or layout.
++pub(crate) fn require_core1(p: &Program) -> Result<()> {
++    mori_core::stage::require_core1(p).map_err(|_| core1_refusal())
++}
+ pub fn digest(domain: &str, parts: &[&[u8]]) -> [u8; 32] {
+     let mut bytes = Vec::new();
+     bytes.extend((domain.len() as u32).to_le_bytes());
+@@ -147,6 +155,7 @@
+     MappedRoles,
+ }
+ fn admit_bindings_inner(p: &Program, d: &StaticBindings, debits: DebitRule) -> Result<LedgerAbi> {
++    require_core1(p)?;
+     mori_core::validate(p).map_err(|_| layout_error("core-validation"))?;
+     if d.toolchain != Toolchain::pinned() || d.limits != Limits::supported() {
+         return Err(identity("toolchain-or-limits"));
+@@ -249,6 +258,7 @@
+                         return Err(layout_error("undeclared-duty-asset"));
+                     }
+                 }
++                Statement::Await { .. } => return Err(core1_refusal()),
+                 _ => {}
+             }
+         }
+--- a/crates/mori-ledger/src/ops.rs
++++ b/crates/mori-ledger/src/ops.rs
+@@ -329,6 +329,7 @@
+             Statement::Requires { predicate } | Statement::Ensures { predicate } => {
+                 Some(*predicate)
+             }
++            Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
+         };
+         let mut names = std::collections::BTreeSet::new();
+         let mut duty_reads = Vec::new();
+--- a/crates/mori-ledger/src/relation/compiler.rs
++++ b/crates/mori-ledger/src/relation/compiler.rs
+@@ -509,6 +509,7 @@
+             | Statement::Fee { amount, .. }
+             | Statement::Liability { amount, .. }
+             | Statement::Discharge { amount, .. } => *amount,
++            Statement::Await { .. } => return Err(layout::core1_refusal()),
+         };
+         let mut names = BTreeSet::new();
+         self.names(id, &mut names, &mut BTreeSet::new())?;
+@@ -517,6 +518,7 @@
+         }
+         let value = self.expr(id, &mut BTreeMap::new())?;
+         match s {
++            Statement::Await { .. } => return Err(layout::core1_refusal()),
+             Statement::Let { name, .. } => {
+                 self.env.insert(name.clone(), value);
+             }
+--- a/crates/mori-ledger/src/relation/mod.rs
++++ b/crates/mori-ledger/src/relation/mod.rs
+@@ -357,6 +357,7 @@
+     validated: &layout::ValidatedSourceStaticBindings<'_>,
+     action: &str,
+ ) -> Result<SourceStaticArtifact> {
++    layout::require_core1(validated.program())?;
+     let (ir, groups, input_count, statement_emissions) =
+         compiler::compile_source_static_roles(validated, action)?;
+     let p = validated.program();
+--- a/crates/mori-ledger/src/static_compile.rs
++++ b/crates/mori-ledger/src/static_compile.rs
+@@ -367,6 +367,7 @@
+     authorization: &StaticAuthorization,
+     limits: &NativeWorkLimits,
+ ) -> Result<StaticBundle> {
++    crate::layout::require_core1(program)?;
+     check_input_budget(source.len(), bindings, authorization, limits, 0, 0, 0)?;
+     if program.actions.is_empty()
+         || program.actions.len() > NativeWorkLimits::cap(limits.max_actions)?
+--- a/crates/mori-ledger/src/signed/mod.rs
++++ b/crates/mori-ledger/src/signed/mod.rs
+@@ -207,6 +207,7 @@
+         policy: &FixedSignerPolicy,
+         version: SignedVersion,
+     ) -> Result<Self> {
++        crate::layout::require_core1(program)?;
+         policy.validate()?;
+         if bindings.economic_bounds.is_some() {
+             return Err(refuse("economic-bounds-forbidden"));
+@@ -303,6 +304,7 @@
+                         }
+                     }
+                     Statement::Let { name, .. } | Statement::Emit { name, .. } => label(name)?,
++                    Statement::Await { .. } => return Err(crate::layout::core1_refusal()),
+                     _ => {}
+                 }
+             }
+--- a/crates/mori-backend/src/proving.rs
++++ b/crates/mori-backend/src/proving.rs
+@@ -678,6 +678,7 @@
+     s: &Scenario,
+     e: &Execution,
+ ) -> Result<Vec<Value>, Error> {
++    crate::stage::require_core1(program)?;
+     let registry = crate::liabilities::registry(program)?;
+     if c.liability_frame.len() != registry.len()
+         || c.liability_frame.iter().zip(&registry).any(|(f, r)| {
+@@ -735,6 +736,7 @@
+             Statement::Liability { name, .. } | Statement::Discharge { name, .. } => {
+                 Some(name.as_str())
+             }
++            Statement::Await { .. } => return Err(crate::stage::core1_refusal(program)),
+             _ => None,
+         };
+         for (j, r) in registry.iter().enumerate() {

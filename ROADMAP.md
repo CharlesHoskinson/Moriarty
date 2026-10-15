@@ -23,6 +23,65 @@ qualification and every existing parent exit remain open.
 
 The [mapped-role provenance evidence](docs/audits/2026-10-15/core-source-provenance/README.md) records compiler-produced statement/expression-to-field metadata, public export/reopen, byte-identical IR for one independent specimen and ten passing focused tests. Full source/result audits remain pending. This is source-static correspondence support; all U0/U2 and other parent exits remain open.
 
+## Core continuation closure observation — 2026-10-15
+
+The [closure observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CLOSURE.json)
+and [source scope](docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-CLOSURE.json)
+cover 88 distinct focused Rust test functions: 17 passed in the last closure
+captures (public CLI 12 and Core compatibility 5), while 71 are retained on
+unchanged selected call paths. This is not a fresh rerun of all 88. Separate
+Quint QA remains 11 normal tests without established Rust correspondence.
+The candidate remains local, unpublished and unmerged; final closure Muse and
+Opus reviews are pending. No native qualification or full U0–U7, M1–M17 or
+MC/SP/G exit is closed. The earlier 86-, 78- and 58-test observations retain
+their historical scope.
+
+## Latest Core continuation observation — 2026-10-15
+
+The [final observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-FINAL.json)
+and [source scope](docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-FINAL.json)
+cover 86 distinct focused Rust test functions: 24 passed in the final
+test/documentation-repair captures (backend relation 10, public CLI 11 and ledger
+profile refusals 3), while 62 are retained on unchanged selected call paths.
+This is not a fresh rerun of all 86. Separate Quint QA remains 11 normal tests,
+without established Rust correspondence. The candidate remains local, unpublished
+and unmerged; final successor Muse and Opus reviews are pending. No native
+qualification or full U0–U7, M1–M17 or MC/SP/G exit is closed. The 78- and 58-test
+observations below retain their historical scope.
+
+## Core continuation successor observation — 2026-10-15
+
+The [current observations](docs/audits/2026-10-15/core-continuations/OBSERVATIONS-CURRENT.json)
+and [source scope](docs/audits/2026-10-15/core-continuations/SOURCE-SCOPE-CURRENT.json)
+cover 78 distinct focused Rust test functions: 49 affected functions passed in
+fresh post-repair captures and 29 unchanged functions are carried forward by
+source and call-path projections. This is not a full post-repair rerun of all 78.
+Separate Quint QA totals 11 normal tests, with 4 prefix one-transition samples
+and 32 sampled lifecycle traces; it supplies no established Rust correspondence.
+The successor remains local, unpublished and unmerged. Fresh successor Muse
+and Opus source/result reviews are pending; native qualification and every full
+U0–U7, M1–M17 and MC/SP/G exit remain open. The earlier 58-test observation below
+retains its historical scope.
+
+## Core continuation observation — 2026-10-15
+
+The [continuation guide](docs/CORE-CONTINUATIONS.md) and
+[current dossier](docs/audits/2026-10-15/core-continuations/README.md) record
+explicit typed `await` in `moriarty/2`, pure local start/resume with captured
+inputs, lets and earlier events, and an unsigned source-static `/4` compiler
+emitting `N + 1` circuits for N awaits. A false guard returns the unchanged
+continuation; accepted prefixes and residual duties remain explicit.
+
+The candidate passed 58 focused Rust tests: Core 32, public CLI 7, backend normal
+5, backend relation 4, backend frame 6, ledger closure 3 and baseline byte
+comparison 1. The baseline comparison covers one independently frozen `/1`
+specimen only.
+Separately, the first Quint increment passed 2 normal prefix tests and 4 witness
+traces; this is model QA without established Rust correspondence. Full-candidate
+Muse and Opus audits remain pending, and the candidate is unpublished and
+unmerged. Native-call execution through `mori-ledger` does not support `/2`.
+All full U0–U7, M1–M17 and MC/SP/G acceptance exits remain open.
+
 ## Current delivery observation — 2026-10-14
 
 The [mid-roadmap review](docs/audits/2026-10-14/MID-ROADMAP-REVIEW.md) and

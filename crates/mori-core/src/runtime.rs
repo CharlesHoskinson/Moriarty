@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 fn failure(code: &str, message: impl Into<String>) -> Error {
     Error::new(code, message)
 }
-fn identifier(name: &str) -> bool {
+pub(crate) fn identifier(name: &str) -> bool {
     let mut bytes = name.bytes();
     matches!(bytes.next(), Some(b'A'..=b'Z' | b'a'..=b'z'))
         && name.len() <= 64
@@ -48,7 +48,7 @@ fn names<'a>(values: impl Iterator<Item = &'a str>, kind: &str) -> Result<(), Er
     }
     Ok(())
 }
-fn expr_type(
+pub(crate) fn expr_type(
     program: &Program,
     id: ExprId,
     env: &BTreeMap<String, Type>,
@@ -232,6 +232,11 @@ pub fn validate(program: &Program) -> Result<(), Error> {
         }
         for statement in &action.statements {
             match statement {
+                // Same identity as `stage::require_core1`; only an in-memory
+                // program can carry Await here, since `/1` JSON cannot.
+                Statement::Await { .. } => {
+                    return Err(failure("profile", "Await requires moriarty-core/2."));
+                }
                 Statement::Let { name, value } => {
                     let ty = expr_type(program, *value, &env, 0)?;
                     if !identifier(name)
@@ -317,7 +322,7 @@ pub fn validate(program: &Program) -> Result<(), Error> {
 }
 // New reads require a source-fixed identity. Legacy Core external duties and
 // discharge-only programs keep their existing validation rules.
-fn validate_liability_reads(p: &Program) -> Result<(), Error> {
+pub(crate) fn validate_liability_reads(p: &Program) -> Result<(), Error> {
     let mut reads = BTreeMap::new();
     for expr in &p.expressions {
         if let Expr::LiabilityPresent { name } | Expr::LiabilityAmount { name } = expr {
@@ -366,7 +371,7 @@ fn validate_liability_reads(p: &Program) -> Result<(), Error> {
     Ok(())
 }
 
-fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
+pub(crate) fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result<(), Error> {
     if expr_type(p, id, env, 0)? != Type::UInt {
         Err(failure(
             "type",
@@ -376,7 +381,7 @@ fn require_uint(p: &Program, id: ExprId, env: &BTreeMap<String, Type>) -> Result
         Ok(())
     }
 }
-fn validate_asset<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> {
+pub(crate) fn validate_asset<'a>(p: &'a Program, name: &str) -> Result<&'a AssetId, Error> {
     p.assets
         .iter()
         .find(|a| a.name == name)
@@ -520,7 +525,7 @@ fn liability_identities(p: &Program) -> Result<BTreeMap<&str, (&AssetId, &str, &
     }
     Ok(identities)
 }
-fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, Error> {
+pub(crate) fn scenario_snapshot(p: &Program, a: &Action, s: &Scenario) -> Result<Snapshot, Error> {
     if s.balances.len() > 4096 || s.liabilities.len() > 1024 {
         return Err(failure(
             "bound",
@@ -693,6 +698,169 @@ fn move_funds(
     }
     Ok(())
 }
+/// Shared scalar statement execution for legacy actions and admitted segments.
+fn execute_statement(
+    program: &Program,
+    stmt: &Statement,
+    env: &mut BTreeMap<String, Value>,
+    current: &mut Snapshot,
+    meter: &mut Option<&mut Meter>,
+    effects: &mut Vec<Effect>,
+) -> Result<Option<Value>, Error> {
+    charge_logical(meter)?;
+    match stmt {
+        Statement::Await { guard, .. } => {
+            let v = evaluate(program, *guard, env, current, meter)?;
+            Ok(Some(v))
+        }
+        Statement::Let { name, value } => {
+            let v = evaluate(program, *value, env, current, meter)?;
+            env.insert(name.clone(), v.clone());
+            Ok(Some(v))
+        }
+        Statement::Requires { predicate } | Statement::Ensures { predicate } => {
+            let v = evaluate(program, *predicate, env, current, meter)?;
+            if v != Value::Bool(true) {
+                return Err(failure(
+                    if matches!(stmt, Statement::Requires { .. }) {
+                        "requires"
+                    } else {
+                        "ensures"
+                    },
+                    "Action predicate evaluated to false.",
+                ));
+            }
+            Ok(Some(v))
+        }
+        Statement::Next { state, value } => {
+            let after = evaluate(program, *value, env, current, meter)?;
+            let before = current.state[state].clone();
+            current.state.insert(state.clone(), after.clone());
+            env.insert(state.clone(), after.clone());
+            effects.push(Effect::State {
+                name: state.clone(),
+                before,
+                after: after.clone(),
+            });
+            Ok(Some(after))
+        }
+        Statement::Emit { name, value } => {
+            let v = evaluate(program, *value, env, current, meter)?;
+            effects.push(Effect::Emit {
+                name: name.clone(),
+                value: v.clone(),
+            });
+            Ok(Some(v))
+        }
+        Statement::Transfer {
+            asset,
+            from,
+            to,
+            amount: expr,
+        }
+        | Statement::Fee {
+            asset,
+            from,
+            to,
+            amount: expr,
+        } => {
+            let amount = amount(program, *expr, env, current, meter)?;
+            let id = validate_asset(program, asset)?.clone();
+            move_funds(current, &id, from, to, amount)?;
+            effects.push(if matches!(stmt, Statement::Fee { .. }) {
+                Effect::Fee {
+                    asset: id,
+                    from: from.clone(),
+                    to: to.clone(),
+                    amount,
+                }
+            } else {
+                Effect::Transfer {
+                    asset: id,
+                    from: from.clone(),
+                    to: to.clone(),
+                    amount,
+                }
+            });
+            Ok(Some(Value::UInt(amount)))
+        }
+        Statement::Liability {
+            name,
+            asset,
+            debtor,
+            creditor,
+            amount: expr,
+        } => {
+            let amount = amount(program, *expr, env, current, meter)?;
+            let id = validate_asset(program, asset)?.clone();
+            let found = current.liabilities.iter().position(|l| l.name == *name);
+            let before = if let Some(index) = found {
+                let l = &current.liabilities[index];
+                if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {
+                    return Err(failure(
+                        "liability",
+                        "Existing liability identity differs.",
+                    ));
+                }
+                l.amount
+            } else {
+                UInt(0)
+            };
+            let after = UInt(
+                before
+                    .0
+                    .checked_add(amount.0)
+                    .ok_or_else(|| failure("overflow", "Liability exceeds u128."))?,
+            );
+            if let Some(index) = found {
+                current.liabilities[index].amount = after;
+            } else {
+                current.liabilities.push(Liability {
+                    name: name.clone(),
+                    asset: id.clone(),
+                    debtor: debtor.clone(),
+                    creditor: creditor.clone(),
+                    amount: after,
+                });
+                current.liabilities.sort_by(|a, b| a.name.cmp(&b.name));
+            }
+            effects.push(Effect::Liability {
+                name: name.clone(),
+                asset: id,
+                debtor: debtor.clone(),
+                creditor: creditor.clone(),
+                before,
+                after,
+            });
+            Ok(Some(Value::UInt(amount)))
+        }
+        Statement::Discharge { name, amount: expr } => {
+            let amount = amount(program, *expr, env, current, meter)?;
+            let l = current
+                .liabilities
+                .iter_mut()
+                .find(|l| l.name == *name)
+                .ok_or_else(|| {
+                    failure("liability", format!("Unknown residual liability {name:?}."))
+                })?;
+            let before = l.amount;
+            let after = UInt(before.0.checked_sub(amount.0).ok_or_else(|| {
+                failure("liability", "Discharge exceeds residual liability.")
+            })?);
+            l.amount = after;
+            effects.push(Effect::Liability {
+                name: name.clone(),
+                asset: l.asset.clone(),
+                debtor: l.debtor.clone(),
+                creditor: l.creditor.clone(),
+                before,
+                after,
+            });
+            Ok(Some(Value::UInt(amount)))
+        }
+    }
+}
+
 /// Executes one finite action on a clone. A refusal exposes no committed effects.
 pub fn simulate(program: &Program, action: &str, scenario: &Scenario) -> Result<Execution, Error> {
     simulate_with_meter(program, action, scenario, None)
@@ -717,156 +885,9 @@ pub(crate) fn simulate_with_meter(
     let mut all_effects = vec![];
     for (i, stmt) in selected.statements.iter().enumerate() {
         let mut effects = vec![];
-        let result = (|| -> Result<Option<Value>, Error> {
-            charge_logical(&mut meter)?;
-            match stmt {
-                Statement::Let { name, value } => {
-                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
-                    env.insert(name.clone(), v.clone());
-                    Ok(Some(v))
-                }
-                Statement::Requires { predicate } | Statement::Ensures { predicate } => {
-                    let v = evaluate(program, *predicate, &env, &current, &mut meter)?;
-                    if v != Value::Bool(true) {
-                        return Err(failure(
-                            if matches!(stmt, Statement::Requires { .. }) {
-                                "requires"
-                            } else {
-                                "ensures"
-                            },
-                            "Action predicate evaluated to false.",
-                        ));
-                    }
-                    Ok(Some(v))
-                }
-                Statement::Next { state, value } => {
-                    let after = evaluate(program, *value, &env, &current, &mut meter)?;
-                    let before = current.state[state].clone();
-                    current.state.insert(state.clone(), after.clone());
-                    env.insert(state.clone(), after.clone());
-                    effects.push(Effect::State {
-                        name: state.clone(),
-                        before,
-                        after: after.clone(),
-                    });
-                    Ok(Some(after))
-                }
-                Statement::Emit { name, value } => {
-                    let v = evaluate(program, *value, &env, &current, &mut meter)?;
-                    effects.push(Effect::Emit {
-                        name: name.clone(),
-                        value: v.clone(),
-                    });
-                    Ok(Some(v))
-                }
-                Statement::Transfer {
-                    asset,
-                    from,
-                    to,
-                    amount: expr,
-                }
-                | Statement::Fee {
-                    asset,
-                    from,
-                    to,
-                    amount: expr,
-                } => {
-                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
-                    let id = validate_asset(program, asset)?.clone();
-                    move_funds(&mut current, &id, from, to, amount)?;
-                    effects.push(if matches!(stmt, Statement::Fee { .. }) {
-                        Effect::Fee {
-                            asset: id,
-                            from: from.clone(),
-                            to: to.clone(),
-                            amount,
-                        }
-                    } else {
-                        Effect::Transfer {
-                            asset: id,
-                            from: from.clone(),
-                            to: to.clone(),
-                            amount,
-                        }
-                    });
-                    Ok(Some(Value::UInt(amount)))
-                }
-                Statement::Liability {
-                    name,
-                    asset,
-                    debtor,
-                    creditor,
-                    amount: expr,
-                } => {
-                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
-                    let id = validate_asset(program, asset)?.clone();
-                    let found = current.liabilities.iter().position(|l| l.name == *name);
-                    let before = if let Some(index) = found {
-                        let l = &current.liabilities[index];
-                        if l.asset != id || l.debtor != *debtor || l.creditor != *creditor {
-                            return Err(failure(
-                                "liability",
-                                "Existing liability identity differs.",
-                            ));
-                        }
-                        l.amount
-                    } else {
-                        UInt(0)
-                    };
-                    let after = UInt(
-                        before
-                            .0
-                            .checked_add(amount.0)
-                            .ok_or_else(|| failure("overflow", "Liability exceeds u128."))?,
-                    );
-                    if let Some(index) = found {
-                        current.liabilities[index].amount = after;
-                    } else {
-                        current.liabilities.push(Liability {
-                            name: name.clone(),
-                            asset: id.clone(),
-                            debtor: debtor.clone(),
-                            creditor: creditor.clone(),
-                            amount: after,
-                        });
-                        current.liabilities.sort_by(|a, b| a.name.cmp(&b.name));
-                    }
-                    effects.push(Effect::Liability {
-                        name: name.clone(),
-                        asset: id,
-                        debtor: debtor.clone(),
-                        creditor: creditor.clone(),
-                        before,
-                        after,
-                    });
-                    Ok(Some(Value::UInt(amount)))
-                }
-                Statement::Discharge { name, amount: expr } => {
-                    let amount = amount(program, *expr, &env, &current, &mut meter)?;
-                    let l = current
-                        .liabilities
-                        .iter_mut()
-                        .find(|l| l.name == *name)
-                        .ok_or_else(|| {
-                            failure("liability", format!("Unknown residual liability {name:?}."))
-                        })?;
-                    let before = l.amount;
-                    let after = UInt(before.0.checked_sub(amount.0).ok_or_else(|| {
-                        failure("liability", "Discharge exceeds residual liability.")
-                    })?);
-                    l.amount = after;
-                    effects.push(Effect::Liability {
-                        name: name.clone(),
-                        asset: l.asset.clone(),
-                        debtor: l.debtor.clone(),
-                        creditor: l.creditor.clone(),
-                        before,
-                        after,
-                    });
-                    Ok(Some(Value::UInt(amount)))
-                }
-            }
-        })();
+        let result = execute_statement(
+            program, stmt, &mut env, &mut current, &mut meter, &mut effects,
+        );
         let value = result.map_err(|mut e| {
             e.step = Some(i as u16);
             e
@@ -889,6 +910,116 @@ pub(crate) fn simulate_with_meter(
         effects: all_effects,
     })
 }
+/// Environment seed supplied only by stage admission.
+pub enum SegmentEntry<'a> {
+    Start { inputs: &'a [crate::stage::NamedValue] },
+    Resume {
+        site: u16,
+        captures: &'a [crate::stage::NamedValue],
+        event: &'a [crate::stage::NamedValue],
+    },
+}
+
+pub enum SegmentRun {
+    NotAdvanced,
+    Ran {
+        execution: Execution,
+        exit_site: u16,
+        captures_out: Vec<crate::stage::NamedValue>,
+    },
+}
+
+/// Runs an already-admitted finite source segment with the same scalar executor
+/// as legacy simulation. The caller owns admission, publication and work policy.
+pub(crate) fn run_segment(
+    sp: &crate::stage::StagedProgram,
+    action: usize,
+    entry: SegmentEntry<'_>,
+    boundary: Snapshot,
+    meter: &mut Meter,
+) -> Result<SegmentRun, Error> {
+    let program = sp.program();
+    let selected = &program.actions[action];
+    let plan = &sp.plan().actions[action];
+    let pre = boundary;
+    let mut current = pre.clone();
+    let mut env = pre.state.clone();
+    let mut meter = Some(meter);
+    let mut steps = Vec::new();
+    let mut all_effects = Vec::new();
+    let begin = match entry {
+        SegmentEntry::Start { inputs } => {
+            env.extend(inputs.iter().map(|v| (v.name.clone(), v.value.clone())));
+            0
+        }
+        SegmentEntry::Resume { site, captures, event } => {
+            env.extend(captures.iter().chain(event).map(|v| (v.name.clone(), v.value.clone())));
+            let ordinal = usize::from(plan.sites[usize::from(site) - 1].ordinal);
+            let statement = &selected.statements[ordinal];
+            let mut effects = Vec::new();
+            // execute_statement charges dispatch once, then visits the guard.
+            let value = execute_statement(
+                program, statement, &mut env, &mut current, &mut meter, &mut effects,
+            ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+            if value != Some(Value::Bool(true)) {
+                return Ok(SegmentRun::NotAdvanced);
+            }
+            steps.push(Step {
+                index: ordinal as u16,
+                statement: statement.clone(),
+                value,
+                snapshot: pre.clone(),
+                effects,
+            });
+            ordinal + 1
+        }
+    };
+    let mut exit_site = 0;
+    let mut captures_out = Vec::new();
+    for (ordinal, statement) in selected.statements.iter().enumerate().skip(begin) {
+        if matches!(statement, Statement::Await { .. }) {
+            // Entry charge is attempted now; guard and its Step belong to resume.
+            charge_logical(&mut meter).map_err(|mut error| {
+                error.step = Some(ordinal as u16);
+                error
+            })?;
+            let site = plan.sites.iter().find(|s| usize::from(s.ordinal) == ordinal)
+                .ok_or_else(|| failure("stage_site", "Await site is absent from stage plan."))?;
+            exit_site = site.site;
+            for slot in &site.captures {
+                let value = env.get(&slot.name).cloned()
+                    .ok_or_else(|| failure("name", format!("Unknown name {:?}.", slot.name)))?;
+                captures_out.push(crate::stage::NamedValue { name: slot.name.clone(), value });
+            }
+            break;
+        }
+        let mut effects = Vec::new();
+        let value = execute_statement(
+            program, statement, &mut env, &mut current, &mut meter, &mut effects,
+        ).map_err(|mut error| { error.step = Some(ordinal as u16); error })?;
+        all_effects.extend(effects.clone());
+        steps.push(Step {
+            index: ordinal as u16,
+            statement: statement.clone(),
+            value,
+            snapshot: current.clone(),
+            effects,
+        });
+    }
+    Ok(SegmentRun::Ran {
+        execution: Execution {
+            semantics: program.semantics.clone(),
+            action: selected.name.clone(),
+            pre,
+            post: current,
+            steps,
+            effects: all_effects,
+        },
+        exit_site,
+        captures_out,
+    })
+}
+
 /// Recomputes all steps and rejects at the first deterministic divergence.
 pub fn replay(
     program: &Program,

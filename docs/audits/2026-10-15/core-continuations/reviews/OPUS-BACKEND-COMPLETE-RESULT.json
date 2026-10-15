@@ -1,0 +1,24 @@
+{
+  "report_kind": "opus-authored-stage-security-source",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 30,
+      "outputTokens": 14082,
+      "cacheReadInputTokens": 468291,
+      "cacheCreationInputTokens": 44179,
+      "webSearchRequests": 0,
+      "costUSD": 0.7288501999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 3878,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "source_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "**SOURCE_WRITTEN.** I'm Opus 5.5 (`claude-opus-5-5`), the security author on this job. Nothing was compiled, formatted, tested, modelled or proved, and there's no commit. I'm not claiming any approval. Full U/M/MC/SP/G remain open.\n\n**Files:**\n- **`crates/mori-backend/src/stage/{mod,artifact,frame,context}.rs`:** the earlier job had already finished all four, so I left them unchanged.\n  - `frame` and `context` are `pub(crate)`, and `PendingPositions` is re-exported as an `Option`.\n  - The decoder is strict, `context` builds the 29-element context, and a signed Target is refused there.\n- **`crates/mori-backend/tests/stage_relation.rs` (new):** four focused tests, not run.\n  1. Pending roles appear only at the recorded positions, with the right site and padding constants (H27).\n  2. Every circuit has its own context, and all ten gates stay unperformed.\n  3. The decoder rejects six forgeries (H20/H21).\n  4. The `/3` compiler refuses a moriarty/2 program with a typed error (H18). The H mapping is my own reading, not an audited classification.\n- **`R/OPUS-BACKEND-SHARED.patch`:** exact diff hunks for Sol to apply:\n  - **`lib.rs`:** `require_core1` goes first in `compile`, `compile_signed` and `compile_mode`, and the main lowering match gets an `Await` arm that refuses with a typed error.\n  - **`signed_relation.rs`:** `admit` checks the profile first and gets the same `Await` arm. The reconstruction step also checks the profile after parsing, which covers replay `generate`.\n  - **`stage/lower.rs`:** a signed Target is refused before the program loads and before any output directory.\n- **`R/OPUS-BACKEND-DETAIL.md`:** the public report.\n\n**Remaining qualifiers:**\n- **Test 4 will fail** until Sol applies the `lib.rs` hunks.\n- **Diff line numbers** are counted by hand against today's uncommitted worktree, so they may need a small offset.\n- **Visibility is unchecked:** the tests assume certain fields and constructors are public. If one isn't, it's a compile-only fix.\n- **`proving.rs:735/982`:** I didn't check whether these statement matches need an `Await` arm.\n- **Not verified:** that the command-line tool calls `compile_staged` before it reserves the output directory.\n- **`/3` identity** is untouched: no snapshots changed and the EMPTY whitelist is preserved. The authenticated ledger binding and all ten gates are unperformed, and I'm drawing no conclusion about host security.\n- **Startup:** given the time limit, I read only the start of `AGENTS.md`. I didn't load the `moriarty-dev:develop` skill or run `status --json`."
+}

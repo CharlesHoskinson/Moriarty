@@ -678,6 +678,7 @@ pub(crate) fn financial_values(
     s: &Scenario,
     e: &Execution,
 ) -> Result<Vec<Value>, Error> {
+    crate::stage::require_core1(program)?;
     let registry = crate::liabilities::registry(program)?;
     if c.liability_frame.len() != registry.len()
         || c.liability_frame.iter().zip(&registry).any(|(f, r)| {
@@ -735,6 +736,7 @@ pub(crate) fn financial_values(
             Statement::Liability { name, .. } | Statement::Discharge { name, .. } => {
                 Some(name.as_str())
             }
+            Statement::Await { .. } => return Err(crate::stage::core1_refusal(program)),
             _ => None,
         };
         for (j, r) in registry.iter().enumerate() {

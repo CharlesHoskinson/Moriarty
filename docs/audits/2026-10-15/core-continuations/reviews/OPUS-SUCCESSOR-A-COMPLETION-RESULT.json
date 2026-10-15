@@ -1,0 +1,25 @@
+{
+  "report_kind": "opus-independent-security-review",
+  "requested_model": "claude-opus-5-5",
+  "requested_effort": "high",
+  "returned_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 104,
+      "outputTokens": 29013,
+      "cacheReadInputTokens": 6162968,
+      "cacheCreationInputTokens": 200416,
+      "webSearchRequests": 0,
+      "costUSD": 3.4165976000000007,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 8643,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "is_error": false,
+  "candidate_commit": "7d6c3965b89d713575ade6a8dddc4f1780b3fdd3",
+  "baseline_commit": "fe01bc8b7d889427192c304b0e75d0ec719f63db",
+  "text": "I've closed the items the previous scope A review left unread, and the report is at `R/OPUS-SUCCESSOR-A-COMPLETION.md`. This was a read-only pass: I built, tested and executed nothing, and wrote nothing other than that report. I also ran over the 650s budget.\n\n**Verdicts (scope A only):**\n- **SOURCE: approved for this subscope, with 2 required findings.** I found no defect in the product code I read: CLI commands, ledger changes and the closure test. Both findings are missing tests.\n  - **A-C1 (medium, required):** the frozen design says tests must pin the exact error for each ledger refusal of a `/2` program. No test in `crates/mori-ledger` references `core1-required`, and the \"CompileCall with `/2`\" hostile case (H19) has no test.\n  - **A-C2 (low\u2013medium, required):** three CLI cases from hostile family H16 have no test: a `/1` program given to `--resume`, `/2` with `--trace`, and `inspect --target` on `/2`. The Core library behaviour behind them is tested.\n- **ACTUAL-RESULTS: approved for this subscope.**\n  - **Counts:** stdout of the selected captures shows 57 distinct passing scope A tests (5+4+13+22+7+6). The 78 = 49 new + 29 carried forward arithmetic checks out, and no reruns are summed.\n  - **Original failure:** `cli-normal-01` failed (exit 101, a missing `Await` match arm in `mori-ledger`). It is retained and not counted.\n  - **Carried-forward captures:** the only file differences are `stage_hostile.rs` and the examples README. `stage_hostile.rs` is a separate test binary, and nothing includes the README. So the carry-forward holds.\n  - **Pins and oracle:** the 11 current files I hashed (7 of them also checked against the current source manifest) match the pins of their newly captured runs. All three oracle copies hash to `76075b63\u2026`.\n- **DOCS: approved for this subscope, with 1 required finding.**\n  - **A-D1 (low):** no doc says the cap stored in a continuation is advisory. It sits outside both digests, so a caller can remove or raise it. This matters given the spec's UNI-008 case about a budget being reset.\n  - **Labels and gates:** the three labels (local-reference-stage / none / untracked) and \"all ten `/4` gates unperformed\" are stated accurately.\n\n**Optional notes:**\n- The H6 test comment claims an escaped duplicate key, but the payload has no escape. The frozen H6 doesn't require escaped keys, so this is optional.\n- One H6 test case is listed twice.\n- Some test comments still say \"not yet run\".\n- `OBSERVATIONS-CURRENT.json` says `PENDING_ROOT_FREEZE` instead of naming the commit.\n\n**Not read (listed in the report rather than approved):**\n- `security-reconciliation-2026-10-14.md`.\n- Most of the FINAL, CLARIFICATION, original and FINAL-NONSECURITY design text; I read only the H-test, refusal and amendment sections.\n- `stage_static_cost.rs` lines 1\u201399.\n- The full stderr and `start.json` of the passing captures.\n- A full walk of the 84-path manifest.\n- The lexer's identifier charset, which the compile output-filename safety depends on.\n\n**Taken from the previous report, not rechecked:** its full Core-module read, and its `SHA256SUMS` result of 417 entries OK. My own check failed only because the entries are paths relative to the dossier directory, which I wasn't allowed to `cd` into.\n\nScope B, the integrated whole-feature Opus review, and all native, U, M, MC, SP and G exits remain open."
+}

@@ -1,0 +1,50 @@
+Shared hunks for Sol (owner of mori-backend lib.rs, signed_relation.rs, stage/lower.rs).
+Against the uncommitted worktree state of 2026-10-14; not applied, not compiled.
+Replay `generate` reaches the guard through signed_relation::reconstruct_statement.
+
+--- a/crates/mori-backend/src/lib.rs
++++ b/crates/mori-backend/src/lib.rs
+@@ -365,2 +365,3 @@
+ pub fn compile(program: &Program, target: &Target) -> Result<Artifact, Error> {
++    stage::require_core1(program)?;
+     if target.signed_policy.is_some() {
+@@ -376,2 +377,3 @@
+ pub fn compile_signed(program: &Program, target: &Target) -> Result<Artifact, Error> {
++    stage::require_core1(program)?;
+     if target.signed_policy.is_none() {
+@@ -385,2 +387,3 @@
+ pub(crate) fn compile_mode(program: &Program, target: &Target) -> Result<Artifact, Error> {
++    stage::require_core1(program)?;
+     target.validate()?;
+@@ -919,2 +922,3 @@
+         match statement {
++            Statement::Await { .. } => return Err(stage::core1_refusal(program)),
+             Statement::Let { name, value } => {
+--- a/crates/mori-backend/src/signed_relation.rs
++++ b/crates/mori-backend/src/signed_relation.rs
+@@ -49,2 +49,3 @@
+ pub(crate) fn admit(program: &Program, policy: &SignedPolicy) -> Result<Layout, Error> {
++    crate::stage::require_core1(program)?;
+     if program.assets.len() > MAX_SIGNED_ASSETS {
+@@ -116,2 +117,5 @@
+                 Statement::Requires { .. } | Statement::Ensures { .. } => {}
++                Statement::Await { .. } => {
++                    return Err(crate::stage::core1_refusal(program));
++                }
+             }
+@@ -672,2 +676,3 @@
+     let program = mori_core::parse(source).map_err(|e| error("program", e.to_string()))?;
++    crate::stage::require_core1(&program)?;
+     let artifact = crate::compile_mode(&program, target)?;
+--- a/crates/mori-backend/src/stage/lower.rs
++++ b/crates/mori-backend/src/stage/lower.rs
+@@ -18,3 +18,9 @@
+ pub fn compile_staged(src: &str, target: &Target, _out: &Path) -> Result<StagedArtifact, Error> {
++    if target.signed_policy.is_some() {
++        return Err(error(
++            "unsupported",
++            "Staged moriarty/2 relations are unsigned; a signed Target is refused.",
++        ));
++    }
+     let sp = mori_core::stage::load(src).map_err(|e| error("program", e.to_string()))?;
+     target.validate()?;
