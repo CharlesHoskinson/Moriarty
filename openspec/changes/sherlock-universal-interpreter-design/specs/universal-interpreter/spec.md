@@ -165,9 +165,9 @@ WHEN the interpreter is connected to the native backend, the integration SHALL i
 - **WHEN** Factorial and tree fold are routed through a candidate native realization of the same Sherlock reference machine.
 - **THEN** The inventory names dispatch, scalar, frame and data constraint owners, whether the realization is universal, per-program or a finite family, its common bounded StepInput/StepOutput interface and the native recursion/custom-decider adapter; complete semantic StepRecord snapshots are produced separately by host materializeStep. No VerifyProof or ledger10 prerequisite is introduced.
 
-#### Scenario: Stagenet end-to-end qualification
+#### Scenario: Midnight stagenet end-to-end qualification
 - **WHEN** Sherlock/Moriarty native target behavior is submitted for acceptance.
-- **THEN** The evidence includes actual supported source compilation, proof production and independent verification, stagenet deployment and call, and complete state/effects readback against independent expectations under pinned network/toolchain/relation identities. Unperformed stages stay not run; this scenario grants no execution authority or transfer of Preview/Fenrir evidence.
+- **THEN** The evidence includes actual supported source compilation, proof production and independent verification, Midnight stagenet deployment and call, and complete state/effects readback against independent expectations under pinned network/toolchain/relation identities. Unperformed stages stay not run; this scenario grants no execution authority or transfer of Preview/Fenrir evidence.
 
 ### Requirement: UIREQ-024 Optimization preservation
 WHEN an optimization replaces a reference operation or representation, its proposal SHALL state a preservation predicate over all declared observations and costs.

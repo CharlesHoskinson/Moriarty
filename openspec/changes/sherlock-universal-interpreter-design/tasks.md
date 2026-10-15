@@ -43,7 +43,7 @@ FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their lin
 - [ ] Specify representation and semantic correspondence for the admitted transition relation under the existing ZR/MNR and unchanged Opus requirements.
 - [ ] Prepare the adapter to native recursion and the existing ledger-9 custom-decider route without requiring VerifyProof or ledger10.
 - [ ] Obtain separately authorized qualified native/target evidence; this draft grants none and makes no deployment claim.
-- [ ] Verify the real compiler/native path on stagenet: compile, prove, independently verify, deploy, call and compare full readback under exact target/toolchain identities and existing resource limits. Retain all other qualified-target obligations.
+- [ ] Verify the real compiler/native path on Midnight stagenet: compile, prove, independently verify, deploy, call and compare full readback under exact target/toolchain identities and existing resource limits. Retain all other qualified-target obligations.
 
 ## Optimization and existing exits
 

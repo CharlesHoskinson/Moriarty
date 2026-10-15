@@ -2,7 +2,9 @@
 
 User instruction: “remember we have to test this on stagenet to verify it works”.
 
-Sherlock/Moriarty target acceptance requires actual stagenet end-to-end evidence:
+User clarification: “Midnight stagenet”.
+
+Sherlock/Moriarty target acceptance requires actual Midnight stagenet end-to-end evidence:
 source compilation, native proof production and verification, deployment, call
 and complete effects readback under an explicitly qualified network/toolchain
 configuration. Record the actual artifacts and results; model agreement, host

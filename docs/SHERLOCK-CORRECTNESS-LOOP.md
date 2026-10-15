@@ -108,14 +108,14 @@ Report unavailable stages explicitly rather than counting them as successful.
 ## Required stagenet end-to-end evidence
 
 The [October 15 stagenet instruction](../raw/assignments/moriarty-stagenet-acceptance-2026-10-15.md)
-requires an actual target run after the relevant semantic/component checks.
+requires an actual Midnight stagenet run after the relevant semantic/component checks.
 Compile supported source through the real compiler/native path, produce and
-independently verify its proof, deploy and call on stagenet, then read back the
+independently verify its proof, deploy and call on Midnight stagenet, then read back the
 complete resulting state and ordered effects against the independent expectations.
 Use two distinct supported programs as required by the retained U2 contract;
 full financial/continuation and release coverage remains in scope.
 
-Pin the actual stagenet network identity, endpoints, toolchain/ZKIR/ledger/verifier
+Pin the actual Midnight stagenet network identity, endpoints, toolchain/ZKIR/ledger/verifier
 versions, relation and key/artifact identities, submission references and readback
 position. Check compatibility rather than treating a target name as a version.
 Retain fee, debit, liability and residual-duty observations where applicable,
