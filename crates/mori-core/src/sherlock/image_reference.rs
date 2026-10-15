@@ -44,7 +44,7 @@ enum ImageControl {
 /// Host-only source candidate. Integrator wiring is limited to cfg(test).
 /// No arbitrary-state importer or observer-controlled transition flags exist.
 #[derive(Clone)]
-pub(super) struct ImageMachine {
+pub(crate) struct ImageMachine {
     image: Arc<ProgramImageDraft>,
     constants: Vec<Value>,
     observations: Arc<SourceObservations>,
@@ -70,7 +70,7 @@ pub(super) struct ImageCheckpoint {
 impl ImageMachine {
     /// Requires an unchanged image produced by prepare_program_image. This
     /// constructor deliberately adds no policy for arbitrary malformed tables.
-    pub(super) fn new(image: Arc<ProgramImageDraft>, fuel: u128, stack_limit: usize) -> Self {
+    pub(crate) fn new(image: Arc<ProgramImageDraft>, fuel: u128, stack_limit: usize) -> Self {
         let constants = decode_constants(&image);
         let observations = Arc::new(SourceObservations::new(&image, &constants));
         Self {
@@ -162,7 +162,7 @@ impl ImageMachine {
         Some(StepRecord { rule_start_line, charge, before, after: self.snapshot() })
     }
 
-    pub(super) fn run(&mut self) -> Snapshot {
+    pub(crate) fn run(&mut self) -> Snapshot {
         while self.step().is_some() {}
         self.snapshot()
     }
