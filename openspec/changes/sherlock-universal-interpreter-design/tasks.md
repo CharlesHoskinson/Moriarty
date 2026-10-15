@@ -13,7 +13,7 @@ FINAL DESIGN CANDIDATE B / SPECIFIED-ONLY. Checked boxes refer only to their lin
 
 ## Models and correspondence
 
-- [ ] Extend/reconcile pure K dedicated data sorts, missing generic grammar, helper cost accounting, input-size bounds and error4 versus proposed exhaustion classification.
+- [ ] Extend/reconcile pure K dedicated data sorts, missing generic grammar, helper cost accounting and input-size bounds. Frame-cap overflow: error4 (K-a, B); StackBound (Quint-a, frozen); resourceLimit per A1 table.
 - [ ] Assess the concrete scalar15 three-algorithm Quint source/witnesses and specify any extension to general code/lexical/financial behavior without claiming it already exists.
 - [x] Inspect and classify any proposed ordinary model check before root dispatch; retain actual command, tool version, tree, seed/bounds and output receipts.
 - [ ] Specify K-to-Quint field, value, frame, work, terminal-stutter and rule/action projections.

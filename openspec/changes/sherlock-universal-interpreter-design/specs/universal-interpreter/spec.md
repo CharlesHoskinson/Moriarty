@@ -196,7 +196,7 @@ WHEN the proposed sherlock-helper-microstep/1 profile performs helper work, it S
 
 #### Scenario: Lookup and equality cursors
 - **WHEN** A lookup crosses two ordered entries or equality visits two occurrences of a shared subtree.
-- **THEN** Function/environment lookup, binding, validation, argument/field accumulation, equality and match cursors expose each bounded helper transition and complete resume state. The proposed schedule charges one per completed legacy machine transition and one per helper transition, with startup/terminal publication zero; code/data/environment/frame/serialization/helper-work capacities are declared. The mapped A state remains at the origin until the helper interval completes. W_B = W_A + H_B is only a proposed completed-interval mapping under common-domain/cap premises, never a same-fuel or implemented-refinement claim.
+- **THEN** Function/environment lookup, binding, validation, argument/field accumulation, equality and match cursors expose each bounded helper transition and complete resume state. The proposed schedule charges one per completed legacy machine transition and one per helper transition, with startup, terminal publication and error publication zero-cost; code/data/environment/frame/serialization/helper-work capacities are declared. The mapped A state remains at the origin until the helper interval completes. W_B = W_A + H_B is only a proposed completed-interval mapping under common-domain/cap premises, never a same-fuel or implemented-refinement claim.
 
 ### Requirement: UIREQ-029 Bounded representation domain
 WHEN a ReferenceState is offered to the bounded representation adapter, it SHALL return a MachineImage Bounds F related by RepresentationRelation or an explicit out-of-domain result.

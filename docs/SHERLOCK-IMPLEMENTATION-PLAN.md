@@ -47,7 +47,7 @@ The new `crates/mori-core/src/sherlock/` modules extend the existing `mori-core`
 
 ## Dependency and parallel preparation
 
-I freezes interface names/profile IDs first. R and O then prepare independent inventories and expectations concurrently. Once their contract is stable, P, T and the existing Fenrir L reconciliation can proceed together. D, F and A implement disjoint representation components after `MachineImage` and `Bounds` freeze. C, W and E can prepare their independent visitors/inventories in parallel using those fixed interfaces; integrated step acceptance waits for all consumed components. Q instruments existing outputs without changing reference semantics. B begins against the deterministic one-step baseline, while H prepares its Core/2 mapping independently. S has independent ownership throughout and supplies its own requirements and verdicts. No dependency on native qualification blocks unrelated source preparation.
+I prepares interface names/profile IDs first; a B schema freeze follows the Opus-owned Phase 0 gate below. R and O prepare independent inventories and expectations concurrently. Once their contract is stable, P, T and the existing Fenrir L reconciliation can proceed together. D, F and A implement disjoint representation components after `MachineImage` and `Bounds` freeze. C, W and E can prepare their independent visitors/inventories in parallel using those fixed interfaces; integrated step acceptance waits for all consumed components and applicable Opus gates. Q instruments existing outputs without changing reference semantics. B begins against the deterministic one-step baseline, while H prepares its Core/2 mapping independently. S has independent ownership throughout and supplies its own requirements and verdicts. No dependency on native qualification blocks unrelated source preparation.
 
 ```mermaid
 flowchart LR
@@ -98,16 +98,31 @@ For every pure specimen, O freezes ordinary fuel prefixes through completion and
 
 ## Delivery packages
 
-Each phase has one falsifiable callable acceptance predicate. Predicate names below specify future report interfaces; no implementation or pass is asserted. A phase report retains source/profile/input identities, command and exit, exact output bytes, oracle identity, evidence class, scope and first blocked boundary. Author evidence and independent result review remain separate.
+Each phase retains one falsifiable source/component comparison predicate and its independent normal oracles. These predicates are necessary comparison evidence; normal cases alone cannot establish B phase acceptance. Static counts, input hashes and draft-document completeness are source-preparation observations, not runtime passes or a B schema freeze. Source preparation and design integration may proceed while implementation evidence remains open. All planned tests, proofs and native checks below remain unexecuted by this documentation edit.
+
+The following gate is reproduced verbatim from the Opus 5.5 engineering handoff for the [Opus-owned Candidate B security amendment](../openspec/changes/sherlock-universal-interpreter-design/security-candidate-b.md). It applies to every phase, in addition to its source/component comparison predicate:
+
+> No B-specific claim without the applicable Opus-authored B001–B009 hostile cases as its gate. Phase 8 is not the sole gate.
+
+Only Opus authors those cases and supplies their security judgments; this plan does not define replacements or claim their results. A phase report retains source/profile/input identities, command and exit, exact output bytes, oracle identity, evidence class, scope and first blocked boundary. Author evidence and independent result review remain separate.
 
 ### Phase 0 — rule, admission and resource inventory
 
 **Owners:** I/R/O; S independently owns security review. **Inputs:** immutable A sources, current requirements and public model observations. **Files:** R and O's exact public paths above; I's schemas. **Consumes/produces:** fixed rule text → `OperationManifest`, profile/capacity inventory and independent prefix expectations.
 
+Opus 5.5's Phase 0 gate, reproduced verbatim from the handoff for [A1](../openspec/changes/sherlock-universal-interpreter-design/security-candidate-b.md#a1-uisec-004-overflow-arm-all-named-profiles) and [A4](../openspec/changes/sherlock-universal-interpreter-design/security-candidate-b.md#a4-canonicality-scope):
+
+> No B schema freeze until the error table, `isResourceLimit`, `StepInv` fields, per-rule charge and allocation rows (including failure transitions) and intra-cap order are specified and Opus-reviewed.
+
+Opus's profile-erratum handoff adds these Phase 0 gate items verbatim:
+
+> `Bounds.stepCap`, the `admit` signature and the per-profile `isResourceLimit` table
+
 - [ ] R enumerates every machine rule, startup/publication and helper site, with IDs, input/output shape, ordering, charge, outcome precedence and source locator.
 - [ ] R records K error4 as Rejected and terminal publication as free; records Quint's different terminal tick and finite abstraction. List closed-body/unique-function admission as missing until P implements it.
+- [ ] Apply the Opus profile-erratum handoff mechanically: include `Bounds.stepCap`, `admit(program,bounds,layout) -> Result<Admitted,CapacityNotAdmitted>` and `isResourceLimit(ProfileId,Observation) -> Bool` under the A1 table. Keep K/B `Rejected(error4)` distinct from frozen Quint `StackBound`; cap-boundary and charge agreement remain differential obligations. `CapacityNotAdmitted` remains an admission error, never an `Outcome`.
 - [ ] I records code/data/node/frame/environment/serialization/helper capacities, partial encoding envelope and supported/rejected/exhausted/unsupported dispositions. A new representation cap has a named admission decision; preparation failure is not application exhaustion.
-- [ ] O freezes complete normal snapshots and hand counts. I checks every current rule/profile/cap entry is represented exactly once and freezes the manifest digest.
+- [ ] O freezes complete normal snapshots and hand counts. I checks every current rule/profile/cap entry is represented exactly once and records the draft manifest digest. A B schema freeze remains subject to the quoted Opus gate; static inventory completeness does not satisfy it.
 
 **Predicate `inventory_complete`:** the enumerated source rules/helpers and profile/capacity disposition rows have no uncovered or conflicting entry, and every selected oracle prefix references those exact rows. Evidence: source-static inventory only. A helper cap or function-admission claim without an implementation fails this predicate's declared status, rather than being recorded as supported.
 
@@ -135,21 +150,26 @@ Each phase has one falsifiable callable acceptance predicate. Predicate names be
 
 ### Phase 3 — bounded MachineImage, declarations, frames and arithmetic
 
-**Owners:** D/F/A in parallel; I owns common `Bounds` and `MachineImage Bounds F`; S owns security work. **Depends:** interfaces/phase0; integration uses phase2. **Files:** D/F/A paths and private bounded representation components. **Consumes/produces:** semantic state + layout → partial `encode`/`decode`, `RepresentationRelation`, `TypeDecl`/`CtorLayout`/`MatchPlan`, scalar/frame reports.
+**Owners:** D/F/A in parallel; I owns common `Bounds` and `MachineImage Bounds F`; S owns security work. **Depends:** interfaces/phase0; integration uses phase2. **Files:** D/F/A paths and private bounded representation components. **Consumes/produces:** semantic state + layout → partial `encode`, `decodeCanonical`, `decodeStep`, `project`, host-only `checkStepInv`, `RepresentationRelation`, `TypeDecl`/`CtorLayout`/`MatchPlan`, scalar/frame reports. These names follow the Opus handoff and integrator-owned schema contract.
+
+Opus 5.5's Phase 3 gate, reproduced verbatim from the handoff for [A4/B002](../openspec/changes/sherlock-universal-interpreter-design/security-candidate-b.md#a4-canonicality-scope):
+
+> `bounded_decode_matches` SHALL NOT be claimed for B unless gated on Opus-authored A4/B002 hostile cases. These are: inactive-slot garbage, a referenced unreachable node, a foreign `codeId`, a tag/layout mismatch, a write below `activeLength`, and a nondeterministic physical post-image.
 
 - [ ] D builds a plain immutable node arena baseline with typed ordered fields and occurrence-based structural decode. Add closed monomorphic and mutually recursive declaration groups; retain parameter-instance capacity as separate admission work.
 - [ ] D implements direct ordered matching and a first-column baseline plan preserving minimum source-arm priority; evaluate constructor fields/scrutinee once in source order. Use the genuinely new Schedule declaration before any layout heuristic.
 - [ ] F stores complete saved caller environments and every ordered logical frame. Measure physical slots/bytes separately; compressed frames and tail activation reuse retain logical cap checks.
 - [ ] A implements byte baseline plus named addCarry/subBorrow/mulWide interfaces with explicit limb order and full product information. Compare four-U32, two-U64 and packed proposals only through the same exact semantic API.
 - [ ] I composes partial encoding over explicit code/data/frame/environment/serialization/helper bounds and records which semantic states are representable. No total encoding or unchanged-domain refinement is inferred from round-trip examples.
+- [ ] Implement the Opus handoff's decoder split: `decodeCanonical` at the named A4 boundaries; `decodeStep` for intermediate step images; `project` at A4 boundaries only; `checkStepInv` as a host-only check. Keep physical `activeLengths` separate from logical `allocationCounters`, using the exact A3/A4 definitions rather than a new policy in this plan.
 
-**Predicate `bounded_decode_matches`:** every independently supplied admitted normal state round-trips to the identical full semantic projection, and each D/F/A transition produces the frozen next projection/work under its named bounds. Evidence: representation/component normal checks, with theorem and circuit acceptance distinct. One scalar-only success cannot pass phase3's declared ADT/frame/arithmetic coverage.
+**Predicate `bounded_decode_matches`:** canonical boundary images round-trip to the independently supplied semantic projection through `decodeCanonical`; intermediate images materialize that projection through `decodeStep`; each D/F/A transition produces the frozen next projection/work under its named bounds. Evidence: representation/component normal comparisons, subject to the quoted Phase 3 and every-phase Opus gates; theorem and circuit acceptance remain distinct. One scalar-only success cannot satisfy phase3's declared ADT/frame/arithmetic comparison coverage, and normal comparison success alone cannot establish B acceptance.
 
 ### Phase 4 — required Clean components, witness DAG and exporter separation
 
 **Owners:** C/W/E in parallel; I integrates; S owns all security/theorem/hostile work. **Depends:** stable phase3 interfaces; full integration waits for phase3 evidence. **Files:** C's private Clean step roles, W/E public interfaces and private visitors. **Consumes/produces:** `compileStep(layout,componentInventory)` → separate `ConstraintPlan` and `WitnessPlan`; capability-directed exporter → artifact or `UnsupportedFeature`.
 
-- [ ] C inventories every reference rule/helper against an actual Clean component, bounded state input/output, ordered field positions and operation locator. `realizeStep(plan, StepInput{program,state})` returns bounded `StepOutput{next,event,diagnostics}`; `materializeStep(program,layout,preImage,output)` decodes the host `StepRecord` separately. Unbounded reference snapshots are never circuit payloads. Build normal scalar/frame slice first, then close all admitted data/match/call/helper coverage.
+- [ ] C inventories every reference rule/helper against an actual Clean component, bounded state input/output, ordered field positions and operation locator. `realizeStep(plan, StepInput{program,state})` uses the bounded `ProgramImageView` and returns bounded `StepOutput{next,event,diagnostics}`. Per the Opus handoff, host-side `materializeStep(program,layout,preImage,output)` uses `decodeStep` on both `preImage` and `output.next`; report that host work separately. Unbounded reference snapshots are never circuit payloads. Build normal scalar/frame slice first, then close all admitted data/match/call/helper coverage.
 - [ ] W builds typed witness dependencies, deterministic topological order, explicit input bindings and an uncached baseline. Structured serializable programs are the initial exportable subset; native closures have explicit unsupported status.
 - [ ] E separately records field, arithmetic, lookup, interaction, custom-gate, table and witness-program export support. Constraint JSON alone cannot satisfy witness export; a witness row cannot establish the emitted relation.
 - [ ] W/E compare independently derived normal operation/DAG/artifact expectations. Record public Clean API membership separately from privately retained implementation and consumer bindings.
@@ -173,6 +193,7 @@ Each phase has one falsifiable callable acceptance predicate. Predicate names be
 
 - [ ] Implement `advance_m` for m1/2/4/8 with ordered internal rule boundaries, per-prefix fuel/frame checks, earliest stop and zero-charge terminal publication; padding stays physical.
 - [ ] Compare universal, per-program and fixed-family realizations against the same step projection. Keep original trace order recoverable from event partitions and complete cut/resume images.
+- [ ] Per the Opus handoff, `ChunkStore.put` emits `project` output and `ChunkStore.get` uses `decodeCanonical`. Projection occurs only at A4 boundaries; snapshot I/O and projection work are reported separately from reference work. Retain the exact A3/A4 treatment of physical rows and logical allocation counters.
 - [ ] Specialize immutable image/layout facts with a finite memoized worklist. Keep dynamic control, input values, frames, logical depth, budgets and outcomes dynamic. A size-limit fallback emits generic dispatch; source recursion is never unrolled.
 - [ ] W compares uncached/cold/warm lifetime/cache variants without removing occurrence work or saved frames. Q reports whole-path cost and reuse-count assumptions; preserve direct baselines and losing alternatives.
 
