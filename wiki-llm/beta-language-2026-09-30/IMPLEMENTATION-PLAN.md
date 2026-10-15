@@ -1,7 +1,12 @@
 # Moriarty beta implementation plan
 
-> For agentic workers: use focused subagent development and independent review.
-> The user's AFK instruction selects execution now, without another question.
+This is the completed September 30 authoring-beta implementation plan, retained
+for its task/interface rationale. [RESULT](RESULT.md) records the final local
+checks, exact candidate reviews and PR11/prerelease publication. This is no
+longer an active worker instruction. Current language work follows the
+[October 14 audit plan](../../docs/audits/2026-10-14/AUDIT-PLAN.md) and
+[research crosswalk](../RECONCILIATION-2026-10-14.md). The Source/6/Core/5 names
+below identify the experimental TypeScript path, separately from Rust Core/1.
 
 Goal: ship a standalone authoring beta and truthful local S0 preparation.
 Architecture: one strict text frontend feeds existing Source/6 and Core/5; CLI,
@@ -121,6 +126,6 @@ preserve external acceptance gates and original audits.
 - [x] Convergence amendments selected; final concurrence recorded in audits.
 - [x] Frontend, exact nominal arithmetic and bounded S0 authoring checks.
 - [x] Source/6 bridge and strict local scenarios.
-- [x] CLI/distribution and stdio/editor/AI tooling; actual VS Code/provider activation remains unperformed.
-- [ ] Complete typed horizon and requirements matrix.
-- [ ] Independent code audits, repair, fresh verification and publication.
+- [x] CLI/distribution and stdio/editor/AI tooling; actual VS Code GUI activation remains unperformed. [RESULT](RESULT.md#executed-checks) records one later Claude Code MCP check/inspect observation; broader provider adoption remains unestablished.
+- [x] Complete the specified-only typed horizon and requirements matrix; its language implementation remains open ([horizon](FULL-LANGUAGE-HORIZON.md), [final scope](RESULT.md#research-and-design-review)).
+- [x] Independent authoring-beta code audits, repairs, captured final checks and PR11/prerelease publication ([final result](RESULT.md#publication)); these historical reviews do not approve later source changes.

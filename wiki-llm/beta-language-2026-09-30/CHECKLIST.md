@@ -1,6 +1,12 @@
 # Moriarty beta delivery checklist
 
-Completed scope is the research, language authoring beta and developer feedback loop. [Exact results and evidence](RESULT.md) distinguish implemented local work, specifications and open financial obligations.
+This checklist records the September 30 research, authoring-beta and developer
+feedback scope. [Exact results and evidence](RESULT.md) retain the original
+candidate and observations. The [October 14 crosswalk](../RECONCILIATION-2026-10-14.md)
+records subsequent Rust language/tooling and site delivery, with all roadmap exits
+still open. The boxes below do not retest current source or reset later evidence.
+In particular, the original tutorial deployment item is historical: later site
+source/review exists, while a fresh live observation was not performed here.
 
 ## Research and design
 

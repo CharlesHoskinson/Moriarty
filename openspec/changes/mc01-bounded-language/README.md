@@ -1,12 +1,18 @@
 # MC01: Bounded language and semantic contract
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc01-bounded-language/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+Rust `moriarty/1` / `moriarty-core/1` parsing/evaluation and the separate beta/Source/6 path are delivered child implementations. They do not complete the profile/grammar/numeric matrix or general correspondence. Original experiment outputs retain their own profiles.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

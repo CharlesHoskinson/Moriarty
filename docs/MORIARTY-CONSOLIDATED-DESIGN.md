@@ -2,6 +2,15 @@
 
 Status: proposed target architecture, 2026-09-19. This proposal consolidates the research agenda; it does not claim the language or federated runtime is implemented. The product contract controls permissionlessness and the native Midnight target. The single delivery sequence is ROADMAP.md; OpenSpec records required behavior, EARS supplies observable acceptance, and Pel describes internal implementation work.
 
+## Implementation context — 2026-10-14
+
+This remains the target architecture, not a claim that every layer is implemented.
+The [current roadmap review](audits/2026-10-14/MID-ROADMAP-REVIEW.md) separates delivered local/static capabilities from full acceptance.
+Rust `moriarty/1` / `moriarty-core/1` differs from the Node beta and experimental Source/6/Core/5 preparation path.
+The [OpenSpec crosswalk](../openspec/changes/consolidated-language-kernel/traceability.md) preserves all retained requirement owners.
+The [EARS](../openspec/changes/consolidated-language-kernel/requirements.md) and linked scenarios supply observable acceptance.
+All original target contracts below remain unchanged.
+
 ## Vision
 
 Moriarty is a permissionless, bounded financial programming language in which a developer defines valid financial behavior and a user authorizes the precise outcomes, costs, obligations and disclosures they will accept. Independent solvers can find ways to satisfy that intention. Every accepted execution must establish that the actual effects satisfy both the program and the signed intention, while preserving unresolved duties and compliant history.

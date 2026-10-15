@@ -8,6 +8,18 @@ scope: authoring-beta-design
 
 # Real editor tooling for the Moriarty authoring beta
 
+## Subsequent disposition — October 14, 2026
+
+The later Node beta supplies the shared [LSP/MCP services](../../../packages/moriarty-beta/src/servers.ts)
+and [editor assets](../../../packages/moriarty-beta/editor/). The captured
+[final beta result](../RESULT.md#executed-checks) records Neovim, extracted-VSIX
+protocol and Claude Code MCP observations; VS Code GUI activation and broader
+clients remain unperformed in that scope. Rust's [LSP](../../../crates/mori/src/commands/lsp.rs)
+and [MCP](../../../crates/mori/src/commands/mcp.rs) are still stubs. The initial
+“no editor package” observation below is confined to its September 30 tree.
+
+## Original September 30 research
+
 **Recommendation:** ship a `.mori` language extension and a bounded stdio language server around the same TypeScript analysis service used by the CLI. Begin with lexical highlighting, snippets, comments and brackets, then add real diagnostics, completion, hover, declaration navigation, document symbols and formatting as their services become callable. Advertise each implemented capability from its registered handler. Keep Langium as a measured workbench alternative, consistent with [domain 08](08-meta-tools.md); defer independent proprietary analyzers and a second authoritative grammar.
 
 This is a research recommendation for the five-reviewer candidate. No extension, LSP server, framework migration, production implementation or IDE activation was performed here. An editor feature cannot establish financial validity, native proof qualification or Midnight acceptance.

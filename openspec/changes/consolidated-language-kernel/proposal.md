@@ -10,7 +10,7 @@ Adopt one [vision and design](../../../docs/MORIARTY-CONSOLIDATED-DESIGN.md), [U
 
 ## Impact and status
 
-Documentation and requirements only. All implementation exits remain open. Existing P/C/K plans become historical detail/provenance; MC/SP/G acceptance and resource histories remain. This proposal creates no public validity gate, native proof, deployment or new resource budget. The six-month recursion horizon is user-supplied planning context, not a verified release promise.
+Documentation and requirements only. All full implementation exits remain open. The [October 14 reconciliation](reconciliation-2026-10-14.md) records delivered child capabilities, distinct Rust and TypeScript profiles, different lowering domains and retained evidence limits against merged PR50. Existing P/C/K plans remain detail/provenance; MC/SP/G acceptance and resource histories remain. This proposal creates no public validity gate, native proof, deployment or new resource budget. The six-month recursion horizon is user-supplied planning context, not a verified release promise.
 
 ## Acceptance
 

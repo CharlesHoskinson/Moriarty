@@ -2,12 +2,33 @@
 title: Moriarty beta language research and delivery loop
 status: completed-authoring-beta
 created: 2026-09-30
-updated: 2026-09-30
+updated: 2026-10-14
 ---
 
 # Moriarty beta language
 
-## User contract
+## Current source relationship — October 14, 2026
+
+This directory records the completed September 30 authoring-beta scope and its
+research. The baseline for this reconciliation is merged PR50,
+`fc6353bf19b87a76410319c378efe529d52d23d9`. Current product acceptance belongs
+to the [roadmap](../../ROADMAP.md), not the historical checklist or design votes.
+
+The Node [bridge](../../packages/moriarty-beta/src/bridge.ts) still imports the
+experimental TypeScript Source/6 parser/preparer and returns local preparation.
+Rust's [profile constants](../../crates/mori-core/src/ir.rs) instead declare
+`moriarty/1` and `moriarty-core/1`; the [Rust compile command](../../crates/mori/src/commands/compile.rs)
+is implemented. Node's [LSP/MCP services](../../packages/moriarty-beta/src/servers.ts)
+are delivered authoring tools, while Rust's [LSP](../../crates/mori/src/commands/lsp.rs)
+and [MCP](../../crates/mori/src/commands/mcp.rs) commands remain stubs.
+
+The initial candidate, convergence, mockup, horizon, RESULT and developer-trial
+records keep their original exact-byte review scopes. Their present-tense
+observations refer to their recorded trees. [The current crosswalk](../RECONCILIATION-2026-10-14.md)
+distinguishes selected proposals, delivered local tools and still-open language
+work, including the later tutorial implementation in [`site/`](../../site/).
+
+## Historical user contract
 
 The user requests deep research on widely used language syntax and design,
 domain decomposition and design choices, and developer experience from syntax
@@ -75,8 +96,8 @@ separate, preserving the original acquisition record.
 
 The [programmer-facing mockup requirements](../../docs/language/PROGRAMMER-FACING-MOCKUP-REQUIREMENTS-2026-09-30.md)
 control the broad eight-family examples and visible local/specified/open labels.
-Source/6 and Core/5 S0 transfer and funded AccrualFirst repayment are the current
-local execution baseline. A beta authoring frontend may improve syntax and
+For this Node beta, experimental TypeScript Source/6 and Core/5 S0 transfer and
+funded AccrualFirst repayment are the local preparation baseline. A beta authoring frontend may improve syntax and
 tooling but must preserve complete signed limits and ordered effects. It must
 reject unsupported execution requests explicitly. The product remains the
 permissionless Midnight language with an optional kernel; proof, signature,
@@ -92,7 +113,7 @@ and [typed full-language horizon](FULL-LANGUAGE-HORIZON.md) preserve all eight
 families and the explicit local/specified/open split.
 
 Implementation and six developer trials are complete. [Final result](RESULT.md)
-records current measurements, exact review scope and publication state.
+records the captured September 30 measurements, exact review scope and publication state.
 [DevEx results](DEVEX-RESULT.md) and the [tutorial site plan](TUTORIAL-SITE-PLAN.md)
 preserve the feedback and onboarding decisions. Historical baseline counts do
 not establish beta acceptance.

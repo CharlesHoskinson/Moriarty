@@ -2,7 +2,7 @@
 id: moriarty.beta.20260930.surface
 title: Programmer surface and desugaring options
 type: comparison
-status: active
+status: historical-research-proposal
 created: 2026-09-30
 updated: 2026-09-30
 tags: [moriarty, beta, surface, specified-only]

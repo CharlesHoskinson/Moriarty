@@ -1,12 +1,18 @@
 # MC05: Mandatory contract, intent, transition, and history claims
 
-Status: specified-only.
+Status: full package acceptance remains open.
 
 - [Proposal](proposal.md)
 - [Design](design.md)
 - [Requirements](specs/mc05-mandatory-claim-acceptance/spec.md)
 - [Tasks](tasks.md)
 - [Program charter](../../MORIARTY-COMPLETION-PROGRAM.md)
+
+## Current capability reconciliation — 2026-10-14
+
+Local intent, policy, sponsor/recovery-hold and metering consumers exist. Their supplied observations and bounded accounting remain qualified precursors. All full mandatory target-acceptance predicates remain open; security assessment belongs to Opus. Opus source observations SEC-07 and SEC-18 apply (OSR-1014-05, -13).
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) controls current profile, task-status and workflow interpretation. Original numbered tasks, checked history and frozen reviewer contracts remain unchanged. New nonsecurity work follows Sol high / fresh non-author Muse high; all security work belongs to Opus.
 
 ## Report-informed acceptance refinement
 

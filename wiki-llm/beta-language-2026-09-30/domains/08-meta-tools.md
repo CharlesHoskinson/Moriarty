@@ -8,6 +8,19 @@ scope: authoring-beta-design
 
 # Language development tools and beta architecture
 
+## Subsequent disposition — October 14, 2026
+
+The five-reviewer [convergence](../CONVERGENCE.md) selected the bounded
+TypeScript authoring frontend; [the final result](../RESULT.md) records its
+CLI/library/editor delivery. Langium, Xtext, Chevrotain and Tree-sitter remained
+alternatives rather than adopted migrations. The “private/noEmit/empty lock”
+observations below describe the inspected experimental package, not the later
+[`packages/moriarty-beta/package.json`](../../../packages/moriarty-beta/package.json).
+Rust [Core/1](../../../crates/mori-core/src/ir.rs) and its compiler are a separate
+current surface, not an unrecorded TypeScript framework migration.
+
+## Original September 30 research
+
 **Recommendation:** build the first authoring beta in the existing TypeScript frontend, with a new explicit source profile, a typed surface AST, preserved source provenance, deterministic elaboration and shared diagnostics. Keep the callable S0 transfer/repayment boundary visible. Treat Langium as the leading candidate for a later authoring workbench trial if symbols, references and completion need more infrastructure. Tool selection is provisional until the requested language reviews and a measured trial; no framework or production scaffolding was implemented by this research.
 
 This recommendation optimizes the upcoming developer demonstration: author a readable agreement, check it, inspect what it lowers to, simulate a supported local operation, and get a precise failure for unsupported execution. It does not advance signature, native proof, authenticated state or ledger acceptance by choosing a parser library.

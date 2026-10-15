@@ -2,15 +2,24 @@
 
 ## Current model routing — October 14
 
-The user's latest instruction selects `gpt-6.1-sol` implementation and
-`muse-wonder-1.0` independent audits. Use high effort for both.
-This supersedes the Sol/Grok author and reviewer routing below for new language
-roadmap work. Preserve historical records and terminal task contracts.
-Muse reviews the full exact candidate and applicable actual results in a fresh
-non-author session; changed candidates need fresh audits. Missing reviewers
-cannot approve. Consequential designs still need two substantive agreeing votes.
-See [the routing assignment](raw/assignments/moriarty-sol-muse-routing-2026-10-14.md).
-Native authority, resource limits and all roadmap acceptance requirements remain.
+Use `gpt-6.1-sol` at high effort for nonsecurity implementation.
+Use a fresh `muse-wonder-1.0` high audit for nonsecurity changes.
+The user's later instruction assigns **all security work to Opus 5.5**.
+That includes security analysis, requirements, tests, recommendations and judgments.
+Preserve historical rosters on frozen contracts; they do not select new work.
+Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
+Missing reviewers cannot approve. Changed candidates need fresh applicable audits.
+Consequential design/resource decisions retain two substantive agreeing votes.
+See the [implementation routing](raw/assignments/moriarty-sol-muse-routing-2026-10-14.md)
+and [audit/security steering](raw/assignments/moriarty-mid-roadmap-audit-2026-10-14.md).
+
+Read the current [roadmap](ROADMAP.md), [OpenSpec entrypoint](openspec/README.md),
+[EARS](openspec/changes/consolidated-language-kernel/requirements.md), and
+[wiki-llm entrypoint](wiki-llm/README.md) for the requested task.
+Report implementation, evidence and acceptance separately.
+Historical campaign queues do not override current user work.
+Current native authority remains zero; no resource contract or counter resets here.
+All roadmap acceptance requirements remain in force.
 
 ## Required startup: load the development plugin
 
@@ -47,18 +56,16 @@ silently bypass it or start an installation/infrastructure loop.
 Actual host interception remains unverified until observed; loading the skill
 does not establish hook trust or product acceptance.
 
-## Current parallel source workflow — October 13
+## Parallel source workflow
 
-The user selects three `gpt-6.1-sol` and three `grok-4.7` authors at high effort.
 Use [the current workflow](docs/PARALLEL-DEVELOPMENT.md) and
 [its task manifest](openspec/parallel-language-workflow.json).
-This instruction supersedes the single active source delivery restriction and older routing for this scope.
-Prepare disjoint source tasks concurrently. Give shared interfaces to one integrator.
-Require fresh non-author Sol and Grok reviews of each exact full final candidate.
-Rotate reviewer seats on changed candidates. Record requested and returned identities separately.
-Luna supplies an advisory graph, not product certification.
-Existing frozen signed-call native gates retain their Opus 5.5 and Muse audits.
-Preserve native admission, resource limits, repeated-defect stops and all objective acceptance requirements.
+The October 13 instruction permits disjoint source preparation with one integrator.
+The October 14 routing above selects current authors and reviewers.
+The initial six-lane roster remains historical; do not restore its Grok review pair.
+Give shared IR, ABI and result interfaces to the integrator.
+Luna supplies advisory context, not product certification.
+Preserve frozen native gates, resource limits and objective acceptance requirements.
 This workflow creates no public developer permission requirement.
 
 ## Prevent orchestration displacement
@@ -97,8 +104,9 @@ resource and acceptance gates. Merge status is not product acceptance.
 
 ## Current constraints
 
-- Preview is the sole public execution target. Preserve existing wallet identities,
-  keys and contract state. Never commit credentials or private witness material.
+- Preview and required Fenrir devnet qualification have separate target evidence.
+  Invent no Fenrir configuration or identity. Preserve existing wallets, keys and contract state.
+  Never commit credentials or private witness material.
 - Local evaluation, restricted Compact kernels and Preview hello-world settlement
   exist. Financial ledger settlement, general native recursive proofs, private
   handoff and full ACTUS/DeFi conformance remain open; consult the roadmap for scope.
@@ -122,7 +130,7 @@ resource and acceptance gates. Merge status is not product acceptance.
 
 ## Historical implementation and review routing
 
-The October 13 workflow above controls new parallel source work. The records below retain their earlier scopes.
+Current scoped routing above controls new work. The records below retain their earlier scopes.
 
 The [October 10 user update](raw/assignments/moriarty-sol-review-routing-2026-10-10.md)
 selects a fresh independent `gpt-6.1-sol` review at **high effort**, alongside
@@ -131,7 +139,7 @@ Astra in the required review pair for that work. Earlier Astra verdicts remain
 historical evidence. Apply this override to older routing statements below and
 in the development skill; preserve all acceptance gates and exact-candidate audits.
 
-The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews; historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
+The [latest September 9 reviewer update](raw/assignments/moriarty-grok-review-routing-2026-09-09.md) selects GPT-6 implementation with independent fresh GPT-6 Astra and Grok 4.6 reviews. Use explicit `--model grok-4.6` at high effort and preserve the returned model identity and terminal status. Both audits are required; unavailable reviewers do not approve work or trigger substitution. This replaces Opus for pending and future reviews (superseded for security by the October 14 Opus assignment); historical evidence retains its original identities. Continue the revised twelve-sprint roadmap with all acceptance and resource gates.
 
 ## Autonomous sprint decisions
 

@@ -32,4 +32,4 @@
 
 The internal workflow tasks below require actual host bindings and execution evidence; the checked Pel template alone does not close them. Unchecked implementation tasks remain specified-only. Documentation consensus does not close proof or ledger work.
 
-The [implementation packages](implementation-plan.md) supply objectives, immutable inputs, owned outputs, verification/evidence and stop conditions. P0 is the next technical task; P1 and the proof route follow its actual target findings.
+The [implementation packages](implementation-plan.md) retain objectives, immutable inputs, owned outputs, verification/evidence and stop conditions as P aliases under U0–U7. Current U0 profile/consumer/admission reconciliation precedes the required U1/U2 slice. The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) records delivered local children and the remaining full predicates; the P register is not another dispatch queue.

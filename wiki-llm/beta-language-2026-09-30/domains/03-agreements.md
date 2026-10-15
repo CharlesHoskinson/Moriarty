@@ -9,7 +9,10 @@ updated: 2026-09-30
 
 **Recommendation AG-R01:** organize programmer code around a versioned program with named actions, and bind its fixed financial terms and parties in an agreement instance. An intent authorizes one exact action or a constrained class of completions. A solver proposes a completion; the language derives its complete economic effects and checks refinement of every signed condition before preparation. Natural-language requests may help draft an intent, but are not executable authorization.
 
-**Scope:** S2 research proposal for five independent PL reviews. This memo implements no language, authentication, proof or settlement. The [mockup requirements](../../../docs/language/PROGRAMMER-FACING-MOCKUP-REQUIREMENTS-2026-09-30.md) require readable examples across eight financial families. The [Source/6 contract](../../../experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md) remains the only local execution baseline: exact transfer and funded AccrualFirst repayment, returning `PreparedUnqualified`. Broader examples must retain `specified` or `open` labels. Sources, reading ranges and SHA-256 values are in [agreements-sources.json](../agreements-sources.json).
+**Scope:** S2 research proposal for five independent PL reviews. This memo implements no language, authentication, proof or settlement. The [mockup requirements](../../../docs/language/PROGRAMMER-FACING-MOCKUP-REQUIREMENTS-2026-09-30.md) require readable examples across eight financial families. The [Source/6 contract](../../../experiments/moriarty-language/spec/successor/financial-agreement-source-v6.md) was the local TypeScript baseline inspected for this September 30 study: exact
+transfer and funded AccrualFirst repayment, returning `PreparedUnqualified`.
+It is not an inventory of the later Rust `moriarty/1` language; see the
+[October 14 source crosswalk](../../RECONCILIATION-2026-10-14.md). Broader examples must retain `specified` or `open` labels. Sources, reading ranges and SHA-256 values are in [agreements-sources.json](../agreements-sources.json).
 
 ## Financial language evidence
 

@@ -1,5 +1,12 @@
 # Six independent developer trials
 
+This is the historical September 30 trial contract. All six requested seats
+completed; [DEVEX-RESULT](DEVEX-RESULT.md) records their exact cohort, 65 original
+cases, final package reproductions and coverage limits. The original trial
+inputs/reports remain immutable. The later [website implementation](../website-2026-10-01/PLAN.md)
+has a separate scope; the original deployment exclusion below describes this
+trial, not a prohibition on the subsequently authorized site work.
+
 User steering: after the beta is repaired and verified, three Sonnet5.5 agents
 and three Grok4.7 agents at xhigh effort write programs and report DevEx feedback.
 Each also proposes a tutorial/getting-started GitHub-hosted documentation website.

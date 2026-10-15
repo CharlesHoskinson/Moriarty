@@ -79,6 +79,12 @@ Expected: exit 0 for valid supported inputs and all required controls passing. I
 - [ ] SP02.2: make assets, shares, nominal debt, requests, time and valuation purpose distinct. Reject implicit conversion into borrowing capacity, overflow and unbounded constructs. Preserve versioned atomic sequential semantics separately from successor pre/next semantics.
 - [ ] SP02.3: check and format real .mori sources with stable spans/errors and idempotent meaning-preserving formatting; include source-level positive and invalid financial examples. Complete the matched syntax study with actual participants, not model preference votes.
 
+## Current task interpretation — 2026-10-14
+
+Rust local check/simulate/test/intent consumers and the separate Node beta authoring bridge already exist. The proposed paths above retain their original successor-profile obligations; they are not evidence that every frontend API is absent. Rust Core is `moriarty/1` / `moriarty-core/1`; Source/6 uses separate experimental TypeScript Core/5. Reconcile every source construct, formatter/checker diagnostic and executable/profile journey before closing SP02. A beta check does not imply Rust compilation. Full SP02 remains open.
+
+See the [current reconciliation](../changes/consolidated-language-kernel/reconciliation-2026-10-14.md) and its UNI-018–024 clauses. Original task text, acceptance predicates and historical evidence remain in force.
+
 ## Exit gate
 
 Complete lexical/EBNF/static specification and working successor frontend/formatter/CLI, with current audits. Source syntax alone does not close MC01-EXTENSIONS.

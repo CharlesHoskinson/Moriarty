@@ -2,7 +2,21 @@
 
 Status: documentation and design reconciliation. No new language profile, implementation capability or theorem is accepted. Compared the current source/Core/lifecycle contracts with MPLR-001–035, UNI-001–017, ZR01–16 and MNR01–08 after publishing the consolidated research.
 
-## Findings and corrections
+## Current profile context — 2026-10-14
+
+The earlier reconciliation below inspected the experimental successor profiles.
+It does not identify every current public authoring or compiler path.
+Rust now uses source `moriarty/1` and semantics `moriarty-core/1`.
+Its public consumers include compile, simulate, test and qualified intent tooling.
+The separate Node beta bridge prepares Source/6 through experimental TypeScript Core/5.
+Neither path inherits another profile's semantics or evidence.
+
+The [mid-roadmap review](audits/2026-10-14/MID-ROADMAP-REVIEW.md) records delivered child capabilities and remaining parent exits.
+The [audit plan](audits/2026-10-14/AUDIT-PLAN.md) requires profile-specific grammar, field and independent-oracle coverage.
+The target interfaces and all MPLR/UNI/ZR/MNR requirements below remain required.
+This context update accepts no new profile, theorem or full milestone.
+
+## Earlier findings and corrections (retained)
 
 1. The page combined current /5 grammar with detailed older repayment/expression rules and only a short current lifecycle summary. Expanded the /5 boundary with admission order, explicit action selection, immutable financial PRE, Ensure-only financial POST, ordered protected operations, local rejection, full work accounting, output re-admission and the distinction between local JSON and authenticated ledger state.
 2. The current same-name source-unit/settlement-asset restriction is narrower than the target's domain-qualified financial model. Made that current limitation explicit rather than claiming future asset semantics are implemented.
@@ -11,7 +25,7 @@ Status: documentation and design reconciliation. No new language profile, implem
 5. Current implemented profiles do not define the full planned authenticated continuation, evidence, conditional settlement, phase, recovery, delegation or private history contracts. Added the required semantic interfaces as specified-only design. Their concrete syntax, typing/effect rules, Core encodings and proof obligations must be frozen under U0; labels on the page are not source keywords.
 6. Native proof, compiler, ledger, federation and service obligations require different enforcement points. Retained their ownership and required evidence rather than treating syntax additions or finite tests as backend assurance.
 
-## Current sources inspected
+## Earlier successor sources inspected (retained)
 
 - [Source /5 contract](../experiments/moriarty-language/spec/successor/financial-agreement-source-v5.md)
 - [Canonical /5 grammar](../experiments/moriarty-language/spec/successor/financial-agreement-source-v5-grammar.ebnf)

@@ -2,7 +2,7 @@
 id: moriarty.beta.20260930.workflows
 title: Stages, completion and asynchronous recovery
 type: comparison
-status: active
+status: historical-research-proposal
 created: 2026-09-30
 updated: 2026-09-30
 tags: [moriarty, beta, stages, recovery, specified-only]

@@ -2,7 +2,9 @@
 
 ## Inputs and dependencies
 
-Baseline is main229545f, including PR1–PR4 at merge dc9d516. Current language APIs and complete audit receipts are normative for compatibility. Current user scope and Grok4.6 high/Astra medium routing supersede recovered model queues. SP02/SP03 own source and semantics; MC04/MC05 own authenticated correspondence and acceptance. SP07 owns later scheduled financial coverage. This package closes only its named bounded predicates.
+Design baseline is main229545f, including PR1–PR4 at merge dc9d516. Its language APIs and complete audit receipts remain normative for compatibility within their recorded profiles. Grok4.6 high/Astra medium below identifies the original assignment, not current model selection. New nonsecurity work follows the October 14 Sol high / fresh non-author Muse high assignment; all security work belongs to Opus. SP02/SP03 own source and semantics; MC04/MC05 own authenticated correspondence and acceptance. SP07 owns later scheduled financial coverage. This package closes only its named bounded predicates.
+
+The [PR50 reconciliation](../consolidated-language-kernel/reconciliation-2026-10-14.md) records current delivered children. Source /4–/5 and the separate Source/6/experimental TypeScript Core/5 path must not be renamed Rust `moriarty/1` / `moriarty-core/1`. The September 17 finite K results supersede the missing-runtime observation for their exact corpus; full K claims, authenticated execution and parent exits remain open. Operational state observations below describe this design baseline, not a fresh service or runtime query.
 
 The September11 SDK design remains specified-only. Preserve its program/profile/head identity, gross debit, net credit, fee and liability distinctions. No multichain implementation is added.
 
@@ -71,6 +73,6 @@ Current plugin gaps are stale binding/candidate, missing current-accounting.json
 
 ## Failure handling and completion
 
-Each capability has its own reviewed candidate and actual-result evidence. Keep one implementation writer at a time. Return failures to the same author for bounded repair. After two same-class failures, reproduce and change approach. Preserve originals and fresh audit identities. Publish scoped reviewed changes without staging unrelated user work. Reconcile local implemented scope separately from K, Docker, Preview and proofs.
+Each capability has its own reviewed candidate and actual-result evidence. Assign one writer to each shared file; current disjoint preparation follows the consolidated workflow. Return failures to the same author for bounded repair. After two same-class failures, reproduce and change approach. Preserve originals and fresh audit identities. Publish scoped reviewed changes without staging unrelated user work. Reconcile local implemented scope separately from K, Docker, Preview and proofs.
 
 The native goal is the loop. A planning record is not process liveness. Query actual author/audit/runtime state before reporting activity. No new scheduler is required. All six acceptance outcomes are required for overall completion.
