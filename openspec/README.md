@@ -22,3 +22,5 @@ A checked task requires its own evidence. Planned verification commands and desi
 - [Partial and conditional transactions](changes/partial-and-conditional-transactions/proposal.md): staged execution, evidence-conditioned delivery and MPLR-linked EARS/Pel plan.
 
 - [Kernel security and AI solvers](changes/kernel-security-and-ai-solvers/proposal.md): MPLR-019..034, EARS witnesses and K0–K5 implementation workflow.
+
+- [Sherlock universal interpreter](changes/sherlock-universal-interpreter-design/proposal.md): draft reference-machine design, recursive data and calls, K and Quint models, and a required Lean/Clean circuit stage before native integration. Clean integration changes belong in Fenrir's existing fork. This separate draft does not amend the 160 canonical requirement headings or close a roadmap exit.
