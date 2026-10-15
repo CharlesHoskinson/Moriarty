@@ -40,3 +40,11 @@ mod reference_slice;
 // Unadopted host snapshot rows; normal materialization checks only.
 #[cfg(test)]
 mod machine_image;
+
+// Unadopted finite call-helper proposal; clock and handle adapters stay separate.
+#[cfg(test)]
+mod helper_schedule;
+
+// Host projection of helper completions to the unchanged A reference boundary.
+#[cfg(test)]
+mod helper_call_adapter;
