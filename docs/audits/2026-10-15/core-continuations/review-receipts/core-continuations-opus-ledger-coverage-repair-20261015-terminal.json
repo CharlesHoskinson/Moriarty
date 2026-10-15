@@ -1,0 +1,37 @@
+{
+  "classification": "completed",
+  "exit_code": 0,
+  "owned_pgid": 1252806,
+  "interruption_signal": null,
+  "elapsed_seconds": 288.6819599400005,
+  "first_stdout_seconds": null,
+  "last_stdout_seconds": null,
+  "stdout_sha256": "9dd2b395b74b235f2a6a2ab360c2645d5c050cc68184326b2027a878eac1734d",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 4023,
+  "stderr_bytes": 0,
+  "report_exists": true,
+  "report_sha256": "851199c57c0067fb0f83bf7939dc7d1ab5089dec8192d15a4a0fd9e5a38a6adf",
+  "public_result": {
+    "text": "I've fixed the coverage test (F1): it now walks the Core, lexer and ledger source folders, not just Core. I haven't compiled or run it, because builds and tests were outside what I was allowed to do this round. So whether it compiles, passes or survives `fmt` is still unknown. I expect the 3 new tests to pass on today's files, based on reading the source.\n\nI changed only `crates/mori-ledger/tests/source_closure_coverage.rs`, and wrote the report to `R/OPUS-LEDGER-COVERAGE-REPAIR.md`.\n\n**Hashes**\n- Test file before: `184f35a5d7af3dcc39983042859862e6b04ce86a57a2d4c0f8c2cb2118e4b0d5`. This matches `CANDIDATE-CODE-CHECKSUMS.txt`.\n- Test file after: **`85d144e1a57640fb180bc09b4af1e20f9e4b7c6aeca4d37e7b676aceaca298c5`** (+125/\u22122).\n- `proving.rs` (`c636795d\u2026`), lexer `lib.rs` and `signed/mod.rs` are unchanged. The closure production code is untouched.\n- The other uncommitted changes are both docs-only and not mine: the earlier `examples/core/continuations/README.md` fix, and the F3 wording fix at `docs/CORE-CONTINUATIONS.md:104`.\n\n**Exclusion list.** It has exactly 3 entries, each with one reason. I checked each against its real `#[cfg(test)]` declaration:\n- `mori-lexer/src/proptests.rs` (`lib.rs:14-15`): lexer property tests, compiled only under `cfg(test)`.\n- `mori-lexer/src/tests.rs` (`lib.rs:16-17`): lexer snapshot unit tests, compiled only under `cfg(test)`.\n- `mori-ledger/src/signed/tests.rs` (`signed/mod.rs:340-341`): signed-call unit tests, compiled only under `cfg(test)`.\n\nNo Core file is excluded.\n\n**Tests.** There are now 6: the 3 existing tests plus 3 new ones. The 61 ordered members, the 8 appended Core stage files (69 exactly) and the distinct-existing-files test are unchanged.\n- `closure_covers_every_core_lexer_and_ledger_source_file`: every Rust file in the three folders must be in the closure or on the exclusion list. A new unknown file fails, and so does an exclusion that doesn't match a real unlisted file. That stops the list from acting as a broad allowlist.\n- `exclusions_are_reasoned_cfg_test_modules_outside_core_stage`: each exclusion must have a one-line reason and sit outside the Core stage folder. It must also be declared exactly once under `#[cfg(test)]` by a parent file that is itself in the closure. No source file may pull it in another way, such as a `#[path]` attribute.\n- `coverage_gap_controls_reject_unknown_files_and_unused_exclusions`: checks the gap logic with made-up paths held in memory, both cases that should pass and cases that should fail. No files are created or deleted.\n\nThe file walk now also refuses symbolic links, which only makes the original Core test stricter. The three folders hold 51 Rust files: 48 in the closure and 3 excluded, with no symbolic links. No test hashes anything, calls `source_closure`, or does any proving or native work.\n\n**Check classification.** The command in `H28-PROPOSED-CHECKS.json` stays as it is (`cargo \u2026 test -p mori-ledger --test source_closure_coverage`). I classify it as an approved ordinary check under the existing ledger pure-helper class, pinned to the new test hash. It should report exactly 6 tests; any other count or any failure blocks it.\n\n**Acceptance.** Writing this source is not security acceptance. F1 closes only after a fresh run of that check and a fresh, full integrated Opus audit of the changed candidate. The earlier 3-test capture stays as a historical record for the old hash. F2, F4 and oracle `76075b63\u2026` are unchanged. The U3 spec lines (UNI-006/007/008) were used only to locate them and don't change anything here.",
+    "stopReason": "completed",
+    "modelUsage": {
+      "claude-opus-5-5": {
+        "inputTokens": 54,
+        "outputTokens": 30184,
+        "cacheReadInputTokens": 1120066,
+        "cacheCreationInputTokens": 63107,
+        "webSearchRequests": 0,
+        "costUSD": 1.3327652,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 128000,
+        "thinkingTokens": 14855,
+        "canonicalModel": "claude-opus-5-5",
+        "provider": "firstParty",
+        "costBasis": "list"
+      }
+    },
+    "isError": false
+  },
+  "upstream_cancellation": "not-established if interrupted/timed-out"
+}

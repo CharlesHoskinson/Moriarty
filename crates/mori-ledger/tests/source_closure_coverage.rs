@@ -83,6 +83,42 @@ const CORE_STAGE: [&str; 8] = [
     "../../mori-core/src/stage/validate.rs",
 ];
 
+// Frozen A2 coverage roots: Core, lexer and ledger `src`, walked recursively.
+const ROOTS: [&str; 3] = ["../../mori-core/src", "../../mori-lexer/src", "."];
+
+/// A walked `.rs` file outside the closure. It must be the sibling module that
+/// `parent` (a closure member, `lib.rs` or `mod.rs`) declares only under
+/// `#[cfg(test)]`, so the hashed parent pins its test-only status.
+struct Exclusion {
+    path: &'static str,
+    parent: &'static str,
+    module: &'static str,
+    reason: &'static str,
+}
+
+// Committed exclusions (Clarification §3.4). Each must name an unlisted walked
+// file; unknown files fail closed and Core stage files can never appear here.
+const EXCLUDED: [Exclusion; 3] = [
+    Exclusion {
+        path: "../../mori-lexer/src/proptests.rs",
+        parent: "../../mori-lexer/src/lib.rs",
+        module: "proptests",
+        reason: "lexer property tests, compiled only under cfg(test)",
+    },
+    Exclusion {
+        path: "../../mori-lexer/src/tests.rs",
+        parent: "../../mori-lexer/src/lib.rs",
+        module: "tests",
+        reason: "lexer snapshot unit tests, compiled only under cfg(test)",
+    },
+    Exclusion {
+        path: "signed/tests.rs",
+        parent: "signed/mod.rs",
+        module: "tests",
+        reason: "signed-call ordinary QA unit tests, compiled only under cfg(test)",
+    },
+];
+
 /// Ordered `include_str!` paths of the single `source_closure` declaration.
 /// Any other token inside `concat!` (literal, macro, comment) is refused.
 fn members() -> Vec<&'static str> {
@@ -128,13 +164,37 @@ fn resolve(path: &str) -> PathBuf {
 
 fn rust_files(dir: PathBuf, out: &mut BTreeSet<PathBuf>) {
     for entry in fs::read_dir(&dir).unwrap() {
-        let path = entry.unwrap().path();
-        if path.is_dir() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let kind = entry.file_type().unwrap();
+        assert!(!kind.is_symlink(), "symlink in source root: {path:?}");
+        if kind.is_dir() {
             rust_files(path, out);
         } else if path.extension().is_some_and(|e| e == "rs") {
             out.insert(fs::canonicalize(path).unwrap());
         }
     }
+}
+
+fn walked() -> BTreeSet<PathBuf> {
+    let mut files = BTreeSet::new();
+    for root in ROOTS {
+        rust_files(resolve(root), &mut files);
+    }
+    files
+}
+
+/// Walked files neither listed nor excluded, then exclusions that name no
+/// unlisted walked file (stale, broad, already listed or outside the roots).
+fn gaps(
+    walked: &BTreeSet<PathBuf>,
+    listed: &BTreeSet<PathBuf>,
+    excluded: &BTreeSet<PathBuf>,
+) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let unlisted: BTreeSet<_> = walked.difference(listed).cloned().collect();
+    let missing = unlisted.difference(excluded).cloned().collect();
+    let unused = excluded.difference(&unlisted).cloned().collect();
+    (missing, unused)
 }
 
 #[test]
@@ -161,4 +221,67 @@ fn closure_covers_every_core_source_file() {
     rust_files(resolve("../../mori-core/src"), &mut core);
     let missing: Vec<_> = core.difference(&covered).collect();
     assert!(missing.is_empty(), "Core source outside closure: {missing:?}");
+}
+
+#[test]
+fn closure_covers_every_core_lexer_and_ledger_source_file() {
+    let listed: BTreeSet<_> = members().iter().map(|p| resolve(p)).collect();
+    let excluded: BTreeSet<_> = EXCLUDED.iter().map(|x| resolve(x.path)).collect();
+    assert_eq!(excluded.len(), EXCLUDED.len(), "duplicate exclusion");
+    let walked = walked();
+    for probe in ["../../mori-lexer/src/lib.rs", "lib.rs", CORE_STAGE[7]] {
+        assert!(walked.contains(&resolve(probe)), "walk missed {probe}");
+    }
+    let (missing, unused) = gaps(&walked, &listed, &excluded);
+    assert!(missing.is_empty(), "source outside closure and exclusions: {missing:?}");
+    assert!(unused.is_empty(), "exclusion is not an unlisted source file: {unused:?}");
+}
+
+#[test]
+fn exclusions_are_reasoned_cfg_test_modules_outside_core_stage() {
+    let listed: BTreeSet<_> = members().into_iter().collect();
+    let stage = resolve("../../mori-core/src/stage");
+    assert!(CORE_STAGE.iter().all(|p| resolve(p).starts_with(&stage)));
+    let sources: Vec<_> = walked()
+        .into_iter()
+        .map(|f| (fs::read_to_string(&f).unwrap(), f))
+        .collect();
+    for x in &EXCLUDED {
+        let path = resolve(x.path);
+        assert!(!x.reason.is_empty() && !x.reason.contains('\n'), "{}: reason", x.path);
+        assert!(!path.starts_with(&stage), "{}: Core stage file excluded", x.path);
+        assert!(listed.contains(x.parent), "{}: parent outside closure", x.path);
+        let parent = resolve(x.parent);
+        assert!(["lib.rs", "mod.rs"].iter().any(|n| parent.ends_with(n)));
+        let file = format!("{}.rs", x.module);
+        assert_eq!(path, parent.parent().unwrap().join(&file), "{}: module", x.path);
+        let text = fs::read_to_string(&parent).unwrap();
+        let decl = format!("#[cfg(test)]\nmod {};\n", x.module);
+        assert_eq!(text.matches(&decl).count(), 1, "{}: cfg(test) declaration", x.path);
+        let any_decl = format!("mod {}", x.module);
+        assert_eq!(text.matches(&any_decl).count(), 1, "{}: other declaration", x.path);
+        let named = format!("{file}\"");
+        for (source, f) in &sources {
+            assert!(!source.contains(&named), "{f:?} names excluded {file}");
+        }
+    }
+}
+
+#[test]
+fn coverage_gap_controls_reject_unknown_files_and_unused_exclusions() {
+    let set = |s: &[&str]| s.iter().map(PathBuf::from).collect::<BTreeSet<_>>();
+    let paths = |s: &[&str]| s.iter().map(PathBuf::from).collect::<Vec<_>>();
+    let walked = set(&["/r/a.rs", "/r/b/c.rs", "/r/t.rs"]);
+    let listed = set(&["/r/a.rs", "/r/b/c.rs", "/r/Cargo.toml"]);
+    let excluded = set(&["/r/t.rs"]);
+    assert_eq!(gaps(&walked, &listed, &excluded), (paths(&[]), paths(&[])));
+    let mut future = walked.clone();
+    future.insert("/r/b/new.rs".into());
+    let unknown = gaps(&future, &listed, &excluded);
+    assert_eq!(unknown, (paths(&["/r/b/new.rs"]), paths(&[])));
+    let unexcluded = gaps(&walked, &listed, &set(&[]));
+    assert_eq!(unexcluded, (paths(&["/r/t.rs"]), paths(&[])));
+    let broad = set(&["/r", "/r/a.rs", "/r/gone.rs", "/r/t.rs"]);
+    let unused = gaps(&walked, &listed, &broad);
+    assert_eq!(unused, (paths(&[]), paths(&["/r", "/r/a.rs", "/r/gone.rs"])));
 }

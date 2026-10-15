@@ -12,9 +12,13 @@ use std::path::Path;
 
 /// Compile every action into its successful continuation segments.
 ///
-/// `out` is the caller's publication destination. Compilation remains pure;
-/// the CLI reserves that directory and publishes the manifest last through
-/// its existing publication helpers after this function returns successfully.
+/// `out` is the caller's publication destination. Compilation remains pure and
+/// the backend performs no filesystem effect; the CLI reserves that directory
+/// and publishes the manifest last through its existing publication helpers
+/// after this function returns successfully. Fresh output must pass the full
+/// `/4` decoder predicate before it is returned. That predicate establishes
+/// shape validity only: it does not recompute the program, plan or context
+/// digests, so neither a decoded nor a fresh artifact is provenance-bound.
 pub fn compile_staged(src: &str, target: &Target, _out: &Path) -> Result<StagedArtifact, Error> {
     if target.signed_policy.is_some() {
         return Err(error(
@@ -119,6 +123,8 @@ pub fn compile_staged(src: &str, target: &Target, _out: &Path) -> Result<StagedA
             return Err(error("limit", "Artifact envelope exceeds target byte limit."));
         }
         if count == artifact.resources.artifact_bytes {
+            // Nothing the decoder would refuse is ever returned for publication.
+            artifact.validate()?;
             return Ok(artifact);
         }
         artifact.resources.artifact_bytes = count;
