@@ -147,6 +147,10 @@ ID interpreter](audits/2026-10-15/sherlock-program-image-normal/README.md) have
 captured 46-test host evidence on all eight normal programs and 216 prefixes.
 These modules are private test-only preparation, with no bounded-image or
 circuit acceptance claim.
+The [normal grouping baseline](audits/2026-10-15/sherlock-reference-slices/README.md)
+retains every internal record for groups 1/2/4/8. Its separate 59-test host
+capture covers all 216 prefixes at each size against the unchanged literals;
+it is not an optimized circuit or a completed B slice/identity implementation.
 K runtime execution, full K/Quint refinement, canonical state serialization,
 B schema/helper work, field/constraint correspondence and full grammar coverage
 remain open. The pure Lean foundation has its separately recorded narrow scope.
