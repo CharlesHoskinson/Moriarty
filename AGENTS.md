@@ -1,5 +1,22 @@
 # Moriarty repository instructions
 
+## Temporary security routing — October 15
+
+The user's latest override assigns work otherwise owned by Opus 5.5 to
+**Gemini 4 Argon through AGY until Opus is available again**. Pin the listed
+`gemini-4-argon-high` model slug. This includes all new security analysis,
+requirements, hostile tests, recommendations and judgments; Sol does not take
+over that work. GPT-6.1 Sol high implementation and fresh Muse Wonder1.0 high
+nonsecurity audits continue. Preserve original identities on historical reports
+and frozen contracts. This temporary routing does not change a native gate,
+resource limit, acceptance requirement or public developer permission.
+
+The failed Muse-provider request for `gemini-4-argon` is not evidence about
+AGY availability. Use AGY's authenticated model listing and actual result
+status; see [the routing record](raw/assignments/moriarty-argon-temporary-security-2026-10-15.md).
+Restore Opus only after availability is observed, without interrupting a live
+assigned Argon task or relabelling its work as Opus.
+
 ## Current model routing — October 14
 
 Use `gpt-6.1-sol` at high effort for nonsecurity implementation.

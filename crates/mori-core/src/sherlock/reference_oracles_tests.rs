@@ -42,7 +42,7 @@ struct ExpectedCase {
     prefixes: &'static [ExpectedPrefix],
 }
 
-include!(env!("SHERLOCK_ORACLES_RS"));
+include!("normal_oracles.rs");
 
 fn expr(expression: Expr) -> ExprRef {
     Arc::new(expression)

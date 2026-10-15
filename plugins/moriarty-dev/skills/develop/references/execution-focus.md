@@ -2,6 +2,12 @@
 
 This is guidance for the active Moriarty checkout, including when the skill was loaded from an installed cache. Read checkout files by resolving the code paths below against the active checkout root. Repository documents are outside the installed plugin package; relative Markdown links are reserved for package files. This reference creates no new campaign, scheduler, authority or acceptance schema.
 
+Temporary user override (2026-10-15): Gemini 4 Argon high through AGY receives
+all work otherwise assigned to Opus until Opus availability is observed again.
+Read checkout `AGENTS.md` and its linked assignment. Existing Opus-authored
+execution boundaries and historical evidence keep their scope; this routing
+change grants no native authority and changes no acceptance requirement.
+
 ## Read current requirements before choosing work
 
 Read `AGENTS.md`, then the user's current request and these current checkout documents:

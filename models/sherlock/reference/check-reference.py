@@ -2,16 +2,15 @@
 """Compare production Sherlock against six frozen normal-program trace oracles.
 
 Only Python's standard library and the explicitly selected rustc are used. This script
-transcribes existing JSON literals into Rust constants, compiles the actual
-production modules and runs their dedicated comparison tests. It does not
-interpret programs, calculate expected work, or update any oracle file.
-Generated source and the executable live only in a temporary directory.
+verifies committed Rust constants are the exact transcription of existing JSON
+literals, compiles the actual production module and runs its comparison tests.
+It does not interpret programs, calculate expected work, or update any oracle file.
+The executable lives only in a temporary directory.
 """
 
 import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -34,6 +33,7 @@ SOURCE_PATHS = (
     "crates/mori-core/src/sherlock/reference_display.rs",
     "crates/mori-core/src/sherlock/reference_tests.rs",
     "crates/mori-core/src/sherlock/reference_oracles_tests.rs",
+    "crates/mori-core/src/sherlock/normal_oracles.rs",
     "models/sherlock/reference/check-reference.py",
 )
 
@@ -146,12 +146,11 @@ def serialize_oracles(programs, prefixes):
     return "\n".join(lines)
 
 
-def command(argv, repo, timeout, environment):
+def command(argv, repo, timeout):
     emit({"event": "command", "argv": argv, "cwd": str(repo),
-          "shell_display": shlex.join(argv), "timeout_seconds": timeout,
-          "SHERLOCK_ORACLES_RS": environment.get("SHERLOCK_ORACLES_RS")})
+          "shell_display": shlex.join(argv), "timeout_seconds": timeout})
     try:
-        result = subprocess.run(argv, cwd=repo, env=environment, timeout=timeout,
+        result = subprocess.run(argv, cwd=repo, timeout=timeout,
                                 check=False)
     except subprocess.TimeoutExpired:
         emit({"event": "command_result", "status": "timeout", "timeout_seconds": timeout})
@@ -183,31 +182,23 @@ def main():
     programs = json.loads((repo / "models/sherlock/oracles/normal-programs.json").read_text())
     prefixes = json.loads((repo / "models/sherlock/oracles/normal-prefixes.json").read_text())
     generated = serialize_oracles(programs, prefixes)
+    constants = repo / "crates/mori-core/src/sherlock/normal_oracles.rs"
+    if constants.read_bytes() != generated.encode("utf-8"):
+        raise ValueError("committed normal oracle constants differ from frozen JSON transcription")
+    emit({"event": "oracle_transcription", "path": str(constants),
+          "sha256": digest(constants), "exact_match": True})
     with tempfile.TemporaryDirectory(prefix="sherlock-reference-") as temporary:
         temporary = Path(temporary)
-        constants = temporary / "normal_oracles.rs"
-        wrapper = temporary / "reference_check.rs"
         executable = temporary / "reference_check"
-        constants.write_text(generated, encoding="utf-8")
         production = repo / "crates/mori-core/src/sherlock/mod.rs"
-        tests = repo / "crates/mori-core/src/sherlock/reference_oracles_tests.rs"
-        wrapper.write_text(
-            f"#[path = {rust_string(str(production))}]\nmod sherlock;\n"
-            "pub use sherlock::*;\n"
-            f"#[path = {rust_string(str(tests))}]\nmod reference_oracles_tests;\n",
-            encoding="utf-8")
-        emit({"event": "generated", "sha256": {
-            str(constants): digest(constants), str(wrapper): digest(wrapper)}})
-        environment = os.environ.copy()
-        environment["SHERLOCK_ORACLES_RS"] = str(constants)
-        compile_command = [str(args.rustc), "--edition=2024", "--test", str(wrapper),
+        compile_command = [str(args.rustc), "--edition=2024", "--test", str(production),
                            "-o", str(executable)]
-        result = command(compile_command, repo, args.timeout_seconds, environment)
+        result = command(compile_command, repo, args.timeout_seconds)
         if result:
             return result
         emit({"event": "executable", "path": str(executable), "sha256": digest(executable)})
         result = command([str(executable), "--test-threads=1", "--nocapture"],
-                         repo, args.timeout_seconds, environment)
+                         repo, args.timeout_seconds)
         after = {relative: digest(repo / relative) for relative in (*FROZEN, *SOURCE_PATHS)}
         if after != {relative: hashes[relative] for relative in after}:
             raise ValueError("source bytes changed during comparison; result is not a frozen candidate")

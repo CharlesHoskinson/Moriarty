@@ -22,7 +22,9 @@ also retains K's startup, invalid-input and pure-helper cases. Those counts are
 source membership, not observed rule coverage or a refinement theorem.
 
 The API starts after K's valid startup rule. `u128` literals and nonnegative host
-budgets exclude K's invalid-literal and negative-startup inputs. Canonical
+budgets exclude K's invalid-literal and negative-startup inputs.
+Host fuel is bounded above by `u128::MAX`; stack limits by `usize::MAX`.
+These upper magnitude bounds also restrict the K common domain. Canonical
 signed-decimal names define the claimed K comparison domain; opaque host names
 outside it have no K correspondence claim. Dedicated lists/trees are not yet
 general declaration-driven ADTs. Helpers, copying, structural equality and host
@@ -40,12 +42,18 @@ matching. Checks include input terms, controls, complete saved frames and
 environments, code, depth, initial/remaining fuel, outcome and exact source-rule
 lines. Free publication at zero remaining fuel is included.
 
-The expected JSON predates implementation. The consumer only transcribes its
-literals into temporary Rust constants; it does not generate answers or work
+The expected JSON predates implementation. The consumer verifies the committed
+Rust constants against a literal transcription; it does not generate answers or work
 from the machine. The separate initial RED test compiled, then failed at the
 missing transition implementation before the implementation was written. Exact
 results and source membership are retained in the delivery audit directory.
 The new comparison passed on its first execution; no expected literal changed.
+
+The follow-up wiring declares the seven oracle tests in the production test
+module graph and commits their literal constants. A fresh direct-rustc run of
+that graph passed all eight tests and 92 prefixes, with the constants checked
+byte for byte against the frozen JSON. Whole-crate Cargo execution remains
+unobserved; module discovery is not a claim that it was run.
 
 These are finite host observations. The full `mori-core` Cargo build and public
 CLI were not exercised, and the source `/1` and `/2` parsers/compilers do not yet
