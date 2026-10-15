@@ -151,6 +151,11 @@ The [normal grouping baseline](audits/2026-10-15/sherlock-reference-slices/READM
 retains every internal record for groups 1/2/4/8. Its separate 59-test host
 capture covers all 216 prefixes at each size against the unchanged literals;
 it is not an optimized circuit or a completed B slice/identity implementation.
+The [unadopted flat snapshot proposal](audits/2026-10-15/sherlock-machine-image-normal/README.md)
+adds caller-limited host row tables and complete structural materialization. Its
+captured 72-test closure includes the same eight independent normal programs
+and 216 prefixes; it is private test-only preparation, not bounded native
+representation, canonical state admission or a B-T04 completion.
 K runtime execution, full K/Quint refinement, canonical state serialization,
 B schema/helper work, field/constraint correspondence and full grammar coverage
 remain open. The pure Lean foundation has its separately recorded narrow scope.
