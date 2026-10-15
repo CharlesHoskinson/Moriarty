@@ -1,0 +1,296 @@
+{
+  "format": "moriarty-cardano-layout-metadata/1",
+  "states": [
+    {
+      "name": "allocated",
+      "ty": "Bool",
+      "initial": {
+        "type": "Bool",
+        "value": false
+      }
+    },
+    {
+      "name": "marker",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "77"
+      }
+    },
+    {
+      "name": "rounds",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "A",
+      "identity": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "A",
+        "scale": 0
+      }
+    },
+    {
+      "name": "B",
+      "identity": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "B",
+        "scale": 0
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "alpha",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "beta",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "fees",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "observer",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "owner",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "vault",
+      "class": "ScriptCustodied"
+    }
+  ],
+  "duties": [
+    {
+      "name": "allocation_reserve",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "A",
+        "scale": 0
+      },
+      "debtor": "vault",
+      "creditor": "owner"
+    },
+    {
+      "name": "rebate",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "B",
+        "scale": 0
+      },
+      "debtor": "vault",
+      "creditor": "owner"
+    }
+  ],
+  "actions": [
+    {
+      "name": "allocate",
+      "inputs": [
+        {
+          "name": "approved",
+          "ty": "Bool"
+        },
+        {
+          "name": "units",
+          "ty": "UInt"
+        },
+        {
+          "name": "quotient",
+          "ty": "UInt"
+        },
+        {
+          "name": "remainder",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 3
+        },
+        {
+          "kind": "Requires",
+          "predicate": 6
+        },
+        {
+          "kind": "Requires",
+          "predicate": 13
+        },
+        {
+          "kind": "Requires",
+          "predicate": 20
+        },
+        {
+          "kind": "Let",
+          "name": "toAlpha",
+          "value": 23
+        },
+        {
+          "kind": "Let",
+          "name": "toBeta",
+          "value": 24
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 27
+        },
+        {
+          "kind": "Fee",
+          "asset": "A",
+          "from": "vault",
+          "to": "fees",
+          "amount": 28
+        },
+        {
+          "kind": "Transfer",
+          "asset": "A",
+          "from": "vault",
+          "to": "alpha",
+          "amount": 29
+        },
+        {
+          "kind": "Transfer",
+          "asset": "A",
+          "from": "vault",
+          "to": "beta",
+          "amount": 30
+        },
+        {
+          "kind": "Transfer",
+          "asset": "B",
+          "from": "vault",
+          "to": "alpha",
+          "amount": 31
+        },
+        {
+          "kind": "Liability",
+          "name": "allocation_reserve",
+          "asset": "A",
+          "debtor": "vault",
+          "creditor": "owner",
+          "amount": 32
+        },
+        {
+          "kind": "Liability",
+          "name": "rebate",
+          "asset": "B",
+          "debtor": "vault",
+          "creditor": "owner",
+          "amount": 33
+        },
+        {
+          "kind": "Next",
+          "state": "allocated",
+          "value": 34
+        },
+        {
+          "kind": "Next",
+          "state": "rounds",
+          "value": 37
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 40
+        }
+      ]
+    },
+    {
+      "name": "rebate",
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 41
+        },
+        {
+          "kind": "Let",
+          "name": "prior",
+          "value": 42
+        },
+        {
+          "kind": "Requires",
+          "predicate": 45
+        },
+        {
+          "kind": "Transfer",
+          "asset": "B",
+          "from": "vault",
+          "to": "owner",
+          "amount": 46
+        },
+        {
+          "kind": "Discharge",
+          "name": "rebate",
+          "amount": 47
+        },
+        {
+          "kind": "Next",
+          "state": "rounds",
+          "value": 50
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 55
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 58
+        }
+      ]
+    }
+  ],
+  "framed_cells": [
+    {
+      "account": "vault",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "A",
+        "scale": 0
+      }
+    },
+    {
+      "account": "vault",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "reserve-issuer",
+        "reference": "B",
+        "scale": 0
+      }
+    }
+  ],
+  "projected_balance_cells": 12,
+  "action_bounds": [
+    {
+      "action": "allocate",
+      "statements": 16,
+      "liability_statements": 2,
+      "trace_cells_upper_bound": 360
+    },
+    {
+      "action": "rebate",
+      "statements": 8,
+      "liability_statements": 0,
+      "trace_cells_upper_bound": 180
+    }
+  ]
+}

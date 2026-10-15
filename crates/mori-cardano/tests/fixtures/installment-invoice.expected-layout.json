@@ -1,0 +1,297 @@
+{
+  "format": "moriarty-cardano-layout-metadata/1",
+  "states": [
+    {
+      "name": "marker",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "7"
+      }
+    },
+    {
+      "name": "opened",
+      "ty": "Bool",
+      "initial": {
+        "type": "Bool",
+        "value": false
+      }
+    },
+    {
+      "name": "paid",
+      "ty": "UInt",
+      "initial": {
+        "type": "UInt",
+        "value": "0"
+      }
+    }
+  ],
+  "assets": [
+    {
+      "name": "CASH",
+      "identity": {
+        "network": "oracle-unit",
+        "issuer": "invoice-issuer",
+        "reference": "cash",
+        "scale": 0
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "buyer",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "escrow",
+      "class": "ScriptCustodied"
+    },
+    {
+      "name": "fees",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "seller",
+      "class": "KeyHeldExternal"
+    },
+    {
+      "name": "spectator",
+      "class": "KeyHeldExternal"
+    }
+  ],
+  "duties": [
+    {
+      "name": "invoice",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "invoice-issuer",
+        "reference": "cash",
+        "scale": 0
+      },
+      "debtor": "escrow",
+      "creditor": "seller"
+    },
+    {
+      "name": "reserve",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "invoice-issuer",
+        "reference": "cash",
+        "scale": 0
+      },
+      "debtor": "escrow",
+      "creditor": "buyer"
+    }
+  ],
+  "actions": [
+    {
+      "name": "open",
+      "inputs": [
+        {
+          "name": "principal",
+          "ty": "UInt"
+        },
+        {
+          "name": "reserve",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 1
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 4
+        },
+        {
+          "kind": "Requires",
+          "predicate": 6
+        },
+        {
+          "kind": "Let",
+          "name": "face",
+          "value": 9
+        },
+        {
+          "kind": "Let",
+          "name": "funding",
+          "value": 12
+        },
+        {
+          "kind": "Transfer",
+          "asset": "CASH",
+          "from": "buyer",
+          "to": "escrow",
+          "amount": 13
+        },
+        {
+          "kind": "Fee",
+          "asset": "CASH",
+          "from": "buyer",
+          "to": "fees",
+          "amount": 14
+        },
+        {
+          "kind": "Liability",
+          "name": "invoice",
+          "asset": "CASH",
+          "debtor": "escrow",
+          "creditor": "seller",
+          "amount": 15
+        },
+        {
+          "kind": "Liability",
+          "name": "invoice",
+          "asset": "CASH",
+          "debtor": "escrow",
+          "creditor": "seller",
+          "amount": 16
+        },
+        {
+          "kind": "Liability",
+          "name": "reserve",
+          "asset": "CASH",
+          "debtor": "escrow",
+          "creditor": "buyer",
+          "amount": 17
+        },
+        {
+          "kind": "Next",
+          "state": "opened",
+          "value": 18
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 25
+        }
+      ]
+    },
+    {
+      "name": "partial",
+      "inputs": [
+        {
+          "name": "amount",
+          "ty": "UInt"
+        }
+      ],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 30
+        },
+        {
+          "kind": "Let",
+          "name": "opening",
+          "value": 31
+        },
+        {
+          "kind": "Requires",
+          "predicate": 34
+        },
+        {
+          "kind": "Fee",
+          "asset": "CASH",
+          "from": "escrow",
+          "to": "fees",
+          "amount": 35
+        },
+        {
+          "kind": "Transfer",
+          "asset": "CASH",
+          "from": "escrow",
+          "to": "seller",
+          "amount": 36
+        },
+        {
+          "kind": "Discharge",
+          "name": "invoice",
+          "amount": 37
+        },
+        {
+          "kind": "Next",
+          "state": "paid",
+          "value": 40
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 45
+        }
+      ]
+    },
+    {
+      "name": "finish",
+      "inputs": [],
+      "statements": [
+        {
+          "kind": "Requires",
+          "predicate": 46
+        },
+        {
+          "kind": "Let",
+          "name": "closing",
+          "value": 47
+        },
+        {
+          "kind": "Transfer",
+          "asset": "CASH",
+          "from": "escrow",
+          "to": "seller",
+          "amount": 48
+        },
+        {
+          "kind": "Discharge",
+          "name": "invoice",
+          "amount": 49
+        },
+        {
+          "kind": "Next",
+          "state": "paid",
+          "value": 52
+        },
+        {
+          "kind": "Next",
+          "state": "opened",
+          "value": 53
+        },
+        {
+          "kind": "Ensures",
+          "predicate": 58
+        }
+      ]
+    }
+  ],
+  "framed_cells": [
+    {
+      "account": "escrow",
+      "asset": {
+        "network": "oracle-unit",
+        "issuer": "invoice-issuer",
+        "reference": "cash",
+        "scale": 0
+      }
+    }
+  ],
+  "projected_balance_cells": 5,
+  "action_bounds": [
+    {
+      "action": "open",
+      "statements": 12,
+      "liability_statements": 3,
+      "trace_cells_upper_bound": 196
+    },
+    {
+      "action": "partial",
+      "statements": 8,
+      "liability_statements": 0,
+      "trace_cells_upper_bound": 110
+    },
+    {
+      "action": "finish",
+      "statements": 7,
+      "liability_statements": 0,
+      "trace_cells_upper_bound": 99
+    }
+  ]
+}
